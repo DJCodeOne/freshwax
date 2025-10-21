@@ -1,0 +1,275 @@
+---
+// src/pages/admin/login.astro
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Fresh Wax</title>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <img src="/logo.webp" alt="Fresh Wax" />
+            <p>Admin Login</p>
+        </div>
+
+        <div class="message success-message" id="successMessage">
+            Login successful! Redirecting...
+        </div>
+
+        <div class="message error-message" id="errorMessage"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">Sign In</button>
+        </form>
+
+        <div class="footer-link">
+            <a href="/">← Back to Store</a>
+        </div>
+    </div>
+</body>
+</html>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: #000000;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+
+    .login-container {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 40px;
+        max-width: 450px;
+        width: 100%;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .logo {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .logo img {
+        height: 60px;
+        margin-bottom: 10px;
+    }
+
+    .logo p {
+        color: #666666;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        color: #000000;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    input[type="email"],
+    input[type="password"] {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        background: #ffffff;
+        color: #000000;
+    }
+
+    input:focus {
+        outline: none;
+        border-color: #000000;
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 15px;
+        background: #000000;
+        color: #ffffff;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: 10px;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+        background: #333333;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .footer-link {
+        text-align: center;
+        margin-top: 20px;
+    }
+
+    .footer-link a {
+        color: #666666;
+        text-decoration: none;
+        font-size: 14px;
+    }
+
+    .footer-link a:hover {
+        color: #000000;
+        text-decoration: underline;
+    }
+
+    .message {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: none;
+        text-align: center;
+        font-weight: 500;
+    }
+
+    .success-message {
+        background: #f0fdf4;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .error-message {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    @media (max-width: 640px) {
+        .login-container {
+            padding: 30px 20px;
+        }
+
+        .logo img {
+            height: 50px;
+        }
+    }
+</style>
+
+<script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getAuth, signInWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+        authDomain: "freshwax-store.firebaseapp.com",
+        projectId: "freshwax-store",
+        storageBucket: "freshwax-store.firebasestorage.app",
+        messagingSenderId: "675435782973",
+        appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const form = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const successMessage = document.getElementById('successMessage');
+    const errorMessage = document.getElementById('errorMessage');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        successMessage.style.display = 'none';
+        errorMessage.style.display = 'none';
+        
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Signing In...';
+        
+        try {
+            // Sign in with Firebase Auth
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            console.log('User UID:', user.uid);
+
+            // Check if user is an admin
+            const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+            
+            console.log('Admin doc exists:', adminDoc.exists());
+            console.log('Admin doc data:', adminDoc.data());
+            
+            if (!adminDoc.exists()) {
+                await auth.signOut();
+                errorMessage.textContent = 'Access denied. Admin account required.';
+                errorMessage.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign In';
+                return;
+            }
+
+            // Success - redirect to admin dashboard
+            successMessage.style.display = 'block';
+            form.style.display = 'none';
+            
+            setTimeout(() => {
+                window.location.href = '/admin';
+            }, 1500);
+            
+        } catch (error) {
+            let errorMsg = 'Login failed. Please try again.';
+            
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                errorMsg = 'Invalid email or password.';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMsg = 'Invalid email address.';
+            } else if (error.code === 'auth/too-many-requests') {
+                errorMsg = 'Too many failed attempts. Please try again later.';
+            }
+            
+            errorMessage.textContent = errorMsg;
+            errorMessage.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Sign In';
+            
+            console.error('Login error:', error);
+        }
+    });
+</script>

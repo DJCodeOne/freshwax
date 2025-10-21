@@ -1,0 +1,43 @@
+---
+// src/pages/admin/customers.astro
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Management - Fresh Wax Admin</title>
+</head>
+<body>
+    <div id="loadingScreen" class="loading-screen">
+        <div class="spinner"></div>
+    </div>
+
+    <div id="mainContent" style="display: none;">
+        <nav class="navbar">
+            <div class="nav-container">
+                <h1 class="logo">🎵 Fresh Wax Admin</h1>
+                <div class="nav-links">
+                    <a href="/admin">Releases</a>
+                    <a href="/admin/orders">Orders</a>
+                    <a href="/admin/customers" class="active">Customers</a>
+                    <button id="logoutBtn" class="logout-btn">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="dashboard-container">
+            <!-- Statistics Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-info">
+                        <span class="stat-number" id="totalCustomers">0</span>
+                        <span class="stat-label">Total Customers</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🎨</div>
+                    <div class="stat-info">
+                        <span class="stat-number" id="totalArtists

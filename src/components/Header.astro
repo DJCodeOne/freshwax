@@ -1,0 +1,564 @@
+---
+// src/components/Header.astro
+---
+
+<header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    
+    <!-- Mobile Layout -->
+    <div class="flex flex-col gap-3 sm:hidden">
+      <div class="flex items-center justify-between">
+        <a href="/" class="flex items-center">
+          <img src="/logo.webp" alt="Freshwax" style="height: 50px;" />
+        </a>
+        
+        <div class="flex items-center gap-2">
+          <!-- Customer Dropdown Mobile -->
+          <div class="relative account-dropdown">
+            <button class="account-button bg-blue-100 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1 text-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Customer
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div class="account-menu hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+              <a href="/pages/customer/login" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                Login
+              </a>
+              <a href="/customer/register" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                Register
+              </a>
+            </div>
+          </div>
+
+          <!-- Artist Dropdown Mobile -->
+          <div class="relative account-dropdown">
+            <button class="account-button bg-purple-100 text-purple-700 px-3 py-2 rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-1 text-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+              </svg>
+              Artist
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div class="account-menu hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+              <a href="/login" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                Login
+              </a>
+              <a href="/register" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                Register
+              </a>
+            </div>
+          </div>
+
+          <a 
+            href="/cart" 
+            class="relative bg-gray-900 text-white px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <span class="text-sm">Cart</span>
+            <span id="cart-count-mobile" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+          </a>
+        </div>
+      </div>
+      
+      <div class="relative w-full">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input
+          type="text"
+          id="search-input-mobile"
+          placeholder="Search..."
+          class="block w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          autocomplete="off"
+        />
+        <div id="search-dropdown-mobile" class="absolute w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-96 overflow-y-auto z-50"></div>
+      </div>
+    </div>
+    
+    <!-- Desktop Layout -->
+    <div class="hidden sm:flex items-center justify-between gap-8">
+      <a href="/" class="flex items-center flex-shrink-0">
+        <img src="/logo.webp" alt="Freshwax" style="height: 70px;" />
+      </a>
+      
+      <div class="flex-1 max-w-2xl relative">
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Search by artist, title, or label..."
+            class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            autocomplete="off"
+          />
+        </div>
+        <div id="search-dropdown" class="absolute w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-96 overflow-y-auto z-50"></div>
+      </div>
+      
+      <div class="flex items-center gap-3 flex-shrink-0">
+        <a 
+          href="/releases" 
+          class="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 font-medium text-sm"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+          </svg>
+          Releases
+        </a>
+
+        <!-- Customer Dropdown Desktop -->
+        <div class="relative account-dropdown">
+          <button class="account-button bg-blue-100 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 font-medium text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            Customer
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div class="account-menu hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+            <a href="/customer/login" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+              <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              Login
+            </a>
+            <a href="/customer/register" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+              <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              Register
+            </a>
+          </div>
+        </div>
+
+        <!-- Artist Dropdown Desktop -->
+        <div class="relative account-dropdown">
+          <button class="account-button bg-purple-100 text-purple-700 px-3 py-2 rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-2 font-medium text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+            </svg>
+            Artist
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <div class="account-menu hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+            <a href="/login" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+              <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+              </svg>
+              Login
+            </a>
+            <a href="/register" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+              <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+              Register
+            </a>
+          </div>
+        </div>
+        
+        <a 
+          href="/cart" 
+          class="relative bg-gray-900 text-white px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+          Cart
+          <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Search Results Overlay -->
+<div id="search-results-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-20">
+    <div class="bg-white rounded-lg shadow-xl max-h-[calc(100vh-8rem)] overflow-y-auto">
+      <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <h2 id="search-results-title" class="text-xl font-bold text-gray-900">Search Results</h2>
+        <button id="close-search-results" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div id="search-results-content" class="p-6"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  interface Release {
+    title: string;
+    artist: string;
+    label: string;
+    image: string;
+    id: string;
+    price: string;
+    element: HTMLElement;
+  }
+
+  function updateCartCount() {
+    const cart = JSON.parse(localStorage.getItem('freshwax-cart') || '[]');
+    const cartCount = document.getElementById('cart-count');
+    const cartCountMobile = document.getElementById('cart-count-mobile');
+    
+    [cartCount, cartCountMobile].forEach(element => {
+      if (element) {
+        element.textContent = cart.length.toString();
+        element.classList.toggle('hidden', cart.length === 0);
+      }
+    });
+  }
+
+  updateCartCount();
+  window.addEventListener('cart-updated', updateCartCount);
+
+  // Account dropdown logic
+  document.querySelectorAll('.account-dropdown').forEach(dropdown => {
+    const button = dropdown.querySelector('.account-button');
+    const menu = dropdown.querySelector('.account-menu');
+    let timeoutId: number;
+
+    if (button && menu) {
+      button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('hidden');
+      });
+
+      dropdown.addEventListener('mouseenter', () => {
+        clearTimeout(timeoutId);
+      });
+
+      dropdown.addEventListener('mouseleave', () => {
+        timeoutId = window.setTimeout(() => {
+          menu.classList.add('hidden');
+        }, 300);
+      });
+
+      menu.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.account-menu').forEach(menu => {
+      menu.classList.add('hidden');
+    });
+  });
+
+  // Extract release data from page
+  function extractReleases(): Release[] {
+    const releases: Release[] = [];
+    const articles = document.querySelectorAll('article');
+    
+    articles.forEach((article) => {
+      const titleEl = article.querySelector('h3');
+      const imageEl = article.querySelector('img');
+      
+      const artistAttr = article.getAttribute('data-artist');
+      const artistBtn = article.querySelector('.filter-by-artist');
+      const artistText = artistAttr || artistBtn?.textContent?.trim() || '';
+      
+      const labelAttr = article.getAttribute('data-label');
+      const labelBtn = article.querySelector('.filter-by-label');
+      const labelText = labelAttr || labelBtn?.textContent?.trim() || '';
+      
+      const digitalBtn = article.querySelector('[data-product-type="digital"]');
+      const vinylBtn = article.querySelector('[data-product-type="vinyl"]');
+      const priceText = digitalBtn?.textContent?.trim() || vinylBtn?.textContent?.trim() || '';
+      
+      const parentDiv = article.closest('[id]') as HTMLElement;
+      const releaseId = parentDiv?.id || '';
+      
+      if (titleEl && imageEl) {
+        releases.push({
+          title: titleEl.textContent?.trim() || '',
+          artist: artistText,
+          label: labelText,
+          image: imageEl.getAttribute('src') || '',
+          id: releaseId,
+          price: priceText,
+          element: article.parentElement as HTMLElement
+        });
+      }
+    });
+    
+    return releases;
+  }
+
+  // Search releases
+  function searchReleases(query: string): Release[] {
+    const releases = extractReleases();
+    const lowerQuery = query.toLowerCase().trim();
+    
+    if (!lowerQuery) return [];
+    
+    return releases.filter(release => {
+      return (
+        release.title.toLowerCase().includes(lowerQuery) ||
+        release.artist.toLowerCase().includes(lowerQuery) ||
+        release.label.toLowerCase().includes(lowerQuery)
+      );
+    });
+  }
+
+  // Highlight matching text
+  function highlightText(text: string, query: string): string {
+    if (!query) return text;
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
+  }
+
+  // Show dropdown suggestions
+  function showDropdownSuggestions(results: Release[], query: string, dropdown: HTMLElement) {
+    if (results.length === 0) {
+      dropdown.innerHTML = `
+        <div class="p-4 text-gray-500 text-sm text-center">
+          No results found for "${query}"
+        </div>
+      `;
+      dropdown.classList.remove('hidden');
+      return;
+    }
+
+    const limitedResults = results.slice(0, 5);
+    const hasMore = results.length > 5;
+    
+    dropdown.innerHTML = `
+      <div class="py-2">
+        ${limitedResults.map(release => `
+          <a href="#${release.id}" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors search-result-link">
+            <img src="${release.image}" alt="${release.title}" class="w-12 h-12 object-cover rounded" />
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-gray-900 truncate">${highlightText(release.title, query)}</div>
+              <div class="text-xs text-gray-500 truncate">${highlightText(release.artist, query)}</div>
+              <div class="text-xs text-gray-400 truncate">${highlightText(release.label, query)}</div>
+            </div>
+            <div class="text-sm font-semibold text-gray-900">${release.price}</div>
+          </a>
+        `).join('')}
+        ${hasMore ? `
+          <button class="view-all-results w-full px-4 py-3 text-sm font-medium text-blue-600 hover:bg-blue-50 border-t border-gray-200 text-center transition-colors">
+            View all ${results.length} results →
+          </button>
+        ` : ''}
+      </div>
+    `;
+    
+    dropdown.classList.remove('hidden');
+    
+    dropdown.querySelectorAll('.search-result-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const href = (link as HTMLAnchorElement).getAttribute('href');
+        if (href) {
+          dropdown.classList.add('hidden');
+          const targetId = href.substring(1);
+          const targetElement = document.getElementById(targetId);
+          if (targetElement) {
+            const headerOffset = 100;
+            const elementPosition = targetElement.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+            
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }
+        }
+      });
+    });
+    
+    const viewAllBtn = dropdown.querySelector('.view-all-results');
+    if (viewAllBtn) {
+      viewAllBtn.addEventListener('click', () => {
+        showSearchResults(results, query);
+        dropdown.classList.add('hidden');
+      });
+    }
+  }
+
+  // Show full search results overlay
+  function showSearchResults(results: Release[], query: string) {
+    const overlay = document.getElementById('search-results-overlay');
+    const title = document.getElementById('search-results-title');
+    const content = document.getElementById('search-results-content');
+    
+    if (!overlay || !title || !content) return;
+    
+    title.textContent = `Search Results for "${query}" (${results.length})`;
+    
+    content.innerHTML = `
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        ${results.map(release => `
+          <a href="#${release.id}" class="group search-result-card">
+            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+              <img src="${release.image}" alt="${release.title}" class="w-full aspect-square object-cover group-hover:opacity-90 transition-opacity" />
+              <div class="p-4">
+                <h3 class="font-bold text-gray-900 mb-1 line-clamp-2">${release.title}</h3>
+                <p class="text-sm text-gray-600 mb-1">${release.artist}</p>
+                <p class="text-xs text-gray-400 mb-2">${release.label}</p>
+                <p class="text-lg font-bold text-gray-900">${release.price}</p>
+              </div>
+            </div>
+          </a>
+        `).join('')}
+      </div>
+    `;
+    
+    overlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    
+    content.querySelectorAll('.search-result-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        e.preventDefault();
+        const href = (card as HTMLAnchorElement).getAttribute('href');
+        if (href) {
+          overlay.classList.add('hidden');
+          document.body.style.overflow = '';
+          const targetId = href.substring(1);
+          const targetElement = document.getElementById(targetId);
+          if (targetElement) {
+            const headerOffset = 100;
+            const elementPosition = targetElement.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+            
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }
+        }
+      });
+    });
+  }
+
+  // Close search results
+  const closeBtn = document.getElementById('close-search-results');
+  const overlay = document.getElementById('search-results-overlay');
+  
+  closeBtn?.addEventListener('click', () => {
+    overlay?.classList.add('hidden');
+    document.body.style.overflow = '';
+  });
+  
+  overlay?.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  });
+
+  // Setup search inputs
+  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+  const searchInputMobile = document.getElementById('search-input-mobile') as HTMLInputElement;
+  const searchDropdown = document.getElementById('search-dropdown') as HTMLElement;
+  const searchDropdownMobile = document.getElementById('search-dropdown-mobile') as HTMLElement;
+
+  let searchTimeout: number;
+
+  function handleSearch(input: HTMLInputElement, dropdown: HTMLElement, otherInput: HTMLInputElement) {
+    const query = input.value;
+    
+    if (otherInput) {
+      otherInput.value = query;
+    }
+    
+    clearTimeout(searchTimeout);
+    
+    if (!query.trim()) {
+      dropdown.classList.add('hidden');
+      return;
+    }
+    
+    const results = searchReleases(query);
+    showDropdownSuggestions(results, query, dropdown);
+  }
+
+  function handleEnter(e: KeyboardEvent, input: HTMLInputElement, dropdown: HTMLElement) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const query = input.value.trim();
+      if (query) {
+        const results = searchReleases(query);
+        showSearchResults(results, query);
+        dropdown.classList.add('hidden');
+      }
+    }
+  }
+
+  searchInput?.addEventListener('input', () => handleSearch(searchInput, searchDropdown, searchInputMobile));
+  searchInputMobile?.addEventListener('input', () => handleSearch(searchInputMobile, searchDropdownMobile, searchInput));
+  
+  searchInput?.addEventListener('keydown', (e) => handleEnter(e, searchInput, searchDropdown));
+  searchInputMobile?.addEventListener('keydown', (e) => handleEnter(e, searchInputMobile, searchDropdownMobile));
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest('#search-input') && !target.closest('#search-dropdown')) {
+      searchDropdown?.classList.add('hidden');
+    }
+    if (!target.closest('#search-input-mobile') && !target.closest('#search-dropdown-mobile')) {
+      searchDropdownMobile?.classList.add('hidden');
+    }
+  });
+
+  // Close dropdown on escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      searchDropdown?.classList.add('hidden');
+      searchDropdownMobile?.classList.add('hidden');
+      overlay?.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  });
+
+  // Handle filter by artist event
+  window.addEventListener('filter-by-artist', ((e: CustomEvent) => {
+    const artist = e.detail.artist;
+    const results = searchReleases(artist);
+    showSearchResults(results, artist);
+  }) as EventListener);
+
+  // Handle filter by label event
+  window.addEventListener('filter-by-label', ((e: CustomEvent) => {
+    const label = e.detail.label;
+    const results = searchReleases(label);
+    showSearchResults(results, label);
+  }) as EventListener);
+</script>

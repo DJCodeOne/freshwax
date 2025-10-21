@@ -1,0 +1,433 @@
+---
+// src/pages/register.astro
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artist Registration - Freshwax</title>
+</head>
+<body>
+    <div class="registration-container">
+        <div class="logo">
+            <img src="/logo.webp" alt="Freshwax" />
+            <p>Artist / Label Registration</p>
+        </div>
+
+        <div class="info-note">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <p>Artist accounts are for uploading music only. To purchase music, you'll need a separate customer account with a different email address.</p>
+        </div>
+
+        <div class="message success-message" id="successMessage">
+            <h3 style="margin-bottom: 10px; font-size: 18px;">Registration Successful!</h3>
+            <p style="margin-bottom: 15px;">Your account is pending approval. We'll email you when approved.</p>
+            <a href="/login" class="success-btn">Go to Login</a>
+        </div>
+
+        <div class="message error-message" id="errorMessage"></div>
+
+        <form id="registrationForm">
+            <div class="form-group">
+                <label for="artistName">Artist / Label Name *</label>
+                <input type="text" id="artistName" name="artistName" required>
+                <span class="error" id="artistNameError">Please enter your artist or label name</span>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address *</label>
+                <input type="email" id="email" name="email" required>
+                <span class="error" id="emailError">Please enter a valid email address</span>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password *</label>
+                <input type="password" id="password" name="password" required>
+                <span class="error" id="passwordError">Password must be at least 6 characters</span>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password *</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required>
+                <span class="error" id="confirmPasswordError">Passwords do not match</span>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="terms" name="terms" required>
+                <label for="terms">
+                    I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a> *
+                </label>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">Create Account</button>
+        </form>
+
+        <div class="login-link">
+            Already have an account? <a href="/login">Sign in here</a>
+        </div>
+    </div>
+</body>
+</html>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: #000000;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 40px 20px;
+    }
+
+    .registration-container {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 40px;
+        max-width: 500px;
+        width: 100%;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .logo {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .logo img {
+        height: 60px;
+        margin-bottom: 10px;
+    }
+
+    .logo p {
+        color: #666666;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .info-note {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 8px;
+        padding: 12px 15px;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+    }
+
+    .info-note svg {
+        flex-shrink: 0;
+        margin-top: 2px;
+        color: #856404;
+    }
+
+    .info-note p {
+        margin: 0;
+        font-size: 13px;
+        color: #856404;
+        line-height: 1.5;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        color: #000000;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+        width: 100%;
+        padding: 12px 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        background: #ffffff;
+        color: #000000;
+    }
+
+    input:focus {
+        outline: none;
+        border-color: #000000;
+        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+    }
+
+    input::placeholder {
+        color: #999999;
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 15px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        margin-right: 10px;
+        margin-top: 3px;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+    }
+
+    .checkbox-group label {
+        margin-bottom: 0;
+        font-weight: normal;
+        font-size: 13px;
+        color: #666666;
+        cursor: pointer;
+    }
+
+    .checkbox-group a {
+        color: #000000;
+        text-decoration: underline;
+    }
+
+    .checkbox-group a:hover {
+        text-decoration: none;
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 15px;
+        background: #000000;
+        color: #ffffff;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: 10px;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+        background: #333333;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .submit-btn:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .login-link {
+        text-align: center;
+        margin-top: 20px;
+        color: #666666;
+        font-size: 14px;
+    }
+
+    .login-link a {
+        color: #000000;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .login-link a:hover {
+        text-decoration: underline;
+    }
+
+    .error {
+        color: #dc2626;
+        font-size: 12px;
+        margin-top: 5px;
+        display: none;
+    }
+
+    .message {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: none;
+        text-align: center;
+        font-weight: 500;
+    }
+
+    .success-message {
+        background: #f0fdf4;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .error-message {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    .success-btn {
+        display: inline-block;
+        padding: 10px 24px;
+        background: #166534;
+        color: #ffffff;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+
+    .success-btn:hover {
+        background: #14532d;
+        transform: translateY(-1px);
+    }
+
+    @media (max-width: 640px) {
+        .registration-container {
+            padding: 30px 20px;
+        }
+
+        .logo img {
+            height: 50px;
+        }
+    }
+</style>
+
+<script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+    import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+        authDomain: "freshwax-store.firebaseapp.com",
+        projectId: "freshwax-store",
+        storageBucket: "freshwax-store.firebasestorage.app",
+        messagingSenderId: "675435782973",
+        appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const form = document.getElementById('registrationForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const successMessage = document.getElementById('successMessage');
+    const errorMessage = document.getElementById('errorMessage');
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        document.querySelectorAll('.error').forEach(err => err.style.display = 'none');
+        successMessage.style.display = 'none';
+        errorMessage.style.display = 'none';
+        
+        let isValid = true;
+        
+        const artistName = document.getElementById('artistName').value.trim();
+        if (!artistName) {
+            document.getElementById('artistNameError').style.display = 'block';
+            isValid = false;
+        }
+        
+        const email = document.getElementById('email').value.trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            document.getElementById('emailError').style.display = 'block';
+            isValid = false;
+        }
+        
+        const password = document.getElementById('password').value;
+        if (password.length < 6) {
+            document.getElementById('passwordError').style.display = 'block';
+            isValid = false;
+        }
+        
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        if (password !== confirmPassword) {
+            document.getElementById('confirmPasswordError').style.display = 'block';
+            isValid = false;
+        }
+        
+        const terms = document.getElementById('terms').checked;
+        if (!terms) {
+            errorMessage.textContent = 'Please accept the Terms of Service and Privacy Policy';
+            errorMessage.style.display = 'block';
+            isValid = false;
+        }
+        
+        if (!isValid) return;
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating Account...';
+        
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            await updateProfile(user, {
+                displayName: artistName
+            });
+
+            await setDoc(doc(db, 'artists', user.uid), {
+                artistName: artistName,
+                email: email,
+                approved: false,
+                registeredAt: new Date().toISOString()
+            });
+
+            form.style.display = 'none';
+            successMessage.style.display = 'block';
+
+           
+        } catch (error) {
+            let errorMsg = 'Registration failed. Please try again.';
+            
+            if (error.code === 'auth/email-already-in-use') {
+                errorMsg = 'This email is already registered. Please sign in instead.';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMsg = 'Invalid email address.';
+            } else if (error.code === 'auth/weak-password') {
+                errorMsg = 'Password is too weak. Please use a stronger password.';
+            } else if (error.code === 'auth/network-request-failed') {
+                errorMsg = 'Network error. Please check your connection.';
+            }
+            
+            errorMessage.textContent = errorMsg;
+            errorMessage.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create Account';
+            
+            console.error('Registration error:', error);
+        }
+    });
+
+    document.getElementById('confirmPassword').addEventListener('blur', function() {
+        const password = document.getElementById('password').value;
+        const confirmPassword = this.value;
+        const error = document.getElementById('confirmPasswordError');
+        
+        if (confirmPassword && password !== confirmPassword) {
+            error.style.display = 'block';
+        } else {
+            error.style.display = 'none';
+        }
+    });
+</script>

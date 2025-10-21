@@ -1,0 +1,533 @@
+---
+// src/pages/login.astro
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artist Login - Fresh Wax</title>
+</head>
+<body>
+    <div class="split-container">
+        <!-- Left Side - Form -->
+        <div class="form-side">
+            <div class="form-container">
+                <div class="form-header">
+                    <h2>Artist Portal</h2>
+                    <p>Sign in to access your dashboard and upload music</p>
+                </div>
+
+                <div class="message success-message" id="successMessage">
+                    Login successful! Redirecting to dashboard...
+                </div>
+
+                <div class="message error-message" id="errorMessage"></div>
+
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="email">
+                            <svg class="input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            Email Address
+                        </label>
+                        <input type="email" id="email" name="email" placeholder="artist@example.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">
+                            <svg class="input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                            Password
+                        </label>
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                    </div>
+
+                    <div class="form-actions">
+                        <a href="#" id="forgotPasswordLink" class="forgot-link">Forgot password?</a>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="submitBtn">
+                        <span>Access Dashboard</span>
+                        <svg class="btn-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </button>
+                </form>
+
+                <div class="form-footer">
+                    <p class="register-prompt">New artist? <a href="/register">Create account</a></p>
+                    <div class="divider">
+                        <span>OR</span>
+                    </div>
+                    <p class="customer-prompt">Shopping for music? <a href="/customer/login">Customer Login →</a></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side - Branding -->
+        <div class="branding-side">
+            <div class="branding-content">
+                <img src="/logo.webp" alt="Fresh Wax Logo" class="logo-image" />
+                <h2 class="welcome-text">Artist Portal</h2>
+                <p class="tagline">Upload your music and manage your releases on Fresh Wax</p>
+                <div class="features">
+                    <div class="feature">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <span>Upload your releases</span>
+                    </div>
+                    <div class="feature">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <span>Track your sales</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Arial', sans-serif;
+        min-height: 100vh;
+        background: #f5f7fa;
+    }
+
+    .split-container {
+        display: flex;
+        min-height: 100vh;
+    }
+
+    /* Left Side - Form (Black Background) */
+    .form-side {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        background: #000000;
+    }
+
+    .form-container {
+        width: 100%;
+        max-width: 450px;
+    }
+
+    .form-header {
+        margin-bottom: 2rem;
+    }
+
+    .form-header h2 {
+        font-size: 2rem;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-header p {
+        color: #a0a0a0;
+        font-size: 0.95rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .input-icon {
+        width: 18px;
+        height: 18px;
+    }
+
+    input[type="email"],
+    input[type="password"] {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        border: 2px solid #333333;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.2s ease;
+        background: #1a1a1a;
+        color: #ffffff;
+    }
+
+    input:focus {
+        outline: none;
+        border-color: #ffffff;
+        background: #1a1a1a;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+    }
+
+    input::placeholder {
+        color: #666666;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 1.5rem;
+    }
+
+    .forgot-link {
+        color: #ffffff;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: color 0.2s;
+    }
+
+    .forgot-link:hover {
+        color: #cccccc;
+        text-decoration: underline;
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 1rem;
+        background: #ffffff;
+        color: #000000;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(255, 255, 255, 0.2);
+        background: #f0f0f0;
+    }
+
+    .submit-btn:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-arrow {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.2s;
+    }
+
+    .submit-btn:hover .btn-arrow {
+        transform: translateX(4px);
+    }
+
+    .form-footer {
+        margin-top: 2rem;
+        text-align: center;
+    }
+
+    .register-prompt,
+    .customer-prompt {
+        color: #a0a0a0;
+        font-size: 0.9rem;
+    }
+
+    .register-prompt a,
+    .customer-prompt a {
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .register-prompt a:hover,
+    .customer-prompt a:hover {
+        text-decoration: underline;
+        color: #cccccc;
+    }
+
+    .divider {
+        display: flex;
+        align-items: center;
+        margin: 1.5rem 0;
+        color: #666666;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid #333333;
+    }
+
+    .divider span {
+        padding: 0 1rem;
+        font-size: 0.75rem;
+        color: #666666;
+        font-weight: 600;
+    }
+
+    .message {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        display: none;
+        text-align: center;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .success-message {
+        background: #c6f6d5;
+        color: #22543d;
+        border: 1px solid #9ae6b4;
+    }
+
+    .error-message {
+        background: #fed7d7;
+        color: #742a2a;
+        border: 1px solid #fc8181;
+    }
+
+    /* Right Side - Branding (White Background) */
+    .branding-side {
+        flex: 1;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        color: #000000;
+    }
+
+    .branding-content {
+        max-width: 500px;
+    }
+
+    .logo-image {
+        max-width: 200px;
+        margin-bottom: 2rem;
+    }
+
+    .welcome-text {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        font-weight: 700;
+        color: #000000;
+    }
+
+    .tagline {
+        font-size: 1.1rem;
+        opacity: 0.7;
+        margin-bottom: 3rem;
+        line-height: 1.6;
+        color: #000000;
+    }
+
+    .features {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .feature {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-size: 1.1rem;
+        color: #000000;
+    }
+
+    .feature svg {
+        width: 24px;
+        height: 24px;
+        flex-shrink: 0;
+        color: #000000;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 968px) {
+        .split-container {
+            flex-direction: column-reverse;
+        }
+
+        .branding-side {
+            padding: 3rem 2rem;
+        }
+
+        .welcome-text {
+            font-size: 1.75rem;
+        }
+
+        .tagline {
+            font-size: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .features {
+            gap: 1rem;
+        }
+
+        .feature {
+            font-size: 1rem;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .branding-side {
+            padding: 2rem 1.5rem;
+        }
+
+        .form-side {
+            padding: 2rem 1.5rem;
+        }
+
+        .form-header h2 {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+
+<script>
+    import { initializeApp } from 'firebase/app';
+    import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+    import { getFirestore, doc, getDoc } from 'firebase/firestore';
+
+    // Firebase config
+    const firebaseConfig = {
+        apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+        authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId: import.meta.env.PUBLIC_FIREBASE_APP_ID
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const form = document.getElementById('loginForm') as HTMLFormElement;
+    const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
+    const successMessage = document.getElementById('successMessage') as HTMLElement;
+    const errorMessage = document.getElementById('errorMessage') as HTMLElement;
+    const forgotPasswordLink = document.getElementById('forgotPasswordLink') as HTMLAnchorElement;
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        successMessage.style.display = 'none';
+        errorMessage.style.display = 'none';
+        
+        const email = (document.getElementById('email') as HTMLInputElement).value.trim();
+        const password = (document.getElementById('password') as HTMLInputElement).value;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span>Signing In...</span>';
+        
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            const artistDoc = await getDoc(doc(db, 'artists', user.uid));
+            
+            if (!artistDoc.exists()) {
+                await auth.signOut();
+                errorMessage.textContent = 'This account is not registered as an artist. Please use customer login.';
+                errorMessage.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>Access Dashboard</span><svg class="btn-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>';
+                return;
+            }
+
+            const artistData = artistDoc.data();
+            if (!artistData.hasUploadAccess) {
+                errorMessage.textContent = 'Your account does not have upload access. Please contact support.';
+                errorMessage.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>Access Dashboard</span><svg class="btn-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>';
+                return;
+            }
+
+            successMessage.style.display = 'block';
+            form.style.display = 'none';
+            
+            setTimeout(() => {
+                window.location.href = '/artist/dashboard';
+            }, 1500);
+            
+        } catch (error: any) {
+            let errorMsg = 'Login failed. Please try again.';
+            
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                errorMsg = 'Invalid email or password.';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMsg = 'Invalid email address.';
+            } else if (error.code === 'auth/too-many-requests') {
+                errorMsg = 'Too many failed attempts. Please try again later.';
+            } else if (error.code === 'auth/network-request-failed') {
+                errorMsg = 'Network error. Please check your connection.';
+            }
+            
+            errorMessage.textContent = errorMsg;
+            errorMessage.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>Access Dashboard</span><svg class="btn-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>';
+            
+            console.error('Login error:', error);
+        }
+    });
+
+    forgotPasswordLink.addEventListener('click', async function(e) {
+        e.preventDefault();
+        
+        const email = (document.getElementById('email') as HTMLInputElement).value.trim();
+        
+        if (!email) {
+            errorMessage.textContent = 'Please enter your email address first.';
+            errorMessage.style.display = 'block';
+            return;
+        }
+        
+        try {
+            await sendPasswordResetEmail(auth, email);
+            successMessage.textContent = 'Password reset email sent! Check your inbox.';
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        } catch (error: any) {
+            let errorMsg = 'Failed to send reset email.';
+            
+            if (error.code === 'auth/user-not-found') {
+                errorMsg = 'No account found with this email.';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMsg = 'Invalid email address.';
+            }
+            
+            errorMessage.textContent = errorMsg;
+            errorMessage.style.display = 'block';
+        }
+    });
+</script>

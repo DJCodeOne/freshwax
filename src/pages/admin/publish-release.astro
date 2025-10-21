@@ -1,0 +1,603 @@
+---
+// src/pages/publish-release.astro
+import ReleasePlate from '../components/ReleasePlate.astro';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Publish Release</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="bg-black text-white rounded-lg p-8 mb-8 text-center">
+      <img src="/logo.webp" alt="Logo" class="max-w-[200px] h-auto mx-auto mb-6 bg-white p-4 rounded-lg">
+      <h1 class="text-4xl font-bold mb-2">📦 Publish Release to Store</h1>
+      <p class="text-gray-300">Paste hotlinks, preview, verify, and publish</p>
+    </div>
+
+    <!-- Step 1: Upload Files -->
+    <div class="bg-white border-2 border-black rounded-lg p-6 mb-8">
+      <h2 class="text-2xl font-bold mb-4 pb-3 border-b-2 border-black">Step 1: Upload Release Data</h2>
+      
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Metadata JSON Dropzone -->
+        <div>
+          <h3 class="font-bold mb-2">📄 Drop Metadata JSON</h3>
+          <div 
+            id="metadata-dropzone" 
+            class="border-3 border-dashed border-black rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+          >
+            <div class="text-4xl mb-2">📄</div>
+            <p class="font-bold text-black mb-1">Drop metadata.json here</p>
+            <p class="text-sm text-gray-600">or click to browse</p>
+            <input type="file" id="metadata-input" accept=".json" class="hidden">
+          </div>
+          <div id="metadata-status" class="hidden mt-3 p-3 rounded-lg"></div>
+        </div>
+
+        <!-- Hotlinks Dropzone -->
+        <div>
+          <h3 class="font-bold mb-2">🔗 Paste or Drop Hotlinks JSON</h3>
+          <div 
+            id="hotlinks-dropzone" 
+            class="border-3 border-dashed border-black rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+          >
+            <div class="text-4xl mb-2">🔗</div>
+            <p class="font-bold text-black mb-1">Drop hotlinks JSON or paste below</p>
+            <p class="text-sm text-gray-600">From upload-release page</p>
+            <input type="file" id="hotlinks-input" accept=".json" class="hidden">
+          </div>
+          <textarea 
+            id="hotlinks-paste"
+            placeholder='Paste hotlinks code from upload page:
+
+const release = {
+  artwork: ["https://..."],
+  previews: ["https://..."],
+  fullTracks: [
+    { url: "https://...", format: "WAV" }
+  ],
+  metadata: "https://..."
+};'
+            class="w-full h-32 mt-3 p-3 border-2 border-black rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-black"
+          ></textarea>
+          <div id="hotlinks-status" class="hidden mt-3 p-3 rounded-lg"></div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex gap-4">
+        <button 
+          onclick="mergeAndPreview()" 
+          id="merge-btn"
+          class="bg-black text-white px-6 py-3 rounded-lg font-bold hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled
+        >
+          🔄 Merge & Preview
+        </button>
+        <button 
+          onclick="validateLinks()" 
+          id="validate-btn"
+          class="bg-white text-black border-2 border-black px-6 py-3 rounded-lg font-bold hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled
+        >
+          ✓ Validate All Links
+        </button>
+      </div>
+
+      <div id="validation-results" class="hidden mt-4"></div>
+    </div>
+
+    <!-- Step 2: Preview -->
+    <div id="preview-section" class="hidden">
+      <div class="bg-white border-2 border-black rounded-lg p-6 mb-8">
+        <h2 class="text-2xl font-bold mb-4 pb-3 border-b-2 border-black">Step 2: Preview Release</h2>
+        
+        <div id="release-preview" class="mt-6"></div>
+        
+        <div class="mt-6 p-4 bg-gray-50 rounded-lg border-2 border-black">
+          <h3 class="font-bold mb-2">📋 Release Info:</h3>
+          <div id="release-info" class="text-sm space-y-1"></div>
+        </div>
+      </div>
+
+      <!-- Step 3: Publish -->
+      <div class="bg-black text-white rounded-lg p-6">
+        <h2 class="text-2xl font-bold mb-4 pb-3 border-b-2 border-white">Step 3: Publish to Store</h2>
+        
+        <div class="space-y-4 mb-6">
+          <label class="block">
+            <span class="text-sm font-bold mb-2 block">Filename (no spaces or special chars):</span>
+            <input 
+              type="text" 
+              id="filename-input"
+              placeholder="artist-name-release-title"
+              class="w-full px-4 py-2 border-2 border-white bg-black text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-white"
+            >
+            <p class="text-xs text-gray-400 mt-1">Will be saved as: src/data/releases/[filename].json</p>
+          </label>
+        </div>
+
+        <div class="flex gap-4">
+          <button 
+            onclick="publishRelease()" 
+            id="publish-btn"
+            class="bg-white text-black px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled
+          >
+            🚀 Publish to Store
+          </button>
+          
+          <button 
+            onclick="downloadJSON()" 
+            class="bg-black text-white border-2 border-white px-6 py-4 rounded-lg font-bold hover:bg-gray-900 transition-colors"
+          >
+            💾 Download JSON
+          </button>
+        </div>
+
+        <p class="text-xs text-gray-400 mt-4">⚠️ Note: Publishing requires backend API. For now, use Download JSON and manually add to your project.</p>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    let currentRelease = null;
+    let metadataData = null;
+    let hotlinksData = null;
+
+    // Setup dropzones
+    document.addEventListener('DOMContentLoaded', () => {
+      setupDropzone('metadata-dropzone', 'metadata-input', handleMetadataFile);
+      setupDropzone('hotlinks-dropzone', 'hotlinks-input', handleHotlinksFile);
+      
+      // Also handle paste in hotlinks textarea
+      document.getElementById('hotlinks-paste').addEventListener('input', (e) => {
+        const text = e.target.value.trim();
+        if (text) {
+          try {
+            // Try to parse as JSON first
+            hotlinksData = JSON.parse(text);
+            showStatus('hotlinks-status', '✓ Hotlinks loaded from paste', 'success');
+            checkIfReadyToMerge();
+          } catch (err) {
+            // If that fails, try to extract from JavaScript object format
+            try {
+              // Extract the object part between { and };
+              const startIndex = text.indexOf('{');
+              const endIndex = text.lastIndexOf('}');
+              
+              if (startIndex === -1 || endIndex === -1) {
+                throw new Error('No object found');
+              }
+              
+              let objStr = text.substring(startIndex, endIndex + 1);
+              
+              // Remove single-line comments (// ...)
+              objStr = objStr.replace(/\/\/[^\n]*/g, '');
+              
+              // Remove multi-line comments (/* ... */)
+              objStr = objStr.replace(/\/\*[\s\S]*?\*\//g, '');
+              
+              // Remove trailing commas before closing brackets
+              objStr = objStr.replace(/,(\s*[}\]])/g, '$1');
+              
+              // Parse using eval (safe since we control the input)
+              hotlinksData = eval('(' + objStr + ')');
+              
+              // Validate structure
+              if (!hotlinksData.artwork && !hotlinksData.previews && !hotlinksData.fullTracks) {
+                throw new Error('Invalid structure');
+              }
+              
+              showStatus('hotlinks-status', '✓ Hotlinks loaded from JavaScript format', 'success');
+              checkIfReadyToMerge();
+            } catch (err2) {
+              console.error('Parse error:', err2);
+              showStatus('hotlinks-status', '✗ Invalid format - paste the full hotlinks code from upload page', 'error');
+            }
+          }
+        }
+      });
+    });
+
+    function setupDropzone(dropzoneId, inputId, handler) {
+      const dropzone = document.getElementById(dropzoneId);
+      const input = document.getElementById(inputId);
+      
+      dropzone.addEventListener('click', () => input.click());
+      
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('bg-gray-100');
+      });
+      
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('bg-gray-100');
+      });
+      
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('bg-gray-100');
+        if (e.dataTransfer.files.length) {
+          handler(e.dataTransfer.files[0]);
+        }
+      });
+      
+      input.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+          handler(e.target.files[0]);
+        }
+      });
+    }
+
+    async function handleMetadataFile(file) {
+      if (!file.name.endsWith('.json')) {
+        showStatus('metadata-status', '✗ Please upload a .json file', 'error');
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        metadataData = JSON.parse(text);
+        showStatus('metadata-status', `✓ Loaded: ${file.name}`, 'success');
+        checkIfReadyToMerge();
+      } catch (err) {
+        showStatus('metadata-status', '✗ Invalid JSON format', 'error');
+        metadataData = null;
+      }
+    }
+
+    async function handleHotlinksFile(file) {
+      if (!file.name.endsWith('.json')) {
+        showStatus('hotlinks-status', '✗ Please upload a .json file', 'error');
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        hotlinksData = JSON.parse(text);
+        document.getElementById('hotlinks-paste').value = text;
+        showStatus('hotlinks-status', `✓ Loaded: ${file.name}`, 'success');
+        checkIfReadyToMerge();
+      } catch (err) {
+        showStatus('hotlinks-status', '✗ Invalid JSON format', 'error');
+        hotlinksData = null;
+      }
+    }
+
+    function showStatus(elementId, message, type) {
+      const element = document.getElementById(elementId);
+      element.classList.remove('hidden');
+      element.className = `mt-3 p-3 rounded-lg border-2 ${
+        type === 'success' ? 'bg-green-50 border-green-500 text-green-900' :
+        type === 'error' ? 'bg-red-50 border-red-500 text-red-900' :
+        'bg-blue-50 border-blue-500 text-blue-900'
+      }`;
+      element.innerHTML = `<p class="text-sm font-semibold">${message}</p>`;
+    }
+
+    function checkIfReadyToMerge() {
+      const mergeBtn = document.getElementById('merge-btn');
+      const validateBtn = document.getElementById('validate-btn');
+      
+      if (metadataData && hotlinksData) {
+        mergeBtn.disabled = false;
+        validateBtn.disabled = false;
+      } else {
+        mergeBtn.disabled = true;
+        validateBtn.disabled = true;
+      }
+    }
+
+    function mergeAndPreview() {
+      if (!metadataData || !hotlinksData) {
+        alert('Please upload both metadata and hotlinks first!');
+        return;
+      }
+
+      try {
+        // Parse track listing from metadata
+        const trackNames = metadataData.trackListing
+          .split('\n')
+          .map(t => t.trim())
+          .filter(t => t.length > 0);
+        
+        // Determine if it's a preorder
+        const releaseDate = new Date(metadataData.releaseDate || metadataData.officialReleaseDate);
+        const today = new Date();
+        const isPreorder = releaseDate > today;
+        
+        // Create track objects by matching previews with track names
+        const tracks = trackNames.map((trackName, i) => ({
+          id: `track-${String(i + 1).padStart(3, '0')}`,
+          title: trackName,
+          preview_url: hotlinksData.previews?.[i] || null,
+          track_number: i + 1
+        }));
+        
+        // Generate release ID
+        const releaseId = `release-${Date.now()}`;
+        
+        // Merge metadata with hotlinks
+        currentRelease = {
+          id: releaseId,
+          title: metadataData.releaseName || "Untitled Release",
+          artist: metadataData.artistName || "Unknown Artist",
+          label: metadataData.labelName || "",
+          artworkUrl: hotlinksData.artwork?.[0] || "",
+          releaseDate: metadataData.releaseDate || metadataData.officialReleaseDate || new Date().toISOString().split('T')[0],
+          isPreorder: isPreorder,
+          hasVinyl: metadataData.vinylRelease || false,
+          vinylStock: parseInt(metadataData.vinylRecordCount) || 0,
+          digitalPrice: parseFloat(metadataData.pricePerSale) || 7.99,
+          vinylPrice: parseFloat(metadataData.vinylPrice) || 0,
+          tracks: tracks,
+          fullTracks: hotlinksData.fullTracks || [],
+          metadata: hotlinksData.metadata || "",
+          extraNotes: metadataData.notes || "",
+          description: "",
+          // Additional metadata
+          genre: metadataData.genre || metadataData.customGenre || "",
+          trackPrice: parseFloat(metadataData.trackPrice) || 1.50,
+          hasLimitedEdition: metadataData.hasLimitedEdition || false,
+          limitedEditionType: metadataData.limitedEditionType || "",
+          limitedEditionPrice: parseFloat(metadataData.limitedEditionPrice) || 0,
+          limitedEditionDetails: metadataData.limitedEditionDetails || ""
+        };
+        
+        // Generate filename suggestion
+        const filename = `${currentRelease.artist}-${currentRelease.title}`
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+        document.getElementById('filename-input').value = filename;
+        
+        // Show preview section
+        document.getElementById('preview-section').classList.remove('hidden');
+        
+        // Render preview
+        renderPreview(currentRelease);
+        
+        // Show release info
+        showReleaseInfo(currentRelease);
+        
+        // Enable publish button
+        document.getElementById('publish-btn').disabled = false;
+        
+        // Scroll to preview
+        document.getElementById('preview-section').scrollIntoView({ behavior: 'smooth' });
+        
+      } catch (err) {
+        alert('Error merging data: ' + err.message);
+        console.error(err);
+      }
+    }
+
+    function renderPreview(release) {
+      const previewContainer = document.getElementById('release-preview');
+      
+      // Create ReleasePlate HTML
+      const html = `
+        <article class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 border-2 border-gray-200">
+          <div class="flex">
+            <div class="relative w-64 h-64 flex-shrink-0">
+              <img src="${release.artworkUrl}" alt="${release.title}" class="w-full h-full object-cover" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22%3E%3Crect fill=%22%23ddd%22 width=%22400%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22%3EImage Not Found%3C/text%3E%3C/svg%3E'">
+              
+              <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent flex gap-2 justify-center">
+                <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                  </svg>
+                  <span class="text-sm font-semibold">£${release.digitalPrice.toFixed(2)}</span>
+                </button>
+                
+                ${release.hasVinyl ? `
+                  <button class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                      <circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                      <circle cx="12" cy="12" r="2" fill="currentColor"/>
+                    </svg>
+                    <span class="text-sm font-semibold">£${release.vinylPrice?.toFixed(2)}</span>
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+            
+            <div class="flex-1 p-6">
+              <div class="mb-3">
+                <h3 class="text-2xl font-bold text-gray-900 mb-1">${release.title}</h3>
+                <p class="text-lg text-gray-600 mb-1">${release.artist}</p>
+                ${release.label ? `<p class="text-base text-gray-500 mb-2">${release.label}</p>` : ''}
+                
+                <div class="flex items-center gap-2 flex-wrap">
+                  ${release.isPreorder ? '<span class="inline-block bg-orange-100 text-orange-800 text-xs font-semibold px-2.5 py-1 rounded">Pre-order</span>' : ''}
+                  <span class="text-sm text-gray-500">${new Date(release.releaseDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                </div>
+              </div>
+              
+              ${release.extraNotes ? `<div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded"><p class="text-sm text-blue-900">${release.extraNotes}</p></div>` : ''}
+              
+              ${release.tracks.length > 0 ? `
+                <div class="space-y-2">
+                  ${release.tracks.slice(0, 3).map(track => `
+                    <div class="flex items-center gap-3 bg-gray-50 rounded p-2">
+                      <span class="text-sm font-semibold text-gray-500 w-6">${track.track_number}.</span>
+                      <p class="text-sm font-medium text-gray-900 flex-1">${track.title}</p>
+                      <button class="preview-track-btn flex items-center justify-center w-7 h-7 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors" data-url="${track.preview_url}">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                      </button>
+                    </div>
+                  `).join('')}
+                  ${release.tracks.length > 3 ? `<p class="text-sm text-gray-500 text-center">+ ${release.tracks.length - 3} more tracks</p>` : ''}
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </article>
+      `;
+      
+      previewContainer.innerHTML = html;
+      
+      // Add preview audio functionality
+      document.querySelectorAll('.preview-track-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const url = btn.getAttribute('data-url');
+          if (url && url !== 'null') {
+            const audio = new Audio(url);
+            audio.play().catch(err => {
+              console.error('Preview playback failed:', err);
+              alert('Could not play preview. Check if the URL is accessible.');
+            });
+          } else {
+            alert('No preview URL available for this track');
+          }
+        };
+      });
+    }
+
+    function showReleaseInfo(release) {
+      const infoContainer = document.getElementById('release-info');
+      
+      const info = `
+        <p><strong>ID:</strong> ${release.id}</p>
+        <p><strong>Artist:</strong> ${release.artist}</p>
+        <p><strong>Title:</strong> ${release.title}</p>
+        <p><strong>Label:</strong> ${release.label || 'N/A'}</p>
+        <p><strong>Genre:</strong> ${release.genre || 'N/A'}</p>
+        <p><strong>Release Date:</strong> ${release.releaseDate} ${release.isPreorder ? '(Pre-order)' : ''}</p>
+        <p><strong>Tracks:</strong> ${release.tracks.length}</p>
+        <p><strong>Digital Price:</strong> £${release.digitalPrice.toFixed(2)}</p>
+        <p><strong>Track Price:</strong> £${release.trackPrice?.toFixed(2) || 'N/A'}</p>
+        <p><strong>Has Vinyl:</strong> ${release.hasVinyl ? 'Yes' : 'No'}</p>
+        ${release.hasVinyl ? `<p><strong>Vinyl Price:</strong> £${release.vinylPrice.toFixed(2)}</p>` : ''}
+        ${release.hasVinyl ? `<p><strong>Vinyl Stock:</strong> ${release.vinylStock}</p>` : ''}
+        ${release.hasLimitedEdition ? `<p><strong>Limited Edition:</strong> ${release.limitedEditionType} - £${release.limitedEditionPrice.toFixed(2)}</p>` : ''}
+        <p><strong>Full Track Files:</strong> ${release.fullTracks?.length || 0} (${release.fullTracks?.length / 2 || 0} tracks × 2 formats)</p>
+        <p><strong>Metadata URL:</strong> ${release.metadata ? '✓' : '✗'}</p>
+      `;
+      
+      infoContainer.innerHTML = info;
+    }
+
+    async function validateLinks() {
+      if (!currentRelease) {
+        alert('Please merge data first!');
+        return;
+      }
+
+      const resultsContainer = document.getElementById('validation-results');
+      resultsContainer.classList.remove('hidden');
+      resultsContainer.innerHTML = '<p class="text-sm text-gray-600">🔍 Validating links...</p>';
+      
+      const results = [];
+      
+      // Check artwork
+      if (currentRelease.artworkUrl) {
+        const artworkStatus = await checkUrl(currentRelease.artworkUrl);
+        results.push({ type: 'Artwork', url: currentRelease.artworkUrl, status: artworkStatus });
+      }
+      
+      // Check previews
+      for (const track of currentRelease.tracks) {
+        if (track.preview_url) {
+          const status = await checkUrl(track.preview_url);
+          results.push({ type: `Preview: ${track.title}`, url: track.preview_url, status });
+        }
+      }
+      
+      // Check full tracks
+      if (currentRelease.fullTracks) {
+        for (const track of currentRelease.fullTracks) {
+          const status = await checkUrl(track.url);
+          results.push({ type: `Full Track (${track.format})`, url: track.url, status });
+        }
+      }
+      
+      // Check metadata
+      if (currentRelease.metadata) {
+        const status = await checkUrl(currentRelease.metadata);
+        results.push({ type: 'Metadata', url: currentRelease.metadata, status });
+      }
+      
+      // Display results
+      const successCount = results.filter(r => r.status === 'success').length;
+      const failCount = results.filter(r => r.status === 'error').length;
+      
+      let html = `
+        <div class="p-4 rounded-lg border-2 ${failCount === 0 ? 'bg-green-50 border-green-500' : 'bg-yellow-50 border-yellow-500'}">
+          <h3 class="font-bold mb-2">Validation Results: ${successCount}/${results.length} passed</h3>
+          <div class="space-y-1 text-xs max-h-64 overflow-y-auto">
+            ${results.map(r => `
+              <div class="flex items-center gap-2">
+                <span class="${r.status === 'success' ? 'text-green-600' : 'text-red-600'}">
+                  ${r.status === 'success' ? '✓' : '✗'}
+                </span>
+                <span class="font-medium min-w-[150px]">${r.type}:</span>
+                <span class="text-gray-600 truncate flex-1" title="${r.url}">${r.url}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      
+      resultsContainer.innerHTML = html;
+    }
+
+    async function checkUrl(url) {
+      try {
+        const response = await fetch(url, { method: 'HEAD' });
+        return response.ok ? 'success' : 'error';
+      } catch (err) {
+        return 'error';
+      }
+    }
+
+    function publishRelease() {
+      const filename = document.getElementById('filename-input').value.trim();
+      
+      if (!filename) {
+        alert('Please enter a filename!');
+        return;
+      }
+      
+      if (!currentRelease) {
+        alert('No release data loaded!');
+        return;
+      }
+      
+      // For now, just download the JSON (backend API needed for actual publishing)
+      downloadJSON();
+      
+      alert(`📦 Release JSON downloaded!\n\nTo publish:\n1. Save the file as: src/data/releases/${filename}.json\n2. Commit to your repository\n3. Deploy your site\n\nThe release will appear on your store!`);
+    }
+
+    function downloadJSON() {
+      if (!currentRelease) {
+        alert('No release data loaded!');
+        return;
+      }
+      
+      const filename = document.getElementById('filename-input').value.trim() || 'release';
+      const jsonString = JSON.stringify(currentRelease, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

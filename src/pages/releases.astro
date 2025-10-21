@@ -1,0 +1,148 @@
+---
+// src/pages/releases.astro
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import ReleasePlate from '../components/ReleasePlate.astro';
+import { getAllReleases } from '../lib/releases';
+const releases = await getAllReleases();
+---
+
+<Layout title="Fresh Wax - Releases">
+  <Header />
+  
+  <div class="flex min-h-screen bg-gray-50">
+    
+    <!-- Left Sidebar Navigation -->
+    <aside class="w-64 bg-white border-r border-gray-200 sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto flex-shrink-0 hidden lg:block">
+      <div class="p-6">
+        <h2 class="text-2xl font-black text-gray-900 mb-4 tracking-tight uppercase" style="font-family: 'Impact', 'Arial Black', sans-serif; letter-spacing: 0.05em;">Releases</h2>
+        <p class="text-sm text-gray-600 mb-6">{releases.length} release{releases.length !== 1 ? 's' : ''}</p>
+        
+        <nav class="space-y-1">
+          {releases.map((release) => (
+            <a 
+              href={`#${release.id}`}
+              class="release-nav-link flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors group"
+              data-release-id={release.id}
+            >
+              <img 
+                src={release.artworkUrl} 
+                alt={`${release.title} by ${release.artist}`}
+                class="w-12 h-12 object-cover rounded shadow-sm flex-shrink-0"
+              />
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-600">
+                  {release.title}
+                </div>
+                <div class="text-xs text-gray-600 truncate">
+                  {release.artist}
+                </div>
+              </div>
+            </a>
+          ))}
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 px-6 sm:px-8 md:px-12 lg:px-20 xl:px-24 py-8 sm:py-12">
+      <div class="max-w-4xl mx-auto">
+        <header class="mb-8 text-center lg:text-left">
+          <h1 class="text-3xl sm:text-4xl font-black text-gray-900 mb-2 tracking-tight uppercase" style="font-family: 'Impact', 'Arial Black', sans-serif; letter-spacing: 0.05em;">Releases</h1>
+          <p class="text-gray-600">Fresh jungle beats and vinyl releases</p>
+        </header>
+
+        <div class="space-y-6">
+          {releases.map((release) => (
+            <div id={release.id} class="scroll-mt-6">
+              <ReleasePlate {...release} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </main>
+    </div>
+  </div>
+
+  <Footer />
+
+  <script>
+    // Smooth scroll behavior
+    document.querySelectorAll('.release-nav-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetId = link.getAttribute('href').substring(1);
+        const targetElement = document.getElementById(targetId);
+        
+        if (targetElement) {
+          targetElement.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+
+    // Highlight active release in sidebar as user scrolls
+    const observerOptions = {
+      root: null,
+      rootMargin: '-20% 0px -75% 0px',
+      threshold: 0
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          // Remove active class from all links
+          document.querySelectorAll('.release-nav-link').forEach(link => {
+            link.classList.remove('bg-blue-50', 'border-l-4', 'border-blue-500');
+          });
+          
+          // Add active class to current link
+          const activeLink = document.querySelector(`[data-release-id="${entry.target.id}"]`);
+          if (activeLink) {
+            activeLink.classList.add('bg-blue-50', 'border-l-4', 'border-blue-500');
+          }
+        }
+      });
+    }, observerOptions);
+
+    // Observe all release sections
+    document.querySelectorAll('[id]').forEach(section => {
+      if (section.id && section.id !== 'cart') {
+        observer.observe(section);
+      }
+    });
+  </script>
+
+  <style>
+    /* Custom scrollbar for sidebar */
+    aside::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    aside::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    
+    aside::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    
+    aside::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Smooth scroll behavior */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Ensure scroll target is visible under any fixed headers */
+    .scroll-mt-6 {
+      scroll-margin-top: 1.5rem;
+    }
+  </style>
+</Layout>

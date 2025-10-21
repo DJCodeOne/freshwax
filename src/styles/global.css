@@ -1,0 +1,180 @@
+/* src/styles/global.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Release Plate Styles */
+.release-plate {
+  @apply bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 w-48;
+}
+
+.release-plate-layout {
+  @apply flex flex-col;
+}
+
+.release-plate-artwork {
+  @apply w-48 flex-shrink-0 relative;
+}
+
+.release-plate-artwork img {
+  @apply w-48 h-48 object-cover hover:opacity-90 transition-opacity;
+}
+
+.purchase-buttons-overlay {
+  @apply absolute top-2 right-2 flex flex-col gap-2;
+}
+
+.release-plate-content {
+  @apply p-3;
+}
+
+.release-plate-header {
+  @apply mb-2;
+}
+
+.release-plate-title {
+  @apply text-base font-bold text-gray-900 hover:text-blue-600 transition-colors;
+}
+
+.release-plate-artist {
+  @apply text-sm text-gray-600 mt-1;
+}
+
+.release-plate-meta {
+  @apply flex items-center gap-2 mt-2;
+}
+
+.release-plate-description {
+  @apply text-gray-700 text-xs mb-2 line-clamp-2;
+}
+
+/* Badges */
+.badge-preorder {
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800;
+}
+
+.badge-date {
+  @apply text-xs text-gray-500;
+}
+
+/* Track Previews */
+.track-preview-section {
+  @apply mb-2;
+}
+
+.track-preview-toggle {
+  @apply flex items-center justify-between w-full px-2 py-1.5 text-left text-xs font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded transition-colors cursor-pointer;
+}
+
+.track-preview-toggle svg {
+  @apply w-4 h-4 transition-transform duration-200;
+}
+
+.track-preview-toggle[aria-expanded="true"] svg {
+  @apply rotate-180;
+}
+
+.track-preview-list {
+  @apply mt-2 space-y-2 pl-2;
+}
+
+.track-preview-item {
+  @apply flex items-center gap-3;
+}
+
+.track-preview-number {
+  @apply text-xs text-gray-400 w-6;
+}
+
+.track-preview-audio {
+  @apply flex-1 h-8;
+}
+
+.track-preview-title {
+  @apply text-sm text-gray-500 flex-1;
+}
+
+/* Extra Notes */
+.release-notes {
+  @apply mb-2 p-2 bg-gray-50 rounded border-l-2 border-gray-300;
+}
+
+.release-notes-text {
+  @apply text-xs text-gray-700 italic;
+}
+
+/* Purchase Buttons */
+.purchase-options {
+  @apply hidden;
+}
+
+.btn-digital,
+.btn-vinyl,
+.btn-vinyl-sold-out {
+  @apply w-10 h-10 rounded-full font-medium transition-colors shadow-md hover:shadow-lg flex items-center justify-center p-0 backdrop-blur-sm bg-opacity-90;
+}
+
+.btn-digital {
+  @apply bg-blue-600 text-white hover:bg-blue-700;
+}
+
+.btn-vinyl {
+  @apply bg-green-600 text-white hover:bg-green-700;
+}
+
+.btn-vinyl-sold-out {
+  @apply bg-gray-400 text-white cursor-not-allowed;
+}
+
+.btn-view-details {
+  @apply px-6 py-2.5 rounded-lg font-medium border-2 border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors flex items-center gap-2;
+}
+
+/* Icons */
+.icon-sm {
+  @apply w-4 h-4;
+}
+
+.icon-md {
+  @apply w-5 h-5;
+}
+
+/* Stock Warning */
+.stock-warning {
+  @apply text-xs text-orange-600 mt-2 font-medium;
+}
+
+/* Audio player custom styling */
+@layer base {
+  audio::-webkit-media-controls-panel {
+    background-color: #f3f4f6;
+  }
+
+  audio::-webkit-media-controls-current-time-display,
+  audio::-webkit-media-controls-time-remaining-display {
+    font-size: 11px;
+  }
+}
+
+/* Utility classes */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Header Navigation Styles */
+.nav-link {
+  @apply text-gray-700 hover:text-gray-900 transition-colors font-medium;
+}
+
+.nav-button-new-releases {
+  @apply relative px-3 py-1 rounded-full bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold text-sm hover:shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center gap-1;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+.nav-button-new-releases:hover {
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
+}
