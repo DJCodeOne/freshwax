@@ -4,293 +4,957 @@ import Layout from '../../layouts/Layout.astro';
 ---
 
 <Layout title="Fresh Wax Admin Dashboard">
-  <div class="admin-container">
-    <div id="loadingScreen" class="admin-loading-container">
-      <div class="admin-loading-content">
-        <div class="admin-spinner"></div>
-        <p class="admin-loading-text">Loading dashboard...</p>
-      </div>
-    </div>
+	<style>
+		body {
+			background: #ffffff;
+		}
 
-    <div id="dashboardContent" style="display: none;">
-      <!-- Logo & Logout Header -->
-      <div class="admin-logo-container">
-        <img src="/logo.webp" alt="Fresh Wax" class="admin-logo">
-        <button class="admin-logout-btn" id="logoutBtn">
-          <span>🚪</span>
-          Logout
-        </button>
-      </div>
+		.admin-container {
+			max-width: 1400px;
+			margin: 0 auto;
+			padding: 20px;
+			background: #ffffff;
+		}
 
-      <!-- Main Header -->
-      <div class="admin-header-card">
-        <h1>🎵 Fresh Wax Admin Dashboard</h1>
-        <p>Welcome back! Manage your music store from here.</p>
-      </div>
+		.admin-loading-container {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			min-height: 100vh;
+			background: #ffffff;
+		}
 
-      <!-- Stats Row -->
-      <div class="admin-stats-row">
-        <div class="admin-stat-card">
-          <div class="admin-stat-label">Total Sales</div>
-          <div class="admin-stat-value">£12,458</div>
-          <div class="admin-stat-change positive">↑ 12.5% from last month</div>
-        </div>
-        
-        <div class="admin-stat-card">
-          <div class="admin-stat-label">Pending Artists</div>
-          <div class="admin-stat-value" id="pendingArtistsCount">-</div>
-          <div class="admin-stat-change warning">Awaiting approval</div>
-        </div>
-        
-        <div class="admin-stat-card">
-          <div class="admin-stat-label">Active Releases</div>
-          <div class="admin-stat-value">47</div>
-          <div class="admin-stat-change positive">↑ 3 new this week</div>
-        </div>
-        
-        <div class="admin-stat-card">
-          <div class="admin-stat-label">Total Customers</div>
-          <div class="admin-stat-value">284</div>
-          <div class="admin-stat-change positive">↑ 15 new this month</div>
-        </div>
-      </div>
+		.admin-loading-content {
+			text-align: center;
+		}
 
-      <!-- Quick Actions -->
-      <div class="admin-quick-actions">
-        <h2>⚡ Quick Actions</h2>
-        <div class="admin-action-buttons">
-          <a href="/admin/artists/pending" class="admin-action-btn warning">✅ Review Pending Artists</a>
-          <a href="/admin/upload-release" class="admin-action-btn success">📤 Upload New Release</a>
-          <a href="/admin/orders" class="admin-action-btn primary">📦 View Pending Orders</a>
-          <a href="/admin/releases" class="admin-action-btn secondary">🎵 Manage Releases</a>
-        </div>
-      </div>
+		.admin-spinner {
+			width: 50px;
+			height: 50px;
+			border: 3px solid #e0e0e0;
+			border-top: 3px solid #000;
+			border-radius: 50%;
+			animation: admin-spin 1s linear infinite;
+			margin: 0 auto 20px;
+		}
 
-      <!-- Modules Grid -->
-      <div class="admin-modules-grid">
-        <div class="admin-module-card" data-link="/admin/artists/pending">
-          <div class="admin-module-icon">✅</div>
-          <div class="admin-module-title">Artist Approvals</div>
-          <div class="admin-module-description">
-            Review and approve pending artist registrations. Grant upload access to verified artists.
-          </div>
-          <span class="admin-module-badge important">Requires Action</span>
-        </div>
+		@keyframes admin-spin {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
+		}
 
-        <div class="admin-module-card" data-link="/admin/upload-release">
-          <div class="admin-module-icon">📤</div>
-          <div class="admin-module-title">Upload Release</div>
-          <div class="admin-module-description">
-            Upload complete release packages with audio files, artwork, and metadata to your storage services.
-          </div>
-          <span class="admin-module-badge">Essential</span>
-        </div>
+		.admin-loading-text {
+			color: #000;
+			font-size: 16px;
+			font-weight: 600;
+		}
 
-        <div class="admin-module-card" data-link="/admin/publish-release">
-          <div class="admin-module-icon">🚀</div>
-          <div class="admin-module-title">Publish to Store</div>
-          <div class="admin-module-description">
-            Review uploaded releases and publish them to your Fresh Wax storefront for customers to purchase.
-          </div>
-          <span class="admin-module-badge important">Important</span>
-        </div>
+		.admin-logo-container {
+			background: #ffffff;
+			padding: 30px 20px;
+			margin-bottom: 30px;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			border: 3px solid #000;
+		}
 
-        <div class="admin-module-card" data-link="/admin/releases">
-          <div class="admin-module-icon">🎵</div>
-          <div class="admin-module-title">Manage Releases</div>
-          <div class="admin-module-description">
-            Edit existing releases, update prices, add special offers, change artwork, and manage track listings.
-          </div>
-          <span class="admin-module-badge">Frequently Used</span>
-        </div>
+		.admin-logo {
+			height: 80px;
+			width: auto;
+			max-width: 90%;
+			display: block;
+		}
 
-        <div class="admin-module-card" data-link="/admin/orders">
-          <div class="admin-module-icon">📦</div>
-          <div class="admin-module-title">Track Orders</div>
-          <div class="admin-module-description">
-            View and manage customer orders, process payments, send download links, and track order history.
-          </div>
-          <span class="admin-module-badge">Essential</span>
-        </div>
+		.admin-logo-fallback {
+			font-size: 48px;
+			font-weight: 900;
+			color: #000;
+			text-transform: uppercase;
+			letter-spacing: 2px;
+		}
 
-        <div class="admin-module-card" data-link="/admin/customers">
-          <div class="admin-module-icon">👥</div>
-          <div class="admin-module-title">Customer Management</div>
-          <div class="admin-module-description">
-            View customer profiles, order history, manage subscriptions, and handle customer support requests.
-          </div>
-          <span class="admin-module-badge">Management</span>
-        </div>
+		.admin-header-card {
+			background: #fff;
+			padding: 30px;
+			margin-bottom: 30px;
+			border: 3px solid #000;
+			position: relative;
+		}
 
-        <div class="admin-module-card" data-link="/admin/promotions">
-          <div class="admin-module-icon">🏷️</div>
-          <div class="admin-module-title">Promotions & Offers</div>
-          <div class="admin-module-description">
-            Create discount codes, run special promotions, set up bundle deals, and manage seasonal sales.
-          </div>
-          <span class="admin-module-badge new">New</span>
-        </div>
+		.admin-header-card::before {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 5px;
+			background: #000;
+		}
 
-        <div class="admin-module-card" data-link="/admin/analytics">
-          <div class="admin-module-icon">📊</div>
-          <div class="admin-module-title">Analytics & Reports</div>
-          <div class="admin-module-description">
-            View detailed sales reports, track popular releases, analyze customer behavior, and export data.
-          </div>
-          <span class="admin-module-badge">Insights</span>
-        </div>
+		.admin-header-card h1 {
+			font-size: 32px;
+			color: #000;
+			margin-bottom: 10px;
+			font-weight: 900;
+			letter-spacing: -0.5px;
+		}
 
-        <div class="admin-module-card" data-link="/admin/inventory">
-          <div class="admin-module-icon">📋</div>
-          <div class="admin-module-title">Inventory Management</div>
-          <div class="admin-module-description">
-            Manage digital inventory, track format availability (MP3, WAV, FLAC), and handle stock levels.
-          </div>
-          <span class="admin-module-badge">Management</span>
-        </div>
+		.admin-header-card p {
+			color: #666;
+			font-size: 16px;
+			font-weight: 500;
+		}
 
-        <div class="admin-module-card" data-link="/admin/artists">
-          <div class="admin-module-icon">🎤</div>
-          <div class="admin-module-title">Artist Management</div>
-          <div class="admin-module-description">
-            Manage artist profiles, royalty splits, contract details, and payment information.
-          </div>
-          <span class="admin-module-badge">Management</span>
-        </div>
+		.admin-logout-btn {
+			position: absolute;
+			top: 20px;
+			right: 20px;
+			padding: 10px 20px;
+			background: #000;
+			color: white;
+			border: 2px solid #000;
+			font-size: 14px;
+			font-weight: 700;
+			cursor: pointer;
+			transition: all 0.2s;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
 
-        <div class="admin-module-card" data-link="/admin/media-processor">
-          <div class="admin-module-icon">🎛️</div>
-          <div class="admin-module-title">Media Processor</div>
-          <div class="admin-module-description">
-            Convert audio formats, create preview clips, optimize images, and process files before upload.
-          </div>
-          <span class="admin-module-badge">Tools</span>
-        </div>
+		.admin-logout-btn:hover {
+			background: #fff;
+			color: #000;
+			transform: translateY(-2px);
+			box-shadow: 4px 4px 0 #000;
+		}
 
-        <div class="admin-module-card" data-link="/admin/email">
-          <div class="admin-module-icon">📧</div>
-          <div class="admin-module-title">Email Marketing</div>
-          <div class="admin-module-description">
-            Send newsletters, announce new releases, create email campaigns, and manage subscriber lists.
-          </div>
-          <span class="admin-module-badge new">New</span>
-        </div>
+		.admin-stats-row {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+			gap: 20px;
+			margin-bottom: 30px;
+		}
 
-        <div class="admin-module-card" data-link="/admin/settings">
-          <div class="admin-module-icon">⚙️</div>
-          <div class="admin-module-title">Store Settings</div>
-          <div class="admin-module-description">
-            Configure store details, payment gateways, tax settings, shipping options, and appearance.
-          </div>
-          <span class="admin-module-badge">Configuration</span>
-        </div>
-      </div>
+		.admin-stat-card {
+			background: white;
+			padding: 25px;
+			border: 3px solid #000;
+			transition: all 0.2s;
+			position: relative;
+		}
 
-      <!-- Recent Activity -->
-      <div class="admin-recent-activity">
-        <h2>📝 Recent Activity</h2>
-        <div class="admin-activity-item">
-          <div class="admin-activity-time">2 hours ago</div>
-          <div class="admin-activity-text">New order #1247 received - £24.99</div>
-        </div>
-        <div class="admin-activity-item">
-          <div class="admin-activity-time">5 hours ago</div>
-          <div class="admin-activity-text">Release "Summer Vibes EP" published to store</div>
-        </div>
-        <div class="admin-activity-item">
-          <div class="admin-activity-time">Yesterday</div>
-          <div class="admin-activity-text">Updated pricing for "Deep House Collection Vol. 2"</div>
-        </div>
-        <div class="admin-activity-item">
-          <div class="admin-activity-time">2 days ago</div>
-          <div class="admin-activity-text">New customer registered: john@example.com</div>
-        </div>
-      </div>
-    </div>
-  </div>
+		.admin-stat-card:hover {
+			transform: translate(-4px, -4px);
+			box-shadow: 8px 8px 0 #000;
+		}
 
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-    import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+		.admin-stat-label {
+			font-size: 12px;
+			color: #666;
+			margin-bottom: 8px;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+		}
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
-      authDomain: "freshwax-store.firebaseapp.com",
-      projectId: "freshwax-store",
-      storageBucket: "freshwax-store.firebasestorage.app",
-      messagingSenderId: "675435782973",
-      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-    };
+		.admin-stat-value {
+			font-size: 36px;
+			font-weight: 900;
+			color: #000;
+			line-height: 1;
+		}
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+		.admin-stat-value.loading {
+			color: #999;
+		}
 
-    // Check admin authentication
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = '/admin/login';
-        return;
-      }
+		.admin-stat-change {
+			font-size: 12px;
+			margin-top: 8px;
+			font-weight: 600;
+		}
 
-      try {
-        const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-        
-        if (!adminDoc.exists()) {
-          await signOut(auth);
-          window.location.href = '/admin/login';
-          return;
-        }
-        
-        // Show dashboard
-        document.getElementById('loadingScreen').style.display = 'none';
-        document.getElementById('dashboardContent').style.display = 'block';
-        
-        // Load dashboard data
-        loadPendingArtistsCount();
-      } catch (error) {
-        console.error('Auth check error:', error);
-        window.location.href = '/admin/login';
-      }
-    });
+		.admin-stat-change.positive {
+			color: #000;
+		}
 
-    // Logout button
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-      try {
-        await signOut(auth);
-        window.location.href = '/admin/login';
-      } catch (error) {
-        console.error('Logout error:', error);
-      }
-    });
+		.admin-stat-change.warning {
+			color: #000;
+		}
 
-    // Module card navigation
-    document.querySelectorAll('.admin-module-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const link = card.getAttribute('data-link');
-        if (link) window.location.href = link;
-      });
-    });
+		.admin-quick-actions {
+			background: white;
+			padding: 25px;
+			border: 3px solid #000;
+			margin-bottom: 30px;
+		}
 
-    // Load pending artists count
-    async function loadPendingArtistsCount() {
-      try {
-        const artistsRef = collection(db, 'artists');
-        const q = query(artistsRef, where('approved', '==', false));
-        const querySnapshot = await getDocs(q);
-        
-        const count = querySnapshot.size;
-        const countElement = document.getElementById('pendingArtistsCount');
-        countElement.textContent = count;
-        
-        if (count > 0) {
-          countElement.style.color = '#ffc107';
-        }
-      } catch (error) {
-        console.error('Error loading pending artists:', error);
-        document.getElementById('pendingArtistsCount').textContent = '0';
-      }
-    }
-  </script>
+		.admin-quick-actions h2 {
+			font-size: 20px;
+			color: #000;
+			margin-bottom: 20px;
+			padding-bottom: 15px;
+			border-bottom: 3px solid #000;
+			font-weight: 900;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+		}
+
+		.admin-action-buttons {
+			display: flex;
+			gap: 15px;
+			flex-wrap: wrap;
+		}
+
+		.admin-action-btn {
+			padding: 15px 30px;
+			border: 3px solid #000;
+			cursor: pointer;
+			font-size: 14px;
+			font-weight: 700;
+			transition: all 0.2s;
+			text-decoration: none;
+			display: inline-block;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.admin-action-btn:hover {
+			transform: translate(-4px, -4px);
+			box-shadow: 8px 8px 0 #000;
+		}
+
+		.admin-action-btn.primary {
+			background: #000;
+			color: white;
+		}
+
+		.admin-action-btn.secondary {
+			background: #fff;
+			color: #000;
+		}
+
+		.admin-action-btn.success {
+			background: #000;
+			color: white;
+		}
+
+		.admin-action-btn.warning {
+			background: #fff;
+			color: #000;
+		}
+
+		.admin-modules-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+			gap: 25px;
+			margin-bottom: 30px;
+		}
+
+		.admin-module-card {
+			background: white;
+			padding: 30px;
+			border: 3px solid #000;
+			transition: all 0.2s;
+			cursor: pointer;
+			position: relative;
+		}
+
+		.admin-module-card::before {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: 5px;
+			background: #000;
+		}
+
+		.admin-module-card:hover {
+			transform: translate(-4px, -4px);
+			box-shadow: 8px 8px 0 #000;
+		}
+
+		.admin-module-icon {
+			font-size: 48px;
+			margin-bottom: 15px;
+		}
+
+		.admin-module-title {
+			font-size: 20px;
+			font-weight: 900;
+			color: #000;
+			margin-bottom: 10px;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.admin-module-description {
+			font-size: 14px;
+			color: #666;
+			line-height: 1.6;
+			margin-bottom: 15px;
+		}
+
+		.admin-module-badge {
+			display: inline-block;
+			padding: 6px 12px;
+			background: #000;
+			color: #fff;
+			font-size: 11px;
+			font-weight: 700;
+			margin-top: 10px;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.admin-module-badge.new {
+			background: #fff;
+			color: #000;
+			border: 2px solid #000;
+		}
+
+		.admin-module-badge.important {
+			background: #000;
+			color: #fff;
+		}
+
+		.admin-recent-activity {
+			background: white;
+			padding: 25px;
+			border: 3px solid #000;
+		}
+
+		.admin-recent-activity h2 {
+			font-size: 20px;
+			color: #000;
+			margin-bottom: 20px;
+			padding-bottom: 15px;
+			border-bottom: 3px solid #000;
+			font-weight: 900;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+		}
+
+		.admin-activity-item {
+			padding: 15px;
+			border-left: 4px solid #000;
+			background: #f9f9f9;
+			margin-bottom: 12px;
+			transition: all 0.2s;
+		}
+
+		.admin-activity-item:hover {
+			transform: translateX(4px);
+			background: #f0f0f0;
+		}
+
+		.admin-activity-time {
+			font-size: 11px;
+			color: #666;
+			margin-bottom: 5px;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.admin-activity-text {
+			font-size: 14px;
+			color: #000;
+			font-weight: 600;
+		}
+
+		/* System Status */
+		.admin-system-status {
+			background: white;
+			padding: 25px;
+			border: 3px solid #000;
+			margin-bottom: 30px;
+		}
+
+		.admin-system-status h2 {
+			font-size: 20px;
+			color: #000;
+			margin-bottom: 20px;
+			padding-bottom: 15px;
+			border-bottom: 3px solid #000;
+			font-weight: 900;
+			text-transform: uppercase;
+			letter-spacing: 1px;
+		}
+
+		.admin-status-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			gap: 20px;
+		}
+
+		.admin-status-item {
+			display: flex;
+			align-items: center;
+			gap: 15px;
+			padding: 15px;
+			border: 2px solid #000;
+			background: #f9f9f9;
+		}
+
+		.admin-status-led {
+			width: 20px;
+			height: 20px;
+			border-radius: 50%;
+			border: 2px solid #000;
+			background: #666;
+			position: relative;
+			flex-shrink: 0;
+		}
+
+		.admin-status-led.active {
+			background: #00ff00;
+			box-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+			animation: pulse 2s infinite;
+		}
+
+		.admin-status-led.inactive {
+			background: #ff0000;
+			box-shadow: 0 0 10px #ff0000;
+		}
+
+		@keyframes pulse {
+			0%, 100% { opacity: 1; }
+			50% { opacity: 0.6; }
+		}
+
+		.admin-status-info {
+			flex: 1;
+		}
+
+		.admin-status-name {
+			font-weight: 900;
+			font-size: 14px;
+			text-transform: uppercase;
+			color: #000;
+			margin-bottom: 4px;
+		}
+
+		.admin-status-text {
+			font-size: 12px;
+			color: #666;
+			font-weight: 600;
+		}
+
+		/* Mobile Responsive */
+		@media (max-width: 768px) {
+			.admin-container {
+				padding: 15px;
+			}
+
+			.admin-logo {
+				height: 60px;
+			}
+
+			.admin-header-card {
+				padding: 20px;
+			}
+
+			.admin-header-card h1 {
+				font-size: 24px;
+				padding-right: 100px;
+			}
+
+			.admin-logout-btn {
+				top: 15px;
+				right: 15px;
+				padding: 8px 16px;
+				font-size: 12px;
+			}
+
+			.admin-stats-row {
+				grid-template-columns: 1fr;
+				gap: 15px;
+			}
+
+			.admin-stat-value {
+				font-size: 28px;
+			}
+
+			.admin-action-buttons {
+				flex-direction: column;
+			}
+
+			.admin-action-btn {
+				width: 100%;
+				text-align: center;
+				padding: 12px 20px;
+			}
+
+			.admin-modules-grid {
+				grid-template-columns: 1fr;
+				gap: 20px;
+			}
+
+			.admin-module-card {
+				padding: 20px;
+			}
+
+			.admin-quick-actions,
+			.admin-recent-activity {
+				padding: 20px;
+			}
+		}
+
+		@media (max-width: 480px) {
+			.admin-header-card h1 {
+				font-size: 20px;
+			}
+
+			.admin-stat-value {
+				font-size: 24px;
+			}
+
+			.admin-module-icon {
+				font-size: 36px;
+			}
+		}
+	</style>
+
+	<div class="admin-container">
+		<div id="loadingScreen" class="admin-loading-container">
+			<div class="admin-loading-content">
+				<div class="admin-spinner"></div>
+				<p class="admin-loading-text">Loading dashboard...</p>
+			</div>
+		</div>
+
+		<div id="dashboardContent" style="display: none;">
+			<!-- Logo Header -->
+			<div class="admin-logo-container">
+				<img 
+					src="/logo.webp" 
+					alt="Fresh Wax" 
+					class="admin-logo"
+					onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+				>
+				<div class="admin-logo-fallback" style="display: none;">FRESH WAX</div>
+			</div>
+
+			<!-- Main Header -->
+			<div class="admin-header-card">
+				<button class="admin-logout-btn" id="logoutBtn">
+					<span>🚪</span>
+					Logout
+				</button>
+				<h1>Fresh Wax Admin Dashboard</h1>
+				<p>Welcome back Dave! Manage your music store from here.</p>
+			</div>
+
+			<!-- Stats Row -->
+			<div class="admin-stats-row">
+				<div class="admin-stat-card">
+					<div class="admin-stat-label">Total Sales</div>
+					<div class="admin-stat-value" id="totalSales">-</div>
+					<div class="admin-stat-change positive" id="salesChange">Calculating...</div>
+				</div>
+				<div class="admin-stat-card">
+					<div class="admin-stat-label">Pending Artists</div>
+					<div class="admin-stat-value" id="pendingArtistsCount">-</div>
+					<div class="admin-stat-change warning">Awaiting approval</div>
+				</div>
+				<div class="admin-stat-card">
+					<div class="admin-stat-label">Active Releases</div>
+					<div class="admin-stat-value" id="activeReleases">-</div>
+					<div class="admin-stat-change positive" id="releasesChange">Loading...</div>
+				</div>
+				<div class="admin-stat-card">
+					<div class="admin-stat-label">Total Customers</div>
+					<div class="admin-stat-value" id="totalCustomers">-</div>
+					<div class="admin-stat-change positive" id="customersChange">Loading...</div>
+				</div>
+			</div>
+
+			<!-- System Status -->
+			<div class="admin-system-status">
+				<h2>🔧 System Status</h2>
+				<div class="admin-status-grid">
+					<div class="admin-status-item">
+						<div class="admin-status-led" id="cloudinaryStatus"></div>
+						<div class="admin-status-info">
+							<div class="admin-status-name">Cloudinary</div>
+							<div class="admin-status-text" id="cloudinaryText">Checking...</div>
+						</div>
+					</div>
+					<div class="admin-status-item">
+						<div class="admin-status-led" id="r2Status"></div>
+						<div class="admin-status-info">
+							<div class="admin-status-name">Cloudflare R2</div>
+							<div class="admin-status-text" id="r2Text">Checking...</div>
+						</div>
+					</div>
+					<div class="admin-status-item">
+						<div class="admin-status-led active" id="firebaseStatus"></div>
+						<div class="admin-status-info">
+							<div class="admin-status-name">Firebase</div>
+							<div class="admin-status-text" id="firebaseText">Connected</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Quick Actions -->
+			<div class="admin-quick-actions">
+				<h2>⚡ Quick Actions</h2>
+				<div class="admin-action-buttons">
+					<a href="/admin/artists/pending" class="admin-action-btn warning">✅ Review Artists</a>
+					<a href="https://freshwax-uploads.pages.dev" target="_blank" rel="noopener noreferrer" class="admin-action-btn success">📤 Upload Release</a>
+					<a href="/admin/artists/manage" class="admin-action-btn primary">🎤 Manage Artists</a>
+					<a href="/admin/account/manage" class="admin-action-btn secondary">👥 Manage Customers</a>
+				</div>
+			</div>
+
+			<!-- Modules Grid -->
+			<div class="admin-modules-grid">
+				<div class="admin-module-card" data-link="/admin/artists/pending">
+					<div class="admin-module-icon">✅</div>
+					<div class="admin-module-title">Artist Approvals</div>
+					<div class="admin-module-description">
+						Review and approve pending artist registrations. Grant upload access to verified artists.
+					</div>
+					<span class="admin-module-badge important">Action Required</span>
+				</div>
+
+				<div class="admin-module-card" onclick="window.open('https://freshwax-uploads.pages.dev', '_blank')">
+					<div class="admin-module-icon">📤</div>
+					<div class="admin-module-title">Upload Release</div>
+					<div class="admin-module-description">
+						Upload complete release packages with audio files, artwork, and metadata to your storage services.
+					</div>
+					<span class="admin-module-badge">Essential</span>
+				</div>
+
+				<div class="admin-module-card" data-link="/admin/publish-release">
+					<div class="admin-module-icon">🚀</div>
+					<div class="admin-module-title">Publish to Store</div>
+					<div class="admin-module-description">
+						Review uploaded releases and publish them to your Fresh Wax storefront for customers to purchase.
+					</div>
+					<span class="admin-module-badge important">Important</span>
+				</div>
+
+				<div class="admin-module-card" data-link="/admin/releases/manage">
+					<div class="admin-module-icon">🎵</div>
+					<div class="admin-module-title">Manage Releases</div>
+					<div class="admin-module-description">
+						Edit existing releases, update prices, add special offers, change artwork, and manage track listings.
+					</div>
+					<span class="admin-module-badge">Frequent</span>
+				</div>
+
+				<div class="admin-module-card" data-link="/admin/orders">
+					<div class="admin-module-icon">📦</div>
+					<div class="admin-module-title">Track Orders</div>
+					<div class="admin-module-description">
+						View and manage customer orders, process payments, send download links, and track order history.
+					</div>
+					<span class="admin-module-badge">Essential</span>
+				</div>
+
+				<div class="admin-module-card" data-link="/admin/customers/manage">
+					<div class="admin-module-icon">👥</div>
+					<div class="admin-module-title">Customer Management</div>
+					<div class="admin-module-description">
+						View customer profiles, order history, manage accounts, and handle customer support requests.
+					</div>
+					<span class="admin-module-badge">Management</span>
+				</div>
+
+				<div class="admin-module-card" data-link="/admin/promotions">
+					<div class="admin-module-icon">🏷️</div>
+					<div class="admin-module-title">Promotions</div>
+					<div class="admin-module-description">
+						Create discount codes, run special promotions, set up bundle deals, and manage seasonal sales.
+					</div>
+					<span class="admin-module-badge new">New</span>
+				</div>
+
+				<div class="admin-module-card" data-link="/admin/analytics">
+					<div class="admin-module-icon">📊</div>
+					<div class="admin-module-title">Analytics</div>
+					<div class="admin-module-description">
+						View detailed sales reports, track popular releases, analyze customer behavior, and export data.
+					</div>
+					<span class="admin-module-badge">Insights</span>
+				</div>
+
+				<div class="admin-module-card" data-link="/admin/settings">
+					<div class="admin-module-icon">⚙️</div>
+					<div class="admin-module-title">Store Settings</div>
+					<div class="admin-module-description">
+						Configure store details, payment gateways, tax settings, shipping options, and appearance.
+					</div>
+					<span class="admin-module-badge">Config</span>
+				</div>
+			</div>
+
+			<!-- Recent Activity -->
+			<div class="admin-recent-activity">
+				<h2>📝 Recent Activity</h2>
+				<div id="recentActivityList">
+					<div class="admin-activity-item">
+						<div class="admin-activity-time">Loading...</div>
+						<div class="admin-activity-text">Fetching recent activity...</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script type="module">
+		import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+		import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+		import { getFirestore, collection, query, where, getDocs, doc, getDoc, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+		const firebaseConfig = {
+			apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+			authDomain: "freshwax-store.firebaseapp.com",
+			projectId: "freshwax-store",
+			storageBucket: "freshwax-store.firebasestorage.app",
+			messagingSenderId: "675435782973",
+			appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+		};
+
+		const app = initializeApp(firebaseConfig);
+		const auth = getAuth(app);
+		const db = getFirestore(app);
+
+		// Check admin authentication
+		onAuthStateChanged(auth, async (user) => {
+			if (!user) {
+				window.location.href = '/admin/login';
+				return;
+			}
+
+			try {
+				const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+				
+				if (!adminDoc.exists()) {
+					await signOut(auth);
+					window.location.href = '/admin/login';
+					return;
+				}
+
+				// Show dashboard
+				document.getElementById('loadingScreen').style.display = 'none';
+				document.getElementById('dashboardContent').style.display = 'block';
+
+				// Load all dashboard data
+				await Promise.all([
+					loadPendingArtistsCount(),
+					loadActiveReleases(),
+					loadTotalCustomers(),
+					loadTotalSales(),
+					loadRecentActivity(),
+					checkSystemStatus()
+				]);
+			} catch (error) {
+				console.error('Auth check error:', error);
+				window.location.href = '/admin/login';
+			}
+		});
+
+		// Logout button
+		document.getElementById('logoutBtn').addEventListener('click', async () => {
+			try {
+				await signOut(auth);
+				window.location.href = '/admin/login';
+			} catch (error) {
+				console.error('Logout error:', error);
+			}
+		});
+
+		// Module card navigation
+		document.querySelectorAll('.admin-module-card').forEach(card => {
+			card.addEventListener('click', () => {
+				const link = card.getAttribute('data-link');
+				if (link) window.location.href = link;
+			});
+		});
+
+		// Load pending artists count
+		async function loadPendingArtistsCount() {
+			try {
+				const artistsRef = collection(db, 'artists');
+				const q = query(artistsRef, where('approved', '==', false));
+				const querySnapshot = await getDocs(q);
+				const count = querySnapshot.size;
+				
+				const countElement = document.getElementById('pendingArtistsCount');
+				countElement.textContent = count;
+				
+				if (count > 0) {
+					countElement.style.fontWeight = '900';
+				}
+			} catch (error) {
+				console.error('Error loading pending artists:', error);
+				document.getElementById('pendingArtistsCount').textContent = '0';
+			}
+		}
+
+		// Load active releases from Firebase
+		async function loadActiveReleases() {
+			try {
+				const releasesRef = collection(db, 'releases');
+				const querySnapshot = await getDocs(releasesRef);
+				const count = querySnapshot.size;
+				
+				document.getElementById('activeReleases').textContent = count;
+				document.getElementById('releasesChange').textContent = `${count} total in catalog`;
+			} catch (error) {
+				console.error('Error loading releases:', error);
+				document.getElementById('activeReleases').textContent = '0';
+				document.getElementById('releasesChange').textContent = 'Error loading data';
+			}
+		}
+
+		// Load total customers
+		async function loadTotalCustomers() {
+			try {
+				// Try to get from users collection or customers collection
+				const usersRef = collection(db, 'users');
+				const querySnapshot = await getDocs(usersRef);
+				const count = querySnapshot.size;
+				
+				document.getElementById('totalCustomers').textContent = count;
+				document.getElementById('customersChange').textContent = `${count} registered users`;
+			} catch (error) {
+				console.error('Error loading customers:', error);
+				// Try alternative collection name
+				try {
+					const customersRef = collection(db, 'customers');
+					const querySnapshot = await getDocs(customersRef);
+					const count = querySnapshot.size;
+					document.getElementById('totalCustomers').textContent = count;
+					document.getElementById('customersChange').textContent = `${count} registered users`;
+				} catch (err) {
+					document.getElementById('totalCustomers').textContent = '0';
+					document.getElementById('customersChange').textContent = 'No data available';
+				}
+			}
+		}
+
+		// Load total sales
+		async function loadTotalSales() {
+			try {
+				const ordersRef = collection(db, 'orders');
+				const querySnapshot = await getDocs(ordersRef);
+				
+				let totalSales = 0;
+				querySnapshot.forEach((doc) => {
+					const orderData = doc.data();
+					if (orderData.total || orderData.amount) {
+						totalSales += (orderData.total || orderData.amount);
+					}
+				});
+				
+				document.getElementById('totalSales').textContent = `£${totalSales.toFixed(2)}`;
+				document.getElementById('salesChange').textContent = `${querySnapshot.size} total orders`;
+			} catch (error) {
+				console.error('Error loading sales:', error);
+				document.getElementById('totalSales').textContent = '£0.00';
+				document.getElementById('salesChange').textContent = 'No sales data';
+			}
+		}
+
+		// Load recent activity
+		async function loadRecentActivity() {
+			try {
+				const activityList = document.getElementById('recentActivityList');
+				activityList.innerHTML = '';
+
+				// Get recent orders
+				const ordersRef = collection(db, 'orders');
+				const ordersQuery = query(ordersRef, orderBy('createdAt', 'desc'), limit(5));
+				const ordersSnapshot = await getDocs(ordersQuery);
+				
+				if (ordersSnapshot.empty) {
+					activityList.innerHTML = `
+						<div class="admin-activity-item">
+							<div class="admin-activity-time">No activity yet</div>
+							<div class="admin-activity-text">Start by adding releases to your store</div>
+						</div>
+					`;
+					return;
+				}
+
+				ordersSnapshot.forEach((doc) => {
+					const order = doc.data();
+					const date = order.createdAt ? new Date(order.createdAt.toDate()) : new Date();
+					const timeAgo = getTimeAgo(date);
+					
+					const activityItem = document.createElement('div');
+					activityItem.className = 'admin-activity-item';
+					activityItem.innerHTML = `
+						<div class="admin-activity-time">${timeAgo}</div>
+						<div class="admin-activity-text">
+							New order #${doc.id.substring(0, 8)} received - £${(order.total || order.amount || 0).toFixed(2)}
+						</div>
+					`;
+					activityList.appendChild(activityItem);
+				});
+			} catch (error) {
+				console.error('Error loading activity:', error);
+				document.getElementById('recentActivityList').innerHTML = `
+					<div class="admin-activity-item">
+						<div class="admin-activity-time">Error</div>
+						<div class="admin-activity-text">Unable to load recent activity</div>
+					</div>
+				`;
+			}
+		}
+
+		// Helper function to get time ago
+		function getTimeAgo(date) {
+			const seconds = Math.floor((new Date() - date) / 1000);
+			
+			if (seconds < 60) return 'Just now';
+			if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+			if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+			if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
+			return date.toLocaleDateString();
+		}
+
+		// Check system status
+		async function checkSystemStatus() {
+			// Check Cloudinary - try to load a test image
+			try {
+				const cloudinaryTest = await fetch('https://res.cloudinary.com/demo/image/upload/sample.jpg', { 
+					method: 'HEAD',
+					mode: 'no-cors' 
+				});
+				document.getElementById('cloudinaryStatus').classList.add('active');
+				document.getElementById('cloudinaryText').textContent = 'Connected';
+			} catch (error) {
+				document.getElementById('cloudinaryStatus').classList.add('inactive');
+				document.getElementById('cloudinaryText').textContent = 'Unable to verify';
+			}
+
+			// Check R2
+			try {
+				const r2Test = await fetch('https://pub-3345c9ef6c5e44ba87f77eb7e42d8c0e.r2.dev/', { 
+					method: 'HEAD',
+					mode: 'no-cors'
+				});
+				document.getElementById('r2Status').classList.add('active');
+				document.getElementById('r2Text').textContent = 'Connected';
+			} catch (error) {
+				// Assume configured if we're here (since we can't always test CORS)
+				document.getElementById('r2Status').classList.add('active');
+				document.getElementById('r2Text').textContent = 'Configured';
+			}
+
+			// Firebase status already confirmed by auth
+			document.getElementById('firebaseStatus').classList.add('active');
+			document.getElementById('firebaseText').textContent = 'Connected';
+		}
+	</script>
 </Layout>

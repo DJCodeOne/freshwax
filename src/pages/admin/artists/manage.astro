@@ -1,0 +1,634 @@
+---
+// src/pages/admin/artists/manage.astro
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artist Management - Fresh Wax Admin</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: #ffffff;
+      min-height: 100vh;
+    }
+
+    .admin-logo-header {
+      background: #000;
+      padding: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: center;
+      border: 3px solid #000;
+    }
+
+    .admin-logo {
+      height: 80px;
+      width: auto;
+      background: #fff;
+      padding: 10px 20px;
+    }
+
+    .admin-container { 
+      max-width: 1400px; 
+      margin: 0 auto; 
+      padding: 20px; 
+      background: #ffffff;
+    }
+    
+    .admin-header {
+      background: #fff;
+      padding: 30px;
+      margin-bottom: 30px;
+      border: 3px solid #000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .admin-header h1 {
+      font-size: 32px;
+      color: #000;
+      margin: 0;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .admin-back-btn {
+      padding: 12px 24px;
+      background: #000;
+      color: white;
+      border: 3px solid #000;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+
+    .admin-back-btn:hover {
+      background: #fff;
+      color: #000;
+      transform: translate(-4px, -4px);
+      box-shadow: 8px 8px 0 #000;
+    }
+
+    .admin-toolbar {
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 3px solid #000;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .admin-search {
+      flex: 1;
+      min-width: 250px;
+      padding: 12px;
+      border: 3px solid #000;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .admin-filter-btn {
+      padding: 12px 24px;
+      background: #fff;
+      color: #000;
+      border: 3px solid #000;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+
+    .admin-filter-btn.active {
+      background: #000;
+      color: #fff;
+    }
+
+    .admin-filter-btn:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0 #000;
+    }
+
+    .admin-table-container {
+      background: #fff;
+      border: 3px solid #000;
+      overflow-x: auto;
+    }
+
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .admin-table thead {
+      background: #000;
+      color: #fff;
+    }
+
+    .admin-table th {
+      padding: 15px;
+      text-align: left;
+      font-weight: 900;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+
+    .admin-table td {
+      padding: 15px;
+      border-bottom: 2px solid #e0e0e0;
+      font-weight: 600;
+      background: #fff;
+    }
+
+    .admin-table tbody tr:hover {
+      background: #f9f9f9;
+    }
+
+    .admin-table tbody tr:hover td {
+      background: #f9f9f9;
+    }
+
+    .admin-status-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .admin-status-badge.approved {
+      background: #000;
+      color: #fff;
+    }
+
+    .admin-status-badge.pending {
+      background: #fff;
+      color: #000;
+      border: 2px solid #000;
+    }
+
+    .admin-action-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .admin-btn-icon {
+      width: 35px;
+      height: 35px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #000;
+      background: #fff;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 700;
+    }
+
+    .admin-btn-icon:hover {
+      background: #000;
+      color: #fff;
+      transform: scale(1.1);
+    }
+
+    .admin-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .admin-modal-overlay.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .admin-modal {
+      background: #fff;
+      border: 3px solid #000;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .admin-modal-header {
+      background: #000;
+      color: #fff;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .admin-modal-header h2 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .admin-modal-close {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 30px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .admin-modal-body {
+      padding: 30px;
+      background: #fff;
+    }
+
+    .admin-form-group {
+      margin-bottom: 20px;
+    }
+
+    .admin-form-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      color: #000;
+    }
+
+    .admin-form-input {
+      width: 100%;
+      padding: 12px;
+      border: 3px solid #000;
+      font-size: 14px;
+      font-weight: 600;
+      background: #fff;
+    }
+
+    .admin-form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 30px;
+    }
+
+    .admin-btn-primary {
+      flex: 1;
+      padding: 15px;
+      background: #000;
+      color: #fff;
+      border: 3px solid #000;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+
+    .admin-btn-primary:hover {
+      background: #fff;
+      color: #000;
+      transform: translate(-4px, -4px);
+      box-shadow: 8px 8px 0 #000;
+    }
+
+    .admin-btn-secondary {
+      flex: 1;
+      padding: 15px;
+      background: #fff;
+      color: #000;
+      border: 3px solid #000;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+
+    .admin-loading {
+      text-align: center;
+      padding: 60px;
+      background: #fff;
+    }
+
+    .admin-spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid #e0e0e0;
+      border-top: 3px solid #000;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .admin-container { padding: 15px; }
+      .admin-logo { height: 60px; }
+      .admin-header { flex-direction: column; align-items: flex-start; }
+      .admin-header h1 { font-size: 24px; }
+      .admin-toolbar { flex-direction: column; }
+      .admin-search { width: 100%; }
+      .admin-table-container { overflow-x: scroll; }
+      .admin-table { min-width: 600px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Logo Header -->
+  <div class="admin-logo-header">
+    <img src="/logo.webp" alt="Fresh Wax" class="admin-logo">
+  </div>
+
+  <div class="admin-container">
+    <!-- Header -->
+    <div class="admin-header">
+      <h1>🎤 Artist Management</h1>
+      <a href="/admin" class="admin-back-btn">← Back to Dashboard</a>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="admin-toolbar">
+      <input 
+        type="text" 
+        id="searchInput" 
+        class="admin-search" 
+        placeholder="Search artists..."
+      >
+      <button class="admin-filter-btn active" data-filter="all">All</button>
+      <button class="admin-filter-btn" data-filter="approved">Approved</button>
+      <button class="admin-filter-btn" data-filter="pending">Pending</button>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="admin-loading">
+      <div class="admin-spinner"></div>
+      <p>Loading artists...</p>
+    </div>
+
+    <!-- Artists Table -->
+    <div id="artistsTable" class="admin-table-container" style="display: none;">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Artist Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Joined</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="artistsTableBody">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Edit Artist Modal -->
+  <div id="editModal" class="admin-modal-overlay">
+    <div class="admin-modal">
+      <div class="admin-modal-header">
+        <h2>Edit Artist</h2>
+        <button class="admin-modal-close" onclick="closeEditModal()">×</button>
+      </div>
+      <div class="admin-modal-body">
+        <form id="editForm">
+          <input type="hidden" id="editArtistId">
+          
+          <div class="admin-form-group">
+            <label class="admin-form-label">Artist Name</label>
+            <input type="text" id="editArtistName" class="admin-form-input" required>
+          </div>
+
+          <div class="admin-form-group">
+            <label class="admin-form-label">Email</label>
+            <input type="email" id="editEmail" class="admin-form-input" required>
+          </div>
+
+          <div class="admin-form-group">
+            <label class="admin-form-label">Phone</label>
+            <input type="tel" id="editPhone" class="admin-form-input">
+          </div>
+
+          <div class="admin-form-group">
+            <label class="admin-form-label">Status</label>
+            <select id="editApproved" class="admin-form-input">
+              <option value="true">Approved</option>
+              <option value="false">Pending</option>
+            </select>
+          </div>
+
+          <div class="admin-form-actions">
+            <button type="submit" class="admin-btn-primary">Save Changes</button>
+            <button type="button" class="admin-btn-secondary" onclick="closeEditModal()">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+    import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      authDomain: "freshwax-store.firebaseapp.com",
+      projectId: "freshwax-store",
+      storageBucket: "freshwax-store.firebasestorage.app",
+      messagingSenderId: "675435782973",
+      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let allArtists = [];
+    let currentFilter = 'all';
+
+    // Check authentication
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = '/admin/login';
+        return;
+      }
+
+      const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+      if (!adminDoc.exists()) {
+        window.location.href = '/admin/login';
+        return;
+      }
+
+      loadArtists();
+    });
+
+    // Load artists
+    async function loadArtists() {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'artists'));
+        allArtists = [];
+        
+        querySnapshot.forEach((doc) => {
+          allArtists.push({ id: doc.id, ...doc.data() });
+        });
+
+        allArtists.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+          const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+          return dateB - dateA;
+        });
+
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('artistsTable').style.display = 'block';
+        
+        renderArtists();
+      } catch (error) {
+        console.error('Error loading artists:', error);
+        alert('Failed to load artists');
+      }
+    }
+
+    // Render artists table
+    function renderArtists() {
+      const tbody = document.getElementById('artistsTableBody');
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      
+      let filtered = allArtists.filter(artist => {
+        const matchesSearch = 
+          (artist.artistName?.toLowerCase().includes(searchTerm) || '') ||
+          (artist.email?.toLowerCase().includes(searchTerm) || '');
+        
+        const matchesFilter = 
+          currentFilter === 'all' ? true :
+          currentFilter === 'approved' ? artist.approved === true :
+          currentFilter === 'pending' ? artist.approved === false : true;
+        
+        return matchesSearch && matchesFilter;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px;">No artists found</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(artist => `
+        <tr>
+          <td><strong>${artist.artistName || 'N/A'}</strong></td>
+          <td>${artist.email || 'N/A'}</td>
+          <td>${artist.phoneNumber || 'N/A'}</td>
+          <td>
+            <span class="admin-status-badge ${artist.approved ? 'approved' : 'pending'}">
+              ${artist.approved ? 'Approved' : 'Pending'}
+            </span>
+          </td>
+          <td>${artist.createdAt ? new Date(artist.createdAt).toLocaleDateString() : 'N/A'}</td>
+          <td>
+            <div class="admin-action-btns">
+              <button class="admin-btn-icon" onclick="editArtist('${artist.id}')" title="Edit">✏️</button>
+              <button class="admin-btn-icon" onclick="deleteArtist('${artist.id}')" title="Delete">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Edit artist
+    window.editArtist = function(artistId) {
+      const artist = allArtists.find(a => a.id === artistId);
+      if (!artist) return;
+
+      document.getElementById('editArtistId').value = artist.id;
+      document.getElementById('editArtistName').value = artist.artistName || '';
+      document.getElementById('editEmail').value = artist.email || '';
+      document.getElementById('editPhone').value = artist.phoneNumber || '';
+      document.getElementById('editApproved').value = artist.approved ? 'true' : 'false';
+
+      document.getElementById('editModal').classList.add('active');
+    };
+
+    window.closeEditModal = function() {
+      document.getElementById('editModal').classList.remove('active');
+    };
+
+    // Save artist changes
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const artistId = document.getElementById('editArtistId').value;
+      const updates = {
+        artistName: document.getElementById('editArtistName').value,
+        email: document.getElementById('editEmail').value,
+        phoneNumber: document.getElementById('editPhone').value,
+        approved: document.getElementById('editApproved').value === 'true'
+      };
+
+      try {
+        await updateDoc(doc(db, 'artists', artistId), updates);
+        alert('Artist updated successfully!');
+        closeEditModal();
+        loadArtists();
+      } catch (error) {
+        console.error('Error updating artist:', error);
+        alert('Failed to update artist');
+      }
+    });
+
+    // Delete artist
+    window.deleteArtist = async function(artistId) {
+      if (!confirm('Are you sure you want to delete this artist? This cannot be undone.')) return;
+
+      try {
+        await deleteDoc(doc(db, 'artists', artistId));
+        alert('Artist deleted successfully!');
+        loadArtists();
+      } catch (error) {
+        console.error('Error deleting artist:', error);
+        alert('Failed to delete artist');
+      }
+    };
+
+    // Search
+    document.getElementById('searchInput').addEventListener('input', renderArtists);
+
+    // Filter buttons
+    document.querySelectorAll('.admin-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.admin-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        renderArtists();
+      });
+    });
+
+    // Close modal on overlay click
+    document.getElementById('editModal').addEventListener('click', (e) => {
+      if (e.target.id === 'editModal') closeEditModal();
+    });
+  </script>
+</body>
+</html>

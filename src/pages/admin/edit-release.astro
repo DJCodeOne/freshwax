@@ -1,0 +1,1070 @@
+---
+// src/pages/admin/edit-release.astro
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Edit & Customize Release">
+<style>
+body { background: #ffffff; }
+
+.container {
+max-width: 1400px;
+margin: 0 auto;
+padding: 20px;
+}
+
+/* Logo */
+.logo-container {
+background: #ffffff;
+padding: 30px 20px;
+margin-bottom: 30px;
+display: flex;
+justify-content: center;
+align-items: center;
+border: 3px solid #000;
+}
+
+.logo {
+height: 80px;
+width: auto;
+max-width: 90%;
+}
+
+.logo-fallback {
+font-size: 48px;
+font-weight: 900;
+color: #000;
+text-transform: uppercase;
+letter-spacing: 2px;
+}
+
+/* Header */
+.header {
+background: #fff;
+padding: 30px;
+margin-bottom: 30px;
+border: 3px solid #000;
+position: relative;
+}
+
+.header::before {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+height: 5px;
+background: #000;
+}
+
+.header-content {
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+
+.header h1 {
+font-size: 32px;
+color: #000;
+margin-bottom: 5px;
+font-weight: 900;
+letter-spacing: -0.5px;
+}
+
+.header p {
+color: #666;
+font-size: 16px;
+font-weight: 500;
+}
+
+.back-btn {
+padding: 10px 20px;
+background: #000;
+color: white;
+text-decoration: none;
+border: 2px solid #000;
+font-size: 14px;
+font-weight: 700;
+transition: all 0.2s;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+}
+
+.back-btn:hover {
+background: #fff;
+color: #000;
+transform: translateY(-2px);
+box-shadow: 4px 4px 0 #000;
+}
+
+/* Section Card */
+.section-card {
+background: white;
+border: 3px solid #000;
+padding: 30px;
+margin-bottom: 30px;
+position: relative;
+}
+
+.section-card::before {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+height: 5px;
+background: #000;
+}
+
+.section-title {
+font-size: 24px;
+font-weight: 900;
+color: #000;
+margin-bottom: 20px;
+padding-bottom: 15px;
+border-bottom: 3px solid #000;
+text-transform: uppercase;
+letter-spacing: 1px;
+}
+
+/* Preview Section - at top */
+.preview-section {
+background: white;
+border: 3px solid #000;
+padding: 30px;
+margin-bottom: 30px;
+position: relative;
+}
+
+.preview-section::before {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+height: 5px;
+background: #000;
+}
+
+/* Editor Section - below preview */
+.editor-section {
+background: white;
+border: 3px solid #000;
+padding: 30px;
+position: relative;
+margin-bottom: 30px;
+}
+
+.editor-section::before {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+height: 5px;
+background: #000;
+}
+
+/* Form Elements */
+.form-group {
+margin-bottom: 20px;
+}
+
+.form-label {
+display: block;
+font-size: 12px;
+font-weight: 700;
+margin-bottom: 8px;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+color: #000;
+}
+
+.form-input,
+.form-textarea,
+.form-select {
+width: 100%;
+padding: 10px;
+border: 3px solid #000;
+font-size: 14px;
+font-weight: 600;
+font-family: inherit;
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+outline: none;
+box-shadow: 3px 3px 0 #000;
+}
+
+.form-textarea {
+resize: vertical;
+min-height: 80px;
+}
+
+.form-hint {
+font-size: 11px;
+color: #666;
+margin-top: 5px;
+font-weight: 600;
+}
+
+/* Checkbox */
+.checkbox-group {
+display: flex;
+align-items: center;
+gap: 10px;
+padding: 12px;
+border: 3px solid #000;
+background: #f9f9f9;
+cursor: pointer;
+transition: all 0.2s;
+}
+
+.checkbox-group:hover {
+background: #fff;
+transform: translateX(2px);
+}
+
+.checkbox-group input[type="checkbox"] {
+width: 20px;
+height: 20px;
+cursor: pointer;
+}
+
+.checkbox-label {
+font-weight: 700;
+font-size: 12px;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+flex: 1;
+}
+
+/* Track Editor */
+.tracks-editor {
+border: 3px solid #000;
+padding: 20px;
+background: #f9f9f9;
+margin-bottom: 20px;
+}
+
+.tracks-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 15px;
+padding-bottom: 10px;
+border-bottom: 2px solid #000;
+}
+
+.tracks-header h3 {
+font-size: 14px;
+font-weight: 900;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+}
+
+.track-item {
+background: #fff;
+border: 2px solid #000;
+padding: 12px;
+margin-bottom: 10px;
+display: grid;
+grid-template-columns: 40px 1fr auto;
+gap: 10px;
+align-items: center;
+}
+
+.track-number-input {
+width: 40px;
+padding: 6px;
+border: 2px solid #000;
+font-weight: 700;
+text-align: center;
+}
+
+.track-title-input {
+padding: 8px;
+border: 2px solid #000;
+font-weight: 600;
+}
+
+.track-actions {
+display: flex;
+gap: 5px;
+}
+
+.btn-small {
+padding: 6px 10px;
+border: 2px solid #000;
+background: #fff;
+font-size: 11px;
+font-weight: 700;
+cursor: pointer;
+transition: all 0.2s;
+}
+
+.btn-small:hover {
+background: #000;
+color: #fff;
+}
+
+/* Display Options */
+.display-options {
+background: #f9f9f9;
+border: 3px solid #000;
+padding: 20px;
+margin-bottom: 20px;
+}
+
+.display-options h3 {
+font-size: 14px;
+font-weight: 900;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+margin-bottom: 15px;
+padding-bottom: 10px;
+border-bottom: 2px solid #000;
+}
+
+/* Buttons */
+.btn {
+padding: 12px 24px;
+border: 3px solid #000;
+font-size: 14px;
+font-weight: 700;
+cursor: pointer;
+transition: all 0.2s;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+}
+
+.btn:disabled {
+opacity: 0.5;
+cursor: not-allowed;
+}
+
+.btn-primary {
+background: #000;
+color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+background: #fff;
+color: #000;
+transform: translate(-2px, -2px);
+box-shadow: 4px 4px 0 #000;
+}
+
+.btn-secondary {
+background: #fff;
+color: #000;
+}
+
+.btn-secondary:hover:not(:disabled) {
+transform: translate(-2px, -2px);
+box-shadow: 4px 4px 0 #000;
+}
+
+.button-row {
+display: flex;
+gap: 12px;
+flex-wrap: wrap;
+margin-top: 20px;
+}
+
+/* Publish Section */
+.publish-section {
+background: #000;
+color: #fff;
+padding: 30px;
+border: 3px solid #000;
+margin-top: 30px;
+}
+
+.publish-section h2 {
+font-size: 20px;
+font-weight: 900;
+margin-bottom: 20px;
+padding-bottom: 15px;
+border-bottom: 3px solid #fff;
+text-transform: uppercase;
+letter-spacing: 1px;
+}
+
+.text-input-dark {
+width: 100%;
+padding: 12px;
+border: 3px solid #fff;
+background: #000;
+color: #fff;
+font-size: 14px;
+font-weight: 600;
+}
+
+.text-input-dark:focus {
+outline: none;
+box-shadow: 4px 4px 0 #fff;
+}
+
+.warning-text {
+font-size: 11px;
+color: #999;
+margin-top: 15px;
+padding: 12px;
+border: 2px solid #333;
+}
+
+.hidden {
+display: none;
+}
+
+@media (max-width: 768px) {
+.header-content {
+flex-direction: column;
+align-items: flex-start;
+gap: 15px;
+}
+
+.track-item {
+grid-template-columns: 1fr;
+}
+
+.track-actions {
+justify-content: flex-end;
+}
+}
+</style>
+
+<div class="container">
+<!-- Logo -->
+<div class="logo-container">
+<img
+src="/logo.webp"
+alt="Fresh Wax"
+class="logo"
+onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+>
+<div class="logo-fallback" style="display: none;">FRESH WAX</div>
+</div>
+
+<!-- Header -->
+<div class="header">
+<div class="header-content">
+<div>
+<h1><span style="font-family: 'Arial', sans-serif;">✏️</span> Edit & Customise Release</h1>
+<p>Fine-tune every detail before publishing</p>
+</div>
+<a href="/admin/publish-release" class="back-btn">← Back</a>
+</div>
+</div>
+
+<div id="no-data" class="section-card">
+<h2 class="section-title"><span style="font-family: 'Arial', sans-serif;">⚠️</span> No Release Data</h2>
+<p style="margin-bottom: 20px; color: #666; font-weight: 600;">
+Please go to the Publish Release page first to upload and merge your release data.
+</p>
+<a href="/admin/publish-release" class="btn btn-primary">Go to Publish Release</a>
+</div>
+
+<div id="editor-layout" class="hidden">
+<!-- Preview Section - AT TOP -->
+<div class="preview-section">
+<h2 class="section-title"><span style="font-family: 'Arial', sans-serif;">👁️</span> Live Preview</h2>
+<p style="font-size: 12px; color: #666; margin-bottom: 15px; font-weight: 600;">
+This is how it will appear on your store
+</p>
+<div id="live-preview"></div>
+</div>
+
+<!-- Editor Section - BELOW PREVIEW -->
+<div class="editor-section">
+<h2 class="section-title"><span style="font-family: 'Arial', sans-serif;">📝</span> Edit Release</h2>
+
+<!-- Basic Info -->
+<div class="form-group">
+<label class="form-label">Release Title *</label>
+<input type="text" id="edit-title" class="form-input" placeholder="Release Title">
+</div>
+
+<div class="form-group">
+<label class="form-label">Artist Name *</label>
+<input type="text" id="edit-artist" class="form-input" placeholder="Artist Name">
+</div>
+
+<div class="form-group">
+<label class="form-label">Record Label</label>
+<input type="text" id="edit-label" class="form-input" placeholder="Label Name (optional)">
+</div>
+
+<div class="form-group">
+<label class="form-label">Release Date</label>
+<input type="date" id="edit-date" class="form-input">
+</div>
+
+<div class="form-group">
+<label class="form-label">Genre</label>
+<input type="text" id="edit-genre" class="form-input" placeholder="House, Techno, etc.">
+</div>
+
+<!-- Prices -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+<div class="form-group">
+<label class="form-label">Digital Price (£)</label>
+<input type="number" id="edit-digital-price" class="form-input" step="0.01" min="0">
+</div>
+<div class="form-group">
+<label class="form-label">Track Price (£)</label>
+<input type="number" id="edit-track-price" class="form-input" step="0.01" min="0">
+</div>
+</div>
+
+<!-- Vinyl Options -->
+<div class="form-group">
+<label class="checkbox-group">
+<input type="checkbox" id="edit-has-vinyl">
+<span class="checkbox-label"><span style="font-family: 'Arial', sans-serif;">🎵</span> Vinyl Available</span>
+</label>
+</div>
+
+<div id="vinyl-options" class="hidden">
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+<div class="form-group">
+<label class="form-label">Vinyl Price (£)</label>
+<input type="number" id="edit-vinyl-price" class="form-input" step="0.01" min="0">
+</div>
+<div class="form-group">
+<label class="form-label">Vinyl Stock</label>
+<input type="number" id="edit-vinyl-stock" class="form-input" min="0">
+</div>
+</div>
+</div>
+
+<!-- Description & Notes -->
+<div class="form-group">
+<label class="form-label">Description</label>
+<textarea id="edit-description" class="form-textarea" placeholder="Release description..."></textarea>
+</div>
+
+<div class="form-group">
+<label class="form-label">Extra Notes / Warning</label>
+<textarea id="edit-extra-notes" class="form-textarea" placeholder="Special edition info, warnings, etc."></textarea>
+<p class="form-hint">Shows as highlighted banner on release</p>
+</div>
+
+<!-- Track Editor -->
+<div class="tracks-editor">
+<div class="tracks-header">
+<h3><span style="font-family: 'Arial', sans-serif;">🎵</span> Track Listing</h3>
+<button class="btn-small" onclick="addTrack()">+ Add Track</button>
+</div>
+<div id="tracks-container"></div>
+</div>
+
+<!-- Display Customization -->
+<div class="display-options">
+<h3><span style="font-family: 'Arial', sans-serif;">🎨</span> Display Options</h3>
+<div class="form-group">
+<label class="checkbox-group">
+<input type="checkbox" id="show-label" checked>
+<span class="checkbox-label">Show Label Name</span>
+</label>
+</div>
+<div class="form-group">
+<label class="checkbox-group">
+<input type="checkbox" id="show-genre" checked>
+<span class="checkbox-label">Show Genre</span>
+</label>
+</div>
+<div class="form-group">
+<label class="checkbox-group">
+<input type="checkbox" id="show-extra-notes" checked>
+<span class="checkbox-label">Show Extra Notes Banner</span>
+</label>
+</div>
+<div class="form-group">
+<label class="checkbox-group">
+<input type="checkbox" id="show-description" checked>
+<span class="checkbox-label">Show Description</span>
+</label>
+</div>
+</div>
+
+<div class="button-row">
+<button class="btn btn-secondary" onclick="resetChanges()"><span style="font-family: 'Arial', sans-serif;">↺</span> Reset</button>
+<button class="btn btn-primary" onclick="updatePreview()"><span style="font-family: 'Arial', sans-serif;">👁️</span> Update Preview</button>
+</div>
+</div>
+
+<!-- Publish Section -->
+<div class="publish-section">
+<h2><span style="font-family: 'Arial', sans-serif;">🚀</span> Ready to Publish?</h2>
+
+<div class="form-group">
+<label class="input-label" style="color: #fff;">Filename (no spaces or special chars)</label>
+<input
+type="text"
+id="filename-input"
+class="text-input-dark"
+placeholder="artist-name-release-title"
+>
+<p class="form-hint">Will be saved as: src/data/releases/[filename].json</p>
+</div>
+
+<div class="button-row">
+<button class="btn btn-primary" onclick="publishRelease()" style="font-size: 16px; padding: 15px 30px;">
+<span style="font-family: 'Arial', sans-serif;">🚀</span> Publish to Store
+</button>
+<button class="btn btn-secondary" onclick="downloadJSON()">
+<span style="font-family: 'Arial', sans-serif;">💾</span> Download JSON
+</button>
+</div>
+
+<p class="warning-text">
+<span style="font-family: 'Arial', sans-serif;">ℹ️</span> After publishing, rebuild your Astro site to see the release live in your store.
+</p>
+</div>
+</div>
+</div>
+
+<script is:inline>
+let releaseData = null;
+let originalData = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+// Try to load data from sessionStorage (passed from publish-release page)
+const storedData = sessionStorage.getItem('freshwax-release-draft');
+
+if (storedData) {
+try {
+releaseData = JSON.parse(storedData);
+originalData = JSON.parse(storedData);
+initializeEditor();
+} catch (err) {
+console.error('Error loading release data:', err);
+showNoData();
+}
+} else {
+showNoData();
+}
+});
+
+function showNoData() {
+document.getElementById('no-data').classList.remove('hidden');
+document.getElementById('editor-layout').classList.add('hidden');
+}
+
+function initializeEditor() {
+document.getElementById('no-data').classList.add('hidden');
+document.getElementById('editor-layout').classList.remove('hidden');
+
+// Populate form fields
+document.getElementById('edit-title').value = releaseData.title || '';
+document.getElementById('edit-artist').value = releaseData.artist || '';
+document.getElementById('edit-label').value = releaseData.label || '';
+document.getElementById('edit-date').value = releaseData.releaseDate || '';
+document.getElementById('edit-genre').value = releaseData.genre || '';
+document.getElementById('edit-digital-price').value = releaseData.digitalPrice || 7.99;
+document.getElementById('edit-track-price').value = releaseData.trackPrice || 1.50;
+document.getElementById('edit-description').value = releaseData.description || '';
+document.getElementById('edit-extra-notes').value = releaseData.extraNotes || '';
+
+// Vinyl options
+const hasVinyl = releaseData.hasVinyl || false;
+document.getElementById('edit-has-vinyl').checked = hasVinyl;
+if (hasVinyl) {
+document.getElementById('vinyl-options').classList.remove('hidden');
+document.getElementById('edit-vinyl-price').value = releaseData.vinylPrice || 0;
+document.getElementById('edit-vinyl-stock').value = releaseData.vinylStock || 0;
+}
+
+// Event listeners
+document.getElementById('edit-has-vinyl').addEventListener('change', (e) => {
+document.getElementById('vinyl-options').classList.toggle('hidden', !e.target.checked);
+});
+
+// Auto-update preview on input
+const inputs = document.querySelectorAll('input, textarea, select');
+inputs.forEach(input => {
+input.addEventListener('input', updatePreview);
+input.addEventListener('change', updatePreview);
+});
+
+// Load tracks
+renderTracks();
+
+// Generate filename
+generateFilename();
+
+// Initial preview
+updatePreview();
+}
+
+function renderTracks() {
+const container = document.getElementById('tracks-container');
+container.innerHTML = '';
+
+releaseData.tracks.forEach((track, index) => {
+const div = document.createElement('div');
+div.className = 'track-item';
+div.innerHTML = `
+<input
+type="number"
+class="track-number-input"
+value="${track.track_number}"
+min="1"
+onchange="updateTrackNumber(${index}, this.value)"
+>
+<input
+type="text"
+class="track-title-input"
+value="${track.title}"
+placeholder="Track title"
+onchange="updateTrackTitle(${index}, this.value)"
+>
+<div class="track-actions">
+${index > 0 ? `<button class="btn-small" onclick="moveTrack(${index}, -1)">↑</button>` : ''}
+${index < releaseData.tracks.length - 1 ? `<button class="btn-small" onclick="moveTrack(${index}, 1)">↓</button>` : ''}
+<button class="btn-small" onclick="deleteTrack(${index})">✗</button>
+</div>
+`;
+container.appendChild(div);
+});
+}
+
+window.updateTrackNumber = function(index, value) {
+releaseData.tracks[index].track_number = parseInt(value);
+updatePreview();
+};
+
+window.updateTrackTitle = function(index, value) {
+releaseData.tracks[index].title = value;
+updatePreview();
+};
+
+window.moveTrack = function(index, direction) {
+const newIndex = index + direction;
+if (newIndex >= 0 && newIndex < releaseData.tracks.length) {
+const temp = releaseData.tracks[index];
+releaseData.tracks[index] = releaseData.tracks[newIndex];
+releaseData.tracks[newIndex] = temp;
+renderTracks();
+updatePreview();
+}
+};
+
+window.deleteTrack = function(index) {
+if (confirm('Delete this track?')) {
+releaseData.tracks.splice(index, 1);
+renderTracks();
+updatePreview();
+}
+};
+
+window.addTrack = function() {
+const newTrack = {
+id: `track-${String(releaseData.tracks.length + 1).padStart(3, '0')}`,
+title: `New Track ${releaseData.tracks.length + 1}`,
+preview_url: null,
+track_number: releaseData.tracks.length + 1
+};
+releaseData.tracks.push(newTrack);
+renderTracks();
+updatePreview();
+};
+
+function updatePreview() {
+// Update release data from form
+releaseData.title = document.getElementById('edit-title').value;
+releaseData.artist = document.getElementById('edit-artist').value;
+releaseData.label = document.getElementById('edit-label').value;
+releaseData.releaseDate = document.getElementById('edit-date').value;
+releaseData.genre = document.getElementById('edit-genre').value;
+releaseData.digitalPrice = parseFloat(document.getElementById('edit-digital-price').value) || 7.99;
+releaseData.trackPrice = parseFloat(document.getElementById('edit-track-price').value) || 1.50;
+releaseData.description = document.getElementById('edit-description').value;
+releaseData.extraNotes = document.getElementById('edit-extra-notes').value;
+releaseData.hasVinyl = document.getElementById('edit-has-vinyl').checked;
+
+if (releaseData.hasVinyl) {
+releaseData.vinylPrice = parseFloat(document.getElementById('edit-vinyl-price').value) || 0;
+releaseData.vinylStock = parseInt(document.getElementById('edit-vinyl-stock').value) || 0;
+}
+
+// Display options
+const showLabel = document.getElementById('show-label').checked;
+const showGenre = document.getElementById('show-genre').checked;
+const showExtraNotes = document.getElementById('show-extra-notes').checked;
+const showDescription = document.getElementById('show-description').checked;
+
+// Check if preorder
+const releaseDate = new Date(releaseData.releaseDate);
+const today = new Date();
+releaseData.isPreorder = releaseDate > today;
+
+// Render preview using the same style as ReleasePlate
+const formattedDate = new Date(releaseData.releaseDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+const vinylAvailable = releaseData.hasVinyl && releaseData.vinylStock > 0;
+const initialTracksDesktop = 2;
+const initialTracksMobile = 2;
+const trackPrice = releaseData.trackPrice || 1.00;
+
+const preview = document.getElementById('live-preview');
+preview.innerHTML = `
+<article style="background: white; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden;">
+<!-- Mobile Layout -->
+<div style="display: block;">
+<div style="position: relative; width: 100%;">
+<img src="${releaseData.artworkUrl}" alt="${releaseData.title} by ${releaseData.artist}" style="width: 100%; aspect-ratio: 1; object-fit: cover;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22%3E%3Crect fill=%22%23ddd%22 width=%22400%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22 font-size=%2224%22%3ENo Image%3C/text%3E%3C/svg%3E'" />
+<div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 0.75rem; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); display: flex; gap: 0.5rem; justify-content: center;">
+<button style="background: #3b82f6; color: white; padding: 0.5rem 0.75rem; border-radius: 0.5rem; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; border: none; cursor: pointer; transition: background 0.2s;">
+<svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+</svg>
+£${releaseData.digitalPrice.toFixed(2)}
+</button>
+${releaseData.hasVinyl ? `
+<button ${!vinylAvailable ? 'disabled' : ''} style="background: ${vinylAvailable ? '#a855f7' : '#9ca3af'}; color: ${vinylAvailable ? 'white' : '#d1d5db'}; padding: 0.5rem 0.75rem; border-radius: 0.5rem; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; border: none; ${vinylAvailable ? 'cursor: pointer;' : 'cursor: not-allowed;'} transition: background 0.2s;">
+<svg style="width: 1rem; height: 1rem;" fill="currentColor" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<circle cx="12" cy="12" r="2" fill="currentColor"/>
+</svg>
+${vinylAvailable ? `£${releaseData.vinylPrice.toFixed(2)}` : 'Sold Out'}
+</button>
+` : ''}
+</div>
+</div>
+<div style="padding: 1rem;">
+<div style="margin-bottom: 0.75rem;">
+<h3 style="font-size: 1.25rem; font-weight: 700; color: #111827; margin-bottom: 0.25rem; line-height: 1.375;">${releaseData.title}</h3>
+<p style="font-size: 1rem; color: #4b5563; margin-bottom: 0.25rem;">${releaseData.artist}</p>
+${showLabel && releaseData.label ? `<p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">${releaseData.label}</p>` : ''}
+<div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+${releaseData.isPreorder ? '<span style="display: inline-block; background: #fed7aa; color: #9a3412; font-size: 0.75rem; font-weight: 600; padding: 0.125rem 0.5rem; border-radius: 0.25rem;">Pre-order</span>' : ''}
+<span style="font-size: 0.75rem; color: #6b7280;">${releaseData.isPreorder ? `Ships ${formattedDate}` : formattedDate}</span>
+${vinylAvailable && releaseData.vinylStock <= 5 ? `<span style="display: inline-block; background: #fecaca; color: #991b1b; font-size: 0.75rem; font-weight: 600; padding: 0.125rem 0.5rem; border-radius: 0.25rem;">Only ${releaseData.vinylStock} left</span>` : ''}
+${releaseData.hasVinyl && vinylAvailable ? '<span style="display: inline-block; background: #e9d5ff; color: #6b21a8; font-size: 0.75rem; font-weight: 600; padding: 0.125rem 0.5rem; border-radius: 0.25rem;">Vinyl includes digital</span>' : ''}
+</div>
+</div>
+${showExtraNotes && releaseData.extraNotes ? `<div style="margin-bottom: 0.75rem; padding: 0.5rem; background: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 0.25rem;"><p style="font-size: 0.75rem; color: #1e3a8a;">${releaseData.extraNotes}</p></div>` : ''}
+${releaseData.tracks.length > 0 ? `
+<div style="margin-top: 0.75rem;">
+<div style="display: flex; flex-direction: column; gap: 0.5rem;">
+${releaseData.tracks.slice(0, initialTracksMobile).map(track => `
+<div style="display: flex; align-items: center; gap: 0.5rem; background: #f9fafb; border-radius: 0.25rem; padding: 0.5rem;">
+<span style="font-size: 0.75rem; font-weight: 600; color: #6b7280; width: 1.25rem; flex-shrink: 0;">${track.track_number}.</span>
+<p style="font-size: 0.75rem; font-weight: 500; color: #111827; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${track.title}">${track.title}</p>
+<button style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 0.25rem; background: #3b82f6; color: white; border: none; cursor: pointer; transition: background 0.2s;" title="Play">
+<svg style="width: 1rem; height: 1rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+</button>
+<div style="width: 6rem; flex-shrink: 0; height: 2rem; background: #e5e7eb; border-radius: 0.25rem;"></div>
+<button style="flex-shrink: 0; background: #22c55e; color: white; font-size: 0.75rem; font-weight: 700; padding: 0.375rem 0.625rem; border-radius: 0.25rem; white-space: nowrap; margin-left: 0.25rem; border: none; cursor: pointer; transition: background 0.2s;" title="Buy track">
+£${trackPrice.toFixed(2)}
+</button>
+</div>
+`).join('')}
+</div>
+${releaseData.tracks.length > initialTracksMobile ? `
+<details style="margin-top: 0.5rem;">
+<summary style="cursor: pointer; font-size: 0.75rem; color: #2563eb; font-weight: 600; padding: 0.5rem; background: #f9fafb; border-radius: 0.25rem; list-style: none;">
++ Show ${releaseData.tracks.length - initialTracksMobile} more track${releaseData.tracks.length - initialTracksMobile !== 1 ? 's' : ''}
+</summary>
+<div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+${releaseData.tracks.slice(initialTracksMobile).map(track => `
+<div style="display: flex; align-items: center; gap: 0.5rem; background: #f9fafb; border-radius: 0.25rem; padding: 0.5rem;">
+<span style="font-size: 0.75rem; font-weight: 600; color: #6b7280; width: 1.25rem; flex-shrink: 0;">${track.track_number}.</span>
+<p style="font-size: 0.75rem; font-weight: 500; color: #111827; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${track.title}">${track.title}</p>
+<button style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 0.25rem; background: #3b82f6; color: white; border: none; cursor: pointer; transition: background 0.2s;" title="Play">
+<svg style="width: 1rem; height: 1rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+</button>
+<div style="width: 6rem; flex-shrink: 0; height: 2rem; background: #e5e7eb; border-radius: 0.25rem;"></div>
+<button style="flex-shrink: 0; background: #22c55e; color: white; font-size: 0.75rem; font-weight: 700; padding: 0.375rem 0.625rem; border-radius: 0.25rem; white-space: nowrap; margin-left: 0.25rem; border: none; cursor: pointer; transition: background 0.2s;" title="Buy track">
+£${trackPrice.toFixed(2)}
+</button>
+</div>
+`).join('')}
+</div>
+</details>
+` : ''}
+</div>
+` : ''}
+</div>
+</div>
+
+<!-- Desktop Layout -->
+<div style="display: none;">
+<div style="position: relative; width: 16rem; height: 16rem; flex-shrink: 0;">
+<img src="${releaseData.artworkUrl}" alt="${releaseData.title} by ${releaseData.artist}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22%3E%3Crect fill=%22%23ddd%22 width=%22400%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22 font-size=%2224%22%3ENo Image%3C/text%3E%3C/svg%3E'" />
+<div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 0.75rem; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); display: flex; gap: 0.5rem; justify-content: center;">
+<button style="background: #3b82f6; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; display: inline-flex; align-items: center; gap: 0.5rem; border: none; cursor: pointer; transition: background 0.2s;">
+<svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+</svg>
+<span style="font-size: 0.875rem; font-weight: 600;">£${releaseData.digitalPrice.toFixed(2)}</span>
+</button>
+${releaseData.hasVinyl ? `
+<button ${!vinylAvailable ? 'disabled' : ''} style="background: ${vinylAvailable ? '#a855f7' : '#9ca3af'}; color: ${vinylAvailable ? 'white' : '#d1d5db'}; padding: 0.5rem 1rem; border-radius: 0.5rem; display: inline-flex; align-items: center; gap: 0.5rem; border: none; ${vinylAvailable ? 'cursor: pointer;' : 'cursor: not-allowed;'} transition: background 0.2s;">
+<svg style="width: 1.25rem; height: 1.25rem;" fill="currentColor" viewBox="0 0 24 24">
+<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+<circle cx="12" cy="12" r="2" fill="currentColor"/>
+</svg>
+<span style="font-size: 0.875rem; font-weight: 600;">${vinylAvailable ? `£${releaseData.vinylPrice.toFixed(2)}` : 'Sold Out'}</span>
+</button>
+` : ''}
+</div>
+</div>
+<div style="flex: 1; padding: 1.5rem; display: flex; flex-direction: column;">
+<div style="margin-bottom: 0.75rem;">
+<h3 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 0.25rem;">${releaseData.title}</h3>
+<p style="font-size: 1.125rem; color: #4b5563; margin-bottom: 0.25rem;">${releaseData.artist}</p>
+${showLabel && releaseData.label ? `<p style="font-size: 1rem; color: #6b7280; margin-bottom: 0.5rem;">${releaseData.label}</p>` : ''}
+<div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+${releaseData.isPreorder ? '<span style="display: inline-block; background: #fed7aa; color: #9a3412; font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.625rem; border-radius: 0.25rem;">Pre-order</span>' : ''}
+<span style="font-size: 0.875rem; color: #6b7280;">${releaseData.isPreorder ? `Ships ${formattedDate}` : formattedDate}</span>
+${vinylAvailable && releaseData.vinylStock <= 5 ? `<span style="display: inline-block; background: #fecaca; color: #991b1b; font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.625rem; border-radius: 0.25rem;">Only ${releaseData.vinylStock} left</span>` : ''}
+${releaseData.hasVinyl && vinylAvailable ? '<span style="display: inline-block; background: #e9d5ff; color: #6b21a8; font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.625rem; border-radius: 0.25rem;">Vinyl includes digital</span>' : ''}
+</div>
+</div>
+${showExtraNotes && releaseData.extraNotes ? `<div style="margin-bottom: 0.75rem; padding: 0.75rem; background: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 0.25rem;"><p style="font-size: 0.875rem; color: #1e3a8a;">${releaseData.extraNotes}</p></div>` : ''}
+${releaseData.tracks.length > 0 ? `
+<div style="flex: 1; display: flex; flex-direction: column;">
+<div style="display: flex; flex-direction: column; gap: 0.5rem;">
+${releaseData.tracks.slice(0, initialTracksDesktop).map(track => `
+<div style="display: flex; align-items: center; gap: 0.75rem; background: #f9fafb; border-radius: 0.25rem; padding: 0.5rem;">
+<span style="font-size: 0.875rem; font-weight: 600; color: #6b7280; width: 1.5rem; flex-shrink: 0;">${track.track_number}.</span>
+<p style="font-size: 0.875rem; font-weight: 500; color: #111827; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${track.title}">${track.title}</p>
+<button style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; border-radius: 0.25rem; background: #3b82f6; color: white; border: none; cursor: pointer; transition: background 0.2s;" title="Play">
+<svg style="width: 1rem; height: 1rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+</button>
+<div style="width: 12rem; flex-shrink: 0; height: 2rem; background: #e5e7eb; border-radius: 0.25rem;"></div>
+<button style="flex-shrink: 0; background: #22c55e; color: white; font-size: 0.875rem; font-weight: 700; padding: 0.5rem 1rem; border-radius: 0.25rem; white-space: nowrap; margin-left: 0.5rem; border: none; cursor: pointer; transition: background 0.2s;" title="Buy track">
+£${trackPrice.toFixed(2)}
+</button>
+</div>
+`).join('')}
+</div>
+${releaseData.tracks.length > initialTracksDesktop ? `
+<details style="margin-top: 0.5rem;">
+<summary style="cursor: pointer; font-size: 0.875rem; color: #2563eb; font-weight: 600; padding: 0.5rem; background: #f9fafb; border-radius: 0.25rem; list-style: none;">
++ Show ${releaseData.tracks.length - initialTracksDesktop} more track${releaseData.tracks.length - initialTracksDesktop !== 1 ? 's' : ''}
+</summary>
+<div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
+${releaseData.tracks.slice(initialTracksDesktop).map(track => `
+<div style="display: flex; align-items: center; gap: 0.75rem; background: #f9fafb; border-radius: 0.25rem; padding: 0.5rem;">
+<span style="font-size: 0.875rem; font-weight: 600; color: #6b7280; width: 1.5rem; flex-shrink: 0;">${track.track_number}.</span>
+<p style="font-size: 0.875rem; font-weight: 500; color: #111827; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${track.title}">${track.title}</p>
+<button style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; border-radius: 0.25rem; background: #3b82f6; color: white; border: none; cursor: pointer; transition: background 0.2s;" title="Play">
+<svg style="width: 1rem; height: 1rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+</button>
+<div style="width: 12rem; flex-shrink: 0; height: 2rem; background: #e5e7eb; border-radius: 0.25rem;"></div>
+<button style="flex-shrink: 0; background: #22c55e; color: white; font-size: 0.875rem; font-weight: 700; padding: 0.5rem 1rem; border-radius: 0.25rem; white-space: nowrap; margin-left: 0.5rem; border: none; cursor: pointer; transition: background 0.2s;" title="Buy track">
+£${trackPrice.toFixed(2)}
+</button>
+</div>
+`).join('')}
+</div>
+</details>
+` : ''}
+</div>
+` : ''}
+</div>
+</div>
+</article>
+
+<style>
+@media (min-width: 640px) {
+article > div:first-child { display: none !important; }
+article > div:last-child { display: flex !important; }
+}
+</style>
+`;
+
+// Save to sessionStorage
+sessionStorage.setItem('freshwax-release-draft', JSON.stringify(releaseData));
+generateFilename();
+}
+
+function generateFilename() {
+const filename = `${releaseData.artist}-${releaseData.title}`
+.toLowerCase()
+.replace(/[^a-z0-9]+/g, '-')
+.replace(/^-|-$/g, '');
+document.getElementById('filename-input').value = filename;
+}
+
+window.resetChanges = function() {
+if (confirm('Reset all changes to original values?')) {
+releaseData = JSON.parse(JSON.stringify(originalData));
+initializeEditor();
+}
+};
+
+async function publishRelease() {
+const filename = document.getElementById('filename-input').value.trim();
+
+if (!filename) {
+alert('Please enter a filename!');
+return;
+}
+
+if (!releaseData.title || !releaseData.artist) {
+alert('Please fill in required fields: Title and Artist');
+return;
+}
+
+try {
+const releaseWithFilename = {
+...releaseData,
+filename: filename
+};
+
+const response = await fetch('/api/save-release', {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+},
+body: JSON.stringify(releaseWithFilename)
+});
+
+const result = await response.json();
+
+if (response.ok && result.success) {
+alert(`✅ Success!\n\n${result.message}\n\nFile saved: ${result.filename}\nAction: ${result.action}`);
+downloadJSON();
+sessionStorage.removeItem('freshwax-release-draft');
+} else {
+throw new Error(result.error || 'Failed to publish release');
+}
+} catch (error) {
+console.error('Publish error:', error);
+alert(`❌ Error publishing release:\n\n${error.message}\n\nDownloading JSON as fallback...`);
+downloadJSON();
+}
+}
+
+window.publishRelease = publishRelease;
+
+window.downloadJSON = function() {
+if (!releaseData) {
+alert('No release data loaded!');
+return;
+}
+
+const filename = document.getElementById('filename-input').value.trim() || 'release';
+const jsonString = JSON.stringify(releaseData, null, 2);
+const blob = new Blob([jsonString], { type: 'application/json' });
+const url = URL.createObjectURL(blob);
+
+const a = document.createElement('a');
+a.href = url;
+a.download = `${filename}.json`;
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(url);
+};
+</script>
+</Layout>

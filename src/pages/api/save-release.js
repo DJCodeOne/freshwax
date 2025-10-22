@@ -1,11 +1,38 @@
 // src/pages/api/save-release.js
+// Saves releases ONLY to Firebase (not static files)
 export const prerender = false;
 
-import fs from 'fs/promises';
-import path from 'path';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+let db;
+
+// Initialize Firebase Admin SDK
+function initializeFirebase() {
+  if (getApps().length === 0) {
+    initializeApp({
+      credential: cert({
+        projectId: import.meta.env.FIREBASE_PROJECT_ID,
+        clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+      })
+    });
+  }
+  return getFirestore();
+}
+
+try {
+  db = initializeFirebase();
+} catch (error) {
+  console.error('Failed to initialize Firebase:', error);
+}
 
 export async function POST({ request }) {
   try {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+
     const releaseData = await request.json();
     
     // Validate required fields
@@ -18,69 +45,80 @@ export async function POST({ request }) {
       });
     }
     
-    // Path to releases.json in the public/data directory
-    const dataDir = path.join(process.cwd(), 'public', 'data');
-    const filePath = path.join(dataDir, 'releases.json');
+    const releaseId = releaseData.id;
+    const now = new Date().toISOString();
     
-    // Ensure the data directory exists
-    try {
-      await fs.mkdir(dataDir, { recursive: true });
-    } catch (err) {
-      // Directory might already exist, ignore error
+    // Generate filename if not provided
+    const filename = releaseData.filename || 
+      `${releaseData.artist}-${releaseData.title}`
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+    
+    // Check if release already exists
+    const releaseRef = db.collection('releases').doc(releaseId);
+    const existingDoc = await releaseRef.get();
+    const isUpdate = existingDoc.exists;
+    
+    // Prepare release document for Firestore
+    const firestoreRelease = {
+      // All release data
+      ...releaseData,
+      
+      // Ensure filename is set
+      filename: filename,
+      
+      // Timestamps
+      updatedAt: now,
+      
+      // Set defaults for new releases
+      isPublished: releaseData.isPublished !== undefined ? releaseData.isPublished : true,
+      isFeatured: releaseData.isFeatured || false,
+      
+      // Analytics
+      views: releaseData.views || 0,
+      sales: releaseData.sales || 0,
+      vinylSold: releaseData.vinylSold || 0,
+      
+      // Display options (from editor)
+      displayOptions: releaseData.displayOptions || {
+        showLabel: true,
+        showGenre: true,
+        showDescription: true,
+        showExtraNotes: true
+      }
+    };
+    
+    // Add creation timestamps for new releases
+    if (!isUpdate) {
+      firestoreRelease.createdAt = now;
+      firestoreRelease.publishedAt = now;
     }
     
-    // Read existing releases or create empty array
-    let releases = [];
-    try {
-      const fileContent = await fs.readFile(filePath, 'utf-8');
-      const data = JSON.parse(fileContent);
-      releases = data.releases || [];
-    } catch (err) {
-      // File doesn't exist yet, will create it
-      console.log('Creating new releases.json file');
-    }
+    // Save to Firestore
+    await releaseRef.set(firestoreRelease, { merge: true });
     
-    // Check if release already exists (update instead of duplicate)
-    const existingIndex = releases.findIndex(r => r.id === releaseData.id);
-    
-    if (existingIndex >= 0) {
-      // Update existing release
-      releases[existingIndex] = {
-        ...releaseData,
-        updatedAt: new Date().toISOString()
-      };
-      console.log(`Updated release: ${releaseData.id}`);
-    } else {
-      // Add new release to the beginning (newest first)
-      releases.unshift({
-        ...releaseData,
-        createdAt: new Date().toISOString()
-      });
-      console.log(`Added new release: ${releaseData.id}`);
-    }
-    
-    // Write back to file
-    await fs.writeFile(
-      filePath, 
-      JSON.stringify({ releases }, null, 2),
-      'utf-8'
-    );
+    console.log(`✅ ${isUpdate ? 'Updated' : 'Created'} release in Firebase:`, releaseId);
     
     return new Response(JSON.stringify({ 
       success: true, 
-      releaseId: releaseData.id,
-      action: existingIndex >= 0 ? 'updated' : 'created',
-      totalReleases: releases.length
+      releaseId: releaseId,
+      filename: filename,
+      action: isUpdate ? 'updated' : 'created',
+      message: `Release ${isUpdate ? 'updated' : 'published'} successfully! ${isUpdate ? 'Changes are live.' : 'It\'s now live in your store.'}`,
+      savedTo: 'firebase',
+      timestamp: now
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
     
   } catch (error) {
-    console.error('Error saving release:', error);
+    console.error('❌ Error saving release:', error);
     return new Response(JSON.stringify({ 
       error: error.message,
-      details: 'Failed to save release to database'
+      details: 'Failed to save release to Firebase',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -88,31 +126,66 @@ export async function POST({ request }) {
   }
 }
 
-// Optional: GET endpoint to retrieve all releases
-export async function GET() {
+// GET all releases from Firestore
+export async function GET({ url }) {
   try {
-    const filePath = path.join(process.cwd(), 'public', 'data', 'releases.json');
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+
+    const searchParams = url.searchParams;
+    const publishedOnly = searchParams.get('published') !== 'false';
+    const featured = searchParams.get('featured') === 'true';
+    const limit = parseInt(searchParams.get('limit')) || null;
     
-    try {
-      const fileContent = await fs.readFile(filePath, 'utf-8');
-      const data = JSON.parse(fileContent);
-      
-      return new Response(JSON.stringify(data), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    } catch (err) {
-      // File doesn't exist, return empty array
-      return new Response(JSON.stringify({ releases: [] }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    let query = db.collection('releases');
+    
+    // Filter by published status
+    if (publishedOnly) {
+      query = query.where('isPublished', '==', true);
     }
     
-  } catch (error) {
-    console.error('Error reading releases:', error);
+    // Filter by featured
+    if (featured) {
+      query = query.where('isFeatured', '==', true);
+    }
+    
+    // Order by release date (newest first)
+    query = query.orderBy('releaseDate', 'desc');
+    
+    // Limit results
+    if (limit) {
+      query = query.limit(limit);
+    }
+    
+    const snapshot = await query.get();
+    const releases = [];
+    
+    snapshot.forEach(doc => {
+      releases.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
     return new Response(JSON.stringify({ 
-      error: error.message 
+      releases,
+      count: releases.length,
+      filters: {
+        published: publishedOnly,
+        featured: featured,
+        limit: limit
+      }
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching releases:', error);
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: 'Failed to fetch releases from Firebase'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -120,28 +193,89 @@ export async function GET() {
   }
 }
 
-// Optional: DELETE endpoint to remove a release
-export async function DELETE({ request }) {
+// PATCH - Update specific fields (for quick edits from admin panel)
+export async function PATCH({ request }) {
   try {
-    const { id } = await request.json();
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+
+    const { id, updates } = await request.json();
     
     if (!id) {
       return new Response(JSON.stringify({ 
-        error: 'Release ID is required' 
+        error: 'Release ID required' 
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
     
-    const filePath = path.join(process.cwd(), 'public', 'data', 'releases.json');
-    const fileContent = await fs.readFile(filePath, 'utf-8');
-    const data = JSON.parse(fileContent);
+    if (!updates || Object.keys(updates).length === 0) {
+      return new Response(JSON.stringify({ 
+        error: 'Updates object required' 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
     
-    const releases = data.releases || [];
-    const filteredReleases = releases.filter(r => r.id !== id);
+    // Add updated timestamp
+    const updateData = {
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
     
-    if (releases.length === filteredReleases.length) {
+    // Update in Firestore
+    await db.collection('releases').doc(id).update(updateData);
+    
+    console.log(`✅ Updated release fields:`, id, Object.keys(updates));
+    
+    return new Response(JSON.stringify({ 
+      success: true,
+      releaseId: id,
+      updatedFields: Object.keys(updates),
+      message: 'Release updated successfully'
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error updating release:', error);
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: 'Failed to update release in Firebase'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// DELETE release from Firestore
+export async function DELETE({ request }) {
+  try {
+    if (!db) {
+      throw new Error('Firebase not initialized');
+    }
+
+    const { id } = await request.json();
+    
+    if (!id) {
+      return new Response(JSON.stringify({ 
+        error: 'Release ID required' 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Check if release exists
+    const releaseRef = db.collection('releases').doc(id);
+    const doc = await releaseRef.get();
+    
+    if (!doc.exists) {
       return new Response(JSON.stringify({ 
         error: 'Release not found' 
       }), {
@@ -150,25 +284,25 @@ export async function DELETE({ request }) {
       });
     }
     
-    await fs.writeFile(
-      filePath, 
-      JSON.stringify({ releases: filteredReleases }, null, 2),
-      'utf-8'
-    );
+    // Delete from Firestore
+    await releaseRef.delete();
+    
+    console.log(`✅ Deleted release:`, id);
     
     return new Response(JSON.stringify({ 
       success: true,
       deletedId: id,
-      totalReleases: filteredReleases.length
+      message: 'Release deleted successfully'
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
     
   } catch (error) {
-    console.error('Error deleting release:', error);
+    console.error('❌ Error deleting release:', error);
     return new Response(JSON.stringify({ 
-      error: error.message 
+      error: error.message,
+      details: 'Failed to delete release from Firebase'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
