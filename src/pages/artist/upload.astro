@@ -1,0 +1,571 @@
+---
+// src/pages/artist/upload.astro
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Your Music - Fresh Wax</title>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="main-content" style="display: none;">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-container">
+                <div class="header-left">
+                    <img src="/logo.webp" alt="Fresh Wax" class="logo">
+                    <h1 class="site-title">Fresh Wax</h1>
+                </div>
+                <div class="header-right">
+                    <a href="/artist/dashboard" class="btn-back">← Back to Dashboard</a>
+                    <button id="logoutBtn" class="btn-logout">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="content-section">
+            <div class="content-container">
+                
+                <!-- Hero Section -->
+                <div class="hero-section">
+                    <div class="hero-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                    </div>
+                    <h2>Upload Your Music</h2>
+                    <p class="hero-subtitle">Use our dedicated upload portal to submit your releases to Fresh Wax</p>
+                </div>
+
+                <!-- Info Cards -->
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="card-number">1</div>
+                        <h3>Prepare Your Files</h3>
+                        <p>Make sure you have your high-quality audio files (WAV, FLAC, or MP3) and artwork ready (minimum 3000x3000px JPG or PNG).</p>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="card-number">2</div>
+                        <h3>Access the Uploader</h3>
+                        <p>Click the button below to open our dedicated upload portal. You'll be able to upload multiple tracks, artwork, and fill in all release details.</p>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="card-number">3</div>
+                        <h3>Submit for Review</h3>
+                        <p>Once you've completed all fields and uploaded your files, submit your release. Our team will review it and you'll be notified once it's approved.</p>
+                    </div>
+                </div>
+
+                <!-- Requirements Section -->
+                <div class="requirements-section">
+                    <h3>Upload Requirements</h3>
+                    <div class="requirements-grid">
+                        <div class="requirement-item">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                            </svg>
+                            <div>
+                                <strong>Audio Files</strong>
+                                <p>WAV (16-bit or 24-bit), FLAC, or high-quality MP3 (320kbps)</p>
+                            </div>
+                        </div>
+
+                        <div class="requirement-item">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <div>
+                                <strong>Artwork</strong>
+                                <p>Minimum 3000x3000px, JPG or PNG format, square aspect ratio</p>
+                            </div>
+                        </div>
+
+                        <div class="requirement-item">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <div>
+                                <strong>Metadata</strong>
+                                <p>Release title, artist name, genre, release date, track titles, and description</p>
+                            </div>
+                        </div>
+
+                        <div class="requirement-item">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div>
+                                <strong>Rights & Ownership</strong>
+                                <p>You must own all rights to the music and artwork you're uploading</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CTA Section -->
+                <div class="cta-section">
+                    <div class="cta-content">
+                        <h3>Ready to Upload?</h3>
+                        <p>Access our upload portal to submit your music to Fresh Wax. The process typically takes 10-15 minutes.</p>
+                        <a href="https://freshwax-uploads.pages.dev" target="_blank" class="btn-upload">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            Open Upload Portal
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Help Section -->
+                <div class="help-section">
+                    <h3>Need Help?</h3>
+                    <p>If you encounter any issues or have questions about the upload process, please contact our support team at <a href="mailto:support@freshwax.com">support@freshwax.com</a></p>
+                </div>
+
+            </div>
+        </main>
+    </div>
+</body>
+</html>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #ffffff;
+        color: #000000;
+        line-height: 1.6;
+    }
+
+    /* Loading Screen */
+    .loading-screen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: #000000;
+        color: #ffffff;
+    }
+
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-top-color: #ffffff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1rem;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Header */
+    .header {
+        background: #000000;
+        color: #ffffff;
+        border-bottom: 2px solid #ffffff;
+        padding: 1.5rem 0;
+    }
+
+    .header-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .logo {
+        height: 50px;
+        width: auto;
+    }
+
+    .site-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .btn-back {
+        background: transparent;
+        color: #ffffff;
+        border: 2px solid #ffffff;
+        padding: 0.625rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: inline-block;
+    }
+
+    .btn-back:hover {
+        background: #ffffff;
+        color: #000000;
+    }
+
+    .btn-logout {
+        background: #ffffff;
+        color: #000000;
+        border: 2px solid #ffffff;
+        padding: 0.625rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-logout:hover {
+        background: #000000;
+        color: #ffffff;
+    }
+
+    /* Content Section */
+    .content-section {
+        padding: 4rem 0;
+        min-height: calc(100vh - 100px);
+    }
+
+    .content-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 2rem;
+    }
+
+    /* Hero Section */
+    .hero-section {
+        text-align: center;
+        margin-bottom: 4rem;
+        padding-bottom: 3rem;
+        border-bottom: 2px solid #000000;
+    }
+
+    .hero-icon {
+        width: 100px;
+        height: 100px;
+        background: #000000;
+        margin: 0 auto 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .hero-icon svg {
+        width: 60px;
+        height: 60px;
+        stroke: #ffffff;
+    }
+
+    .hero-section h2 {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: #000000;
+    }
+
+    .hero-subtitle {
+        font-size: 1.25rem;
+        color: #666666;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    /* Info Grid */
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-bottom: 4rem;
+    }
+
+    .info-card {
+        background: #ffffff;
+        border: 2px solid #000000;
+        padding: 2rem;
+        transition: all 0.2s;
+    }
+
+    .info-card:hover {
+        box-shadow: 8px 8px 0 #000000;
+        transform: translate(-4px, -4px);
+    }
+
+    .card-number {
+        width: 50px;
+        height: 50px;
+        background: #000000;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+    }
+
+    .info-card h3 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: #000000;
+    }
+
+    .info-card p {
+        color: #333333;
+        line-height: 1.7;
+    }
+
+    /* Requirements Section */
+    .requirements-section {
+        background: #ffffff;
+        border: 2px solid #000000;
+        padding: 3rem;
+        margin-bottom: 4rem;
+    }
+
+    .requirements-section h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+        color: #000000;
+        text-align: center;
+    }
+
+    .requirements-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2rem;
+    }
+
+    .requirement-item {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .requirement-item svg {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+        stroke: #000000;
+    }
+
+    .requirement-item strong {
+        display: block;
+        font-size: 1.125rem;
+        margin-bottom: 0.25rem;
+        color: #000000;
+    }
+
+    .requirement-item p {
+        color: #666666;
+        font-size: 0.95rem;
+        line-height: 1.5;
+    }
+
+    /* CTA Section */
+    .cta-section {
+        background: #000000;
+        color: #ffffff;
+        padding: 4rem;
+        text-align: center;
+        margin-bottom: 4rem;
+    }
+
+    .cta-content h3 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    .cta-content p {
+        font-size: 1.125rem;
+        margin-bottom: 2rem;
+        color: #cccccc;
+    }
+
+    .btn-upload {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: #ffffff;
+        color: #000000;
+        border: 2px solid #ffffff;
+        padding: 1.25rem 3rem;
+        font-size: 1.25rem;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .btn-upload:hover {
+        box-shadow: 8px 8px 0 #ffffff;
+        transform: translate(-4px, -4px);
+    }
+
+    .btn-upload svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Help Section */
+    .help-section {
+        text-align: center;
+        padding: 2rem;
+        background: #f5f5f5;
+        border: 2px solid #000000;
+    }
+
+    .help-section h3 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: #000000;
+    }
+
+    .help-section p {
+        color: #333333;
+        font-size: 1rem;
+    }
+
+    .help-section a {
+        color: #000000;
+        font-weight: 600;
+        text-decoration: underline;
+    }
+
+    .help-section a:hover {
+        text-decoration: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .header-container {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .header-left {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .hero-section h2 {
+            font-size: 2rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1rem;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .requirements-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .cta-section {
+            padding: 3rem 2rem;
+        }
+
+        .cta-content h3 {
+            font-size: 1.75rem;
+        }
+
+        .btn-upload {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+        }
+
+        .requirements-section {
+            padding: 2rem 1.5rem;
+        }
+    }
+</style>
+
+<script>
+    import { initializeApp } from 'firebase/app';
+    import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
+    import { getFirestore, doc, getDoc } from 'firebase/firestore';
+
+    // Firebase config
+    const firebaseConfig = {
+        apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+        authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId: import.meta.env.PUBLIC_FIREBASE_APP_ID
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Check authentication
+    onAuthStateChanged(auth, async (user) => {
+        const loadingScreen = document.getElementById('loadingScreen');
+        const mainContent = document.getElementById('mainContent');
+
+        if (user) {
+            // Check if artist has upload access
+            const artistDoc = await getDoc(doc(db, 'artists', user.uid));
+            if (!artistDoc.exists() || !artistDoc.data().hasUploadAccess) {
+                alert('You do not have upload access. Please contact support.');
+                window.location.href = '/artist/dashboard';
+                return;
+            }
+            
+            if (loadingScreen) loadingScreen.style.display = 'none';
+            if (mainContent) mainContent.style.display = 'block';
+        } else {
+            window.location.href = '/artist/login';
+        }
+    });
+
+    // Logout
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+        try {
+            await signOut(auth);
+            window.location.href = '/';
+        } catch (error) {
+            console.error('Error logging out:', error);
+        }
+    });
+</script>

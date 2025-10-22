@@ -1,533 +1,612 @@
 ---
-// src/pages/login.astro
+// src/pages/admin/index.astro
+import Layout from '../../layouts/Layout.astro';
 ---
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artist Login - Fresh Wax</title>
-</head>
-<body>
-    <div class="split-container">
-        <!-- Left Side - Form -->
-        <div class="form-side">
-            <div class="form-container">
-                <div class="form-header">
-                    <h2>Artist Portal</h2>
-                    <p>Sign in to access your dashboard and upload music</p>
-                </div>
+<Layout title="Fresh Wax Admin Dashboard">
+  <style>
+    .admin-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
 
-                <div class="message success-message" id="successMessage">
-                    Login successful! Redirecting to dashboard...
-                </div>
+    .admin-loading-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #ffffff;
+    }
 
-                <div class="message error-message" id="errorMessage"></div>
+    .admin-loading-content {
+      text-align: center;
+    }
 
-                <form id="loginForm">
-                    <div class="form-group">
-                        <label for="email">
-                            <svg class="input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            Email Address
-                        </label>
-                        <input type="email" id="email" name="email" placeholder="artist@example.com" required>
-                    </div>
+    .admin-spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #000;
+      border-radius: 50%;
+      animation: admin-spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
 
-                    <div class="form-group">
-                        <label for="password">
-                            <svg class="input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>
-                            Password
-                        </label>
-                        <input type="password" id="password" name="password" placeholder="Enter your password" required>
-                    </div>
+    @keyframes admin-spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
 
-                    <div class="form-actions">
-                        <a href="#" id="forgotPasswordLink" class="forgot-link">Forgot password?</a>
-                    </div>
+    .admin-loading-text {
+      color: #000;
+      font-size: 16px;
+    }
 
-                    <button type="submit" class="submit-btn" id="submitBtn">
-                        <span>Access Dashboard</span>
-                        <svg class="btn-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                    </button>
-                </form>
+    .admin-logo-container {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-                <div class="form-footer">
-                    <p class="register-prompt">New artist? <a href="/register">Create account</a></p>
-                    <div class="divider">
-                        <span>OR</span>
-                    </div>
-                    <p class="customer-prompt">Shopping for music? <a href="/customer/login">Customer Login →</a></p>
-                </div>
-            </div>
-        </div>
+    .admin-logo {
+      height: 60px;
+      width: auto;
+    }
 
-        <!-- Right Side - Branding -->
-        <div class="branding-side">
-            <div class="branding-content">
-                <img src="/logo.webp" alt="Fresh Wax Logo" class="logo-image" />
-                <h2 class="welcome-text">Artist Portal</h2>
-                <p class="tagline">Upload your music and manage your releases on Fresh Wax</p>
-                <div class="features">
-                    <div class="feature">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        <span>Upload your releases</span>
-                    </div>
-                    <div class="feature">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                        <span>Track your sales</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+    .admin-logout-btn {
+      padding: 10px 20px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .admin-logout-btn:hover {
+      background: #c82333;
+      transform: translateY(-2px);
+    }
+
+    .admin-header-card {
+      background: white;
+      padding: 30px;
+      margin-bottom: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .admin-header-card h1 {
+      font-size: 36px;
+      color: #000;
+      margin-bottom: 10px;
+    }
+
+    .admin-header-card p {
+      color: #000;
+      font-size: 16px;
+      font-weight: 400;
+    }
+
+    .admin-stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .admin-stat-card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .admin-stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .admin-stat-label {
+      font-size: 14px;
+      color: #000;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .admin-stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      color: #000;
+    }
+
+    .admin-stat-change {
+      font-size: 12px;
+      margin-top: 5px;
+      font-weight: 500;
+    }
+
+    .admin-stat-change.positive {
+      color: #28a745;
+    }
+
+    .admin-stat-change.warning {
+      color: #856404;
+    }
+
+    .admin-quick-actions {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .admin-quick-actions h2 {
+      font-size: 20px;
+      color: #000;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .admin-action-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .admin-action-btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .admin-action-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .admin-action-btn.primary {
+      background: #000;
+      color: white;
+    }
+
+    .admin-action-btn.secondary {
+      background: #666;
+      color: white;
+    }
+
+    .admin-action-btn.success {
+      background: #28a745;
+      color: white;
+    }
+
+    .admin-action-btn.warning {
+      background: #ffc107;
+      color: #000;
+    }
+
+    .admin-modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 25px;
+      margin-bottom: 30px;
+    }
+
+    .admin-module-card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      transition: all 0.3s;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #e0e0e0;
+    }
+
+    .admin-module-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: #000;
+    }
+
+    .admin-module-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      border-color: #000;
+    }
+
+    .admin-module-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .admin-module-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #000;
+      margin-bottom: 10px;
+    }
+
+    .admin-module-description {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 15px;
+    }
+
+    .admin-module-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: #f5f5f5;
+      color: #000;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 10px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .admin-module-badge.new {
+      background: #d4edda;
+      color: #28a745;
+      border-color: #28a745;
+    }
+
+    .admin-module-badge.important {
+      background: #fff3cd;
+      color: #856404;
+      border-color: #ffc107;
+    }
+
+    .admin-recent-activity {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      border: 1px solid #e0e0e0;
+    }
+
+    .admin-recent-activity h2 {
+      font-size: 20px;
+      color: #000;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .admin-activity-item {
+      padding: 15px;
+      border-left: 3px solid #000;
+      background: #f9f9f9;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    .admin-activity-time {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .admin-activity-text {
+      font-size: 14px;
+      color: #000;
+    }
+  </style>
+
+  <div class="admin-container">
+    <div id="loadingScreen" class="admin-loading-container">
+      <div class="admin-loading-content">
+        <div class="admin-spinner"></div>
+        <p class="admin-loading-text">Loading dashboard...</p>
+      </div>
     </div>
-</body>
-</html>
 
-<style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
+    <div id="dashboardContent" style="display: none;">
+      <!-- Logo & Logout Header -->
+      <div class="admin-logo-container">
+        <img src="/logo.webp" alt="Fresh Wax" class="admin-logo">
+        <button class="admin-logout-btn" id="logoutBtn">
+          <span>🚪</span>
+          Logout
+        </button>
+      </div>
 
-    body {
-        font-family: 'Arial', sans-serif;
-        min-height: 100vh;
-        background: #f5f7fa;
-    }
+      <!-- Main Header -->
+      <div class="admin-header-card">
+        <h1>🎵 Fresh Wax Admin Dashboard</h1>
+        <p>Welcome back! Manage your music store from here.</p>
+      </div>
 
-    .split-container {
-        display: flex;
-        min-height: 100vh;
-    }
+      <!-- Stats Row -->
+      <div class="admin-stats-row">
+        <div class="admin-stat-card">
+          <div class="admin-stat-label">Total Sales</div>
+          <div class="admin-stat-value">£12,458</div>
+          <div class="admin-stat-change positive">↑ 12.5% from last month</div>
+        </div>
+        
+        <div class="admin-stat-card">
+          <div class="admin-stat-label">Pending Artists</div>
+          <div class="admin-stat-value" id="pendingArtistsCount">-</div>
+          <div class="admin-stat-change warning">Awaiting approval</div>
+        </div>
+        
+        <div class="admin-stat-card">
+          <div class="admin-stat-label">Active Releases</div>
+          <div class="admin-stat-value">47</div>
+          <div class="admin-stat-change positive">↑ 3 new this week</div>
+        </div>
+        
+        <div class="admin-stat-card">
+          <div class="admin-stat-label">Total Customers</div>
+          <div class="admin-stat-value">284</div>
+          <div class="admin-stat-change positive">↑ 15 new this month</div>
+        </div>
+      </div>
 
-    /* Left Side - Form (Black Background) */
-    .form-side {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-        background: #000000;
-    }
+      <!-- Quick Actions -->
+      <div class="admin-quick-actions">
+        <h2>⚡ Quick Actions</h2>
+        <div class="admin-action-buttons">
+          <a href="/admin/artists/pending" class="admin-action-btn warning">✅ Review Pending Artists</a>
+          <a href="/admin/upload-release" class="admin-action-btn success">📤 Upload New Release</a>
+          <a href="/admin/orders" class="admin-action-btn primary">📦 View Pending Orders</a>
+          <a href="/admin/releases" class="admin-action-btn secondary">🎵 Manage Releases</a>
+        </div>
+      </div>
 
-    .form-container {
-        width: 100%;
-        max-width: 450px;
-    }
+      <!-- Modules Grid -->
+      <div class="admin-modules-grid">
+        <div class="admin-module-card" data-link="/admin/artists/pending">
+          <div class="admin-module-icon">✅</div>
+          <div class="admin-module-title">Artist Approvals</div>
+          <div class="admin-module-description">
+            Review and approve pending artist registrations. Grant upload access to verified artists.
+          </div>
+          <span class="admin-module-badge important">Requires Action</span>
+        </div>
 
-    .form-header {
-        margin-bottom: 2rem;
-    }
+        <div class="admin-module-card" data-link="/admin/upload-release">
+          <div class="admin-module-icon">📤</div>
+          <div class="admin-module-title">Upload Release</div>
+          <div class="admin-module-description">
+            Upload complete release packages with audio files, artwork, and metadata to your storage services.
+          </div>
+          <span class="admin-module-badge">Essential</span>
+        </div>
 
-    .form-header h2 {
-        font-size: 2rem;
-        color: #ffffff;
-        margin-bottom: 0.5rem;
-    }
+        <div class="admin-module-card" data-link="/admin/publish-release">
+          <div class="admin-module-icon">🚀</div>
+          <div class="admin-module-title">Publish to Store</div>
+          <div class="admin-module-description">
+            Review uploaded releases and publish them to your Fresh Wax storefront for customers to purchase.
+          </div>
+          <span class="admin-module-badge important">Important</span>
+        </div>
 
-    .form-header p {
-        color: #a0a0a0;
-        font-size: 0.95rem;
-    }
+        <div class="admin-module-card" data-link="/admin/releases">
+          <div class="admin-module-icon">🎵</div>
+          <div class="admin-module-title">Manage Releases</div>
+          <div class="admin-module-description">
+            Edit existing releases, update prices, add special offers, change artwork, and manage track listings.
+          </div>
+          <span class="admin-module-badge">Frequently Used</span>
+        </div>
 
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
+        <div class="admin-module-card" data-link="/admin/orders">
+          <div class="admin-module-icon">📦</div>
+          <div class="admin-module-title">Track Orders</div>
+          <div class="admin-module-description">
+            View and manage customer orders, process payments, send download links, and track order history.
+          </div>
+          <span class="admin-module-badge">Essential</span>
+        </div>
 
-    label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
-        color: #ffffff;
-        font-weight: 600;
-        font-size: 0.9rem;
-    }
+        <div class="admin-module-card" data-link="/admin/customers">
+          <div class="admin-module-icon">👥</div>
+          <div class="admin-module-title">Customer Management</div>
+          <div class="admin-module-description">
+            View customer profiles, order history, manage subscriptions, and handle customer support requests.
+          </div>
+          <span class="admin-module-badge">Management</span>
+        </div>
 
-    .input-icon {
-        width: 18px;
-        height: 18px;
-    }
+        <div class="admin-module-card" data-link="/admin/promotions">
+          <div class="admin-module-icon">🏷️</div>
+          <div class="admin-module-title">Promotions & Offers</div>
+          <div class="admin-module-description">
+            Create discount codes, run special promotions, set up bundle deals, and manage seasonal sales.
+          </div>
+          <span class="admin-module-badge new">New</span>
+        </div>
 
-    input[type="email"],
-    input[type="password"] {
-        width: 100%;
-        padding: 0.875rem 1rem;
-        border: 2px solid #333333;
-        border-radius: 8px;
-        font-size: 1rem;
-        transition: all 0.2s ease;
-        background: #1a1a1a;
-        color: #ffffff;
-    }
+        <div class="admin-module-card" data-link="/admin/analytics">
+          <div class="admin-module-icon">📊</div>
+          <div class="admin-module-title">Analytics & Reports</div>
+          <div class="admin-module-description">
+            View detailed sales reports, track popular releases, analyze customer behavior, and export data.
+          </div>
+          <span class="admin-module-badge">Insights</span>
+        </div>
 
-    input:focus {
-        outline: none;
-        border-color: #ffffff;
-        background: #1a1a1a;
-        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
-    }
+        <div class="admin-module-card" data-link="/admin/inventory">
+          <div class="admin-module-icon">📋</div>
+          <div class="admin-module-title">Inventory Management</div>
+          <div class="admin-module-description">
+            Manage digital inventory, track format availability (MP3, WAV, FLAC), and handle stock levels.
+          </div>
+          <span class="admin-module-badge">Management</span>
+        </div>
 
-    input::placeholder {
-        color: #666666;
-    }
+        <div class="admin-module-card" data-link="/admin/artists">
+          <div class="admin-module-icon">🎤</div>
+          <div class="admin-module-title">Artist Management</div>
+          <div class="admin-module-description">
+            Manage artist profiles, royalty splits, contract details, and payment information.
+          </div>
+          <span class="admin-module-badge">Management</span>
+        </div>
 
-    .form-actions {
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: 1.5rem;
-    }
+        <div class="admin-module-card" data-link="/admin/media-processor">
+          <div class="admin-module-icon">🎛️</div>
+          <div class="admin-module-title">Media Processor</div>
+          <div class="admin-module-description">
+            Convert audio formats, create preview clips, optimize images, and process files before upload.
+          </div>
+          <span class="admin-module-badge">Tools</span>
+        </div>
 
-    .forgot-link {
-        color: #ffffff;
-        text-decoration: none;
-        font-size: 0.9rem;
-        font-weight: 600;
-        transition: color 0.2s;
-    }
+        <div class="admin-module-card" data-link="/admin/email">
+          <div class="admin-module-icon">📧</div>
+          <div class="admin-module-title">Email Marketing</div>
+          <div class="admin-module-description">
+            Send newsletters, announce new releases, create email campaigns, and manage subscriber lists.
+          </div>
+          <span class="admin-module-badge new">New</span>
+        </div>
 
-    .forgot-link:hover {
-        color: #cccccc;
-        text-decoration: underline;
-    }
+        <div class="admin-module-card" data-link="/admin/settings">
+          <div class="admin-module-icon">⚙️</div>
+          <div class="admin-module-title">Store Settings</div>
+          <div class="admin-module-description">
+            Configure store details, payment gateways, tax settings, shipping options, and appearance.
+          </div>
+          <span class="admin-module-badge">Configuration</span>
+        </div>
+      </div>
 
-    .submit-btn {
-        width: 100%;
-        padding: 1rem;
-        background: #ffffff;
-        color: #000000;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
+      <!-- Recent Activity -->
+      <div class="admin-recent-activity">
+        <h2>📝 Recent Activity</h2>
+        <div class="admin-activity-item">
+          <div class="admin-activity-time">2 hours ago</div>
+          <div class="admin-activity-text">New order #1247 received - £24.99</div>
+        </div>
+        <div class="admin-activity-item">
+          <div class="admin-activity-time">5 hours ago</div>
+          <div class="admin-activity-text">Release "Summer Vibes EP" published to store</div>
+        </div>
+        <div class="admin-activity-item">
+          <div class="admin-activity-time">Yesterday</div>
+          <div class="admin-activity-text">Updated pricing for "Deep House Collection Vol. 2"</div>
+        </div>
+        <div class="admin-activity-item">
+          <div class="admin-activity-time">2 days ago</div>
+          <div class="admin-activity-text">New customer registered: john@example.com</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    .submit-btn:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 25px rgba(255, 255, 255, 0.2);
-        background: #f0f0f0;
-    }
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-    .submit-btn:active:not(:disabled) {
-        transform: translateY(0);
-    }
-
-    .submit-btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-
-    .btn-arrow {
-        width: 20px;
-        height: 20px;
-        transition: transform 0.2s;
-    }
-
-    .submit-btn:hover .btn-arrow {
-        transform: translateX(4px);
-    }
-
-    .form-footer {
-        margin-top: 2rem;
-        text-align: center;
-    }
-
-    .register-prompt,
-    .customer-prompt {
-        color: #a0a0a0;
-        font-size: 0.9rem;
-    }
-
-    .register-prompt a,
-    .customer-prompt a {
-        color: #ffffff;
-        text-decoration: none;
-        font-weight: 600;
-    }
-
-    .register-prompt a:hover,
-    .customer-prompt a:hover {
-        text-decoration: underline;
-        color: #cccccc;
-    }
-
-    .divider {
-        display: flex;
-        align-items: center;
-        margin: 1.5rem 0;
-        color: #666666;
-    }
-
-    .divider::before,
-    .divider::after {
-        content: '';
-        flex: 1;
-        border-bottom: 1px solid #333333;
-    }
-
-    .divider span {
-        padding: 0 1rem;
-        font-size: 0.75rem;
-        color: #666666;
-        font-weight: 600;
-    }
-
-    .message {
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 1.5rem;
-        display: none;
-        text-align: center;
-        font-size: 0.9rem;
-        font-weight: 500;
-    }
-
-    .success-message {
-        background: #c6f6d5;
-        color: #22543d;
-        border: 1px solid #9ae6b4;
-    }
-
-    .error-message {
-        background: #fed7d7;
-        color: #742a2a;
-        border: 1px solid #fc8181;
-    }
-
-    /* Right Side - Branding (White Background) */
-    .branding-side {
-        flex: 1;
-        background: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 4rem 2rem;
-        color: #000000;
-    }
-
-    .branding-content {
-        max-width: 500px;
-    }
-
-    .logo-image {
-        max-width: 200px;
-        margin-bottom: 2rem;
-    }
-
-    .welcome-text {
-        font-size: 2.5rem;
-        margin-bottom: 1rem;
-        font-weight: 700;
-        color: #000000;
-    }
-
-    .tagline {
-        font-size: 1.1rem;
-        opacity: 0.7;
-        margin-bottom: 3rem;
-        line-height: 1.6;
-        color: #000000;
-    }
-
-    .features {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-
-    .feature {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        font-size: 1.1rem;
-        color: #000000;
-    }
-
-    .feature svg {
-        width: 24px;
-        height: 24px;
-        flex-shrink: 0;
-        color: #000000;
-    }
-
-    /* Mobile Responsive */
-    @media (max-width: 968px) {
-        .split-container {
-            flex-direction: column-reverse;
-        }
-
-        .branding-side {
-            padding: 3rem 2rem;
-        }
-
-        .welcome-text {
-            font-size: 1.75rem;
-        }
-
-        .tagline {
-            font-size: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .features {
-            gap: 1rem;
-        }
-
-        .feature {
-            font-size: 1rem;
-        }
-    }
-
-    @media (max-width: 640px) {
-        .branding-side {
-            padding: 2rem 1.5rem;
-        }
-
-        .form-side {
-            padding: 2rem 1.5rem;
-        }
-
-        .form-header h2 {
-            font-size: 1.5rem;
-        }
-    }
-</style>
-
-<script>
-    import { initializeApp } from 'firebase/app';
-    import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-    import { getFirestore, doc, getDoc } from 'firebase/firestore';
-
-    // Firebase config
     const firebaseConfig = {
-        apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
-        authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
-        projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID,
-        storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        appId: import.meta.env.PUBLIC_FIREBASE_APP_ID
+      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      authDomain: "freshwax-store.firebaseapp.com",
+      projectId: "freshwax-store",
+      storageBucket: "freshwax-store.firebasestorage.app",
+      messagingSenderId: "675435782973",
+      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const form = document.getElementById('loginForm') as HTMLFormElement;
-    const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
-    const successMessage = document.getElementById('successMessage') as HTMLElement;
-    const errorMessage = document.getElementById('errorMessage') as HTMLElement;
-    const forgotPasswordLink = document.getElementById('forgotPasswordLink') as HTMLAnchorElement;
+    // Check admin authentication
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = '/admin/login';
+        return;
+      }
 
-    form.addEventListener('submit', async function(e) {
-        e.preventDefault();
+      try {
+        const adminDoc = await getDoc(doc(db, 'admins', user.uid));
         
-        successMessage.style.display = 'none';
-        errorMessage.style.display = 'none';
-        
-        const email = (document.getElementById('email') as HTMLInputElement).value.trim();
-        const password = (document.getElementById('password') as HTMLInputElement).value;
-        
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span>Signing In...</span>';
-        
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-
-            const artistDoc = await getDoc(doc(db, 'artists', user.uid));
-            
-            if (!artistDoc.exists()) {
-                await auth.signOut();
-                errorMessage.textContent = 'This account is not registered as an artist. Please use customer login.';
-                errorMessage.style.display = 'block';
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span>Access Dashboard</span><svg class="btn-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>';
-                return;
-            }
-
-            const artistData = artistDoc.data();
-            if (!artistData.hasUploadAccess) {
-                errorMessage.textContent = 'Your account does not have upload access. Please contact support.';
-                errorMessage.style.display = 'block';
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span>Access Dashboard</span><svg class="btn-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>';
-                return;
-            }
-
-            successMessage.style.display = 'block';
-            form.style.display = 'none';
-            
-            setTimeout(() => {
-                window.location.href = '/artist/dashboard';
-            }, 1500);
-            
-        } catch (error: any) {
-            let errorMsg = 'Login failed. Please try again.';
-            
-            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                errorMsg = 'Invalid email or password.';
-            } else if (error.code === 'auth/invalid-email') {
-                errorMsg = 'Invalid email address.';
-            } else if (error.code === 'auth/too-many-requests') {
-                errorMsg = 'Too many failed attempts. Please try again later.';
-            } else if (error.code === 'auth/network-request-failed') {
-                errorMsg = 'Network error. Please check your connection.';
-            }
-            
-            errorMessage.textContent = errorMsg;
-            errorMessage.style.display = 'block';
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<span>Access Dashboard</span><svg class="btn-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>';
-            
-            console.error('Login error:', error);
+        if (!adminDoc.exists()) {
+          await signOut(auth);
+          window.location.href = '/admin/login';
+          return;
         }
+        
+        // Show dashboard
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('dashboardContent').style.display = 'block';
+        
+        // Load dashboard data
+        loadPendingArtistsCount();
+      } catch (error) {
+        console.error('Auth check error:', error);
+        window.location.href = '/admin/login';
+      }
     });
 
-    forgotPasswordLink.addEventListener('click', async function(e) {
-        e.preventDefault();
-        
-        const email = (document.getElementById('email') as HTMLInputElement).value.trim();
-        
-        if (!email) {
-            errorMessage.textContent = 'Please enter your email address first.';
-            errorMessage.style.display = 'block';
-            return;
-        }
-        
-        try {
-            await sendPasswordResetEmail(auth, email);
-            successMessage.textContent = 'Password reset email sent! Check your inbox.';
-            successMessage.style.display = 'block';
-            errorMessage.style.display = 'none';
-        } catch (error: any) {
-            let errorMsg = 'Failed to send reset email.';
-            
-            if (error.code === 'auth/user-not-found') {
-                errorMsg = 'No account found with this email.';
-            } else if (error.code === 'auth/invalid-email') {
-                errorMsg = 'Invalid email address.';
-            }
-            
-            errorMessage.textContent = errorMsg;
-            errorMessage.style.display = 'block';
-        }
+    // Logout button
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      try {
+        await signOut(auth);
+        window.location.href = '/admin/login';
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
     });
-</script>
+
+    // Module card navigation
+    document.querySelectorAll('.admin-module-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const link = card.getAttribute('data-link');
+        if (link) window.location.href = link;
+      });
+    });
+
+    // Load pending artists count
+    async function loadPendingArtistsCount() {
+      try {
+        const artistsRef = collection(db, 'artists');
+        const q = query(artistsRef, where('approved', '==', false));
+        const querySnapshot = await getDocs(q);
+        
+        const count = querySnapshot.size;
+        const countElement = document.getElementById('pendingArtistsCount');
+        countElement.textContent = count;
+        
+        if (count > 0) {
+          countElement.style.color = '#ffc107';
+        }
+      } catch (error) {
+        console.error('Error loading pending artists:', error);
+        document.getElementById('pendingArtistsCount').textContent = '0';
+      }
+    }
+  </script>
+</Layout>
