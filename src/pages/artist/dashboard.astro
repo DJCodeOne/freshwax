@@ -1,13 +1,985 @@
 ---
 // src/pages/artist/dashboard.astro
+// Firebase configuration from environment variables
+const firebaseConfig = {
+    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+    authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.PUBLIC_FIREBASE_APP_ID
+};
 ---
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Artist Dashboard - Fresh Wax</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #ffffff;
+            color: #000000;
+            line-height: 1.6;
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top-color: #000000;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Header with White Background for Logo */
+        .header {
+            background: #ffffff;
+            color: #000000;
+            border-bottom: 3px solid #000000;
+            padding: 1.5rem 0;
+        }
+
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .logo {
+            height: 60px;
+            width: auto;
+        }
+
+        .site-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #000000;
+            margin: 0;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-welcome {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-logout-header {
+            background: #000000;
+            color: #ffffff;
+            border: 2px solid #000000;
+            padding: 0.5rem 1.25rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-logout-header:hover {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .welcome-text {
+            font-size: 1rem;
+            color: #666666;
+        }
+
+        .artist-name-header {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #000000;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            min-height: calc(100vh - 100px);
+            padding: 2rem 0;
+            background: #f5f5f5;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Artist Welcome Banner */
+        .artist-banner {
+            background: #000000;
+            color: #ffffff;
+            padding: 2rem 3rem;
+            margin-bottom: 2rem;
+            border: 3px solid #000000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .banner-left h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .banner-right {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .banner-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            opacity: 0.95;
+        }
+
+        .banner-meta-item svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Logout Button Section */
+        .logout-section {
+            margin-bottom: 2rem;
+            text-align: right;
+        }
+
+        .btn-logout {
+            background: #000000;
+            color: #ffffff;
+            border: 2px solid #000000;
+            padding: 0.625rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        /* Connection Status */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 0.85rem;
+        }
+
+        .status-led {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+            animation: pulse 2s infinite;
+        }
+
+        .status-led.disconnected {
+            background: #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Earnings Card */
+        .earnings-card {
+            background: #000000;
+            color: #ffffff;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 3px solid #000000;
+        }
+
+        .earnings-header {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .earnings-amount {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .earnings-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .earnings-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .earnings-item-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .earnings-item-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: #ffffff;
+            border: 3px solid #000000;
+            padding: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .stat-card:hover {
+            box-shadow: 8px 8px 0 #000000;
+            transform: translate(-4px, -4px);
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            background: #000000;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-icon svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .stat-info h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-number {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #000000;
+            line-height: 1;
+        }
+
+        .stat-change {
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: #666666;
+        }
+
+        /* Action Buttons */
+        .actions-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary,
+        .btn-secondary {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border: 3px solid #000000;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            flex: 1;
+            justify-content: center;
+            min-width: 200px;
+        }
+
+        .btn-primary {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover:not(.disabled) {
+            background: #ffffff;
+            color: #000000;
+            box-shadow: 8px 8px 0 #000000;
+            transform: translate(-4px, -4px);
+        }
+
+        .btn-primary.disabled {
+            background: #999999;
+            border-color: #999999;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-secondary {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .btn-secondary:hover {
+            background: #000000;
+            color: #ffffff;
+            box-shadow: 8px 8px 0 #000000;
+            transform: translate(-4px, -4px);
+        }
+
+        .btn-primary svg,
+        .btn-secondary svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Section */
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #000000;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.5rem 1rem;
+            background: #ffffff;
+            border: 3px solid #000000;
+            color: #000000;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        .tab-btn:hover:not(.active) {
+            box-shadow: 4px 4px 0 #000000;
+            transform: translate(-2px, -2px);
+        }
+
+        /* Release Cards */
+        .releases-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .release-card {
+            background: #ffffff;
+            border: 3px solid #000000;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .release-card:hover {
+            box-shadow: 8px 8px 0 #000000;
+            transform: translate(-4px, -4px);
+        }
+
+        .release-cover {
+            width: 100%;
+            height: 280px;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            border-bottom: 3px solid #000000;
+        }
+
+        .release-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .release-status-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 2px solid #000000;
+        }
+
+        .release-status-badge.published {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .release-status-badge.pending {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        .release-status-badge.draft {
+            background: #cccccc;
+            color: #000000;
+        }
+
+        .release-info {
+            padding: 1.5rem;
+        }
+
+        .release-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #000000;
+        }
+
+        .release-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .release-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #666666;
+        }
+
+        .release-meta-item svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .release-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            padding-top: 1rem;
+            border-top: 2px solid #000000;
+        }
+
+        .release-stat {
+            text-align: center;
+        }
+
+        .release-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #000000;
+        }
+
+        .release-stat-label {
+            font-size: 0.75rem;
+            color: #666666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #666666;
+            background: #ffffff;
+            border: 3px solid #000000;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            stroke: #cccccc;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Activity Table */
+        .activity-table {
+            background: #ffffff;
+            border: 3px solid #000000;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        th {
+            text-align: left;
+            padding: 1rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tbody tr {
+            border-bottom: 2px solid #000000;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        td {
+            padding: 1rem;
+            color: #333333;
+        }
+
+        .payment-status {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            border: 2px solid #000000;
+            letter-spacing: 0.5px;
+        }
+
+        .payment-status.paid {
+            background: #ffffff;
+            color: #22c55e;
+            border-color: #22c55e;
+        }
+
+        .payment-status.pending {
+            background: #000000;
+            color: #ffffff;
+        }
+
+        .payment-status.processing {
+            background: #ffffff;
+            color: #f59e0b;
+            border-color: #f59e0b;
+        }
+
+        .empty-row td {
+            text-align: center;
+            padding: 3rem;
+            color: #999999;
+            font-style: italic;
+        }
+
+        /* Profile Grid */
+        .profile-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem 3rem;
+            background: #ffffff;
+            padding: 2rem;
+            border: 3px solid #000000;
+        }
+
+        .profile-item {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.75rem;
+        }
+
+        .profile-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .profile-label::after {
+            content: ':';
+        }
+
+        .profile-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #000000;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 0 1rem;
+            }
+
+            .header-container {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+                padding: 0 1rem;
+            }
+
+            .header-left {
+                width: 100%;
+                justify-content: center;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .header-right {
+                width: 100%;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .header-welcome {
+                justify-content: center;
+            }
+
+            .logo {
+                height: 50px;
+            }
+
+            .site-title {
+                font-size: 1.5rem;
+            }
+
+            .btn-logout-header {
+                width: 100%;
+            }
+
+            .artist-banner {
+                flex-direction: column;
+                gap: 1.5rem;
+                padding: 1.5rem;
+                text-align: center;
+            }
+
+            .banner-left h1 {
+                font-size: 1.5rem;
+            }
+
+            .banner-right {
+                flex-direction: column;
+                gap: 1rem;
+                width: 100%;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .earnings-card {
+                padding: 1.5rem;
+            }
+
+            .earnings-amount {
+                font-size: 2rem;
+            }
+
+            .earnings-breakdown {
+                grid-template-columns: 1fr;
+            }
+
+            .actions-row {
+                flex-direction: column;
+            }
+
+            .btn-primary,
+            .btn-secondary {
+                width: 100%;
+                min-width: auto;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .filter-tabs {
+                width: 100%;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+
+            .tab-btn {
+                white-space: nowrap;
+            }
+
+            .releases-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .activity-table {
+                overflow-x: auto;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 0.75rem 0.5rem;
+            }
+
+            .profile-grid {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1.5rem;
+            }
+
+            .profile-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.25rem;
+            }
+
+            .profile-label::after {
+                content: '';
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: #ffffff;
+                padding: 0;
+                margin: 0;
+            }
+
+            .header {
+                border-bottom: 2px solid #000000;
+                padding: 1rem 0;
+            }
+
+            .loading-screen,
+            .btn-logout,
+            .btn-logout-header,
+            .logout-section,
+            .actions-row,
+            .filter-tabs,
+            .status-led,
+            .status-badge {
+                display: none !important;
+            }
+
+            .dashboard {
+                padding: 0;
+                background: #ffffff;
+            }
+
+            .dashboard-container {
+                max-width: 100%;
+                padding: 0 1cm;
+            }
+
+            .artist-banner {
+                page-break-after: avoid;
+                margin-bottom: 1cm;
+                padding: 1cm;
+            }
+
+            .banner-right {
+                gap: 1rem;
+            }
+
+            .earnings-card {
+                page-break-inside: avoid;
+                margin-bottom: 1cm;
+                padding: 1cm;
+            }
+
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1cm;
+                margin-bottom: 1cm;
+                page-break-inside: avoid;
+            }
+
+            .stat-card {
+                page-break-inside: avoid;
+                box-shadow: none;
+            }
+
+            .stat-card:hover {
+                transform: none;
+                box-shadow: none;
+            }
+
+            .section {
+                page-break-inside: avoid;
+                margin-bottom: 1cm;
+            }
+
+            .section-header {
+                margin-bottom: 0.5cm;
+            }
+
+            .releases-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.5cm;
+                page-break-inside: avoid;
+            }
+
+            .release-card {
+                page-break-inside: avoid;
+                box-shadow: none;
+            }
+
+            .release-card:hover {
+                transform: none;
+                box-shadow: none;
+            }
+
+            .release-cover {
+                height: 200px;
+            }
+
+            .activity-table {
+                page-break-inside: avoid;
+                box-shadow: none;
+            }
+
+            table {
+                page-break-inside: avoid;
+            }
+
+            tbody tr:hover {
+                background: transparent;
+            }
+
+            .profile-grid {
+                page-break-inside: avoid;
+                box-shadow: none;
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.5cm;
+            }
+
+            /* Add page breaks between major sections */
+            .earnings-card {
+                page-break-after: avoid;
+            }
+
+            .stats-grid {
+                page-break-before: avoid;
+                page-break-after: auto;
+            }
+
+            h3 {
+                page-break-after: avoid;
+            }
+
+            /* Print report title */
+            .artist-banner .banner-left h1::before {
+                content: 'Artist Performance Report - ';
+            }
+
+            /* Hide empty states in print */
+            .empty-state {
+                display: none;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Loading Screen -->
@@ -17,7 +989,7 @@
     </div>
 
     <!-- Main Dashboard Content -->
-    <div id="mainContent" class="main-content" style="display: none;">
+    <div id="mainContent" class="hidden">
         <!-- Header -->
         <header class="header">
             <div class="header-container">
@@ -26,8 +998,11 @@
                     <h1 class="site-title">Fresh Wax</h1>
                 </div>
                 <div class="header-right">
-                    <span class="welcome-text">Welcome, <strong id="artistName">Artist</strong></span>
-                    <button id="logoutBtn" class="btn-logout">Logout</button>
+                    <div class="header-welcome">
+                        <span class="welcome-text">Welcome,</span>
+                        <span class="artist-name-header" id="artistNameHeader">Artist</span>
+                    </div>
+                    <button id="logoutBtnHeader" class="btn-logout-header">Logout</button>
                 </div>
             </div>
         </header>
@@ -35,83 +1010,130 @@
         <!-- Main Dashboard -->
         <main class="dashboard">
             <div class="dashboard-container">
-                
-                <!-- Dashboard Title with Connection Status -->
-                <div class="dashboard-title">
-                    <div class="title-group">
-                        <h2>Artist Dashboard</h2>
-                        <div class="connection-status">
+                <!-- Artist Dashboard Banner -->
+                <div class="artist-banner">
+                    <div class="banner-left">
+                        <h1>Artist Dashboard</h1>
+                    </div>
+                    <div class="banner-right">
+                        <div class="banner-meta-item">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>Member since <span id="memberSinceBanner">2024</span></span>
+                        </div>
+                        <div class="status-badge">
                             <span class="status-led" id="statusLed"></span>
-                            <span class="status-text" id="statusText">Checking connection...</span>
+                            <span id="statusText">Connected</span>
                         </div>
                     </div>
-                    <p>Manage your music releases and track your performance</p>
                 </div>
 
                 <!-- Stats Overview -->
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
+                        <div class="stat-header">
+                            <div class="stat-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Total Downloads</h3>
+                            </div>
                         </div>
-                        <div class="stat-info">
-                            <h3>Total Downloads</h3>
-                            <p class="stat-number" id="totalDownloads">0</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                            </svg>
-                        </div>
-                        <div class="stat-info">
-                            <h3>Total Releases</h3>
-                            <p class="stat-number" id="totalReleases">0</p>
+                        <div class="stat-number" id="totalDownloads">0</div>
+                        <div class="stat-change">
+                            <span id="downloadsChange">No data yet</span>
                         </div>
                     </div>
 
                     <div class="stat-card">
-                        <div class="stat-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                        <div class="stat-header">
+                            <div class="stat-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                                </svg>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Total Releases</h3>
+                            </div>
                         </div>
-                        <div class="stat-info">
-                            <h3>This Month</h3>
-                            <p class="stat-number" id="monthlyDownloads">0</p>
+                        <div class="stat-number" id="totalReleases">0</div>
+                        <div class="stat-change">
+                            <span id="releasesBreakdown">0 published</span>
                         </div>
                     </div>
 
                     <div class="stat-card">
-                        <div class="stat-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                            </svg>
+                        <div class="stat-header">
+                            <div class="stat-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Profile Views</h3>
+                            </div>
                         </div>
-                        <div class="stat-info">
-                            <h3>Revenue</h3>
-                            <p class="stat-number" id="totalRevenue">$0</p>
+                        <div class="stat-number" id="profileViews">0</div>
+                        <div class="stat-change">
+                            <span>This month</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                </svg>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Best Seller</h3>
+                            </div>
+                        </div>
+                        <div class="stat-number" style="font-size: 1.2rem;" id="bestSeller">-</div>
+                        <div class="stat-change">
+                            <span id="bestSellerDownloads">0 downloads</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Earnings Overview -->
+                <div class="earnings-card">
+                    <div class="earnings-header">Total Earnings</div>
+                    <div class="earnings-amount" id="totalEarnings">£0.00</div>
+                    <div class="earnings-breakdown">
+                        <div class="earnings-item">
+                            <span class="earnings-item-label">This Month</span>
+                            <span class="earnings-item-value" id="monthlyEarnings">£0.00</span>
+                        </div>
+                        <div class="earnings-item">
+                            <span class="earnings-item-label">Last Month</span>
+                            <span class="earnings-item-value" id="lastMonthEarnings">£0.00</span>
+                        </div>
+                        <div class="earnings-item">
+                            <span class="earnings-item-label">Avg per Release</span>
+                            <span class="earnings-item-value" id="avgPerRelease">£0.00</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Primary Actions -->
                 <div class="actions-row">
-                    <a href="/artist/upload" id="uploadPortalBtn" class="btn-primary">
+                    <a href="https://freshwax-uploads.pages.dev" id="uploadPortalBtn" class="btn-primary" target="_blank" rel="noopener noreferrer">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                         </svg>
-                        Upload New Release
+                        <span>Upload New Release</span>
                     </a>
                     <button id="printReportBtn" class="btn-secondary">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        Print Monthly Report
+                        Download Report
                     </button>
                 </div>
 
@@ -125,37 +1147,36 @@
                             <button class="tab-btn" data-filter="pending">Pending</button>
                         </div>
                     </div>
-
                     <div id="releasesContainer" class="releases-grid">
                         <div class="empty-state">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                             </svg>
-                            <p>No releases yet. Upload your first release to get started!</p>
+                            <p>No releases yet</p>
+                            <p style="font-size: 0.9rem; margin-top: 0.5rem;">Upload your first release to get started!</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Download Activity -->
+                <!-- Recent Sales -->
                 <div class="section">
                     <div class="section-header">
-                        <h3>Recent Download Activity</h3>
-                        <a href="/artist/downloads" class="link-view-all">View All →</a>
+                        <h3>Recent Sales</h3>
                     </div>
-
                     <div class="activity-table">
                         <table>
                             <thead>
                                 <tr>
                                     <th>Release</th>
-                                    <th>Customer</th>
                                     <th>Date</th>
                                     <th>Amount</th>
+                                    <th>Digital/Vinyl</th>
+                                    <th>Paid to Artist</th>
                                 </tr>
                             </thead>
                             <tbody id="activityTableBody">
                                 <tr class="empty-row">
-                                    <td colspan="4">No download activity yet</td>
+                                    <td colspan="5">No sales yet</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -166,9 +1187,7 @@
                 <div class="section">
                     <div class="section-header">
                         <h3>Your Profile</h3>
-                        <a href="/artist/profile" class="link-view-all">Edit Profile →</a>
                     </div>
-
                     <div class="profile-grid">
                         <div class="profile-item">
                             <span class="profile-label">Artist Name</span>
@@ -179,807 +1198,491 @@
                             <span class="profile-value" id="artistEmail">Loading...</span>
                         </div>
                         <div class="profile-item">
-                            <span class="profile-label">Genre</span>
-                            <span class="profile-value" id="artistGenre">Loading...</span>
-                        </div>
-                        <div class="profile-item">
                             <span class="profile-label">Phone</span>
-                            <span class="profile-value" id="artistPhone">Loading...</span>
+                            <span class="profile-value" id="artistPhone">Not provided</span>
                         </div>
                         <div class="profile-item">
                             <span class="profile-label">Member Since</span>
                             <span class="profile-value" id="memberSince">Loading...</span>
                         </div>
-                        <div class="profile-item full-width">
-                            <span class="profile-label">Bio</span>
-                            <div class="profile-value" id="artistBio">No bio available</div>
+                        <div class="profile-item">
+                            <span class="profile-label">Account Status</span>
+                            <span class="profile-value" id="accountStatus">Active</span>
                         </div>
                     </div>
                 </div>
-
             </div>
         </main>
     </div>
-</body>
-</html>
 
-<style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
+    <script type="module" define:vars={{ firebaseConfig }}>
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+        import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        background: #ffffff;
-        color: #000000;
-        line-height: 1.6;
-    }
+        // Firebase config passed from Astro frontmatter
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-    /* Loading Screen */
-    .loading-screen {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-        background: #000000;
-        color: #ffffff;
-    }
+        let currentUser = null;
+        let allReleases = [];
+        let currentFilter = 'all';
 
-    .spinner {
-        width: 50px;
-        height: 50px;
-        border: 4px solid rgba(255, 255, 255, 0.1);
-        border-top-color: #ffffff;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 1rem;
-    }
+        // ==========================================
+        // AUTHENTICATION & INITIALISATION
+        // ==========================================
 
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
-
-    /* Header */
-    .header {
-        background: #000000;
-        color: #ffffff;
-        border-bottom: 2px solid #ffffff;
-        padding: 1.5rem 0;
-    }
-
-    .header-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 0 2rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .header-left {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-
-    .logo {
-        height: 50px;
-        width: auto;
-    }
-
-    .site-title {
-        font-size: 1.75rem;
-        font-weight: 700;
-        color: #ffffff;
-    }
-
-    .header-right {
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-    }
-
-    .welcome-text {
-        font-size: 1rem;
-        color: #ffffff;
-    }
-
-    .btn-logout {
-        background: #ffffff;
-        color: #000000;
-        border: 2px solid #ffffff;
-        padding: 0.625rem 1.5rem;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .btn-logout:hover {
-        background: #000000;
-        color: #ffffff;
-    }
-
-    /* Dashboard */
-    .dashboard {
-        min-height: calc(100vh - 100px);
-        padding: 3rem 0;
-    }
-
-    .dashboard-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 0 2rem;
-    }
-
-    .dashboard-title {
-        margin-bottom: 3rem;
-    }
-
-    .title-group {
-        display: flex;
-        align-items: center;
-        gap: 2rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .dashboard-title h2 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #000000;
-    }
-
-    .dashboard-title p {
-        font-size: 1.125rem;
-        color: #666666;
-    }
-
-    /* Connection Status */
-    .connection-status {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 1rem;
-        border: 2px solid #000000;
-        background: #ffffff;
-    }
-
-    .status-led {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: #cccccc;
-        animation: pulse 2s infinite;
-    }
-
-    .status-led.connected {
-        background: #22c55e;
-        box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
-    }
-
-    .status-led.disconnected {
-        background: #ef4444;
-        box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
-    }
-
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-
-    .status-text {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #000000;
-    }
-
-    /* Stats Grid */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 3rem;
-    }
-
-    .stat-card {
-        background: #ffffff;
-        border: 2px solid #000000;
-        padding: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 1.25rem;
-        transition: all 0.2s;
-    }
-
-    .stat-card:hover {
-        box-shadow: 8px 8px 0 #000000;
-        transform: translate(-4px, -4px);
-    }
-
-    .stat-icon {
-        width: 60px;
-        height: 60px;
-        background: #000000;
-        color: #ffffff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .stat-icon svg {
-        width: 32px;
-        height: 32px;
-    }
-
-    .stat-info h3 {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #666666;
-        margin-bottom: 0.25rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .stat-number {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #000000;
-    }
-
-    /* Action Buttons */
-    .actions-row {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 3rem;
-        flex-wrap: wrap;
-    }
-
-    .btn-primary,
-    .btn-secondary {
-        padding: 1rem 2rem;
-        font-size: 1rem;
-        font-weight: 600;
-        border: 2px solid #000000;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        text-decoration: none;
-        flex: 1;
-        justify-content: center;
-        min-width: 250px;
-    }
-
-    .btn-primary {
-        background: #000000;
-        color: #ffffff;
-    }
-
-    .btn-primary:hover {
-        background: #ffffff;
-        color: #000000;
-        box-shadow: 8px 8px 0 #000000;
-        transform: translate(-4px, -4px);
-    }
-
-    .btn-secondary {
-        background: #ffffff;
-        color: #000000;
-    }
-
-    .btn-secondary:hover {
-        background: #000000;
-        color: #ffffff;
-        box-shadow: 8px 8px 0 #000000;
-        transform: translate(-4px, -4px);
-    }
-
-    .btn-primary svg,
-    .btn-secondary svg {
-        width: 20px;
-        height: 20px;
-    }
-
-    /* Section */
-    .section {
-        margin-bottom: 3rem;
-    }
-
-    .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        padding-bottom: 1rem;
-        border-bottom: 2px solid #000000;
-    }
-
-    .section-header h3 {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #000000;
-    }
-
-    .link-view-all {
-        color: #000000;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 1rem;
-        transition: all 0.2s;
-    }
-
-    .link-view-all:hover {
-        text-decoration: underline;
-    }
-
-    /* Filter Tabs */
-    .filter-tabs {
-        display: flex;
-        gap: 0.5rem;
-    }
-
-    .tab-btn {
-        padding: 0.5rem 1rem;
-        background: #ffffff;
-        border: 2px solid #000000;
-        color: #000000;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .tab-btn.active {
-        background: #000000;
-        color: #ffffff;
-    }
-
-    .tab-btn:hover:not(.active) {
-        background: #f0f0f0;
-    }
-
-    /* Releases Grid */
-    .releases-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1.5rem;
-    }
-
-    .empty-state {
-        grid-column: 1 / -1;
-        text-align: center;
-        padding: 4rem 2rem;
-        color: #666666;
-    }
-
-    .empty-state svg {
-        width: 64px;
-        height: 64px;
-        margin-bottom: 1rem;
-        stroke: #cccccc;
-    }
-
-    /* Activity Table */
-    .activity-table {
-        background: #ffffff;
-        border: 2px solid #000000;
-        overflow: hidden;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    thead {
-        background: #000000;
-        color: #ffffff;
-    }
-
-    th {
-        text-align: left;
-        padding: 1rem;
-        font-weight: 600;
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    tbody tr {
-        border-bottom: 1px solid #e0e0e0;
-    }
-
-    tbody tr:last-child {
-        border-bottom: none;
-    }
-
-    tbody tr:hover {
-        background: #f5f5f5;
-    }
-
-    td {
-        padding: 1rem;
-        color: #000000;
-    }
-
-    .empty-row td {
-        text-align: center;
-        padding: 3rem;
-        color: #666666;
-        font-style: italic;
-    }
-
-    /* Profile Grid */
-    .profile-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1.5rem;
-        background: #ffffff;
-        border: 2px solid #000000;
-        padding: 2rem;
-    }
-
-    .profile-item {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .profile-item.full-width {
-        grid-column: 1 / -1;
-    }
-
-    .profile-label {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #666666;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .profile-value {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #000000;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .header-container {
-            flex-direction: column;
-            gap: 1rem;
-            text-align: center;
-        }
-
-        .header-left {
-            flex-direction: column;
-        }
-
-        .dashboard-title h2 {
-            font-size: 2rem;
-        }
-
-        .title-group {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-
-        .stats-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .actions-row {
-            flex-direction: column;
-        }
-
-        .btn-primary,
-        .btn-secondary {
-            width: 100%;
-        }
-
-        .section-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-
-        .filter-tabs {
-            width: 100%;
-            justify-content: flex-start;
-        }
-    }
-</style>
-
-<script>
-    import { initializeApp } from 'firebase/app';
-    import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
-    import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-
-    const firebaseConfig = {
-        apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
-        authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
-        projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID,
-        storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-        appId: import.meta.env.PUBLIC_FIREBASE_APP_ID
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    let isFirestoreConnected = false;
-
-    async function testFirestoreConnection() {
-        try {
-            await getDocs(query(collection(db, 'artists'), limit(1)));
-            isFirestoreConnected = true;
-            updateConnectionStatus(true);
-            return true;
-        } catch (error) {
-            console.warn('Firestore connection issue:', error);
-            isFirestoreConnected = false;
-            updateConnectionStatus(false);
-            return false;
-        }
-    }
-
-    function updateConnectionStatus(connected) {
-        const statusLed = document.getElementById('statusLed');
-        const statusText = document.getElementById('statusText');
-        
-        if (!statusLed || !statusText) return;
-
-        if (connected) {
-            statusLed.className = 'status-led connected';
-            statusText.textContent = 'Database Connected';
-        } else {
-            statusLed.className = 'status-led disconnected';
-            statusText.textContent = 'Database Disconnected';
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
         onAuthStateChanged(auth, async (user) => {
             const loadingScreen = document.getElementById('loadingScreen');
             const mainContent = document.getElementById('mainContent');
 
             if (user) {
-                console.log('User authenticated:', user.uid);
-                await testFirestoreConnection();
-                await loadDashboardData(user.uid);
+                console.log('✅ User authenticated:', user.email);
+                currentUser = user;
                 
-                if (loadingScreen) loadingScreen.style.display = 'none';
-                if (mainContent) mainContent.style.display = 'block';
+                try {
+                    await loadDashboardData(user.uid);
+                    loadingScreen.classList.add('hidden');
+                    mainContent.classList.remove('hidden');
+                    updateConnectionStatus(true);
+                } catch (error) {
+                    console.error('Error loading dashboard:', error);
+                    alert('Failed to load dashboard: ' + error.message);
+                    updateConnectionStatus(false);
+                }
             } else {
-                console.log('No user authenticated, redirecting to login');
+                console.log('❌ No user authenticated');
                 window.location.href = '/artist/login';
             }
         });
 
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', async () => {
-                try {
-                    await signOut(auth);
-                    window.location.href = '/';
-                } catch (error) {
-                    console.error('Error logging out:', error);
-                    alert('Failed to logout');
+        // ==========================================
+        // CONNECTION STATUS
+        // ==========================================
+
+        function updateConnectionStatus(connected) {
+            const statusLed = document.getElementById('statusLed');
+            const statusText = document.getElementById('statusText');
+            
+            if (statusLed && statusText) {
+                if (connected) {
+                    statusLed.classList.remove('disconnected');
+                    statusText.textContent = 'Connected';
+                } else {
+                    statusLed.classList.add('disconnected');
+                    statusText.textContent = 'Disconnected';
                 }
-            });
-        }
-
-        const printReportBtn = document.getElementById('printReportBtn');
-        if (printReportBtn) {
-            printReportBtn.addEventListener('click', () => {
-                window.print();
-            });
-        }
-    });
-
-    async function loadDashboardData(userId) {
-        if (!isFirestoreConnected) {
-            console.warn('Firestore not connected, skipping data load');
-            return;
-        }
-        
-        try {
-            await loadArtistData(userId);
-            await loadStats(userId);
-            await loadReleases(userId);
-            await loadRecentActivity(userId);
-        } catch (error) {
-            console.error('Error loading dashboard data:', error);
-        }
-    }
-
-    async function loadArtistData(userId) {
-        if (!isFirestoreConnected) {
-            console.warn('Skipping artist data load - not connected');
-            return;
-        }
-        
-        try {
-            const artistDoc = await getDoc(doc(db, 'artists', userId));
-            
-            if (!artistDoc.exists()) {
-                console.error('Artist document not found');
-                alert('Artist profile not found');
-                window.location.href = '/artist/login';
-                return;
             }
-
-            const artistData = artistDoc.data();
-            
-            const artistName = document.getElementById('artistName');
-            const displayArtistName = document.getElementById('displayArtistName');
-            const artistEmail = document.getElementById('artistEmail');
-            const artistGenre = document.getElementById('artistGenre');
-            const artistPhone = document.getElementById('artistPhone');
-            const memberSince = document.getElementById('memberSince');
-            const artistBio = document.getElementById('artistBio');
-
-            if (artistName) artistName.textContent = artistData.artistName || 'Artist';
-            if (displayArtistName) displayArtistName.textContent = artistData.artistName || 'N/A';
-            if (artistEmail) artistEmail.textContent = artistData.email || 'N/A';
-            if (artistGenre) artistGenre.textContent = artistData.genre || 'Not specified';
-            if (artistPhone) artistPhone.textContent = artistData.phone || 'Not provided';
-            
-            if (memberSince && artistData.registeredAt) {
-                const date = new Date(artistData.registeredAt);
-                memberSince.textContent = date.toLocaleDateString();
-            }
-
-            if (artistBio && artistData.bio) {
-                artistBio.innerHTML = `<p>${artistData.bio}</p>`;
-            }
-
-            const uploadBtn = document.getElementById('uploadPortalBtn');
-            if (!artistData.hasUploadAccess && uploadBtn) {
-                uploadBtn.style.background = '#6c757d';
-                uploadBtn.style.borderColor = '#6c757d';
-                uploadBtn.style.pointerEvents = 'none';
-                uploadBtn.style.opacity = '0.6';
-                uploadBtn.innerHTML = `
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                    Upload Access Disabled
-                `;
-            }
-        } catch (error) {
-            console.error('Error loading artist data:', error);
         }
-    }
 
-    async function loadStats(userId) {
-        if (!isFirestoreConnected) {
-            console.warn('Skipping stats load - not connected');
-            return;
+        // ==========================================
+        // LOAD DASHBOARD DATA
+        // ==========================================
+
+        async function loadDashboardData(userId) {
+            console.log('Loading dashboard for:', userId);
+            
+            await Promise.all([
+                loadArtistData(userId),
+                loadStats(userId),
+                loadReleases(userId),
+                loadRecentActivity(userId)
+            ]);
+            
+            console.log('✅ Dashboard loaded successfully');
         }
-        
-        try {
-            const releasesQuery = query(collection(db, 'releases'), where('artistId', '==', userId));
-            const releasesSnapshot = await getDocs(releasesQuery);
-            
-            let totalDownloads = 0;
-            let totalRevenue = 0;
-            let monthlyDownloads = 0;
-            
-            const currentMonth = new Date().getMonth();
-            const currentYear = new Date().getFullYear();
 
-            const ordersQuery = query(collection(db, 'orders'), where('artistId', '==', userId));
-            const ordersSnapshot = await getDocs(ordersQuery);
-            
-            ordersSnapshot.forEach((doc) => {
-                const orderData = doc.data();
-                totalDownloads++;
-                totalRevenue += orderData.amount || 0;
+        // ==========================================
+        // LOAD ARTIST DATA
+        // ==========================================
+
+        async function loadArtistData(userId) {
+            try {
+                const artistRef = doc(db, 'artists', userId);
+                const artistDoc = await getDoc(artistRef);
+
+                if (!artistDoc.exists()) {
+                    throw new Error('Artist profile not found');
+                }
+
+                const artistData = artistDoc.data();
+                const artistName = artistData.artistName || 'Artist';
+
+                // Update header name
+                document.getElementById('artistNameHeader').textContent = artistName;
                 
-                const orderDate = orderData.createdAt?.toDate();
-                if (orderDate && orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear) {
-                    monthlyDownloads++;
+                // Update profile name
+                document.getElementById('displayArtistName').textContent = artistName;
+
+                // Update other fields
+                document.getElementById('artistEmail').textContent = artistData.email || 'N/A';
+                document.getElementById('artistPhone').textContent = artistData.phone || 'Not provided';
+
+                // Update member since
+                if (artistData.registeredAt) {
+                    const date = artistData.registeredAt.toDate ? artistData.registeredAt.toDate() : new Date(artistData.registeredAt);
+                    document.getElementById('memberSince').textContent = date.toLocaleDateString('en-GB');
+                    document.getElementById('memberSinceBanner').textContent = date.getFullYear();
                 }
-            });
 
-            document.getElementById('totalDownloads').textContent = totalDownloads.toLocaleString();
-            document.getElementById('totalReleases').textContent = releasesSnapshot.size.toLocaleString();
-            document.getElementById('monthlyDownloads').textContent = monthlyDownloads.toLocaleString();
-            document.getElementById('totalRevenue').textContent = `${totalRevenue.toFixed(2)}`;
-        } catch (error) {
-            console.error('Error loading stats:', error);
-        }
-    }
+                // Update account status
+                const approved = artistData.approved ? 'Active' : 'Pending Approval';
+                document.getElementById('accountStatus').textContent = approved;
 
-    async function loadReleases(userId) {
-        if (!isFirestoreConnected) {
-            console.warn('Skipping releases load - not connected');
-            return;
+                // Configure upload button - always enabled
+                const uploadBtn = document.getElementById('uploadPortalBtn');
+                const token = await currentUser.getIdToken();
+                uploadBtn.href = `https://freshwax-uploads.pages.dev?token=${token}&artistId=${userId}`;
+                uploadBtn.target = '_blank';
+                uploadBtn.rel = 'noopener noreferrer';
+            } catch (error) {
+                console.error('Error loading artist data:', error);
+                throw error;
+            }
         }
-        
-        try {
-            const releasesQuery = query(
-                collection(db, 'releases'), 
-                where('artistId', '==', userId),
-                orderBy('createdAt', 'desc')
-            );
-            const releasesSnapshot = await getDocs(releasesQuery);
-            
+
+        // ==========================================
+        // LOAD STATS
+        // ==========================================
+
+        async function loadStats(userId) {
+            try {
+                // Get all releases
+                const releasesQuery = query(
+                    collection(db, 'releases'),
+                    where('artistId', '==', userId)
+                );
+                const releasesSnapshot = await getDocs(releasesQuery);
+
+                let totalDownloads = 0;
+                let totalRevenue = 0;
+                let monthlyDownloads = 0;
+                let monthlyRevenue = 0;
+                let lastMonthRevenue = 0;
+                let publishedCount = 0;
+                let bestSellerTitle = '-';
+                let bestSellerDownloads = 0;
+
+                const currentDate = new Date();
+                const currentMonth = currentDate.getMonth();
+                const currentYear = currentDate.getFullYear();
+                const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+                const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+                // Get all orders for this artist
+                const ordersQuery = query(
+                    collection(db, 'orders'),
+                    where('artistId', '==', userId)
+                );
+                const ordersSnapshot = await getDocs(ordersQuery);
+
+                // Calculate stats
+                const releaseStats = {};
+
+                ordersSnapshot.forEach((orderDoc) => {
+                    const order = orderDoc.data();
+                    totalDownloads++;
+                    totalRevenue += order.amount || 0;
+
+                    const orderDate = order.createdAt?.toDate();
+                    if (orderDate) {
+                        const orderMonth = orderDate.getMonth();
+                        const orderYear = orderDate.getFullYear();
+
+                        if (orderMonth === currentMonth && orderYear === currentYear) {
+                            monthlyDownloads++;
+                            monthlyRevenue += order.amount || 0;
+                        }
+
+                        if (orderMonth === lastMonth && orderYear === lastMonthYear) {
+                            lastMonthRevenue += order.amount || 0;
+                        }
+                    }
+
+                    // Track downloads per release
+                    const releaseId = order.releaseId || order.releaseName;
+                    if (releaseId) {
+                        if (!releaseStats[releaseId]) {
+                            releaseStats[releaseId] = {
+                                title: order.releaseTitle || order.releaseName || 'Unknown',
+                                downloads: 0
+                            };
+                        }
+                        releaseStats[releaseId].downloads++;
+                    }
+                });
+
+                // Find best seller
+                Object.values(releaseStats).forEach(release => {
+                    if (release.downloads > bestSellerDownloads) {
+                        bestSellerDownloads = release.downloads;
+                        bestSellerTitle = release.title;
+                    }
+                });
+
+                // Count published releases
+                releasesSnapshot.forEach((releaseDoc) => {
+                    const release = releaseDoc.data();
+                    if (release.status === 'published') {
+                        publishedCount++;
+                    }
+                });
+
+                // Calculate average per release
+                const avgPerRelease = publishedCount > 0 ? totalRevenue / publishedCount : 0;
+
+                // Update DOM
+                document.getElementById('totalDownloads').textContent = totalDownloads.toLocaleString('en-GB');
+                document.getElementById('totalReleases').textContent = releasesSnapshot.size.toLocaleString('en-GB');
+                document.getElementById('totalEarnings').textContent = `£${totalRevenue.toFixed(2)}`;
+                document.getElementById('monthlyEarnings').textContent = `£${monthlyRevenue.toFixed(2)}`;
+                document.getElementById('lastMonthEarnings').textContent = `£${lastMonthRevenue.toFixed(2)}`;
+                document.getElementById('avgPerRelease').textContent = `£${avgPerRelease.toFixed(2)}`;
+                document.getElementById('releasesBreakdown').textContent = `${publishedCount} published`;
+                document.getElementById('bestSeller').textContent = bestSellerTitle;
+                document.getElementById('bestSellerDownloads').textContent = `${bestSellerDownloads} downloads`;
+
+                // Update download change indicator
+                if (monthlyDownloads > 0) {
+                    document.getElementById('downloadsChange').textContent = `${monthlyDownloads} this month`;
+                }
+
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // ==========================================
+        // LOAD RELEASES
+        // ==========================================
+
+        async function loadReleases(userId) {
+            try {
+                const releasesQuery = query(
+                    collection(db, 'releases'),
+                    where('artistId', '==', userId),
+                    orderBy('createdAt', 'desc')
+                );
+
+                const releasesSnapshot = await getDocs(releasesQuery);
+                const container = document.getElementById('releasesContainer');
+
+                if (releasesSnapshot.empty) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                            </svg>
+                            <p>No releases yet</p>
+                            <p style="font-size: 0.9rem; margin-top: 0.5rem;">Upload your first release to get started!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                allReleases = [];
+                releasesSnapshot.forEach((doc) => {
+                    allReleases.push({ id: doc.id, ...doc.data() });
+                });
+
+                displayReleases(allReleases);
+
+            } catch (error) {
+                console.error('Error loading releases:', error);
+            }
+        }
+
+        function displayReleases(releases) {
             const container = document.getElementById('releasesContainer');
             
-            if (releasesSnapshot.empty) {
+            if (releases.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                         </svg>
-                        <p>No releases yet. Upload your first release to get started!</p>
+                        <p>No ${currentFilter === 'all' ? '' : currentFilter} releases</p>
                     </div>
                 `;
                 return;
             }
 
-            let releasesHTML = '';
-            releasesSnapshot.forEach((doc) => {
-                const release = doc.data();
-                releasesHTML += `
-                    <div class="release-card" style="background: #f5f5f5; border: 2px solid #000; padding: 1rem;">
-                        <h4 style="margin-bottom: 0.5rem; font-weight: 700;">${release.title || 'Untitled'}</h4>
-                        <p style="color: #666; font-size: 0.875rem; text-transform: uppercase; font-weight: 600;">${release.status || 'Unknown'}</p>
+            const releasesHTML = releases.map(release => {
+                const title = release.title || 'Untitled';
+                const status = release.status || 'draft';
+                const genre = release.genre || 'Unknown';
+                const format = release.format || 'WAV';
+                const price = release.price || 0;
+                const coverUrl = release.coverUrl || release.coverImage || '';
+                const releaseDate = release.releaseDate || (release.createdAt?.toDate ? release.createdAt.toDate().toLocaleDateString('en-GB') : 'N/A');
+                const downloadCount = release.downloadCount || 0;
+                const revenue = price * downloadCount;
+
+                return `
+                    <div class="release-card">
+                        <div class="release-cover">
+                            ${coverUrl ? 
+                                `<img src="${coverUrl}" alt="${title}" />` :
+                                `<div style="display: flex; align-items: center; justify-content: center; height: 100%;">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 80px; height: 80px; color: #cccccc;">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                                    </svg>
+                                </div>`
+                            }
+                            <div class="release-status-badge ${status}">${status.toUpperCase()}</div>
+                        </div>
+                        <div class="release-info">
+                            <h4 class="release-title">${title}</h4>
+                            <div class="release-meta">
+                                <div class="release-meta-item">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                    </svg>
+                                    <span>${genre}</span>
+                                </div>
+                                <div class="release-meta-item">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                    </svg>
+                                    <span>${format}</span>
+                                </div>
+                                <div class="release-meta-item">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span>${releaseDate}</span>
+                                </div>
+                                <div class="release-meta-item">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span>£${price.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            <div class="release-stats">
+                                <div class="release-stat">
+                                    <div class="release-stat-value">${downloadCount}</div>
+                                    <div class="release-stat-label">Downloads</div>
+                                </div>
+                                <div class="release-stat">
+                                    <div class="release-stat-value">£${revenue.toFixed(2)}</div>
+                                    <div class="release-stat-label">Revenue</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 `;
-            });
+            }).join('');
+
             container.innerHTML = releasesHTML;
-        } catch (error) {
-            console.error('Error loading releases:', error);
         }
-    }
 
-    async function loadRecentActivity(userId) {
-        if (!isFirestoreConnected) {
-            console.warn('Skipping activity load - not connected');
-            return;
-        }
-        
-        try {
-            const ordersQuery = query(
-                collection(db, 'orders'),
-                where('artistId', '==', userId),
-                orderBy('createdAt', 'desc'),
-                limit(10)
-            );
-            const ordersSnapshot = await getDocs(ordersQuery);
-            
-            const tbody = document.getElementById('activityTableBody');
-            
-            if (ordersSnapshot.empty) {
-                tbody.innerHTML = '<tr class="empty-row"><td colspan="4">No download activity yet</td></tr>';
-                return;
+        // ==========================================
+        // LOAD RECENT ACTIVITY
+        // ==========================================
+
+        async function loadRecentActivity(userId) {
+            try {
+                const ordersQuery = query(
+                    collection(db, 'orders'),
+                    where('artistId', '==', userId),
+                    orderBy('createdAt', 'desc'),
+                    limit(15)
+                );
+
+                const ordersSnapshot = await getDocs(ordersQuery);
+                const tbody = document.getElementById('activityTableBody');
+
+                if (ordersSnapshot.empty) {
+                    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No sales yet</td></tr>';
+                    return;
+                }
+
+                const activityHTML = ordersSnapshot.docs.map(doc => {
+                    const order = doc.data();
+                    const date = order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString('en-GB') : 'N/A';
+                    const whatTheyBought = order.format || order.fileType || 'Digital Download';
+                    
+                    // Determine payment status
+                    // Check if artistPaid field exists, otherwise check paidToArtist or default to pending
+                    let paymentStatus = 'pending';
+                    let paymentClass = 'pending';
+                    let paymentText = 'PENDING';
+                    
+                    if (order.artistPaid === true || order.paidToArtist === true) {
+                        paymentStatus = 'paid';
+                        paymentClass = 'paid';
+                        paymentText = 'PAID';
+                    } else if (order.artistPaid === 'processing' || order.paidToArtist === 'processing') {
+                        paymentStatus = 'processing';
+                        paymentClass = 'processing';
+                        paymentText = 'PROCESSING';
+                    }
+                    
+                    return `
+                        <tr>
+                            <td><strong>${order.releaseTitle || 'Unknown'}</strong></td>
+                            <td>${date}</td>
+                            <td><strong>£${(order.amount || 0).toFixed(2)}</strong></td>
+                            <td>${whatTheyBought}</td>
+                            <td><span class="payment-status ${paymentClass}">${paymentText}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+
+                tbody.innerHTML = activityHTML;
+
+            } catch (error) {
+                console.error('Error loading activity:', error);
             }
-
-            let activityHTML = '';
-            ordersSnapshot.forEach((doc) => {
-                const order = doc.data();
-                const date = order.createdAt?.toDate().toLocaleDateString() || 'N/A';
-                activityHTML += `
-                    <tr>
-                        <td>${order.releaseTitle || 'Unknown'}</td>
-                        <td>${order.customerEmail || 'Anonymous'}</td>
-                        <td>${date}</td>
-                        <td>${(order.amount || 0).toFixed(2)}</td>
-                    </tr>
-                `;
-            });
-            tbody.innerHTML = activityHTML;
-        } catch (error) {
-            console.error('Error loading activity:', error);
         }
-    }
-</script>
+
+        // ==========================================
+        // EVENT LISTENERS
+        // ==========================================
+
+        // Logout buttons (both header and any other)
+        document.getElementById('logoutBtnHeader')?.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Logout error:', error);
+                alert('Failed to logout');
+            }
+        });
+
+        document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Logout error:', error);
+                alert('Failed to logout');
+            }
+        });
+
+        // Print report button
+        document.getElementById('printReportBtn')?.addEventListener('click', () => {
+            window.print();
+        });
+
+        // Filter tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                currentFilter = btn.dataset.filter;
+                
+                const filtered = currentFilter === 'all' 
+                    ? allReleases 
+                    : allReleases.filter(r => r.status === currentFilter);
+                
+                displayReleases(filtered);
+            });
+        });
+    </script>
+</body>
+</html>

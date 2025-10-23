@@ -1029,69 +1029,94 @@ return { status: 'error', label, url, message: 'Cannot reach URL' };
 }
 }
 
+// Fixed publishRelease function for publish-release.astro
+// Replace the existing publishRelease function with this version
+
 async function publishRelease() {
-const filename = document.getElementById('filename-input').value.trim();
+  const filename = document.getElementById('filename-input').value.trim();
+  
+  if (!filename) {
+    alert('Please enter a filename!');
+    return;
+  }
 
-if (!filename) {
-alert('Please enter a filename!');
-return;
-}
+  if (!currentRelease) {
+    alert('No release data to publish!');
+    return;
+  }
 
-if (!currentRelease) {
-alert('No release data to publish!');
-return;
-}
+  // Validate required fields
+  if (!currentRelease.title || !currentRelease.artist) {
+    alert('Missing required fields: Title and Artist');
+    return;
+  }
 
-// Validate required fields
-if (!currentRelease.title || !currentRelease.artist) {
-alert('Missing required fields: Title and Artist');
-return;
-}
+  // Disable publish button while processing
+  const publishBtn = document.getElementById('publish-btn');
+  const originalText = publishBtn.innerHTML;
+  publishBtn.disabled = true;
+  publishBtn.innerHTML = '<span class="spinner"></span> Publishing...';
 
-// Disable publish button while processing
-const publishBtn = document.getElementById('publish-btn');
-const originalText = publishBtn.innerHTML;
-publishBtn.disabled = true;
-publishBtn.innerHTML = '<span class="spinner"></span> Publishing...';
+  try {
+    // Create a clean copy of the release data
+    const releaseToSend = {
+      ...currentRelease,
+      filename: filename
+    };
 
-try {
-// Add filename to release data
-const releaseWithFilename = {
-...currentRelease,
-filename: filename
-};
+    // Convert to JSON string and back to ensure it's serializable
+    const jsonString = JSON.stringify(releaseToSend);
+    
+    // Debug: Log what we're sending
+    console.log('Sending release data:', jsonString.substring(0, 200) + '...');
+    
+    // Call API to save release
+    const response = await fetch('/api/save-release', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonString
+    });
 
-// Call API to save release
-const response = await fetch('/api/save-release', {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-},
-body: JSON.stringify(releaseWithFilename)
-});
+    // Get response text first
+    const responseText = await response.text();
+    console.log('Response status:', response.status);
+    console.log('Response text:', responseText.substring(0, 500));
 
-const result = await response.json();
+    // Try to parse as JSON
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse response:', parseError);
+      throw new Error(`Server returned invalid JSON: ${responseText.substring(0, 200)}`);
+    }
 
-if (response.ok && result.success) {
-alert(`✅ Success!\n\n${result.message}\n\nFile saved: ${result.filename}\nAction: ${result.action}`);
-
-// Also download as backup
-downloadJSON();
-
-// Clear sessionStorage draft if it exists
-sessionStorage.removeItem('freshwax-release-draft');
-} else {
-throw new Error(result.error || 'Failed to publish release');
-}
-} catch (error) {
-console.error('Publish error:', error);
-alert(`❌ Error publishing release:\n\n${error.message}\n\nDownloading JSON as fallback...`);
-downloadJSON();
-} finally {
-// Re-enable button
-publishBtn.disabled = false;
-publishBtn.innerHTML = originalText;
-}
+    if (response.ok && result.success) {
+      alert(`✅ Success!\n\n${result.message}\n\nFile saved: ${result.filename}\nAction: ${result.action}`);
+      
+      // Also download as backup
+      downloadJSON();
+      
+      // Clear sessionStorage draft if it exists
+      sessionStorage.removeItem('freshwax-release-draft');
+      
+      // Optionally reload the page or redirect
+      // window.location.href = '/admin';
+    } else {
+      throw new Error(result.error || 'Failed to publish release');
+    }
+    
+  } catch (error) {
+    console.error('Publish error:', error);
+    alert(`❌ Error publishing release:\n\n${error.message}\n\nDownloading JSON as fallback...`);
+    downloadJSON();
+  } finally {
+    // Re-enable button
+    publishBtn.disabled = false;
+    publishBtn.innerHTML = originalText;
+  }
 }
 
 function editRelease() {

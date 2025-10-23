@@ -5,7 +5,7 @@ export interface Track {
   title: string;
   preview_url: string | null;
   track_number: number;
-  price: number;
+  price?: number;
   wav_url?: string;
   mp3_url?: string;
 }
@@ -23,75 +23,41 @@ export interface Release {
   digitalPrice: number;
   vinylPrice?: number;
   tracks: Track[];
+  trackPrice?: number;
   extraNotes?: string;
   description?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-// src/lib/releases.ts
-
-export interface Track {
-  id: string;
-  title: string;
-  preview_url: string | null;
-  track_number: number;
-  price: number;
-  wav_url?: string;
-  mp3_url?: string;
-}
-
-export interface Release {
-  id: string;
-  title: string;
-  artist: string;
-  label?: string;
-  artworkUrl: string;
-  releaseDate: string;
-  isPreorder: boolean;
-  hasVinyl: boolean;
-  vinylStock?: number;
-  digitalPrice: number;
-  vinylPrice?: number;
-  tracks: Track[];
-  extraNotes?: string;
-  description?: string;
+  genre?: string;
+  fullTracks?: string[];
+  metadata?: string;
+  hasLimitedEdition?: boolean;
+  limitedEditionType?: string;
+  limitedEditionPrice?: number;
+  limitedEditionDetails?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
 /**
- * Get all releases from the JSON file
+ * Get all releases from individual JSON files in src/data/releases/
  */
 export async function getAllReleases(): Promise<Release[]> {
   try {
-    // Read directly from the file system (server-side)
-    if (typeof window === 'undefined') {
-      // Server-side: read from file
-      const fs = await import('fs/promises');
-      const path = await import('path');
-      
-      const filePath = path.join(process.cwd(), 'public', 'data', 'releases.json');
-      
+    // Use Vite's glob import to get all JSON files - eager load them
+    const releaseFiles = import.meta.glob('/src/data/releases/*.json', { eager: true });
+    const releases: Release[] = [];
+
+    for (const path in releaseFiles) {
       try {
-        const fileContent = await fs.readFile(filePath, 'utf-8');
-        const data = JSON.parse(fileContent);
-        return data.releases || [];
-      } catch (err) {
-        console.log('No releases.json file found or file is empty');
-        return [];
+        const module = releaseFiles[path] as { default: Release };
+        if (module.default) {
+          releases.push(module.default);
+        }
+      } catch (error) {
+        console.error(`Error loading release from ${path}:`, error);
       }
-    } else {
-      // Client-side: fetch from public folder
-      const response = await fetch('/data/releases.json');
-      if (!response.ok) {
-        console.error('Failed to fetch releases');
-        return [];
-      }
-      
-      const data = await response.json();
-      return data.releases || [];
     }
+
+    return releases;
   } catch (error) {
     console.error('Error loading releases:', error);
     return [];
