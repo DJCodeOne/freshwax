@@ -1,3 +1,7 @@
+---
+// src/pages/merch.astro
+---
+
 <!DOCTYPE html>
 <html lang="en-GB">
 <head>
@@ -459,289 +463,286 @@
     window.addEventListener('storage', updateCartCount);
     window.addEventListener('cart-updated', updateCartCount);
 
-    // PART 1 ENDS HERE - CONTINUED IN PART 2
+    async function loadAllProducts() {
+      try {
+        const snapshot = await getDocs(collection(db, 'merch_products'));
+        allProducts = [];
+        snapshot.forEach(doc => {
+          allProducts.push({ firestoreId: doc.id, ...doc.data() });
+        });
+      } catch (error) {
+        console.error('Error loading all products:', error);
+      }
+    }
+
+    function searchProducts(query) {
+      const searchTerm = query.toLowerCase().trim();
+      if (!searchTerm) return [];
+      return allProducts.filter(product => {
+        const name = product.name?.toLowerCase() || '';
+        const description = product.description?.toLowerCase() || '';
+        const sizes = product.sizes?.join(' ').toLowerCase() || '';
+        const sku = product.sku?.toLowerCase() || '';
+        const text = `${name} ${description} ${sizes} ${sku}`;
+        return text.includes(searchTerm);
+      });
+    }
+
+    function showSearchDropdown(results, query) {
+      const dropdown = document.getElementById('search-dropdown');
+      if (results.length === 0) {
+        dropdown.innerHTML = `<div class="p-4 text-center text-gray-500">No results found for "${query}"</div>`;
+        dropdown.classList.remove('hidden');
+        return;
+      }
+      const maxResults = 5;
+      const displayResults = results.slice(0, maxResults);
+      dropdown.innerHTML = `
+        ${displayResults.map(product => `
+          <div class="flex items-center gap-3 p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer search-result" data-product-id="${product.firestoreId}">
+            <img src="${product.image}" alt="${product.name}" class="w-12 h-12 object-cover rounded" />
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-gray-900 truncate">${product.name}</p>
+              <p class="text-sm text-gray-600 truncate">${product.sizes?.join(', ') || ''}</p>
+            </div>
+            <span class="text-sm font-bold text-gray-900">£${product.price.toFixed(2)}</span>
+          </div>
+        `).join('')}
+        ${results.length > maxResults ? `<div class="p-3 text-center text-sm font-medium text-blue-600">${results.length - maxResults} more results found</div>` : ''}
+      `;
+      dropdown.classList.remove('hidden');
+      dropdown.querySelectorAll('.search-result').forEach(result => {
+        result.addEventListener('click', () => {
+          const productId = result.dataset.productId;
+          const product = allProducts.find(p => p.firestoreId === productId);
+          if (product) {
+            selectNavItemByProduct(product);
+            dropdown.classList.add('hidden');
+            document.getElementById('search-input').value = '';
+          }
+        });
+      });
+    }
+
+    async function selectNavItemByProduct(product) {
+      const categoryElement = document.querySelector(`[onclick*="${product.type}"][onclick*="${product.categoryId}"]`);
+      if (categoryElement) {
+        const categoryId = product.type === 'label' ? 'labels' : product.type === 'dj' ? 'djs' : product.type === 'soundsystem' ? 'soundsystems' : 'crews';
+        const items = document.getElementById(`${categoryId}-items`);
+        if (!items.classList.contains('active')) {
+          toggleCategory(categoryId);
+        }
+        categoryElement.click();
+        setTimeout(() => { selectProduct(product.firestoreId); }, 300);
+      }
+    }
+
+    const searchInput = document.getElementById('search-input');
+    let searchTimeout;
+    searchInput?.addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      const query = e.target.value;
+      if (!query.trim()) {
+        document.getElementById('search-dropdown').classList.add('hidden');
+        return;
+      }
+      searchTimeout = setTimeout(() => {
+        const results = searchProducts(query);
+        showSearchDropdown(results, query);
+      }, 300);
+    });
+
+    document.addEventListener('click', (e) => {
+      const target = e.target;
+      if (!target.closest('#search-input') && !target.closest('#search-dropdown')) {
+        document.getElementById('search-dropdown')?.classList.add('hidden');
+      }
+    });
+
+    async function loadProducts(type, categoryId) {
+      try {
+        const q = query(collection(db, 'merch_products'), where('type', '==', type), where('categoryId', '==', categoryId));
+        const snapshot = await getDocs(q);
+        const products = [];
+        snapshot.forEach(doc => {
+          products.push({ firestoreId: doc.id, ...doc.data() });
+        });
+        return products;
+      } catch (error) {
+        console.error('Error loading products:', error);
+        return [];
+      }
+    }
+
+    function getStockStatus(stock) {
+      if (stock === 0) return { status: 'out-of-stock', text: 'Out of Stock', class: 'out-of-stock' };
+      if (stock <= 5) return { status: 'low-stock', text: `Only ${stock} left`, class: 'low-stock' };
+      return { status: 'in-stock', text: `In Stock (${stock})`, class: 'in-stock' };
+    }
+
+    window.toggleCategory = function(categoryId) {
+      const items = document.getElementById(`${categoryId}-items`);
+      const arrow = document.getElementById(`${categoryId}-arrow`);
+      items.classList.toggle('active');
+      arrow.style.transform = items.classList.contains('active') ? 'rotate(0deg)' : 'rotate(-90deg)';
+    };
+
+    window.selectNavItem = async function(element, type, id) {
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      element.classList.add('active');
+      const gridContainer = document.getElementById('product-grid-container');
+      const grid = document.getElementById('product-grid');
+      gridContainer.classList.remove('hidden');
+      grid.innerHTML = '<div class="col-span-full text-center p-8 text-gray-600">Loading products...</div>';
+      currentProducts = await loadProducts(type, id);
+      showProductGrid();
+    };
+
+    function showProductGrid() {
+      const gridContainer = document.getElementById('product-grid-container');
+      const previewContainer = document.getElementById('preview-container');
+      const grid = document.getElementById('product-grid');
+      if (currentProducts.length === 0) {
+        gridContainer.classList.add('hidden');
+        previewContainer.innerHTML = `
+          <div class="empty-state">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <h2 class="text-2xl font-bold mb-2">No products available</h2>
+            <p class="text-gray-600">Check back soon for new merch drops!</p>
+          </div>
+        `;
+        return;
+      }
+      gridContainer.classList.remove('hidden');
+      grid.innerHTML = currentProducts.map(product => {
+        const stockInfo = getStockStatus(product.stock || 0);
+        const isOutOfStock = product.stock === 0;
+        return `
+          <div class="product-thumbnail ${isOutOfStock ? 'out-of-stock' : ''}" onclick="${isOutOfStock ? '' : `selectProduct('${product.firestoreId}')`}">
+            <span class="stock-badge ${stockInfo.class}">${stockInfo.text}</span>
+            <img src="${product.image}" alt="${product.name}" />
+            <div class="product-thumbnail-info">
+              <div class="font-semibold truncate">${product.name}</div>
+              <div class="text-gray-600">£${product.price.toFixed(2)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      const firstAvailable = currentProducts.find(p => p.stock > 0);
+      if (firstAvailable) {
+        selectProduct(firstAvailable.firestoreId);
+      }
+    }
+
+    window.selectProduct = function(firestoreId) {
+      const product = currentProducts.find(p => p.firestoreId === firestoreId);
+      if (!product) return;
+      selectedProduct = product;
+      selectedSize = null;
+      document.querySelectorAll('.product-thumbnail').forEach((thumb, index) => {
+        thumb.classList.toggle('selected', currentProducts[index].firestoreId === firestoreId);
+      });
+      const stockInfo = getStockStatus(product.stock || 0);
+      const isOutOfStock = product.stock === 0;
+      const previewContainer = document.getElementById('preview-container');
+      previewContainer.innerHTML = `
+        <div class="preview-image">
+          <img src="${product.image}" alt="${product.name}" />
+        </div>
+        <div class="preview-details">
+          <h2 class="text-3xl font-bold mb-2">${product.name}</h2>
+          <p class="text-2xl font-bold text-gray-900 mb-4">£${product.price.toFixed(2)}</p>
+          <div class="stock-indicator ${stockInfo.class}">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${stockInfo.status === 'in-stock' ? 'M5 13l4 4L19 7' : 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'}" />
+            </svg>
+            ${stockInfo.text}
+          </div>
+          <p class="text-gray-600 mb-6">${product.description}</p>
+          <div class="mb-4">
+            <label class="block text-sm font-bold mb-2">Size</label>
+            <div class="size-selector">
+              ${product.sizes.map(size => {
+                const sizeStock = product.sizeStock?.[size] || 0;
+                const disabled = sizeStock === 0 || isOutOfStock;
+                return `
+                  <div class="size-option ${disabled ? 'disabled' : ''}" onclick="${disabled ? '' : `selectSize('${size}')`}">
+                    ${size}${sizeStock > 0 && sizeStock <= 3 ? ` (${sizeStock})` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+          <button class="btn-primary" onclick="addToCart()" ${isOutOfStock ? 'disabled' : ''}>
+            ${isOutOfStock ? 'Out of Stock' : 'Add to Bag'}
+          </button>
+          <div class="mt-4 text-xs text-gray-500">
+            <p>Product Code: ${product.sku || product.firestoreId}</p>
+          </div>
+        </div>
+      `;
+    };
+
+    window.selectSize = function(size) {
+      selectedSize = size;
+      document.querySelectorAll('.size-option:not(.disabled)').forEach(option => {
+        option.classList.toggle('selected', option.textContent.includes(size));
+      });
+    };
+
+    window.addToCart = async function() {
+      if (!selectedProduct) {
+        alert('Please select a product');
+        return;
+      }
+      if (!selectedSize) {
+        alert('Please select a size');
+        return;
+      }
+      const sizeStock = selectedProduct.sizeStock?.[selectedSize] || 0;
+      if (sizeStock === 0) {
+        alert('This size is currently out of stock');
+        return;
+      }
+      try {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const existingItemIndex = cart.findIndex(
+          item => item.firestoreId === selectedProduct.firestoreId && item.size === selectedSize
+        );
+        if (existingItemIndex > -1) {
+          cart[existingItemIndex].quantity += 1;
+        } else {
+          cart.push({
+            id: `${selectedProduct.firestoreId}-${selectedSize}`,
+            firestoreId: selectedProduct.firestoreId,
+            sku: selectedProduct.sku || selectedProduct.firestoreId,
+            name: selectedProduct.name,
+            price: selectedProduct.price,
+            size: selectedSize,
+            image: selectedProduct.image,
+            quantity: 1,
+            type: selectedProduct.type,
+            categoryId: selectedProduct.categoryId
+          });
+        }
+        localStorage.setItem('cart', JSON.stringify(cart));
+        window.dispatchEvent(new Event('cart-updated'));
+        alert(`Added ${selectedProduct.name} (${selectedSize}) to bag!`);
+        if (selectedProduct.sizeStock) {
+          selectedProduct.sizeStock[selectedSize] = Math.max(0, selectedProduct.sizeStock[selectedSize] - 1);
+          selectProduct(selectedProduct.firestoreId);
+        }
+      } catch (error) {
+        console.error('Error adding to cart:', error);
+        alert('Failed to add item to bag. Please try again.');
+      }
+    };
+
+    // Initialize
+    toggleCategory('labels');
+    loadAllProducts();
   </script>
 </body>
 </html>
-// PART 2 - Add this JavaScript after the updateCartCount() section in Part 1
-
-async function loadAllProducts() {
-  try {
-    const snapshot = await getDocs(collection(db, 'merch_products'));
-    allProducts = [];
-    snapshot.forEach(doc => {
-      allProducts.push({ firestoreId: doc.id, ...doc.data() });
-    });
-  } catch (error) {
-    console.error('Error loading all products:', error);
-  }
-}
-
-function searchProducts(query) {
-  const searchTerm = query.toLowerCase().trim();
-  if (!searchTerm) return [];
-  return allProducts.filter(product => {
-    const name = product.name?.toLowerCase() || '';
-    const description = product.description?.toLowerCase() || '';
-    const sizes = product.sizes?.join(' ').toLowerCase() || '';
-    const sku = product.sku?.toLowerCase() || '';
-    const text = `${name} ${description} ${sizes} ${sku}`;
-    return text.includes(searchTerm);
-  });
-}
-
-function showSearchDropdown(results, query) {
-  const dropdown = document.getElementById('search-dropdown');
-  if (results.length === 0) {
-    dropdown.innerHTML = `<div class="p-4 text-center text-gray-500">No results found for "${query}"</div>`;
-    dropdown.classList.remove('hidden');
-    return;
-  }
-  const maxResults = 5;
-  const displayResults = results.slice(0, maxResults);
-  dropdown.innerHTML = `
-    ${displayResults.map(product => `
-      <div class="flex items-center gap-3 p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer search-result" data-product-id="${product.firestoreId}">
-        <img src="${product.image}" alt="${product.name}" class="w-12 h-12 object-cover rounded" />
-        <div class="flex-1 min-w-0">
-          <p class="font-medium text-gray-900 truncate">${product.name}</p>
-          <p class="text-sm text-gray-600 truncate">${product.sizes?.join(', ') || ''}</p>
-        </div>
-        <span class="text-sm font-bold text-gray-900">£${product.price.toFixed(2)}</span>
-      </div>
-    `).join('')}
-    ${results.length > maxResults ? `<div class="p-3 text-center text-sm font-medium text-blue-600">${results.length - maxResults} more results found</div>` : ''}
-  `;
-  dropdown.classList.remove('hidden');
-  dropdown.querySelectorAll('.search-result').forEach(result => {
-    result.addEventListener('click', () => {
-      const productId = result.dataset.productId;
-      const product = allProducts.find(p => p.firestoreId === productId);
-      if (product) {
-        selectNavItemByProduct(product);
-        dropdown.classList.add('hidden');
-        document.getElementById('search-input').value = '';
-      }
-    });
-  });
-}
-
-async function selectNavItemByProduct(product) {
-  const categoryElement = document.querySelector(`[onclick*="${product.type}"][onclick*="${product.categoryId}"]`);
-  if (categoryElement) {
-    const categoryId = product.type === 'label' ? 'labels' : product.type === 'dj' ? 'djs' : product.type === 'soundsystem' ? 'soundsystems' : 'crews';
-    const items = document.getElementById(`${categoryId}-items`);
-    if (!items.classList.contains('active')) {
-      toggleCategory(categoryId);
-    }
-    categoryElement.click();
-    setTimeout(() => { selectProduct(product.firestoreId); }, 300);
-  }
-}
-
-const searchInput = document.getElementById('search-input');
-let searchTimeout;
-searchInput?.addEventListener('input', (e) => {
-  clearTimeout(searchTimeout);
-  const query = e.target.value;
-  if (!query.trim()) {
-    document.getElementById('search-dropdown').classList.add('hidden');
-    return;
-  }
-  searchTimeout = setTimeout(() => {
-    const results = searchProducts(query);
-    showSearchDropdown(results, query);
-  }, 300);
-});
-
-document.addEventListener('click', (e) => {
-  const target = e.target;
-  if (!target.closest('#search-input') && !target.closest('#search-dropdown')) {
-    document.getElementById('search-dropdown')?.classList.add('hidden');
-  }
-});
-
-async function loadProducts(type, categoryId) {
-  try {
-    const q = query(collection(db, 'merch_products'), where('type', '==', type), where('categoryId', '==', categoryId));
-    const snapshot = await getDocs(q);
-    const products = [];
-    snapshot.forEach(doc => {
-      products.push({ firestoreId: doc.id, ...doc.data() });
-    });
-    return products;
-  } catch (error) {
-    console.error('Error loading products:', error);
-    return [];
-  }
-}
-
-function getStockStatus(stock) {
-  if (stock === 0) return { status: 'out-of-stock', text: 'Out of Stock', class: 'out-of-stock' };
-  if (stock <= 5) return { status: 'low-stock', text: `Only ${stock} left`, class: 'low-stock' };
-  return { status: 'in-stock', text: `In Stock (${stock})`, class: 'in-stock' };
-}
-
-window.toggleCategory = function(categoryId) {
-  const items = document.getElementById(`${categoryId}-items`);
-  const arrow = document.getElementById(`${categoryId}-arrow`);
-  items.classList.toggle('active');
-  arrow.style.transform = items.classList.contains('active') ? 'rotate(0deg)' : 'rotate(-90deg)';
-};
-
-window.selectNavItem = async function(element, type, id) {
-  document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-  element.classList.add('active');
-  const gridContainer = document.getElementById('product-grid-container');
-  const grid = document.getElementById('product-grid');
-  gridContainer.classList.remove('hidden');
-  grid.innerHTML = '<div class="col-span-full text-center p-8 text-gray-600">Loading products...</div>';
-  currentProducts = await loadProducts(type, id);
-  showProductGrid();
-};
-
-function showProductGrid() {
-  const gridContainer = document.getElementById('product-grid-container');
-  const previewContainer = document.getElementById('preview-container');
-  const grid = document.getElementById('product-grid');
-  if (currentProducts.length === 0) {
-    gridContainer.classList.add('hidden');
-    previewContainer.innerHTML = `
-      <div class="empty-state">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-        </svg>
-        <h2 class="text-2xl font-bold mb-2">No products available</h2>
-        <p class="text-gray-600">Check back soon for new merch drops!</p>
-      </div>
-    `;
-    return;
-  }
-  gridContainer.classList.remove('hidden');
-  grid.innerHTML = currentProducts.map(product => {
-    const stockInfo = getStockStatus(product.stock || 0);
-    const isOutOfStock = product.stock === 0;
-    return `
-      <div class="product-thumbnail ${isOutOfStock ? 'out-of-stock' : ''}" onclick="${isOutOfStock ? '' : `selectProduct('${product.firestoreId}')`}">
-        <span class="stock-badge ${stockInfo.class}">${stockInfo.text}</span>
-        <img src="${product.image}" alt="${product.name}" />
-        <div class="product-thumbnail-info">
-          <div class="font-semibold truncate">${product.name}</div>
-          <div class="text-gray-600">£${product.price.toFixed(2)}</div>
-        </div>
-      </div>
-    `;
-  }).join('');
-  const firstAvailable = currentProducts.find(p => p.stock > 0);
-  if (firstAvailable) {
-    selectProduct(firstAvailable.firestoreId);
-  }
-}
-
-window.selectProduct = function(firestoreId) {
-  const product = currentProducts.find(p => p.firestoreId === firestoreId);
-  if (!product) return;
-  selectedProduct = product;
-  selectedSize = null;
-  document.querySelectorAll('.product-thumbnail').forEach((thumb, index) => {
-    thumb.classList.toggle('selected', currentProducts[index].firestoreId === firestoreId);
-  });
-  const stockInfo = getStockStatus(product.stock || 0);
-  const isOutOfStock = product.stock === 0;
-  const previewContainer = document.getElementById('preview-container');
-  previewContainer.innerHTML = `
-    <div class="preview-image">
-      <img src="${product.image}" alt="${product.name}" />
-    </div>
-    <div class="preview-details">
-      <h2 class="text-3xl font-bold mb-2">${product.name}</h2>
-      <p class="text-2xl font-bold text-gray-900 mb-4">£${product.price.toFixed(2)}</p>
-      <div class="stock-indicator ${stockInfo.class}">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${stockInfo.status === 'in-stock' ? 'M5 13l4 4L19 7' : 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'}" />
-        </svg>
-        ${stockInfo.text}
-      </div>
-      <p class="text-gray-600 mb-6">${product.description}</p>
-      <div class="mb-4">
-        <label class="block text-sm font-bold mb-2">Size</label>
-        <div class="size-selector">
-          ${product.sizes.map(size => {
-            const sizeStock = product.sizeStock?.[size] || 0;
-            const disabled = sizeStock === 0 || isOutOfStock;
-            return `
-              <div class="size-option ${disabled ? 'disabled' : ''}" onclick="${disabled ? '' : `selectSize('${size}')`}">
-                ${size}${sizeStock > 0 && sizeStock <= 3 ? ` (${sizeStock})` : ''}
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-      <button class="btn-primary" onclick="addToCart()" ${isOutOfStock ? 'disabled' : ''}>
-        ${isOutOfStock ? 'Out of Stock' : 'Add to Bag'}
-      </button>
-      <div class="mt-4 text-xs text-gray-500">
-        <p>Product Code: ${product.sku || product.firestoreId}</p>
-      </div>
-    </div>
-  `;
-};
-
-window.selectSize = function(size) {
-  selectedSize = size;
-  document.querySelectorAll('.size-option:not(.disabled)').forEach(option => {
-    option.classList.toggle('selected', option.textContent.includes(size));
-  });
-};
-
-window.addToCart = async function() {
-  if (!selectedProduct) {
-    alert('Please select a product');
-    return;
-  }
-  if (!selectedSize) {
-    alert('Please select a size');
-    return;
-  }
-  const sizeStock = selectedProduct.sizeStock?.[selectedSize] || 0;
-  if (sizeStock === 0) {
-    alert('This size is currently out of stock');
-    return;
-  }
-  try {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existingItemIndex = cart.findIndex(
-      item => item.firestoreId === selectedProduct.firestoreId && item.size === selectedSize
-    );
-    if (existingItemIndex > -1) {
-      cart[existingItemIndex].quantity += 1;
-    } else {
-      cart.push({
-        id: `${selectedProduct.firestoreId}-${selectedSize}`,
-        firestoreId: selectedProduct.firestoreId,
-        sku: selectedProduct.sku || selectedProduct.firestoreId,
-        name: selectedProduct.name,
-        price: selectedProduct.price,
-        size: selectedSize,
-        image: selectedProduct.image,
-        quantity: 1,
-        type: selectedProduct.type,
-        categoryId: selectedProduct.categoryId
-      });
-    }
-    localStorage.setItem('cart', JSON.stringify(cart));
-    window.dispatchEvent(new Event('cart-updated'));
-    alert(`Added ${selectedProduct.name} (${selectedSize}) to bag!`);
-    if (selectedProduct.sizeStock) {
-      selectedProduct.sizeStock[selectedSize] = Math.max(0, selectedProduct.sizeStock[selectedSize] - 1);
-      selectProduct(selectedProduct.firestoreId);
-    }
-  } catch (error) {
-    console.error('Error adding to cart:', error);
-    alert('Failed to add item to bag. Please try again.');
-  }
-};
-
-// Initialize
-toggleCategory('labels');
-loadAllProducts();
