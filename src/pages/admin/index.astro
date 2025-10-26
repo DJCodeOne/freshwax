@@ -1208,13 +1208,13 @@ import Layout from '../../layouts/Layout.astro';
 		import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, query, where, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 		const firebaseConfig = {
-			apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
-			authDomain: "freshwax-store.firebaseapp.com",
-			projectId: "freshwax-store",
-			storageBucket: "freshwax-store.firebasestorage.app",
-			messagingSenderId: "675435782973",
-			appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-		};
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+  authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.PUBLIC_FIREBASE_APP_ID
+};
 
 		const app = initializeApp(firebaseConfig);
 		const auth = getAuth(app);
