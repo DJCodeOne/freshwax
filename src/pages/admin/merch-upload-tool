@@ -1,0 +1,644 @@
+---
+import '../styles/global.css';
+---
+
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Merch Upload - Fresh Wax</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: #f5f5f5;
+      color: #000;
+    }
+    
+    .upload-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .card {
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #333;
+    }
+    
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      outline: none;
+      border-color: #000;
+    }
+    
+    .form-textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    
+    .btn-primary {
+      background: #000;
+      color: #fff;
+      padding: 0.75rem 2rem;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .btn-primary:hover {
+      background: #333;
+    }
+    
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #000;
+      padding: 0.75rem 2rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+    
+    .size-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+    
+    .size-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    
+    .size-input-group label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #666;
+    }
+    
+    .size-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+    }
+    
+    .image-preview {
+      width: 100%;
+      max-width: 300px;
+      margin-top: 1rem;
+      border-radius: 8px;
+      border: 2px solid #e0e0e0;
+    }
+    
+    .product-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .product-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      margin-bottom: 0.75rem;
+      background: #fafafa;
+    }
+    
+    .product-item img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin-right: 1rem;
+    }
+    
+    .product-info {
+      flex: 1;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    
+    .badge-success {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    
+    .badge-error {
+      background: #ffebee;
+      color: #c62828;
+    }
+    
+    .json-preview {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .alert {
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+    
+    .alert-success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border: 1px solid #c8e6c9;
+    }
+    
+    .alert-error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ffcdd2;
+    }
+  </style>
+</head>
+<body>
+  <div class="upload-container">
+    <!-- Header -->
+    <div class="card">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold mb-2">Merchandise Upload Tool</h1>
+          <p class="text-gray-600">Upload products for labels, DJs, sound systems, and crews</p>
+        </div>
+        <a href="/merch" class="btn-secondary">← Back to Merch</a>
+      </div>
+    </div>
+
+    <!-- Alert Messages -->
+    <div id="alert-container"></div>
+
+    <!-- Upload Form -->
+    <div class="card">
+      <h2 class="text-2xl font-bold mb-6">Add New Product</h2>
+      
+      <form id="product-form">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Left Column -->
+          <div>
+            <div class="form-group">
+              <label class="form-label">Product Type *</label>
+              <select class="form-select" id="product-type" required>
+                <option value="">Select type...</option>
+                <option value="label">Label</option>
+                <option value="dj">DJ</option>
+                <option value="soundsystem">Sound System</option>
+                <option value="crew">Crew</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Category ID *</label>
+              <select class="form-select" id="category-id" required disabled>
+                <option value="">Select product type first...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Product Name *</label>
+              <input type="text" class="form-input" id="product-name" placeholder="e.g., Classic Logo Tee" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">SKU / Product Code *</label>
+              <input type="text" class="form-input" id="product-sku" placeholder="e.g., WT-TEE-001" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Price (£) *</label>
+              <input type="number" class="form-input" id="product-price" step="0.01" min="0" placeholder="25.00" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Description *</label>
+              <textarea class="form-textarea" id="product-description" placeholder="Product description..." required></textarea>
+            </div>
+          </div>
+
+          <!-- Right Column -->
+          <div>
+            <div class="form-group">
+              <label class="form-label">Product Image URL *</label>
+              <input type="url" class="form-input" id="product-image" placeholder="https://..." required />
+              <img id="image-preview" class="image-preview hidden" alt="Preview" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Available Sizes *</label>
+              <div class="size-grid">
+                <div class="size-checkbox">
+                  <input type="checkbox" id="size-xs" value="XS" />
+                  <label for="size-xs">XS</label>
+                </div>
+                <div class="size-checkbox">
+                  <input type="checkbox" id="size-s" value="S" />
+                  <label for="size-s">S</label>
+                </div>
+                <div class="size-checkbox">
+                  <input type="checkbox" id="size-m" value="M" />
+                  <label for="size-m">M</label>
+                </div>
+                <div class="size-checkbox">
+                  <input type="checkbox" id="size-l" value="L" />
+                  <label for="size-l">L</label>
+                </div>
+                <div class="size-checkbox">
+                  <input type="checkbox" id="size-xl" value="XL" />
+                  <label for="size-xl">XL</label>
+                </div>
+                <div class="size-checkbox">
+                  <input type="checkbox" id="size-xxl" value="XXL" />
+                  <label for="size-xxl">XXL</label>
+                </div>
+                <div class="size-checkbox">
+                  <input type="checkbox" id="size-onesize" value="One Size" />
+                  <label for="size-onesize">One Size</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group" id="stock-inputs-container">
+              <label class="form-label">Stock Levels by Size</label>
+              <div id="stock-inputs"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-4 mt-6">
+          <button type="submit" class="btn-primary">Add Product</button>
+          <button type="button" class="btn-secondary" onclick="resetForm()">Clear Form</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Products List -->
+    <div class="card">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">Current Products</h2>
+        <div class="flex gap-2">
+          <button class="btn-secondary" onclick="refreshProducts()">🔄 Refresh</button>
+          <button class="btn-secondary" onclick="exportJSON()">📥 Export JSON</button>
+        </div>
+      </div>
+      
+      <div id="products-loading" class="text-centre text-gray-600 py-8">
+        Loading products...
+      </div>
+      
+      <ul id="products-list" class="product-list hidden"></ul>
+    </div>
+
+    <!-- JSON Preview -->
+    <div class="card">
+      <h2 class="text-2xl font-bold mb-4">JSON Preview</h2>
+      <pre id="json-preview" class="json-preview">No data yet</pre>
+    </div>
+  </div>
+
+  <!-- Firebase Config -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      authDomain: "freshwax-store.firebaseapp.com",
+      projectId: "freshwax-store",
+      storageBucket: "freshwax-store.firebasestorage.app",
+      messagingSenderId: "675435782973",
+      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Category mappings
+    const categories = {
+      label: [
+        { id: 'wax-trax', name: 'Wax Trax Records' },
+        { id: 'deep-cuts', name: 'Deep Cuts' },
+        { id: 'vinyl-vault', name: 'Vinyl Vault' },
+        { id: 'bassline', name: 'Bassline Records' }
+      ],
+      dj: [
+        { id: 'dj-shadow', name: 'DJ Shadow' },
+        { id: 'dj-krush', name: 'DJ Krush' },
+        { id: 'dj-premier', name: 'DJ Premier' },
+        { id: 'dj-qbert', name: 'DJ Qbert' }
+      ],
+      soundsystem: [
+        { id: 'bass-culture', name: 'Bass Culture Sound' },
+        { id: 'dub-station', name: 'Dub Station' },
+        { id: 'roots-rumble', name: 'Roots Rumble' }
+      ],
+      crew: [
+        { id: 'jungle-massive', name: 'Jungle Massive' },
+        { id: 'techno-militia', name: 'Techno Militia' },
+        { id: 'house-heads', name: 'House Heads' }
+      ]
+    };
+
+    // Update category dropdown when type changes
+    document.getElementById('product-type').addEventListener('change', (e) => {
+      const type = e.target.value;
+      const categorySelect = document.getElementById('category-id');
+      
+      if (type) {
+        categorySelect.disabled = false;
+        categorySelect.innerHTML = '<option value="">Select category...</option>' +
+          categories[type].map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
+      } else {
+        categorySelect.disabled = true;
+        categorySelect.innerHTML = '<option value="">Select product type first...</option>';
+      }
+    });
+
+    // Image preview
+    document.getElementById('product-image').addEventListener('input', (e) => {
+      const preview = document.getElementById('image-preview');
+      if (e.target.value) {
+        preview.src = e.target.value;
+        preview.classList.remove('hidden');
+      } else {
+        preview.classList.add('hidden');
+      }
+    });
+
+    // Update stock inputs when sizes change
+    document.querySelectorAll('[id^="size-"]').forEach(checkbox => {
+      checkbox.addEventListener('change', updateStockInputs);
+    });
+
+    function updateStockInputs() {
+      const stockContainer = document.getElementById('stock-inputs');
+      const checkedSizes = Array.from(document.querySelectorAll('[id^="size-"]:checked')).map(cb => cb.value);
+      
+      if (checkedSizes.length === 0) {
+        stockContainer.innerHTML = '<p class="text-gray-500 text-sm">Select sizes to set stock levels</p>';
+        return;
+      }
+      
+      stockContainer.innerHTML = checkedSizes.map(size => `
+        <div class="size-input-group mb-3">
+          <label class="text-sm font-semibold">${size}</label>
+          <input type="number" class="form-input" id="stock-${size.replace(/\s/g, '-')}" min="0" value="10" placeholder="Stock quantity" />
+        </div>
+      `).join('');
+    }
+
+    // Show alert
+    function showAlert(message, type = 'success') {
+      const container = document.getElementById('alert-container');
+      const alert = document.createElement('div');
+      alert.className = `alert alert-${type}`;
+      alert.textContent = message;
+      container.appendChild(alert);
+      
+      setTimeout(() => {
+        alert.remove();
+      }, 5000);
+    }
+
+    // Form submission
+    document.getElementById('product-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Adding...';
+      
+      try {
+        const type = document.getElementById('product-type').value;
+        const categoryId = document.getElementById('category-id').value;
+        const name = document.getElementById('product-name').value;
+        const sku = document.getElementById('product-sku').value;
+        const price = parseFloat(document.getElementById('product-price').value);
+        const description = document.getElementById('product-description').value;
+        const image = document.getElementById('product-image').value;
+        
+        // Get selected sizes
+        const sizes = Array.from(document.querySelectorAll('[id^="size-"]:checked')).map(cb => cb.value);
+        
+        if (sizes.length === 0) {
+          throw new Error('Please select at least one size');
+        }
+        
+        // Get stock levels
+        const sizeStock = {};
+        let totalStock = 0;
+        
+        sizes.forEach(size => {
+          const stockInput = document.getElementById(`stock-${size.replace(/\s/g, '-')}`);
+          const stock = parseInt(stockInput?.value || 0);
+          sizeStock[size] = stock;
+          totalStock += stock;
+        });
+        
+        const product = {
+          type,
+          categoryId,
+          name,
+          sku,
+          price,
+          description,
+          image,
+          sizes,
+          sizeStock,
+          stock: totalStock,
+          createdAt: new Date().toISOString()
+        };
+        
+        // Add to Firestore
+        await addDoc(collection(db, 'merch_products'), product);
+        
+        showAlert('Product added successfully!', 'success');
+        resetForm();
+        refreshProducts();
+        updateJSONPreview();
+        
+      } catch (error) {
+        console.error('Error adding product:', error);
+        showAlert('Error adding product: ' + error.message, 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add Product';
+      }
+    });
+
+    // Reset form
+    window.resetForm = function() {
+      document.getElementById('product-form').reset();
+      document.getElementById('category-id').disabled = true;
+      document.getElementById('image-preview').classList.add('hidden');
+      document.getElementById('stock-inputs').innerHTML = '<p class="text-gray-500 text-sm">Select sizes to set stock levels</p>';
+    };
+
+    // Load products
+    async function loadProducts() {
+      const loadingEl = document.getElementById('products-loading');
+      const listEl = document.getElementById('products-list');
+      
+      try {
+        loadingEl.classList.remove('hidden');
+        listEl.classList.add('hidden');
+        
+        const q = query(collection(db, 'merch_products'), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+          listEl.innerHTML = '<li class="text-centre text-gray-600 py-4">No products yet</li>';
+        } else {
+          listEl.innerHTML = snapshot.docs.map(docSnap => {
+            const product = docSnap.data();
+            const categoryName = categories[product.type]?.find(c => c.id === product.categoryId)?.name || product.categoryId;
+            
+            return `
+              <li class="product-item">
+                <img src="${product.image}" alt="${product.name}" />
+                <div class="product-info">
+                  <div class="font-bold text-lg">${product.name}</div>
+                  <div class="text-sm text-gray-600">${categoryName} - ${product.type}</div>
+                  <div class="text-sm text-gray-600">SKU: ${product.sku}</div>
+                  <div class="mt-1">
+                    <span class="badge badge-success">£${product.price.toFixed(2)}</span>
+                    <span class="badge ${product.stock > 0 ? 'badge-success' : 'badge-error'}">
+                      Stock: ${product.stock}
+                    </span>
+                  </div>
+                </div>
+                <button class="btn-secondary" onclick="deleteProduct('${docSnap.id}')">Delete</button>
+              </li>
+            `;
+          }).join('');
+        }
+        
+        loadingEl.classList.add('hidden');
+        listEl.classList.remove('hidden');
+        
+      } catch (error) {
+        console.error('Error loading products:', error);
+        loadingEl.textContent = 'Error loading products';
+      }
+    }
+
+    // Delete product
+    window.deleteProduct = async function(docId) {
+      if (!confirm('Are you sure you want to delete this product?')) return;
+      
+      try {
+        await deleteDoc(doc(db, 'merch_products', docId));
+        showAlert('Product deleted successfully', 'success');
+        refreshProducts();
+        updateJSONPreview();
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        showAlert('Error deleting product', 'error');
+      }
+    };
+
+    // Refresh products
+    window.refreshProducts = loadProducts;
+
+    // Update JSON preview
+    async function updateJSONPreview() {
+      try {
+        const snapshot = await getDocs(collection(db, 'merch_products'));
+        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        document.getElementById('json-preview').textContent = JSON.stringify(products, null, 2);
+      } catch (error) {
+        console.error('Error updating JSON preview:', error);
+      }
+    }
+
+    // Export JSON
+    window.exportJSON = async function() {
+      try {
+        const snapshot = await getDocs(collection(db, 'merch_products'));
+        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        const dataStr = JSON.stringify(products, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `merch-products-${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        
+        URL.revokeObjectURL(url);
+        showAlert('JSON exported successfully', 'success');
+      } catch (error) {
+        console.error('Error exporting JSON:', error);
+        showAlert('Error exporting JSON', 'error');
+      }
+    };
+
+    // Initialize
+    loadProducts();
+    updateJSONPreview();
+  </script>
+</body>
+</html>

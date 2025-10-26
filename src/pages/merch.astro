@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fresh Wax - Merch</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: #ffffff;
+      color: #000;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .merch-container {
+      display: flex;
+      height: calc(100vh - 140px);
+      overflow: hidden;
+    }
+    
+    .nav-panel {
+      width: 300px;
+      background: #f5f5f5;
+      border-right: 2px solid #e0e0e0;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    
+    .preview-panel {
+      flex: 1;
+      background: #ffffff;
+      overflow-y: auto;
+      position: relative;
+    }
+    
+    .nav-category {
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .nav-category-title {
+      padding: 1rem 1.5rem;
+      background: #ffffff;
+      font-weight: bold;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s;
+    }
+    
+    .nav-category-title:hover {
+      background: #fafafa;
+    }
+    
+    .nav-category-items {
+      display: none;
+    }
+    
+    .nav-category-items.active {
+      display: block;
+    }
+    
+    .nav-item {
+      padding: 0.75rem 1.5rem 0.75rem 2.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.875rem;
+      border-left: 3px solid transparent;
+    }
+    
+    .nav-item:hover {
+      background: #ffffff;
+      border-left-color: #000;
+    }
+    
+    .nav-item.active {
+      background: #ffffff;
+      border-left-color: #000;
+      font-weight: 600;
+    }
+    
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 1rem;
+      padding: 2rem;
+    }
+    
+    .product-thumbnail {
+      cursor: pointer;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: all 0.2s;
+      background: #ffffff;
+      position: relative;
+    }
+    
+    .product-thumbnail:hover {
+      border-color: #000;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .product-thumbnail.selected {
+      border-color: #000;
+      box-shadow: 0 0 0 3px rgba(0,0,0,0.1);
+    }
+    
+    .product-thumbnail.out-of-stock {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .product-thumbnail img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+    }
+    
+    .product-thumbnail-info {
+      padding: 0.5rem;
+      font-size: 0.75rem;
+    }
+    
+    .stock-badge {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: bold;
+      background: #000;
+      color: #fff;
+    }
+    
+    .stock-badge.low-stock {
+      background: #ff9800;
+    }
+    
+    .stock-badge.out-of-stock {
+      background: #f44336;
+    }
+    
+    .preview-content {
+      position: sticky;
+      top: 0;
+      padding: 2rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .preview-image {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto 2rem;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+    
+    .preview-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    
+    .preview-details {
+      background: #f5f5f5;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 2rem;
+    }
+    
+    .stock-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    
+    .stock-indicator.in-stock {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    
+    .stock-indicator.low-stock {
+      background: #fff3e0;
+      color: #ef6c00;
+    }
+    
+    .stock-indicator.out-of-stock {
+      background: #ffebee;
+      color: #c62828;
+    }
+    
+    .size-selector {
+      display: flex;
+      gap: 0.5rem;
+      margin: 1rem 0;
+      flex-wrap: wrap;
+    }
+    
+    .size-option {
+      padding: 0.5rem 1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #ffffff;
+    }
+    
+    .size-option:hover:not(.disabled) {
+      border-color: #000;
+    }
+    
+    .size-option.selected {
+      border-color: #000;
+      background: #000;
+      color: #fff;
+    }
+    
+    .size-option.disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    
+    .btn-primary {
+      background: #000;
+      color: #fff;
+      padding: 0.75rem 2rem;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+      width: 100%;
+      margin-top: 1rem;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      background: #333;
+    }
+    
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #666;
+    }
+    
+    .empty-state svg {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 1rem;
+      opacity: 0.3;
+    }
+    
+    @media (max-width: 768px) {
+      .merch-container {
+        flex-direction: column;
+        height: auto;
+      }
+      
+      .nav-panel {
+        width: 100%;
+        border-right: none;
+        border-bottom: 2px solid #e0e0e0;
+        max-height: 300px;
+      }
+      
+      .preview-panel {
+        min-height: 500px;
+      }
+      
+      .product-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        padding: 1rem;
+        gap: 0.75rem;
+      }
+      
+      .preview-content {
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex items-center justify-between gap-8">
+        <a href="/" class="flex items-center flex-shrink-0">
+          <img src="/logo.webp" alt="Freshwax" style="height: 70px;" />
+        </a>
+        
+        <div class="flex-1 max-w-2xl relative">
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              id="search-input"
+              placeholder="Search by colour, size, garment, item..."
+              class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              autocomplete="off"
+            />
+          </div>
+          <div id="search-dropdown" class="absolute w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg hidden max-h-96 overflow-y-auto z-50"></div>
+        </div>
+        
+        <div class="flex items-center gap-3 flex-shrink-0">
+          <a href="/" class="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium text-sm">
+            ← Back
+          </a>
+          <a href="/cart" class="relative px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            Bag
+            <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="min-h-screen">
+    <div class="merch-container">
+      <div class="nav-panel">
+        <div class="nav-category">
+          <div class="nav-category-title" onclick="toggleCategory('labels')">
+            <span>Labels</span>
+            <svg class="w-4 h-4 transition-transform" id="labels-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          <div class="nav-category-items active" id="labels-items">
+            <div class="nav-item" onclick="selectNavItem(this, 'label', 'wax-trax')">Wax Trax Records</div>
+            <div class="nav-item" onclick="selectNavItem(this, 'label', 'deep-cuts')">Deep Cuts</div>
+            <div class="nav-item" onclick="selectNavItem(this, 'label', 'vinyl-vault')">Vinyl Vault</div>
+            <div class="nav-item" onclick="selectNavItem(this, 'label', 'bassline')">Bassline Records</div>
+          </div>
+        </div>
+
+        <div class="nav-category">
+          <div class="nav-category-title" onclick="toggleCategory('djs')">
+            <span>DJs</span>
+            <svg class="w-4 h-4 transition-transform" id="djs-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          <div class="nav-category-items" id="djs-items">
+            <div class="nav-item" onclick="selectNavItem(this, 'dj', 'dj-shadow')">DJ Shadow</div>
+            <div class="nav-item" onclick="selectNavItem(this, 'dj', 'dj-krush')">DJ Krush</div>
+            <div class="nav-item" onclick="selectNavItem(this, 'dj', 'dj-premier')">DJ Premier</div>
+            <div class="nav-item" onclick="selectNavItem(this, 'dj', 'dj-qbert')">DJ Qbert</div>
+          </div>
+        </div>
+
+        <div class="nav-category">
+          <div class="nav-category-title" onclick="toggleCategory('soundsystems')">
+            <span>Sound Systems</span>
+            <svg class="w-4 h-4 transition-transform" id="soundsystems-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          <div class="nav-category-items" id="soundsystems-items">
+            <div class="nav-item" onclick="selectNavItem(this, 'soundsystem', 'bass-culture')">Bass Culture Sound</div>
+            <div class="nav-item" onclick="selectNavItem(this, 'soundsystem', 'dub-station')">Dub Station</div>
+            <div class="nav-item" onclick="selectNavItem(this, 'soundsystem', 'roots-rumble')">Roots Rumble</div>
+          </div>
+        </div>
+
+        <div class="nav-category">
+          <div class="nav-category-title" onclick="toggleCategory('crews')">
+            <span>Crews</span>
+            <svg class="w-4 h-4 transition-transform" id="crews-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          <div class="nav-category-items" id="crews-items">
+            <div class="nav-item" onclick="selectNavItem(this, 'crew', 'jungle-massive')">Jungle Massive</div>
+            <div class="nav-item" onclick="selectNavItem(this, 'crew', 'techno-militia')">Techno Militia</div>
+            <div class="nav-item" onclick="selectNavItem(this, 'crew', 'house-heads')">House Heads</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-panel">
+        <div id="product-grid-container" class="hidden">
+          <div class="product-grid" id="product-grid"></div>
+        </div>
+        
+        <div id="preview-container" class="preview-content">
+          <div class="empty-state">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+            </svg>
+            <h2 class="text-2xl font-bold mb-2">Select a category</h2>
+            <p class="text-gray-600">Choose a label, DJ, sound system, or crew from the left to browse merch</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getFirestore, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      authDomain: "freshwax-store.firebaseapp.com",
+      projectId: "freshwax-store",
+      storageBucket: "freshwax-store.firebasestorage.app",
+      messagingSenderId: "675435782973",
+      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let currentProducts = [];
+    let allProducts = [];
+    let selectedProduct = null;
+    let selectedSize = null;
+
+    function updateCartCount() {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+      const cartCount = document.getElementById('cart-count');
+      if (totalItems > 0) {
+        if (cartCount) {
+          cartCount.textContent = totalItems.toString();
+          cartCount.classList.remove('hidden');
+        }
+      } else {
+        cartCount?.classList.add('hidden');
+      }
+    }
+
+    updateCartCount();
+    window.addEventListener('storage', updateCartCount);
+    window.addEventListener('cart-updated', updateCartCount);
+
+    // PART 1 ENDS HERE - CONTINUED IN PART 2
+  </script>
+</body>
+</html>
+// PART 2 - Add this JavaScript after the updateCartCount() section in Part 1
+
+async function loadAllProducts() {
+  try {
+    const snapshot = await getDocs(collection(db, 'merch_products'));
+    allProducts = [];
+    snapshot.forEach(doc => {
+      allProducts.push({ firestoreId: doc.id, ...doc.data() });
+    });
+  } catch (error) {
+    console.error('Error loading all products:', error);
+  }
+}
+
+function searchProducts(query) {
+  const searchTerm = query.toLowerCase().trim();
+  if (!searchTerm) return [];
+  return allProducts.filter(product => {
+    const name = product.name?.toLowerCase() || '';
+    const description = product.description?.toLowerCase() || '';
+    const sizes = product.sizes?.join(' ').toLowerCase() || '';
+    const sku = product.sku?.toLowerCase() || '';
+    const text = `${name} ${description} ${sizes} ${sku}`;
+    return text.includes(searchTerm);
+  });
+}
+
+function showSearchDropdown(results, query) {
+  const dropdown = document.getElementById('search-dropdown');
+  if (results.length === 0) {
+    dropdown.innerHTML = `<div class="p-4 text-center text-gray-500">No results found for "${query}"</div>`;
+    dropdown.classList.remove('hidden');
+    return;
+  }
+  const maxResults = 5;
+  const displayResults = results.slice(0, maxResults);
+  dropdown.innerHTML = `
+    ${displayResults.map(product => `
+      <div class="flex items-center gap-3 p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0 cursor-pointer search-result" data-product-id="${product.firestoreId}">
+        <img src="${product.image}" alt="${product.name}" class="w-12 h-12 object-cover rounded" />
+        <div class="flex-1 min-w-0">
+          <p class="font-medium text-gray-900 truncate">${product.name}</p>
+          <p class="text-sm text-gray-600 truncate">${product.sizes?.join(', ') || ''}</p>
+        </div>
+        <span class="text-sm font-bold text-gray-900">£${product.price.toFixed(2)}</span>
+      </div>
+    `).join('')}
+    ${results.length > maxResults ? `<div class="p-3 text-center text-sm font-medium text-blue-600">${results.length - maxResults} more results found</div>` : ''}
+  `;
+  dropdown.classList.remove('hidden');
+  dropdown.querySelectorAll('.search-result').forEach(result => {
+    result.addEventListener('click', () => {
+      const productId = result.dataset.productId;
+      const product = allProducts.find(p => p.firestoreId === productId);
+      if (product) {
+        selectNavItemByProduct(product);
+        dropdown.classList.add('hidden');
+        document.getElementById('search-input').value = '';
+      }
+    });
+  });
+}
+
+async function selectNavItemByProduct(product) {
+  const categoryElement = document.querySelector(`[onclick*="${product.type}"][onclick*="${product.categoryId}"]`);
+  if (categoryElement) {
+    const categoryId = product.type === 'label' ? 'labels' : product.type === 'dj' ? 'djs' : product.type === 'soundsystem' ? 'soundsystems' : 'crews';
+    const items = document.getElementById(`${categoryId}-items`);
+    if (!items.classList.contains('active')) {
+      toggleCategory(categoryId);
+    }
+    categoryElement.click();
+    setTimeout(() => { selectProduct(product.firestoreId); }, 300);
+  }
+}
+
+const searchInput = document.getElementById('search-input');
+let searchTimeout;
+searchInput?.addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  const query = e.target.value;
+  if (!query.trim()) {
+    document.getElementById('search-dropdown').classList.add('hidden');
+    return;
+  }
+  searchTimeout = setTimeout(() => {
+    const results = searchProducts(query);
+    showSearchDropdown(results, query);
+  }, 300);
+});
+
+document.addEventListener('click', (e) => {
+  const target = e.target;
+  if (!target.closest('#search-input') && !target.closest('#search-dropdown')) {
+    document.getElementById('search-dropdown')?.classList.add('hidden');
+  }
+});
+
+async function loadProducts(type, categoryId) {
+  try {
+    const q = query(collection(db, 'merch_products'), where('type', '==', type), where('categoryId', '==', categoryId));
+    const snapshot = await getDocs(q);
+    const products = [];
+    snapshot.forEach(doc => {
+      products.push({ firestoreId: doc.id, ...doc.data() });
+    });
+    return products;
+  } catch (error) {
+    console.error('Error loading products:', error);
+    return [];
+  }
+}
+
+function getStockStatus(stock) {
+  if (stock === 0) return { status: 'out-of-stock', text: 'Out of Stock', class: 'out-of-stock' };
+  if (stock <= 5) return { status: 'low-stock', text: `Only ${stock} left`, class: 'low-stock' };
+  return { status: 'in-stock', text: `In Stock (${stock})`, class: 'in-stock' };
+}
+
+window.toggleCategory = function(categoryId) {
+  const items = document.getElementById(`${categoryId}-items`);
+  const arrow = document.getElementById(`${categoryId}-arrow`);
+  items.classList.toggle('active');
+  arrow.style.transform = items.classList.contains('active') ? 'rotate(0deg)' : 'rotate(-90deg)';
+};
+
+window.selectNavItem = async function(element, type, id) {
+  document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+  element.classList.add('active');
+  const gridContainer = document.getElementById('product-grid-container');
+  const grid = document.getElementById('product-grid');
+  gridContainer.classList.remove('hidden');
+  grid.innerHTML = '<div class="col-span-full text-center p-8 text-gray-600">Loading products...</div>';
+  currentProducts = await loadProducts(type, id);
+  showProductGrid();
+};
+
+function showProductGrid() {
+  const gridContainer = document.getElementById('product-grid-container');
+  const previewContainer = document.getElementById('preview-container');
+  const grid = document.getElementById('product-grid');
+  if (currentProducts.length === 0) {
+    gridContainer.classList.add('hidden');
+    previewContainer.innerHTML = `
+      <div class="empty-state">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+        </svg>
+        <h2 class="text-2xl font-bold mb-2">No products available</h2>
+        <p class="text-gray-600">Check back soon for new merch drops!</p>
+      </div>
+    `;
+    return;
+  }
+  gridContainer.classList.remove('hidden');
+  grid.innerHTML = currentProducts.map(product => {
+    const stockInfo = getStockStatus(product.stock || 0);
+    const isOutOfStock = product.stock === 0;
+    return `
+      <div class="product-thumbnail ${isOutOfStock ? 'out-of-stock' : ''}" onclick="${isOutOfStock ? '' : `selectProduct('${product.firestoreId}')`}">
+        <span class="stock-badge ${stockInfo.class}">${stockInfo.text}</span>
+        <img src="${product.image}" alt="${product.name}" />
+        <div class="product-thumbnail-info">
+          <div class="font-semibold truncate">${product.name}</div>
+          <div class="text-gray-600">£${product.price.toFixed(2)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  const firstAvailable = currentProducts.find(p => p.stock > 0);
+  if (firstAvailable) {
+    selectProduct(firstAvailable.firestoreId);
+  }
+}
+
+window.selectProduct = function(firestoreId) {
+  const product = currentProducts.find(p => p.firestoreId === firestoreId);
+  if (!product) return;
+  selectedProduct = product;
+  selectedSize = null;
+  document.querySelectorAll('.product-thumbnail').forEach((thumb, index) => {
+    thumb.classList.toggle('selected', currentProducts[index].firestoreId === firestoreId);
+  });
+  const stockInfo = getStockStatus(product.stock || 0);
+  const isOutOfStock = product.stock === 0;
+  const previewContainer = document.getElementById('preview-container');
+  previewContainer.innerHTML = `
+    <div class="preview-image">
+      <img src="${product.image}" alt="${product.name}" />
+    </div>
+    <div class="preview-details">
+      <h2 class="text-3xl font-bold mb-2">${product.name}</h2>
+      <p class="text-2xl font-bold text-gray-900 mb-4">£${product.price.toFixed(2)}</p>
+      <div class="stock-indicator ${stockInfo.class}">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${stockInfo.status === 'in-stock' ? 'M5 13l4 4L19 7' : 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z'}" />
+        </svg>
+        ${stockInfo.text}
+      </div>
+      <p class="text-gray-600 mb-6">${product.description}</p>
+      <div class="mb-4">
+        <label class="block text-sm font-bold mb-2">Size</label>
+        <div class="size-selector">
+          ${product.sizes.map(size => {
+            const sizeStock = product.sizeStock?.[size] || 0;
+            const disabled = sizeStock === 0 || isOutOfStock;
+            return `
+              <div class="size-option ${disabled ? 'disabled' : ''}" onclick="${disabled ? '' : `selectSize('${size}')`}">
+                ${size}${sizeStock > 0 && sizeStock <= 3 ? ` (${sizeStock})` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+      <button class="btn-primary" onclick="addToCart()" ${isOutOfStock ? 'disabled' : ''}>
+        ${isOutOfStock ? 'Out of Stock' : 'Add to Bag'}
+      </button>
+      <div class="mt-4 text-xs text-gray-500">
+        <p>Product Code: ${product.sku || product.firestoreId}</p>
+      </div>
+    </div>
+  `;
+};
+
+window.selectSize = function(size) {
+  selectedSize = size;
+  document.querySelectorAll('.size-option:not(.disabled)').forEach(option => {
+    option.classList.toggle('selected', option.textContent.includes(size));
+  });
+};
+
+window.addToCart = async function() {
+  if (!selectedProduct) {
+    alert('Please select a product');
+    return;
+  }
+  if (!selectedSize) {
+    alert('Please select a size');
+    return;
+  }
+  const sizeStock = selectedProduct.sizeStock?.[selectedSize] || 0;
+  if (sizeStock === 0) {
+    alert('This size is currently out of stock');
+    return;
+  }
+  try {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const existingItemIndex = cart.findIndex(
+      item => item.firestoreId === selectedProduct.firestoreId && item.size === selectedSize
+    );
+    if (existingItemIndex > -1) {
+      cart[existingItemIndex].quantity += 1;
+    } else {
+      cart.push({
+        id: `${selectedProduct.firestoreId}-${selectedSize}`,
+        firestoreId: selectedProduct.firestoreId,
+        sku: selectedProduct.sku || selectedProduct.firestoreId,
+        name: selectedProduct.name,
+        price: selectedProduct.price,
+        size: selectedSize,
+        image: selectedProduct.image,
+        quantity: 1,
+        type: selectedProduct.type,
+        categoryId: selectedProduct.categoryId
+      });
+    }
+    localStorage.setItem('cart', JSON.stringify(cart));
+    window.dispatchEvent(new Event('cart-updated'));
+    alert(`Added ${selectedProduct.name} (${selectedSize}) to bag!`);
+    if (selectedProduct.sizeStock) {
+      selectedProduct.sizeStock[selectedSize] = Math.max(0, selectedProduct.sizeStock[selectedSize] - 1);
+      selectProduct(selectedProduct.firestoreId);
+    }
+  } catch (error) {
+    console.error('Error adding to cart:', error);
+    alert('Failed to add item to bag. Please try again.');
+  }
+};
+
+// Initialize
+toggleCategory('labels');
+loadAllProducts();

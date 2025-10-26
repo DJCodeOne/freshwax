@@ -103,7 +103,6 @@ import Layout from '../../layouts/Layout.astro';
 		.admin-header-card p {
 			color: #666;
 			font-size: 16px;
-			font-weight: 500;
 		}
 
 		.admin-logout-btn {
@@ -112,22 +111,21 @@ import Layout from '../../layouts/Layout.astro';
 			right: 20px;
 			padding: 10px 20px;
 			background: #000;
-			color: white;
-			border: 2px solid #000;
-			font-size: 14px;
+			color: #ffffff;
+			border: 3px solid #000;
 			font-weight: 700;
 			cursor: pointer;
 			transition: all 0.2s;
-			display: flex;
-			align-items: center;
-			gap: 8px;
+			font-size: 14px;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
 		}
 
 		.admin-logout-btn:hover {
-			background: #fff;
+			background: #ffffff;
 			color: #000;
-			transform: translateY(-2px);
-			box-shadow: 4px 4px 0 #000;
+			transform: translate(-4px, -4px);
+			box-shadow: 8px 8px 0 #000;
 		}
 
 		.admin-stats-row {
@@ -138,11 +136,10 @@ import Layout from '../../layouts/Layout.astro';
 		}
 
 		.admin-stat-card {
-			background: white;
-			padding: 25px;
+			background: #fff;
 			border: 3px solid #000;
+			padding: 25px;
 			transition: all 0.2s;
-			position: relative;
 		}
 
 		.admin-stat-card:hover {
@@ -152,71 +149,133 @@ import Layout from '../../layouts/Layout.astro';
 
 		.admin-stat-label {
 			font-size: 12px;
-			color: #666;
-			margin-bottom: 8px;
 			font-weight: 700;
+			color: #666;
 			text-transform: uppercase;
 			letter-spacing: 1px;
+			margin-bottom: 10px;
 		}
 
 		.admin-stat-value {
 			font-size: 36px;
 			font-weight: 900;
 			color: #000;
-			line-height: 1;
-		}
-
-		.admin-stat-value.loading {
-			color: #999;
+			margin-bottom: 10px;
 		}
 
 		.admin-stat-change {
-			font-size: 12px;
-			margin-top: 8px;
+			font-size: 13px;
 			font-weight: 600;
+			color: #666;
 		}
 
 		.admin-stat-change.positive {
-			color: #000;
+			color: #00aa00;
 		}
 
 		.admin-stat-change.warning {
+			color: #ff9900;
+		}
+
+		.admin-system-status {
+			background: #fff;
+			border: 3px solid #000;
+			padding: 25px;
+			margin-bottom: 30px;
+		}
+
+		.admin-system-status h2 {
+			font-size: 20px;
+			font-weight: 900;
 			color: #000;
+			margin-bottom: 20px;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.admin-status-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			gap: 20px;
+		}
+
+		.admin-status-item {
+			display: flex;
+			align-items: center;
+			gap: 15px;
+		}
+
+		.admin-status-led {
+			width: 16px;
+			height: 16px;
+			border-radius: 50%;
+			background: #cccccc;
+			border: 3px solid #000;
+			flex-shrink: 0;
+		}
+
+		.admin-status-led.active {
+			background: #00ff00;
+			animation: pulse 2s infinite;
+		}
+
+		@keyframes pulse {
+			0%, 100% { opacity: 1; }
+			50% { opacity: 0.5; }
+		}
+
+		.admin-status-info {
+			flex-grow: 1;
+		}
+
+		.admin-status-name {
+			font-size: 14px;
+			font-weight: 700;
+			color: #000;
+			margin-bottom: 2px;
+		}
+
+		.admin-status-text {
+			font-size: 12px;
+			color: #666;
+			font-weight: 600;
 		}
 
 		.admin-quick-actions {
-			background: white;
-			padding: 25px;
+			background: #fff;
 			border: 3px solid #000;
+			padding: 25px;
 			margin-bottom: 30px;
 		}
 
 		.admin-quick-actions h2 {
 			font-size: 20px;
+			font-weight: 900;
 			color: #000;
 			margin-bottom: 20px;
-			padding-bottom: 15px;
-			border-bottom: 3px solid #000;
-			font-weight: 900;
 			text-transform: uppercase;
-			letter-spacing: 1px;
+			letter-spacing: 0.5px;
 		}
 
 		.admin-action-buttons {
 			display: flex;
-			gap: 15px;
 			flex-wrap: wrap;
+			gap: 15px;
 		}
 
 		.admin-action-btn {
-			padding: 15px 30px;
+			flex: 1;
+			min-width: 200px;
+			padding: 15px 25px;
 			border: 3px solid #000;
-			cursor: pointer;
-			font-size: 14px;
-			font-weight: 700;
-			transition: all 0.2s;
+			background: #ffffff;
+			color: #000;
 			text-decoration: none;
-			display: inline-block;
+			font-weight: 700;
+			text-align: center;
+			cursor: pointer;
+			transition: all 0.2s;
+			font-size: 14px;
 			text-transform: uppercase;
 			letter-spacing: 0.5px;
 		}
@@ -228,48 +287,57 @@ import Layout from '../../layouts/Layout.astro';
 
 		.admin-action-btn.primary {
 			background: #000;
-			color: white;
+			color: #ffffff;
 		}
 
-		.admin-action-btn.secondary {
-			background: #fff;
+		.admin-action-btn.primary:hover {
+			background: #ffffff;
 			color: #000;
 		}
 
 		.admin-action-btn.success {
-			background: #000;
-			color: white;
+			background: #00aa00;
+			color: #ffffff;
+			border-color: #000;
+		}
+
+		.admin-action-btn.success:hover {
+			background: #ffffff;
+			color: #00aa00;
+			border-color: #00aa00;
 		}
 
 		.admin-action-btn.warning {
-			background: #fff;
+			background: #ff9900;
+			color: #ffffff;
+			border-color: #000;
+		}
+
+		.admin-action-btn.warning:hover {
+			background: #ffffff;
+			color: #ff9900;
+			border-color: #ff9900;
+		}
+
+		.admin-action-btn.secondary {
+			background: #ffffff;
 			color: #000;
 		}
 
 		.admin-modules-grid {
 			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+			grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 			gap: 25px;
 			margin-bottom: 30px;
 		}
 
 		.admin-module-card {
-			background: white;
-			padding: 30px;
+			background: #fff;
 			border: 3px solid #000;
-			transition: all 0.2s;
+			padding: 25px;
 			cursor: pointer;
+			transition: all 0.2s;
 			position: relative;
-		}
-
-		.admin-module-card::before {
-			content: '';
-			position: absolute;
-			top: 0;
-			left: 0;
-			right: 0;
-			height: 5px;
-			background: #000;
 		}
 
 		.admin-module-card:hover {
@@ -283,7 +351,7 @@ import Layout from '../../layouts/Layout.astro';
 		}
 
 		.admin-module-title {
-			font-size: 20px;
+			font-size: 18px;
 			font-weight: 900;
 			color: #000;
 			margin-bottom: 10px;
@@ -294,70 +362,66 @@ import Layout from '../../layouts/Layout.astro';
 		.admin-module-description {
 			font-size: 14px;
 			color: #666;
-			line-height: 1.6;
+			line-height: 1.5;
+			font-weight: 600;
 			margin-bottom: 15px;
 		}
 
 		.admin-module-badge {
 			display: inline-block;
-			padding: 6px 12px;
-			background: #000;
-			color: #fff;
+			padding: 5px 12px;
+			background: #f0f0f0;
+			border: 2px solid #000;
 			font-size: 11px;
 			font-weight: 700;
-			margin-top: 10px;
 			text-transform: uppercase;
 			letter-spacing: 0.5px;
 		}
 
-		.admin-module-badge.new {
-			background: #fff;
-			color: #000;
-			border: 2px solid #000;
+		.admin-module-badge.important {
+			background: #ff9900;
+			color: #ffffff;
 		}
 
-		.admin-module-badge.important {
+		.admin-module-badge.new {
 			background: #000;
-			color: #fff;
+			color: #ffffff;
 		}
 
 		.admin-recent-activity {
-			background: white;
-			padding: 25px;
+			background: #fff;
 			border: 3px solid #000;
+			padding: 25px;
+			margin-bottom: 30px;
 		}
 
 		.admin-recent-activity h2 {
 			font-size: 20px;
+			font-weight: 900;
 			color: #000;
 			margin-bottom: 20px;
-			padding-bottom: 15px;
-			border-bottom: 3px solid #000;
-			font-weight: 900;
 			text-transform: uppercase;
-			letter-spacing: 1px;
+			letter-spacing: 0.5px;
 		}
 
 		.admin-activity-item {
 			padding: 15px;
-			border-left: 4px solid #000;
+			border-left: 5px solid #000;
 			background: #f9f9f9;
-			margin-bottom: 12px;
-			transition: all 0.2s;
+			margin-bottom: 15px;
 		}
 
-		.admin-activity-item:hover {
-			transform: translateX(4px);
-			background: #f0f0f0;
+		.admin-activity-item:last-child {
+			margin-bottom: 0;
 		}
 
 		.admin-activity-time {
 			font-size: 11px;
-			color: #666;
-			margin-bottom: 5px;
 			font-weight: 700;
+			color: #666;
 			text-transform: uppercase;
 			letter-spacing: 0.5px;
+			margin-bottom: 5px;
 		}
 
 		.admin-activity-text {
@@ -366,122 +430,42 @@ import Layout from '../../layouts/Layout.astro';
 			font-weight: 600;
 		}
 
-		/* System Status */
-		.admin-system-status {
-			background: white;
-			padding: 25px;
-			border: 3px solid #000;
-			margin-bottom: 30px;
-		}
-
-		.admin-system-status h2 {
-			font-size: 20px;
-			color: #000;
-			margin-bottom: 20px;
-			padding-bottom: 15px;
-			border-bottom: 3px solid #000;
-			font-weight: 900;
-			text-transform: uppercase;
-			letter-spacing: 1px;
-		}
-
-		.admin-status-grid {
-			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-			gap: 20px;
-		}
-
-		.admin-status-item {
-			display: flex;
-			align-items: center;
-			gap: 15px;
-			padding: 15px;
-			border: 2px solid #000;
-			background: #f9f9f9;
-		}
-
-		.admin-status-led {
-			width: 20px;
-			height: 20px;
-			border-radius: 50%;
-			border: 2px solid #000;
-			background: #666;
-			position: relative;
-			flex-shrink: 0;
-		}
-
-		.admin-status-led.active {
-			background: #00ff00;
-			box-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
-			animation: pulse 2s infinite;
-		}
-
-		.admin-status-led.inactive {
-			background: #ff0000;
-			box-shadow: 0 0 10px #ff0000;
-		}
-
-		@keyframes pulse {
-			0%, 100% { opacity: 1; }
-			50% { opacity: 0.6; }
-		}
-
-		.admin-status-info {
-			flex: 1;
-		}
-
-		.admin-status-name {
-			font-weight: 900;
-			font-size: 14px;
-			text-transform: uppercase;
-			color: #000;
-			margin-bottom: 4px;
-		}
-
-		.admin-status-text {
-			font-size: 12px;
-			color: #666;
-			font-weight: 600;
-		}
-
-		/* Fee Management Modal */
+		/* Fee Management Modal Styles */
 		.fee-modal-overlay {
 			display: none;
 			position: fixed;
 			top: 0;
 			left: 0;
-			width: 100%;
-			height: 100%;
-			background: rgba(0, 0, 0, 0.8);
-			z-index: 9999;
-			align-items: center;
-			justify-content: center;
+			right: 0;
+			bottom: 0;
+			background: rgba(0, 0, 0, 0.7);
+			z-index: 1000;
 			padding: 20px;
 			overflow-y: auto;
 		}
 
 		.fee-modal-overlay.active {
 			display: flex;
+			justify-content: center;
+			align-items: flex-start;
+			padding-top: 50px;
 		}
 
 		.fee-modal {
 			background: #ffffff;
-			border: 3px solid #000;
-			max-width: 1200px;
+			border: 5px solid #000;
+			max-width: 1000px;
 			width: 100%;
-			max-height: 90vh;
-			overflow-y: auto;
-			box-shadow: 16px 16px 0 #000;
+			box-shadow: 12px 12px 0 #000;
 		}
 
 		.fee-modal-header {
 			background: #000;
-			color: #fff;
+			color: #ffffff;
 			padding: 20px 30px;
 			display: flex;
 			justify-content: space-between;
 			align-items: center;
-			border-bottom: 3px solid #000;
 		}
 
 		.fee-modal-title {
@@ -489,12 +473,13 @@ import Layout from '../../layouts/Layout.astro';
 			font-weight: 900;
 			text-transform: uppercase;
 			letter-spacing: 1px;
+			margin: 0;
 		}
 
 		.fee-modal-close {
-			background: #fff;
+			background: #ffffff;
 			color: #000;
-			border: 2px solid #fff;
+			border: 3px solid #000;
 			padding: 8px 16px;
 			font-weight: 700;
 			cursor: pointer;
@@ -701,98 +686,64 @@ import Layout from '../../layouts/Layout.astro';
 			color: #000;
 		}
 
-		.fee-display {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-		}
-
-		.override-badge {
-			background: #000;
-			color: #ffffff;
-			padding: 4px 8px;
-			font-size: 10px;
-			font-weight: 700;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-		}
-
-		.btn-edit-fee {
+		.btn-custom-fee {
 			padding: 8px 16px;
 			background: #000;
 			color: #ffffff;
-			border: 2px solid #000;
+			border: 3px solid #000;
 			font-weight: 700;
 			cursor: pointer;
 			transition: all 0.2s;
-			text-transform: uppercase;
 			font-size: 12px;
+			text-transform: uppercase;
 			letter-spacing: 0.5px;
 		}
 
-		.btn-edit-fee:hover {
+		.btn-custom-fee:hover {
 			background: #ffffff;
 			color: #000;
-			transform: translate(-2px, -2px);
-			box-shadow: 4px 4px 0 #000;
 		}
 
-		/* Edit Artist Fee Modal */
-		.edit-fee-modal {
+		/* Custom Fee Modal */
+		.custom-fee-modal {
 			background: #ffffff;
-			border: 3px solid #000;
+			border: 5px solid #000;
 			max-width: 500px;
-			width: 90%;
-			box-shadow: 16px 16px 0 #000;
+			width: 100%;
+			padding: 30px;
 		}
 
-		.edit-fee-modal-header {
-			background: #000;
-			color: #fff;
-			padding: 20px;
-			border-bottom: 3px solid #000;
-		}
-
-		.edit-fee-modal-title {
+		.custom-fee-modal h3 {
 			font-size: 20px;
 			font-weight: 900;
+			margin-bottom: 20px;
 			text-transform: uppercase;
 		}
 
-		.edit-fee-modal-body {
-			padding: 20px;
+		.custom-fee-form {
+			display: flex;
+			flex-direction: column;
+			gap: 20px;
 		}
 
 		.form-group {
-			margin-bottom: 20px;
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
 		}
 
-		.form-label {
-			display: block;
-			font-weight: 700;
-			margin-bottom: 8px;
-			text-transform: uppercase;
+		.form-group label {
 			font-size: 12px;
+			font-weight: 700;
+			text-transform: uppercase;
 			letter-spacing: 0.5px;
+			color: #666;
 		}
 
-		.form-input {
-			width: 100%;
-			padding: 12px;
-			border: 2px solid #000;
-			font-size: 16px;
-			font-family: inherit;
-		}
-
-		.form-input:focus {
-			outline: none;
-			box-shadow: 4px 4px 0 #000;
-		}
-
-		.modal-actions {
+		.modal-buttons {
 			display: flex;
 			gap: 10px;
-			margin-top: 20px;
+			margin-top: 10px;
 		}
 
 		.btn-modal {
@@ -1032,6 +983,7 @@ import Layout from '../../layouts/Layout.astro';
 					<a href="/admin/artists/pending" class="admin-action-btn warning">✅ Review Artists</a>
 					<a href="https://freshwax-uploads.pages.dev" target="_blank" rel="noopener noreferrer" class="admin-action-btn success">📤 Upload Release</a>
 					<button id="openFeeManagementBtn" class="admin-action-btn primary">💰 Manage Fees</button>
+					<a href="/admin/dj-mix-reports" class="admin-action-btn warning">🚨 View Reports</a>
 					<a href="/admin/account/manage" class="admin-action-btn secondary">👥 Manage Customers</a>
 				</div>
 			</div>
@@ -1090,6 +1042,15 @@ import Layout from '../../layouts/Layout.astro';
 						View and manage customer orders, process payments, send download links, and track order history.
 					</div>
 					<span class="admin-module-badge">Essential</span>
+				</div>
+
+				<div class="admin-module-card" data-link="/admin/dj-mix-reports">
+					<div class="admin-module-icon">🚨</div>
+					<div class="admin-module-title">DJ Mix Reports</div>
+					<div class="admin-module-description">
+						Review and manage reported DJ mixes from the community. Handle malicious uploads and content issues.
+					</div>
+					<span class="admin-module-badge important">Reports</span>
 				</div>
 
 				<div class="admin-module-card" data-link="/admin/account/manage">
@@ -1200,7 +1161,9 @@ import Layout from '../../layouts/Layout.astro';
 						</thead>
 						<tbody id="artistTableBody">
 							<tr>
-								<td colspan="5" style="text-align: center; padding: 30px; color: #666;">Loading artists...</td>
+								<td colspan="5" style="text-align: center; padding: 30px; color: #666;">
+									Loading artists...
+								</td>
 							</tr>
 						</tbody>
 					</table>
@@ -1209,44 +1172,40 @@ import Layout from '../../layouts/Layout.astro';
 		</div>
 	</div>
 
-	<!-- Edit Artist Fee Modal -->
-	<div id="editArtistFeeModal" class="fee-modal-overlay">
-		<div class="edit-fee-modal">
-			<div class="edit-fee-modal-header">
-				<h2 class="edit-fee-modal-title">Edit Artist Fee</h2>
-			</div>
-			<div class="edit-fee-modal-body">
+	<!-- Custom Fee Modal -->
+	<div id="customFeeModal" class="fee-modal-overlay">
+		<div class="custom-fee-modal">
+			<h3 id="customFeeArtistName">Set Custom Fee</h3>
+			<form id="customFeeForm" class="custom-fee-form">
 				<div class="form-group">
-					<label class="form-label">Artist Name</label>
-					<input type="text" id="modalArtistName" class="form-input" readonly>
-				</div>
-				<div class="form-group">
-					<label class="form-label">Fee Type</label>
+					<label>Fee Type</label>
 					<div class="fee-type-toggle">
-						<button id="modalFeeTypePercentage" class="toggle-btn active" data-type="percentage">Percentage</button>
-						<button id="modalFeeTypeFixed" class="toggle-btn" data-type="fixed">Fixed (£)</button>
+						<button type="button" id="customFeeTypePercentage" class="toggle-btn active" data-type="percentage">Percentage</button>
+						<button type="button" id="customFeeTypeFixed" class="toggle-btn" data-type="fixed">Fixed (£)</button>
 					</div>
 				</div>
+
 				<div class="form-group">
-					<label class="form-label">Custom Fee Amount</label>
+					<label>Fee Amount</label>
 					<div class="fee-input-group">
-						<span id="modalFeePrefix" class="fee-unit" style="display: none;">£</span>
-						<input type="number" id="modalCustomFee" class="form-input" placeholder="0" step="0.01" min="0">
-						<span id="modalFeeSuffix" class="fee-unit">%</span>
+						<span id="customFeePrefix" class="fee-unit" style="display: none;">£</span>
+						<input type="number" id="customFeeAmount" class="fee-input" placeholder="0" step="0.01" min="0" value="0" required>
+						<span id="customFeeSuffix" class="fee-unit">%</span>
 					</div>
 				</div>
-				<div class="modal-actions">
-					<button id="cancelModalBtn" class="btn-modal btn-modal-cancel">Cancel</button>
-					<button id="saveModalBtn" class="btn-modal btn-modal-save">Save Changes</button>
+
+				<div class="modal-buttons">
+					<button type="submit" class="btn-modal btn-modal-save">Save Custom Fee</button>
+					<button type="button" id="cancelCustomFeeBtn" class="btn-modal btn-modal-cancel">Cancel</button>
 				</div>
-			</div>
+			</form>
 		</div>
 	</div>
 
 	<script type="module">
 		import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 		import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-		import { getFirestore, collection, query, where, getDocs, doc, getDoc, orderBy, limit, setDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+		import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, query, where, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 		const firebaseConfig = {
 			apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
@@ -1261,507 +1220,351 @@ import Layout from '../../layouts/Layout.astro';
 		const auth = getAuth(app);
 		const db = getFirestore(app);
 
-		let currentUser = null;
+		let currentFeeSettings = null;
 		let allArtists = [];
-		let currentEditingArtistId = null;
+		let currentArtistId = null;
 
-		// Check admin authentication
+		// Auth check
 		onAuthStateChanged(auth, async (user) => {
-			if (!user) {
-				window.location.href = '/admin/login';
-				return;
-			}
-
-			try {
-				const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-				
-				if (!adminDoc.exists()) {
-					await signOut(auth);
-					window.location.href = '/admin/login';
-					return;
-				}
-
-				currentUser = user;
-
-				// Show dashboard
-				document.getElementById('loadingScreen').style.display = 'none';
-				document.getElementById('dashboardContent').style.display = 'block';
-
-				// Load all dashboard data
-				await Promise.all([
-					loadPendingArtistsCount(),
-					loadActiveReleases(),
-					loadTotalSales(),
-					loadPlatformFees(),
-					loadRecentActivity(),
-					checkSystemStatus()
-				]);
-			} catch (error) {
-				console.error('Auth check error:', error);
-				window.location.href = '/admin/login';
+			if (user) {
+				await loadDashboard();
+			} else {
+				window.location.href = '/login';
 			}
 		});
 
-		// Logout button
+		async function loadDashboard() {
+			try {
+				await Promise.all([
+					loadStats(),
+					loadRecentActivity(),
+					loadFeeSettings()
+				]);
+
+				document.getElementById('loadingScreen').style.display = 'none';
+				document.getElementById('dashboardContent').style.display = 'block';
+			} catch (error) {
+				console.error('Error loading dashboard:', error);
+			}
+		}
+
+		async function loadStats() {
+			try {
+				// Load pending artists
+				const pendingQuery = query(
+					collection(db, 'artists'),
+					where('status', '==', 'pending')
+				);
+				const pendingSnapshot = await getDocs(pendingQuery);
+				document.getElementById('pendingArtistsCount').textContent = pendingSnapshot.size;
+
+				// Load active releases
+				const releasesSnapshot = await getDocs(collection(db, 'releases'));
+				document.getElementById('activeReleases').textContent = releasesSnapshot.size;
+
+				// Calculate total sales and platform fees
+				const ordersSnapshot = await getDocs(collection(db, 'orders'));
+				let totalSales = 0;
+				let totalFees = 0;
+
+				ordersSnapshot.forEach(doc => {
+					const order = doc.data();
+					totalSales += order.amount || 0;
+					totalFees += order.platformFee || 0;
+				});
+
+				document.getElementById('totalSales').textContent = `£${totalSales.toFixed(2)}`;
+				document.getElementById('platformFees').textContent = `£${totalFees.toFixed(2)}`;
+			} catch (error) {
+				console.error('Error loading stats:', error);
+			}
+		}
+
+		async function loadRecentActivity() {
+			try {
+				const activityList = document.getElementById('recentActivityList');
+				const q = query(
+					collection(db, 'activity'),
+					orderBy('timestamp', 'desc'),
+					limit(10)
+				);
+				const snapshot = await getDocs(q);
+
+				if (snapshot.empty) {
+					activityList.innerHTML = `
+						<div class="admin-activity-item">
+							<div class="admin-activity-time">No activity</div>
+							<div class="admin-activity-text">No recent activity to display</div>
+						</div>
+					`;
+					return;
+				}
+
+				activityList.innerHTML = snapshot.docs.map(doc => {
+					const activity = doc.data();
+					return `
+						<div class="admin-activity-item">
+							<div class="admin-activity-time">${formatTime(activity.timestamp)}</div>
+							<div class="admin-activity-text">${activity.description}</div>
+						</div>
+					`;
+				}).join('');
+			} catch (error) {
+				console.error('Error loading activity:', error);
+			}
+		}
+
+		function formatTime(timestamp) {
+			if (!timestamp) return 'Recent';
+			const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+			const now = new Date();
+			const diff = now - date;
+			
+			const minutes = Math.floor(diff / 60000);
+			const hours = Math.floor(diff / 3600000);
+			const days = Math.floor(diff / 86400000);
+
+			if (minutes < 60) return `${minutes} minutes ago`;
+			if (hours < 24) return `${hours} hours ago`;
+			if (days === 1) return 'Yesterday';
+			return `${days} days ago`;
+		}
+
+		// Logout
 		document.getElementById('logoutBtn').addEventListener('click', async () => {
 			try {
 				await signOut(auth);
-				window.location.href = '/admin/login';
+				window.location.href = '/login';
 			} catch (error) {
 				console.error('Logout error:', error);
 			}
 		});
 
 		// Module card navigation
-		document.querySelectorAll('.admin-module-card').forEach(card => {
+		document.querySelectorAll('.admin-module-card[data-link]').forEach(card => {
 			card.addEventListener('click', () => {
 				const link = card.getAttribute('data-link');
-				if (link) window.location.href = link;
+				window.location.href = link;
 			});
 		});
 
 		// Fee Management Modal
-		document.getElementById('openFeeManagementBtn').addEventListener('click', openFeeManagementModal);
-		document.getElementById('feeManagementCard').addEventListener('click', openFeeManagementModal);
-		document.getElementById('closeFeeModalBtn').addEventListener('click', closeFeeManagementModal);
+		const feeModal = document.getElementById('feeManagementModal');
+		const openFeeBtn = document.getElementById('openFeeManagementBtn');
+		const closeFeeBtn = document.getElementById('closeFeeModalBtn');
+		const feeCard = document.getElementById('feeManagementCard');
 
-		async function openFeeManagementModal() {
-			document.getElementById('feeManagementModal').classList.add('active');
-			await loadPlatformFeeSettings();
-			await loadArtistsData();
-		}
+		openFeeBtn.addEventListener('click', () => {
+			feeModal.classList.add('active');
+			loadArtistsTable();
+		});
 
-		function closeFeeManagementModal() {
-			document.getElementById('feeManagementModal').classList.remove('active');
-		}
+		feeCard.addEventListener('click', () => {
+			feeModal.classList.add('active');
+			loadArtistsTable();
+		});
 
-		// Close modal on overlay click
-		document.getElementById('feeManagementModal').addEventListener('click', (e) => {
-			if (e.target.id === 'feeManagementModal') {
-				closeFeeManagementModal();
+		closeFeeBtn.addEventListener('click', () => {
+			feeModal.classList.remove('active');
+		});
+
+		feeModal.addEventListener('click', (e) => {
+			if (e.target === feeModal) {
+				feeModal.classList.remove('active');
 			}
 		});
 
-		document.getElementById('editArtistFeeModal').addEventListener('click', (e) => {
-			if (e.target.id === 'editArtistFeeModal') {
-				document.getElementById('editArtistFeeModal').classList.remove('active');
-			}
+		// Fee Type Toggle
+		const feeTypeButtons = document.querySelectorAll('#feeTypePercentage, #feeTypeFixed');
+		feeTypeButtons.forEach(btn => {
+			btn.addEventListener('click', () => {
+				feeTypeButtons.forEach(b => b.classList.remove('active'));
+				btn.classList.add('active');
+				
+				const isPercentage = btn.dataset.type === 'percentage';
+				document.getElementById('feePrefix').style.display = isPercentage ? 'none' : 'inline';
+				document.getElementById('feeSuffix').style.display = isPercentage ? 'inline' : 'none';
+			});
 		});
 
-		// Load pending artists count
-		async function loadPendingArtistsCount() {
+		// Load fee settings
+		async function loadFeeSettings() {
 			try {
-				const artistsRef = collection(db, 'artists');
-				const q = query(artistsRef, where('approved', '==', false));
-				const querySnapshot = await getDocs(q);
-				const count = querySnapshot.size;
-				
-				const countElement = document.getElementById('pendingArtistsCount');
-				countElement.textContent = count;
-				
-				if (count > 0) {
-					countElement.style.fontWeight = '900';
-				}
-			} catch (error) {
-				console.error('Error loading pending artists:', error);
-				document.getElementById('pendingArtistsCount').textContent = '0';
-			}
-		}
-
-		// Load active releases from Firebase
-		async function loadActiveReleases() {
-			try {
-				const releasesRef = collection(db, 'releases');
-				const querySnapshot = await getDocs(releasesRef);
-				const count = querySnapshot.size;
-				
-				document.getElementById('activeReleases').textContent = count;
-				document.getElementById('releasesChange').textContent = `${count} total in catalog`;
-			} catch (error) {
-				console.error('Error loading releases:', error);
-				document.getElementById('activeReleases').textContent = '0';
-				document.getElementById('releasesChange').textContent = 'Error loading data';
-			}
-		}
-
-		// Load total sales
-		async function loadTotalSales() {
-			try {
-				const ordersRef = collection(db, 'orders');
-				const querySnapshot = await getDocs(ordersRef);
-				
-				let totalSales = 0;
-				querySnapshot.forEach((doc) => {
-					const orderData = doc.data();
-					if (orderData.total || orderData.amount) {
-						totalSales += (orderData.total || orderData.amount);
-					}
-				});
-				
-				document.getElementById('totalSales').textContent = `£${totalSales.toFixed(2)}`;
-				document.getElementById('salesChange').textContent = `${querySnapshot.size} total orders`;
-			} catch (error) {
-				console.error('Error loading sales:', error);
-				document.getElementById('totalSales').textContent = '£0.00';
-				document.getElementById('salesChange').textContent = 'No sales data';
-			}
-		}
-
-		// Load platform fees
-		async function loadPlatformFees() {
-			try {
-				const ordersRef = collection(db, 'orders');
-				const querySnapshot = await getDocs(ordersRef);
-				
-				let totalFees = 0;
-				querySnapshot.forEach((doc) => {
-					const orderData = doc.data();
-					if (orderData.platformFee) {
-						totalFees += orderData.platformFee;
-					}
-				});
-				
-				document.getElementById('platformFees').textContent = `£${totalFees.toFixed(2)}`;
-				document.getElementById('platformFeesChange').textContent = totalFees > 0 ? 'Total collected' : 'No fees collected yet';
-			} catch (error) {
-				console.error('Error loading platform fees:', error);
-				document.getElementById('platformFees').textContent = '£0.00';
-			}
-		}
-
-		// Load platform fee settings
-		async function loadPlatformFeeSettings() {
-			try {
-				const settingsDoc = await getDoc(doc(db, 'settings', 'platformFees'));
-				
-				if (settingsDoc.exists()) {
-					const settings = settingsDoc.data();
+				const feeDoc = await getDoc(doc(db, 'settings', 'platformFees'));
+				if (feeDoc.exists()) {
+					currentFeeSettings = feeDoc.data();
 					
-					// Set fee type
-					const feeType = settings.feeType || 'percentage';
-					if (feeType === 'fixed') {
-						document.getElementById('feeTypeFixed').click();
-					}
-					
-					// Set fee amount
-					document.getElementById('feeAmount').value = settings.feeAmount || 0;
-					
-					// Set enabled status
-					document.getElementById('feeEnabled').checked = settings.enabled !== false;
-				} else {
-					// Create default settings (0% fee)
-					await setDoc(doc(db, 'settings', 'platformFees'), {
-						feeType: 'percentage',
-						feeAmount: 0,
-						enabled: true
-					});
+					// Set UI values
+					const isPercentage = currentFeeSettings.type === 'percentage';
+					document.getElementById(isPercentage ? 'feeTypePercentage' : 'feeTypeFixed').click();
+					document.getElementById('feeAmount').value = currentFeeSettings.amount || 0;
+					document.getElementById('feeEnabled').checked = currentFeeSettings.enabled !== false;
 				}
 			} catch (error) {
 				console.error('Error loading fee settings:', error);
 			}
 		}
 
-		// Fee type toggle
-		document.querySelectorAll('.fee-type-toggle .toggle-btn').forEach(btn => {
-			btn.addEventListener('click', (e) => {
-				const parent = e.target.closest('.fee-type-toggle');
-				parent.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-				e.target.classList.add('active');
-				
-				const feeType = e.target.dataset.type;
-				const prefix = parent.parentElement.querySelector('[id$="Prefix"]');
-				const suffix = parent.parentElement.querySelector('[id$="Suffix"]');
-				
-				if (prefix && suffix) {
-					if (feeType === 'fixed') {
-						prefix.style.display = 'inline';
-						suffix.textContent = '';
-					} else {
-						prefix.style.display = 'none';
-						suffix.textContent = '%';
-					}
-				}
-			});
-		});
-
 		// Save fee settings
 		document.getElementById('saveFeeSettingsBtn').addEventListener('click', async () => {
 			try {
-				const feeType = document.querySelector('#feeTypePercentage.active') ? 'percentage' : 'fixed';
-				const feeAmount = parseFloat(document.getElementById('feeAmount').value) || 0;
+				const type = document.querySelector('#feeTypePercentage.active') ? 'percentage' : 'fixed';
+				const amount = parseFloat(document.getElementById('feeAmount').value) || 0;
 				const enabled = document.getElementById('feeEnabled').checked;
 
 				await setDoc(doc(db, 'settings', 'platformFees'), {
-					feeType: feeType,
-					feeAmount: feeAmount,
-					enabled: enabled,
-					updatedAt: new Date(),
-					updatedBy: currentUser.uid
+					type,
+					amount,
+					enabled,
+					updatedAt: new Date().toISOString()
 				});
 
-				showSuccessMessage('Platform fee settings saved successfully!');
-				await loadPlatformFees();
+				showSuccessMessage('Platform fee settings saved successfully');
 			} catch (error) {
 				console.error('Error saving fee settings:', error);
-				alert('Failed to save settings: ' + error.message);
+				alert('Failed to save fee settings');
 			}
 		});
 
-		// Load artists data
-		async function loadArtistsData() {
+		// Load artists table
+		async function loadArtistsTable() {
 			try {
 				const artistsSnapshot = await getDocs(collection(db, 'artists'));
-				allArtists = [];
+				allArtists = artistsSnapshot.docs.map(doc => ({
+					id: doc.id,
+					...doc.data()
+				}));
 
-				for (const artistDoc of artistsSnapshot.docs) {
-					const artistData = artistDoc.data();
-					
-					// Get artist earnings
-					const ordersQuery = query(
-						collection(db, 'orders'),
-						where('artistId', '==', artistDoc.id)
-					);
-					const ordersSnapshot = await getDocs(ordersQuery);
-					
-					let totalEarnings = 0;
-					ordersSnapshot.forEach(orderDoc => {
-						totalEarnings += orderDoc.data().amount || 0;
-					});
-
-					allArtists.push({
-						id: artistDoc.id,
-						name: artistData.artistName || 'Unknown Artist',
-						email: artistData.email,
-						totalEarnings: totalEarnings,
-						downloadCount: ordersSnapshot.size,
-						customFee: artistData.customFee || null,
-						customFeeType: artistData.customFeeType || 'percentage'
-					});
-				}
-
-				// Sort by earnings
-				allArtists.sort((a, b) => b.totalEarnings - a.totalEarnings);
-				
-				displayArtists(allArtists);
+				renderArtistsTable(allArtists);
 			} catch (error) {
 				console.error('Error loading artists:', error);
 			}
 		}
 
-		function displayArtists(artists) {
+		function renderArtistsTable(artists) {
 			const tbody = document.getElementById('artistTableBody');
 			
 			if (artists.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #666;">No artists found</td></tr>';
+				tbody.innerHTML = `
+					<tr>
+						<td colspan="5" style="text-align: center; padding: 30px; color: #666;">
+							No artists found
+						</td>
+					</tr>
+				`;
 				return;
 			}
 
 			tbody.innerHTML = artists.map(artist => {
-				const feeDisplay = artist.customFee !== null && artist.customFee !== undefined
-					? `<div class="fee-display">
-						 ${artist.customFeeType === 'percentage' ? artist.customFee + '%' : '£' + artist.customFee.toFixed(2)}
-						 <span class="override-badge">CUSTOM</span>
-					   </div>`
-					: '<div class="fee-display">0% (default)</div>';
+				const customFee = artist.customFee || null;
+				const feeDisplay = customFee 
+					? `${customFee.type === 'percentage' ? customFee.amount + '%' : '£' + customFee.amount}`
+					: 'Global';
 
 				return `
 					<tr>
-						<td class="artist-name-cell">${artist.name}</td>
-						<td class="earnings-cell">£${artist.totalEarnings.toFixed(2)}</td>
-						<td>${artist.downloadCount}</td>
+						<td class="artist-name-cell">${artist.artistName || 'Unknown'}</td>
+						<td class="earnings-cell">£${(artist.totalEarnings || 0).toFixed(2)}</td>
+						<td>${artist.totalDownloads || 0}</td>
 						<td>${feeDisplay}</td>
 						<td>
-							<button class="btn-edit-fee" data-artist-id="${artist.id}">Edit</button>
+							<button class="btn-custom-fee" onclick="openCustomFeeModal('${artist.id}', '${artist.artistName}')">
+								Set Custom Fee
+							</button>
 						</td>
 					</tr>
 				`;
 			}).join('');
-
-			// Add event listeners to edit buttons
-			document.querySelectorAll('.btn-edit-fee').forEach(btn => {
-				btn.addEventListener('click', (e) => {
-					const artistId = e.target.dataset.artistId;
-					openEditArtistFeeModal(artistId);
-				});
-			});
 		}
 
 		// Artist search
 		document.getElementById('artistSearchInput').addEventListener('input', (e) => {
 			const searchTerm = e.target.value.toLowerCase();
 			const filtered = allArtists.filter(artist => 
-				artist.name.toLowerCase().includes(searchTerm) ||
-				artist.email.toLowerCase().includes(searchTerm)
+				(artist.artistName || '').toLowerCase().includes(searchTerm)
 			);
-			displayArtists(filtered);
+			renderArtistsTable(filtered);
 		});
 
-		// Open edit artist fee modal
-		function openEditArtistFeeModal(artistId) {
+		// Custom Fee Modal
+		const customFeeModal = document.getElementById('customFeeModal');
+		const cancelCustomFeeBtn = document.getElementById('cancelCustomFeeBtn');
+
+		window.openCustomFeeModal = function(artistId, artistName) {
+			currentArtistId = artistId;
+			document.getElementById('customFeeArtistName').textContent = `Set Custom Fee for ${artistName}`;
+			
 			const artist = allArtists.find(a => a.id === artistId);
-			if (!artist) return;
-
-			currentEditingArtistId = artistId;
-			
-			document.getElementById('modalArtistName').value = artist.name;
-			document.getElementById('modalCustomFee').value = artist.customFee !== null ? artist.customFee : '';
-			
-			// Set fee type
-			if (artist.customFeeType === 'fixed') {
-				document.getElementById('modalFeeTypeFixed').click();
+			if (artist && artist.customFee) {
+				const isPercentage = artist.customFee.type === 'percentage';
+				document.getElementById(isPercentage ? 'customFeeTypePercentage' : 'customFeeTypeFixed').click();
+				document.getElementById('customFeeAmount').value = artist.customFee.amount;
 			} else {
-				document.getElementById('modalFeeTypePercentage').click();
+				document.getElementById('customFeeTypePercentage').click();
+				document.getElementById('customFeeAmount').value = '0';
 			}
-			
-			document.getElementById('editArtistFeeModal').classList.add('active');
-		}
 
-		// Save artist fee
-		document.getElementById('saveModalBtn').addEventListener('click', async () => {
-			try {
-				const customFeeValue = document.getElementById('modalCustomFee').value;
-				const customFee = customFeeValue === '' ? null : parseFloat(customFeeValue);
-				const feeType = document.querySelector('#modalFeeTypePercentage.active') ? 'percentage' : 'fixed';
+			customFeeModal.classList.add('active');
+		};
 
-				if (customFee !== null && customFee < 0) {
-					alert('Please enter a valid fee amount (0 or greater)');
-					return;
-				}
+		cancelCustomFeeBtn.addEventListener('click', () => {
+			customFeeModal.classList.remove('active');
+		});
 
-				await updateDoc(doc(db, 'artists', currentEditingArtistId), {
-					customFee: customFee,
-					customFeeType: feeType,
-					feeUpdatedAt: new Date(),
-					feeUpdatedBy: currentUser.uid
-				});
-
-				showSuccessMessage('Artist fee updated successfully!');
-				document.getElementById('editArtistFeeModal').classList.remove('active');
-				await loadArtistsData();
-			} catch (error) {
-				console.error('Error updating artist fee:', error);
-				alert('Failed to update fee: ' + error.message);
+		customFeeModal.addEventListener('click', (e) => {
+			if (e.target === customFeeModal) {
+				customFeeModal.classList.remove('active');
 			}
 		});
 
-		// Cancel modal
-		document.getElementById('cancelModalBtn').addEventListener('click', () => {
-			document.getElementById('editArtistFeeModal').classList.remove('active');
-		});
-
-		// Load recent activity
-		async function loadRecentActivity() {
-			try {
-				const activityList = document.getElementById('recentActivityList');
-				activityList.innerHTML = '';
-
-				// Get recent orders
-				const ordersRef = collection(db, 'orders');
-				const ordersQuery = query(ordersRef, orderBy('createdAt', 'desc'), limit(10));
-				const ordersSnapshot = await getDocs(ordersQuery);
+		// Custom fee type toggle
+		const customFeeTypeButtons = document.querySelectorAll('#customFeeTypePercentage, #customFeeTypeFixed');
+		customFeeTypeButtons.forEach(btn => {
+			btn.addEventListener('click', () => {
+				customFeeTypeButtons.forEach(b => b.classList.remove('active'));
+				btn.classList.add('active');
 				
-				if (ordersSnapshot.empty) {
-					activityList.innerHTML = `
-						<div class="admin-activity-item">
-							<div class="admin-activity-time">No activity yet</div>
-							<div class="admin-activity-text">Start by adding releases to your store</div>
-						</div>
-					`;
-					return;
-				}
+				const isPercentage = btn.dataset.type === 'percentage';
+				document.getElementById('customFeePrefix').style.display = isPercentage ? 'none' : 'inline';
+				document.getElementById('customFeeSuffix').style.display = isPercentage ? 'inline' : 'none';
+			});
+		});
 
-				ordersSnapshot.forEach((doc) => {
-					const order = doc.data();
-					const date = order.createdAt ? new Date(order.createdAt.toDate()) : new Date();
-					const timeAgo = getTimeAgo(date);
-					
-					// Build activity text
-					let activityText = '';
-					const releaseName = order.releaseTitle || order.releaseName || 'Unknown Release';
-					const customerName = order.customerName || order.email || 'Customer';
-					const amount = (order.total || order.amount || 0).toFixed(2);
-					
-					// Check if it was a code redemption
-					if (order.promoCode || order.discountCode || order.redemptionCode) {
-						const code = order.promoCode || order.discountCode || order.redemptionCode;
-						activityText = `🎟️ Code "${code}" redeemed by ${customerName} for "${releaseName}" - £${amount}`;
-					} else {
-						activityText = `💰 New purchase: "${releaseName}" by ${customerName} - £${amount}`;
+		// Save custom fee
+		document.getElementById('customFeeForm').addEventListener('submit', async (e) => {
+			e.preventDefault();
+
+			if (!currentArtistId) return;
+
+			try {
+				const type = document.querySelector('#customFeeTypePercentage.active') ? 'percentage' : 'fixed';
+				const amount = parseFloat(document.getElementById('customFeeAmount').value) || 0;
+
+				await updateDoc(doc(db, 'artists', currentArtistId), {
+					customFee: {
+						type,
+						amount,
+						setAt: new Date().toISOString()
 					}
-					
-					const activityItem = document.createElement('div');
-					activityItem.className = 'admin-activity-item';
-					activityItem.innerHTML = `
-						<div class="admin-activity-time">${timeAgo}</div>
-						<div class="admin-activity-text">${activityText}</div>
-					`;
-					activityList.appendChild(activityItem);
 				});
+
+				showSuccessMessage('Custom fee saved successfully');
+				customFeeModal.classList.remove('active');
+				await loadArtistsTable();
 			} catch (error) {
-				console.error('Error loading activity:', error);
-				document.getElementById('recentActivityList').innerHTML = `
-					<div class="admin-activity-item">
-						<div class="admin-activity-time">Error</div>
-						<div class="admin-activity-text">Unable to load recent activity</div>
-					</div>
-				`;
+				console.error('Error saving custom fee:', error);
+				alert('Failed to save custom fee');
 			}
-		}
+		});
 
-		// Helper function to get time ago
-		function getTimeAgo(date) {
-			const seconds = Math.floor((new Date() - date) / 1000);
-			
-			if (seconds < 60) return 'Just now';
-			if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
-			if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
-			if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
-			return date.toLocaleDateString();
-		}
-
-		// Check system status
-		async function checkSystemStatus() {
-			// Check Cloudinary - try to load a test image
-			try {
-				const cloudinaryTest = await fetch('https://res.cloudinary.com/demo/image/upload/sample.jpg', { 
-					method: 'HEAD',
-					mode: 'no-cors' 
-				});
-				document.getElementById('cloudinaryStatus').classList.add('active');
-				document.getElementById('cloudinaryText').textContent = 'Connected';
-			} catch (error) {
-				document.getElementById('cloudinaryStatus').classList.add('inactive');
-				document.getElementById('cloudinaryText').textContent = 'Unable to verify';
-			}
-
-			// Check R2
-			try {
-				const r2Test = await fetch('https://pub-3345c9ef6c5e44ba87f77eb7e42d8c0e.r2.dev/', { 
-					method: 'HEAD',
-					mode: 'no-cors'
-				});
-				document.getElementById('r2Status').classList.add('active');
-				document.getElementById('r2Text').textContent = 'Connected';
-			} catch (error) {
-				// Assume configured if we're here (since we can't always test CORS)
-				document.getElementById('r2Status').classList.add('active');
-				document.getElementById('r2Text').textContent = 'Configured';
-			}
-
-			// Firebase status already confirmed by auth
-			document.getElementById('firebaseStatus').classList.add('active');
-			document.getElementById('firebaseText').textContent = 'Connected';
-		}
-
-		// Success message
 		function showSuccessMessage(message) {
-			const successDiv = document.createElement('div');
-			successDiv.className = 'success-message';
-			successDiv.textContent = message;
-			document.body.appendChild(successDiv);
+			const msgEl = document.createElement('div');
+			msgEl.className = 'success-message';
+			msgEl.textContent = message;
+			document.body.appendChild(msgEl);
 
 			setTimeout(() => {
-				successDiv.remove();
+				msgEl.remove();
 			}, 3000);
 		}
 	</script>
