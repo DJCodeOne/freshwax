@@ -119,12 +119,34 @@
       box-shadow: 8px 8px 0 #000;
     }
 
-    .admin-release-artwork {
+    .admin-release-artwork-container {
       width: 100%;
       height: 300px;
-      object-fit: cover;
       border-bottom: 3px solid #000;
       background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .admin-release-artwork {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .admin-release-artwork-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #e0e0e0 0%, #f5f5f5 100%);
+      font-size: 48px;
+      color: #999;
     }
 
     .admin-release-content {
@@ -338,6 +360,7 @@
       text-align: center;
       padding: 60px;
       background: #fff;
+      border: 3px solid #000;
     }
 
     .admin-spinner {
@@ -381,7 +404,7 @@
 <body>
   <!-- Logo Header -->
   <div class="admin-logo-header">
-    <img src="/logo.webp" alt="Fresh Wax" class="admin-logo">
+    <img src="/logo.webp" alt="Fresh Wax" class="admin-logo" onerror="this.style.display='none'">
   </div>
 
   <div class="admin-container">
@@ -508,18 +531,23 @@
     // Check authentication
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        window.location.href = '/admin/login';
-        return;
-      }
-
-      const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-      if (!adminDoc.exists()) {
-        window.location.href = '/admin/login';
+        window.location.href = '/login';
         return;
       }
 
       loadReleases();
     });
+
+    // Get artwork URL with fallback logic
+    function getArtworkUrl(release) {
+      // Try multiple possible field names
+      return release.artworkUrl || 
+             release.artwork || 
+             release.coverArt || 
+             release.image || 
+             release.artworkURL ||
+             null;
+    }
 
     // Load releases
     async function loadReleases() {
@@ -528,7 +556,9 @@
         allReleases = [];
         
         querySnapshot.forEach((doc) => {
-          allReleases.push({ id: doc.id, ...doc.data() });
+          const data = doc.data();
+          console.log('Release data:', data); // Debug log
+          allReleases.push({ id: doc.id, ...data });
         });
 
         allReleases.sort((a, b) => {
@@ -568,23 +598,37 @@
         return;
       }
 
-      grid.innerHTML = filtered.map(release => `
-        <div class="admin-release-card">
-          <img src="${release.artworkUrl || release.artwork || '/placeholder.jpg'}" alt="${release.title || release.releaseName}" class="admin-release-artwork" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22%3E%3Crect fill=%22%23ddd%22 width=%22400%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22 font-size=%2220%22%3ENo Image%3C/text%3E%3C/svg%3E'">
-          <div class="admin-release-content">
-            <div class="admin-release-title">${release.title || release.releaseName || 'Untitled'}</div>
-            <div class="admin-release-artist">${release.artist || release.artistName || 'Unknown Artist'}</div>
-            <div class="admin-release-meta">
-              <div class="admin-release-price">£${(release.digitalPrice || release.price || 0).toFixed(2)}</div>
-              <div class="admin-release-status">${release.status || 'Published'}</div>
+      grid.innerHTML = filtered.map(release => {
+        const artworkUrl = getArtworkUrl(release);
+        const title = release.title || release.releaseName || 'Untitled';
+        const artist = release.artist || release.artistName || 'Unknown Artist';
+        const price = release.digitalPrice || release.price || 0;
+        
+        return `
+          <div class="admin-release-card">
+            <div class="admin-release-artwork-container">
+              ${artworkUrl ? 
+                `<img src="${artworkUrl}" alt="${title}" class="admin-release-artwork" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                 <div class="admin-release-artwork-placeholder" style="display: none;">🎵</div>` 
+                : 
+                `<div class="admin-release-artwork-placeholder">🎵</div>`
+              }
             </div>
-            <div class="admin-release-actions">
-              <button class="admin-btn-edit" onclick="editRelease('${release.id}')">✏️ Edit</button>
-              <button class="admin-btn-delete" onclick="deleteRelease('${release.id}')">🗑️ Delete</button>
+            <div class="admin-release-content">
+              <div class="admin-release-title">${title}</div>
+              <div class="admin-release-artist">${artist}</div>
+              <div class="admin-release-meta">
+                <div class="admin-release-price">£${price.toFixed(2)}</div>
+                <div class="admin-release-status">${release.status || 'Published'}</div>
+              </div>
+              <div class="admin-release-actions">
+                <button class="admin-btn-edit" onclick="editRelease('${release.id}')">✏️ Edit</button>
+                <button class="admin-btn-delete" onclick="deleteRelease('${release.id}')">🗑️ Delete</button>
+              </div>
             </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
     // Edit release

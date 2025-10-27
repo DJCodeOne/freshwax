@@ -177,17 +177,17 @@ import Layout from '../../layouts/Layout.astro';
 			color: #ff9900;
 		}
 
+		/* System Status Styles */
 		.admin-system-status {
 			background: #fff;
 			border: 3px solid #000;
-			padding: 25px;
+			padding: 30px;
 			margin-bottom: 30px;
 		}
 
 		.admin-system-status h2 {
-			font-size: 20px;
+			font-size: 24px;
 			font-weight: 900;
-			color: #000;
 			margin-bottom: 20px;
 			text-transform: uppercase;
 			letter-spacing: 0.5px;
@@ -195,7 +195,7 @@ import Layout from '../../layouts/Layout.astro';
 
 		.admin-status-grid {
 			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 			gap: 20px;
 		}
 
@@ -203,36 +203,97 @@ import Layout from '../../layouts/Layout.astro';
 			display: flex;
 			align-items: center;
 			gap: 15px;
+			padding: 20px;
+			background: #f9f9f9;
+			border: 2px solid #e0e0e0;
+			border-radius: 8px;
+			transition: all 0.2s;
+		}
+
+		.admin-status-item:hover {
+			border-color: #000;
+			transform: translateY(-2px);
+			box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 		}
 
 		.admin-status-led {
 			width: 16px;
 			height: 16px;
 			border-radius: 50%;
-			background: #cccccc;
-			border: 3px solid #000;
+			background: #ccc;
+			position: relative;
 			flex-shrink: 0;
+			transition: all 0.3s;
+		}
+
+		.admin-status-led::before {
+			content: '';
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 24px;
+			height: 24px;
+			border-radius: 50%;
+			opacity: 0;
+			transition: opacity 0.3s;
 		}
 
 		.admin-status-led.active {
-			background: #00ff00;
-			animation: pulse 2s infinite;
+			background: #00cc00;
+			box-shadow: 0 0 10px rgba(0, 204, 0, 0.5);
 		}
 
-		@keyframes pulse {
-			0%, 100% { opacity: 1; }
-			50% { opacity: 0.5; }
+		.admin-status-led.active::before {
+			background: rgba(0, 204, 0, 0.3);
+			opacity: 1;
+			animation: pulse-led 2s infinite;
+		}
+
+		.admin-status-led.warning {
+			background: #ff9800;
+			box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+		}
+
+		.admin-status-led.warning::before {
+			background: rgba(255, 152, 0, 0.3);
+			opacity: 1;
+			animation: pulse-led 2s infinite;
+		}
+
+		.admin-status-led.error {
+			background: #ff0000;
+			box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+		}
+
+		.admin-status-led.error::before {
+			background: rgba(255, 0, 0, 0.3);
+			opacity: 1;
+			animation: pulse-led 2s infinite;
+		}
+
+		@keyframes pulse-led {
+			0%, 100% {
+				opacity: 0.3;
+				transform: translate(-50%, -50%) scale(1);
+			}
+			50% {
+				opacity: 0;
+				transform: translate(-50%, -50%) scale(1.5);
+			}
 		}
 
 		.admin-status-info {
-			flex-grow: 1;
+			flex: 1;
 		}
 
 		.admin-status-name {
 			font-size: 14px;
 			font-weight: 700;
 			color: #000;
-			margin-bottom: 2px;
+			margin-bottom: 4px;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
 		}
 
 		.admin-status-text {
@@ -241,92 +302,35 @@ import Layout from '../../layouts/Layout.astro';
 			font-weight: 600;
 		}
 
-		.admin-quick-actions {
+		/* Section Headers */
+		.section-header {
 			background: #fff;
 			border: 3px solid #000;
-			padding: 25px;
-			margin-bottom: 30px;
+			padding: 20px 30px;
+			margin-bottom: 20px;
+			margin-top: 30px;
 		}
 
-		.admin-quick-actions h2 {
-			font-size: 20px;
+		.section-header h2 {
+			font-size: 24px;
 			font-weight: 900;
 			color: #000;
-			margin-bottom: 20px;
+			margin: 0;
 			text-transform: uppercase;
 			letter-spacing: 0.5px;
 		}
 
-		.admin-action-buttons {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 15px;
-		}
-
-		.admin-action-btn {
-			flex: 1;
-			min-width: 200px;
-			padding: 15px 25px;
-			border: 3px solid #000;
-			background: #ffffff;
-			color: #000;
-			text-decoration: none;
-			font-weight: 700;
-			text-align: center;
-			cursor: pointer;
-			transition: all 0.2s;
+		.section-header p {
+			margin: 5px 0 0 0;
+			color: #666;
 			font-size: 14px;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
+			font-weight: 600;
 		}
 
-		.admin-action-btn:hover {
-			transform: translate(-4px, -4px);
-			box-shadow: 8px 8px 0 #000;
-		}
-
-		.admin-action-btn.primary {
-			background: #000;
-			color: #ffffff;
-		}
-
-		.admin-action-btn.primary:hover {
-			background: #ffffff;
-			color: #000;
-		}
-
-		.admin-action-btn.success {
-			background: #00aa00;
-			color: #ffffff;
-			border-color: #000;
-		}
-
-		.admin-action-btn.success:hover {
-			background: #ffffff;
-			color: #00aa00;
-			border-color: #00aa00;
-		}
-
-		.admin-action-btn.warning {
-			background: #ff9900;
-			color: #ffffff;
-			border-color: #000;
-		}
-
-		.admin-action-btn.warning:hover {
-			background: #ffffff;
-			color: #ff9900;
-			border-color: #ff9900;
-		}
-
-		.admin-action-btn.secondary {
-			background: #ffffff;
-			color: #000;
-		}
-
+		/* Module Cards Grid */
 		.admin-modules-grid {
 			display: grid;
-			grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+			grid-template-columns: repeat(4, 1fr);
 			gap: 25px;
 			margin-bottom: 30px;
 		}
@@ -388,46 +392,9 @@ import Layout from '../../layouts/Layout.astro';
 			color: #ffffff;
 		}
 
-		.admin-recent-activity {
-			background: #fff;
-			border: 3px solid #000;
-			padding: 25px;
-			margin-bottom: 30px;
-		}
-
-		.admin-recent-activity h2 {
-			font-size: 20px;
-			font-weight: 900;
-			color: #000;
-			margin-bottom: 20px;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-		}
-
-		.admin-activity-item {
-			padding: 15px;
-			border-left: 5px solid #000;
-			background: #f9f9f9;
-			margin-bottom: 15px;
-		}
-
-		.admin-activity-item:last-child {
-			margin-bottom: 0;
-		}
-
-		.admin-activity-time {
-			font-size: 11px;
-			font-weight: 700;
-			color: #666;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-			margin-bottom: 5px;
-		}
-
-		.admin-activity-text {
-			font-size: 14px;
-			color: #000;
-			font-weight: 600;
+		.admin-module-badge.essential {
+			background: #00aa00;
+			color: #ffffff;
 		}
 
 		/* Fee Management Modal Styles */
@@ -489,6 +456,7 @@ import Layout from '../../layouts/Layout.astro';
 		.fee-modal-close:hover {
 			background: #000;
 			color: #fff;
+			border-color: #fff;
 		}
 
 		.fee-modal-body {
@@ -803,6 +771,12 @@ import Layout from '../../layouts/Layout.astro';
 		}
 
 		/* Mobile Responsive */
+		@media (max-width: 1200px) {
+			.admin-modules-grid {
+				grid-template-columns: repeat(2, 1fr);
+			}
+		}
+
 		@media (max-width: 768px) {
 			.admin-container {
 				padding: 15px;
@@ -837,16 +811,6 @@ import Layout from '../../layouts/Layout.astro';
 				font-size: 28px;
 			}
 
-			.admin-action-buttons {
-				flex-direction: column;
-			}
-
-			.admin-action-btn {
-				width: 100%;
-				text-align: center;
-				padding: 12px 20px;
-			}
-
 			.admin-modules-grid {
 				grid-template-columns: 1fr;
 				gap: 20px;
@@ -856,8 +820,7 @@ import Layout from '../../layouts/Layout.astro';
 				padding: 20px;
 			}
 
-			.admin-quick-actions,
-			.admin-recent-activity {
+			.admin-system-status {
 				padding: 20px;
 			}
 
@@ -876,6 +839,18 @@ import Layout from '../../layouts/Layout.astro';
 			.artist-table th,
 			.artist-table td {
 				padding: 10px;
+			}
+
+			.admin-status-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.section-header {
+				padding: 15px 20px;
+			}
+
+			.section-header h2 {
+				font-size: 20px;
 			}
 		}
 
@@ -921,14 +896,14 @@ import Layout from '../../layouts/Layout.astro';
 					Logout
 				</button>
 				<h1>Fresh Wax Admin Dashboard</h1>
-				<p>Welcome back Dave! Manage your music store from here.</p>
+				<p>Welcome back! Manage your music store from here.</p>
 			</div>
 
 			<!-- Stats Row -->
 			<div class="admin-stats-row">
 				<div class="admin-stat-card">
 					<div class="admin-stat-label">Total Sales</div>
-					<div class="admin-stat-value" id="totalSales">-</div>
+					<div class="admin-stat-value" id="totalSales">£0.00</div>
 					<div class="admin-stat-change positive" id="salesChange">Calculating...</div>
 				</div>
 				<div class="admin-stat-card">
@@ -938,12 +913,12 @@ import Layout from '../../layouts/Layout.astro';
 				</div>
 				<div class="admin-stat-card">
 					<div class="admin-stat-label">Pending Artists</div>
-					<div class="admin-stat-value" id="pendingArtistsCount">-</div>
+					<div class="admin-stat-value" id="pendingArtistsCount">0</div>
 					<div class="admin-stat-change warning">Awaiting approval</div>
 				</div>
 				<div class="admin-stat-card">
 					<div class="admin-stat-label">Active Releases</div>
-					<div class="admin-stat-value" id="activeReleases">-</div>
+					<div class="admin-stat-value" id="activeReleases">0</div>
 					<div class="admin-stat-change positive" id="releasesChange">Loading...</div>
 				</div>
 			</div>
@@ -967,28 +942,21 @@ import Layout from '../../layouts/Layout.astro';
 						</div>
 					</div>
 					<div class="admin-status-item">
-						<div class="admin-status-led active" id="firebaseStatus"></div>
+						<div class="admin-status-led" id="firebaseStatus"></div>
 						<div class="admin-status-info">
 							<div class="admin-status-name">Firebase</div>
-							<div class="admin-status-text" id="firebaseText">Connected</div>
+							<div class="admin-status-text" id="firebaseText">Checking...</div>
 						</div>
 					</div>
 				</div>
 			</div>
 
-			<!-- Quick Actions -->
-			<div class="admin-quick-actions">
-				<h2>⚡ Quick Actions</h2>
-				<div class="admin-action-buttons">
-					<a href="/admin/artists/pending" class="admin-action-btn warning">✅ Review Artists</a>
-					<a href="https://freshwax-uploads.pages.dev" target="_blank" rel="noopener noreferrer" class="admin-action-btn success">📤 Upload Release</a>
-					<button id="openFeeManagementBtn" class="admin-action-btn primary">💰 Manage Fees</button>
-					<a href="/admin/dj-mix-reports" class="admin-action-btn warning">🚨 View Reports</a>
-					<a href="/admin/account/manage" class="admin-action-btn secondary">👥 Manage Customers</a>
-				</div>
+			<!-- ESSENTIAL WORKFLOW SECTION -->
+			<div class="section-header">
+				<h2>⚡ Essential Workflow</h2>
+				<p>Core operations for managing releases</p>
 			</div>
 
-			<!-- Modules Grid -->
 			<div class="admin-modules-grid">
 				<div class="admin-module-card" data-link="/admin/artists/pending">
 					<div class="admin-module-icon">✅</div>
@@ -999,22 +967,13 @@ import Layout from '../../layouts/Layout.astro';
 					<span class="admin-module-badge important">Action Required</span>
 				</div>
 
-				<div class="admin-module-card" id="feeManagementCard">
-					<div class="admin-module-icon">💰</div>
-					<div class="admin-module-title">Fee Management</div>
-					<div class="admin-module-description">
-						Configure platform fees globally or set custom fees per artist. Default fee is 0% (no fees).
-					</div>
-					<span class="admin-module-badge new">Financial</span>
-				</div>
-
 				<div class="admin-module-card" onclick="window.open('https://freshwax-uploads.pages.dev', '_blank')">
 					<div class="admin-module-icon">📤</div>
 					<div class="admin-module-title">Upload Release</div>
 					<div class="admin-module-description">
 						Upload complete release packages with audio files, artwork, and metadata to your storage services.
 					</div>
-					<span class="admin-module-badge">Essential</span>
+					<span class="admin-module-badge essential">Essential</span>
 				</div>
 
 				<div class="admin-module-card" data-link="/admin/publish-release">
@@ -1034,25 +993,15 @@ import Layout from '../../layouts/Layout.astro';
 					</div>
 					<span class="admin-module-badge">Frequent</span>
 				</div>
+			</div>
 
-				<div class="admin-module-card" data-link="/admin/orders">
-					<div class="admin-module-icon">📦</div>
-					<div class="admin-module-title">Track Orders</div>
-					<div class="admin-module-description">
-						View and manage customer orders, process payments, send download links, and track order history.
-					</div>
-					<span class="admin-module-badge">Essential</span>
-				</div>
+			<!-- MANAGEMENT SECTION -->
+			<div class="section-header">
+				<h2>👥 Management</h2>
+				<p>User and financial management tools</p>
+			</div>
 
-				<div class="admin-module-card" data-link="/admin/dj-mix-reports">
-					<div class="admin-module-icon">🚨</div>
-					<div class="admin-module-title">DJ Mix Reports</div>
-					<div class="admin-module-description">
-						Review and manage reported DJ mixes from the community. Handle malicious uploads and content issues.
-					</div>
-					<span class="admin-module-badge important">Reports</span>
-				</div>
-
+			<div class="admin-modules-grid">
 				<div class="admin-module-card" data-link="/admin/account/manage">
 					<div class="admin-module-icon">👥</div>
 					<div class="admin-module-title">Customer Management</div>
@@ -1060,6 +1009,50 @@ import Layout from '../../layouts/Layout.astro';
 						View customer profiles, order history, manage accounts, and handle customer support requests.
 					</div>
 					<span class="admin-module-badge">Management</span>
+				</div>
+
+				<div class="admin-module-card" data-link="/admin/artists/manage">
+					<div class="admin-module-icon">🎤</div>
+					<div class="admin-module-title">Artist Management</div>
+					<div class="admin-module-description">
+						Manage registered artists and labels, view their releases, earnings, and account details.
+					</div>
+					<span class="admin-module-badge">Management</span>
+				</div>
+
+				<div class="admin-module-card" id="feeManagementCard">
+					<div class="admin-module-icon">💰</div>
+					<div class="admin-module-title">Fee Management</div>
+					<div class="admin-module-description">
+						Configure platform fees globally or set custom fees per artist. Default fee is 0% (no fees).
+					</div>
+					<span class="admin-module-badge new">Financial</span>
+				</div>
+
+				<div class="admin-module-card" data-link="/admin/orders">
+					<div class="admin-module-icon">📦</div>
+					<div class="admin-module-title">Track Orders</div>
+					<div class="admin-module-description">
+						View and manage customer orders, process payments, send download links, and track order history.
+					</div>
+					<span class="admin-module-badge essential">Essential</span>
+				</div>
+			</div>
+
+			<!-- ADDITIONAL TOOLS SECTION -->
+			<div class="section-header">
+				<h2>🛠️ Additional Tools</h2>
+				<p>Analytics, promotions, and configuration</p>
+			</div>
+
+			<div class="admin-modules-grid">
+				<div class="admin-module-card" data-link="/admin/dj-mix-reports">
+					<div class="admin-module-icon">🚨</div>
+					<div class="admin-module-title">DJ Mix Reports</div>
+					<div class="admin-module-description">
+						Review and manage reported DJ mixes from the community. Handle malicious uploads and content issues.
+					</div>
+					<span class="admin-module-badge important">Reports</span>
 				</div>
 
 				<div class="admin-module-card" data-link="/admin/promotions">
@@ -1087,17 +1080,6 @@ import Layout from '../../layouts/Layout.astro';
 						Configure store details, payment gateways, tax settings, shipping options, and appearance.
 					</div>
 					<span class="admin-module-badge">Config</span>
-				</div>
-			</div>
-
-			<!-- Recent Activity -->
-			<div class="admin-recent-activity">
-				<h2>📝 Recent Activity</h2>
-				<div id="recentActivityList">
-					<div class="admin-activity-item">
-						<div class="admin-activity-time">Loading...</div>
-						<div class="admin-activity-text">Fetching recent activity...</div>
-					</div>
 				</div>
 			</div>
 		</div>
@@ -1205,8 +1187,9 @@ import Layout from '../../layouts/Layout.astro';
 	<script type="module">
 		import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 		import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-		import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, query, where, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+		import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, addDoc, query, where, orderBy, limit, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
+		// Firebase Configuration (hardcoded - safe for client-side)
 		const firebaseConfig = {
 			apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
 			authDomain: "freshwax-store.firebaseapp.com",
@@ -1224,9 +1207,108 @@ import Layout from '../../layouts/Layout.astro';
 		let allArtists = [];
 		let currentArtistId = null;
 
+		// Activity Logging Helper Function
+		async function logActivity(description, type = 'general') {
+			try {
+				await addDoc(collection(db, 'activity'), {
+					description: description,
+					timestamp: serverTimestamp(),
+					type: type,
+					userId: auth.currentUser?.email || 'unknown',
+					createdAt: new Date().toISOString()
+				});
+			} catch (error) {
+				console.error('Error logging activity:', error);
+			}
+		}
+
+		// System Status Monitoring
+		async function checkSystemStatus() {
+			await Promise.all([
+				checkFirebaseStatus(),
+				checkCloudinaryStatus(),
+				checkR2Status()
+			]);
+		}
+
+		// Check Firebase connection
+		async function checkFirebaseStatus() {
+			const statusLed = document.getElementById('firebaseStatus');
+			const statusText = document.getElementById('firebaseText');
+			
+			try {
+				const testQuery = query(collection(db, 'settings'), limit(1));
+				await getDocs(testQuery);
+				
+				if (auth.currentUser) {
+					setStatus(statusLed, statusText, 'active', 'Connected & Authenticated');
+				} else {
+					setStatus(statusLed, statusText, 'warning', 'Connected (No Auth)');
+				}
+			} catch (error) {
+				console.error('Firebase status check failed:', error);
+				setStatus(statusLed, statusText, 'error', 'Connection Failed');
+			}
+		}
+
+		// Check Cloudinary connection
+		async function checkCloudinaryStatus() {
+			const statusLed = document.getElementById('cloudinaryStatus');
+			const statusText = document.getElementById('cloudinaryText');
+			
+			try {
+				const cloudName = 'dijam9uva'; // Audio cloud
+				const cloudNameImage = 'dm9gldbda'; // Image cloud
+				
+				const audioTest = fetch(`https://res.cloudinary.com/${cloudName}/image/upload/sample.jpg`, {
+					method: 'HEAD',
+					mode: 'no-cors'
+				});
+				
+				const imageTest = fetch(`https://res.cloudinary.com/${cloudNameImage}/image/upload/sample.jpg`, {
+					method: 'HEAD',
+					mode: 'no-cors'
+				});
+
+				await Promise.all([audioTest, imageTest]);
+				setStatus(statusLed, statusText, 'active', 'Audio & Image Accounts OK');
+			} catch (error) {
+				console.error('Cloudinary status check failed:', error);
+				setStatus(statusLed, statusText, 'error', 'Connection Failed');
+			}
+		}
+
+		// Check Cloudflare R2 connection
+		async function checkR2Status() {
+			const statusLed = document.getElementById('r2Status');
+			const statusText = document.getElementById('r2Text');
+			
+			try {
+				const r2PublicUrl = 'https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev';
+				
+				await fetch(r2PublicUrl, {
+					method: 'HEAD',
+					mode: 'no-cors'
+				});
+				
+				setStatus(statusLed, statusText, 'active', 'Bucket Accessible');
+			} catch (error) {
+				console.error('R2 status check failed:', error);
+				setStatus(statusLed, statusText, 'warning', 'Limited Access');
+			}
+		}
+
+		// Helper function to set status
+		function setStatus(ledElement, textElement, status, message) {
+			ledElement.classList.remove('active', 'warning', 'error');
+			ledElement.classList.add(status);
+			textElement.textContent = message;
+		}
+
 		// Auth check
 		onAuthStateChanged(auth, async (user) => {
 			if (user) {
+				await logActivity('Admin logged in', 'auth');
 				await loadDashboard();
 			} else {
 				window.location.href = '/login';
@@ -1237,8 +1319,8 @@ import Layout from '../../layouts/Layout.astro';
 			try {
 				await Promise.all([
 					loadStats(),
-					loadRecentActivity(),
-					loadFeeSettings()
+					loadFeeSettings(),
+					checkSystemStatus()
 				]);
 
 				document.getElementById('loadingScreen').style.display = 'none';
@@ -1280,59 +1362,21 @@ import Layout from '../../layouts/Layout.astro';
 			}
 		}
 
-		async function loadRecentActivity() {
-			try {
-				const activityList = document.getElementById('recentActivityList');
-				const q = query(
-					collection(db, 'activity'),
-					orderBy('timestamp', 'desc'),
-					limit(10)
-				);
-				const snapshot = await getDocs(q);
+		// Run status checks on load and every 30 seconds
+		checkSystemStatus();
+		setInterval(checkSystemStatus, 30000);
 
-				if (snapshot.empty) {
-					activityList.innerHTML = `
-						<div class="admin-activity-item">
-							<div class="admin-activity-time">No activity</div>
-							<div class="admin-activity-text">No recent activity to display</div>
-						</div>
-					`;
-					return;
-				}
-
-				activityList.innerHTML = snapshot.docs.map(doc => {
-					const activity = doc.data();
-					return `
-						<div class="admin-activity-item">
-							<div class="admin-activity-time">${formatTime(activity.timestamp)}</div>
-							<div class="admin-activity-text">${activity.description}</div>
-						</div>
-					`;
-				}).join('');
-			} catch (error) {
-				console.error('Error loading activity:', error);
+		// Check when user returns to tab
+		document.addEventListener('visibilitychange', () => {
+			if (!document.hidden) {
+				checkSystemStatus();
 			}
-		}
-
-		function formatTime(timestamp) {
-			if (!timestamp) return 'Recent';
-			const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-			const now = new Date();
-			const diff = now - date;
-			
-			const minutes = Math.floor(diff / 60000);
-			const hours = Math.floor(diff / 3600000);
-			const days = Math.floor(diff / 86400000);
-
-			if (minutes < 60) return `${minutes} minutes ago`;
-			if (hours < 24) return `${hours} hours ago`;
-			if (days === 1) return 'Yesterday';
-			return `${days} days ago`;
-		}
+		});
 
 		// Logout
 		document.getElementById('logoutBtn').addEventListener('click', async () => {
 			try {
+				await logActivity('Admin logged out', 'auth');
 				await signOut(auth);
 				window.location.href = '/login';
 			} catch (error) {
@@ -1350,14 +1394,8 @@ import Layout from '../../layouts/Layout.astro';
 
 		// Fee Management Modal
 		const feeModal = document.getElementById('feeManagementModal');
-		const openFeeBtn = document.getElementById('openFeeManagementBtn');
 		const closeFeeBtn = document.getElementById('closeFeeModalBtn');
 		const feeCard = document.getElementById('feeManagementCard');
-
-		openFeeBtn.addEventListener('click', () => {
-			feeModal.classList.add('active');
-			loadArtistsTable();
-		});
 
 		feeCard.addEventListener('click', () => {
 			feeModal.classList.add('active');
@@ -1394,7 +1432,6 @@ import Layout from '../../layouts/Layout.astro';
 				if (feeDoc.exists()) {
 					currentFeeSettings = feeDoc.data();
 					
-					// Set UI values
 					const isPercentage = currentFeeSettings.type === 'percentage';
 					document.getElementById(isPercentage ? 'feeTypePercentage' : 'feeTypeFixed').click();
 					document.getElementById('feeAmount').value = currentFeeSettings.amount || 0;
@@ -1419,6 +1456,7 @@ import Layout from '../../layouts/Layout.astro';
 					updatedAt: new Date().toISOString()
 				});
 
+				await logActivity(`Updated platform fee: ${amount}${type === 'percentage' ? '%' : '£'}`, 'settings');
 				showSuccessMessage('Platform fee settings saved successfully');
 			} catch (error) {
 				console.error('Error saving fee settings:', error);
@@ -1540,6 +1578,8 @@ import Layout from '../../layouts/Layout.astro';
 				const type = document.querySelector('#customFeeTypePercentage.active') ? 'percentage' : 'fixed';
 				const amount = parseFloat(document.getElementById('customFeeAmount').value) || 0;
 
+				const artist = allArtists.find(a => a.id === currentArtistId);
+
 				await updateDoc(doc(db, 'artists', currentArtistId), {
 					customFee: {
 						type,
@@ -1548,6 +1588,7 @@ import Layout from '../../layouts/Layout.astro';
 					}
 				});
 
+				await logActivity(`Set custom fee for ${artist?.artistName}: ${amount}${type === 'percentage' ? '%' : '£'}`, 'artist');
 				showSuccessMessage('Custom fee saved successfully');
 				customFeeModal.classList.remove('active');
 				await loadArtistsTable();
@@ -1557,6 +1598,7 @@ import Layout from '../../layouts/Layout.astro';
 			}
 		});
 
+		// Success message utility
 		function showSuccessMessage(message) {
 			const msgEl = document.createElement('div');
 			msgEl.className = 'success-message';
