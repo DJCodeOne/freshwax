@@ -1,0 +1,516 @@
+---
+// src/pages/admin/merch-upload-tool-enhanced.astro
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Merch - Admin</title>
+  <style>
+    body { background: #fff; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .header { background: #fff; border: 3px solid #000; padding: 20px; margin-bottom: 20px; position: relative; }
+    .header h1 { font-size: 28px; font-weight: 900; text-transform: uppercase; margin: 0; }
+    .back-btn { position: absolute; top: 15px; right: 15px; padding: 8px 16px; background: #000; color: #fff; border: 2px solid #000; font-weight: 700; text-decoration: none; text-transform: uppercase; font-size: 12px; }
+    .back-btn:hover { background: #fff; color: #000; }
+    
+    .form-card { background: #fff; border: 3px solid #000; padding: 30px; margin-bottom: 20px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; font-size: 12px; }
+    .form-input, .form-select, .form-textarea { width: 100%; padding: 12px; border: 2px solid #000; font-size: 16px; font-family: inherit; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; box-shadow: 4px 4px 0 #000; }
+    .form-textarea { min-height: 100px; resize: vertical; }
+    
+    .size-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .size-checkbox { display: flex; align-items: center; gap: 8px; padding: 10px; background: #f5f5f5; border: 2px solid #000; cursor: pointer; }
+    .size-checkbox input { width: 20px; height: 20px; }
+    .size-checkbox label { font-weight: 700; cursor: pointer; }
+    
+    .stock-inputs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
+    .stock-group label { font-size: 12px; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 5px; }
+    
+    /* Image Upload Section */
+    .image-upload-section { border: 2px dashed #000; padding: 20px; background: #f9f9f9; margin-bottom: 15px; }
+    .image-upload-section h3 { font-size: 14px; font-weight: 900; text-transform: uppercase; margin-bottom: 15px; }
+    .image-preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; margin-top: 15px; }
+    .image-preview-item { position: relative; border: 2px solid #000; }
+    .image-preview-item img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+    .image-preview-item .remove-image { position: absolute; top: 5px; right: 5px; background: #ff0000; color: #fff; border: none; width: 24px; height: 24px; cursor: pointer; font-weight: 900; }
+    .image-preview-item .primary-badge { position: absolute; bottom: 5px; left: 5px; background: #000; color: #fff; padding: 2px 6px; font-size: 10px; font-weight: 900; }
+    .add-image-btn { display: inline-block; padding: 10px 20px; background: #000; color: #fff; border: 2px solid #000; cursor: pointer; font-weight: 700; text-transform: uppercase; font-size: 12px; }
+    .add-image-btn:hover { background: #fff; color: #000; }
+    
+    /* Color Selection */
+    .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+    .color-option { display: flex; align-items: center; gap: 8px; padding: 10px; border: 2px solid #000; cursor: pointer; background: #f5f5f5; }
+    .color-option input { width: 20px; height: 20px; }
+    .color-swatch { width: 30px; height: 30px; border: 2px solid #000; }
+    .color-option label { font-weight: 700; font-size: 12px; cursor: pointer; }
+    .custom-color-input { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+    .custom-color-input input[type="color"] { width: 50px; height: 40px; border: 2px solid #000; cursor: pointer; }
+    
+    .preview { background: #f5f5f5; border: 3px solid #000; padding: 20px; position: sticky; top: 20px; }
+    .preview-image-carousel { position: relative; margin-bottom: 15px; }
+    .preview-image-carousel img { max-width: 300px; border: 2px solid #000; }
+    .preview-image-dots { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+    .preview-image-dot { width: 10px; height: 10px; border: 2px solid #000; background: #fff; cursor: pointer; }
+    .preview-image-dot.active { background: #000; }
+    .preview-details { background: #fff; border: 2px solid #000; padding: 15px; }
+    .preview-colors { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .preview-color-swatch { width: 30px; height: 30px; border: 2px solid #000; }
+    
+    .btn { padding: 12px 24px; border: 2px solid #000; font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 14px; }
+    .btn-primary { background: #000; color: #fff; }
+    .btn-primary:hover { background: #fff; color: #000; }
+    .btn-primary:disabled { background: #ccc; border-color: #ccc; cursor: not-allowed; }
+    
+    .success { position: fixed; top: 20px; right: 20px; background: #000; color: #fff; padding: 15px 20px; border: 3px solid #000; font-weight: 700; box-shadow: 8px 8px 0 #000; z-index: 10000; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <a href="/admin" class="back-btn">← Back</a>
+      <h1>📤 Upload Merch Product</h1>
+    </div>
+
+    <div class="form-grid">
+      <div>
+        <div class="form-card">
+          <h2 style="font-size: 20px; font-weight: 900; margin-bottom: 20px; text-transform: uppercase;">Product Details</h2>
+          
+          <form id="product-form">
+            <div class="form-group">
+              <label class="form-label">Product Type *</label>
+              <select class="form-select" id="product-type" required>
+                <option value="">Select type...</option>
+                <option value="label">Label</option>
+                <option value="dj">DJ</option>
+                <option value="soundsystem">Sound System</option>
+                <option value="crew">Crew</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Category *</label>
+              <select class="form-select" id="category-id" required disabled>
+                <option value="">Select type first...</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Product Name *</label>
+              <input type="text" class="form-input" id="product-name" placeholder="Classic Logo Tee" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">SKU / Product Code</label>
+              <input type="text" class="form-input" id="product-sku" placeholder="Auto-generated if empty" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Price (£) *</label>
+              <input type="number" class="form-input" id="product-price" step="0.01" min="0" placeholder="25.00" required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Description *</label>
+              <textarea class="form-textarea" id="product-description" placeholder="Product description..." required></textarea>
+            </div>
+
+            <!-- Multiple Images Upload -->
+            <div class="form-group">
+              <label class="form-label">Product Images * (Up to 5)</label>
+              <div class="image-upload-section">
+                <input type="file" id="image-file-input" accept="image/*" style="display: none;" />
+                <button type="button" class="add-image-btn" id="add-image-btn">+ Add Image</button>
+                <div class="image-preview-grid" id="image-preview-grid"></div>
+              </div>
+            </div>
+
+            <!-- Available Colors -->
+            <div class="form-group">
+              <label class="form-label">Available Colors</label>
+              <div class="color-grid">
+                <div class="color-option">
+                  <input type="checkbox" id="color-black" value="Black" data-hex="#000000" />
+                  <div class="color-swatch" style="background: #000000;"></div>
+                  <label for="color-black">Black</label>
+                </div>
+                <div class="color-option">
+                  <input type="checkbox" id="color-white" value="White" data-hex="#FFFFFF" />
+                  <div class="color-swatch" style="background: #FFFFFF;"></div>
+                  <label for="color-white">White</label>
+                </div>
+                <div class="color-option">
+                  <input type="checkbox" id="color-red" value="Red" data-hex="#FF0000" />
+                  <div class="color-swatch" style="background: #FF0000;"></div>
+                  <label for="color-red">Red</label>
+                </div>
+                <div class="color-option">
+                  <input type="checkbox" id="color-blue" value="Blue" data-hex="#0000FF" />
+                  <div class="color-swatch" style="background: #0000FF;"></div>
+                  <label for="color-blue">Blue</label>
+                </div>
+                <div class="color-option">
+                  <input type="checkbox" id="color-green" value="Green" data-hex="#00AA00" />
+                  <div class="color-swatch" style="background: #00AA00;"></div>
+                  <label for="color-green">Green</label>
+                </div>
+                <div class="color-option">
+                  <input type="checkbox" id="color-navy" value="Navy" data-hex="#000080" />
+                  <div class="color-swatch" style="background: #000080;"></div>
+                  <label for="color-navy">Navy</label>
+                </div>
+                <div class="color-option">
+                  <input type="checkbox" id="color-grey" value="Grey" data-hex="#808080" />
+                  <div class="color-swatch" style="background: #808080;"></div>
+                  <label for="color-grey">Grey</label>
+                </div>
+                <div class="color-option">
+                  <input type="checkbox" id="color-yellow" value="Yellow" data-hex="#FFD700" />
+                  <div class="color-swatch" style="background: #FFD700;"></div>
+                  <label for="color-yellow">Yellow</label>
+                </div>
+              </div>
+              
+              <div class="custom-color-input">
+                <input type="color" id="custom-color-picker" />
+                <input type="text" class="form-input" id="custom-color-name" placeholder="Custom color name" style="flex: 1;" />
+                <button type="button" class="btn" id="add-custom-color-btn" style="background: #000; color: #fff;">Add Color</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Available Sizes *</label>
+              <div class="size-grid">
+                <div class="size-checkbox"><input type="checkbox" id="size-xs" value="XS" /><label for="size-xs">XS</label></div>
+                <div class="size-checkbox"><input type="checkbox" id="size-s" value="S" /><label for="size-s">S</label></div>
+                <div class="size-checkbox"><input type="checkbox" id="size-m" value="M" /><label for="size-m">M</label></div>
+                <div class="size-checkbox"><input type="checkbox" id="size-l" value="L" /><label for="size-l">L</label></div>
+                <div class="size-checkbox"><input type="checkbox" id="size-xl" value="XL" /><label for="size-xl">XL</label></div>
+                <div class="size-checkbox"><input type="checkbox" id="size-xxl" value="XXL" /><label for="size-xxl">XXL</label></div>
+                <div class="size-checkbox"><input type="checkbox" id="size-onesize" value="One Size" /><label for="size-onesize">One Size</label></div>
+              </div>
+            </div>
+
+            <div class="form-group" id="stock-container" style="display: none;">
+              <label class="form-label">Stock by Size</label>
+              <div class="stock-inputs" id="stock-inputs"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Upload & Publish</button>
+          </form>
+        </div>
+      </div>
+
+      <div>
+        <div class="preview">
+          <h2 style="font-size: 20px; font-weight: 900; margin-bottom: 20px; text-transform: uppercase;">Preview</h2>
+          <div id="preview-content">
+            <p style="color: #666; text-align: center; padding: 40px 20px;">Fill in the form to see preview</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const categories = {
+      label: [
+        { id: 'wax-trax', name: 'Wax Trax Records' },
+        { id: 'deep-cuts', name: 'Deep Cuts' },
+        { id: 'vinyl-vault', name: 'Vinyl Vault' },
+        { id: 'bassline', name: 'Bassline Records' }
+      ],
+      dj: [
+        { id: 'dj-shadow', name: 'DJ Shadow' },
+        { id: 'dj-krush', name: 'DJ Krush' },
+        { id: 'dj-premier', name: 'DJ Premier' },
+        { id: 'dj-qbert', name: 'DJ Qbert' }
+      ],
+      soundsystem: [
+        { id: 'bass-culture', name: 'Bass Culture Sound' },
+        { id: 'dub-station', name: 'Dub Station' },
+        { id: 'roots-rumble', name: 'Roots Rumble' }
+      ],
+      crew: [
+        { id: 'jungle-massive', name: 'Jungle Massive' },
+        { id: 'techno-militia', name: 'Techno Militia' },
+        { id: 'house-heads', name: 'House Heads' }
+      ]
+    };
+
+    let uploadedImages = [];
+    let customColors = [];
+    let currentPreviewIndex = 0;
+
+    // Image upload handling
+    document.getElementById('add-image-btn').addEventListener('click', () => {
+      document.getElementById('image-file-input').click();
+    });
+
+    document.getElementById('image-file-input').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      
+      files.forEach(file => {
+        if (uploadedImages.length >= 5) {
+          alert('Maximum 5 images allowed');
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          uploadedImages.push({
+            file: file,
+            url: event.target.result
+          });
+          renderImagePreviews();
+          updatePreview();
+        };
+        reader.readAsDataURL(file);
+      });
+      
+      e.target.value = '';
+    });
+
+    function renderImagePreviews() {
+      const grid = document.getElementById('image-preview-grid');
+      grid.innerHTML = uploadedImages.map((img, index) => `
+        <div class="image-preview-item">
+          <img src="${img.url}" alt="Product image ${index + 1}" />
+          ${index === 0 ? '<div class="primary-badge">PRIMARY</div>' : ''}
+          <button class="remove-image" onclick="removeImage(${index})">×</button>
+        </div>
+      `).join('');
+    }
+
+    window.removeImage = function(index) {
+      uploadedImages.splice(index, 1);
+      renderImagePreviews();
+      updatePreview();
+    };
+
+    // Custom color handling
+    document.getElementById('add-custom-color-btn').addEventListener('click', () => {
+      const colorPicker = document.getElementById('custom-color-picker');
+      const colorName = document.getElementById('custom-color-name').value.trim();
+      
+      if (!colorName) {
+        alert('Please enter a color name');
+        return;
+      }
+      
+      const colorGrid = document.querySelector('.color-grid');
+      const colorId = 'color-custom-' + Date.now();
+      
+      const colorOption = document.createElement('div');
+      colorOption.className = 'color-option';
+      colorOption.innerHTML = `
+        <input type="checkbox" id="${colorId}" value="${colorName}" data-hex="${colorPicker.value}" checked />
+        <div class="color-swatch" style="background: ${colorPicker.value};"></div>
+        <label for="${colorId}">${colorName}</label>
+      `;
+      
+      colorGrid.appendChild(colorOption);
+      
+      colorOption.querySelector('input').addEventListener('change', updatePreview);
+      
+      document.getElementById('custom-color-name').value = '';
+      updatePreview();
+    });
+
+    // Category handling
+    document.getElementById('product-type').addEventListener('change', (e) => {
+      const type = e.target.value;
+      const categorySelect = document.getElementById('category-id');
+      
+      if (type) {
+        categorySelect.disabled = false;
+        categorySelect.innerHTML = '<option value="">Select category...</option>' +
+          categories[type].map(cat => `<option value="${cat.id}" data-name="${cat.name}">${cat.name}</option>`).join('');
+      } else {
+        categorySelect.disabled = true;
+        categorySelect.innerHTML = '<option value="">Select type first...</option>';
+      }
+      updatePreview();
+    });
+
+    // Form input listeners
+    document.querySelectorAll('#product-form input, #product-form select, #product-form textarea').forEach(el => {
+      el.addEventListener('input', updatePreview);
+      el.addEventListener('change', updatePreview);
+    });
+
+    document.querySelectorAll('[id^="size-"]').forEach(checkbox => {
+      checkbox.addEventListener('change', () => {
+        updateStockInputs();
+        updatePreview();
+      });
+    });
+
+    document.querySelectorAll('[id^="color-"]').forEach(checkbox => {
+      checkbox.addEventListener('change', updatePreview);
+    });
+
+    function updateStockInputs() {
+      const stockContainer = document.getElementById('stock-container');
+      const stockInputs = document.getElementById('stock-inputs');
+      const checkedSizes = Array.from(document.querySelectorAll('[id^="size-"]:checked')).map(cb => cb.value);
+      
+      if (checkedSizes.length === 0) {
+        stockContainer.style.display = 'none';
+        return;
+      }
+      
+      stockContainer.style.display = 'block';
+      stockInputs.innerHTML = checkedSizes.map(size => `
+        <div class="stock-group">
+          <label>${size}</label>
+          <input type="number" class="form-input" id="stock-${size.replace(/\s/g, '-')}" min="0" value="10" />
+        </div>
+      `).join('');
+    }
+
+    function updatePreview() {
+      const name = document.getElementById('product-name').value;
+      const price = document.getElementById('product-price').value;
+      const description = document.getElementById('product-description').value;
+      const categorySelect = document.getElementById('category-id');
+      const categoryName = categorySelect.selectedOptions[0]?.dataset.name || '';
+      const sizes = Array.from(document.querySelectorAll('[id^="size-"]:checked')).map(cb => cb.value);
+      const colors = Array.from(document.querySelectorAll('[id^="color-"]:checked')).map(cb => ({
+        name: cb.value,
+        hex: cb.dataset.hex
+      }));
+
+      if (!name && !price && !description && uploadedImages.length === 0) {
+        document.getElementById('preview-content').innerHTML = '<p style="color: #666; text-align: center; padding: 40px 20px;">Fill in the form to see preview</p>';
+        return;
+      }
+
+      const totalStock = sizes.reduce((sum, size) => {
+        const input = document.getElementById(`stock-${size.replace(/\s/g, '-')}`);
+        return sum + (parseInt(input?.value || 0));
+      }, 0);
+
+      const imageCarousel = uploadedImages.length > 0 ? `
+        <div class="preview-image-carousel">
+          <img src="${uploadedImages[0].url}" alt="Preview" />
+          ${uploadedImages.length > 1 ? `
+            <div class="preview-image-dots">
+              ${uploadedImages.map((_, i) => `<div class="preview-image-dot ${i === 0 ? 'active' : ''}"></div>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      ` : '';
+
+      document.getElementById('preview-content').innerHTML = `
+        ${imageCarousel}
+        <div class="preview-details">
+          <h3 style="font-size: 20px; font-weight: 900; margin-bottom: 5px;">${name || 'Product Name'}</h3>
+          ${categoryName ? `<p style="color: #666; font-size: 14px; margin-bottom: 10px;">${categoryName}</p>` : ''}
+          <p style="font-size: 24px; font-weight: 900; margin-bottom: 15px;">£${price || '0.00'}</p>
+          ${colors.length > 0 ? `
+            <div style="margin-bottom: 15px;">
+              <strong style="font-size: 12px; text-transform: uppercase;">Colors:</strong>
+              <div class="preview-colors">
+                ${colors.map(c => `<div class="preview-color-swatch" style="background: ${c.hex};" title="${c.name}"></div>`).join('')}
+              </div>
+            </div>
+          ` : ''}
+          ${sizes.length > 0 ? `
+            <div style="margin-bottom: 15px;">
+              <strong style="font-size: 12px; text-transform: uppercase;">Sizes:</strong>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px;">
+                ${sizes.map(s => `<span style="padding: 5px 10px; border: 2px solid #000; font-weight: 700;">${s}</span>`).join('')}
+              </div>
+            </div>
+          ` : ''}
+          ${totalStock > 0 ? `<p style="font-size: 12px; font-weight: 700; margin-bottom: 10px;">Stock: ${totalStock} units</p>` : ''}
+          <p style="color: #666; line-height: 1.5;">${description || 'Product description...'}</p>
+        </div>
+      `;
+    }
+
+    // Form submission
+    document.getElementById('product-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (uploadedImages.length === 0) {
+        alert('Please upload at least one product image');
+        return;
+      }
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Uploading...';
+
+      try {
+        const formData = new FormData();
+        
+        // Add all images
+        uploadedImages.forEach((img, index) => {
+          formData.append(`imageFile${index}`, img.file);
+        });
+        formData.append('imageCount', uploadedImages.length.toString());
+        
+        formData.append('productName', document.getElementById('product-name').value);
+        formData.append('productType', document.getElementById('product-type').value);
+        formData.append('categoryId', document.getElementById('category-id').value);
+        formData.append('categoryName', document.getElementById('category-id').selectedOptions[0].dataset.name);
+        formData.append('price', document.getElementById('product-price').value);
+        formData.append('description', document.getElementById('product-description').value);
+        formData.append('sku', document.getElementById('product-sku').value);
+
+        const sizes = Array.from(document.querySelectorAll('[id^="size-"]:checked')).map(cb => cb.value);
+        formData.append('sizes', JSON.stringify(sizes));
+
+        const sizeStock = {};
+        sizes.forEach(size => {
+          const input = document.getElementById(`stock-${size.replace(/\s/g, '-')}`);
+          sizeStock[size] = parseInt(input?.value || 0);
+        });
+        formData.append('sizeStock', JSON.stringify(sizeStock));
+
+        const colors = Array.from(document.querySelectorAll('[id^="color-"]:checked')).map(cb => ({
+          name: cb.value,
+          hex: cb.dataset.hex
+        }));
+        formData.append('colors', JSON.stringify(colors));
+
+        const response = await fetch('/api/upload-merch', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          showSuccess('Product uploaded successfully!');
+          setTimeout(() => window.location.href = '/admin/merch/manage', 2000);
+        } else {
+          const error = await response.json();
+          alert('Upload failed: ' + (error.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        alert('Upload failed: ' + error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Upload & Publish';
+      }
+    });
+
+    function showSuccess(message) {
+      const msgEl = document.createElement('div');
+      msgEl.className = 'success';
+      msgEl.textContent = message;
+      document.body.appendChild(msgEl);
+      setTimeout(() => msgEl.remove(), 3000);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,549 @@
+---
+// src/pages/admin/dj-mixes/manage.astro
+import Layout from '../../../layouts/Layout.astro';
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: 'dscqbze0d',
+  api_key: '555922422486159',
+  api_secret: '1OV_96Pd_x7MSdt7Bph5aNELYho',
+});
+
+let mixes = [];
+let errorMessage = '';
+
+try {
+  const info = await cloudinary.api.resource('dj-mixes/mixes.json', {
+    resource_type: 'raw'
+  });
+  
+  const version = info.version;
+  const mixesUrl = `https://res.cloudinary.com/dscqbze0d/raw/upload/v${version}/dj-mixes/mixes.json`;
+  
+  const response = await fetch(mixesUrl, { cache: 'no-store' });
+  
+  if (response.ok) {
+    const data = await response.json();
+    if (Array.isArray(data)) {
+      mixes = data;
+      mixes.sort((a, b) => new Date(b.upload_date).getTime() - new Date(a.upload_date).getTime());
+    }
+  }
+} catch (error) {
+  console.error('Error loading mixes:', error);
+  errorMessage = error instanceof Error ? error.message : 'Unknown error';
+}
+---
+
+<Layout title="Manage DJ Mixes - Admin">
+  <style>
+    .admin-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #ffffff;
+    }
+
+    .admin-header {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 30px;
+      margin-bottom: 30px;
+      position: relative;
+    }
+
+    .admin-header h1 {
+      font-size: 32px;
+      font-weight: 900;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .admin-header p {
+      color: #666;
+      font-size: 16px;
+    }
+
+    .back-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      background: #000;
+      color: #fff;
+      border: 3px solid #000;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .back-btn:hover {
+      background: #fff;
+      color: #000;
+      transform: translate(-4px, -4px);
+      box-shadow: 8px 8px 0 #000;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 20px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #666;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 36px;
+      font-weight: 900;
+      color: #000;
+    }
+
+    .mix-table {
+      background: #fff;
+      border: 3px solid #000;
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+    }
+
+    .mix-table thead {
+      background: #000;
+      color: #fff;
+    }
+
+    .mix-table th {
+      text-align: left;
+      padding: 15px;
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .mix-table tbody tr {
+      border-bottom: 2px solid #000;
+    }
+
+    .mix-table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .mix-table tbody tr:hover {
+      background: #f9f9f9;
+    }
+
+    .mix-table td {
+      padding: 15px;
+    }
+
+    .mix-artwork {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border: 2px solid #000;
+    }
+
+    .mix-info h3 {
+      font-size: 16px;
+      font-weight: 900;
+      margin-bottom: 5px;
+    }
+
+    .mix-info p {
+      font-size: 14px;
+      color: #666;
+      margin: 2px 0;
+    }
+
+    .stats-inline {
+      display: flex;
+      gap: 15px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .stats-inline span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: 2px solid #000;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 12px;
+      text-transform: uppercase;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+    }
+
+    .btn-view {
+      background: #fff;
+      color: #000;
+    }
+
+    .btn-view:hover {
+      background: #000;
+      color: #fff;
+    }
+
+    .btn-delete {
+      background: #ff0000;
+      color: #fff;
+      border-color: #ff0000;
+    }
+
+    .btn-delete:hover {
+      background: #fff;
+      color: #ff0000;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      background: #fff;
+      border: 3px solid #000;
+    }
+
+    .empty-state h2 {
+      font-size: 24px;
+      font-weight: 900;
+      margin-bottom: 10px;
+    }
+
+    .empty-state p {
+      color: #666;
+      margin-bottom: 20px;
+    }
+
+    /* Delete Confirmation Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: #fff;
+      border: 5px solid #000;
+      max-width: 500px;
+      width: 90%;
+      padding: 30px;
+      box-shadow: 12px 12px 0 #000;
+    }
+
+    .modal h2 {
+      font-size: 24px;
+      font-weight: 900;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+
+    .modal p {
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .modal-btn {
+      flex: 1;
+      padding: 15px;
+      border: 3px solid #000;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
+
+    .modal-btn-confirm {
+      background: #ff0000;
+      color: #fff;
+      border-color: #ff0000;
+    }
+
+    .modal-btn-confirm:hover {
+      background: #fff;
+      color: #ff0000;
+    }
+
+    .modal-btn-cancel {
+      background: #fff;
+      color: #000;
+    }
+
+    .modal-btn-cancel:hover {
+      background: #000;
+      color: #fff;
+    }
+
+    .success-message {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #000;
+      color: #fff;
+      padding: 15px 20px;
+      border: 3px solid #000;
+      font-weight: 700;
+      box-shadow: 8px 8px 0 #000;
+      z-index: 10000;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .error-message {
+      background: #ff0000;
+      color: #fff;
+      padding: 15px;
+      border: 3px solid #ff0000;
+      margin-bottom: 20px;
+      font-weight: 700;
+    }
+  </style>
+
+  <div class="admin-container">
+    <div class="admin-header">
+      <a href="/admin" class="back-btn">← Back to Dashboard</a>
+      <h1>🎧 Manage DJ Mixes</h1>
+      <p>Review, moderate, and delete DJ mix submissions</p>
+    </div>
+
+    {errorMessage && (
+      <div class="error-message">
+        ⚠️ Error loading mixes: {errorMessage}
+      </div>
+    )}
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Mixes</div>
+        <div class="stat-value">{mixes.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Plays</div>
+        <div class="stat-value">{mixes.reduce((sum, m) => sum + (m.plays || 0), 0)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Downloads</div>
+        <div class="stat-value">{mixes.reduce((sum, m) => sum + (m.downloads || 0), 0)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Likes</div>
+        <div class="stat-value">{mixes.reduce((sum, m) => sum + (m.likes || 0), 0)}</div>
+      </div>
+    </div>
+
+    {mixes.length === 0 ? (
+      <div class="empty-state">
+        <h2>No DJ Mixes Found</h2>
+        <p>There are currently no mixes uploaded to the system.</p>
+        <a href="/upload-mix" class="btn btn-view">Upload Test Mix</a>
+      </div>
+    ) : (
+      <table class="mix-table">
+        <thead>
+          <tr>
+            <th>Artwork</th>
+            <th>Mix Info</th>
+            <th>Stats</th>
+            <th>Upload Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {mixes.map((mix) => (
+            <tr data-mix-id={mix.id}>
+              <td>
+                <img 
+                  src={mix.artwork_url} 
+                  alt={mix.title}
+                  class="mix-artwork"
+                  onerror="this.src='/logo.webp'"
+                />
+              </td>
+              <td>
+                <div class="mix-info">
+                  <h3>{mix.title}</h3>
+                  <p>by {mix.dj_name}</p>
+                  {mix.description && <p class="description">{mix.description}</p>}
+                </div>
+              </td>
+              <td>
+                <div class="stats-inline">
+                  <span title="Plays">▶ {mix.plays || 0}</span>
+                  <span title="Downloads">⬇ {mix.downloads || 0}</span>
+                  <span title="Likes">❤ {mix.likes || 0}</span>
+                </div>
+              </td>
+              <td>{new Date(mix.upload_date).toLocaleDateString()}</td>
+              <td>
+                <div class="btn-group">
+                  <a href={mix.audio_url} target="_blank" class="btn btn-view">
+                    Listen
+                  </a>
+                  <button class="btn btn-delete delete-mix-btn" data-mix-id={mix.id} data-mix-title={mix.title}>
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="modal-overlay">
+    <div class="modal">
+      <h2>⚠️ Confirm Deletion</h2>
+      <p>
+        Are you sure you want to delete "<strong id="deleteMixTitle"></strong>"?
+      </p>
+      <p style="color: #ff0000;">
+        This will permanently remove:
+        <br>• The audio file
+        <br>• The artwork
+        <br>• All stats (plays, downloads, likes)
+        <br>• The mix entry from the database
+      </p>
+      <p><strong>This action cannot be undone.</strong></p>
+      <div class="modal-buttons">
+        <button id="confirmDeleteBtn" class="modal-btn modal-btn-confirm">Delete Mix</button>
+        <button id="cancelDeleteBtn" class="modal-btn modal-btn-cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let mixToDelete = null;
+    const deleteModal = document.getElementById('deleteModal');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+
+    // Open delete modal
+    document.querySelectorAll('.delete-mix-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mixId = btn.getAttribute('data-mix-id');
+        const mixTitle = btn.getAttribute('data-mix-title');
+        
+        mixToDelete = mixId;
+        document.getElementById('deleteMixTitle').textContent = mixTitle;
+        deleteModal.classList.add('active');
+      });
+    });
+
+    // Cancel delete
+    cancelDeleteBtn.addEventListener('click', () => {
+      deleteModal.classList.remove('active');
+      mixToDelete = null;
+    });
+
+    deleteModal.addEventListener('click', (e) => {
+      if (e.target === deleteModal) {
+        deleteModal.classList.remove('active');
+        mixToDelete = null;
+      }
+    });
+
+    // Confirm delete
+    confirmDeleteBtn.addEventListener('click', async () => {
+      if (!mixToDelete) return;
+
+      confirmDeleteBtn.disabled = true;
+      confirmDeleteBtn.textContent = 'Deleting...';
+
+      try {
+        const response = await fetch('/api/delete-mix', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mixId: mixToDelete })
+        });
+
+        if (response.ok) {
+          showSuccessMessage('Mix deleted successfully');
+          
+          // Remove row from table
+          const row = document.querySelector(`tr[data-mix-id="${mixToDelete}"]`);
+          if (row) row.remove();
+          
+          deleteModal.classList.remove('active');
+          mixToDelete = null;
+          
+          // Reload page after 2 seconds to update stats
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          const error = await response.json();
+          alert('Failed to delete mix: ' + (error.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        alert('Failed to delete mix: ' + error.message);
+      } finally {
+        confirmDeleteBtn.disabled = false;
+        confirmDeleteBtn.textContent = 'Delete Mix';
+      }
+    });
+
+    function showSuccessMessage(message) {
+      const msgEl = document.createElement('div');
+      msgEl.className = 'success-message';
+      msgEl.textContent = message;
+      document.body.appendChild(msgEl);
+
+      setTimeout(() => {
+        msgEl.remove();
+      }, 3000);
+    }
+  </script>
+</Layout>

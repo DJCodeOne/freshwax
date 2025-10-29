@@ -66,14 +66,6 @@ import Layout from '../../layouts/Layout.astro';
 			display: block;
 		}
 
-		.admin-logo-fallback {
-			font-size: 48px;
-			font-weight: 900;
-			color: #000;
-			text-transform: uppercase;
-			letter-spacing: 2px;
-		}
-
 		.admin-header-card {
 			background: #fff;
 			padding: 30px;
@@ -98,11 +90,6 @@ import Layout from '../../layouts/Layout.astro';
 			margin-bottom: 10px;
 			font-weight: 900;
 			letter-spacing: -0.5px;
-		}
-
-		.admin-header-card p {
-			color: #666;
-			font-size: 16px;
 		}
 
 		.admin-logout-btn {
@@ -130,7 +117,7 @@ import Layout from '../../layouts/Layout.astro';
 
 		.admin-stats-row {
 			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 			gap: 20px;
 			margin-bottom: 30px;
 		}
@@ -138,7 +125,7 @@ import Layout from '../../layouts/Layout.astro';
 		.admin-stat-card {
 			background: #fff;
 			border: 3px solid #000;
-			padding: 25px;
+			padding: 20px;
 			transition: all 0.2s;
 		}
 
@@ -160,159 +147,18 @@ import Layout from '../../layouts/Layout.astro';
 			font-size: 36px;
 			font-weight: 900;
 			color: #000;
-			margin-bottom: 10px;
 		}
 
-		.admin-stat-change {
-			font-size: 13px;
-			font-weight: 600;
-			color: #666;
-		}
-
-		.admin-stat-change.positive {
-			color: #00aa00;
-		}
-
-		.admin-stat-change.warning {
-			color: #ff9900;
-		}
-
-		/* System Status Styles */
-		.admin-system-status {
-			background: #fff;
-			border: 3px solid #000;
-			padding: 30px;
-			margin-bottom: 30px;
-		}
-
-		.admin-system-status h2 {
-			font-size: 24px;
-			font-weight: 900;
-			margin-bottom: 20px;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-		}
-
-		.admin-status-grid {
-			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-			gap: 20px;
-		}
-
-		.admin-status-item {
-			display: flex;
-			align-items: center;
-			gap: 15px;
-			padding: 20px;
-			background: #f9f9f9;
-			border: 2px solid #e0e0e0;
-			border-radius: 8px;
-			transition: all 0.2s;
-		}
-
-		.admin-status-item:hover {
-			border-color: #000;
-			transform: translateY(-2px);
-			box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-		}
-
-		.admin-status-led {
-			width: 16px;
-			height: 16px;
-			border-radius: 50%;
-			background: #ccc;
-			position: relative;
-			flex-shrink: 0;
-			transition: all 0.3s;
-		}
-
-		.admin-status-led::before {
-			content: '';
-			position: absolute;
-			top: 50%;
-			left: 50%;
-			transform: translate(-50%, -50%);
-			width: 24px;
-			height: 24px;
-			border-radius: 50%;
-			opacity: 0;
-			transition: opacity 0.3s;
-		}
-
-		.admin-status-led.active {
-			background: #00cc00;
-			box-shadow: 0 0 10px rgba(0, 204, 0, 0.5);
-		}
-
-		.admin-status-led.active::before {
-			background: rgba(0, 204, 0, 0.3);
-			opacity: 1;
-			animation: pulse-led 2s infinite;
-		}
-
-		.admin-status-led.warning {
-			background: #ff9800;
-			box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
-		}
-
-		.admin-status-led.warning::before {
-			background: rgba(255, 152, 0, 0.3);
-			opacity: 1;
-			animation: pulse-led 2s infinite;
-		}
-
-		.admin-status-led.error {
-			background: #ff0000;
-			box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
-		}
-
-		.admin-status-led.error::before {
-			background: rgba(255, 0, 0, 0.3);
-			opacity: 1;
-			animation: pulse-led 2s infinite;
-		}
-
-		@keyframes pulse-led {
-			0%, 100% {
-				opacity: 0.3;
-				transform: translate(-50%, -50%) scale(1);
-			}
-			50% {
-				opacity: 0;
-				transform: translate(-50%, -50%) scale(1.5);
-			}
-		}
-
-		.admin-status-info {
-			flex: 1;
-		}
-
-		.admin-status-name {
-			font-size: 14px;
-			font-weight: 700;
-			color: #000;
-			margin-bottom: 4px;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-		}
-
-		.admin-status-text {
-			font-size: 12px;
-			color: #666;
-			font-weight: 600;
-		}
-
-		/* Section Headers */
 		.section-header {
 			background: #fff;
 			border: 3px solid #000;
-			padding: 20px 30px;
+			padding: 15px 20px;
 			margin-bottom: 20px;
 			margin-top: 30px;
 		}
 
 		.section-header h2 {
-			font-size: 24px;
+			font-size: 20px;
 			font-weight: 900;
 			color: #000;
 			margin: 0;
@@ -320,28 +166,20 @@ import Layout from '../../layouts/Layout.astro';
 			letter-spacing: 0.5px;
 		}
 
-		.section-header p {
-			margin: 5px 0 0 0;
-			color: #666;
-			font-size: 14px;
-			font-weight: 600;
-		}
-
-		/* Module Cards Grid */
 		.admin-modules-grid {
 			display: grid;
-			grid-template-columns: repeat(4, 1fr);
-			gap: 25px;
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			gap: 20px;
 			margin-bottom: 30px;
 		}
 
 		.admin-module-card {
 			background: #fff;
 			border: 3px solid #000;
-			padding: 25px;
+			padding: 20px;
 			cursor: pointer;
 			transition: all 0.2s;
-			position: relative;
+			text-align: center;
 		}
 
 		.admin-module-card:hover {
@@ -350,401 +188,18 @@ import Layout from '../../layouts/Layout.astro';
 		}
 
 		.admin-module-icon {
-			font-size: 48px;
-			margin-bottom: 15px;
+			font-size: 36px;
+			margin-bottom: 10px;
 		}
 
 		.admin-module-title {
-			font-size: 18px;
-			font-weight: 900;
-			color: #000;
-			margin-bottom: 10px;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-		}
-
-		.admin-module-description {
 			font-size: 14px;
-			color: #666;
-			line-height: 1.5;
-			font-weight: 600;
-			margin-bottom: 15px;
-		}
-
-		.admin-module-badge {
-			display: inline-block;
-			padding: 5px 12px;
-			background: #f0f0f0;
-			border: 2px solid #000;
-			font-size: 11px;
-			font-weight: 700;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-		}
-
-		.admin-module-badge.important {
-			background: #ff9900;
-			color: #ffffff;
-		}
-
-		.admin-module-badge.new {
-			background: #000;
-			color: #ffffff;
-		}
-
-		.admin-module-badge.essential {
-			background: #00aa00;
-			color: #ffffff;
-		}
-
-		/* Fee Management Modal Styles */
-		.fee-modal-overlay {
-			display: none;
-			position: fixed;
-			top: 0;
-			left: 0;
-			right: 0;
-			bottom: 0;
-			background: rgba(0, 0, 0, 0.7);
-			z-index: 1000;
-			padding: 20px;
-			overflow-y: auto;
-		}
-
-		.fee-modal-overlay.active {
-			display: flex;
-			justify-content: center;
-			align-items: flex-start;
-			padding-top: 50px;
-		}
-
-		.fee-modal {
-			background: #ffffff;
-			border: 5px solid #000;
-			max-width: 1000px;
-			width: 100%;
-			box-shadow: 12px 12px 0 #000;
-		}
-
-		.fee-modal-header {
-			background: #000;
-			color: #ffffff;
-			padding: 20px 30px;
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-		}
-
-		.fee-modal-title {
-			font-size: 24px;
-			font-weight: 900;
-			text-transform: uppercase;
-			letter-spacing: 1px;
-			margin: 0;
-		}
-
-		.fee-modal-close {
-			background: #ffffff;
-			color: #000;
-			border: 3px solid #000;
-			padding: 8px 16px;
-			font-weight: 700;
-			cursor: pointer;
-			transition: all 0.2s;
-		}
-
-		.fee-modal-close:hover {
-			background: #000;
-			color: #fff;
-			border-color: #fff;
-		}
-
-		.fee-modal-body {
-			padding: 30px;
-		}
-
-		.fee-section {
-			margin-bottom: 30px;
-		}
-
-		.fee-section-title {
-			font-size: 18px;
 			font-weight: 900;
 			color: #000;
-			margin-bottom: 15px;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-			border-bottom: 3px solid #000;
-			padding-bottom: 10px;
-		}
-
-		.fee-settings-grid {
-			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-			gap: 20px;
-			margin-bottom: 20px;
-		}
-
-		.fee-setting-card {
-			border: 3px solid #000;
-			padding: 20px;
-			background: #f9f9f9;
-		}
-
-		.fee-setting-label {
-			font-size: 12px;
-			font-weight: 700;
-			color: #666;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-			margin-bottom: 10px;
-		}
-
-		.fee-input-group {
-			display: flex;
-			gap: 10px;
-			align-items: center;
-		}
-
-		.fee-input {
-			flex: 1;
-			padding: 12px;
-			border: 2px solid #000;
-			font-size: 18px;
-			font-weight: 700;
-			font-family: inherit;
-		}
-
-		.fee-input:focus {
-			outline: none;
-			box-shadow: 4px 4px 0 #000;
-		}
-
-		.fee-unit {
-			font-size: 18px;
-			font-weight: 700;
-		}
-
-		.fee-type-toggle {
-			display: flex;
-			gap: 10px;
-		}
-
-		.toggle-btn {
-			flex: 1;
-			padding: 12px;
-			border: 3px solid #000;
-			background: #ffffff;
-			color: #000;
-			font-weight: 700;
-			cursor: pointer;
-			transition: all 0.2s;
 			text-transform: uppercase;
 			letter-spacing: 0.5px;
 		}
 
-		.toggle-btn.active {
-			background: #000;
-			color: #ffffff;
-		}
-
-		.toggle-btn:hover:not(.active) {
-			transform: translate(-2px, -2px);
-			box-shadow: 4px 4px 0 #000;
-		}
-
-		.checkbox-group {
-			display: flex;
-			align-items: center;
-			gap: 10px;
-		}
-
-		.checkbox-group input[type="checkbox"] {
-			width: 24px;
-			height: 24px;
-			cursor: pointer;
-		}
-
-		.checkbox-group label {
-			font-weight: 700;
-			cursor: pointer;
-		}
-
-		.btn-save-fees {
-			width: 100%;
-			padding: 15px;
-			background: #000;
-			color: #ffffff;
-			border: 3px solid #000;
-			font-size: 16px;
-			font-weight: 900;
-			cursor: pointer;
-			text-transform: uppercase;
-			letter-spacing: 1px;
-			transition: all 0.2s;
-		}
-
-		.btn-save-fees:hover {
-			background: #ffffff;
-			color: #000;
-			transform: translate(-4px, -4px);
-			box-shadow: 8px 8px 0 #000;
-		}
-
-		/* Artist Fees Table */
-		.artist-search {
-			margin-bottom: 20px;
-		}
-
-		.search-input {
-			width: 100%;
-			padding: 12px;
-			border: 3px solid #000;
-			font-size: 16px;
-			font-family: inherit;
-		}
-
-		.search-input:focus {
-			outline: none;
-			box-shadow: 4px 4px 0 #000;
-		}
-
-		.artist-table {
-			width: 100%;
-			border-collapse: collapse;
-			border: 3px solid #000;
-		}
-
-		.artist-table thead {
-			background: #000;
-			color: #ffffff;
-		}
-
-		.artist-table th {
-			text-align: left;
-			padding: 15px;
-			font-weight: 700;
-			font-size: 12px;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-		}
-
-		.artist-table tbody tr {
-			border-bottom: 2px solid #000;
-		}
-
-		.artist-table tbody tr:last-child {
-			border-bottom: none;
-		}
-
-		.artist-table tbody tr:hover {
-			background: #f9f9f9;
-		}
-
-		.artist-table td {
-			padding: 15px;
-		}
-
-		.artist-name-cell {
-			font-weight: 700;
-		}
-
-		.earnings-cell {
-			font-weight: 900;
-			color: #000;
-		}
-
-		.btn-custom-fee {
-			padding: 8px 16px;
-			background: #000;
-			color: #ffffff;
-			border: 3px solid #000;
-			font-weight: 700;
-			cursor: pointer;
-			transition: all 0.2s;
-			font-size: 12px;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-		}
-
-		.btn-custom-fee:hover {
-			background: #ffffff;
-			color: #000;
-		}
-
-		/* Custom Fee Modal */
-		.custom-fee-modal {
-			background: #ffffff;
-			border: 5px solid #000;
-			max-width: 500px;
-			width: 100%;
-			padding: 30px;
-		}
-
-		.custom-fee-modal h3 {
-			font-size: 20px;
-			font-weight: 900;
-			margin-bottom: 20px;
-			text-transform: uppercase;
-		}
-
-		.custom-fee-form {
-			display: flex;
-			flex-direction: column;
-			gap: 20px;
-		}
-
-		.form-group {
-			display: flex;
-			flex-direction: column;
-			gap: 10px;
-		}
-
-		.form-group label {
-			font-size: 12px;
-			font-weight: 700;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-			color: #666;
-		}
-
-		.modal-buttons {
-			display: flex;
-			gap: 10px;
-			margin-top: 10px;
-		}
-
-		.btn-modal {
-			flex: 1;
-			padding: 12px;
-			border: 3px solid #000;
-			font-weight: 700;
-			cursor: pointer;
-			transition: all 0.2s;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-		}
-
-		.btn-modal-save {
-			background: #000;
-			color: #ffffff;
-		}
-
-		.btn-modal-save:hover {
-			background: #ffffff;
-			color: #000;
-		}
-
-		.btn-modal-cancel {
-			background: #ffffff;
-			color: #000;
-		}
-
-		.btn-modal-cancel:hover {
-			background: #f9f9f9;
-		}
-
-		/* Success Message */
 		.success-message {
 			position: fixed;
 			top: 20px;
@@ -770,24 +225,9 @@ import Layout from '../../layouts/Layout.astro';
 			}
 		}
 
-		/* Mobile Responsive */
-		@media (max-width: 1200px) {
-			.admin-modules-grid {
-				grid-template-columns: repeat(2, 1fr);
-			}
-		}
-
 		@media (max-width: 768px) {
 			.admin-container {
 				padding: 15px;
-			}
-
-			.admin-logo {
-				height: 60px;
-			}
-
-			.admin-header-card {
-				padding: 20px;
 			}
 
 			.admin-header-card h1 {
@@ -795,76 +235,22 @@ import Layout from '../../layouts/Layout.astro';
 				padding-right: 100px;
 			}
 
-			.admin-logout-btn {
-				top: 15px;
-				right: 15px;
-				padding: 8px 16px;
-				font-size: 12px;
-			}
-
 			.admin-stats-row {
-				grid-template-columns: 1fr;
-				gap: 15px;
-			}
-
-			.admin-stat-value {
-				font-size: 28px;
+				grid-template-columns: repeat(2, 1fr);
 			}
 
 			.admin-modules-grid {
-				grid-template-columns: 1fr;
-				gap: 20px;
-			}
-
-			.admin-module-card {
-				padding: 20px;
-			}
-
-			.admin-system-status {
-				padding: 20px;
-			}
-
-			.fee-modal-body {
-				padding: 20px;
-			}
-
-			.fee-settings-grid {
-				grid-template-columns: 1fr;
-			}
-
-			.artist-table {
-				font-size: 14px;
-			}
-
-			.artist-table th,
-			.artist-table td {
-				padding: 10px;
-			}
-
-			.admin-status-grid {
-				grid-template-columns: 1fr;
-			}
-
-			.section-header {
-				padding: 15px 20px;
-			}
-
-			.section-header h2 {
-				font-size: 20px;
+				grid-template-columns: repeat(2, 1fr);
 			}
 		}
 
 		@media (max-width: 480px) {
-			.admin-header-card h1 {
-				font-size: 20px;
+			.admin-stats-row {
+				grid-template-columns: 1fr;
 			}
 
-			.admin-stat-value {
-				font-size: 24px;
-			}
-
-			.admin-module-icon {
-				font-size: 36px;
+			.admin-modules-grid {
+				grid-template-columns: 1fr;
 			}
 		}
 	</style>
@@ -884,19 +270,16 @@ import Layout from '../../layouts/Layout.astro';
 					src="/logo.webp" 
 					alt="Fresh Wax" 
 					class="admin-logo"
-					onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+					onerror="this.style.display='none'"
 				>
-				<div class="admin-logo-fallback" style="display: none;">FRESH WAX</div>
 			</div>
 
 			<!-- Main Header -->
 			<div class="admin-header-card">
 				<button class="admin-logout-btn" id="logoutBtn">
-					<span>🚪</span>
-					Logout
+					🚪 Logout
 				</button>
-				<h1>Fresh Wax Admin Dashboard</h1>
-				<p>Welcome back! Manage your music store from here.</p>
+				<h1>Welcome back Dave!</h1>
 			</div>
 
 			<!-- Stats Row -->
@@ -904,292 +287,122 @@ import Layout from '../../layouts/Layout.astro';
 				<div class="admin-stat-card">
 					<div class="admin-stat-label">Total Sales</div>
 					<div class="admin-stat-value" id="totalSales">£0.00</div>
-					<div class="admin-stat-change positive" id="salesChange">Calculating...</div>
 				</div>
 				<div class="admin-stat-card">
 					<div class="admin-stat-label">Platform Fees</div>
 					<div class="admin-stat-value" id="platformFees">£0.00</div>
-					<div class="admin-stat-change" id="platformFeesChange">Collected fees</div>
 				</div>
 				<div class="admin-stat-card">
 					<div class="admin-stat-label">Pending Artists</div>
 					<div class="admin-stat-value" id="pendingArtistsCount">0</div>
-					<div class="admin-stat-change warning">Awaiting approval</div>
 				</div>
 				<div class="admin-stat-card">
-					<div class="admin-stat-label">Active Releases</div>
+					<div class="admin-stat-label">Store Releases</div>
 					<div class="admin-stat-value" id="activeReleases">0</div>
-					<div class="admin-stat-change positive" id="releasesChange">Loading...</div>
+				</div>
+				<div class="admin-stat-card">
+					<div class="admin-stat-label">Merch Products</div>
+					<div class="admin-stat-value" id="merchCount">0</div>
+				</div>
+				<div class="admin-stat-card">
+					<div class="admin-stat-label">DJ Mixes</div>
+					<div class="admin-stat-value" id="djMixesCount">0</div>
 				</div>
 			</div>
 
-			<!-- System Status -->
-			<div class="admin-system-status">
-				<h2>🔧 System Status</h2>
-				<div class="admin-status-grid">
-					<div class="admin-status-item">
-						<div class="admin-status-led" id="cloudinaryStatus"></div>
-						<div class="admin-status-info">
-							<div class="admin-status-name">Cloudinary</div>
-							<div class="admin-status-text" id="cloudinaryText">Checking...</div>
-						</div>
-					</div>
-					<div class="admin-status-item">
-						<div class="admin-status-led" id="r2Status"></div>
-						<div class="admin-status-info">
-							<div class="admin-status-name">Cloudflare R2</div>
-							<div class="admin-status-text" id="r2Text">Checking...</div>
-						</div>
-					</div>
-					<div class="admin-status-item">
-						<div class="admin-status-led" id="firebaseStatus"></div>
-						<div class="admin-status-info">
-							<div class="admin-status-name">Firebase</div>
-							<div class="admin-status-text" id="firebaseText">Checking...</div>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<!-- ESSENTIAL WORKFLOW SECTION -->
+			<!-- WORKFLOW SECTION -->
 			<div class="section-header">
-				<h2>⚡ Essential Workflow</h2>
-				<p>Core operations for managing releases</p>
+				<h2>⚡ Store Management</h2>
 			</div>
 
 			<div class="admin-modules-grid">
 				<div class="admin-module-card" data-link="/admin/artists/pending">
 					<div class="admin-module-icon">✅</div>
 					<div class="admin-module-title">Artist Approvals</div>
-					<div class="admin-module-description">
-						Review and approve pending artist registrations. Grant upload access to verified artists.
-					</div>
-					<span class="admin-module-badge important">Action Required</span>
 				</div>
 
 				<div class="admin-module-card" onclick="window.open('https://freshwax-uploads.pages.dev', '_blank')">
 					<div class="admin-module-icon">📤</div>
 					<div class="admin-module-title">Upload Release</div>
-					<div class="admin-module-description">
-						Upload complete release packages with audio files, artwork, and metadata to your storage services.
-					</div>
-					<span class="admin-module-badge essential">Essential</span>
 				</div>
 
 				<div class="admin-module-card" data-link="/admin/publish-release">
 					<div class="admin-module-icon">🚀</div>
 					<div class="admin-module-title">Publish to Store</div>
-					<div class="admin-module-description">
-						Review uploaded releases and publish them to your Fresh Wax storefront for customers to purchase.
-					</div>
-					<span class="admin-module-badge important">Important</span>
 				</div>
 
 				<div class="admin-module-card" data-link="/admin/releases/manage">
 					<div class="admin-module-icon">🎵</div>
 					<div class="admin-module-title">Manage Releases</div>
-					<div class="admin-module-description">
-						Edit existing releases, update prices, add special offers, change artwork, and manage track listings.
-					</div>
-					<span class="admin-module-badge">Frequent</span>
 				</div>
-			</div>
 
-			<!-- MANAGEMENT SECTION -->
-			<div class="section-header">
-				<h2>👥 Management</h2>
-				<p>User and financial management tools</p>
-			</div>
+				<!-- Upload Merch -->
+				<div class="admin-module-card" data-link="/admin/merch-upload-tool">
+  <div class="admin-module-icon">📤</div>
+  <div class="admin-module-title">Upload Merch</div>
+</div>
 
-			<div class="admin-modules-grid">
+<!-- Manage Merch -->
+<div class="admin-module-card" data-link="/admin/merch/manage">
+  <div class="admin-module-icon">👕</div>
+  <div class="admin-module-title">Manage Merch</div>
+</div>
+
 				<div class="admin-module-card" data-link="/admin/account/manage">
 					<div class="admin-module-icon">👥</div>
-					<div class="admin-module-title">Customer Management</div>
-					<div class="admin-module-description">
-						View customer profiles, order history, manage accounts, and handle customer support requests.
-					</div>
-					<span class="admin-module-badge">Management</span>
+					<div class="admin-module-title">Customers</div>
 				</div>
 
 				<div class="admin-module-card" data-link="/admin/artists/manage">
 					<div class="admin-module-icon">🎤</div>
-					<div class="admin-module-title">Artist Management</div>
-					<div class="admin-module-description">
-						Manage registered artists and labels, view their releases, earnings, and account details.
-					</div>
-					<span class="admin-module-badge">Management</span>
-				</div>
-
-				<div class="admin-module-card" id="feeManagementCard">
-					<div class="admin-module-icon">💰</div>
-					<div class="admin-module-title">Fee Management</div>
-					<div class="admin-module-description">
-						Configure platform fees globally or set custom fees per artist. Default fee is 0% (no fees).
-					</div>
-					<span class="admin-module-badge new">Financial</span>
+					<div class="admin-module-title">Artists</div>
 				</div>
 
 				<div class="admin-module-card" data-link="/admin/orders">
 					<div class="admin-module-icon">📦</div>
-					<div class="admin-module-title">Track Orders</div>
-					<div class="admin-module-description">
-						View and manage customer orders, process payments, send download links, and track order history.
-					</div>
-					<span class="admin-module-badge essential">Essential</span>
-				</div>
-			</div>
-
-			<!-- ADDITIONAL TOOLS SECTION -->
-			<div class="section-header">
-				<h2>🛠️ Additional Tools</h2>
-				<p>Analytics, promotions, and configuration</p>
-			</div>
-
-			<div class="admin-modules-grid">
-				<div class="admin-module-card" data-link="/admin/dj-mix-reports">
-					<div class="admin-module-icon">🚨</div>
-					<div class="admin-module-title">DJ Mix Reports</div>
-					<div class="admin-module-description">
-						Review and manage reported DJ mixes from the community. Handle malicious uploads and content issues.
-					</div>
-					<span class="admin-module-badge important">Reports</span>
-				</div>
-
-				<div class="admin-module-card" data-link="/admin/promotions">
-					<div class="admin-module-icon">🏷️</div>
-					<div class="admin-module-title">Promotions</div>
-					<div class="admin-module-description">
-						Create discount codes, run special promotions, set up bundle deals, and manage seasonal sales.
-					</div>
-					<span class="admin-module-badge new">New</span>
+					<div class="admin-module-title">Orders</div>
 				</div>
 
 				<div class="admin-module-card" data-link="/admin/analytics">
 					<div class="admin-module-icon">📊</div>
 					<div class="admin-module-title">Analytics</div>
-					<div class="admin-module-description">
-						View detailed sales reports, track popular releases, analyze customer behavior, and export data.
-					</div>
-					<span class="admin-module-badge">Insights</span>
-				</div>
-
-				<div class="admin-module-card" data-link="/admin/settings">
-					<div class="admin-module-icon">⚙️</div>
-					<div class="admin-module-title">Store Settings</div>
-					<div class="admin-module-description">
-						Configure store details, payment gateways, tax settings, shipping options, and appearance.
-					</div>
-					<span class="admin-module-badge">Config</span>
 				</div>
 			</div>
-		</div>
-	</div>
 
-	<!-- Fee Management Modal -->
-	<div id="feeManagementModal" class="fee-modal-overlay">
-		<div class="fee-modal">
-			<div class="fee-modal-header">
-				<h2 class="fee-modal-title">💰 Fee Management</h2>
-				<button id="closeFeeModalBtn" class="fee-modal-close">Close</button>
+			<!-- DJ MIXES SECTION -->
+			<div class="section-header">
+				<h2>🎧 DJ Mixes</h2>
 			</div>
-			<div class="fee-modal-body">
-				<!-- Global Platform Fee Settings -->
-				<div class="fee-section">
-					<h3 class="fee-section-title">Global Platform Fee Settings</h3>
-					<div class="fee-settings-grid">
-						<div class="fee-setting-card">
-							<div class="fee-setting-label">Fee Type</div>
-							<div class="fee-type-toggle">
-								<button id="feeTypePercentage" class="toggle-btn active" data-type="percentage">Percentage</button>
-								<button id="feeTypeFixed" class="toggle-btn" data-type="fixed">Fixed (£)</button>
-							</div>
-						</div>
 
-						<div class="fee-setting-card">
-							<div class="fee-setting-label">Fee Amount</div>
-							<div class="fee-input-group">
-								<span id="feePrefix" class="fee-unit" style="display: none;">£</span>
-								<input type="number" id="feeAmount" class="fee-input" placeholder="0" step="0.01" min="0" value="0">
-								<span id="feeSuffix" class="fee-unit">%</span>
-							</div>
-						</div>
-
-						<div class="fee-setting-card">
-							<div class="fee-setting-label">Status</div>
-							<div class="checkbox-group">
-								<input type="checkbox" id="feeEnabled" checked>
-								<label for="feeEnabled">Fee Collection Enabled</label>
-							</div>
-						</div>
-					</div>
-					<button id="saveFeeSettingsBtn" class="btn-save-fees">Save Platform Fee Settings</button>
+			<div class="admin-modules-grid">
+				<div class="admin-module-card" data-link="/admin/dj-mixes/manage">
+					<div class="admin-module-icon">🗑️</div>
+					<div class="admin-module-title">Manage & Delete</div>
 				</div>
 
-				<!-- Artist Custom Fees -->
-				<div class="fee-section">
-					<h3 class="fee-section-title">Artist Custom Fees</h3>
-					<div class="artist-search">
-						<input type="text" id="artistSearchInput" class="search-input" placeholder="Search artists by name...">
-					</div>
-					<table class="artist-table">
-						<thead>
-							<tr>
-								<th>Artist Name</th>
-								<th>Total Earnings</th>
-								<th>Downloads</th>
-								<th>Current Fee</th>
-								<th>Action</th>
-							</tr>
-						</thead>
-						<tbody id="artistTableBody">
-							<tr>
-								<td colspan="5" style="text-align: center; padding: 30px; color: #666;">
-									Loading artists...
-								</td>
-							</tr>
-						</tbody>
-					</table>
+				<div class="admin-module-card" data-link="/dj-mixes">
+					<div class="admin-module-icon">🎛️</div>
+					<div class="admin-module-title">Public Page</div>
+				</div>
+
+				<div class="admin-module-card" data-link="/upload-mix">
+					<div class="admin-module-icon">📤</div>
+					<div class="admin-module-title">Upload Test</div>
+				</div>
+
+				<div class="admin-module-card" onclick="window.open('https://cloudinary.com/console/media_library/folders/dj-mixes', '_blank')">
+					<div class="admin-module-icon">☁️</div>
+					<div class="admin-module-title">Storage</div>
 				</div>
 			</div>
-		</div>
-	</div>
-
-	<!-- Custom Fee Modal -->
-	<div id="customFeeModal" class="fee-modal-overlay">
-		<div class="custom-fee-modal">
-			<h3 id="customFeeArtistName">Set Custom Fee</h3>
-			<form id="customFeeForm" class="custom-fee-form">
-				<div class="form-group">
-					<label>Fee Type</label>
-					<div class="fee-type-toggle">
-						<button type="button" id="customFeeTypePercentage" class="toggle-btn active" data-type="percentage">Percentage</button>
-						<button type="button" id="customFeeTypeFixed" class="toggle-btn" data-type="fixed">Fixed (£)</button>
-					</div>
-				</div>
-
-				<div class="form-group">
-					<label>Fee Amount</label>
-					<div class="fee-input-group">
-						<span id="customFeePrefix" class="fee-unit" style="display: none;">£</span>
-						<input type="number" id="customFeeAmount" class="fee-input" placeholder="0" step="0.01" min="0" value="0" required>
-						<span id="customFeeSuffix" class="fee-unit">%</span>
-					</div>
-				</div>
-
-				<div class="modal-buttons">
-					<button type="submit" class="btn-modal btn-modal-save">Save Custom Fee</button>
-					<button type="button" id="cancelCustomFeeBtn" class="btn-modal btn-modal-cancel">Cancel</button>
-				</div>
-			</form>
 		</div>
 	</div>
 
 	<script type="module">
 		import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 		import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-		import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, addDoc, query, where, orderBy, limit, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+		import { getFirestore, collection, getDocs, query, where } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-		// Firebase Configuration (hardcoded - safe for client-side)
 		const firebaseConfig = {
 			apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
 			authDomain: "freshwax-store.firebaseapp.com",
@@ -1203,112 +416,9 @@ import Layout from '../../layouts/Layout.astro';
 		const auth = getAuth(app);
 		const db = getFirestore(app);
 
-		let currentFeeSettings = null;
-		let allArtists = [];
-		let currentArtistId = null;
-
-		// Activity Logging Helper Function
-		async function logActivity(description, type = 'general') {
-			try {
-				await addDoc(collection(db, 'activity'), {
-					description: description,
-					timestamp: serverTimestamp(),
-					type: type,
-					userId: auth.currentUser?.email || 'unknown',
-					createdAt: new Date().toISOString()
-				});
-			} catch (error) {
-				console.error('Error logging activity:', error);
-			}
-		}
-
-		// System Status Monitoring
-		async function checkSystemStatus() {
-			await Promise.all([
-				checkFirebaseStatus(),
-				checkCloudinaryStatus(),
-				checkR2Status()
-			]);
-		}
-
-		// Check Firebase connection
-		async function checkFirebaseStatus() {
-			const statusLed = document.getElementById('firebaseStatus');
-			const statusText = document.getElementById('firebaseText');
-			
-			try {
-				const testQuery = query(collection(db, 'settings'), limit(1));
-				await getDocs(testQuery);
-				
-				if (auth.currentUser) {
-					setStatus(statusLed, statusText, 'active', 'Connected & Authenticated');
-				} else {
-					setStatus(statusLed, statusText, 'warning', 'Connected (No Auth)');
-				}
-			} catch (error) {
-				console.error('Firebase status check failed:', error);
-				setStatus(statusLed, statusText, 'error', 'Connection Failed');
-			}
-		}
-
-		// Check Cloudinary connection
-		async function checkCloudinaryStatus() {
-			const statusLed = document.getElementById('cloudinaryStatus');
-			const statusText = document.getElementById('cloudinaryText');
-			
-			try {
-				const cloudName = 'dijam9uva'; // Audio cloud
-				const cloudNameImage = 'dm9gldbda'; // Image cloud
-				
-				const audioTest = fetch(`https://res.cloudinary.com/${cloudName}/image/upload/sample.jpg`, {
-					method: 'HEAD',
-					mode: 'no-cors'
-				});
-				
-				const imageTest = fetch(`https://res.cloudinary.com/${cloudNameImage}/image/upload/sample.jpg`, {
-					method: 'HEAD',
-					mode: 'no-cors'
-				});
-
-				await Promise.all([audioTest, imageTest]);
-				setStatus(statusLed, statusText, 'active', 'Audio & Image Accounts OK');
-			} catch (error) {
-				console.error('Cloudinary status check failed:', error);
-				setStatus(statusLed, statusText, 'error', 'Connection Failed');
-			}
-		}
-
-		// Check Cloudflare R2 connection
-		async function checkR2Status() {
-			const statusLed = document.getElementById('r2Status');
-			const statusText = document.getElementById('r2Text');
-			
-			try {
-				const r2PublicUrl = 'https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev';
-				
-				await fetch(r2PublicUrl, {
-					method: 'HEAD',
-					mode: 'no-cors'
-				});
-				
-				setStatus(statusLed, statusText, 'active', 'Bucket Accessible');
-			} catch (error) {
-				console.error('R2 status check failed:', error);
-				setStatus(statusLed, statusText, 'warning', 'Limited Access');
-			}
-		}
-
-		// Helper function to set status
-		function setStatus(ledElement, textElement, status, message) {
-			ledElement.classList.remove('active', 'warning', 'error');
-			ledElement.classList.add(status);
-			textElement.textContent = message;
-		}
-
 		// Auth check
 		onAuthStateChanged(auth, async (user) => {
 			if (user) {
-				await logActivity('Admin logged in', 'auth');
 				await loadDashboard();
 			} else {
 				window.location.href = '/login';
@@ -1317,12 +427,7 @@ import Layout from '../../layouts/Layout.astro';
 
 		async function loadDashboard() {
 			try {
-				await Promise.all([
-					loadStats(),
-					loadFeeSettings(),
-					checkSystemStatus()
-				]);
-
+				await loadStats();
 				document.getElementById('loadingScreen').style.display = 'none';
 				document.getElementById('dashboardContent').style.display = 'block';
 			} catch (error) {
@@ -1332,7 +437,7 @@ import Layout from '../../layouts/Layout.astro';
 
 		async function loadStats() {
 			try {
-				// Load pending artists
+				// Pending artists
 				const pendingQuery = query(
 					collection(db, 'artists'),
 					where('status', '==', 'pending')
@@ -1340,11 +445,15 @@ import Layout from '../../layouts/Layout.astro';
 				const pendingSnapshot = await getDocs(pendingQuery);
 				document.getElementById('pendingArtistsCount').textContent = pendingSnapshot.size;
 
-				// Load active releases
+				// Store releases
 				const releasesSnapshot = await getDocs(collection(db, 'releases'));
 				document.getElementById('activeReleases').textContent = releasesSnapshot.size;
 
-				// Calculate total sales and platform fees
+				// Merch products
+				const merchSnapshot = await getDocs(collection(db, 'merch_products'));
+				document.getElementById('merchCount').textContent = merchSnapshot.size;
+
+				// Sales and fees
 				const ordersSnapshot = await getDocs(collection(db, 'orders'));
 				let totalSales = 0;
 				let totalFees = 0;
@@ -1357,26 +466,25 @@ import Layout from '../../layouts/Layout.astro';
 
 				document.getElementById('totalSales').textContent = `£${totalSales.toFixed(2)}`;
 				document.getElementById('platformFees').textContent = `£${totalFees.toFixed(2)}`;
+
+				// DJ Mixes count
+				try {
+					const mixesResponse = await fetch('https://res.cloudinary.com/dscqbze0d/raw/upload/dj-mixes/mixes.json?cache=' + Date.now());
+					if (mixesResponse.ok) {
+						const mixes = await mixesResponse.json();
+						document.getElementById('djMixesCount').textContent = Array.isArray(mixes) ? mixes.length : 0;
+					}
+				} catch (e) {
+					console.log('No DJ mixes yet');
+				}
 			} catch (error) {
 				console.error('Error loading stats:', error);
 			}
 		}
 
-		// Run status checks on load and every 30 seconds
-		checkSystemStatus();
-		setInterval(checkSystemStatus, 30000);
-
-		// Check when user returns to tab
-		document.addEventListener('visibilitychange', () => {
-			if (!document.hidden) {
-				checkSystemStatus();
-			}
-		});
-
 		// Logout
 		document.getElementById('logoutBtn').addEventListener('click', async () => {
 			try {
-				await logActivity('Admin logged out', 'auth');
 				await signOut(auth);
 				window.location.href = '/login';
 			} catch (error) {
@@ -1384,230 +492,11 @@ import Layout from '../../layouts/Layout.astro';
 			}
 		});
 
-		// Module card navigation
+		// Module navigation
 		document.querySelectorAll('.admin-module-card[data-link]').forEach(card => {
 			card.addEventListener('click', () => {
-				const link = card.getAttribute('data-link');
-				window.location.href = link;
+				window.location.href = card.getAttribute('data-link');
 			});
 		});
-
-		// Fee Management Modal
-		const feeModal = document.getElementById('feeManagementModal');
-		const closeFeeBtn = document.getElementById('closeFeeModalBtn');
-		const feeCard = document.getElementById('feeManagementCard');
-
-		feeCard.addEventListener('click', () => {
-			feeModal.classList.add('active');
-			loadArtistsTable();
-		});
-
-		closeFeeBtn.addEventListener('click', () => {
-			feeModal.classList.remove('active');
-		});
-
-		feeModal.addEventListener('click', (e) => {
-			if (e.target === feeModal) {
-				feeModal.classList.remove('active');
-			}
-		});
-
-		// Fee Type Toggle
-		const feeTypeButtons = document.querySelectorAll('#feeTypePercentage, #feeTypeFixed');
-		feeTypeButtons.forEach(btn => {
-			btn.addEventListener('click', () => {
-				feeTypeButtons.forEach(b => b.classList.remove('active'));
-				btn.classList.add('active');
-				
-				const isPercentage = btn.dataset.type === 'percentage';
-				document.getElementById('feePrefix').style.display = isPercentage ? 'none' : 'inline';
-				document.getElementById('feeSuffix').style.display = isPercentage ? 'inline' : 'none';
-			});
-		});
-
-		// Load fee settings
-		async function loadFeeSettings() {
-			try {
-				const feeDoc = await getDoc(doc(db, 'settings', 'platformFees'));
-				if (feeDoc.exists()) {
-					currentFeeSettings = feeDoc.data();
-					
-					const isPercentage = currentFeeSettings.type === 'percentage';
-					document.getElementById(isPercentage ? 'feeTypePercentage' : 'feeTypeFixed').click();
-					document.getElementById('feeAmount').value = currentFeeSettings.amount || 0;
-					document.getElementById('feeEnabled').checked = currentFeeSettings.enabled !== false;
-				}
-			} catch (error) {
-				console.error('Error loading fee settings:', error);
-			}
-		}
-
-		// Save fee settings
-		document.getElementById('saveFeeSettingsBtn').addEventListener('click', async () => {
-			try {
-				const type = document.querySelector('#feeTypePercentage.active') ? 'percentage' : 'fixed';
-				const amount = parseFloat(document.getElementById('feeAmount').value) || 0;
-				const enabled = document.getElementById('feeEnabled').checked;
-
-				await setDoc(doc(db, 'settings', 'platformFees'), {
-					type,
-					amount,
-					enabled,
-					updatedAt: new Date().toISOString()
-				});
-
-				await logActivity(`Updated platform fee: ${amount}${type === 'percentage' ? '%' : '£'}`, 'settings');
-				showSuccessMessage('Platform fee settings saved successfully');
-			} catch (error) {
-				console.error('Error saving fee settings:', error);
-				alert('Failed to save fee settings');
-			}
-		});
-
-		// Load artists table
-		async function loadArtistsTable() {
-			try {
-				const artistsSnapshot = await getDocs(collection(db, 'artists'));
-				allArtists = artistsSnapshot.docs.map(doc => ({
-					id: doc.id,
-					...doc.data()
-				}));
-
-				renderArtistsTable(allArtists);
-			} catch (error) {
-				console.error('Error loading artists:', error);
-			}
-		}
-
-		function renderArtistsTable(artists) {
-			const tbody = document.getElementById('artistTableBody');
-			
-			if (artists.length === 0) {
-				tbody.innerHTML = `
-					<tr>
-						<td colspan="5" style="text-align: center; padding: 30px; color: #666;">
-							No artists found
-						</td>
-					</tr>
-				`;
-				return;
-			}
-
-			tbody.innerHTML = artists.map(artist => {
-				const customFee = artist.customFee || null;
-				const feeDisplay = customFee 
-					? `${customFee.type === 'percentage' ? customFee.amount + '%' : '£' + customFee.amount}`
-					: 'Global';
-
-				return `
-					<tr>
-						<td class="artist-name-cell">${artist.artistName || 'Unknown'}</td>
-						<td class="earnings-cell">£${(artist.totalEarnings || 0).toFixed(2)}</td>
-						<td>${artist.totalDownloads || 0}</td>
-						<td>${feeDisplay}</td>
-						<td>
-							<button class="btn-custom-fee" onclick="openCustomFeeModal('${artist.id}', '${artist.artistName}')">
-								Set Custom Fee
-							</button>
-						</td>
-					</tr>
-				`;
-			}).join('');
-		}
-
-		// Artist search
-		document.getElementById('artistSearchInput').addEventListener('input', (e) => {
-			const searchTerm = e.target.value.toLowerCase();
-			const filtered = allArtists.filter(artist => 
-				(artist.artistName || '').toLowerCase().includes(searchTerm)
-			);
-			renderArtistsTable(filtered);
-		});
-
-		// Custom Fee Modal
-		const customFeeModal = document.getElementById('customFeeModal');
-		const cancelCustomFeeBtn = document.getElementById('cancelCustomFeeBtn');
-
-		window.openCustomFeeModal = function(artistId, artistName) {
-			currentArtistId = artistId;
-			document.getElementById('customFeeArtistName').textContent = `Set Custom Fee for ${artistName}`;
-			
-			const artist = allArtists.find(a => a.id === artistId);
-			if (artist && artist.customFee) {
-				const isPercentage = artist.customFee.type === 'percentage';
-				document.getElementById(isPercentage ? 'customFeeTypePercentage' : 'customFeeTypeFixed').click();
-				document.getElementById('customFeeAmount').value = artist.customFee.amount;
-			} else {
-				document.getElementById('customFeeTypePercentage').click();
-				document.getElementById('customFeeAmount').value = '0';
-			}
-
-			customFeeModal.classList.add('active');
-		};
-
-		cancelCustomFeeBtn.addEventListener('click', () => {
-			customFeeModal.classList.remove('active');
-		});
-
-		customFeeModal.addEventListener('click', (e) => {
-			if (e.target === customFeeModal) {
-				customFeeModal.classList.remove('active');
-			}
-		});
-
-		// Custom fee type toggle
-		const customFeeTypeButtons = document.querySelectorAll('#customFeeTypePercentage, #customFeeTypeFixed');
-		customFeeTypeButtons.forEach(btn => {
-			btn.addEventListener('click', () => {
-				customFeeTypeButtons.forEach(b => b.classList.remove('active'));
-				btn.classList.add('active');
-				
-				const isPercentage = btn.dataset.type === 'percentage';
-				document.getElementById('customFeePrefix').style.display = isPercentage ? 'none' : 'inline';
-				document.getElementById('customFeeSuffix').style.display = isPercentage ? 'inline' : 'none';
-			});
-		});
-
-		// Save custom fee
-		document.getElementById('customFeeForm').addEventListener('submit', async (e) => {
-			e.preventDefault();
-
-			if (!currentArtistId) return;
-
-			try {
-				const type = document.querySelector('#customFeeTypePercentage.active') ? 'percentage' : 'fixed';
-				const amount = parseFloat(document.getElementById('customFeeAmount').value) || 0;
-
-				const artist = allArtists.find(a => a.id === currentArtistId);
-
-				await updateDoc(doc(db, 'artists', currentArtistId), {
-					customFee: {
-						type,
-						amount,
-						setAt: new Date().toISOString()
-					}
-				});
-
-				await logActivity(`Set custom fee for ${artist?.artistName}: ${amount}${type === 'percentage' ? '%' : '£'}`, 'artist');
-				showSuccessMessage('Custom fee saved successfully');
-				customFeeModal.classList.remove('active');
-				await loadArtistsTable();
-			} catch (error) {
-				console.error('Error saving custom fee:', error);
-				alert('Failed to save custom fee');
-			}
-		});
-
-		// Success message utility
-		function showSuccessMessage(message) {
-			const msgEl = document.createElement('div');
-			msgEl.className = 'success-message';
-			msgEl.textContent = message;
-			document.body.appendChild(msgEl);
-
-			setTimeout(() => {
-				msgEl.remove();
-			}, 3000);
-		}
 	</script>
 </Layout>
