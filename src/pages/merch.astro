@@ -77,7 +77,29 @@ const productsByCategory = allProducts.reduce((acc, product) => {
     .product-card-color-dot { width: 20px; height: 20px; border: 2px solid #000; border-radius: 50%; }
     .product-card-info .price { font-size: 20px; font-weight: 900; color: #000; margin-top: 0.5rem; }
     
-    .empty-state { text-align: center; padding: 4rem 2rem; color: #666; }
+    .empty-state { padding: 3rem 2rem; }
+    
+    /* Carousel styles */
+    .carousel-item { flex: 0 0 250px; border: 2px solid #000; background: #fff; cursor: pointer; transition: all 0.2s; }
+    .carousel-item:hover { transform: translate(-4px, -4px); box-shadow: 8px 8px 0 #000; }
+    .carousel-item img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+    .carousel-item-info { padding: 1rem; }
+    .carousel-item-info h3 { font-size: 16px; font-weight: 900; margin-bottom: 0.5rem; }
+    .carousel-item-info .category { font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 0.5rem; }
+    .carousel-item-info .price { font-size: 20px; font-weight: 900; }
+    .carousel-dot { width: 12px; height: 12px; border-radius: 50%; background: #e0e0e0; border: 2px solid #000; cursor: pointer; transition: all 0.2s; }
+    .carousel-dot.active { background: #000; transform: scale(1.2); }
+    
+    @keyframes pulse {
+      0%, 100% { transform: translate(-4px, -4px); box-shadow: 8px 8px 0 #000; }
+      50% { transform: translate(-6px, -6px); box-shadow: 12px 12px 0 #000; }
+    }
+    
+    @media (max-width: 768px) {
+      .carousel-item { flex: 0 0 180px; }
+      #featured-carousel { padding: 0 40px !important; }
+      #carousel-prev, #carousel-next { width: 35px !important; height: 35px !important; font-size: 18px !important; }
+    }
     
     /* Product modal */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto; }
@@ -210,11 +232,29 @@ const productsByCategory = allProducts.reduce((acc, product) => {
         <div id="product-grid-container" class="product-grid" style="display: none;"></div>
         
         <div id="empty-state" class="empty-state">
-          <svg style="width: 120px; height: 120px; margin: 0 auto 1rem; opacity: 0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-          </svg>
-          <h2 style="font-size: 24px; font-weight: 900; margin-bottom: 10px;">Select a category</h2>
-          <p>Choose a label, DJ, sound system, or crew from the left to browse merch</p>
+          <!-- Featured Products Carousel -->
+          <div style="max-width: 1000px; margin: 0 auto;">
+            <div style="text-align: left; padding: 0 2rem 1rem; border-bottom: 3px solid #000; margin-bottom: 2rem;">
+              <h2 style="font-size: 32px; font-weight: 900; margin-bottom: 10px;">Featured Merch</h2>
+              <p style="color: #666;">Browse categories on the left or click any product below</p>
+            </div>
+            
+            <div id="featured-carousel" style="position: relative; padding: 0 60px;">
+              <button id="carousel-prev" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; background: #000; color: #fff; border: 2px solid #000; font-size: 24px; font-weight: 900; cursor: pointer; z-index: 10;">‹</button>
+              
+              <div style="overflow: hidden;">
+                <div id="carousel-track" style="display: flex; transition: transform 0.5s ease; gap: 1.5rem;">
+                  <!-- Carousel items will be inserted here -->
+                </div>
+              </div>
+              
+              <button id="carousel-next" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; background: #000; color: #fff; border: 2px solid #000; font-size: 24px; font-weight: 900; cursor: pointer; z-index: 10;">›</button>
+            </div>
+            
+            <div id="carousel-dots" style="display: flex; justify-content: center; gap: 10px; margin-top: 2rem;">
+              <!-- Dots will be inserted here -->
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -238,6 +278,94 @@ const productsByCategory = allProducts.reduce((acc, product) => {
     let selectedColor = null;
     let selectedSize = null;
     let currentModalImageIndex = 0;
+    let carouselIndex = 0;
+    let featuredProducts = [];
+    
+    // Initialize featured carousel
+    function initFeaturedCarousel() {
+      if (products.length === 0) return;
+      
+      // Get random products (8-12 items)
+      const shuffled = [...products].sort(() => Math.random() - 0.5);
+      featuredProducts = shuffled.slice(0, Math.min(12, products.length));
+      
+      const carouselTrack = document.getElementById('carousel-track');
+      carouselTrack.innerHTML = featuredProducts.map(product => {
+        const images = product.images || [{ url: product.image }];
+        const colors = product.colors || [];
+        
+        return `
+          <div class="carousel-item" onclick="openProductCategory('${product.type}', '${product.categoryId}', '${product.id}')">
+            <img src="${images[0].url}" alt="${product.name}" />
+            <div class="carousel-item-info">
+              <div class="category">${product.categoryName}</div>
+              <h3>${product.name}</h3>
+              ${colors.length > 0 ? `
+                <div style="display: flex; gap: 5px; margin-bottom: 0.5rem;">
+                  ${colors.slice(0, 4).map(c => `<div style="width: 15px; height: 15px; border: 2px solid #000; border-radius: 50%; background: ${c.hex};"></div>`).join('')}
+                  ${colors.length > 4 ? `<span style="font-size: 11px; font-weight: 700;">+${colors.length - 4}</span>` : ''}
+                </div>
+              ` : ''}
+              <div class="price">£${product.price.toFixed(2)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      // Create dots (one per 3 items)
+      const totalSlides = Math.ceil(featuredProducts.length / 3);
+      const dotsContainer = document.getElementById('carousel-dots');
+      dotsContainer.innerHTML = Array.from({ length: totalSlides }, (_, i) => 
+        `<div class="carousel-dot ${i === 0 ? 'active' : ''}" onclick="goToSlide(${i})"></div>`
+      ).join('');
+      
+      // Setup navigation
+      document.getElementById('carousel-prev').addEventListener('click', prevSlide);
+      document.getElementById('carousel-next').addEventListener('click', nextSlide);
+      
+      // Auto-play
+      setInterval(nextSlide, 5000);
+    }
+    
+    function goToSlide(index) {
+      const totalSlides = Math.ceil(featuredProducts.length / 3);
+      carouselIndex = Math.max(0, Math.min(index, totalSlides - 1));
+      
+      const track = document.getElementById('carousel-track');
+      const offset = -(carouselIndex * 3 * (250 + 24)); // item width + gap
+      track.style.transform = `translateX(${offset}px)`;
+      
+      // Update dots
+      document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === carouselIndex);
+      });
+    }
+    
+    function prevSlide() {
+      const totalSlides = Math.ceil(featuredProducts.length / 3);
+      carouselIndex = (carouselIndex - 1 + totalSlides) % totalSlides;
+      goToSlide(carouselIndex);
+    }
+    
+    function nextSlide() {
+      const totalSlides = Math.ceil(featuredProducts.length / 3);
+      carouselIndex = (carouselIndex + 1) % totalSlides;
+      goToSlide(carouselIndex);
+    }
+    
+    window.openProductCategory = function(type, categoryId, productId) {
+      // Open the category
+      selectCategory(type, categoryId);
+      
+      // Wait a bit then scroll to and highlight the product
+      setTimeout(() => {
+        const productCard = document.querySelector(`[onclick*="${productId}"]`);
+        if (productCard) {
+          productCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          productCard.style.animation = 'pulse 1s';
+        }
+      }, 300);
+    };
     
     window.toggleCategory = function(categoryId) {
       const items = document.getElementById(`${categoryId}-items`);
@@ -250,7 +378,13 @@ const productsByCategory = allProducts.reduce((acc, product) => {
       const filtered = products.filter(p => p.type === type && p.categoryId === categoryId);
       
       document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-      event.target.classList.add('active');
+      // Find and activate the correct nav item
+      const navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(item => {
+        if (item.textContent.trim() === filtered[0]?.categoryName) {
+          item.classList.add('active');
+        }
+      });
       
       const gridContainer = document.getElementById('product-grid-container');
       const emptyState = document.getElementById('empty-state');
@@ -447,6 +581,9 @@ const productsByCategory = allProducts.reduce((acc, product) => {
       }
     }
     updateCartCount();
+    
+    // Initialize carousel on page load
+    initFeaturedCarousel();
   </script>
 </body>
 </html>

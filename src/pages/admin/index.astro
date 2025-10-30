@@ -1,6 +1,35 @@
 ---
 // src/pages/admin/index.astro
 import Layout from '../../layouts/Layout.astro';
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: 'dscqbze0d',
+  api_key: '555922422486159',
+  api_secret: '1OV_96Pd_x7MSdt7Bph5aNELYho',
+});
+
+// Get merch count server-side (same as manage page)
+let merchProductCount = 0;
+try {
+  const info = await cloudinary.api.resource('merch/products.json', {
+    resource_type: 'raw'
+  });
+  
+  const version = info.version;
+  const productsUrl = `https://res.cloudinary.com/dscqbze0d/raw/upload/v${version}/merch/products.json`;
+  
+  const response = await fetch(productsUrl, { cache: 'no-store' });
+  
+  if (response.ok) {
+    const data = await response.json();
+    if (Array.isArray(data)) {
+      merchProductCount = data.length;
+    }
+  }
+} catch (error) {
+  console.error('Error loading merch count:', error);
+}
 ---
 
 <Layout title="Fresh Wax Admin Dashboard">
@@ -111,42 +140,49 @@ import Layout from '../../layouts/Layout.astro';
 		.admin-logout-btn:hover {
 			background: #ffffff;
 			color: #000;
-			transform: translate(-4px, -4px);
-			box-shadow: 8px 8px 0 #000;
+			transform: translate(-2px, -2px);
+			box-shadow: 4px 4px 0 #000;
 		}
 
 		.admin-stats-row {
 			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-			gap: 20px;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 15px;
 			margin-bottom: 30px;
 		}
 
 		.admin-stat-card {
 			background: #fff;
 			border: 3px solid #000;
-			padding: 20px;
+			padding: 15px;
 			transition: all 0.2s;
+			min-height: 90px;
+			display: flex;
+			flex-direction: column;
+			justify-content: space-between;
 		}
 
 		.admin-stat-card:hover {
-			transform: translate(-4px, -4px);
-			box-shadow: 8px 8px 0 #000;
+			transform: translate(-2px, -2px);
+			box-shadow: 4px 4px 0 #000;
 		}
 
 		.admin-stat-label {
-			font-size: 12px;
+			font-size: 10px;
 			font-weight: 700;
 			color: #666;
 			text-transform: uppercase;
-			letter-spacing: 1px;
-			margin-bottom: 10px;
+			letter-spacing: 0.5px;
+			margin-bottom: 8px;
+			line-height: 1.2;
 		}
 
 		.admin-stat-value {
-			font-size: 36px;
+			font-size: 24px;
 			font-weight: 900;
 			color: #000;
+			line-height: 1;
+			word-break: break-word;
 		}
 
 		.section-header {
@@ -168,8 +204,8 @@ import Layout from '../../layouts/Layout.astro';
 
 		.admin-modules-grid {
 			display: grid;
-			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-			gap: 20px;
+			grid-template-columns: repeat(5, 1fr);
+			gap: 15px;
 			margin-bottom: 30px;
 		}
 
@@ -180,11 +216,16 @@ import Layout from '../../layouts/Layout.astro';
 			cursor: pointer;
 			transition: all 0.2s;
 			text-align: center;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			min-height: 120px;
 		}
 
 		.admin-module-card:hover {
-			transform: translate(-4px, -4px);
-			box-shadow: 8px 8px 0 #000;
+			transform: translate(-2px, -2px);
+			box-shadow: 4px 4px 0 #000;
 		}
 
 		.admin-module-icon {
@@ -193,11 +234,12 @@ import Layout from '../../layouts/Layout.astro';
 		}
 
 		.admin-module-title {
-			font-size: 14px;
+			font-size: 13px;
 			font-weight: 900;
 			color: #000;
 			text-transform: uppercase;
-			letter-spacing: 0.5px;
+			letter-spacing: 0.3px;
+			line-height: 1.3;
 		}
 
 		.success-message {
@@ -225,16 +267,72 @@ import Layout from '../../layouts/Layout.astro';
 			}
 		}
 
+		/* Tablet */
+		@media (max-width: 1024px) {
+			.admin-stats-row {
+				grid-template-columns: repeat(3, 1fr);
+			}
+
+			.admin-modules-grid {
+				grid-template-columns: repeat(4, 1fr);
+			}
+		}
+
+		/* Mobile Large */
 		@media (max-width: 768px) {
 			.admin-container {
 				padding: 15px;
 			}
 
-			.admin-header-card h1 {
-				font-size: 24px;
-				padding-right: 100px;
+			.admin-header-card {
+				padding: 20px;
 			}
 
+			.admin-header-card h1 {
+				font-size: 24px;
+				padding-right: 90px;
+			}
+
+			.admin-logout-btn {
+				padding: 8px 12px;
+				font-size: 12px;
+			}
+
+			.admin-stats-row {
+				grid-template-columns: repeat(2, 1fr);
+				gap: 12px;
+			}
+
+			.admin-stat-card {
+				padding: 12px;
+				min-height: 80px;
+			}
+
+			.admin-stat-value {
+				font-size: 20px;
+			}
+
+			.admin-modules-grid {
+				grid-template-columns: repeat(3, 1fr);
+				gap: 12px;
+			}
+
+			.admin-module-card {
+				padding: 15px;
+				min-height: 100px;
+			}
+
+			.admin-module-icon {
+				font-size: 28px;
+			}
+
+			.admin-module-title {
+				font-size: 11px;
+			}
+		}
+
+		/* Mobile Small */
+		@media (max-width: 480px) {
 			.admin-stats-row {
 				grid-template-columns: repeat(2, 1fr);
 			}
@@ -242,9 +340,14 @@ import Layout from '../../layouts/Layout.astro';
 			.admin-modules-grid {
 				grid-template-columns: repeat(2, 1fr);
 			}
+
+			.admin-module-title {
+				font-size: 10px;
+			}
 		}
 
-		@media (max-width: 480px) {
+		/* Mobile Extra Small */
+		@media (max-width: 360px) {
 			.admin-stats-row {
 				grid-template-columns: 1fr;
 			}
@@ -302,7 +405,7 @@ import Layout from '../../layouts/Layout.astro';
 				</div>
 				<div class="admin-stat-card">
 					<div class="admin-stat-label">Merch Products</div>
-					<div class="admin-stat-value" id="merchCount">0</div>
+					<div class="admin-stat-value" id="merchCount">{merchProductCount}</div>
 				</div>
 				<div class="admin-stat-card">
 					<div class="admin-stat-label">DJ Mixes</div>
@@ -321,7 +424,7 @@ import Layout from '../../layouts/Layout.astro';
 					<div class="admin-module-title">Artist Approvals</div>
 				</div>
 
-				<div class="admin-module-card" onclick="window.open('https://freshwax-uploads.pages.dev', '_blank')">
+				<div class="admin-module-card" data-link="/admin/upload-release-zip">
 					<div class="admin-module-icon">📤</div>
 					<div class="admin-module-title">Upload Release</div>
 				</div>
@@ -336,17 +439,15 @@ import Layout from '../../layouts/Layout.astro';
 					<div class="admin-module-title">Manage Releases</div>
 				</div>
 
-				<!-- Upload Merch -->
 				<div class="admin-module-card" data-link="/admin/merch-upload-tool">
-  <div class="admin-module-icon">📤</div>
-  <div class="admin-module-title">Upload Merch</div>
-</div>
+					<div class="admin-module-icon">📤</div>
+					<div class="admin-module-title">Upload Merch</div>
+				</div>
 
-<!-- Manage Merch -->
-<div class="admin-module-card" data-link="/admin/merch/manage">
-  <div class="admin-module-icon">👕</div>
-  <div class="admin-module-title">Manage Merch</div>
-</div>
+				<div class="admin-module-card" data-link="/admin/merch/manage">
+					<div class="admin-module-icon">👕</div>
+					<div class="admin-module-title">Manage Merch</div>
+				</div>
 
 				<div class="admin-module-card" data-link="/admin/account/manage">
 					<div class="admin-module-icon">👥</div>
@@ -437,21 +538,26 @@ import Layout from '../../layouts/Layout.astro';
 
 		async function loadStats() {
 			try {
-				// Pending artists
-				const pendingQuery = query(
-					collection(db, 'artists'),
-					where('status', '==', 'pending')
-				);
-				const pendingSnapshot = await getDocs(pendingQuery);
-				document.getElementById('pendingArtistsCount').textContent = pendingSnapshot.size;
+				// FIXED: Get pending artists by checking approved field
+				const artistsSnapshot = await getDocs(collection(db, 'artists'));
+				let pendingCount = 0;
+				
+				artistsSnapshot.forEach(doc => {
+					const artist = doc.data();
+					// Count as pending if approved is false or undefined
+					if (artist.approved === false || artist.approved === undefined) {
+						pendingCount++;
+					}
+				});
+				
+				document.getElementById('pendingArtistsCount').textContent = pendingCount;
+				console.log('Pending artists count:', pendingCount); // Debug log
 
 				// Store releases
 				const releasesSnapshot = await getDocs(collection(db, 'releases'));
 				document.getElementById('activeReleases').textContent = releasesSnapshot.size;
 
-				// Merch products
-				const merchSnapshot = await getDocs(collection(db, 'merch_products'));
-				document.getElementById('merchCount').textContent = merchSnapshot.size;
+				// Merch count is set server-side, no need to fetch here
 
 				// Sales and fees
 				const ordersSnapshot = await getDocs(collection(db, 'orders'));

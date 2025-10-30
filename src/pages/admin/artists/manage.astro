@@ -503,6 +503,8 @@
           return dateB - dateA;
         });
 
+        console.log('Loaded artists:', allArtists); // Debug log
+
         document.getElementById('loadingState').style.display = 'none';
         document.getElementById('artistsTable').style.display = 'block';
         
@@ -523,27 +525,38 @@
           (artist.artistName?.toLowerCase().includes(searchTerm) || '') ||
           (artist.email?.toLowerCase().includes(searchTerm) || '');
         
+        // FIXED: Check for approved field, handle undefined as pending
+        const isApproved = artist.approved === true;
+        const isPending = artist.approved === false || artist.approved === undefined;
+        
         const matchesFilter = 
           currentFilter === 'all' ? true :
-          currentFilter === 'approved' ? artist.approved === true :
-          currentFilter === 'pending' ? artist.approved === false : true;
+          currentFilter === 'approved' ? isApproved :
+          currentFilter === 'pending' ? isPending : true;
         
         return matchesSearch && matchesFilter;
       });
+
+      console.log('Filtered artists:', filtered); // Debug log
+      console.log('Current filter:', currentFilter); // Debug log
 
       if (filtered.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px;">No artists found</td></tr>';
         return;
       }
 
-      tbody.innerHTML = filtered.map(artist => `
+      tbody.innerHTML = filtered.map(artist => {
+        // FIXED: Handle undefined approved status
+        const isApproved = artist.approved === true;
+        
+        return `
         <tr>
           <td><strong>${artist.artistName || 'N/A'}</strong></td>
           <td>${artist.email || 'N/A'}</td>
           <td>${artist.phoneNumber || 'N/A'}</td>
           <td>
-            <span class="admin-status-badge ${artist.approved ? 'approved' : 'pending'}">
-              ${artist.approved ? 'Approved' : 'Pending'}
+            <span class="admin-status-badge ${isApproved ? 'approved' : 'pending'}">
+              ${isApproved ? 'Approved' : 'Pending'}
             </span>
           </td>
           <td>${artist.createdAt ? new Date(artist.createdAt).toLocaleDateString() : 'N/A'}</td>
@@ -554,7 +567,7 @@
             </div>
           </td>
         </tr>
-      `).join('');
+      `}).join('');
     }
 
     // Edit artist
@@ -566,7 +579,8 @@
       document.getElementById('editArtistName').value = artist.artistName || '';
       document.getElementById('editEmail').value = artist.email || '';
       document.getElementById('editPhone').value = artist.phoneNumber || '';
-      document.getElementById('editApproved').value = artist.approved ? 'true' : 'false';
+      // FIXED: Handle undefined approved status
+      document.getElementById('editApproved').value = artist.approved === true ? 'true' : 'false';
 
       document.getElementById('editModal').classList.add('active');
     };

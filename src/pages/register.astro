@@ -1,433 +1,448 @@
 ---
 // src/pages/register.astro
+// FIXED VERSION - Prevents auto-login for unapproved artists
 ---
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artist Registration - Freshwax</title>
-</head>
-<body>
-    <div class="registration-container">
-        <div class="logo">
-            <img src="/logo.webp" alt="Freshwax" />
-            <p>Artist / Label Registration</p>
-        </div>
-
-        <div class="info-note">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
-            <p>Artist accounts are for uploading music only. To purchase music, you'll need a separate customer account with a different email address.</p>
-        </div>
-
-        <div class="message success-message" id="successMessage">
-            <h3 style="margin-bottom: 10px; font-size: 18px;">Registration Successful!</h3>
-            <p style="margin-bottom: 15px;">Your account is pending approval. We'll email you when approved.</p>
-            <a href="/login" class="success-btn">Go to Login</a>
-        </div>
-
-        <div class="message error-message" id="errorMessage"></div>
-
-        <form id="registrationForm">
-            <div class="form-group">
-                <label for="artistName">Artist / Label Name *</label>
-                <input type="text" id="artistName" name="artistName" required>
-                <span class="error" id="artistNameError">Please enter your artist or label name</span>
-            </div>
-
-            <div class="form-group">
-                <label for="email">Email Address *</label>
-                <input type="email" id="email" name="email" required>
-                <span class="error" id="emailError">Please enter a valid email address</span>
-            </div>
-
-            <div class="form-group">
-                <label for="password">Password *</label>
-                <input type="password" id="password" name="password" required>
-                <span class="error" id="passwordError">Password must be at least 6 characters</span>
-            </div>
-
-            <div class="form-group">
-                <label for="confirmPassword">Confirm Password *</label>
-                <input type="password" id="confirmPassword" name="confirmPassword" required>
-                <span class="error" id="confirmPasswordError">Passwords do not match</span>
-            </div>
-
-            <div class="checkbox-group">
-                <input type="checkbox" id="terms" name="terms" required>
-                <label for="terms">
-                    I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a> *
-                </label>
-            </div>
-
-            <button type="submit" class="submit-btn" id="submitBtn">Create Account</button>
-        </form>
-
-        <div class="login-link">
-            Already have an account? <a href="/login">Sign in here</a>
-        </div>
-    </div>
-</body>
-</html>
-
-<style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artist Registration - Fresh Wax</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
 
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-        background: #000000;
-        min-height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 40px 20px;
+    .register-container {
+      max-width: 500px;
+      width: 100%;
     }
 
-    .registration-container {
-        background: #ffffff;
-        border-radius: 12px;
-        padding: 40px;
-        max-width: 500px;
-        width: 100%;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    .register-logo {
+      text-align: center;
+      margin-bottom: 30px;
     }
 
-    .logo {
-        text-align: center;
-        margin-bottom: 20px;
+    .register-logo img {
+      height: 80px;
+      width: auto;
     }
 
-    .logo img {
-        height: 60px;
-        margin-bottom: 10px;
+    .register-card {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 40px;
     }
 
-    .logo p {
-        color: #666666;
-        font-size: 14px;
-        font-weight: 500;
+    .register-header {
+      margin-bottom: 30px;
     }
 
-    .info-note {
-        background: #fff3cd;
-        border: 1px solid #ffc107;
-        border-radius: 8px;
-        padding: 12px 15px;
-        margin-bottom: 20px;
-        display: flex;
-        gap: 10px;
-        align-items: flex-start;
+    .register-header h1 {
+      font-size: 28px;
+      font-weight: 900;
+      color: #000;
+      margin-bottom: 8px;
+      text-transform: uppercase;
     }
 
-    .info-note svg {
-        flex-shrink: 0;
-        margin-top: 2px;
-        color: #856404;
-    }
-
-    .info-note p {
-        margin: 0;
-        font-size: 13px;
-        color: #856404;
-        line-height: 1.5;
+    .register-header p {
+      color: #666;
+      font-size: 14px;
     }
 
     .form-group {
-        margin-bottom: 20px;
+      margin-bottom: 20px;
     }
 
-    label {
-        display: block;
-        margin-bottom: 8px;
-        color: #000000;
-        font-weight: 600;
-        font-size: 14px;
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      color: #000;
     }
 
-    input[type="text"],
-    input[type="email"],
-    input[type="password"] {
-        width: 100%;
-        padding: 12px 15px;
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        font-size: 14px;
-        transition: all 0.3s ease;
-        background: #ffffff;
-        color: #000000;
+    .form-input {
+      width: 100%;
+      padding: 12px;
+      border: 3px solid #000;
+      font-size: 14px;
+      font-weight: 600;
+      background: #fff;
     }
 
-    input:focus {
-        outline: none;
-        border-color: #000000;
-        box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
+    .form-input:focus {
+      outline: none;
+      box-shadow: 4px 4px 0 #000;
+      transform: translate(-2px, -2px);
     }
 
-    input::placeholder {
-        color: #999999;
+    .register-btn {
+      width: 100%;
+      padding: 15px;
+      background: #000;
+      color: #fff;
+      border: 3px solid #000;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      font-size: 14px;
+      letter-spacing: 0.5px;
     }
 
-    .checkbox-group {
-        display: flex;
-        align-items: flex-start;
-        margin-bottom: 15px;
+    .register-btn:hover:not(:disabled) {
+      background: #fff;
+      color: #000;
+      transform: translate(-4px, -4px);
+      box-shadow: 8px 8px 0 #000;
     }
 
-    .checkbox-group input[type="checkbox"] {
-        margin-right: 10px;
-        margin-top: 3px;
-        width: 16px;
-        height: 16px;
-        cursor: pointer;
+    .register-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
-    .checkbox-group label {
-        margin-bottom: 0;
-        font-weight: normal;
-        font-size: 13px;
-        color: #666666;
-        cursor: pointer;
+    .register-footer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 14px;
     }
 
-    .checkbox-group a {
-        color: #000000;
-        text-decoration: underline;
+    .register-footer a {
+      color: #000;
+      font-weight: 700;
+      text-decoration: none;
+      border-bottom: 2px solid #000;
     }
 
-    .checkbox-group a:hover {
-        text-decoration: none;
-    }
-
-    .submit-btn {
-        width: 100%;
-        padding: 15px;
-        background: #000000;
-        color: #ffffff;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        margin-top: 10px;
-    }
-
-    .submit-btn:hover:not(:disabled) {
-        background: #333333;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-
-    .submit-btn:active:not(:disabled) {
-        transform: translateY(0);
-    }
-
-    .submit-btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-
-    .login-link {
-        text-align: center;
-        margin-top: 20px;
-        color: #666666;
-        font-size: 14px;
-    }
-
-    .login-link a {
-        color: #000000;
-        text-decoration: none;
-        font-weight: 600;
-    }
-
-    .login-link a:hover {
-        text-decoration: underline;
-    }
-
-    .error {
-        color: #dc2626;
-        font-size: 12px;
-        margin-top: 5px;
-        display: none;
-    }
-
-    .message {
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        display: none;
-        text-align: center;
-        font-weight: 500;
-    }
-
-    .success-message {
-        background: #f0fdf4;
-        color: #166534;
-        border: 1px solid #bbf7d0;
+    .register-footer a:hover {
+      background: #000;
+      color: #fff;
     }
 
     .error-message {
-        background: #fef2f2;
-        color: #991b1b;
-        border: 1px solid #fecaca;
+      background: #fff;
+      border: 3px solid #000;
+      padding: 15px;
+      margin-bottom: 20px;
+      font-weight: 700;
+      color: #000;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .success-message {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 30px;
+      text-align: center;
+      display: none;
+    }
+
+    .success-message.show {
+      display: block;
+    }
+
+    .success-message h2 {
+      font-size: 24px;
+      font-weight: 900;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+    }
+
+    .success-message p {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 20px;
     }
 
     .success-btn {
-        display: inline-block;
-        padding: 10px 24px;
-        background: #166534;
-        color: #ffffff;
-        text-decoration: none;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 14px;
-        transition: all 0.2s ease;
+      display: inline-block;
+      padding: 12px 24px;
+      background: #000;
+      color: #fff;
+      border: 3px solid #000;
+      font-weight: 700;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all 0.2s;
     }
 
     .success-btn:hover {
-        background: #14532d;
-        transform: translateY(-1px);
+      background: #fff;
+      color: #000;
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0 #000;
     }
 
-    @media (max-width: 640px) {
-        .registration-container {
-            padding: 30px 20px;
-        }
-
-        .logo img {
-            height: 50px;
-        }
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #fff;
+      border-top: 2px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      margin-left: 10px;
     }
-</style>
 
-<script type="module">
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 480px) {
+      .register-card {
+        padding: 30px 20px;
+      }
+      
+      .register-header h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="register-container">
+    <div class="register-logo">
+      <img src="/logo.webp" alt="Fresh Wax" onerror="this.style.display='none'">
+    </div>
+
+    <!-- Registration Form -->
+    <div id="registrationForm" class="register-card">
+      <div class="register-header">
+        <h1>🎤 Artist Registration</h1>
+        <p>Join the Fresh Wax family</p>
+      </div>
+
+      <div id="errorMessage" class="error-message">
+        <span>⚠️</span>
+        <span id="errorText"></span>
+      </div>
+
+      <form id="registerForm">
+        <div class="form-group">
+          <label class="form-label">Artist Name</label>
+          <input 
+            type="text" 
+            id="artistName" 
+            class="form-input" 
+            placeholder="DJ Cool"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input 
+            type="email" 
+            id="email" 
+            class="form-input" 
+            placeholder="artist@example.com"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input 
+            type="tel" 
+            id="phoneNumber" 
+            class="form-input" 
+            placeholder="+44 7700 900000"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            class="form-input" 
+            placeholder="••••••••"
+            required
+            minlength="6"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <input 
+            type="password" 
+            id="confirmPassword" 
+            class="form-input" 
+            placeholder="••••••••"
+            required
+          >
+        </div>
+
+        <button type="submit" class="register-btn" id="registerBtn">
+          Register
+        </button>
+      </form>
+
+      <div class="register-footer">
+        Already have an account? <a href="/login">Sign in here</a>
+      </div>
+    </div>
+
+    <!-- Success Message -->
+    <div id="successMessage" class="register-card success-message">
+      <h2>✅ Registration Successful!</h2>
+      <p>
+        Your artist account has been created and is pending approval. 
+        Our admin team will review your application shortly.
+      </p>
+      <p>
+        <strong>You will receive an email notification once your account is approved.</strong>
+      </p>
+      <p>
+        Please do not attempt to log in until you receive approval confirmation.
+      </p>
+      <a href="/login" class="success-btn">Go to Login</a>
+    </div>
+  </div>
+
+  <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-    import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+    import { getAuth, createUserWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+    import { getFirestore, doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const firebaseConfig = {
-        apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
-        authDomain: "freshwax-store.firebaseapp.com",
-        projectId: "freshwax-store",
-        storageBucket: "freshwax-store.firebasestorage.app",
-        messagingSenderId: "675435782973",
-        appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      authDomain: "freshwax-store.firebaseapp.com",
+      projectId: "freshwax-store",
+      storageBucket: "freshwax-store.firebasestorage.app",
+      messagingSenderId: "675435782973",
+      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const form = document.getElementById('registrationForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const successMessage = document.getElementById('successMessage');
+    const registerForm = document.getElementById('registerForm');
+    const registerBtn = document.getElementById('registerBtn');
     const errorMessage = document.getElementById('errorMessage');
+    const errorText = document.getElementById('errorText');
+    const registrationFormDiv = document.getElementById('registrationForm');
+    const successMessageDiv = document.getElementById('successMessage');
 
-    form.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        document.querySelectorAll('.error').forEach(err => err.style.display = 'none');
-        successMessage.style.display = 'none';
-        errorMessage.style.display = 'none';
-        
-        let isValid = true;
-        
-        const artistName = document.getElementById('artistName').value.trim();
-        if (!artistName) {
-            document.getElementById('artistNameError').style.display = 'block';
-            isValid = false;
-        }
-        
-        const email = document.getElementById('email').value.trim();
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            document.getElementById('emailError').style.display = 'block';
-            isValid = false;
-        }
-        
-        const password = document.getElementById('password').value;
-        if (password.length < 6) {
-            document.getElementById('passwordError').style.display = 'block';
-            isValid = false;
-        }
-        
-        const confirmPassword = document.getElementById('confirmPassword').value;
-        if (password !== confirmPassword) {
-            document.getElementById('confirmPasswordError').style.display = 'block';
-            isValid = false;
-        }
-        
-        const terms = document.getElementById('terms').checked;
-        if (!terms) {
-            errorMessage.textContent = 'Please accept the Terms of Service and Privacy Policy';
-            errorMessage.style.display = 'block';
-            isValid = false;
-        }
-        
-        if (!isValid) return;
+    function showError(message) {
+      errorText.textContent = message;
+      errorMessage.classList.add('show');
+    }
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Creating Account...';
+    function hideError() {
+      errorMessage.classList.remove('show');
+    }
+
+    function setLoading(loading) {
+      registerBtn.disabled = loading;
+      if (loading) {
+        registerBtn.innerHTML = 'Creating Account<span class="spinner"></span>';
+      } else {
+        registerBtn.textContent = 'Register';
+      }
+    }
+
+    function showSuccess() {
+      registrationFormDiv.style.display = 'none';
+      successMessageDiv.classList.add('show');
+    }
+
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+      setLoading(true);
+
+      const artistName = document.getElementById('artistName').value;
+      const email = document.getElementById('email').value;
+      const phoneNumber = document.getElementById('phoneNumber').value;
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      // Validate passwords match
+      if (password !== confirmPassword) {
+        showError('Passwords do not match');
+        setLoading(false);
+        return;
+      }
+
+      // Validate password length
+      if (password.length < 6) {
+        showError('Password must be at least 6 characters');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        console.log('Creating user account...');
         
-        try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
+        // Create Firebase Auth user
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-            await updateProfile(user, {
-                displayName: artistName
-            });
+        console.log('User created:', user.uid);
 
-            await setDoc(doc(db, 'artists', user.uid), {
-                artistName: artistName,
-                email: email,
-                approved: false,
-                registeredAt: new Date().toISOString()
-            });
+        // Create artist document with approved = false
+        const artistData = {
+          uid: user.uid,
+          artistName: artistName,
+          email: email,
+          phoneNumber: phoneNumber || '',
+          approved: false, // ⭐ CRITICAL: Set to false by default
+          createdAt: new Date().toISOString(),
+          status: 'pending' // Optional: additional status field
+        };
 
-            form.style.display = 'none';
-            successMessage.style.display = 'block';
+        console.log('Creating artist document:', artistData);
 
-           
-        } catch (error) {
-            let errorMsg = 'Registration failed. Please try again.';
-            
-            if (error.code === 'auth/email-already-in-use') {
-                errorMsg = 'This email is already registered. Please sign in instead.';
-            } else if (error.code === 'auth/invalid-email') {
-                errorMsg = 'Invalid email address.';
-            } else if (error.code === 'auth/weak-password') {
-                errorMsg = 'Password is too weak. Please use a stronger password.';
-            } else if (error.code === 'auth/network-request-failed') {
-                errorMsg = 'Network error. Please check your connection.';
-            }
-            
-            errorMessage.textContent = errorMsg;
-            errorMessage.style.display = 'block';
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Create Account';
-            
-            console.error('Registration error:', error);
-        }
-    });
+        await setDoc(doc(db, 'artists', user.uid), artistData);
 
-    document.getElementById('confirmPassword').addEventListener('blur', function() {
-        const password = document.getElementById('password').value;
-        const confirmPassword = this.value;
-        const error = document.getElementById('confirmPasswordError');
-        
-        if (confirmPassword && password !== confirmPassword) {
-            error.style.display = 'block';
+        console.log('Artist document created');
+
+        // ⭐ CRITICAL: Sign out the user immediately
+        // This prevents them from staying logged in
+        await signOut(auth);
+
+        console.log('User signed out');
+
+        // Show success message
+        showSuccess();
+
+      } catch (error) {
+        console.error('Registration error:', error);
+        setLoading(false);
+
+        // Handle specific Firebase errors
+        if (error.code === 'auth/email-already-in-use') {
+          showError('An account with this email already exists');
+        } else if (error.code === 'auth/invalid-email') {
+          showError('Invalid email address');
+        } else if (error.code === 'auth/weak-password') {
+          showError('Password is too weak. Use at least 6 characters');
         } else {
-            error.style.display = 'none';
+          showError('Registration failed. Please try again.');
         }
+      }
     });
-</script>
+  </script>
+</body>
+</html>

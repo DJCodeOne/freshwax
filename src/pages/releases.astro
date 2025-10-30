@@ -5,7 +5,16 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import ReleasePlate from '../components/ReleasePlate.astro';
 import { getAllReleases } from '../lib/releases';
+
+// Get ALL releases from Cloudinary master JSON
 const releases = await getAllReleases();
+
+// Sort by newest first (using createdAt or releaseDate)
+const sortedReleases = releases.sort((a, b) => {
+  const dateA = new Date(a.createdAt || a.releaseDate || 0).getTime();
+  const dateB = new Date(b.createdAt || b.releaseDate || 0).getTime();
+  return dateB - dateA;
+});
 ---
 
 <Layout title="Fresh Wax - Releases">
@@ -17,10 +26,10 @@ const releases = await getAllReleases();
     <aside class="w-64 bg-white border-r border-gray-200 sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto flex-shrink-0 hidden lg:block">
       <div class="p-6">
         <h2 class="text-2xl font-black text-gray-900 mb-4 tracking-tight uppercase" style="font-family: 'Impact', 'Arial Black', sans-serif; letter-spacing: 0.05em;">Releases</h2>
-        <p class="text-sm text-gray-600 mb-6">{releases.length} release{releases.length !== 1 ? 's' : ''}</p>
+        <p class="text-sm text-gray-600 mb-6">{sortedReleases.length} release{sortedReleases.length !== 1 ? 's' : ''}</p>
         
         <nav class="space-y-1">
-          {releases.map((release) => (
+          {sortedReleases.map((release) => (
             <a 
               href={`#${release.id}`}
               class="release-nav-link flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors group"
@@ -49,20 +58,27 @@ const releases = await getAllReleases();
     <main class="flex-1 px-6 sm:px-8 md:px-12 lg:px-20 xl:px-24 py-8 sm:py-12">
       <div class="max-w-4xl mx-auto">
         <header class="mb-8 text-center lg:text-left">
-          <h1 class="text-3xl sm:text-4xl font-black text-gray-900 mb-2 tracking-tight uppercase" style="font-family: 'Impact', 'Arial Black', sans-serif; letter-spacing: 0.05em;">Releases</h1>
-          <p class="text-gray-600">Fresh jungle beats and vinyl releases</p>
+          <h1 class="text-3xl sm:text-4xl font-black text-gray-900 mb-2 tracking-tight uppercase" style="font-family: 'Impact', 'Arial Black', sans-serif; letter-spacing: 0.05em;">All Releases</h1>
+          <p class="text-gray-600">Fresh jungle beats and vinyl releases - {sortedReleases.length} total</p>
         </header>
 
-        <div class="space-y-6">
-          {releases.map((release) => (
-            <div id={release.id} class="scroll-mt-6">
-              <ReleasePlate {...release} />
-            </div>
-          ))}
-        </div>
+        {sortedReleases.length === 0 ? (
+          <div class="text-center py-20 bg-white rounded-lg">
+            <div class="text-6xl mb-4">🎵</div>
+            <h3 class="text-2xl font-bold text-gray-900 mb-2">No Releases Yet</h3>
+            <p class="text-gray-600 mb-6">New releases coming soon!</p>
+          </div>
+        ) : (
+          <div class="space-y-6">
+            {sortedReleases.map((release) => (
+              <div id={release.id} class="scroll-mt-6">
+                <ReleasePlate {...release} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </main>
-    </div>
   </div>
 
   <Footer />

@@ -44,12 +44,66 @@ try {
       background: #ffffff;
     }
 
+    .admin-logo-container {
+      background: #ffffff;
+      padding: 30px 20px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border: 3px solid #000;
+      position: relative;
+    }
+
+    .admin-logo {
+      height: 80px;
+      width: auto;
+      max-width: 100%;
+      display: block;
+    }
+
+    .back-btn {
+      position: absolute;
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
+      padding: 10px 20px;
+      background: #000;
+      color: #fff;
+      border: 3px solid #000;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 13px;
+      z-index: 10;
+    }
+
+    .back-btn:hover {
+      background: #fff;
+      color: #000;
+      transform: translateY(-50%) translate(-2px, -2px);
+      box-shadow: 4px 4px 0 #000;
+    }
+
     .admin-header {
       background: #fff;
       border: 3px solid #000;
       padding: 30px;
       margin-bottom: 30px;
       position: relative;
+    }
+
+    .admin-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: #000;
     }
 
     .admin-header h1 {
@@ -62,56 +116,47 @@ try {
     .admin-header p {
       color: #666;
       font-size: 16px;
-    }
-
-    .back-btn {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      padding: 10px 20px;
-      background: #000;
-      color: #fff;
-      border: 3px solid #000;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-transform: uppercase;
-      text-decoration: none;
-      display: inline-block;
-    }
-
-    .back-btn:hover {
-      background: #fff;
-      color: #000;
-      transform: translate(-4px, -4px);
-      box-shadow: 8px 8px 0 #000;
+      margin: 0;
     }
 
     .stats-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
       margin-bottom: 30px;
     }
 
     .stat-card {
       background: #fff;
       border: 3px solid #000;
-      padding: 20px;
+      padding: 15px;
+      transition: all 0.2s;
+      min-height: 90px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .stat-card:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0 #000;
     }
 
     .stat-label {
-      font-size: 12px;
+      font-size: 10px;
       font-weight: 700;
       color: #666;
       text-transform: uppercase;
-      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      line-height: 1.2;
     }
 
     .stat-value {
-      font-size: 36px;
+      font-size: 24px;
       font-weight: 900;
       color: #000;
+      line-height: 1;
     }
 
     .mix-table {
@@ -149,6 +194,7 @@ try {
 
     .mix-table td {
       padding: 15px;
+      vertical-align: middle;
     }
 
     .mix-artwork {
@@ -348,13 +394,97 @@ try {
       margin-bottom: 20px;
       font-weight: 700;
     }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .admin-container {
+        padding: 15px;
+      }
+
+      .admin-logo-container {
+        padding: 20px 15px;
+      }
+
+      .admin-logo {
+        height: 60px;
+      }
+
+      .back-btn {
+        padding: 8px 12px;
+        font-size: 11px;
+        right: 15px;
+      }
+
+      .admin-header h1 {
+        font-size: 24px;
+      }
+
+      .admin-header p {
+        font-size: 14px;
+      }
+
+      .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      .stat-card {
+        padding: 12px;
+        min-height: 80px;
+      }
+
+      .stat-value {
+        font-size: 20px;
+      }
+
+      .mix-table {
+        font-size: 14px;
+      }
+
+      .mix-table th,
+      .mix-table td {
+        padding: 10px;
+      }
+
+      .mix-artwork {
+        width: 50px;
+        height: 50px;
+      }
+
+      .btn-group {
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .btn {
+        padding: 6px 12px;
+        font-size: 11px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .stats-row {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 
   <div class="admin-container">
+    <!-- Logo with Back Button -->
+    <div class="admin-logo-container">
+      <img 
+        src="/logo.webp" 
+        alt="Fresh Wax" 
+        class="admin-logo"
+        onerror="this.style.display='none'"
+      >
+      <a href="/admin" class="back-btn">← Dashboard</a>
+    </div>
+
+    <!-- Header -->
     <div class="admin-header">
-      <a href="/admin" class="back-btn">← Back to Dashboard</a>
       <h1>🎧 Manage DJ Mixes</h1>
-      <p>Review, moderate, and delete DJ mix submissions</p>
+      <p>Review and manage all uploaded DJ mixes</p>
     </div>
 
     {errorMessage && (

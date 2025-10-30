@@ -1,10 +1,14 @@
 ---
 // src/components/ReleasePlate.astro
+// REDESIGNED to match exact screenshot layout
 interface Track {
-  id: string;
-  title: string;
-  preview_url: string | null;
-  track_number: number;
+  id?: string;
+  title?: string;
+  name?: string;
+  preview_url?: string | null;
+  previewUrl?: string | null;
+  track_number?: number;
+  number?: number;
 }
 
 interface Props {
@@ -41,6 +45,14 @@ const {
   description = ''
 } = Astro.props;
 
+// Generate track IDs and normalize data
+const tracksWithIds = tracks.map((track, index) => ({
+  id: track.id || `${id}-track-${track.track_number || track.number || index + 1}`,
+  title: track.title || track.name || `Track ${track.track_number || track.number || index + 1}`,
+  preview_url: track.preview_url || track.previewUrl || null,
+  track_number: track.track_number || track.number || index + 1
+}));
+
 const formattedDate = new Date(releaseDate).toLocaleDateString('en-GB', {
   day: 'numeric',
   month: 'short',
@@ -48,274 +60,219 @@ const formattedDate = new Date(releaseDate).toLocaleDateString('en-GB', {
 });
 
 const vinylAvailable = hasVinyl && vinylStock > 0;
-const initialTracksDesktop = 2;
-const initialTracksMobile = 2;
+const visibleTracks = 5;
 const trackPrice = 1.00;
 ---
 
-<article class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300" data-label={label} data-artist={artist}>
-  <!-- Mobile Layout -->
-  <div class="sm:hidden">
-    <div class="relative w-full">
-      <img src={artworkUrl} alt={`${title} by ${artist}`} class="w-full aspect-square object-cover" />
-      
-      <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent flex gap-2 justify-center">
-        <button 
-          data-release-id={id}
-          data-product-type="digital"
-          data-price={digitalPrice}
-          data-title={title}
-          data-artist={artist}
-          class="add-to-cart bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white px-3 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-semibold"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-          </svg>
-          £{digitalPrice.toFixed(2)}
-        </button>
-        
-        {hasVinyl && (
-          <button 
-            data-release-id={id}
-            data-product-type="vinyl"
-            data-price={vinylPrice}
-            data-digital-price={digitalPrice}
-            data-title={title}
-            data-artist={artist}
-            data-includes-digital="true"
-            disabled={!vinylAvailable}
-            class={`add-to-cart px-3 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-semibold ${vinylAvailable ? 'bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white' : 'bg-gray-400 text-gray-200 cursor-not-allowed'}`}
-          >
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
-              <circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-              <circle cx="12" cy="12" r="2" fill="currentColor"/>
-            </svg>
-            {vinylAvailable ? `£${vinylPrice?.toFixed(2)}` : 'Sold Out'}
-          </button>
-        )}
-      </div>
+<article class="bg-white overflow-hidden" data-release={id}>
+  <div class="flex gap-6">
+    <!-- LEFT: ARTWORK (square, centered vertically) -->
+    <div class="relative flex-shrink-0 flex items-center" style="width: 220px;">
+      <img 
+        src={artworkUrl} 
+        alt={`${title} by ${artist}`} 
+        class="w-full object-cover"
+        style="width: 220px; height: 220px;"
+      />
     </div>
-    
-    <div class="p-4">
-      <div class="mb-3">
-        <h3 class="text-xl font-bold text-gray-900 mb-1 leading-tight">{title}</h3>
+
+    <!-- MIDDLE: INFO SECTION -->
+    <div class="flex-1" style="max-width: 280px;">
+      <div class="space-y-3">
+        <!-- Title -->
+        <h3 class="text-2xl font-black text-gray-900 leading-tight">{title}</h3>
+        
+        <!-- Artist -->
         <button 
-          class="filter-by-artist text-base text-gray-600 mb-1 hover:text-blue-600 hover:underline transition-colors text-left"
+          class="filter-by-artist text-lg font-bold text-gray-700 hover:text-black hover:underline transition-colors text-left block"
           data-artist={artist}
         >
           {artist}
         </button>
+        
+        <!-- Label -->
         {label && (
           <button 
-            class="filter-by-label text-sm text-gray-500 mb-2 hover:text-blue-600 hover:underline transition-colors block text-left"
+            class="filter-by-label text-base font-semibold text-gray-500 hover:text-black hover:underline transition-colors text-left block"
             data-label={label}
           >
             {label}
           </button>
         )}
-        
-        <div class="flex items-center gap-2 flex-wrap">
-          {isPreorder && <span class="inline-block bg-orange-100 text-orange-800 text-xs font-semibold px-2 py-0.5 rounded">Pre-order</span>}
-          <span class="text-xs text-gray-500">{isPreorder ? `Ships ${formattedDate}` : formattedDate}</span>
-          {vinylAvailable && vinylStock <= 5 && <span class="inline-block bg-red-100 text-red-800 text-xs font-semibold px-2 py-0.5 rounded">Only {vinylStock} left</span>}
-          {hasVinyl && vinylAvailable && <span class="inline-block bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-0.5 rounded">Vinyl includes digital</span>}
+
+        <!-- Date -->
+        <div class="text-sm font-semibold text-gray-700">
+          {formattedDate}
         </div>
-      </div>
-      
-      {extraNotes && <div class="mb-3 p-2 bg-blue-50 border-l-4 border-blue-400 rounded"><p class="text-xs text-blue-900">{extraNotes}</p></div>}
-      
-      {tracks.length > 0 && (
-        <div class="mt-3">
-          <div class="space-y-2">
-            {tracks.slice(0, initialTracksMobile).map((track) => (
-              <div class="flex items-center gap-2 bg-gray-50 rounded p-2">
-                <span class="text-xs font-semibold text-gray-500 w-5 flex-shrink-0">{track.track_number}.</span>
-                <p class="text-xs font-medium text-gray-900 flex-1 min-w-0 truncate" title={track.title}>{track.title}</p>
-                <button class="play-button flex-shrink-0 flex items-center justify-center w-6 h-6 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors" data-track-id={track.id} title="Play">
-                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                </button>
-                <div class="w-24 flex-shrink-0 waveform-inline" data-track-id={track.id}></div>
-                <button 
-                  class="buy-track flex-shrink-0 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white text-xs font-bold px-2.5 py-1.5 rounded transition-colors whitespace-nowrap ml-1"
-                  data-track-id={track.id}
-                  data-track-title={track.title}
-                  data-track-price={trackPrice}
-                  data-release-id={id}
-                  data-artist={artist}
-                  title="Buy track"
-                >
-                  £{trackPrice.toFixed(2)}
-                </button>
-                <audio class="hidden track-audio" data-track-id={track.id} preload="none">
-                  <source src={track.preview_url || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'} type="audio/mpeg" />
-                </audio>
-              </div>
-            ))}
-          </div>
-          {tracks.length > initialTracksMobile && (
-            <details class="mt-2">
-              <summary class="cursor-pointer text-xs text-blue-600 hover:text-blue-800 font-semibold p-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors">
-                + Show {tracks.length - initialTracksMobile} more track{tracks.length - initialTracksMobile !== 1 ? 's' : ''}
-              </summary>
-              <div class="space-y-2 mt-2">
-                {tracks.slice(initialTracksMobile).map((track) => (
-                  <div class="flex items-center gap-2 bg-gray-50 rounded p-2">
-                    <span class="text-xs font-semibold text-gray-500 w-5 flex-shrink-0">{track.track_number}.</span>
-                    <p class="text-xs font-medium text-gray-900 flex-1 min-w-0 truncate" title={track.title}>{track.title}</p>
-                    <button class="play-button flex-shrink-0 flex items-center justify-center w-6 h-6 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors" data-track-id={track.id} title="Play">
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    </button>
-                    <div class="w-24 flex-shrink-0 waveform-inline" data-track-id={track.id}></div>
-                    <button 
-                      class="buy-track flex-shrink-0 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white text-xs font-bold px-2.5 py-1.5 rounded transition-colors whitespace-nowrap ml-1"
-                      data-track-id={track.id}
-                      data-track-title={track.title}
-                      data-track-price={trackPrice}
-                      data-release-id={id}
-                      data-artist={artist}
-                      title="Buy track"
-                    >
-                      £{trackPrice.toFixed(2)}
-                    </button>
-                    <audio class="hidden track-audio" data-track-id={track.id} preload="none">
-                      <source src={track.preview_url || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'} type="audio/mpeg" />
-                    </audio>
-                  </div>
-                ))}
-              </div>
-            </details>
+
+        <!-- Badges -->
+        <div class="flex flex-wrap gap-2">
+          {vinylAvailable && vinylStock <= 5 && (
+            <span class="inline-block bg-gray-900 text-white text-xs font-bold px-3 py-1 rounded-full">
+              Only {vinylStock} left
+            </span>
+          )}
+          {hasVinyl && vinylAvailable && (
+            <span class="inline-block bg-gray-700 text-white text-xs font-bold px-3 py-1 rounded-full">
+              Vinyl + Digital
+            </span>
           )}
         </div>
-      )}
-    </div>
-  </div>
-  
-  <!-- Desktop Layout -->
-  <div class="hidden sm:flex">
-    <div class="relative w-64 h-64 flex-shrink-0">
-      <img src={artworkUrl} alt={`${title} by ${artist}`} class="w-full h-full object-cover" />
-      
-      <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent flex gap-2 justify-center">
-        <button 
-          data-release-id={id}
-          data-product-type="digital"
-          data-price={digitalPrice}
-          data-title={title}
-          data-artist={artist}
-          class="add-to-cart bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-          </svg>
-          <span class="text-sm font-semibold">£{digitalPrice.toFixed(2)}</span>
-        </button>
-        
-        {hasVinyl && (
+
+        <!-- Description/Notes -->
+        {extraNotes && (
+          <div class="p-3 bg-gray-100 border-l-4 border-gray-400 rounded">
+            <p class="text-sm text-gray-800 font-medium">{extraNotes}</p>
+          </div>
+        )}
+
+        <!-- Buy Buttons -->
+        <div class="flex gap-2 pt-2">
           <button 
             data-release-id={id}
-            data-product-type="vinyl"
-            data-price={vinylPrice}
-            data-digital-price={digitalPrice}
+            data-product-type="digital"
+            data-price={digitalPrice}
             data-title={title}
             data-artist={artist}
-            data-includes-digital="true"
-            disabled={!vinylAvailable}
-            class={`add-to-cart px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${vinylAvailable ? 'bg-purple-500 hover:bg-purple-600 text-white' : 'bg-gray-400 text-gray-200 cursor-not-allowed'}`}
+            class="add-to-cart bg-black hover:bg-gray-800 text-white px-4 py-2 rounded-full flex items-center gap-2 transition-all font-bold text-sm"
           >
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
-              <circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-              <circle cx="12" cy="12" r="2" fill="currentColor"/>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
             </svg>
-            <span class="text-sm font-semibold">{vinylAvailable ? `£${vinylPrice?.toFixed(2)}` : 'Sold Out'}</span>
+            Digital £{digitalPrice.toFixed(2)}
           </button>
-        )}
-      </div>
-    </div>
-    
-    <div class="flex-1 p-6 flex flex-col">
-      <div class="mb-3">
-        <h3 class="text-2xl font-bold text-gray-900 mb-1">{title}</h3>
-        <button 
-          class="filter-by-artist text-lg text-gray-600 mb-1 hover:text-blue-600 hover:underline transition-colors text-left"
-          data-artist={artist}
-        >
-          {artist}
-        </button>
-        {label && (
-          <button 
-            class="filter-by-label text-base text-gray-500 mb-2 hover:text-blue-600 hover:underline transition-colors block text-left"
-            data-label={label}
-          >
-            {label}
-          </button>
-        )}
-        
-        <div class="flex items-center gap-2 flex-wrap">
-          {isPreorder && <span class="inline-block bg-orange-100 text-orange-800 text-xs font-semibold px-2.5 py-1 rounded">Pre-order</span>}
-          <span class="text-sm text-gray-500">{isPreorder ? `Ships ${formattedDate}` : formattedDate}</span>
-          {vinylAvailable && vinylStock <= 5 && <span class="inline-block bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-1 rounded">Only {vinylStock} left</span>}
-          {hasVinyl && vinylAvailable && <span class="inline-block bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-1 rounded">Vinyl includes digital</span>}
+          
+          {hasVinyl && (
+            <button 
+              data-release-id={id}
+              data-product-type="vinyl"
+              data-price={vinylPrice}
+              data-digital-price={digitalPrice}
+              data-title={title}
+              data-artist={artist}
+              data-includes-digital="true"
+              disabled={!vinylAvailable}
+              class={`add-to-cart px-4 py-2 rounded-full flex items-center gap-2 transition-all font-bold text-sm ${
+                vinylAvailable 
+                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="12" cy="12" r="2" fill="currentColor"/>
+              </svg>
+              {vinylAvailable ? `Vinyl £${vinylPrice?.toFixed(2)}` : 'Sold Out'}
+            </button>
+          )}
         </div>
       </div>
-      
-      {extraNotes && <div class="mb-3 p-3 bg-blue-50 border-l-4 border-blue-400 rounded"><p class="text-sm text-blue-900">{extraNotes}</p></div>}
-      
-      {tracks.length > 0 && (
+    </div>
+
+    <!-- RIGHT: TRACKS SECTION -->
+    <div class="flex-1 flex flex-col">
+      <div class="mb-3">
+        <h4 class="text-xs font-black text-gray-500 uppercase tracking-wider">
+          TRACKS ({tracksWithIds.length})
+        </h4>
+      </div>
+
+      {tracksWithIds.length > 0 ? (
         <div class="flex-1 flex flex-col">
-          <div class="space-y-2">
-            {tracks.slice(0, initialTracksDesktop).map((track) => (
-              <div class="flex items-center gap-3 bg-gray-50 rounded p-2">
-                <span class="text-sm font-semibold text-gray-500 w-6 flex-shrink-0">{track.track_number}.</span>
-                <p class="text-sm font-medium text-gray-900 flex-1 min-w-0 truncate" title={track.title}>{track.title}</p>
-                <button class="play-button flex-shrink-0 flex items-center justify-center w-7 h-7 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors" data-track-id={track.id} title="Play">
-                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                </button>
-                <div class="w-48 flex-shrink-0 waveform-inline" data-track-id={track.id}></div>
+          <!-- Track List -->
+          <div class="space-y-2 mb-4">
+            {tracksWithIds.slice(0, visibleTracks).map((track) => (
+              <div class="flex items-center gap-3 hover:bg-gray-50 p-1 rounded transition-colors">
+                <!-- Track Number -->
+                <span class="text-sm font-bold text-gray-400 w-6 text-right flex-shrink-0">
+                  {track.track_number}
+                </span>
+
+                <!-- Play Button -->
                 <button 
-                  class="buy-track flex-shrink-0 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white text-sm font-bold px-4 py-2 rounded transition-colors whitespace-nowrap ml-2"
+                  class="play-button flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-black text-white hover:bg-gray-800 transition-all"
+                  data-track-id={track.id}
+                  data-release-id={id}
+                  title="Play"
+                >
+                  <svg class="w-3 h-3 play-icon ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                  <svg class="w-3 h-3 pause-icon hidden" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                  </svg>
+                </button>
+
+                <!-- Track Title -->
+                <p class="flex-1 text-sm font-bold text-gray-900 truncate" title={track.title}>
+                  {track.title}
+                </p>
+
+                <!-- Price -->
+                <button 
+                  class="buy-track flex-shrink-0 text-sm font-bold text-gray-900 hover:text-black transition-colors"
                   data-track-id={track.id}
                   data-track-title={track.title}
                   data-track-price={trackPrice}
                   data-release-id={id}
                   data-artist={artist}
-                  title="Buy track"
+                  title="Buy this track"
                 >
                   £{trackPrice.toFixed(2)}
                 </button>
-                <audio class="hidden track-audio" data-track-id={track.id} preload="none">
+
+                <!-- Hidden Audio -->
+                <audio class="hidden track-audio" data-track-id={track.id} data-release-id={id} preload="none">
                   <source src={track.preview_url || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'} type="audio/mpeg" />
                 </audio>
               </div>
             ))}
           </div>
-          {tracks.length > initialTracksDesktop && (
-            <details class="mt-2">
-              <summary class="cursor-pointer text-sm text-blue-600 hover:text-blue-800 font-semibold p-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors">
-                + Show {tracks.length - initialTracksDesktop} more track{tracks.length - initialTracksDesktop !== 1 ? 's' : ''}
+
+          <!-- Show More Tracks -->
+          {tracksWithIds.length > visibleTracks && (
+            <details class="mb-4 group">
+              <summary class="cursor-pointer text-xs text-gray-600 hover:text-black font-bold transition-colors flex items-center gap-1">
+                <svg class="w-3 h-3 transform transition-transform group-open:rotate-180" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+                Show {tracksWithIds.length - visibleTracks} more
               </summary>
               <div class="space-y-2 mt-2">
-                {tracks.slice(initialTracksDesktop).map((track) => (
-                  <div class="flex items-center gap-3 bg-gray-50 rounded p-2">
-                    <span class="text-sm font-semibold text-gray-500 w-6 flex-shrink-0">{track.track_number}.</span>
-                    <p class="text-sm font-medium text-gray-900 flex-1 min-w-0 truncate" title={track.title}>{track.title}</p>
-                    <button class="play-button flex-shrink-0 flex items-center justify-center w-7 h-7 rounded bg-blue-500 text-white hover:bg-blue-600 transition-colors" data-track-id={track.id} title="Play">
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    </button>
-                    <div class="w-48 flex-shrink-0 waveform-inline" data-track-id={track.id}></div>
+                {tracksWithIds.slice(visibleTracks).map((track) => (
+                  <div class="flex items-center gap-3 hover:bg-gray-50 p-1 rounded transition-colors">
+                    <span class="text-sm font-bold text-gray-400 w-6 text-right flex-shrink-0">
+                      {track.track_number}
+                    </span>
                     <button 
-                      class="buy-track flex-shrink-0 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white text-sm font-bold px-4 py-2 rounded transition-colors whitespace-nowrap ml-2"
+                      class="play-button flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-black text-white hover:bg-gray-800 transition-all"
+                      data-track-id={track.id}
+                      data-release-id={id}
+                      title="Play"
+                    >
+                      <svg class="w-3 h-3 play-icon ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                      <svg class="w-3 h-3 pause-icon hidden" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                      </svg>
+                    </button>
+                    <p class="flex-1 text-sm font-bold text-gray-900 truncate" title={track.title}>
+                      {track.title}
+                    </p>
+                    <button 
+                      class="buy-track flex-shrink-0 text-sm font-bold text-gray-900 hover:text-black transition-colors"
                       data-track-id={track.id}
                       data-track-title={track.title}
                       data-track-price={trackPrice}
                       data-release-id={id}
                       data-artist={artist}
-                      title="Buy track"
+                      title="Buy this track"
                     >
                       £{trackPrice.toFixed(2)}
                     </button>
-                    <audio class="hidden track-audio" data-track-id={track.id} preload="none">
+                    <audio class="hidden track-audio" data-track-id={track.id} data-release-id={id} preload="none">
                       <source src={track.preview_url || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'} type="audio/mpeg" />
                     </audio>
                   </div>
@@ -323,88 +280,205 @@ const trackPrice = 1.00;
               </div>
             </details>
           )}
+
+          <!-- NOW PLAYING + WAVEFORM -->
+          <div class="mt-auto pt-3 border-t border-gray-200">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex-1">
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-0.5">NOW PLAYING</p>
+                <p class="text-xs font-semibold text-gray-900" data-now-playing-text={id}>
+                  No track selected
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <svg class="w-3.5 h-3.5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"/>
+                </svg>
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="100" 
+                  value="70" 
+                  class="shared-volume-slider w-16 h-1"
+                  data-release-id={id}
+                  title="Volume"
+                />
+                <svg class="w-3.5 h-3.5 text-gray-900" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+            </div>
+            <canvas 
+              class="shared-waveform w-full h-16 cursor-pointer bg-gray-50 rounded"
+              data-release-id={id}
+            ></canvas>
+          </div>
+        </div>
+      ) : (
+        <div class="flex-1 flex items-center justify-center text-gray-400">
+          <p class="text-sm font-semibold">No tracks available</p>
         </div>
       )}
     </div>
   </div>
 </article>
 
+<style>
+  .shared-volume-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #d1d5db;
+    outline: none;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+
+  .shared-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: #000000;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .shared-volume-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: #000000;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+</style>
+
 <script>
-  function initWaveforms() {
-    document.querySelectorAll('.waveform-inline').forEach(container => {
-      if (container.children.length === 0) {
-        const trackId = container.getAttribute('data-track-id');
-        const audio = document.querySelector(`audio[data-track-id="${trackId}"]`);
-        if (audio) {
-          const canvas = document.createElement('canvas');
-          canvas.className = 'h-8 cursor-pointer rounded';
-          canvas.width = 200;
-          canvas.height = 32;
+  function initReleasePlayer() {
+    console.log('[ReleasePlayer] Initializing...');
+    
+    document.querySelectorAll('[data-release]').forEach(releaseCard => {
+      const releaseId = releaseCard.getAttribute('data-release');
+      if (!releaseId) return;
+      
+      const canvas = releaseCard.querySelector(`.shared-waveform[data-release-id="${releaseId}"]`);
+      const volumeSlider = releaseCard.querySelector(`.shared-volume-slider[data-release-id="${releaseId}"]`);
+      const nowPlayingText = releaseCard.querySelector(`[data-now-playing-text="${releaseId}"]`);
+      const playButtons = releaseCard.querySelectorAll('.play-button');
+      const audioElements = releaseCard.querySelectorAll('.track-audio');
+      
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      const canvasWidth = canvas.clientWidth;
+      const canvasHeight = 64;
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      
+      let currentAudio = null;
+      let currentButton = null;
+      
+      const bars = 60;
+      const barWidth = canvasWidth / bars;
+      
+      function drawWaveform(progress = 0, isPlaying = false) {
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+        
+        for (let i = 0; i < bars; i++) {
+          const height = (Math.random() * 0.5 + 0.3) * canvasHeight;
+          const x = i * barWidth;
+          const y = (canvasHeight - height) / 2;
           
-          const ctx = canvas.getContext('2d');
-          const bars = 40;
-          const barWidth = canvas.width / bars;
-          
-          function draw(progress = 0) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let i = 0; i < bars; i++) {
-              const h = (Math.random() * 0.6 + 0.2) * canvas.height;
-              ctx.fillStyle = i / bars < progress ? '#FBBF24' : '#3b82f6';
-              ctx.fillRect(i * barWidth, (canvas.height - h) / 2, barWidth - 1, h);
-            }
-          }
-          
-          draw();
-          container.appendChild(canvas);
-          
-          canvas.onclick = (e) => {
-            const rect = canvas.getBoundingClientRect();
-            audio.currentTime = (e.clientX - rect.left) / canvas.width * audio.duration;
-          };
-          
-          audio.ontimeupdate = () => draw(audio.currentTime / audio.duration);
+          ctx.fillStyle = i / bars < progress ? '#d1d5db' : '#e5e7eb';
+          ctx.fillRect(x, y, barWidth - 1, height);
         }
       }
-    });
-
-    document.querySelectorAll('.play-button').forEach(btn => {
-      if (!btn.initialized) {
-        btn.initialized = true;
-        btn.onclick = () => {
-          const trackId = btn.getAttribute('data-track-id');
-          const audio = document.querySelector(`audio[data-track-id="${trackId}"]`);
-          document.querySelectorAll('.track-audio').forEach(a => {
-            if (a !== audio) {
-              a.pause();
-              a.currentTime = 0;
-            }
-          });
-          if (audio.paused) {
-            audio.play();
-            btn.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>';
-          } else {
-            audio.pause();
-            btn.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-          }
-        };
+      
+      drawWaveform(0, false);
+      
+      canvas.addEventListener('click', (e) => {
+        if (!currentAudio || !currentAudio.duration || !isFinite(currentAudio.duration)) return;
+        const rect = canvas.getBoundingClientRect();
+        const progress = (e.clientX - rect.left) / canvas.clientWidth;
+        currentAudio.currentTime = progress * currentAudio.duration;
+      });
+      
+      if (volumeSlider) {
+        volumeSlider.addEventListener('input', () => {
+          audioElements.forEach(audio => audio.volume = volumeSlider.value / 100);
+        });
+        audioElements.forEach(audio => audio.volume = volumeSlider.value / 100);
       }
-    });
-
-    document.querySelectorAll('.track-audio').forEach(audio => {
-      audio.onended = () => {
-        const btn = document.querySelector(`.play-button[data-track-id="${audio.getAttribute('data-track-id')}"]`);
-        if (btn) btn.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-      };
+      
+      playButtons.forEach(button => {
+        if (button.hasPlayerInit) return;
+        button.hasPlayerInit = true;
+        
+        button.addEventListener('click', () => {
+          const trackId = button.getAttribute('data-track-id');
+          const audio = releaseCard.querySelector(`.track-audio[data-track-id="${trackId}"]`);
+          if (!audio) return;
+          
+          if (currentAudio === audio && !audio.paused) {
+            audio.pause();
+            button.querySelector('.play-icon').classList.remove('hidden');
+            button.querySelector('.pause-icon').classList.add('hidden');
+            if (nowPlayingText) nowPlayingText.textContent = 'Paused';
+            return;
+          }
+          
+          if (currentAudio && currentAudio !== audio) {
+            currentAudio.pause();
+            currentAudio.currentTime = 0;
+            if (currentButton) {
+              currentButton.querySelector('.play-icon').classList.remove('hidden');
+              currentButton.querySelector('.pause-icon').classList.add('hidden');
+            }
+          }
+          
+          currentAudio = audio;
+          currentButton = button;
+          
+          audio.play().catch(err => console.error('[Play error]:', err));
+          button.querySelector('.play-icon').classList.add('hidden');
+          button.querySelector('.pause-icon').classList.remove('hidden');
+          
+          const trackTitle = button.closest('.flex').querySelector('p')?.textContent || 'Unknown';
+          if (nowPlayingText) nowPlayingText.textContent = trackTitle;
+        });
+      });
+      
+      audioElements.forEach(audio => {
+        audio.addEventListener('timeupdate', () => {
+          if (audio === currentAudio && audio.duration && isFinite(audio.duration)) {
+            drawWaveform(audio.currentTime / audio.duration, !audio.paused);
+          }
+        });
+        
+        audio.addEventListener('ended', () => {
+          const trackId = audio.getAttribute('data-track-id');
+          const button = releaseCard.querySelector(`.play-button[data-track-id="${trackId}"]`);
+          if (button) {
+            button.querySelector('.play-icon').classList.remove('hidden');
+            button.querySelector('.pause-icon').classList.add('hidden');
+          }
+          if (nowPlayingText) nowPlayingText.textContent = 'Track ended';
+          drawWaveform(0, false);
+        });
+      });
     });
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initWaveforms);
+    document.addEventListener('DOMContentLoaded', initReleasePlayer);
   } else {
-    initWaveforms();
+    initReleasePlayer();
   }
-  setTimeout(initWaveforms, 100);
+  
+  document.addEventListener('astro:page-load', initReleasePlayer);
+  setTimeout(initReleasePlayer, 100);
 
+  // Cart functionality
   document.addEventListener('click', (e) => {
     const button = e.target.closest('.add-to-cart');
     if (!button || button.hasAttribute('disabled')) return;
@@ -433,13 +507,12 @@ const trackPrice = 1.00;
     
     localStorage.setItem('freshwax-cart', JSON.stringify(cart));
     const html = button.innerHTML;
-    button.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
-    button.classList.add('opacity-75');
-    setTimeout(() => { button.innerHTML = html; button.classList.remove('opacity-75'); }, 1000);
+    button.innerHTML = '✓';
+    setTimeout(() => button.innerHTML = html, 1000);
     window.dispatchEvent(new CustomEvent('cart-updated'));
   });
 
-  // Buy track button handler
+  // Buy track
   document.addEventListener('click', (e) => {
     const button = e.target.closest('.buy-track');
     if (!button) return;
@@ -452,44 +525,21 @@ const trackPrice = 1.00;
     
     let cart = JSON.parse(localStorage.getItem('freshwax-cart') || '[]');
     
-    // Check if user already has digital or vinyl version of the full release
-    const hasFullRelease = cart.some(item => 
-      item.releaseId === releaseId && 
-      (item.productType === 'digital' || item.productType === 'vinyl')
-    );
-    
-    if (hasFullRelease) {
-      alert('You already have the full release which includes this track!');
+    if (cart.some(item => item.releaseId === releaseId && (item.productType === 'digital' || item.productType === 'vinyl'))) {
+      alert('You already have the full release!');
       return;
     }
     
-    // Check if track is already in cart
-    const existingTrack = cart.find(item => 
-      item.releaseId === releaseId && 
-      item.trackId === trackId && 
-      item.productType === 'track'
-    );
-    
-    if (existingTrack) {
-      alert('This track is already in your cart!');
+    if (cart.find(item => item.releaseId === releaseId && item.trackId === trackId)) {
+      alert('Track already in cart!');
       return;
     }
     
-    cart.push({ 
-      releaseId, 
-      trackId,
-      productType: 'track', 
-      price: parseFloat(trackPrice), 
-      title: trackTitle, 
-      artist, 
-      quantity: 1 
-    });
-    
+    cart.push({ releaseId, trackId, productType: 'track', price: parseFloat(trackPrice), title: trackTitle, artist, quantity: 1 });
     localStorage.setItem('freshwax-cart', JSON.stringify(cart));
     const html = button.innerHTML;
-    button.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
-    button.classList.add('opacity-75');
-    setTimeout(() => { button.innerHTML = html; button.classList.remove('opacity-75'); }, 1000);
+    button.innerHTML = '✓';
+    setTimeout(() => button.innerHTML = html, 1000);
     window.dispatchEvent(new CustomEvent('cart-updated'));
   });
 </script>

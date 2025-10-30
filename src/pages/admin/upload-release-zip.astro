@@ -1,0 +1,1172 @@
+---
+// src/pages/admin/upload-release-zip.astro
+// FIXED VERSION - Now uploads metadata JSON to Cloudinary storage
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Release ZIP - Fresh Wax Admin</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: #ffffff;
+      min-height: 100vh;
+    }
+
+    .admin-logo-header {
+      background: #000;
+      padding: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: center;
+      border: 3px solid #000;
+    }
+
+    .admin-logo {
+      height: 80px;
+      width: auto;
+      background: #fff;
+      padding: 10px 20px;
+    }
+
+    .admin-container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+      padding: 20px; 
+      background: #ffffff;
+    }
+    
+    .admin-header {
+      background: #fff;
+      padding: 30px;
+      margin-bottom: 30px;
+      border: 3px solid #000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .admin-header h1 {
+      font-size: 32px;
+      color: #000;
+      margin: 0;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .admin-back-btn {
+      padding: 12px 24px;
+      background: #000;
+      color: white;
+      border: 3px solid #000;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+
+    .admin-back-btn:hover {
+      background: #fff;
+      color: #000;
+      transform: translate(-4px, -4px);
+      box-shadow: 8px 8px 0 #000;
+    }
+
+    /* Drop Zone */
+    .drop-zone {
+      background: #fff;
+      border: 3px dashed #000;
+      padding: 60px 40px;
+      text-align: center;
+      margin-bottom: 30px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .drop-zone.dragover {
+      background: #f5f5f5;
+      border-style: solid;
+      transform: scale(1.02);
+    }
+
+    .drop-zone-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+
+    .drop-zone-text {
+      font-size: 18px;
+      font-weight: 700;
+      color: #000;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .drop-zone-hint {
+      font-size: 14px;
+      color: #666;
+      font-weight: 600;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    /* File List */
+    .file-list-container {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 30px;
+      margin-bottom: 30px;
+      display: none;
+    }
+
+    .file-list-container.show {
+      display: block;
+    }
+
+    .file-list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .file-list-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: #000;
+      text-transform: uppercase;
+    }
+
+    .file-count {
+      font-size: 14px;
+      font-weight: 700;
+      color: #666;
+    }
+
+    .file-list {
+      list-style: none;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      margin-bottom: 10px;
+      background: #fff;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .file-item:hover {
+      border-color: #000;
+      transform: translateX(4px);
+    }
+
+    .file-icon {
+      font-size: 24px;
+      margin-right: 15px;
+    }
+
+    .file-name {
+      flex: 1;
+      font-size: 14px;
+      color: #000;
+      word-break: break-all;
+    }
+
+    .file-size {
+      font-size: 12px;
+      color: #666;
+      margin-left: 15px;
+    }
+
+    .file-type {
+      display: inline-block;
+      padding: 4px 8px;
+      background: #000;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-left: 10px;
+    }
+
+    /* Upload Section */
+    .upload-section {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 30px;
+      margin-bottom: 30px;
+      display: none;
+    }
+
+    .upload-section.show {
+      display: block;
+    }
+
+    .upload-info {
+      background: #f5f5f5;
+      border: 2px solid #000;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .upload-info h3 {
+      font-size: 16px;
+      font-weight: 900;
+      color: #000;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .upload-info p {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+      font-weight: 600;
+    }
+
+    .upload-actions {
+      display: flex;
+      gap: 15px;
+    }
+
+    .upload-btn {
+      flex: 1;
+      padding: 18px;
+      background: #000;
+      color: #fff;
+      border: 3px solid #000;
+      font-weight: 900;
+      cursor: pointer;
+      text-transform: uppercase;
+      font-size: 16px;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+
+    .upload-btn:hover:not(:disabled) {
+      background: #fff;
+      color: #000;
+      transform: translate(-4px, -4px);
+      box-shadow: 8px 8px 0 #000;
+    }
+
+    .upload-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .cancel-btn {
+      flex: 1;
+      padding: 18px;
+      background: #fff;
+      color: #000;
+      border: 3px solid #000;
+      font-weight: 900;
+      cursor: pointer;
+      text-transform: uppercase;
+      font-size: 16px;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+
+    .cancel-btn:hover {
+      background: #f5f5f5;
+    }
+
+    /* Progress */
+    .progress-container {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 30px;
+      margin-bottom: 30px;
+      display: none;
+    }
+
+    .progress-container.show {
+      display: block;
+    }
+
+    .progress-text {
+      font-size: 16px;
+      font-weight: 700;
+      color: #000;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 30px;
+      background: #e0e0e0;
+      border: 3px solid #000;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #000;
+      transition: width 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 12px;
+    }
+
+    .progress-log {
+      margin-top: 20px;
+      background: #f5f5f5;
+      border: 2px solid #000;
+      padding: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .log-item {
+      padding: 5px 0;
+      font-weight: 600;
+    }
+
+    .log-item.success {
+      color: #000;
+    }
+
+    .log-item.error {
+      color: #ff0000;
+      font-weight: 700;
+    }
+
+    .log-item.warning {
+      color: #ff8800;
+      font-weight: 700;
+    }
+
+    .log-item.info {
+      color: #666;
+    }
+
+    /* Success Message */
+    .success-container {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 40px;
+      text-align: center;
+      display: none;
+    }
+
+    .success-container.show {
+      display: block;
+    }
+
+    .success-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+    }
+
+    .success-title {
+      font-size: 28px;
+      font-weight: 900;
+      color: #000;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+    }
+
+    .success-message {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 30px;
+      font-weight: 600;
+    }
+
+    .success-actions {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+    }
+
+    .success-btn {
+      padding: 15px 30px;
+      background: #000;
+      color: #fff;
+      border: 3px solid #000;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      display: inline-block;
+    }
+
+    .success-btn:hover {
+      background: #fff;
+      color: #000;
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0 #000;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #fff;
+      border-top: 2px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .admin-container { padding: 15px; }
+      .admin-logo { height: 60px; }
+      .admin-header { flex-direction: column; align-items: flex-start; }
+      .admin-header h1 { font-size: 24px; }
+      .drop-zone { padding: 40px 20px; }
+      .upload-actions { flex-direction: column; }
+      .success-actions { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Logo Header -->
+  <div class="admin-logo-header">
+    <img src="/logo.webp" alt="Fresh Wax" class="admin-logo">
+  </div>
+
+  <div class="admin-container">
+    <!-- Header -->
+    <div class="admin-header">
+      <h1>📦 Upload Release ZIP</h1>
+      <a href="/admin" class="admin-back-btn">← Back to Dashboard</a>
+    </div>
+
+    <!-- Drop Zone -->
+    <div id="dropZone" class="drop-zone">
+      <div class="drop-zone-icon">📦</div>
+      <div class="drop-zone-text">Drop ZIP File Here</div>
+      <div class="drop-zone-hint">or click to browse</div>
+      <input type="file" id="fileInput" class="file-input" accept=".zip">
+    </div>
+
+    <!-- File List -->
+    <div id="fileListContainer" class="file-list-container">
+      <div class="file-list-header">
+        <h2 class="file-list-title">📁 Files in ZIP</h2>
+        <span class="file-count" id="fileCount">0 files</span>
+      </div>
+      <ul id="fileList" class="file-list"></ul>
+    </div>
+
+    <!-- Upload Section -->
+    <div id="uploadSection" class="upload-section">
+      <div class="upload-info">
+        <h3>⚡ Ready to Upload</h3>
+        <p>
+          This will extract and upload all files to their storage locations (R2 for full audio, Cloudinary for previews/artwork/metadata)
+          and add the release to the master JSON as UNPUBLISHED. You can preview and publish it later from the Publish Releases page.
+        </p>
+      </div>
+      <div class="upload-actions">
+        <button id="uploadBtn" class="upload-btn">🚀 Upload to Storage</button>
+        <button id="cancelBtn" class="cancel-btn">✕ Cancel</button>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div id="progressContainer" class="progress-container">
+      <div class="progress-text" id="progressText">Uploading...</div>
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill">0%</div>
+      </div>
+      <div id="progressLog" class="progress-log"></div>
+    </div>
+
+    <!-- Success -->
+    <div id="successContainer" class="success-container">
+      <div class="success-icon">✅</div>
+      <h2 class="success-title">Upload Complete!</h2>
+      <p class="success-message">Release has been uploaded and added to master JSON as unpublished. Go to Publish Releases to preview and publish it.</p>
+      <div class="success-actions">
+        <a href="/admin/publish-release" class="success-btn">Preview & Publish</a>
+        <button onclick="location.reload()" class="success-btn">Upload Another</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
+
+    let zipFile = null;
+    let extractedFiles = [];
+
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileListContainer = document.getElementById('fileListContainer');
+    const fileList = document.getElementById('fileList');
+    const fileCount = document.getElementById('fileCount');
+    const uploadSection = document.getElementById('uploadSection');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressText = document.getElementById('progressText');
+    const progressFill = document.getElementById('progressFill');
+    const progressLog = document.getElementById('progressLog');
+    const successContainer = document.getElementById('successContainer');
+
+    // Click to browse
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    // Drag and drop
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith('.zip')) {
+        handleZipFile(file);
+      } else {
+        alert('Please drop a ZIP file');
+      }
+    });
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        handleZipFile(file);
+      }
+    });
+
+    // Handle ZIP file
+    async function handleZipFile(file) {
+      zipFile = file;
+      log('Loading ZIP file...', 'info');
+
+      try {
+        const zip = new JSZip();
+        const contents = await zip.loadAsync(file);
+        
+        extractedFiles = [];
+        fileList.innerHTML = '';
+
+        // Extract file information
+        for (const [filename, fileData] of Object.entries(contents.files)) {
+          if (!fileData.dir) {
+            const blob = await fileData.async('blob');
+            extractedFiles.push({
+              name: filename,
+              blob: blob,
+              size: blob.size,
+              type: getFileType(filename)
+            });
+          }
+        }
+
+        // Display files
+        displayFiles();
+        
+        // Show file list and upload section
+        fileListContainer.classList.add('show');
+        uploadSection.classList.add('show');
+        
+        log(`✓ Loaded ${extractedFiles.length} files from ZIP`, 'success');
+
+      } catch (error) {
+        console.error('Error reading ZIP:', error);
+        alert('Error reading ZIP file: ' + error.message);
+      }
+    }
+
+    // Display files
+    function displayFiles() {
+      fileCount.textContent = `${extractedFiles.length} files`;
+      
+      extractedFiles.forEach(file => {
+        const li = document.createElement('li');
+        li.className = 'file-item';
+        li.innerHTML = `
+          <div class="file-icon">${getFileIcon(file.type)}</div>
+          <div class="file-name">${file.name}</div>
+          <span class="file-type">${file.type}</span>
+          <div class="file-size">${formatFileSize(file.size)}</div>
+        `;
+        fileList.appendChild(li);
+      });
+    }
+
+    // Get file type
+    function getFileType(filename) {
+      const ext = filename.split('.').pop().toLowerCase();
+      const types = {
+        'json': 'JSON',
+        'jpg': 'IMAGE',
+        'jpeg': 'IMAGE',
+        'png': 'IMAGE',
+        'webp': 'IMAGE',
+        'mp3': 'AUDIO',
+        'wav': 'AUDIO',
+        'flac': 'AUDIO',
+        'pdf': 'PDF'
+      };
+      return types[ext] || 'FILE';
+    }
+
+    // Get file icon
+    function getFileIcon(type) {
+      const icons = {
+        'JSON': '📄',
+        'IMAGE': '🖼️',
+        'AUDIO': '🎵',
+        'PDF': '📕',
+        'FILE': '📎'
+      };
+      return icons[type] || '📎';
+    }
+
+    // Format file size
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    // Upload button
+    uploadBtn.addEventListener('click', async () => {
+      if (extractedFiles.length === 0) {
+        alert('No files to upload');
+        return;
+      }
+
+      // Hide upload section, show progress
+      uploadSection.classList.remove('show');
+      progressContainer.classList.add('show');
+      
+      await uploadFiles();
+    });
+
+    // Cancel button
+    cancelBtn.addEventListener('click', () => {
+      location.reload();
+    });
+
+    // Upload files
+    async function uploadFiles() {
+      try {
+        log('Starting upload process...', 'info');
+        log('═══════════════════════════════', 'info');
+        
+        let releaseData = null;
+        const fullAudioFiles = [];
+        const previewClips = [];
+        const artworkFiles = [];
+
+        // Separate files by type and destination
+        log('Categorizing files...', 'info');
+        extractedFiles.forEach(file => {
+          const ext = file.name.split('.').pop().toLowerCase();
+          const lowerName = file.name.toLowerCase();
+          
+          log(`Processing: ${file.name}`, 'info');
+          
+          if (lowerName.endsWith('.json') && (lowerName.includes('release') || lowerName.includes('data'))) {
+            releaseData = file;
+            log(`  → Identified as: RELEASE DATA`, 'success');
+          } else if (lowerName.includes('preview') || lowerName.includes('clip')) {
+            previewClips.push(file);
+            log(`  → Destination: CLOUDINARY AUDIO (preview)`, 'info');
+          } else if (['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+            artworkFiles.push(file);
+            log(`  → Destination: CLOUDINARY IMAGES (artwork)`, 'info');
+          } else if (['mp3', 'wav', 'flac'].includes(ext)) {
+            fullAudioFiles.push(file);
+            log(`  → Destination: R2 STORAGE (full audio)`, 'info');
+          } else {
+            log(`  → SKIPPED (unknown type)`, 'warning');
+          }
+        });
+
+        log('═══════════════════════════════', 'info');
+        log(`Summary:`, 'info');
+        log(`  Release data: ${releaseData ? '✓ Found' : '✗ NOT FOUND'}`, releaseData ? 'success' : 'error');
+        log(`  Full audio files: ${fullAudioFiles.length}`, 'info');
+        log(`  Preview clips: ${previewClips.length}`, 'info');
+        log(`  Artwork files: ${artworkFiles.length}`, 'info');
+        log('═══════════════════════════════', 'info');
+
+        if (!releaseData) {
+          throw new Error('No release data JSON file found in ZIP. File must contain "release" or "data" in the filename.');
+        }
+
+        // Read release data
+        const releaseDataText = await releaseData.blob.text();
+        const release = JSON.parse(releaseDataText);
+        
+        // CRITICAL: Ensure release has an ID
+        if (!release.id) {
+          // Try to generate from metadata fields
+          const artistSlug = (release.artistName || release.artist || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          const titleSlug = (release.releaseName || release.title || 'untitled').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          release.id = `${artistSlug}-${titleSlug}-${Date.now()}`;
+          log(`⚠ No ID in metadata, generated: ${release.id}`, 'warning');
+        } else {
+          log(`✓ Using existing ID from metadata: ${release.id}`, 'info');
+        }
+        
+        log(`✓ Release data loaded: "${release.title || release.releaseName || 'Untitled'}" by ${release.artist || release.artistName || 'Unknown'}`, 'success');
+        log(`  Release ID: ${release.id}`, 'info');
+
+        // CRITICAL: Initialize standardRelease BEFORE uploading files
+        log('═══════════════════════════════', 'info');
+        log('📋 INITIALIZING STANDARD RELEASE FORMAT...', 'info');
+        log('═══════════════════════════════', 'info');
+        
+        // Parse track listing helper function
+        function parseTrackListing(trackListing, existingTracks) {
+          if (!trackListing) return existingTracks || [];
+          
+          if (Array.isArray(trackListing)) return trackListing;
+          
+          if (typeof trackListing === 'string') {
+            const trackNames = trackListing
+              .split(/[\n,;]+/)
+              .map(t => t.trim())
+              .filter(t => t.length > 0);
+            
+            return trackNames.map((name, idx) => ({
+              track_number: idx + 1,
+              number: idx + 1,
+              title: name,
+              name: name
+            }));
+          }
+          
+          return existingTracks || [];
+        }
+        
+        // Create standardRelease object from uploaded metadata
+        const standardRelease = {
+          // ID - already set above
+          id: release.id,
+          
+          // Basic info - map from uploaded format to standard format
+          title: release.releaseName || release.title || 'Untitled',
+          artist: release.artistName || release.artist || 'Unknown',
+          label: release.labelName || release.label,
+          genre: release.genre || release.customGenre,
+          catalogNumber: release.catalogNumber,
+          
+          // Pricing
+          digitalPrice: parseFloat(release.pricePerSale) || 0,
+          trackPrice: parseFloat(release.trackPrice) || 0,
+          price: parseFloat(release.pricePerSale) || 0,
+          
+          // Vinyl info
+          hasVinyl: release.vinylRelease === true || release.vinylRelease === 'true',
+          vinylPrice: parseFloat(release.vinylPrice) || 0,
+          vinylStock: parseInt(release.vinylRecordCount) || 0,
+          
+          // Limited edition
+          hasLimitedEdition: release.hasLimitedEdition === true || release.hasLimitedEdition === 'true',
+          limitedEditionType: release.limitedEditionType,
+          limitedEditionPrice: parseFloat(release.limitedEditionPrice) || 0,
+          limitedEditionDetails: release.limitedEditionDetails,
+          
+          // Release date
+          releaseDate: release.releaseDate || release.officialReleaseDate || new Date().toISOString(),
+          releaseDateType: release.releaseDateType,
+          isPreorder: release.releaseDateType === 'preorder',
+          isNew: true,
+          
+          // Additional info
+          description: release.description || release.notes,
+          extraNotes: release.notes || release.extraNotes,
+          
+          // Contact/admin info
+          email: release.email,
+          uploadedAt: release.uploadedAt,
+          
+          // Parse track listing
+          tracks: parseTrackListing(release.trackListing, release.tracks || []),
+          
+          // URLs will be populated during upload
+          coverUrl: null,
+          artworkUrl: null,
+          coverStorage: null,
+          metadataUrl: null,
+          metadataStorage: null,
+          
+          // Status
+          published: false,
+          createdAt: release.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          
+          // Keep original uploaded data for reference
+          _originalUpload: release
+        };
+        
+        log('✓ Standard release initialized', 'success');
+        log(`  Title: ${standardRelease.title}`, 'info');
+        log(`  Artist: ${standardRelease.artist}`, 'info');
+        log(`  Tracks: ${standardRelease.tracks.length}`, 'info');
+        log('═══════════════════════════════', 'info');
+
+        let totalFiles = fullAudioFiles.length + previewClips.length + artworkFiles.length + 1; // +1 for metadata JSON
+        let uploadedCount = 0;
+        let failedCount = 0;
+
+        // **NEW: Upload metadata JSON to Cloudinary FIRST**
+        if (releaseData) {
+          log('═══════════════════════════════', 'info');
+          log(`📤 Uploading metadata JSON to Cloudinary...`, 'info');
+          
+          updateProgress((uploadedCount / totalFiles) * 80, `Uploading metadata to Cloudinary...`);
+          
+          const formData = new FormData();
+          formData.append('file', releaseData.blob, releaseData.name);
+          formData.append('upload_preset', 'ml_default');
+          formData.append('folder', `releases/${release.id}/metadata`);
+          formData.append('resource_type', 'raw'); // Important for JSON files
+
+          try {
+            log(`Uploading: ${releaseData.name} (${formatFileSize(releaseData.blob.size)})...`, 'info');
+            
+            const response = await fetch(
+              `https://api.cloudinary.com/v1_1/dm9gldbda/raw/upload`,
+              {
+                method: 'POST',
+                body: formData
+              }
+            );
+
+            const responseText = await response.text();
+            console.log('Cloudinary Metadata Response:', responseText);
+
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${responseText}`);
+            }
+
+            const result = JSON.parse(responseText);
+            log(`✓ SUCCESS: Metadata → Cloudinary`, 'success');
+            
+            // Store metadata URL in standardRelease data
+            standardRelease.metadataUrl = result.secure_url;
+            standardRelease.metadataStorage = 'cloudinary';
+            log(`  → Metadata URL: ${result.secure_url}`, 'info');
+            
+            uploadedCount++;
+          } catch (error) {
+            failedCount++;
+            log(`✗ FAILED: Metadata upload`, 'error');
+            log(`  Error: ${error.message}`, 'error');
+            console.error('Cloudinary Metadata upload error:', error);
+          }
+        }
+
+        // Upload full audio files to R2
+        if (fullAudioFiles.length > 0) {
+          log('═══════════════════════════════', 'info');
+          log(`📤 Uploading ${fullAudioFiles.length} full audio file(s) to R2...`, 'info');
+          
+          for (const file of fullAudioFiles) {
+            updateProgress((uploadedCount / totalFiles) * 80, `Uploading ${file.name} to R2...`);
+            
+            const formData = new FormData();
+            formData.append('file', file.blob, file.name);
+            formData.append('filename', file.name);
+            formData.append('releaseId', release.id || Date.now().toString());
+
+            try {
+              log(`Uploading: ${file.name} (${formatFileSize(file.size)})...`, 'info');
+              
+              const response = await fetch('/api/upload-r2', {
+                method: 'POST',
+                body: formData
+              });
+
+              const responseText = await response.text();
+              console.log('R2 Response:', responseText);
+
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${responseText}`);
+              }
+
+              const result = JSON.parse(responseText);
+              log(`✓ SUCCESS: ${file.name} → ${result.url}`, 'success');
+              
+              // Update standardRelease data with R2 URL
+              if (!standardRelease.tracks) standardRelease.tracks = [];
+              const trackIndex = standardRelease.tracks.findIndex(t => 
+                t.filename === file.name || 
+                file.name.includes(t.filename?.split('.')[0]) ||
+                file.name.toLowerCase().includes(t.title?.toLowerCase().replace(/\s+/g, '-'))
+              );
+              if (trackIndex >= 0) {
+                standardRelease.tracks[trackIndex].url = result.url;
+                standardRelease.tracks[trackIndex].storage = 'r2';
+                log(`  → Linked to track: "${standardRelease.tracks[trackIndex].title}"`, 'info');
+              } else {
+                log(`  ⚠ Could not link to track in release data`, 'warning');
+              }
+
+              uploadedCount++;
+            } catch (error) {
+              failedCount++;
+              log(`✗ FAILED: ${file.name}`, 'error');
+              log(`  Error: ${error.message}`, 'error');
+              console.error('R2 upload error:', error);
+            }
+          }
+        }
+
+        // Upload preview clips to Cloudinary (audio account)
+        if (previewClips.length > 0) {
+          log('═══════════════════════════════', 'info');
+          log(`📤 Uploading ${previewClips.length} preview clip(s) to Cloudinary Audio...`, 'info');
+          
+          for (const file of previewClips) {
+            updateProgress((uploadedCount / totalFiles) * 80, `Uploading ${file.name} to Cloudinary...`);
+            
+            const formData = new FormData();
+            formData.append('file', file.blob, file.name);
+            formData.append('upload_preset', 'ml_default');
+            formData.append('folder', `releases/${release.id}/previews`);
+
+            try {
+              log(`Uploading: ${file.name} (${formatFileSize(file.size)})...`, 'info');
+              
+              const response = await fetch(
+                `https://api.cloudinary.com/v1_1/dijam9uva/video/upload`,
+                {
+                  method: 'POST',
+                  body: formData
+                }
+              );
+
+              const responseText = await response.text();
+              console.log('Cloudinary Audio Response:', responseText);
+
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${responseText}`);
+              }
+
+              const result = JSON.parse(responseText);
+              log(`✓ SUCCESS: ${file.name} → Cloudinary`, 'success');
+              
+              // Update standardRelease data with preview URL
+              const trackIndex = standardRelease.tracks?.findIndex(t => 
+                file.name.includes(t.filename?.split('.')[0]) || 
+                file.name.toLowerCase().includes(t.title?.toLowerCase().replace(/\s+/g, '-'))
+              );
+              if (trackIndex >= 0) {
+                standardRelease.tracks[trackIndex].previewUrl = result.secure_url;
+                standardRelease.tracks[trackIndex].preview_url = result.secure_url;
+                standardRelease.tracks[trackIndex].previewStorage = 'cloudinary-audio';
+                log(`  → Linked to track: "${standardRelease.tracks[trackIndex].title}"`, 'info');
+              } else {
+                log(`  ⚠ Could not link to track in release data`, 'warning');
+              }
+
+              uploadedCount++;
+            } catch (error) {
+              failedCount++;
+              log(`✗ FAILED: ${file.name}`, 'error');
+              log(`  Error: ${error.message}`, 'error');
+              console.error('Cloudinary Audio upload error:', error);
+            }
+          }
+        }
+
+        // Upload artwork to Cloudinary (images account)
+        if (artworkFiles.length > 0) {
+          log('═══════════════════════════════', 'info');
+          log(`📤 Uploading ${artworkFiles.length} artwork file(s) to Cloudinary Images...`, 'info');
+          
+          for (const file of artworkFiles) {
+            updateProgress((uploadedCount / totalFiles) * 80, `Uploading ${file.name} to Cloudinary...`);
+            
+            const formData = new FormData();
+            formData.append('file', file.blob, file.name);
+            formData.append('upload_preset', 'ml_default');
+            formData.append('folder', `releases/${release.id}/artwork`);
+
+            try {
+              log(`Uploading: ${file.name} (${formatFileSize(file.size)})...`, 'info');
+              
+              const response = await fetch(
+                `https://api.cloudinary.com/v1_1/dm9gldbda/image/upload`,
+                {
+                  method: 'POST',
+                  body: formData
+                }
+              );
+
+              const responseText = await response.text();
+              console.log('Cloudinary Images Response:', responseText);
+
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${responseText}`);
+              }
+
+              const result = JSON.parse(responseText);
+              log(`✓ SUCCESS: ${file.name} → Cloudinary`, 'success');
+              
+              // Update standardRelease data with artwork URL
+              if (file.name.toLowerCase().includes('cover') || file.name.toLowerCase().includes('artwork')) {
+                standardRelease.coverUrl = result.secure_url;
+                standardRelease.artworkUrl = result.secure_url;
+                standardRelease.coverStorage = 'cloudinary-images';
+                log(`  → Set as cover artwork`, 'info');
+              }
+
+              uploadedCount++;
+            } catch (error) {
+              failedCount++;
+              log(`✗ FAILED: ${file.name}`, 'error');
+              log(`  Error: ${error.message}`, 'error');
+              console.error('Cloudinary Images upload error:', error);
+            }
+          }
+        }
+
+        log('═══════════════════════════════', 'info');
+        log(`Upload Summary:`, 'info');
+        log(`  ✓ Successful: ${uploadedCount}/${totalFiles}`, uploadedCount === totalFiles ? 'success' : 'warning');
+        log(`  ✗ Failed: ${failedCount}/${totalFiles}`, failedCount > 0 ? 'error' : 'success');
+        log('═══════════════════════════════', 'info');
+
+        if (uploadedCount === 0) {
+          throw new Error('All uploads failed. Check your environment variables and upload presets.');
+        }
+
+        updateProgress(90, 'Adding to master JSON as unpublished...');
+        
+        log('═══════════════════════════════', 'info');
+        log('📋 FINAL RELEASE OBJECT TO BE SAVED:', 'info');
+        log('═══════════════════════════════', 'info');
+        log(`ID: ${standardRelease.id}`, standardRelease.id ? 'success' : 'error');
+        log(`Title: ${standardRelease.title}`, 'info');
+        log(`Artist: ${standardRelease.artist}`, 'info');
+        log(`Cover URL: ${standardRelease.coverUrl || 'MISSING'}`, 'info');
+        log(`Metadata URL: ${standardRelease.metadataUrl || 'MISSING'}`, 'info');
+        log(`Tracks: ${standardRelease.tracks?.length || 0}`, 'info');
+        log(`Published: ${standardRelease.published}`, 'info');
+        log('--- Full Object ---', 'info');
+        console.log('FULL STANDARD RELEASE OBJECT:', standardRelease);
+        try {
+          log(JSON.stringify(standardRelease, null, 2), 'info');
+        } catch (e) {
+          log('Error stringifying release object: ' + e.message, 'error');
+        }
+        log('═══════════════════════════════', 'info');
+        
+        // Update Cloudinary master JSON
+        log('Updating master JSON...', 'info');
+        await updateMasterJSON(standardRelease);
+        
+        updateProgress(100, 'Complete!');
+        log('═══════════════════════════════', 'info');
+        log('✅ UPLOAD COMPLETE!', 'success');
+        log(`   Uploaded: ${uploadedCount} files (including metadata JSON)`, 'success');
+        if (failedCount > 0) {
+          log(`   Failed: ${failedCount} files (check errors above)`, 'warning');
+        }
+        log('   Release added to master JSON as UNPUBLISHED', 'success');
+        log(`   Release ID: ${standardRelease.id}`, 'success');
+        log(`   Title: ${standardRelease.title} by ${standardRelease.artist}`, 'success');
+        log(`   Metadata stored at: ${standardRelease.metadataUrl || 'N/A'}`, 'info');
+        log('═══════════════════════════════', 'info');
+
+        // Show success
+        setTimeout(() => {
+          progressContainer.classList.remove('show');
+          successContainer.classList.add('show');
+        }, 1500);
+
+      } catch (error) {
+        console.error('Upload error:', error);
+        log('═══════════════════════════════', 'error');
+        log(`✗ CRITICAL ERROR: ${error.message}`, 'error');
+        log('═══════════════════════════════', 'error');
+        alert('Upload failed: ' + error.message + '\n\nCheck the console and logs for details.');
+      }
+    }
+
+    // Update progress
+    function updateProgress(percent, text) {
+      progressFill.style.width = percent + '%';
+      progressFill.textContent = Math.round(percent) + '%';
+      progressText.textContent = text;
+    }
+
+    // Log message
+    function log(message, type = 'info') {
+      console.log(`[${type.toUpperCase()}] ${message}`);
+      const logItem = document.createElement('div');
+      logItem.className = `log-item ${type}`;
+      logItem.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      progressLog.appendChild(logItem);
+      progressLog.scrollTop = progressLog.scrollHeight;
+    }
+
+    // Update master JSON in Cloudinary
+    async function updateMasterJSON(newRelease) {
+      try {
+        log('Sending release data to master JSON...', 'info');
+        
+        const response = await fetch('/api/update-releases-json', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ release: newRelease })
+        });
+
+        const responseText = await response.text();
+        console.log('Master JSON Update Response:', responseText);
+
+        if (!response.ok) {
+          throw new Error(`Failed to update master JSON: ${responseText}`);
+        }
+
+        const result = JSON.parse(responseText);
+        log('✓ Master JSON updated successfully', 'success');
+        log(`  Total releases in JSON: ${result.totalReleases}`, 'info');
+      } catch (error) {
+        console.error('Error updating master JSON:', error);
+        log(`✗ Failed to update master JSON: ${error.message}`, 'error');
+        throw error;
+      }
+    }
+  </script>
+</body>
+</html>

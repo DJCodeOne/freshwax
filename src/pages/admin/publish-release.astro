@@ -1,1155 +1,1560 @@
 ---
 // src/pages/admin/publish-release.astro
+// FIXED: Now fetches individual metadata JSON files from Cloudinary for preview
 import Layout from '../../layouts/Layout.astro';
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: 'dscqbze0d',
+  api_key: '555922422486159',
+  api_secret: '1OV_96Pd_x7MSdt7Bph5aNELYho',
+});
+
+// Fetch releases from Cloudinary
+let releases = [];
+try {
+  const info = await cloudinary.api.resource('releases/releases.json', {
+    resource_type: 'raw'
+  });
+  
+  const version = info.version;
+  const releasesUrl = `https://res.cloudinary.com/dscqbze0d/raw/upload/v${version}/releases/releases.json`;
+  
+  const response = await fetch(releasesUrl, { cache: 'no-store' });
+  
+  if (response.ok) {
+    const data = await response.json();
+    if (Array.isArray(data)) {
+      releases = data;
+    }
+  }
+} catch (error) {
+  console.error('Error loading releases:', error);
+}
+
+// Filter unpublished releases (those without published: true flag)
+const unpublishedReleases = releases.filter(r => !r.published);
+const publishedReleases = releases.filter(r => r.published);
 ---
 
-<Layout title="Publish Release to Store">
+<Layout title="Publish Releases to Store">
 <style>
 body {
-background: #ffffff;
+  background: #ffffff;
 }
 
 .container {
-max-width: 1400px;
-margin: 0 auto;
-padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
-/* Logo Container */
-.logo-container {
-background: #ffffff;
-padding: 30px 20px;
-margin-bottom: 30px;
-display: flex;
-justify-content: center;
-align-items: center;
-border: 3px solid #000;
+/* Logo Header */
+.logo-header {
+  background: #000;
+  padding: 20px;
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: center;
+  border: 3px solid #000;
 }
 
 .logo {
-height: 80px;
-width: auto;
-max-width: 90%;
-}
-
-.logo-fallback {
-font-size: 48px;
-font-weight: 900;
-color: #000;
-text-transform: uppercase;
-letter-spacing: 2px;
+  height: 80px;
+  width: auto;
+  background: #fff;
+  padding: 10px 20px;
 }
 
 /* Header */
 .header {
-background: #fff;
-padding: 30px;
-margin-bottom: 30px;
-border: 3px solid #000;
-position: relative;
-}
-
-.header::before {
-content: '';
-position: absolute;
-top: 0;
-left: 0;
-right: 0;
-height: 5px;
-background: #000;
+  background: #fff;
+  padding: 30px;
+  margin-bottom: 30px;
+  border: 3px solid #000;
+  position: relative;
 }
 
 .header-content {
-display: flex;
-justify-content: space-between;
-align-items: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
 .header h1 {
-font-size: 32px;
-color: #000;
-margin-bottom: 5px;
-font-weight: 900;
-letter-spacing: -0.5px;
+  font-size: 32px;
+  color: #000;
+  margin: 0;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .header p {
-color: #666;
-font-size: 16px;
-font-weight: 500;
+  color: #666;
+  font-size: 14px;
+  margin-top: 5px;
+  font-weight: 600;
 }
 
 .back-btn {
-padding: 10px 20px;
-background: #000;
-color: white;
-text-decoration: none;
-border: 2px solid #000;
-font-size: 14px;
-font-weight: 700;
-transition: all 0.2s;
-text-transform: uppercase;
-letter-spacing: 0.5px;
+  padding: 12px 24px;
+  background: #000;
+  color: white;
+  text-decoration: none;
+  border: 3px solid #000;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.2s;
+  text-transform: uppercase;
 }
 
 .back-btn:hover {
-background: #fff;
-color: #000;
-transform: translateY(-2px);
-box-shadow: 4px 4px 0 #000;
+  background: #fff;
+  color: #000;
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 #000;
 }
 
-/* Section Cards */
-.section-card {
-background: white;
-border: 3px solid #000;
-padding: 30px;
-margin-bottom: 30px;
-position: relative;
+/* Stats Bar */
+.stats-bar {
+  background: #fff;
+  border: 3px solid #000;
+  padding: 20px;
+  margin-bottom: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
 }
 
-.section-card::before {
-content: '';
-position: absolute;
-top: 0;
-left: 0;
-right: 0;
-height: 5px;
-background: #000;
+.stat-item {
+  text-align: center;
+  padding: 15px;
+  border: 2px solid #000;
 }
 
-.section-title {
-font-size: 24px;
-font-weight: 900;
-color: #000;
-margin-bottom: 20px;
-padding-bottom: 15px;
-border-bottom: 3px solid #000;
-text-transform: uppercase;
-letter-spacing: 1px;
+.stat-value {
+  font-size: 32px;
+  font-weight: 900;
+  color: #000;
 }
 
-/* Dropzone */
-.dropzone-grid {
-display: grid;
-grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-gap: 20px;
-margin-bottom: 25px;
+.stat-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  margin-top: 5px;
 }
 
-.dropzone-wrapper h3 {
-font-weight: 900;
-margin-bottom: 12px;
-font-size: 14px;
-text-transform: uppercase;
-letter-spacing: 0.5px;
+/* Action Bar */
+.action-bar {
+  background: #fff;
+  border: 3px solid #000;
+  padding: 20px;
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
-.dropzone {
-border: 3px dashed #000;
-padding: 30px;
-text-align: center;
-cursor: pointer;
-transition: all 0.2s;
-background: #fff;
+.select-info {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
 }
 
-.dropzone:hover {
-background: #f9f9f9;
-transform: translateY(-2px);
+.select-count {
+  font-size: 24px;
+  font-weight: 900;
 }
 
-.dropzone-icon {
-font-size: 48px;
-margin-bottom: 12px;
-}
-
-.dropzone-text {
-font-weight: 700;
-color: #000;
-margin-bottom: 5px;
-text-transform: uppercase;
-letter-spacing: 0.5px;
-}
-
-.dropzone-subtext {
-font-size: 12px;
-color: #666;
-font-weight: 600;
-}
-
-/* Textarea */
-.paste-area {
-width: 100%;
-height: 120px;
-margin-top: 12px;
-padding: 12px;
-border: 3px solid #000;
-font-family: monospace;
-font-size: 12px;
-resize: vertical;
-}
-
-.paste-area:focus {
-outline: none;
-box-shadow: 4px 4px 0 #000;
-}
-
-/* Status Messages */
-.status-message {
-margin-top: 12px;
-padding: 12px;
-border: 3px solid #000;
-font-weight: 700;
-font-size: 12px;
-text-transform: uppercase;
-letter-spacing: 0.5px;
-}
-
-.status-success {
-background: #fff;
-color: #000;
-}
-
-.status-error {
-background: #000;
-color: #fff;
-}
-
-.status-info {
-background: #f9f9f9;
-color: #000;
-}
-
-/* Buttons */
-.button-row {
-display: flex;
-gap: 12px;
-flex-wrap: wrap;
+.button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .btn {
-padding: 12px 24px;
-border: 3px solid #000;
-font-size: 14px;
-font-weight: 700;
-cursor: pointer;
-transition: all 0.2s;
-text-transform: uppercase;
-letter-spacing: 0.5px;
-background: #fff;
-color: #000;
+  padding: 12px 24px;
+  border: 3px solid #000;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  background: #fff;
+  color: #000;
 }
 
 .btn:disabled {
-opacity: 0.5;
-cursor: not-allowed;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-primary {
-background: #000;
-color: white;
+  background: #000;
+  color: #fff;
 }
 
 .btn-primary:hover:not(:disabled) {
-background: #fff;
-color: #000;
-transform: translate(-2px, -2px);
-box-shadow: 4px 4px 0 #000;
+  background: #fff;
+  color: #000;
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 #000;
 }
 
 .btn-secondary {
-background: #fff;
-color: #000;
+  background: #fff;
+  color: #000;
 }
 
 .btn-secondary:hover:not(:disabled) {
-transform: translate(-2px, -2px);
-box-shadow: 4px 4px 0 #000;
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 #000;
 }
 
-.btn-edit {
-background: #fff;
-color: #000;
-border: 3px solid #000;
+.btn-danger {
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
 }
 
-.btn-edit:hover:not(:disabled) {
-background: #000;
-color: #fff;
-transform: translate(-2px, -2px);
-box-shadow: 4px 4px 0 #000;
+.btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 #991b1b;
 }
 
-/* Publish Section */
-.publish-section {
-background: #000;
-color: #fff;
-padding: 30px;
-border: 3px solid #000;
+/* Tabs */
+.tabs {
+  background: #fff;
+  border: 3px solid #000;
+  border-bottom: none;
+  display: flex;
+  margin-bottom: 0;
 }
 
-.publish-section h2 {
-font-size: 24px;
-font-weight: 900;
-margin-bottom: 20px;
-padding-bottom: 15px;
-border-bottom: 3px solid #fff;
-text-transform: uppercase;
-letter-spacing: 1px;
+.tab {
+  flex: 1;
+  padding: 15px 20px;
+  border: none;
+  border-right: 3px solid #000;
+  background: #f5f5f5;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  color: #666;
 }
 
-.input-group {
-margin-bottom: 20px;
+.tab:last-child {
+  border-right: none;
 }
 
-.input-label {
-display: block;
-font-size: 12px;
-font-weight: 700;
-margin-bottom: 8px;
-text-transform: uppercase;
-letter-spacing: 0.5px;
+.tab.active {
+  background: #000;
+  color: #fff;
 }
 
-.text-input {
-width: 100%;
-padding: 12px;
-border: 3px solid #fff;
-background: #000;
-color: #fff;
-font-size: 14px;
-font-weight: 600;
+.tab:hover:not(.active) {
+  background: #e0e0e0;
 }
 
-.text-input:focus {
-outline: none;
-box-shadow: 4px 4px 0 #fff;
+/* Tab Content */
+.tab-content {
+  background: #fff;
+  border: 3px solid #000;
+  padding: 30px;
+  margin-bottom: 30px;
+  display: none;
 }
 
-.input-hint {
-font-size: 11px;
-color: #999;
-margin-top: 5px;
+.tab-content.active {
+  display: block;
 }
 
-.warning-text {
-font-size: 11px;
-color: #999;
-margin-top: 15px;
-padding: 12px;
-border: 2px solid #333;
+/* Release Grid */
+.releases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 }
 
-/* Info Box */
-.info-box {
-padding: 15px;
-background: #f9f9f9;
-border: 3px solid #000;
-margin-top: 20px;
+.release-card {
+  background: #fff;
+  border: 3px solid #000;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
 }
 
-.info-box h3 {
-font-weight: 900;
-margin-bottom: 10px;
-text-transform: uppercase;
-letter-spacing: 0.5px;
+.release-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 #000;
 }
 
-.info-box p {
-font-size: 14px;
-color: #666;
-margin-bottom: 5px;
+.release-card.selected {
+  border-color: #000;
+  box-shadow: 0 0 0 3px #000;
 }
 
-.hidden {
-display: none;
+.release-checkbox {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  z-index: 10;
+  accent-color: #000;
 }
 
-/* Loading Spinner */
-.spinner {
-width: 30px;
-height: 30px;
-border: 3px solid #e0e0e0;
-border-top: 3px solid #000;
-border-radius: 50%;
-animation: spin 1s linear infinite;
-display: inline-block;
-vertical-align: middle;
-margin-right: 10px;
+.release-artwork {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  background: #f5f5f5;
+  display: block;
 }
 
-@keyframes spin {
-0% { transform: rotate(0deg); }
-100% { transform: rotate(360deg); }
+.release-info {
+  padding: 15px;
+}
+
+.release-title {
+  font-size: 16px;
+  font-weight: 900;
+  color: #000;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.release-artist {
+  font-size: 14px;
+  font-weight: 700;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.release-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.release-tracks {
+  font-size: 12px;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.release-price {
+  font-size: 14px;
+  font-weight: 900;
+  color: #000;
+}
+
+.release-status {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #000;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+.release-status.unpublished {
+  background: #f5f5f5;
+  color: #666;
+  border: 2px solid #000;
+}
+
+/* Metadata Badge */
+.metadata-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #22c55e;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 8px;
+  margin-left: 5px;
+}
+
+.metadata-badge.missing {
+  background: #ef4444;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.empty-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #000;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.empty-text {
+  font-size: 14px;
+  color: #666;
+  font-weight: 600;
+}
+
+/* Success Message */
+.success-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #000;
+  color: #fff;
+  padding: 20px;
+  border: 3px solid #000;
+  box-shadow: 8px 8px 0 rgba(0,0,0,0.2);
+  z-index: 1000;
+  animation: slideIn 0.3s ease-out;
+  max-width: 400px;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.success-title {
+  font-size: 16px;
+  font-weight: 900;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.success-text {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Preview Modal - IMPROVED */
+.preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.preview-modal.active {
+  display: flex;
+}
+
+.preview-modal-content {
+  background: #fff;
+  border: 3px solid #000;
+  max-width: 1400px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.preview-modal-header {
+  background: #000;
+  color: #fff;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #000;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.preview-modal-title {
+  font-size: 20px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.preview-close-btn {
+  background: #fff;
+  color: #000;
+  border: 3px solid #fff;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.2s;
+}
+
+.preview-close-btn:hover {
+  background: #000;
+  color: #fff;
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 #fff;
+}
+
+.preview-modal-body {
+  padding: 30px;
+  background: #f9f9f9;
+}
+
+.preview-release-card {
+  background: #fff;
+  border: 3px solid #000;
+  padding: 30px;
+  margin-bottom: 30px;
+}
+
+.preview-actions {
+  padding: 20px;
+  background: #fff;
+  border-top: 3px solid #000;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.btn-preview {
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 3px solid #000;
+  background: #fff;
+  color: #000;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-preview:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 #000;
 }
 
 @media (max-width: 768px) {
-.header-content {
-flex-direction: column;
-align-items: flex-start;
-gap: 15px;
-}
+  .container {
+    padding: 15px;
+  }
 
-.button-row {
-flex-direction: column;
-}
+  .header h1 {
+    font-size: 24px;
+  }
 
-.btn {
-width: 100%;
-text-align: center;
-}
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+  }
+
+  .action-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .button-group {
+    width: 100%;
+  }
+
+  .btn {
+    flex: 1;
+  }
+
+  .releases-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tabs {
+    flex-direction: column;
+  }
+
+  .tab {
+    border-right: none;
+    border-bottom: 3px solid #000;
+  }
+
+  .tab:last-child {
+    border-bottom: none;
+  }
+  
+  .preview-release-header {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
 
 <div class="container">
-<!-- Logo -->
-<div class="logo-container">
-<img
-src="/logo.webp"
-alt="Fresh Wax"
-class="logo"
-onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
->
-<div class="logo-fallback" style="display: none;">FRESH WAX</div>
-</div>
+  <!-- Logo Header -->
+  <div class="logo-header">
+    <img src="/logo.webp" alt="Fresh Wax" class="logo">
+  </div>
 
-<!-- Header -->
-<div class="header">
-<div class="header-content">
-<div>
-<h1><span style="font-family: 'Arial', sans-serif;">🚀</span> Publish Release to Store</h1>
-<p>Upload metadata, paste hotlinks, preview, and publish</p>
-</div>
-<a href="/admin" class="back-btn">← Dashboard</a>
-</div>
-</div>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <div>
+        <h1>🚀 Publish Releases</h1>
+        <p>Select releases to publish to your store - preview includes full uploaded metadata</p>
+      </div>
+      <a href="/admin" class="back-btn">← Dashboard</a>
+    </div>
+  </div>
 
-<!-- Step 1: Upload Files -->
-<div class="section-card">
-<h2 class="section-title"><span style="font-family: 'Arial', sans-serif;">📦</span> Upload Release Data</h2>
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <div class="stat-value">{unpublishedReleases.length}</div>
+      <div class="stat-label">Ready to Publish</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">{publishedReleases.length}</div>
+      <div class="stat-label">Published</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">{releases.length}</div>
+      <div class="stat-label">Total Releases</div>
+    </div>
+  </div>
 
-<div class="dropzone-grid">
-<!-- Metadata JSON -->
-<div class="dropzone-wrapper">
-<h3><span style="font-family: 'Arial', sans-serif;">📄</span> Metadata JSON</h3>
-<div id="metadata-dropzone" class="dropzone">
-<div class="dropzone-icon" style="font-family: 'Arial', sans-serif;">📄</div>
-<p class="dropzone-text">Drop metadata.json</p>
-<p class="dropzone-subtext">or click to browse</p>
-<input type="file" id="metadata-input" accept=".json" style="display: none;">
-</div>
-<div id="metadata-status" class="hidden"></div>
-</div>
+  <!-- Action Bar -->
+  <div class="action-bar">
+    <div class="select-info">
+      <span class="select-count" id="selectedCount">0</span> selected
+    </div>
+    <div class="button-group">
+      <button class="btn btn-secondary" onclick="selectAll()">Select All</button>
+      <button class="btn btn-secondary" onclick="deselectAll()">Deselect All</button>
+      <button class="btn btn-secondary" id="previewBtn" onclick="previewSelected()" disabled>
+        👁️ Preview Full Metadata
+      </button>
+      <button class="btn btn-danger" id="deleteBtn" onclick="deleteSelected()" disabled>
+        🗑️ Delete Selected
+      </button>
+      <button class="btn btn-primary" id="publishBtn" onclick="publishSelected()" disabled>
+        🚀 Publish Selected
+      </button>
+    </div>
+  </div>
 
-<!-- Hotlinks -->
-<div class="dropzone-wrapper">
-<h3><span style="font-family: 'Arial', sans-serif;">🔗</span> Hotlinks JSON</h3>
-<div id="hotlinks-dropzone" class="dropzone">
-<div class="dropzone-icon" style="font-family: 'Arial', sans-serif;">🔗</div>
-<p class="dropzone-text">Drop hotlinks JSON</p>
-<p class="dropzone-subtext">or paste below</p>
-<input type="file" id="hotlinks-input" accept=".json" style="display: none;">
-</div>
-<textarea
-id="hotlinks-paste"
-class="paste-area"
-placeholder="Paste hotlinks code from upload page here..."
-></textarea>
-<div id="hotlinks-status" class="hidden"></div>
-</div>
-</div>
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('unpublished')">
+      📦 Unpublished ({unpublishedReleases.length})
+    </button>
+    <button class="tab" onclick="switchTab('published')">
+      ✅ Published ({publishedReleases.length})
+    </button>
+  </div>
 
-<div class="button-row">
-<button
-onclick="mergeAndPreview()"
-id="merge-btn"
-class="btn btn-primary"
-disabled
->
-<span style="font-family: 'Arial', sans-serif;">🔄</span> Merge & Preview
-</button>
-<button
-onclick="validateLinks()"
-id="validate-btn"
-class="btn btn-secondary"
-disabled
->
-✓ Validate Links
-</button>
-</div>
-
-<div id="validation-results" class="hidden"></div>
-</div>
-
-<!-- Step 2: Preview (Hidden initially) -->
-<div id="preview-section" class="hidden">
-<div class="section-card">
-<h2 class="section-title"><span style="font-family: 'Arial', sans-serif;">👁️</span> Preview Release</h2>
-<div id="release-preview"></div>
-
-<div class="info-box">
-<h3><span style="font-family: 'Arial', sans-serif;">📋</span> Release Summary</h3>
-<div id="release-info"></div>
-</div>
-</div>
-
-<!-- Step 3: Publish -->
-<div class="publish-section">
-<h2><span style="font-family: 'Arial', sans-serif;">🚀</span> Ready to Publish?</h2>
-
-<div class="input-group">
-<label class="input-label">Filename (no spaces or special chars)</label>
-<input
-type="text"
-id="filename-input"
-class="text-input"
-placeholder="artist-name-release-title"
->
-<p class="input-hint">Will be saved as: src/data/releases/[filename].json</p>
-</div>
-
-<div class="button-row">
-<button
-onclick="publishRelease()"
-id="publish-btn"
-class="btn btn-primary"
-disabled
-style="font-size: 16px; padding: 15px 30px;"
->
-<span style="font-family: 'Arial', sans-serif;">🚀</span> Publish to Store
-</button>
-<button
-onclick="editRelease()"
-id="edit-btn"
-class="btn btn-edit"
-disabled
-style="font-size: 16px; padding: 15px 30px;"
->
-<span style="font-family: 'Arial', sans-serif;">✏️</span> Edit & Customize
-</button>
-<button
-onclick="downloadJSON()"
-class="btn btn-secondary"
->
-<span style="font-family: 'Arial', sans-serif;">💾</span> Download JSON
-</button>
-</div>
-
-<p class="warning-text">
-<span style="font-family: 'Arial', sans-serif;">ℹ️</span> After publishing, rebuild your Astro site to see the release live in your store. A backup JSON will also be downloaded.
-</p>
-</div>
-</div>
-</div>
-
-<script is:inline>
-let currentRelease = null;
-let metadataData = null;
-let hotlinksData = null;
-
-document.addEventListener('DOMContentLoaded', () => {
-setupDropzone('metadata-dropzone', 'metadata-input', handleMetadataFile);
-setupDropzone('hotlinks-dropzone', 'hotlinks-input', handleHotlinksFile);
-
-// Handle paste in textarea
-document.getElementById('hotlinks-paste').addEventListener('input', (e) => {
-const text = e.target.value.trim();
-if (text) {
-try {
-hotlinksData = JSON.parse(text);
-showStatus('hotlinks-status', '✓ Hotlinks loaded from paste', 'success');
-checkIfReadyToMerge();
-} catch (err) {
-try {
-const startIndex = text.indexOf('{');
-const endIndex = text.lastIndexOf('}');
-if (startIndex === -1 || endIndex === -1) {
-throw new Error('No object found');
-}
-
-let objStr = text.substring(startIndex, endIndex + 1);
-objStr = objStr.replace(/\/\/[^\n]*/g, '');
-objStr = objStr.replace(/\/\*[\s\S]*?\*\//g, '');
-objStr = objStr.replace(/,(\s*[}\]])/g, '$1');
-
-try {
-hotlinksData = (new Function('return ' + objStr))();
-} catch (evalErr) {
-throw new Error('Invalid JavaScript object');
-}
-
-if (!hotlinksData.artwork && !hotlinksData.previews && !hotlinksData.fullTracks) {
-throw new Error('Invalid structure');
-}
-
-showStatus('hotlinks-status', '✓ Hotlinks loaded from JavaScript format', 'success');
-checkIfReadyToMerge();
-} catch (err2) {
-showStatus('hotlinks-status', '✗ Invalid format - paste the full hotlinks code', 'error');
-}
-}
-}
-});
-});
-
-function setupDropzone(dropzoneId, inputId, handler) {
-const dropzone = document.getElementById(dropzoneId);
-const input = document.getElementById(inputId);
-
-dropzone.addEventListener('click', () => input.click());
-
-dropzone.addEventListener('dragover', (e) => {
-e.preventDefault();
-dropzone.style.background = '#f0f0f0';
-});
-
-dropzone.addEventListener('dragleave', () => {
-dropzone.style.background = '#fff';
-});
-
-dropzone.addEventListener('drop', (e) => {
-e.preventDefault();
-dropzone.style.background = '#fff';
-if (e.dataTransfer.files.length) {
-handler(e.dataTransfer.files[0]);
-}
-});
-
-input.addEventListener('change', (e) => {
-if (e.target.files.length) {
-handler(e.target.files[0]);
-}
-});
-}
-
-async function handleMetadataFile(file) {
-if (!file.name.endsWith('.json')) {
-showStatus('metadata-status', '✗ Please upload a .json file', 'error');
-return;
-}
-
-try {
-const text = await file.text();
-metadataData = JSON.parse(text);
-showStatus('metadata-status', `✓ Loaded: ${file.name}`, 'success');
-checkIfReadyToMerge();
-} catch (err) {
-showStatus('metadata-status', '✗ Invalid JSON format', 'error');
-metadataData = null;
-}
-}
-
-async function handleHotlinksFile(file) {
-if (!file.name.endsWith('.json')) {
-showStatus('hotlinks-status', '✗ Please upload a .json file', 'error');
-return;
-}
-
-try {
-const text = await file.text();
-hotlinksData = JSON.parse(text);
-document.getElementById('hotlinks-paste').value = text;
-showStatus('hotlinks-status', `✓ Loaded: ${file.name}`, 'success');
-checkIfReadyToMerge();
-} catch (err) {
-showStatus('hotlinks-status', '✗ Invalid JSON format', 'error');
-hotlinksData = null;
-}
-}
-
-function showStatus(elementId, message, type) {
-const element = document.getElementById(elementId);
-element.classList.remove('hidden');
-element.className = `status-message status-${type}`;
-element.textContent = message;
-}
-
-function checkIfReadyToMerge() {
-const mergeBtn = document.getElementById('merge-btn');
-const validateBtn = document.getElementById('validate-btn');
-
-if (metadataData && hotlinksData) {
-mergeBtn.disabled = false;
-validateBtn.disabled = false;
-} else {
-mergeBtn.disabled = true;
-validateBtn.disabled = true;
-}
-}
-
-function mergeAndPreview() {
-if (!metadataData || !hotlinksData) {
-alert('Please upload both metadata and hotlinks first!');
-return;
-}
-
-try {
-// Extract track names safely
-let trackNames = [];
-if (metadataData.trackListing && typeof metadataData.trackListing === 'string') {
-trackNames = metadataData.trackListing
-.split('\n')
-.map(t => t.trim())
-.filter(t => t.length > 0);
-} else if (Array.isArray(metadataData.trackListing)) {
-trackNames = metadataData.trackListing;
-} else if (Array.isArray(metadataData.tracks)) {
-trackNames = metadataData.tracks.map(t => t.title || t);
-} else {
-const trackCount = hotlinksData.previews?.length || Math.floor((hotlinksData.fullTracks?.length || 0) / 2) || 0;
-trackNames = Array.from({ length: trackCount }, (_, i) => `Track ${i + 1}`);
-}
-
-// Check if preorder
-const releaseDate = new Date(metadataData.releaseDate || metadataData.officialReleaseDate);
-const today = new Date();
-const isPreorder = releaseDate > today;
-
-// Create tracks array
-const tracks = trackNames.map((trackName, i) => ({
-id: `track-${String(i + 1).padStart(3, '0')}`,
-title: trackName,
-preview_url: hotlinksData.previews?.[i] || null,
-track_number: i + 1
-}));
-
-// Generate release ID
-const releaseId = `release-${Date.now()}`;
-
-// Merge all data
-currentRelease = {
-id: releaseId,
-title: metadataData.releaseName || metadataData.title || "Untitled Release",
-artist: metadataData.artistName || metadataData.artist || "Unknown Artist",
-label: metadataData.labelName || metadataData.label || "",
-artworkUrl: hotlinksData.artwork?.[0] || "",
-releaseDate: metadataData.releaseDate || metadataData.officialReleaseDate || new Date().toISOString().split('T')[0],
-isPreorder: isPreorder,
-hasVinyl: metadataData.vinylRelease || false,
-vinylStock: parseInt(metadataData.vinylRecordCount) || 0,
-digitalPrice: parseFloat(metadataData.pricePerSale || metadataData.digitalPrice) || 7.99,
-vinylPrice: parseFloat(metadataData.vinylPrice) || 0,
-tracks: tracks,
-fullTracks: hotlinksData.fullTracks || [],
-metadata: hotlinksData.metadata || "",
-extraNotes: metadataData.notes || "",
-description: metadataData.description || "",
-genre: metadataData.genre || metadataData.customGenre || "",
-trackPrice: parseFloat(metadataData.trackPrice) || 1.00,
-hasLimitedEdition: metadataData.hasLimitedEdition || false,
-limitedEditionType: metadataData.limitedEditionType || "",
-limitedEditionPrice: parseFloat(metadataData.limitedEditionPrice) || 0,
-limitedEditionDetails: metadataData.limitedEditionDetails || ""
-};
-
-// Generate filename
-const filename = `${currentRelease.artist}-${currentRelease.title}`
-.toLowerCase()
-.replace(/[^a-z0-9]+/g, '-')
-.replace(/^-|-$/g, '');
-
-document.getElementById('filename-input').value = filename;
-
-// Show preview
-document.getElementById('preview-section').classList.remove('hidden');
-renderPreview(currentRelease);
-showReleaseInfo(currentRelease);
-
-// Enable buttons
-document.getElementById('publish-btn').disabled = false;
-document.getElementById('edit-btn').disabled = false;
-
-// Scroll to preview
-document.getElementById('preview-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-} catch (err) {
-alert('Error merging data: ' + err.message);
-console.error('Merge error:', err);
-}
-}
-
-function renderPreview(release) {
-const previewContainer = document.getElementById('release-preview');
-const formattedDate = new Date(release.releaseDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-const vinylAvailable = release.hasVinyl && release.vinylStock > 0;
-const initialTracksDesktop = 2;
-const initialTracksMobile = 2;
-const trackPrice = release.trackPrice || 1.00;
+  <!-- Unpublished Releases -->
+  <div id="unpublished-tab" class="tab-content active">
+    <!-- DEBUG PANEL -->
+    <div style="background: #fff3cd; border: 3px solid #ffc107; padding: 20px; margin-bottom: 20px;">
+      <h3 style="font-size: 16px; font-weight: 900; margin: 0 0 15px 0; color: #000;">🐛 DEBUG INFO</h3>
+      <div id="debugInfo" style="font-family: monospace; font-size: 12px; line-height: 1.6; color: #000;">
+        Loading debug info...
+      </div>
+    </div>
     
-const html = `
-<article style="background: white; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden;">
-<!-- Mobile Layout -->
-<div style="display: block;">
-<div style="position: relative; width: 100%;">
-<img src="${release.artworkUrl}" alt="${release.title} by ${release.artist}" style="width: 100%; aspect-ratio: 1; object-fit: cover;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22%3E%3Crect fill=%22%23ddd%22 width=%22400%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22 font-size=%2224%22%3ENo Image%3C/text%3E%3C/svg%3E'" />
-<div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 0.75rem; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); display: flex; gap: 0.5rem; justify-content: center;">
-<button style="background: #3b82f6; color: white; padding: 0.5rem 0.75rem; border-radius: 0.5rem; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; border: none; cursor: pointer; transition: background 0.2s;">
-<svg style="width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-</svg>
-£${release.digitalPrice.toFixed(2)}
-</button>
-${release.hasVinyl ? `
-<button ${!vinylAvailable ? 'disabled' : ''} style="background: ${vinylAvailable ? '#a855f7' : '#9ca3af'}; color: ${vinylAvailable ? 'white' : '#d1d5db'}; padding: 0.5rem 0.75rem; border-radius: 0.5rem; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 600; border: none; ${vinylAvailable ? 'cursor: pointer;' : 'cursor: not-allowed;'} transition: background 0.2s;">
-<svg style="width: 1rem; height: 1rem;" fill="currentColor" viewBox="0 0 24 24">
-<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
-<circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-<circle cx="12" cy="12" r="2" fill="currentColor"/>
-</svg>
-${vinylAvailable ? `£${release.vinylPrice.toFixed(2)}` : 'Sold Out'}
-</button>
-` : ''}
-</div>
-</div>
-<div style="padding: 1rem;">
-<div style="margin-bottom: 0.75rem;">
-<h3 style="font-size: 1.25rem; font-weight: 700; color: #111827; margin-bottom: 0.25rem; line-height: 1.375;">${release.title}</h3>
-<p style="font-size: 1rem; color: #4b5563; margin-bottom: 0.25rem;">${release.artist}</p>
-${release.label ? `<p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">${release.label}</p>` : ''}
-<div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-${release.isPreorder ? '<span style="display: inline-block; background: #fed7aa; color: #9a3412; font-size: 0.75rem; font-weight: 600; padding: 0.125rem 0.5rem; border-radius: 0.25rem;">Pre-order</span>' : ''}
-<span style="font-size: 0.75rem; color: #6b7280;">${release.isPreorder ? `Ships ${formattedDate}` : formattedDate}</span>
-${vinylAvailable && release.vinylStock <= 5 ? `<span style="display: inline-block; background: #fecaca; color: #991b1b; font-size: 0.75rem; font-weight: 600; padding: 0.125rem 0.5rem; border-radius: 0.25rem;">Only ${release.vinylStock} left</span>` : ''}
-${release.hasVinyl && vinylAvailable ? '<span style="display: inline-block; background: #e9d5ff; color: #6b21a8; font-size: 0.75rem; font-weight: 600; padding: 0.125rem 0.5rem; border-radius: 0.25rem;">Vinyl includes digital</span>' : ''}
-</div>
-</div>
-${release.extraNotes ? `<div style="margin-bottom: 0.75rem; padding: 0.5rem; background: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 0.25rem;"><p style="font-size: 0.75rem; color: #1e3a8a;">${release.extraNotes}</p></div>` : ''}
-${release.tracks.length > 0 ? `
-<div style="margin-top: 0.75rem;">
-<div style="display: flex; flex-direction: column; gap: 0.5rem;">
-${release.tracks.slice(0, initialTracksMobile).map(track => `
-<div style="display: flex; align-items: center; gap: 0.5rem; background: #f9fafb; border-radius: 0.25rem; padding: 0.5rem;">
-<span style="font-size: 0.75rem; font-weight: 600; color: #6b7280; width: 1.25rem; flex-shrink: 0;">${track.track_number}.</span>
-<p style="font-size: 0.75rem; font-weight: 500; color: #111827; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${track.title}">${track.title}</p>
-<button style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 0.25rem; background: #3b82f6; color: white; border: none; cursor: pointer; transition: background 0.2s;" title="Play">
-<svg style="width: 1rem; height: 1rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-</button>
-<div style="width: 6rem; flex-shrink: 0; height: 2rem; background: #e5e7eb; border-radius: 0.25rem;"></div>
-<button style="flex-shrink: 0; background: #22c55e; color: white; font-size: 0.75rem; font-weight: 700; padding: 0.375rem 0.625rem; border-radius: 0.25rem; white-space: nowrap; margin-left: 0.25rem; border: none; cursor: pointer; transition: background 0.2s;" title="Buy track">
-£${trackPrice.toFixed(2)}
-</button>
-</div>
-`).join('')}
-</div>
-${release.tracks.length > initialTracksMobile ? `
-<details style="margin-top: 0.5rem;">
-<summary style="cursor: pointer; font-size: 0.75rem; color: #2563eb; font-weight: 600; padding: 0.5rem; background: #f9fafb; border-radius: 0.25rem; list-style: none;">
-+ Show ${release.tracks.length - initialTracksMobile} more track${release.tracks.length - initialTracksMobile !== 1 ? 's' : ''}
-</summary>
-<div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
-${release.tracks.slice(initialTracksMobile).map(track => `
-<div style="display: flex; align-items: center; gap: 0.5rem; background: #f9fafb; border-radius: 0.25rem; padding: 0.5rem;">
-<span style="font-size: 0.75rem; font-weight: 600; color: #6b7280; width: 1.25rem; flex-shrink: 0;">${track.track_number}.</span>
-<p style="font-size: 0.75rem; font-weight: 500; color: #111827; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${track.title}">${track.title}</p>
-<button style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 0.25rem; background: #3b82f6; color: white; border: none; cursor: pointer; transition: background 0.2s;" title="Play">
-<svg style="width: 1rem; height: 1rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-</button>
-<div style="width: 6rem; flex-shrink: 0; height: 2rem; background: #e5e7eb; border-radius: 0.25rem;"></div>
-<button style="flex-shrink: 0; background: #22c55e; color: white; font-size: 0.75rem; font-weight: 700; padding: 0.375rem 0.625rem; border-radius: 0.25rem; white-space: nowrap; margin-left: 0.25rem; border: none; cursor: pointer; transition: background 0.2s;" title="Buy track">
-£${trackPrice.toFixed(2)}
-</button>
-</div>
-`).join('')}
-</div>
-</details>
-` : ''}
-</div>
-` : ''}
-</div>
-</div>
+    {unpublishedReleases.length === 0 ? (
+      <div class="empty-state">
+        <div class="empty-icon">📦</div>
+        <div class="empty-title">No Unpublished Releases</div>
+        <div class="empty-text">All releases have been published to the store</div>
+      </div>
+    ) : (
+      <div class="releases-grid">
+        {unpublishedReleases.map((release) => (
+          <div class="release-card" data-release-id={release.id}>
+            <!-- DEBUG: Show ID visibly on card -->
+            <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: #fff; padding: 4px 8px; font-size: 10px; font-weight: 700; z-index: 5; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              ID: {release.id || '⚠️ UNDEFINED'}
+            </div>
+            
+            <input 
+              type="checkbox" 
+              class="release-checkbox" 
+              data-release-id={release.id}
+              data-debug-title={release.title}
+              data-debug-artist={release.artist}
+              onchange="updateSelection()"
+            />
+            <img 
+              src={release.coverUrl || release.artworkUrl || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22%3E%3Crect fill=%22%23f5f5f5%22 width=%22400%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22 font-size=%2224%22%3ENo Image%3C/text%3E%3C/svg%3E'} 
+              alt={release.title}
+              class="release-artwork"
+            />
+            <div class="release-info">
+              <div class="release-title">{release.title}</div>
+              <div class="release-artist">{release.artist}</div>
+              <div class="release-details">
+                <span class="release-tracks">
+                  {release.tracks?.length || 0} Tracks
+                </span>
+                <span class="release-price">
+                  £{(release.digitalPrice || release.price || 0).toFixed(2)}
+                </span>
+              </div>
+              <span class="release-status unpublished">Unpublished</span>
+              {release.metadataUrl ? (
+                <span class="metadata-badge">📄 Metadata Available</span>
+              ) : (
+                <span class="metadata-badge missing">⚠️ No Metadata</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
 
-<!-- Desktop Layout -->
-<div style="display: none;">
-<div style="position: relative; width: 16rem; height: 16rem; flex-shrink: 0;">
-<img src="${release.artworkUrl}" alt="${release.title} by ${release.artist}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22%3E%3Crect fill=%22%23ddd%22 width=%22400%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22 font-size=%2224%22%3ENo Image%3C/text%3E%3C/svg%3E'" />
-<div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 0.75rem; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); display: flex; gap: 0.5rem; justify-content: center;">
-<button style="background: #3b82f6; color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; display: inline-flex; align-items: center; gap: 0.5rem; border: none; cursor: pointer; transition: background 0.2s;">
-<svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-</svg>
-<span style="font-size: 0.875rem; font-weight: 600;">£${release.digitalPrice.toFixed(2)}</span>
-</button>
-${release.hasVinyl ? `
-<button ${!vinylAvailable ? 'disabled' : ''} style="background: ${vinylAvailable ? '#a855f7' : '#9ca3af'}; color: ${vinylAvailable ? 'white' : '#d1d5db'}; padding: 0.5rem 1rem; border-radius: 0.5rem; display: inline-flex; align-items: center; gap: 0.5rem; border: none; ${vinylAvailable ? 'cursor: pointer;' : 'cursor: not-allowed;'} transition: background 0.2s;">
-<svg style="width: 1.25rem; height: 1.25rem;" fill="currentColor" viewBox="0 0 24 24">
-<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
-<circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-<circle cx="12" cy="12" r="2" fill="currentColor"/>
-</svg>
-<span style="font-size: 0.875rem; font-weight: 600;">${vinylAvailable ? `£${release.vinylPrice.toFixed(2)}` : 'Sold Out'}</span>
-</button>
-` : ''}
-</div>
-</div>
-<div style="flex: 1; padding: 1.5rem; display: flex; flex-direction: column;">
-<div style="margin-bottom: 0.75rem;">
-<h3 style="font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 0.25rem;">${release.title}</h3>
-<p style="font-size: 1.125rem; color: #4b5563; margin-bottom: 0.25rem;">${release.artist}</p>
-${release.label ? `<p style="font-size: 1rem; color: #6b7280; margin-bottom: 0.5rem;">${release.label}</p>` : ''}
-<div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-${release.isPreorder ? '<span style="display: inline-block; background: #fed7aa; color: #9a3412; font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.625rem; border-radius: 0.25rem;">Pre-order</span>' : ''}
-<span style="font-size: 0.875rem; color: #6b7280;">${release.isPreorder ? `Ships ${formattedDate}` : formattedDate}</span>
-${vinylAvailable && release.vinylStock <= 5 ? `<span style="display: inline-block; background: #fecaca; color: #991b1b; font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.625rem; border-radius: 0.25rem;">Only ${release.vinylStock} left</span>` : ''}
-${release.hasVinyl && vinylAvailable ? '<span style="display: inline-block; background: #e9d5ff; color: #6b21a8; font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.625rem; border-radius: 0.25rem;">Vinyl includes digital</span>' : ''}
-</div>
-</div>
-${release.extraNotes ? `<div style="margin-bottom: 0.75rem; padding: 0.75rem; background: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 0.25rem;"><p style="font-size: 0.875rem; color: #1e3a8a;">${release.extraNotes}</p></div>` : ''}
-${release.tracks.length > 0 ? `
-<div style="flex: 1; display: flex; flex-direction: column;">
-<div style="display: flex; flex-direction: column; gap: 0.5rem;">
-${release.tracks.slice(0, initialTracksDesktop).map(track => `
-<div style="display: flex; align-items: center; gap: 0.75rem; background: #f9fafb; border-radius: 0.25rem; padding: 0.5rem;">
-<span style="font-size: 0.875rem; font-weight: 600; color: #6b7280; width: 1.5rem; flex-shrink: 0;">${track.track_number}.</span>
-<p style="font-size: 0.875rem; font-weight: 500; color: #111827; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${track.title}">${track.title}</p>
-<button style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; border-radius: 0.25rem; background: #3b82f6; color: white; border: none; cursor: pointer; transition: background 0.2s;" title="Play">
-<svg style="width: 1rem; height: 1rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-</button>
-<div style="width: 12rem; flex-shrink: 0; height: 2rem; background: #e5e7eb; border-radius: 0.25rem;"></div>
-<button style="flex-shrink: 0; background: #22c55e; color: white; font-size: 0.875rem; font-weight: 700; padding: 0.5rem 1rem; border-radius: 0.25rem; white-space: nowrap; margin-left: 0.5rem; border: none; cursor: pointer; transition: background 0.2s;" title="Buy track">
-£${trackPrice.toFixed(2)}
-</button>
-</div>
-`).join('')}
-</div>
-${release.tracks.length > initialTracksDesktop ? `
-<details style="margin-top: 0.5rem;">
-<summary style="cursor: pointer; font-size: 0.875rem; color: #2563eb; font-weight: 600; padding: 0.5rem; background: #f9fafb; border-radius: 0.25rem; list-style: none;">
-+ Show ${release.tracks.length - initialTracksDesktop} more track${release.tracks.length - initialTracksDesktop !== 1 ? 's' : ''}
-</summary>
-<div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;">
-${release.tracks.slice(initialTracksDesktop).map(track => `
-<div style="display: flex; align-items: center; gap: 0.75rem; background: #f9fafb; border-radius: 0.25rem; padding: 0.5rem;">
-<span style="font-size: 0.875rem; font-weight: 600; color: #6b7280; width: 1.5rem; flex-shrink: 0;">${track.track_number}.</span>
-<p style="font-size: 0.875rem; font-weight: 500; color: #111827; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${track.title}">${track.title}</p>
-<button style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 1.75rem; height: 1.75rem; border-radius: 0.25rem; background: #3b82f6; color: white; border: none; cursor: pointer; transition: background 0.2s;" title="Play">
-<svg style="width: 1rem; height: 1rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-</button>
-<div style="width: 12rem; flex-shrink: 0; height: 2rem; background: #e5e7eb; border-radius: 0.25rem;"></div>
-<button style="flex-shrink: 0; background: #22c55e; color: white; font-size: 0.875rem; font-weight: 700; padding: 0.5rem 1rem; border-radius: 0.25rem; white-space: nowrap; margin-left: 0.5rem; border: none; cursor: pointer; transition: background 0.2s;" title="Buy track">
-£${trackPrice.toFixed(2)}
-</button>
-</div>
-`).join('')}
-</div>
-</details>
-` : ''}
-</div>
-` : ''}
-</div>
-</div>
-</article>
-
-<style>
-@media (min-width: 640px) {
-article > div:first-child { display: none !important; }
-article > div:last-child { display: flex !important; }
-}
-</style>
-`;
-
-previewContainer.innerHTML = html;
-}
-
-function showReleaseInfo(release) {
-const infoContainer = document.getElementById('release-info');
-const info = `
-<p><strong>ID:</strong> ${release.id}</p>
-<p><strong>Artist:</strong> ${release.artist}</p>
-<p><strong>Title:</strong> ${release.title}</p>
-<p><strong>Tracks:</strong> ${release.tracks.length}</p>
-<p><strong>Digital Price:</strong> £${release.digitalPrice.toFixed(2)}</p>
-${release.hasVinyl ? `<p><strong>Vinyl Price:</strong> £${release.vinylPrice.toFixed(2)} (Stock: ${release.vinylStock})</p>` : ''}
-<p><strong>Genre:</strong> ${release.genre || 'Not specified'}</p>
-<p><strong>Release Date:</strong> ${new Date(release.releaseDate).toLocaleDateString()}</p>
-`;
-infoContainer.innerHTML = info;
-}
-
-async function validateLinks() {
-if (!currentRelease) {
-alert('Please merge data first!');
-return;
-}
-
-const resultsDiv = document.getElementById('validation-results');
-resultsDiv.classList.remove('hidden');
-resultsDiv.innerHTML = '<div class="status-message status-info"><span style="font-family: \'Arial\', sans-serif;">🔍</span> Validating links...</div>';
-
-const checks = [];
-
-// Check artwork
-if (currentRelease.artworkUrl) {
-checks.push(checkUrl(currentRelease.artworkUrl, 'Artwork'));
-}
-
-// Check previews
-currentRelease.tracks.forEach((track, i) => {
-if (track.preview_url) {
-checks.push(checkUrl(track.preview_url, `Preview ${i + 1}`));
-}
-});
-
-// Check full tracks
-if (currentRelease.fullTracks && currentRelease.fullTracks.length > 0) {
-currentRelease.fullTracks.forEach((url, i) => {
-if (url) {
-checks.push(checkUrl(url, `Full Track ${i + 1}`));
-}
-});
-}
-
-try {
-const results = await Promise.all(checks);
-const passed = results.filter(r => r.status === 'ok').length;
-const failed = results.filter(r => r.status === 'error').length;
-
-let html = `<div class="status-message status-success">✓ Validation Complete: ${passed} passed, ${failed} failed</div>`;
-
-if (failed > 0) {
-html += '<div style="margin-top: 12px; padding: 12px; border: 3px solid #000; background: #fff;">';
-html += '<p style="font-weight: 900; margin-bottom: 8px;"><span style="font-family: \'Arial\', sans-serif;">⚠️</span> Failed URLs:</p>';
-results.filter(r => r.status === 'error').forEach(r => {
-html += `<p style="font-size: 12px; color: #666; margin-bottom: 4px;">• ${r.label}: ${r.message}</p>`;
-});
-html += '</div>';
-}
-
-resultsDiv.innerHTML = html;
-} catch (err) {
-resultsDiv.innerHTML = '<div class="status-message status-error">✗ Validation failed</div>';
-}
-}
-
-async function checkUrl(url, label) {
-try {
-const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
-return { status: 'ok', label, url };
-} catch (err) {
-return { status: 'error', label, url, message: 'Cannot reach URL' };
-}
-}
-
-// Fixed publishRelease function for publish-release.astro
-// Replace the existing publishRelease function with this version
-
-async function publishRelease() {
-  const filename = document.getElementById('filename-input').value.trim();
+<!-- Pass releases data to JavaScript -->
+<script is:inline define:vars={{ unpublishedData: unpublishedReleases }}>
+  // Filter out any releases without IDs and log warnings
+  const validReleases = unpublishedData.filter(r => {
+    if (!r.id || r.id === 'undefined' || r.id === 'null') {
+      console.error('[PAGE LOAD] WARNING: Release missing ID:', r);
+      console.error('[PAGE LOAD]   Title:', r.title || r.releaseName);
+      console.error('[PAGE LOAD]   Artist:', r.artist || r.artistName);
+      return false;
+    }
+    return true;
+  });
   
-  if (!filename) {
-    alert('Please enter a filename!');
-    return;
+  window.__UNPUBLISHED_RELEASES__ = validReleases;
+  console.log('[PAGE LOAD] Loaded unpublished releases:', window.__UNPUBLISHED_RELEASES__.length);
+  
+  if (validReleases.length !== unpublishedData.length) {
+    console.error('[PAGE LOAD] ⚠ FILTERED OUT', unpublishedData.length - validReleases.length, 'releases with missing IDs');
   }
+  
+  window.__UNPUBLISHED_RELEASES__.forEach(r => {
+    console.log('[PAGE LOAD]   -', r.id, ':', r.title, 'by', r.artist, '| Metadata:', r.metadataUrl ? '✓' : '✗');
+  });
+</script>
 
-  if (!currentRelease) {
-    alert('No release data to publish!');
-    return;
-  }
+  <!-- Published Releases -->
+  <div id="published-tab" class="tab-content">
+    {publishedReleases.length === 0 ? (
+      <div class="empty-state">
+        <div class="empty-icon">✅</div>
+        <div class="empty-title">No Published Releases</div>
+        <div class="empty-text">Publish your first release to see it here</div>
+      </div>
+    ) : (
+      <div class="releases-grid">
+        {publishedReleases.map((release) => (
+          <div class="release-card">
+            <img 
+              src={release.coverUrl || release.artworkUrl || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22%3E%3Crect fill=%22%23f5f5f5%22 width=%22400%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22 font-size=%2224%22%3ENo Image%3C/text%3E%3C/svg%3E'} 
+              alt={release.title}
+              class="release-artwork"
+            />
+            <div class="release-info">
+              <div class="release-title">{release.title}</div>
+              <div class="release-artist">{release.artist}</div>
+              <div class="release-details">
+                <span class="release-tracks">
+                  {release.tracks?.length || 0} Tracks
+                </span>
+                <span class="release-price">
+                  £{(release.digitalPrice || release.price || 0).toFixed(2)}
+                </span>
+              </div>
+              <span class="release-status">Published</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</div>
 
-  // Validate required fields
-  if (!currentRelease.title || !currentRelease.artist) {
-    alert('Missing required fields: Title and Artist');
-    return;
-  }
+<!-- Preview Modal - IMPROVED -->
+<div id="previewModal" class="preview-modal">
+  <div class="preview-modal-content">
+    <div class="preview-modal-header">
+      <div class="preview-modal-title">👁️ Release Preview - Full Metadata</div>
+      <button class="preview-close-btn" onclick="closePreview()">✕ Close</button>
+    </div>
+    <div class="preview-modal-body" id="previewBody">
+      <!-- Release previews will be inserted here -->
+    </div>
+    <div class="preview-actions">
+      <button class="btn-preview" onclick="closePreview()">Close Preview</button>
+    </div>
+  </div>
+</div>
 
-  // Disable publish button while processing
-  const publishBtn = document.getElementById('publish-btn');
-  const originalText = publishBtn.innerHTML;
-  publishBtn.disabled = true;
-  publishBtn.innerHTML = '<span class="spinner"></span> Publishing...';
+<script>
+  // Get releases data from the page
+  const allReleases = window.__UNPUBLISHED_RELEASES__ || [];
 
-  try {
-    // Create a clean copy of the release data
-    const releaseToSend = {
-      ...currentRelease,
-      filename: filename
-    };
-
-    // Convert to JSON string and back to ensure it's serializable
-    const jsonString = JSON.stringify(releaseToSend);
+  // Display debug info
+  function displayDebugInfo() {
+    const debugDiv = document.getElementById('debugInfo');
+    if (!debugDiv) return;
     
-    // Debug: Log what we're sending
-    console.log('Sending release data:', jsonString.substring(0, 200) + '...');
+    let html = '<div style="background: #fff; padding: 15px; border: 2px solid #000; margin-bottom: 10px;">';
+    html += `<strong>Total Releases:</strong> ${allReleases.length}<br>`;
+    html += `<strong>Raw Data Available:</strong> ${window.__UNPUBLISHED_RELEASES__ ? 'Yes' : 'No'}<br>`;
+    html += '</div>';
     
-    // Call API to save release
-    const response = await fetch('/api/save-release', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonString
+    if (allReleases.length > 0) {
+      allReleases.forEach((release, idx) => {
+        html += '<div style="background: #fff; padding: 15px; border: 2px solid #000; margin-bottom: 10px;">';
+        html += `<strong style="color: #000;">Release ${idx + 1}:</strong><br>`;
+        html += `<span style="color: ${release.id ? '#22c55e' : '#ef4444'};">• ID: ${release.id || '❌ UNDEFINED'}</span><br>`;
+        html += `• Title: ${release.title || release.releaseName || '(no title)'}<br>`;
+        html += `• Artist: ${release.artist || release.artistName || '(no artist)'}<br>`;
+        html += `• Metadata URL: ${release.metadataUrl ? '✓ Present' : '✗ Missing'}<br>`;
+        html += `• Artwork URL: ${release.coverUrl || release.artworkUrl ? '✓ Present' : '✗ Missing'}<br>`;
+        html += `• Tracks: ${release.tracks?.length || 0}<br>`;
+        html += '<details style="margin-top: 10px;"><summary style="cursor: pointer; font-weight: 700;">View Full Object</summary>';
+        html += `<pre style="background: #f5f5f5; padding: 10px; overflow-x: auto; font-size: 10px; margin-top: 5px;">${JSON.stringify(release, null, 2)}</pre>`;
+        html += '</details>';
+        html += '</div>';
+      });
+    } else {
+      html += '<div style="background: #fee2e2; padding: 15px; border: 2px solid #ef4444;">';
+      html += '<strong style="color: #991b1b;">No releases loaded!</strong>';
+      html += '</div>';
+    }
+    
+    debugDiv.innerHTML = html;
+  }
+
+  // Switch between tabs
+  function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.classList.remove('active');
+    });
+    event.target.classList.add('active');
+
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+      content.classList.remove('active');
+    });
+    document.getElementById(tabName + '-tab').classList.add('active');
+  }
+
+  // Update selection count
+  function updateSelection() {
+    const checkboxes = document.querySelectorAll('.release-checkbox:checked');
+    const count = checkboxes.length;
+    
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('publishBtn').disabled = count === 0;
+    document.getElementById('previewBtn').disabled = count === 0;
+    document.getElementById('deleteBtn').disabled = count === 0;
+
+    // Update card styling
+document.querySelectorAll('.release-card').forEach(card => {
+  const checkbox = card.querySelector('.release-checkbox');
+  if (checkbox && checkbox.checked) {
+    card.classList.add('selected');
+  } else {
+    card.classList.remove('selected');
+  }
+});
+
+// Select all
+function selectAll() {
+  const activeTab = document.querySelector('.tab-content.active');
+  const checkboxes = activeTab.querySelectorAll('.release-checkbox');
+  checkboxes.forEach(cb => {
+    cb.checked = true;
+  });
+  updateSelection();
+}
+
+// Deselect all
+function deselectAll() {
+  document.querySelectorAll('.release-checkbox').forEach(cb => {
+    cb.checked = false;
+  });
+  updateSelection();
+}
+
+// ============================================
+// FUNCTION 1: transformMetadata - UPDATED
+// ============================================
+// Transform uploaded metadata format to standard release format
+function transformMetadata(uploadedMeta, masterRelease) {
+  console.log('[TRANSFORM] Original uploaded metadata:', uploadedMeta);
+  
+  // CRITICAL: Ensure ID is always set FIRST
+  const releaseId = masterRelease.id || uploadedMeta.id || `release-${Date.now()}`;
+  
+  // Map uploaded field names to standard release schema
+  const transformed = {
+    // CRITICAL: Ensure ID is always set
+    id: releaseId,
+    
+    // Basic info - map from uploaded format
+    title: uploadedMeta.releaseName || masterRelease.title,
+    artist: uploadedMeta.artistName || masterRelease.artist,
+    label: uploadedMeta.labelName || masterRelease.label,
+    genre: uploadedMeta.genre || uploadedMeta.customGenre || masterRelease.genre,
+    
+    // Pricing
+    digitalPrice: parseFloat(uploadedMeta.pricePerSale) || masterRelease.digitalPrice || 0,
+    trackPrice: parseFloat(uploadedMeta.trackPrice) || masterRelease.trackPrice || 0,
+    
+    // Vinyl info
+    hasVinyl: uploadedMeta.vinylRelease === true || uploadedMeta.vinylRelease === 'true',
+    vinylPrice: parseFloat(uploadedMeta.vinylPrice) || masterRelease.vinylPrice || 0,
+    vinylStock: parseInt(uploadedMeta.vinylRecordCount) || masterRelease.vinylStock || 0,
+    
+    // Limited edition
+    hasLimitedEdition: uploadedMeta.hasLimitedEdition === true || uploadedMeta.hasLimitedEdition === 'true',
+    limitedEditionType: uploadedMeta.limitedEditionType || masterRelease.limitedEditionType,
+    limitedEditionPrice: parseFloat(uploadedMeta.limitedEditionPrice) || masterRelease.limitedEditionPrice,
+    limitedEditionDetails: uploadedMeta.limitedEditionDetails || masterRelease.limitedEditionDetails,
+    
+    // Release date
+    releaseDate: uploadedMeta.releaseDate || uploadedMeta.officialReleaseDate || masterRelease.releaseDate,
+    releaseDateType: uploadedMeta.releaseDateType || masterRelease.releaseDateType,
+    isPreorder: uploadedMeta.releaseDateType === 'preorder' || masterRelease.isPreorder,
+    
+    // Additional info
+    description: uploadedMeta.description || uploadedMeta.notes || masterRelease.description,
+    extraNotes: uploadedMeta.notes || uploadedMeta.extraNotes || masterRelease.extraNotes,
+    catalogNumber: uploadedMeta.catalogNumber || masterRelease.catalogNumber,
+    
+    // Contact/admin info
+    email: uploadedMeta.email || masterRelease.email,
+    uploadedAt: uploadedMeta.uploadedAt || masterRelease.uploadedAt,
+    
+    // Parse track listing - NOW PASSES releaseId for ID generation
+    tracks: parseTrackListing(uploadedMeta.trackListing, masterRelease.tracks, releaseId),
+    
+    // Keep all original uploaded data for reference
+    _uploadedMetadata: uploadedMeta,
+    _hasFullMetadata: true,
+    _source: 'transformed-upload'
+  };
+  
+  console.log('[TRANSFORM] Transformed metadata:', transformed);
+  return transformed;
+}
+
+// ============================================
+// FUNCTION 2: parseTrackListing - UPDATED
+// ============================================
+// Parse track listing string into tracks array
+function parseTrackListing(trackListing, existingTracks, releaseId) {
+  // If no track listing but we have existing tracks, ensure they have IDs
+  if (!trackListing) {
+    return (existingTracks || []).map((track, idx) => ({
+      ...track,
+      id: track.id || `${releaseId}-track-${idx + 1}`,
+      preview_url: track.preview_url || track.previewUrl || '',
+      previewUrl: track.previewUrl || track.preview_url || ''
+    }));
+  }
+  
+  // If trackListing is already an array, ensure tracks have IDs
+  if (Array.isArray(trackListing)) {
+    return trackListing.map((track, idx) => ({
+      ...track,
+      id: track.id || `${releaseId}-track-${idx + 1}`,
+      preview_url: track.preview_url || track.previewUrl || '',
+      previewUrl: track.previewUrl || track.preview_url || ''
+    }));
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof trackListing === 'string') {
+    // Split by common delimiters: newline, comma, semicolon
+    const trackNames = trackListing
+      .split(/[\n,;]+/)
+      .map(t => t.trim())
+      .filter(t => t.length > 0);
+    
+    // Convert to track objects
+    return trackNames.map((name, idx) => {
+      // Check if existing tracks have this track with URLs
+      const existingTrack = existingTracks?.find(t => 
+        t.title?.toLowerCase() === name.toLowerCase() ||
+        t.name?.toLowerCase() === name.toLowerCase()
+      );
+      
+      return {
+        id: `${releaseId}-track-${idx + 1}`, // CRITICAL: Generate unique track ID
+        track_number: idx + 1,
+        number: idx + 1,
+        title: name,
+        name: name,
+        url: existingTrack?.url,
+        previewUrl: existingTrack?.previewUrl || existingTrack?.preview_url || '',
+        preview_url: existingTrack?.previewUrl || existingTrack?.preview_url || '',
+        duration: existingTrack?.duration
+      };
+    });
+  }
+  
+  // Fallback: ensure existing tracks have IDs
+  return (existingTracks || []).map((track, idx) => ({
+    ...track,
+    id: track.id || `${releaseId}-track-${idx + 1}`,
+    preview_url: track.preview_url || track.previewUrl || '',
+    previewUrl: track.previewUrl || track.preview_url || ''
+  }));
+}
+
+// Preview selected releases - FIXED TO FETCH AND TRANSFORM METADATA
+async function previewSelected() {
+  console.log('\n========================================');
+  console.log('[PREVIEW] Starting preview with metadata fetch');
+  console.log('========================================\n');
+  
+  const checkboxes = document.querySelectorAll('.release-checkbox:checked');
+  const releaseIds = Array.from(checkboxes).map(cb => cb.dataset.releaseId);
+
+  if (releaseIds.length === 0) {
+    alert('Please select at least one release to preview');
+    return;
+  }
+
+  // Get selected releases data from master JSON
+  const selectedReleases = allReleases.filter(r => releaseIds.includes(r.id));
+  console.log('[PREVIEW] Selected releases:', selectedReleases.length);
+  
+  // Show modal with loading state
+  const previewBody = document.getElementById('previewBody');
+  previewBody.innerHTML = '<div style="text-align: center; padding: 40px;"><div style="font-size: 18px; font-weight: 700; color: #000;">📥 Loading full metadata from storage...</div><div style="margin-top: 10px; font-size: 14px; color: #666;">Fetching and transforming JSON files from Cloudinary</div></div>';
+  document.getElementById('previewModal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  
+  // Fetch full metadata for each release
+  const releasesWithMetadata = await Promise.all(
+    selectedReleases.map(async (release) => {
+      // If release has a metadataUrl, fetch the full metadata
+      if (release.metadataUrl) {
+        try {
+          console.log('[PREVIEW] Fetching metadata for:', release.title);
+          console.log('[PREVIEW] Metadata URL:', release.metadataUrl);
+          
+          const response = await fetch(release.metadataUrl, { cache: 'no-store' });
+          
+          if (response.ok) {
+            const uploadedMetadata = await response.json();
+            console.log('[PREVIEW] ✓ Loaded uploaded metadata for:', release.title);
+            console.log('[PREVIEW] Uploaded metadata keys:', Object.keys(uploadedMetadata));
+            
+            // Transform uploaded metadata to standard format
+            const transformed = transformMetadata(uploadedMetadata, release);
+            
+            // Merge with master JSON data (URLs from master JSON take precedence)
+            return {
+              ...transformed,
+              // Master JSON overrides for URLs (these were set during upload)
+              id: release.id,
+              coverUrl: release.coverUrl || transformed.coverUrl,
+              artworkUrl: release.artworkUrl || transformed.artworkUrl,
+              metadataUrl: release.metadataUrl,
+              published: release.published,
+              createdAt: release.createdAt,
+              updatedAt: release.updatedAt,
+              // Merge tracks with URLs from master JSON
+              tracks: (transformed.tracks || []).map((track, idx) => ({
+                ...track,
+                url: release.tracks?.[idx]?.url || track.url,
+                previewUrl: release.tracks?.[idx]?.previewUrl || track.previewUrl,
+                storage: release.tracks?.[idx]?.storage || track.storage,
+                previewStorage: release.tracks?.[idx]?.previewStorage || track.previewStorage
+              }))
+            };
+          } else {
+            console.warn('[PREVIEW] Failed to fetch metadata (HTTP', response.status, '), using master JSON data');
+            return { ...release, _hasFullMetadata: false, _source: 'master-json-only' };
+          }
+        } catch (error) {
+          console.error('[PREVIEW] Error fetching metadata:', error);
+          return { ...release, _hasFullMetadata: false, _source: 'error', _error: error.message };
+        }
+      } else {
+        console.warn('[PREVIEW] No metadataUrl for:', release.title);
+        return { ...release, _hasFullMetadata: false, _source: 'no-metadata-url' };
+      }
+    })
+  );
+  
+  console.log('[PREVIEW] Metadata fetch complete:');
+  releasesWithMetadata.forEach(r => {
+    console.log(`[PREVIEW]   - ${r.title}: ${r._hasFullMetadata ? '✓ Full metadata' : '✗ Master JSON only'} (${r._source})`);
+  });
+  console.log('========================================\n');
+  
+  // Render previews with full metadata
+  previewBody.innerHTML = '';
+  
+  releasesWithMetadata.forEach(release => {
+    const previewHTML = createReleasePreview(release);
+    const div = document.createElement('div');
+    div.innerHTML = previewHTML;
+    previewBody.appendChild(div);
+  });
+}
+
+// Close preview modal
+function closePreview() {
+  document.getElementById('previewModal').classList.remove('active');
+  document.body.style.overflow = 'auto';
+}
+
+// Create release preview HTML - MATCHES ReleasePlate.astro STYLING
+  function createReleasePreview(release) {
+    const formattedDate = release.releaseDate ? new Date(release.releaseDate).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    }) : 'Not set';
+    
+    const vinylAvailable = release.hasVinyl && release.vinylStock > 0;
+    const artworkUrl = release.coverUrl || release.artworkUrl || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 400%22%3E%3Crect fill=%22%23f5f5f5%22 width=%22400%22 height=%22400%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23666%22 font-size=%2224%22%3ENo Image%3C/text%3E%3C/svg%3E';
+    
+    const metadataSourceBadge = release._hasFullMetadata 
+      ? '<span style="background: #22c55e; color: #fff; padding: 4px 8px; font-size: 11px; font-weight: 700; border-radius: 3px;">📄 FULL METADATA LOADED</span>'
+      : '<span style="background: #ef4444; color: #fff; padding: 4px 8px; font-size: 11px; font-weight: 700; border-radius: 3px;">⚠️ MASTER JSON ONLY</span>';
+    
+    return `
+      <div class="preview-release-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e0e0e0;">
+          <div style="font-size: 12px; color: #666; font-weight: 600;">
+            Preview Source: ${release._source || 'unknown'}
+          </div>
+          ${metadataSourceBadge}
+        </div>
+        
+        <!-- ReleasePlate Style Layout -->
+        <div style="display: grid; grid-template-columns: 200px 1fr; gap: 25px; margin-bottom: 25px;">
+          <!-- Artwork - Matches ReleasePlate size -->
+          <div style="position: relative;">
+            <img 
+              src="${artworkUrl}" 
+              alt="${release.title || 'Untitled'}" 
+              style="width: 200px; height: 200px; object-fit: cover; border: 3px solid #000; display: block;"
+            />
+            ${release.isNew ? '<div style="position: absolute; top: 10px; right: 10px; background: #000; color: #fff; padding: 4px 8px; font-size: 10px; font-weight: 900; text-transform: uppercase;">NEW</div>' : ''}
+            ${release.isPreorder ? '<div style="position: absolute; top: 10px; left: 10px; background: #f59e0b; color: #fff; padding: 4px 8px; font-size: 10px; font-weight: 900; text-transform: uppercase;">PRE-ORDER</div>' : ''}
+          </div>
+          
+          <!-- Info - Matches ReleasePlate layout -->
+          <div style="display: flex; flex-direction: column; justify-content: space-between;">
+            <!-- Title & Artist -->
+            <div>
+              <h2 style="font-size: 20px; font-weight: 900; color: #000; margin: 0 0 5px 0; text-transform: uppercase; line-height: 1.2;">
+                ${release.title || 'Untitled Release'}
+              </h2>
+              <h3 style="font-size: 16px; font-weight: 700; color: #666; margin: 0 0 8px 0;">
+                ${release.artist || 'Unknown Artist'}
+              </h3>
+              ${release.label ? `<p style="color: #999; font-weight: 600; font-size: 13px; margin: 0 0 8px 0;">${release.label}</p>` : ''}
+              ${release.catalogNumber ? `<p style="color: #999; font-weight: 600; font-size: 11px; margin: 0 0 12px 0;">Cat: ${release.catalogNumber}</p>` : ''}
+            </div>
+            
+            <!-- Metadata badges -->
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+              <span style="padding: 4px 10px; background: #f5f5f5; border: 2px solid #000; color: #000; font-size: 11px; font-weight: 700; text-transform: uppercase;">
+                ${formattedDate}
+              </span>
+              ${release.genre ? `<span style="padding: 4px 10px; background: #000; color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase;">${release.genre}</span>` : ''}
+              ${release.tracks?.length ? `<span style="padding: 4px 10px; background: #f5f5f5; border: 2px solid #000; color: #000; font-size: 11px; font-weight: 700; text-transform: uppercase;">${release.tracks.length} Track${release.tracks.length > 1 ? 's' : ''}</span>` : ''}
+            </div>
+            
+            <!-- Price Info -->
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
+              <div style="font-size: 18px; font-weight: 900; color: #000;">
+                £${(release.digitalPrice || 0).toFixed(2)}
+              </div>
+              ${release.hasVinyl ? `
+                <div style="padding: 4px 10px; background: ${vinylAvailable ? '#6b21a8' : '#9ca3af'}; color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase;">
+                  ${vinylAvailable ? `Vinyl £${(release.vinylPrice || 0).toFixed(2)}` : 'Vinyl Sold Out'}
+                </div>
+              ` : ''}
+            </div>
+            
+            <!-- Action Buttons - Matches ReleasePlate style -->
+            <div style="display: flex; gap: 10px;">
+              <button style="flex: 1; padding: 10px 16px; background: #000; color: #fff; border: 3px solid #000; font-size: 12px; font-weight: 700; text-transform: uppercase; cursor: not-allowed;">
+                🛒 Buy Digital
+              </button>
+              ${release.hasVinyl && vinylAvailable ? `
+                <button style="flex: 1; padding: 10px 16px; background: #6b21a8; color: #fff; border: 3px solid #6b21a8; font-size: 12px; font-weight: 700; text-transform: uppercase; cursor: not-allowed;">
+                  💿 Buy Vinyl
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Description -->
+        ${release.description || release.extraNotes ? `
+          <div style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border: 2px solid #000;">
+            <h4 style="font-size: 13px; font-weight: 900; margin: 0 0 8px 0; text-transform: uppercase; color: #000;">Description</h4>
+            <p style="font-size: 13px; line-height: 1.6; color: #333; margin: 0;">
+              ${release.description || release.extraNotes}
+            </p>
+          </div>
+        ` : ''}
+        
+        <!-- Tracklist -->
+        ${release.tracks && release.tracks.length > 0 ? `
+          <div style="margin-bottom: 20px;">
+            <h4 style="font-size: 14px; font-weight: 900; margin: 0 0 12px 0; text-transform: uppercase; color: #000;">
+              Tracklist (${release.tracks.length})
+            </h4>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              ${release.tracks.map((track, idx) => `
+                <div style="display: flex; align-items: center; gap: 12px; padding: 10px; background: #fff; border: 2px solid #e0e0e0;">
+                  <span style="font-size: 13px; font-weight: 900; color: #666; min-width: 25px;">
+                    ${track.track_number || track.number || idx + 1}.
+                  </span>
+                  <span style="flex: 1; font-size: 13px; font-weight: 700; color: #000;">
+                    ${track.title || track.name || 'Untitled Track'}
+                  </span>
+                  ${track.duration ? `<span style="font-size: 12px; font-weight: 600; color: #666;">${track.duration}</span>` : ''}
+                  <div style="display: flex; gap: 6px;">
+                    <button style="padding: 6px 12px; background: #f5f5f5; border: 2px solid #000; color: #000; font-size: 10px; font-weight: 700; text-transform: uppercase; cursor: not-allowed;">
+                      ▶ Preview
+                    </button>
+                    <button style="padding: 6px 12px; background: #000; color: #fff; border: 2px solid #000; font-size: 10px; font-weight: 700; text-transform: uppercase; cursor: not-allowed;">
+                      £${(release.trackPrice || 0).toFixed(2)}
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : '<div style="padding: 20px; text-align: center; color: #666; font-weight: 600; border: 2px dashed #ccc;">No tracks available</div>'}
+        
+        <!-- Technical Info -->
+        <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border: 2px solid #e0e0e0;">
+          <h4 style="font-size: 12px; font-weight: 900; margin: 0 0 8px 0; text-transform: uppercase; color: #666;">Technical Info</h4>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 11px; color: #666;">
+            ${release.email ? `<div><strong>Contact:</strong> ${release.email}</div>` : ''}
+            ${release.uploadedAt ? `<div><strong>Uploaded:</strong> ${new Date(release.uploadedAt).toLocaleDateString()}</div>` : ''}
+            ${release.metadataUrl ? `<div><strong>Metadata:</strong> ✓ Available</div>` : ''}
+            ${release.vinylStock ? `<div><strong>Vinyl Stock:</strong> ${release.vinylStock}</div>` : ''}
+          </div>
+        </div>
+        
+        ${release._error ? `
+          <div style="margin-top: 15px; padding: 15px; background: #fee2e2; border-left: 4px solid #ef4444;">
+            <p style="font-size: 12px; font-weight: 700; color: #991b1b;">Error loading metadata: ${release._error}</p>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // Delete selected releases
+  async function deleteSelected() {
+    console.log('\n========================================');
+    console.log('[FRONTEND] DELETE PROCESS STARTED');
+    console.log('========================================\n');
+    
+    const checkboxes = document.querySelectorAll('.release-checkbox:checked');
+    const releaseIds = Array.from(checkboxes)
+      .map(cb => cb.dataset.releaseId)
+      .filter(id => id && id !== 'undefined' && id !== 'null');
+    
+    if (releaseIds.length === 0) {
+      alert('Please select at least one release to delete');
+      return;
+    }
+
+    const selectedReleases = allReleases.filter(r => releaseIds.includes(r.id));
+    
+    const confirmMsg = `⚠️ DELETE ${releaseIds.length} release${releaseIds.length > 1 ? 's' : ''}?\n\nThis will permanently remove:\n${selectedReleases.map(r => `• ${r.title} by ${r.artist}`).join('\n')}\n\nThis action CANNOT be undone!`;
+    
+    if (!confirm(confirmMsg)) {
+      console.log('[FRONTEND] User cancelled delete');
+      return;
+    }
+
+    // Show loading
+    const deleteBtn = document.getElementById('deleteBtn');
+    const originalText = deleteBtn.innerHTML;
+    deleteBtn.disabled = true;
+    deleteBtn.innerHTML = '<div style="width: 20px; height: 20px; border: 3px solid #fff; border-top: 3px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px;"></div> Deleting...';
+
+    try {
+      console.log('[FRONTEND] Sending delete request...');
+      console.log('[FRONTEND] Release IDs to delete:', releaseIds);
+      
+      const response = await fetch('/api/delete-releases', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ releaseIds })
+      });
+
+      console.log('[FRONTEND] Response status:', response.status);
+      
+      const result = await response.json();
+      console.log('[FRONTEND] Response:', result);
+
+      if (response.ok && result.success) {
+        console.log('[FRONTEND] ✓ DELETE SUCCESS!');
+        console.log('[FRONTEND] Deleted count:', result.deletedCount);
+        console.log('========================================\n');
+        
+        showSuccess(`🗑️ Deleted ${result.deletedCount} release${result.deletedCount > 1 ? 's' : ''} successfully!`);
+        
+        // Reload page after 1.5 seconds
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        throw new Error(result.error || 'Failed to delete releases');
+      }
+    } catch (error) {
+      console.error('[FRONTEND] DELETE ERROR:', error);
+      alert('Error deleting releases: ' + error.message);
+      deleteBtn.disabled = false;
+      deleteBtn.innerHTML = originalText;
+    }
+  }
+
+  // Publish selected releases - WITH DEBUGGING
+  async function publishSelected() {
+    console.log('\n========================================');
+    console.log('[FRONTEND] PUBLISH PROCESS STARTED');
+    console.log('========================================\n');
+    
+    // Validate we have releases data
+    if (!allReleases || allReleases.length === 0) {
+      console.error('[FRONTEND] ERROR: No releases data available!');
+      console.error('[FRONTEND] allReleases:', allReleases);
+      alert('Error: No releases data loaded. Please refresh the page.');
+      return;
+    }
+    
+    console.log('[FRONTEND] Available releases:', allReleases.length);
+    allReleases.forEach(r => {
+      console.log(`[FRONTEND]   Available: "${r.id}" - ${r.title} by ${r.artist}`);
+    });
+    
+    const checkboxes = document.querySelectorAll('.release-checkbox:checked');
+    console.log('[FRONTEND] Found checked checkboxes:', checkboxes.length);
+    
+    const releaseIds = Array.from(checkboxes).map(cb => {
+      const id = cb.dataset.releaseId;
+      console.log('[FRONTEND] Checkbox data-release-id:', id, 'Type:', typeof id);
+      
+      if (!id || id === 'undefined' || id === 'null') {
+        console.error('[FRONTEND] ERROR: Invalid release ID on checkbox!');
+        console.error('[FRONTEND] Checkbox element:', cb);
+        console.error('[FRONTEND] Parent card:', cb.closest('.release-card'));
+      }
+      
+      return id;
+    }).filter(id => id && id !== 'undefined' && id !== 'null'); // Filter out invalid IDs
+    
+    console.log('[FRONTEND] Valid release IDs to publish:', releaseIds);
+    console.log('[FRONTEND] Release IDs array length:', releaseIds.length);
+
+    if (releaseIds.length === 0) {
+      console.error('[FRONTEND] ERROR: No valid releases selected');
+      alert('Error: No valid releases selected. Please check console for details.');
+      return;
+    }
+
+    // Get full release data for debugging
+    const selectedReleases = allReleases.filter(r => releaseIds.includes(r.id));
+    console.log('[FRONTEND] Found matching releases:', selectedReleases.length);
+    
+    if (selectedReleases.length === 0) {
+      console.error('[FRONTEND] ERROR: Selected release IDs don\'t match any loaded releases!');
+      console.error('[FRONTEND] Selected IDs:', releaseIds);
+      console.error('[FRONTEND] Available IDs:', allReleases.map(r => r.id));
+      alert('Error: Selected releases not found in loaded data. Check console.');
+      return;
+    }
+    
+    selectedReleases.forEach(r => {
+      console.log(`[FRONTEND]   - "${r.id}": ${r.title} by ${r.artist}`);
     });
 
-    // Get response text first
-    const responseText = await response.text();
-    console.log('Response status:', response.status);
-    console.log('Response text:', responseText.substring(0, 500));
+    const confirmMsg = `Publish ${releaseIds.length} release${releaseIds.length > 1 ? 's' : ''} to your store?\n\n${selectedReleases.map(r => `• ${r.title} by ${r.artist}`).join('\n')}`;
+    if (!confirm(confirmMsg)) {
+      console.log('[FRONTEND] User cancelled publish');
+      return;
+    }
 
-    // Try to parse as JSON
-    let result;
+    // Show loading
+    const publishBtn = document.getElementById('publishBtn');
+    const originalText = publishBtn.innerHTML;
+    publishBtn.disabled = true;
+    publishBtn.innerHTML = '<div style="width: 20px; height: 20px; border: 3px solid #fff; border-top: 3px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px;"></div> Publishing...';
+
     try {
-      result = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Failed to parse response:', parseError);
-      throw new Error(`Server returned invalid JSON: ${responseText.substring(0, 200)}`);
-    }
+      const requestBody = { releaseIds };
+      console.log('[FRONTEND] Preparing request...');
+      console.log('[FRONTEND] Request body:', JSON.stringify(requestBody, null, 2));
+      console.log('[FRONTEND] API endpoint: /api/publish-releases');
+      
+      const response = await fetch('/api/publish-releases', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
 
-    if (response.ok && result.success) {
-      alert(`✅ Success!\n\n${result.message}\n\nFile saved: ${result.filename}\nAction: ${result.action}`);
+      console.log('[FRONTEND] Response status:', response.status, response.statusText);
+      console.log('[FRONTEND] Response headers:', Object.fromEntries(response.headers.entries()));
       
-      // Also download as backup
-      downloadJSON();
+      let result;
+      const contentType = response.headers.get('content-type');
+      console.log('[FRONTEND] Response content-type:', contentType);
       
-      // Clear sessionStorage draft if it exists
-      sessionStorage.removeItem('freshwax-release-draft');
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+        console.log('[FRONTEND] Response body:', JSON.stringify(result, null, 2));
+      } else {
+        const text = await response.text();
+        console.error('[FRONTEND] Non-JSON response:', text);
+        throw new Error(`Server returned non-JSON response: ${text.substring(0, 200)}`);
+      }
+
+      if (response.ok && result.success) {
+        console.log('[FRONTEND] ✓ SUCCESS!');
+        console.log('[FRONTEND] Published count:', result.publishedCount);
+        console.log('========================================\n');
+        
+        // Show success message
+        showSuccess(`✅ Published ${result.publishedCount} release${result.publishedCount > 1 ? 's' : ''} successfully!`);
+        
+        // Reload page after 2 seconds
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        console.error('[FRONTEND] ✗ FAILED');
+        console.error('[FRONTEND] Error:', result.error);
+        console.error('[FRONTEND] Details:', result);
+        console.error('========================================\n');
+        throw new Error(result.error || 'Failed to publish releases');
+      }
+    } catch (error) {
+      console.error('\n========================================');
+      console.error('[FRONTEND] CRITICAL ERROR');
+      console.error('========================================');
+      console.error('[FRONTEND] Error:', error);
+      console.error('[FRONTEND] Error message:', error.message);
+      console.error('[FRONTEND] Error stack:', error.stack);
+      console.error('========================================\n');
       
-      // Optionally reload the page or redirect
-      // window.location.href = '/admin';
-    } else {
-      throw new Error(result.error || 'Failed to publish release');
+      alert('Error publishing releases: ' + error.message + '\n\nCheck browser console (F12) for details.');
+      publishBtn.disabled = false;
+      publishBtn.innerHTML = originalText;
     }
-    
-  } catch (error) {
-    console.error('Publish error:', error);
-    alert(`❌ Error publishing release:\n\n${error.message}\n\nDownloading JSON as fallback...`);
-    downloadJSON();
-  } finally {
-    // Re-enable button
-    publishBtn.disabled = false;
-    publishBtn.innerHTML = originalText;
   }
-}
 
-function editRelease() {
-if (!currentRelease) {
-alert('No release data to edit!');
-return;
-}
+  // Show success message
+  function showSuccess(message) {
+    const div = document.createElement('div');
+    div.className = 'success-message';
+    div.innerHTML = `
+      <div class="success-title">Success!</div>
+      <div class="success-text">${message}</div>
+    `;
+    document.body.appendChild(div);
 
-// Store release data in sessionStorage so edit page can access it
-sessionStorage.setItem('freshwax-release-draft', JSON.stringify(currentRelease));
+    setTimeout(() => {
+      div.remove();
+    }, 3000);
+  }
 
-// Navigate to editor
-window.location.href = '/admin/edit-release';
-}
+  // Toggle card selection on click
+  document.addEventListener('DOMContentLoaded', () => {
+    // Display debug info
+    displayDebugInfo();
+    
+    document.querySelectorAll('.release-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        // Don't toggle if clicking checkbox directly
+        if (e.target.classList.contains('release-checkbox')) return;
+        
+        const checkbox = card.querySelector('.release-checkbox');
+        if (checkbox) {
+          checkbox.checked = !checkbox.checked;
+          updateSelection();
+        }
+      });
+    });
 
-function downloadJSON() {
-if (!currentRelease) {
-alert('No release data loaded!');
-return;
-}
+    // Close modal on ESC key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closePreview();
+      }
+    });
 
-const filename = document.getElementById('filename-input').value.trim() || 'release';
-const jsonString = JSON.stringify(currentRelease, null, 2);
-const blob = new Blob([jsonString], { type: 'application/json' });
-const url = URL.createObjectURL(blob);
+    // Close modal when clicking outside
+    document.getElementById('previewModal').addEventListener('click', (e) => {
+      if (e.target.id === 'previewModal') {
+        closePreview();
+      }
+    });
+  });
 
-const a = document.createElement('a');
-a.href = url;
-a.download = `${filename}.json`;
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
-URL.revokeObjectURL(url);
-}
+  // Make functions global
+  window.switchTab = switchTab;
+  window.updateSelection = updateSelection;
+  window.selectAll = selectAll;
+  window.deselectAll = deselectAll;
+  window.previewSelected = previewSelected;
+  window.closePreview = closePreview;
+  window.deleteSelected = deleteSelected;
+  window.publishSelected = publishSelected;
 </script>
+
+<style>
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
 </Layout>

@@ -1,11 +1,9 @@
 ---
 // src/pages/dj-mixes.astro
+import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { v2 as cloudinary } from 'cloudinary';
-
-const title = "DJ Mixes - Freshwax";
-const description = "Stream and download exclusive DJ mixes";
 
 cloudinary.config({
   cloud_name: 'dscqbze0d',
@@ -14,7 +12,6 @@ cloudinary.config({
 });
 
 let mixes = [];
-let errorMessage = '';
 
 try {
   const info = await cloudinary.api.resource('dj-mixes/mixes.json', {
@@ -22,439 +19,649 @@ try {
   });
   
   const version = info.version;
-  const mixesUrl = `https://res.cloudinary.com/dscqbze0d/raw/upload/v${version}/dj-mixes/mixes.json`;
+  const timestamp = Date.now();
+  const mixesUrl = `https://res.cloudinary.com/dscqbze0d/raw/upload/v${version}/dj-mixes/mixes.json?t=${timestamp}`;
   
-  console.log('Fetching mixes from:', mixesUrl);
-  console.log('Version:', version);
-  
-  const response = await fetch(mixesUrl, {
-    cache: 'no-store',
-  });
-  
-  console.log('Response status:', response.status);
+  const response = await fetch(mixesUrl, { cache: 'no-store' });
   
   if (response.ok) {
     const data = await response.json();
-    console.log('Mixes loaded:', data);
-    
     if (Array.isArray(data)) {
       mixes = data;
       mixes.sort((a, b) => new Date(b.upload_date).getTime() - new Date(a.upload_date).getTime());
-      console.log(`Successfully loaded ${mixes.length} mixes`);
-    } else {
-      console.error('Data is not an array:', data);
-      errorMessage = 'Invalid data format';
     }
-  } else {
-    console.error('Failed to load mixes:', response.status, response.statusText);
-    errorMessage = `Failed to load mixes (${response.status})`;
   }
 } catch (error) {
   console.error('Error loading mixes:', error);
-  errorMessage = error instanceof Error ? error.message : 'Unknown error';
 }
-
-console.log('Final mixes count:', mixes.length);
 ---
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title}</title>
-  <meta name="description" content={description}>
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-</head>
-<body class="min-h-screen bg-white">
+<Layout title="DJ Mixes - Fresh Wax">
   <Header />
   
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <!-- Header Section -->
-    <div class="flex items-center justify-between mb-8 pb-6 border-b-2 border-black">
-      <div>
-        <h1 class="text-4xl font-bold text-black mb-2">DJ Mixes</h1>
-        <p class="text-gray-700">Stream and download exclusive mixes from our community</p>
+  <main class="min-h-screen bg-gray-50">
+    <!-- Hero Section -->
+    <section class="bg-black text-white py-16 sm:py-20">
+      <div class="container mx-auto px-6 sm:px-8 md:px-12 lg:px-16 max-w-5xl text-center">
+        <h1 class="text-4xl sm:text-5xl md:text-6xl font-black mb-4 uppercase" style="letter-spacing: 0.08em;">
+          DJ Mixes
+        </h1>
+        <p class="text-xl sm:text-2xl text-gray-300 font-semibold">
+          Curated sets from the best in Jungle and Drum & Bass
+        </p>
       </div>
-      
-      <!-- Upload Button -->
-      <a 
-        href="/upload-mix" 
-        class="bg-black text-white px-6 py-3 rounded-none hover:bg-gray-800 transition-colors flex items-center gap-2 font-medium border-2 border-black"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-        </svg>
-        Upload Mix
-      </a>
-    </div>
+    </section>
 
-    <!-- Error Message -->
-    {errorMessage && (
-      <div class="bg-red-50 border-2 border-red-600 p-4 mb-6">
-        <p class="text-red-800 font-medium">⚠️ {errorMessage}</p>
+    <!-- Mixes Grid -->
+    <section class="container mx-auto px-6 sm:px-8 md:px-12 lg:px-16 py-8 sm:py-12 max-w-5xl">
+      <div class="mb-8">
+        <h2 class="text-2xl sm:text-3xl font-black text-gray-900 mb-2">
+          {mixes.length} Mix{mixes.length !== 1 ? 'es' : ''} Available
+        </h2>
+        <p class="text-gray-600">Stream or download full DJ sets</p>
       </div>
-    )}
 
-    <!-- Mixes List - Black & White Theme -->
-    <div class="space-y-4">
       {mixes.length === 0 ? (
-        <div class="text-center py-16 bg-gray-50 border-2 border-black">
-          <svg class="w-24 h-24 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-          </svg>
-          <h3 class="text-xl font-semibold text-black mb-2">No mixes yet</h3>
-          <p class="text-gray-600 mb-6">Be the first to upload a mix!</p>
-          <a href="/upload-mix" class="inline-flex items-center gap-2 bg-black text-white px-6 py-3 hover:bg-gray-800 transition-colors border-2 border-black">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Upload Your First Mix
-          </a>
+        <div class="text-center py-20 bg-white rounded-lg">
+          <div class="text-6xl mb-4">🎧</div>
+          <h3 class="text-2xl font-bold text-gray-900 mb-2">No Mixes Yet</h3>
+          <p class="text-gray-600">Check back soon for fresh mixes!</p>
         </div>
       ) : (
-        mixes.map((mix) => (
-          <div class="bg-white border-2 border-black hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all">
-            <!-- Inline Layout -->
-            <div class="flex items-center gap-6 p-6">
-              
-              <!-- 1. Artwork -->
-              <div class="flex-shrink-0">
-                <img 
-                  src={mix.artwork_url} 
-                  alt={`${mix.title} artwork`}
-                  class="w-24 h-24 object-cover border-2 border-black"
-                  onerror="this.src='/logo.webp'"
-                />
-              </div>
-
-              <!-- 2. Description -->
-              <div class="flex-shrink-0 w-48">
-                <h2 class="text-lg font-bold text-black mb-1 truncate">{mix.title}</h2>
-                <p class="text-sm text-gray-700 truncate">by {mix.dj_name}</p>
-                <p class="text-xs text-gray-500 mt-1">
-                  {new Date(mix.upload_date).toLocaleDateString()}
-                </p>
-                
-                <!-- Stats -->
-                <div class="flex items-center gap-3 mt-2 text-xs">
-                  <span class="flex items-center gap-1 text-gray-600" title="Plays">
-                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                    <span class="plays-count font-mono">{mix.plays || 0}</span>
-                  </span>
-                  <span class="flex items-center gap-1 text-gray-600" title="Downloads">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    <span class="downloads-count font-mono">{mix.downloads || 0}</span>
-                  </span>
-                  <span class="flex items-center gap-1 text-gray-600" title="Likes">
-                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                    </svg>
-                    <span class="likes-count font-mono">{mix.likes || 0}</span>
-                  </span>
+        <div class="grid grid-cols-1 gap-8">
+          {mixes.map((mix) => (
+            <article 
+              class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300"
+              data-mix-id={mix.id}
+            >
+              <!-- Desktop Layout -->
+              <div class="hidden sm:flex">
+                <div class="relative w-64 h-64 flex-shrink-0">
+                  <img 
+                    src={mix.artwork_url} 
+                    alt={mix.title}
+                    class="w-full h-full object-cover"
+                    onerror="this.src='/logo.webp'"
+                  />
                 </div>
-              </div>
-
-              <!-- 3. Audio Player -->
-              <div class="flex-1 min-w-0">
-                <div 
-                  class="mix-player"
-                  data-mix-id={mix.id}
-                  data-audio-url={mix.audio_url}
-                >
-                  <!-- Hidden audio element -->
-                  <audio class="hidden" preload="metadata"></audio>
-                  
-                  <!-- Styled Progress Bar -->
+                
+                <div class="flex-1 p-6 flex flex-col">
                   <div class="mb-4">
-                    <div class="progress-container relative h-4 bg-gray-100 border-2 border-black cursor-pointer overflow-hidden group">
-                      <!-- Background pattern -->
-                      <div class="absolute inset-0 opacity-5">
-                        <div class="h-full w-full" style="background-image: repeating-linear-gradient(45deg, black 0, black 2px, transparent 2px, transparent 8px);"></div>
-                      </div>
-                      
-                      <!-- Progress bar -->
-                      <div class="progress-bar relative h-full bg-black transition-all duration-100 flex items-center justify-end" style="width: 0%">
-                        <div class="absolute right-0 top-0 bottom-0 w-0.5 bg-white"></div>
-                      </div>
-                      
-                      <!-- Hover effect -->
-                      <div class="absolute inset-0 bg-black opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none"></div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-1">{mix.title}</h3>
+                    <p class="text-lg text-gray-600 mb-2">by {mix.dj_name}</p>
+                    {mix.description && (
+                      <p class="text-sm text-gray-600 mb-3">{mix.description}</p>
+                    )}
+                    
+                    <div class="flex items-center gap-4 text-sm text-gray-500">
+                      <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        {mix.plays || 0} plays
+                      </span>
+                      <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                        </svg>
+                        {mix.downloads || 0} downloads
+                      </span>
+                      <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                        <span class="likes-count" data-mix-id={mix.id}>{mix.likes || 0}</span>
+                      </span>
+                      <span class="text-xs">
+                        {new Date(mix.upload_date).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </span>
                     </div>
                   </div>
                   
-                  <!-- Compact Player Controls -->
-                  <div class="flex items-center gap-4">
-                    <button class="play-pause-btn bg-black text-white p-2.5 border-2 border-black hover:bg-white hover:text-black transition-all">
-                      <svg class="w-5 h-5 play-icon" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
+                  <!-- Download and Like Buttons -->
+                  <div class="mb-3 flex items-center gap-2">
+                    <a 
+                      href={mix.audio_url}
+                      download
+                      class="download-btn bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-black px-3 py-1.5 rounded inline-flex items-center gap-1.5 transition-colors text-xs font-medium"
+                      data-mix-id={mix.id}
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
                       </svg>
-                      <svg class="w-5 h-5 pause-icon hidden" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-                      </svg>
-                    </button>
+                      <span>Download</span>
+                    </a>
                     
-                    <div class="text-sm text-gray-700 font-mono flex items-center gap-2">
-                      <span class="current-time font-bold">0:00</span>
-                      <span class="text-gray-400">/</span>
-                      <span class="duration">0:00</span>
+                    <button 
+                      class="like-btn bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-black px-3 py-1.5 rounded inline-flex items-center gap-1.5 transition-colors text-xs font-medium"
+                      data-mix-id={mix.id}
+                      data-liked="false"
+                    >
+                      <svg class="w-3.5 h-3.5 like-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                      <span>Like</span>
+                    </button>
+                  </div>
+                  
+                  <!-- Audio Player -->
+                  <div class="mt-auto">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                      <div class="flex items-center gap-4 mb-3">
+                        <button 
+                          class="mix-play-button flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-black text-white hover:bg-gray-800 transition-colors"
+                          data-mix-id={mix.id}
+                          title="Play/Pause"
+                        >
+                          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
+                        </button>
+                        
+                        <!-- Volume Slider -->
+                        <div class="flex items-center gap-2">
+                          <svg class="w-5 h-5 text-gray-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                          </svg>
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            value="70" 
+                            class="mix-volume-slider flex-1 h-2" 
+                            data-mix-id={mix.id}
+                            title="Volume"
+                          />
+                        </div>
+                        
+                        <!-- Time Display -->
+                        <div class="flex-shrink-0 text-sm font-semibold text-gray-600 min-w-[80px] text-right">
+                          <span class="current-time" data-mix-id={mix.id}>0:00</span>
+                          <span> / </span>
+                          <span class="total-time" data-mix-id={mix.id}>0:00</span>
+                        </div>
+                      </div>
+                      
+                      <!-- Waveform / Progress Bar -->
+                      <div class="waveform-container" data-mix-id={mix.id}></div>
                     </div>
+                    
+                    <!-- Hidden Audio Element -->
+                    <audio 
+                      class="hidden mix-audio" 
+                      data-mix-id={mix.id} 
+                      preload="metadata"
+                    >
+                      <source src={mix.audio_url} type="audio/mpeg" />
+                    </audio>
                   </div>
                 </div>
               </div>
 
-              <!-- 4. Action Buttons -->
-              <div class="flex-shrink-0 flex flex-col gap-2">
-                <a 
-                  href={mix.audio_url} 
-                  download
-                  class="download-btn bg-black text-white px-5 py-2.5 border-2 border-black hover:bg-white hover:text-black transition-all flex items-center gap-2 text-sm font-bold uppercase tracking-wide"
-                  data-mix-id={mix.id}
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download
-                </a>
+              <!-- Mobile Layout -->
+              <div class="sm:hidden">
+                <div class="relative w-full aspect-square">
+                  <img 
+                    src={mix.artwork_url} 
+                    alt={mix.title}
+                    class="w-full h-full object-cover"
+                    onerror="this.src='/logo.webp'"
+                  />
+                </div>
                 
-                <!-- Like Button -->
-                <button 
-                  class="like-btn bg-white text-black px-5 py-2.5 border-2 border-black hover:bg-black hover:text-white transition-all flex items-center justify-center gap-2 text-sm font-bold uppercase tracking-wide"
-                  data-mix-id={mix.id}
-                >
-                  <svg class="w-4 h-4 heart-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                  <svg class="w-4 h-4 heart-filled hidden" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                  </svg>
-                  <span class="like-text">Like</span>
-                </button>
+                <div class="p-4">
+                  <div class="mb-3">
+                    <h3 class="text-xl font-bold text-gray-900 mb-1">{mix.title}</h3>
+                    <p class="text-base text-gray-600 mb-2">by {mix.dj_name}</p>
+                    {mix.description && (
+                      <p class="text-sm text-gray-600 mb-3">{mix.description}</p>
+                    )}
+                    
+                    <div class="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                      <span class="flex items-center gap-1">▶ {mix.plays || 0}</span>
+                      <span class="flex items-center gap-1">⬇ {mix.downloads || 0}</span>
+                      <span class="flex items-center gap-1">❤ <span class="likes-count" data-mix-id={mix.id}>{mix.likes || 0}</span></span>
+                      <span>
+                        {new Date(mix.upload_date).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <!-- Download and Like Buttons (Mobile) -->
+                  <div class="mb-3 flex items-center gap-2">
+                    <a 
+                      href={mix.audio_url}
+                      download
+                      class="download-btn bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-black px-3 py-1.5 rounded inline-flex items-center gap-1.5 transition-colors text-xs font-medium"
+                      data-mix-id={mix.id}
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                      </svg>
+                      <span>Download</span>
+                    </a>
+                    
+                    <button 
+                      class="like-btn bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-black px-3 py-1.5 rounded inline-flex items-center gap-1.5 transition-colors text-xs font-medium"
+                      data-mix-id={mix.id}
+                      data-liked="false"
+                    >
+                      <svg class="w-3.5 h-3.5 like-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                      <span>Like</span>
+                    </button>
+                  </div>
+                  
+                  <!-- Audio Player (Mobile) -->
+                  <div class="bg-gray-50 rounded-lg p-3">
+                    <div class="flex items-center gap-3 mb-2">
+                      <button 
+                        class="mix-play-button flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-black text-white hover:bg-gray-800 transition-colors"
+                        data-mix-id={mix.id}
+                        title="Play/Pause"
+                      >
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                      </button>
+                      
+                      <!-- Volume Slider (Mobile) -->
+                      <div class="flex items-center gap-2 flex-1">
+                        <svg class="w-4 h-4 text-gray-600 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+                        </svg>
+                        <input 
+                          type="range" 
+                          min="0" 
+                          max="100" 
+                          value="70" 
+                          class="mix-volume-slider flex-1 h-1.5" 
+                          data-mix-id={mix.id}
+                          title="Volume"
+                        />
+                      </div>
+                      
+                      <!-- Time Display (Mobile) -->
+                      <div class="flex-shrink-0 text-xs font-semibold text-gray-600">
+                        <span class="current-time" data-mix-id={mix.id}>0:00</span>
+                        <span> / </span>
+                        <span class="total-time" data-mix-id={mix.id}>0:00</span>
+                      </div>
+                    </div>
+                    
+                    <!-- Waveform / Progress Bar (Mobile) -->
+                    <div class="waveform-container" data-mix-id={mix.id}></div>
+                  </div>
+                  
+                  <!-- Hidden Audio Element (Mobile) -->
+                  <audio 
+                    class="hidden mix-audio" 
+                    data-mix-id={mix.id} 
+                    preload="metadata"
+                  >
+                    <source src={mix.audio_url} type="audio/mpeg" />
+                  </audio>
+                </div>
               </div>
-
-            </div>
-          </div>
-        ))
+            </article>
+          ))}
+        </div>
       )}
-    </div>
+    </section>
   </main>
 
   <Footer />
-  
-  <script>
-    // Track play, download, and like actions
-    async function trackAction(mixId: string, action: 'play' | 'download' | 'like') {
-      try {
-        const response = await fetch('/api/track-action', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mixId, action })
-        });
+</Layout>
+
+<style>
+  /* Volume Slider Styling */
+  .mix-volume-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #e5e7eb;
+    outline: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .mix-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #000000;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mix-volume-slider::-webkit-slider-thumb:hover {
+    background: #1f2937;
+    transform: scale(1.2);
+  }
+
+  .mix-volume-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: #000000;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mix-volume-slider::-moz-range-thumb:hover {
+    background: #1f2937;
+    transform: scale(1.2);
+  }
+
+  /* Waveform Container */
+  .waveform-container {
+    height: 48px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #ddd;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .waveform-container canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Like Button Styling */
+  .like-btn[data-liked="true"] {
+    background: #000000;
+    color: white;
+  }
+
+  .like-btn[data-liked="true"]:hover {
+    background: #1f2937;
+  }
+
+  .like-btn[data-liked="true"] .like-icon {
+    fill: currentColor;
+  }
+</style>
+
+<script>
+  let currentlyPlaying = null;
+
+  function formatTime(seconds) {
+    if (!seconds || !isFinite(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  function initMixPlayers() {
+    // Initialize waveforms
+    document.querySelectorAll('.waveform-container').forEach(container => {
+      if (container.children.length === 0) {
+        const mixId = container.getAttribute('data-mix-id');
+        const audio = document.querySelector(`.mix-audio[data-mix-id="${mixId}"]`);
         
-        if (response.ok) {
-          const data = await response.json();
+        if (audio) {
+          const canvas = document.createElement('canvas');
+          canvas.width = container.offsetWidth * 2; // 2x for retina
+          canvas.height = 96; // 2x for retina
+          canvas.style.width = '100%';
+          canvas.style.height = '100%';
           
-          // Update UI with new counts
-          const mixCard = document.querySelector(`[data-mix-id="${mixId}"]`)?.closest('.border-2');
-          if (mixCard) {
-            const playsEl = mixCard.querySelector('.plays-count');
-            const downloadsEl = mixCard.querySelector('.downloads-count');
-            const likesEl = mixCard.querySelector('.likes-count');
-            
-            if (playsEl && data.plays !== undefined) playsEl.textContent = data.plays.toString();
-            if (downloadsEl && data.downloads !== undefined) downloadsEl.textContent = data.downloads.toString();
-            if (likesEl && data.likes !== undefined) likesEl.textContent = data.likes.toString();
+          const ctx = canvas.getContext('2d');
+          const bars = 100;
+          const barWidth = canvas.width / bars;
+          
+          function draw(progress = 0) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < bars; i++) {
+              const h = (Math.random() * 0.7 + 0.3) * canvas.height;
+              ctx.fillStyle = i / bars < progress ? '#000000' : '#d1d5db';
+              ctx.fillRect(i * barWidth, (canvas.height - h) / 2, barWidth - 2, h);
+            }
           }
           
-          return data;
+          draw();
+          container.appendChild(canvas);
+          
+          // Click to seek
+          canvas.onclick = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const progress = clickX / rect.width;
+            audio.currentTime = progress * audio.duration;
+          };
+          
+          // Update waveform progress
+          audio.addEventListener('timeupdate', () => {
+            draw(audio.currentTime / audio.duration);
+          });
+          
+          // Update time display on metadata load
+          audio.addEventListener('loadedmetadata', () => {
+            const totalTime = document.querySelector(`.total-time[data-mix-id="${mixId}"]`);
+            if (totalTime) {
+              totalTime.textContent = formatTime(audio.duration);
+            }
+          });
+          
+          // Update current time
+          audio.addEventListener('timeupdate', () => {
+            const currentTime = document.querySelector(`.current-time[data-mix-id="${mixId}"]`);
+            if (currentTime) {
+              currentTime.textContent = formatTime(audio.currentTime);
+            }
+          });
         }
-      } catch (error) {
-        console.error('Failed to track action:', error);
-      }
-    }
-
-    // Audio player with tracking
-    document.addEventListener('DOMContentLoaded', () => {
-      const trackedPlays = new Set<string>();
-      const likedMixes = new Set<string>(JSON.parse(localStorage.getItem('likedMixes') || '[]'));
-
-      // Initialize like buttons based on localStorage
-      likedMixes.forEach(mixId => {
-        const likeBtn = document.querySelector(`.like-btn[data-mix-id="${mixId}"]`);
-        if (likeBtn) {
-          likeBtn.classList.add('liked');
-          likeBtn.classList.remove('bg-white', 'text-black');
-          likeBtn.classList.add('bg-black', 'text-white');
-          const heartOutline = likeBtn.querySelector('.heart-outline');
-          const heartFilled = likeBtn.querySelector('.heart-filled');
-          const likeText = likeBtn.querySelector('.like-text');
-          if (heartOutline) heartOutline.classList.add('hidden');
-          if (heartFilled) heartFilled.classList.remove('hidden');
-          if (likeText) likeText.textContent = 'Liked';
-        }
-      });
-
-      // Audio players
-      document.querySelectorAll('.mix-player').forEach((playerEl) => {
-        const mixId = playerEl.getAttribute('data-mix-id');
-        const audioUrl = playerEl.getAttribute('data-audio-url');
-        
-        if (!mixId || !audioUrl) return;
-
-        const audio = playerEl.querySelector('audio') as HTMLAudioElement;
-        const playPauseBtn = playerEl.querySelector('.play-pause-btn');
-        const playIcon = playerEl.querySelector('.play-icon');
-        const pauseIcon = playerEl.querySelector('.pause-icon');
-        const currentTimeEl = playerEl.querySelector('.current-time');
-        const durationEl = playerEl.querySelector('.duration');
-        const progressBar = playerEl.querySelector('.progress-bar') as HTMLElement;
-        const progressContainer = playerEl.querySelector('.progress-container');
-
-        audio.src = audioUrl;
-
-        audio.addEventListener('loadedmetadata', () => {
-          const duration = audio.duration;
-          if (durationEl) durationEl.textContent = formatTime(duration);
-        });
-
-        // Track play after 3 seconds of playback
-        audio.addEventListener('timeupdate', () => {
-          if (audio.currentTime > 3 && !trackedPlays.has(mixId)) {
-            trackedPlays.add(mixId);
-            trackAction(mixId, 'play');
-          }
-        });
-
-        playPauseBtn?.addEventListener('click', () => {
-          if (audio.paused) {
-            document.querySelectorAll('audio').forEach(a => {
-              if (a !== audio) a.pause();
-            });
-            audio.play();
-          } else {
-            audio.pause();
-          }
-        });
-
-        audio.addEventListener('play', () => {
-          playIcon?.classList.add('hidden');
-          pauseIcon?.classList.remove('hidden');
-        });
-
-        audio.addEventListener('pause', () => {
-          playIcon?.classList.remove('hidden');
-          pauseIcon?.classList.add('hidden');
-        });
-
-        audio.addEventListener('timeupdate', () => {
-          const currentTime = audio.currentTime;
-          const duration = audio.duration;
-          
-          if (currentTimeEl) currentTimeEl.textContent = formatTime(currentTime);
-          
-          if (duration > 0) {
-            const progress = (currentTime / duration) * 100;
-            if (progressBar) progressBar.style.width = `${progress}%`;
-          }
-        });
-
-        progressContainer?.addEventListener('click', (e) => {
-          const rect = progressContainer.getBoundingClientRect();
-          const clickX = e.clientX - rect.left;
-          const width = rect.width;
-          const percentage = clickX / width;
-          audio.currentTime = percentage * audio.duration;
-        });
-
-        audio.addEventListener('ended', () => {
-          playIcon?.classList.remove('hidden');
-          pauseIcon?.classList.add('hidden');
-          audio.currentTime = 0;
-          if (progressBar) progressBar.style.width = '0%';
-        });
-      });
-
-      // Track downloads
-      document.querySelectorAll('.download-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const mixId = btn.getAttribute('data-mix-id');
-          if (mixId) {
-            trackAction(mixId, 'download');
-          }
-        });
-      });
-
-      // Like buttons
-      document.querySelectorAll('.like-btn').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          const mixId = btn.getAttribute('data-mix-id');
-          if (!mixId) return;
-
-          const isLiked = likedMixes.has(mixId);
-          const heartOutline = btn.querySelector('.heart-outline');
-          const heartFilled = btn.querySelector('.heart-filled');
-          const likeText = btn.querySelector('.like-text');
-
-          if (isLiked) {
-            // Unlike
-            likedMixes.delete(mixId);
-            btn.classList.remove('liked', 'bg-black', 'text-white');
-            btn.classList.add('bg-white', 'text-black');
-            if (heartOutline) heartOutline.classList.remove('hidden');
-            if (heartFilled) heartFilled.classList.add('hidden');
-            if (likeText) likeText.textContent = 'Like';
-            
-            // Note: You'd need to add 'unlike' action to API for this to work properly
-            // For now, this just updates UI locally
-          } else {
-            // Like
-            likedMixes.add(mixId);
-            btn.classList.add('liked', 'bg-black', 'text-white');
-            btn.classList.remove('bg-white', 'text-black');
-            if (heartOutline) heartOutline.classList.add('hidden');
-            if (heartFilled) heartFilled.classList.remove('hidden');
-            if (likeText) likeText.textContent = 'Liked';
-            
-            // Track like
-            await trackAction(mixId, 'like');
-          }
-
-          // Save to localStorage
-          localStorage.setItem('likedMixes', JSON.stringify([...likedMixes]));
-        });
-      });
-
-      function formatTime(seconds: number): string {
-        if (!seconds || !isFinite(seconds)) return '0:00';
-        const minutes = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${minutes}:${secs.toString().padStart(2, '0')}`;
       }
     });
-  </script>
 
-  <style>
-    @keyframes pulse-line {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
+    // Play/Pause buttons
+    document.querySelectorAll('.mix-play-button').forEach(btn => {
+      if (!btn.initialized) {
+        btn.initialized = true;
+        btn.onclick = () => {
+          const mixId = btn.getAttribute('data-mix-id');
+          const audio = document.querySelector(`.mix-audio[data-mix-id="${mixId}"]`);
+          
+          // Pause other mixes
+          document.querySelectorAll('.mix-audio').forEach(a => {
+            if (a !== audio && !a.paused) {
+              a.pause();
+              a.currentTime = 0;
+              const otherBtn = document.querySelector(`.mix-play-button[data-mix-id="${a.getAttribute('data-mix-id')}"]`);
+              if (otherBtn) {
+                otherBtn.innerHTML = '<svg class="w-6 h-6 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+              }
+            }
+          });
+          
+          if (audio.paused) {
+            audio.play();
+            btn.innerHTML = '<svg class="w-6 h-6 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>';
+            currentlyPlaying = mixId;
+            
+            // Track play count
+            trackPlay(mixId);
+          } else {
+            audio.pause();
+            btn.innerHTML = '<svg class="w-6 h-6 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+            currentlyPlaying = null;
+          }
+        };
+      }
+    });
 
-    .progress-bar .w-0.5 {
-      animation: pulse-line 1s ease-in-out infinite;
-    }
+    // Volume sliders
+    document.querySelectorAll('.mix-volume-slider').forEach(slider => {
+      if (!slider.initialized) {
+        slider.initialized = true;
+        const mixId = slider.getAttribute('data-mix-id');
+        const audio = document.querySelector(`.mix-audio[data-mix-id="${mixId}"]`);
+        
+        if (audio) {
+          // Set initial volume
+          audio.volume = slider.value / 100;
+          
+          // Update volume on slider change
+          slider.oninput = () => {
+            audio.volume = slider.value / 100;
+          };
+        }
+      }
+    });
 
-    .like-btn.liked {
-      animation: likeHeartBeat 0.3s ease-in-out;
-    }
+    // Track audio end
+    document.querySelectorAll('.mix-audio').forEach(audio => {
+      audio.onended = () => {
+        const btn = document.querySelector(`.mix-play-button[data-mix-id="${audio.getAttribute('data-mix-id')}"]`);
+        if (btn) {
+          btn.innerHTML = '<svg class="w-6 h-6 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+        }
+        currentlyPlaying = null;
+      };
+    });
 
-    @keyframes likeHeartBeat {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.1); }
+    // Track downloads
+    document.querySelectorAll('.download-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mixId = btn.getAttribute('data-mix-id');
+        trackDownload(mixId);
+      });
+    });
+
+    // Like buttons
+    document.querySelectorAll('.like-btn').forEach(btn => {
+      if (!btn.initialized) {
+        btn.initialized = true;
+        
+        // Check if user has already liked this mix (from localStorage)
+        const mixId = btn.getAttribute('data-mix-id');
+        const likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
+        if (likedMixes.includes(mixId)) {
+          btn.setAttribute('data-liked', 'true');
+        }
+        
+        btn.addEventListener('click', async () => {
+          const isLiked = btn.getAttribute('data-liked') === 'true';
+          const likesCountElements = document.querySelectorAll(`.likes-count[data-mix-id="${mixId}"]`);
+          
+          likesCountElements.forEach(element => {
+            const currentCount = parseInt(element.textContent);
+            
+            if (isLiked) {
+              // Unlike
+              btn.setAttribute('data-liked', 'false');
+              element.textContent = currentCount - 1;
+              
+              // Remove from localStorage
+              const likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
+              const index = likedMixes.indexOf(mixId);
+              if (index > -1) {
+                likedMixes.splice(index, 1);
+                localStorage.setItem('liked-mixes', JSON.stringify(likedMixes));
+              }
+            } else {
+              // Like
+              btn.setAttribute('data-liked', 'true');
+              element.textContent = currentCount + 1;
+              
+              // Add to localStorage
+              const likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
+              if (!likedMixes.includes(mixId)) {
+                likedMixes.push(mixId);
+                localStorage.setItem('liked-mixes', JSON.stringify(likedMixes));
+              }
+            }
+          });
+          
+          // Track like/unlike on server
+          if (isLiked) {
+            await trackUnlike(mixId);
+          } else {
+            await trackLike(mixId);
+          }
+        });
+      }
+    });
+  }
+
+  // Track play count
+  async function trackPlay(mixId) {
+    try {
+      await fetch('/api/track-mix-play', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mixId })
+      });
+    } catch (error) {
+      console.error('Error tracking play:', error);
     }
-  </style>
-</body>
-</html>
+  }
+
+  // Track download count
+  async function trackDownload(mixId) {
+    try {
+      await fetch('/api/track-mix-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mixId })
+      });
+    } catch (error) {
+      console.error('Error tracking download:', error);
+    }
+  }
+
+  // Track like
+  async function trackLike(mixId) {
+    try {
+      const response = await fetch('/api/track-mix-like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mixId })
+      });
+      const data = await response.json();
+      console.log('Like tracked:', data);
+      return data;
+    } catch (error) {
+      console.error('Error tracking like:', error);
+    }
+  }
+
+  // Track unlike
+  async function trackUnlike(mixId) {
+    try {
+      const response = await fetch('/api/track-mix-unlike', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mixId })
+      });
+      const data = await response.json();
+      console.log('Unlike tracked:', data);
+      return data;
+    } catch (error) {
+      console.error('Error tracking unlike:', error);
+    }
+  }
+
+  // Initialize on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMixPlayers);
+  } else {
+    initMixPlayers();
+  }
+  
+  // Reinitialize after short delay (in case of dynamic content)
+  setTimeout(initMixPlayers, 100);
+</script>
