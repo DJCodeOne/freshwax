@@ -875,24 +875,25 @@ body {
   }
 
   // Update selection count
-  function updateSelection() {
-    const checkboxes = document.querySelectorAll('.release-checkbox:checked');
-    const count = checkboxes.length;
-    
-    document.getElementById('selectedCount').textContent = count;
-    document.getElementById('publishBtn').disabled = count === 0;
-    document.getElementById('previewBtn').disabled = count === 0;
-    document.getElementById('deleteBtn').disabled = count === 0;
+function updateSelection() {
+  const checkboxes = document.querySelectorAll('.release-checkbox:checked');
+  const count = checkboxes.length;
+  
+  document.getElementById('selectedCount').textContent = count;
+  document.getElementById('publishBtn').disabled = count === 0;
+  document.getElementById('previewBtn').disabled = count === 0;
+  document.getElementById('deleteBtn').disabled = count === 0;
 
-    // Update card styling
-document.querySelectorAll('.release-card').forEach(card => {
-  const checkbox = card.querySelector('.release-checkbox');
-  if (checkbox && checkbox.checked) {
-    card.classList.add('selected');
-  } else {
-    card.classList.remove('selected');
-  }
-});
+  // Update card styling
+  document.querySelectorAll('.release-card').forEach(card => {
+    const checkbox = card.querySelector('.release-checkbox');
+    if (checkbox && checkbox.checked) {
+      card.classList.add('selected');
+    } else {
+      card.classList.remove('selected');
+    }
+  });
+}  
 
 // Select all
 function selectAll() {
