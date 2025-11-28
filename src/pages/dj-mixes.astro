@@ -55,11 +55,20 @@ function formatDuration(seconds) {
   return `${mins} ${minWord}`;
 }
 
-// Helper to get duration from mix object - durationSeconds is the primary field from Firebase
+// Helper to get duration from mix object
 function getMixDuration(mix) {
   // durationSeconds is the main field (number in seconds)
   if (mix.durationSeconds && typeof mix.durationSeconds === 'number') {
     return mix.durationSeconds;
+  }
+  // Parse string format "H:MM:SS" or "MM:SS"
+  if (mix.duration && typeof mix.duration === 'string' && mix.duration.includes(':')) {
+    const parts = mix.duration.split(':').map(Number);
+    if (parts.length === 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) {
+      return parts[0] * 60 + parts[1];
+    }
   }
   // Fallback checks
   return mix.duration_seconds || mix.mixDuration || null;
