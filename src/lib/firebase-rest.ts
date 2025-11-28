@@ -7,7 +7,7 @@ const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_I
 
 // Simple in-memory cache
 const cache = new Map<string, { data: any; expires: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes default
 
 function getCached(key: string): any | null {
   const entry = cache.get(key);
@@ -38,8 +38,8 @@ interface QueryOptions {
   filters?: QueryFilter[];
   orderBy?: { field: string; direction?: 'ASCENDING' | 'DESCENDING' };
   limit?: number;
-  cacheKey?: string; // Optional custom cache key
-  cacheTTL?: number; // Optional custom TTL
+  cacheKey?: string;
+  cacheTTL?: number;
 }
 
 // Convert JS values to Firestore REST format
@@ -158,6 +158,7 @@ export async function queryCollection(
   }
   
   try {
+    console.log(`[firebase-rest] Querying ${collection}...`);
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -175,6 +176,8 @@ export async function queryCollection(
     const results = data
       .filter((item: any) => item.document)
       .map((item: any) => parseDocument(item.document));
+    
+    console.log(`[firebase-rest] Found ${results.length} documents in ${collection}`);
     
     // Cache the results
     setCache(cacheKey, results, options.cacheTTL || CACHE_TTL);
