@@ -1,0 +1,1137 @@
+---
+// src/pages/admin/upload-release-zip.astro
+// CLEAN FINAL VERSION - Saves ALL URLs to Firebase (artwork, previews, full tracks)
+// FIXED: Track grouping properly implemented, no duplicates
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Release ZIP - Fresh Wax Admin</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: #ffffff;
+      min-height: 100vh;
+    }
+
+    .admin-logo-header {
+      background: #000;
+      padding: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: center;
+      border: 3px solid #000;
+    }
+
+    .admin-logo {
+      height: 80px;
+      width: auto;
+      background: #fff;
+      padding: 10px 20px;
+    }
+
+    .admin-container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+      padding: 20px; 
+      background: #ffffff;
+    }
+    
+    .admin-header {
+      background: #fff;
+      padding: 30px;
+      margin-bottom: 30px;
+      border: 3px solid #000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .admin-header h1 {
+      font-size: 32px;
+      color: #000;
+      margin: 0;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .admin-header .badge {
+      display: inline-block;
+      background: #dc2626;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-left: 10px;
+      text-transform: uppercase;
+    }
+
+    .admin-back-btn {
+      padding: 12px 24px;
+      background: #000;
+      color: white;
+      border: 3px solid #000;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+
+    .admin-back-btn:hover {
+      background: #fff;
+      color: #000;
+      transform: translate(-4px, -4px);
+      box-shadow: 8px 8px 0 #000;
+    }
+
+    .drop-zone {
+      background: #fff;
+      border: 3px dashed #000;
+      padding: 60px 40px;
+      text-align: center;
+      margin-bottom: 30px;
+      transition: all 0.2s;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .drop-zone:hover {
+      background: #f5f5f5;
+      border-color: #dc2626;
+    }
+
+    .drop-zone.dragover {
+      background: #f5f5f5;
+      border-style: solid;
+      border-color: #dc2626;
+      transform: scale(1.02);
+    }
+
+    .drop-zone-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+
+    .drop-zone-text {
+      font-size: 18px;
+      font-weight: 700;
+      color: #000;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .drop-zone-hint {
+      font-size: 14px;
+      color: #666;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+
+    .browse-btn {
+      padding: 12px 24px;
+      background: #000;
+      color: #fff;
+      border: 3px solid #000;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .browse-btn:hover {
+      background: #dc2626;
+      border-color: #dc2626;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .file-list-container {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 30px;
+      margin-bottom: 30px;
+      display: none;
+    }
+
+    .file-list-container.show {
+      display: block;
+    }
+
+    .file-list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .file-list-title {
+      font-size: 20px;
+      font-weight: 900;
+      color: #000;
+      text-transform: uppercase;
+    }
+
+    .file-count {
+      font-size: 14px;
+      font-weight: 700;
+      color: #666;
+    }
+
+    .file-list {
+      list-style: none;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      margin-bottom: 10px;
+      background: #fff;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .file-item:hover {
+      border-color: #000;
+      transform: translateX(4px);
+    }
+
+    .file-icon {
+      font-size: 24px;
+      margin-right: 15px;
+    }
+
+    .file-name {
+      flex: 1;
+      font-size: 14px;
+      color: #000;
+      word-break: break-all;
+    }
+
+    .file-size {
+      font-size: 12px;
+      color: #666;
+      margin-left: 15px;
+    }
+
+    .file-type {
+      display: inline-block;
+      padding: 4px 8px;
+      background: #000;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-left: 10px;
+    }
+
+    .upload-section {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 30px;
+      margin-bottom: 30px;
+      display: none;
+    }
+
+    .upload-section.show {
+      display: block;
+    }
+
+    .upload-info {
+      background: #f5f5f5;
+      border: 2px solid #000;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .upload-info h3 {
+      font-size: 16px;
+      font-weight: 900;
+      color: #000;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .upload-info p {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+      font-weight: 600;
+    }
+
+    .upload-actions {
+      display: flex;
+      gap: 15px;
+    }
+
+    .upload-btn {
+      flex: 1;
+      padding: 18px;
+      background: #000;
+      color: #fff;
+      border: 3px solid #000;
+      font-weight: 900;
+      cursor: pointer;
+      text-transform: uppercase;
+      font-size: 16px;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+
+    .upload-btn:hover:not(:disabled) {
+      background: #fff;
+      color: #000;
+      transform: translate(-4px, -4px);
+      box-shadow: 8px 8px 0 #000;
+    }
+
+    .upload-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .cancel-btn {
+      flex: 1;
+      padding: 18px;
+      background: #fff;
+      color: #000;
+      border: 3px solid #000;
+      font-weight: 900;
+      cursor: pointer;
+      text-transform: uppercase;
+      font-size: 16px;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+
+    .cancel-btn:hover {
+      background: #f5f5f5;
+    }
+
+    .progress-container {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 30px;
+      margin-bottom: 30px;
+      display: none;
+    }
+
+    .progress-container.show {
+      display: block;
+    }
+
+    .progress-text {
+      font-size: 16px;
+      font-weight: 700;
+      color: #000;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 30px;
+      background: #e0e0e0;
+      border: 3px solid #000;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #000;
+      transition: width 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 12px;
+    }
+
+    .progress-log {
+      margin-top: 20px;
+      background: #f5f5f5;
+      border: 2px solid #000;
+      padding: 15px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .log-item {
+      padding: 5px 0;
+      font-weight: 600;
+    }
+
+    .log-item.success {
+      color: #000;
+    }
+
+    .log-item.error {
+      color: #ff0000;
+      font-weight: 700;
+    }
+
+    .log-item.warning {
+      color: #ff8800;
+      font-weight: 700;
+    }
+
+    .log-item.info {
+      color: #666;
+    }
+
+    .success-container {
+      background: #fff;
+      border: 3px solid #000;
+      padding: 40px;
+      text-align: center;
+      display: none;
+    }
+
+    .success-container.show {
+      display: block;
+    }
+
+    .success-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+    }
+
+    .success-title {
+      font-size: 28px;
+      font-weight: 900;
+      color: #000;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+    }
+
+    .success-message {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 30px;
+      font-weight: 600;
+    }
+
+    .success-actions {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+    }
+
+    .success-btn {
+      padding: 15px 30px;
+      background: #000;
+      color: #fff;
+      border: 3px solid #000;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      display: inline-block;
+    }
+
+    .success-btn:hover {
+      background: #fff;
+      color: #000;
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0 #000;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 768px) {
+      .admin-container { padding: 15px; }
+      .admin-logo { height: 60px; }
+      .admin-header { flex-direction: column; align-items: flex-start; }
+      .admin-header h1 { font-size: 24px; }
+      .drop-zone { padding: 40px 20px; }
+      .upload-actions { flex-direction: column; }
+      .success-actions { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-logo-header">
+    <img src="/logo.webp" alt="Fresh Wax" class="admin-logo">
+  </div>
+
+  <div class="admin-container">
+    <div class="admin-header">
+      <div>
+        <h1>📦 Upload Release ZIP<span class="badge">R2 + Firebase</span></h1>
+        <p style="font-size: 12px; color: #666; margin-top: 8px;">All files to R2, ALL URLs saved to Firebase for editing</p>
+      </div>
+      <a href="/admin" class="admin-back-btn">← Back to Dashboard</a>
+    </div>
+
+    <div id="dropZone" class="drop-zone">
+      <div class="drop-zone-icon">📦</div>
+      <div class="drop-zone-text">Drop ZIP File Here</div>
+      <div class="drop-zone-hint">or click button below to browse</div>
+      <button type="button" class="browse-btn" id="browseBtn">📁 Browse Files</button>
+      <input type="file" id="fileInput" class="file-input" accept=".zip">
+    </div>
+
+    <div id="fileListContainer" class="file-list-container">
+      <div class="file-list-header">
+        <h2 class="file-list-title">📁 Files in ZIP</h2>
+        <span class="file-count" id="fileCount">0 files</span>
+      </div>
+      <ul id="fileList" class="file-list"></ul>
+    </div>
+
+    <div id="uploadSection" class="upload-section">
+      <div class="upload-info">
+        <h3>⚡ Ready to Upload</h3>
+        <p>
+          All files upload to R2, ALL URLs saved to Firebase:
+          <br>• Artwork URLs → artworkUrl, coverUrl
+          <br>• Preview URLs → tracks[].preview_url
+          <br>• Full Track URLs → tracks[].url, tracks[].mp3Url, tracks[].wavUrl
+          <br>• Editable from admin panel
+        </p>
+      </div>
+      <div class="upload-actions">
+        <button id="uploadBtn" class="upload-btn">🚀 Upload Everything</button>
+        <button id="cancelBtn" class="cancel-btn">✕ Cancel</button>
+      </div>
+    </div>
+
+    <div id="progressContainer" class="progress-container">
+      <div class="progress-text" id="progressText">Uploading...</div>
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill">0%</div>
+      </div>
+      <div id="progressLog" class="progress-log"></div>
+    </div>
+
+    <div id="successContainer" class="success-container">
+      <div class="success-icon">✅</div>
+      <h2 class="success-title">Upload Complete!</h2>
+      <p class="success-message">All files uploaded to R2 and ALL URLs saved to Firebase.</p>
+      <div class="success-actions">
+        <a href="/admin/publish-release" class="success-btn">Preview & Publish</a>
+        <button onclick="location.reload()" class="success-btn">Upload Another</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
+
+    let zipFile = null;
+    let extractedFiles = [];
+
+    const dropZone = document.getElementById('dropZone');
+    const browseBtn = document.getElementById('browseBtn');
+    const fileInput = document.getElementById('fileInput');
+    const fileListContainer = document.getElementById('fileListContainer');
+    const fileList = document.getElementById('fileList');
+    const fileCount = document.getElementById('fileCount');
+    const uploadSection = document.getElementById('uploadSection');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressText = document.getElementById('progressText');
+    const progressFill = document.getElementById('progressFill');
+    const progressLog = document.getElementById('progressLog');
+    const successContainer = document.getElementById('successContainer');
+
+    browseBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      fileInput.click();
+    });
+
+    dropZone.addEventListener('click', (e) => {
+      if (e.target !== browseBtn) {
+        e.preventDefault();
+        fileInput.click();
+      }
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith('.zip')) {
+        handleZipFile(file);
+      } else {
+        alert('Please drop a ZIP file');
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        handleZipFile(file);
+      }
+    });
+
+    async function handleZipFile(file) {
+      zipFile = file;
+      log('Loading ZIP file...', 'info');
+
+      try {
+        const zip = new JSZip();
+        const contents = await zip.loadAsync(file);
+        
+        extractedFiles = [];
+        fileList.innerHTML = '';
+
+        for (const [filename, fileData] of Object.entries(contents.files)) {
+          if (!fileData.dir) {
+            const blob = await fileData.async('blob');
+            extractedFiles.push({
+              name: filename,
+              blob: blob,
+              size: blob.size,
+              type: getFileType(filename)
+            });
+          }
+        }
+
+        displayFiles();
+        
+        fileListContainer.classList.add('show');
+        uploadSection.classList.add('show');
+        
+        log(`✓ Loaded ${extractedFiles.length} files from ZIP`, 'success');
+
+      } catch (error) {
+        console.error('Error reading ZIP:', error);
+        alert('Error reading ZIP file: ' + error.message);
+      }
+    }
+
+    function displayFiles() {
+      fileCount.textContent = `${extractedFiles.length} files`;
+      
+      extractedFiles.forEach(file => {
+        const li = document.createElement('li');
+        li.className = 'file-item';
+        li.innerHTML = `
+          <div class="file-icon">${getFileIcon(file.type)}</div>
+          <div class="file-name">${file.name}</div>
+          <span class="file-type">${file.type}</span>
+          <div class="file-size">${formatFileSize(file.size)}</div>
+        `;
+        fileList.appendChild(li);
+      });
+    }
+
+    function getFileType(filename) {
+      const ext = filename.split('.').pop().toLowerCase();
+      const types = {
+        'json': 'JSON',
+        'jpg': 'IMAGE',
+        'jpeg': 'IMAGE',
+        'png': 'IMAGE',
+        'webp': 'IMAGE',
+        'mp3': 'AUDIO',
+        'wav': 'AUDIO',
+        'flac': 'AUDIO'
+      };
+      return types[ext] || 'FILE';
+    }
+
+    function getFileIcon(type) {
+      const icons = {
+        'JSON': '📄',
+        'IMAGE': '🖼️',
+        'AUDIO': '🎵',
+        'FILE': '📎'
+      };
+      return icons[type] || '📎';
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    uploadBtn.addEventListener('click', async () => {
+      if (extractedFiles.length === 0) {
+        alert('No files to upload');
+        return;
+      }
+
+      uploadSection.classList.remove('show');
+      progressContainer.classList.add('show');
+      
+      await uploadFiles();
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      location.reload();
+    });
+
+    async function uploadFiles() {
+      try {
+        // HELPER FUNCTION: Group MP3/WAV files as single tracks
+        function groupAudioFiles(audioFiles) {
+          const trackGroups = new Map();
+          
+          audioFiles.forEach(file => {
+            const numMatch = file.name.match(/(?:track[-_]?)?(\d+)/i);
+            const trackNum = numMatch ? parseInt(numMatch[1]) : null;
+            
+            const baseName = file.name
+              .toLowerCase()
+              .replace(/\.(mp3|wav|flac)$/i, '')
+              .replace(/[-_](mp3|wav|flac)$/i, '')
+              .trim();
+            
+            const ext = file.name.split('.').pop().toLowerCase();
+            const key = trackNum || baseName;
+            
+            if (!trackGroups.has(key)) {
+              trackGroups.set(key, {
+                trackNumber: trackNum,
+                baseName: baseName,
+                title: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
+                files: {}
+              });
+            }
+            
+            trackGroups.get(key).files[ext] = file;
+          });
+          
+          return Array.from(trackGroups.values()).sort((a, b) => {
+            if (a.trackNumber && b.trackNumber) return a.trackNumber - b.trackNumber;
+            return a.baseName.localeCompare(b.baseName);
+          });
+        }
+
+        log('Starting upload process...', 'info');
+        log('═══════════════════════════════', 'info');
+        
+        let releaseData = null;
+        const fullAudioFiles = [];
+        const previewClips = [];
+        const artworkFiles = [];
+
+        // Categorize files
+        extractedFiles.forEach(file => {
+          const ext = file.name.split('.').pop().toLowerCase();
+          const lowerName = file.name.toLowerCase();
+          
+          if (lowerName.endsWith('.json') && (lowerName.includes('release') || lowerName.includes('data') || lowerName.includes('metadata'))) {
+            releaseData = file;
+          } else if (lowerName.includes('preview') || lowerName.includes('clip')) {
+            previewClips.push(file);
+          } else if (['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+            artworkFiles.push(file);
+          } else if (['mp3', 'wav', 'flac'].includes(ext)) {
+            fullAudioFiles.push(file);
+          }
+        });
+
+        log(`Files: Metadata=${releaseData ? '✓' : '✗'}, Tracks=${fullAudioFiles.length}, Previews=${previewClips.length}, Artwork=${artworkFiles.length}`, 'info');
+
+        if (!releaseData) {
+          throw new Error('No release metadata JSON found');
+        }
+
+        const releaseDataText = await releaseData.blob.text();
+        const release = JSON.parse(releaseDataText);
+        
+        if (!release.id) {
+          const artistName = (release.artistName || release.artist || 'Unknown').replace(/[^a-zA-Z0-9]/g, '');
+          const trackNumber = release.trackNumber || release.catalogNumber || '1';
+          release.id = `${artistName}_${trackNumber}-${Date.now()}`;
+          log(`Generated ID: ${release.id}`, 'warning');
+        }
+        
+        log(`Release: "${release.title || release.releaseName}" by ${release.artist || release.artistName}`, 'success');
+
+        function parseTrackListing(trackListing, existingTracks) {
+          if (!trackListing) return existingTracks || [];
+          if (Array.isArray(trackListing)) return trackListing;
+          if (typeof trackListing === 'string') {
+            return trackListing.split(/[\n,;]+/).map(t => t.trim()).filter(t => t).map((name, idx) => ({
+              track_number: idx + 1,
+              title: name
+            }));
+          }
+          return existingTracks || [];
+        }
+        
+        const standardRelease = {
+          id: release.id,
+          title: release.releaseName || release.title || 'Untitled',
+          artist: release.artistName || release.artist || 'Unknown',
+          label: release.labelName || release.label,
+          genre: release.genre || release.customGenre,
+          catalogNumber: release.catalogNumber,
+          digitalPrice: parseFloat(release.pricePerSale) || 0,
+          trackPrice: parseFloat(release.trackPrice) || 0,
+          hasVinyl: release.vinylRelease === true || release.vinylRelease === 'true',
+          vinylPrice: parseFloat(release.vinylPrice) || 0,
+          vinylStock: parseInt(release.vinylRecordCount) || 0,
+          releaseDate: release.releaseDate || new Date().toISOString(),
+          isPreorder: release.releaseDateType === 'preorder',
+          isNew: true,
+          description: release.description || release.notes,
+          extraNotes: release.notes,
+          tracks: parseTrackListing(release.trackListing, release.tracks || []),
+          coverUrl: null,
+          artworkUrl: null,
+          metadataUrl: null,
+          storage: 'r2',
+          published: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        let totalFiles = fullAudioFiles.length + previewClips.length + artworkFiles.length + 1;
+        let uploadedCount = 0;
+
+        // Upload metadata
+        if (releaseData) {
+          log('═══════════════════════════════', 'info');
+          log(`📤 Uploading metadata...`, 'info');
+          
+          updateProgress((uploadedCount / totalFiles) * 80, `Uploading metadata...`);
+          
+          const formData = new FormData();
+          formData.append('file', releaseData.blob, 'metadata.json');
+          formData.append('filename', 'metadata.json');
+          formData.append('releaseId', release.id);
+          formData.append('fileType', 'metadata');
+
+          try {
+            const response = await fetch('/api/upload-r2-batch', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (!result.success) throw new Error(result.error);
+            log(`✓ Metadata: ${result.url}`, 'success');
+            standardRelease.metadataUrl = result.url;
+            uploadedCount++;
+          } catch (error) {
+            log(`✗ Metadata failed: ${error.message}`, 'error');
+          }
+        }
+
+        // FIXED: Upload full audio files with track grouping
+        if (fullAudioFiles.length > 0) {
+          log('═══════════════════════════════', 'info');
+          log(`📤 Processing ${fullAudioFiles.length} audio file(s)...`, 'info');
+          
+          const trackGroups = groupAudioFiles(fullAudioFiles);
+          log(`  → Grouped into ${trackGroups.length} unique tracks`, 'info');
+          
+          if (!standardRelease.tracks || standardRelease.tracks.length === 0) {
+            log(`⚠ No tracks from metadata, creating from audio...`, 'warning');
+            standardRelease.tracks = trackGroups.map((group, idx) => ({
+              track_number: group.trackNumber || idx + 1,
+              title: group.title
+            }));
+          } else {
+            log(`✓ Using ${standardRelease.tracks.length} tracks from metadata:`, 'success');
+            standardRelease.tracks.forEach((t, i) => log(`    ${i+1}. ${t.title}`, 'info'));
+          }
+          
+          for (const group of trackGroups) {
+            log(`\nProcessing track: ${group.title}`, 'info');
+            
+            let trackIndex = -1;
+            if (group.trackNumber) {
+              trackIndex = standardRelease.tracks.findIndex(t => 
+                t.track_number === group.trackNumber || t.number === group.trackNumber
+              );
+            }
+            if (trackIndex < 0) {
+              trackIndex = standardRelease.tracks.findIndex(t => {
+                const cleanTitle = t.title?.toLowerCase().replace(/[^a-z0-9]/g, '') || '';
+                const cleanGroup = group.baseName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                return cleanGroup.includes(cleanTitle) || cleanTitle.includes(cleanGroup);
+              });
+            }
+            if (trackIndex < 0) {
+              trackIndex = standardRelease.tracks.length;
+              standardRelease.tracks.push({
+                track_number: group.trackNumber || trackIndex + 1,
+                title: group.title
+              });
+            }
+            
+            for (const [ext, file] of Object.entries(group.files)) {
+              updateProgress((uploadedCount / totalFiles) * 80, `Uploading ${file.name}...`);
+              
+              const formData = new FormData();
+              formData.append('file', file.blob, file.name);
+              formData.append('filename', file.name);
+              formData.append('releaseId', release.id);
+              formData.append('fileType', 'track');
+
+              try {
+                const response = await fetch('/api/upload-r2-batch', { method: 'POST', body: formData });
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error);
+
+                log(`  ✓ ${ext.toUpperCase()}: ${file.name}`, 'success');
+                
+                if (ext === 'mp3') {
+                  standardRelease.tracks[trackIndex].mp3Url = result.url;
+                  if (!standardRelease.tracks[trackIndex].url) {
+                    standardRelease.tracks[trackIndex].url = result.url;
+                  }
+                } else if (ext === 'wav') {
+                  standardRelease.tracks[trackIndex].wavUrl = result.url;
+                  if (!standardRelease.tracks[trackIndex].url) {
+                    standardRelease.tracks[trackIndex].url = result.url;
+                  }
+                } else {
+                  standardRelease.tracks[trackIndex].url = result.url;
+                }
+                standardRelease.tracks[trackIndex].storage = 'r2';
+                
+                uploadedCount++;
+              } catch (error) {
+                log(`  ✗ ${ext.toUpperCase()}: ${error.message}`, 'error');
+              }
+            }
+            
+            log(`  → Saved to track ${trackIndex + 1}: "${standardRelease.tracks[trackIndex].title}"`, 'success');
+          }
+          
+          log('═══════════════════════════════', 'info');
+          log('Track URLs summary:', 'info');
+          standardRelease.tracks.forEach((track, idx) => {
+            log(`  Track ${idx + 1}: ${track.title}`, 'info');
+            if (track.mp3Url) log(`    MP3: ✓`, 'success');
+            if (track.wavUrl) log(`    WAV: ✓`, 'success');
+            if (!track.url) log(`    WARNING: No primary URL!`, 'error');
+          });
+        }
+
+        // Upload preview clips
+        if (previewClips.length > 0) {
+          log('═══════════════════════════════', 'info');
+          log(`📤 Uploading ${previewClips.length} preview(s)...`, 'info');
+          
+          const sortedPreviews = previewClips.sort((a, b) => a.name.localeCompare(b.name));
+          
+          if (!standardRelease.tracks || standardRelease.tracks.length === 0) {
+            log(`⚠ Creating tracks from previews...`, 'warning');
+            standardRelease.tracks = sortedPreviews.map((file, idx) => ({
+              track_number: idx + 1,
+              title: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
+            }));
+          }
+          
+          for (let i = 0; i < sortedPreviews.length; i++) {
+            const file = sortedPreviews[i];
+            updateProgress((uploadedCount / totalFiles) * 80, `Uploading ${file.name}...`);
+            
+            const formData = new FormData();
+            formData.append('file', file.blob, file.name);
+            formData.append('filename', file.name);
+            formData.append('releaseId', release.id);
+            formData.append('fileType', 'preview');
+
+            try {
+              const response = await fetch('/api/upload-r2-batch', { method: 'POST', body: formData });
+              const result = await response.json();
+              if (!result.success) throw new Error(result.error);
+
+              log(`✓ ${file.name} → ${result.url}`, 'success');
+              
+              // IMPROVED: Match preview to track
+              let trackIndex = -1;
+              
+              // Strategy 1: Match by track number in filename
+              const numMatch = file.name.match(/(\d+)/);
+              if (numMatch) {
+                const num = parseInt(numMatch[1]);
+                if (num >= 1 && num <= standardRelease.tracks.length) {
+                  trackIndex = num - 1;
+                  log(`  → Strategy 1: Matched by number ${num}`, 'success');
+                }
+              }
+              
+              // Strategy 2: Position-based (if 6 previews for 6 tracks)
+              if (trackIndex < 0 && sortedPreviews.length === standardRelease.tracks.length) {
+                trackIndex = i;
+                log(`  → Strategy 2: Matched by position ${i + 1}`, 'success');
+              }
+              
+              // Strategy 3: First empty slot
+              if (trackIndex < 0) {
+                trackIndex = standardRelease.tracks.findIndex(t => !t.preview_url && !t.previewUrl);
+                if (trackIndex >= 0) {
+                  log(`  → Strategy 3: First empty slot ${trackIndex + 1}`, 'warning');
+                }
+              }
+              
+              if (trackIndex >= 0 && trackIndex < standardRelease.tracks.length) {
+                standardRelease.tracks[trackIndex].previewUrl = result.url;
+                standardRelease.tracks[trackIndex].preview_url = result.url;
+                standardRelease.tracks[trackIndex].previewStorage = 'r2';
+                log(`  → Linked to Track ${trackIndex + 1}: "${standardRelease.tracks[trackIndex].title}"`, 'success');
+              } else {
+                log(`  ✗ Could not match preview to any track!`, 'error');
+                const newTrack = {
+                  track_number: standardRelease.tracks.length + 1,
+                  title: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
+                  preview_url: result.url,
+                  previewUrl: result.url,
+                  previewStorage: 'r2'
+                };
+                standardRelease.tracks.push(newTrack);
+                log(`  → Created new track ${standardRelease.tracks.length}`, 'success');
+              }
+
+              uploadedCount++;
+            } catch (error) {
+              log(`✗ ${file.name}: ${error.message}`, 'error');
+            }
+          }
+        }
+
+        // Upload artwork
+        if (artworkFiles.length > 0) {
+          log('═══════════════════════════════', 'info');
+          log(`📤 Uploading ${artworkFiles.length} artwork...`, 'info');
+          
+          for (const file of artworkFiles) {
+            updateProgress((uploadedCount / totalFiles) * 80, `Uploading ${file.name}...`);
+            
+            const formData = new FormData();
+            formData.append('file', file.blob, file.name);
+            formData.append('filename', file.name);
+            formData.append('releaseId', release.id);
+            formData.append('fileType', 'artwork');
+
+            try {
+              const response = await fetch('/api/upload-r2-batch', { method: 'POST', body: formData });
+              const result = await response.json();
+              if (!result.success) throw new Error(result.error);
+
+              log(`✓ ${file.name} → ${result.url}`, 'success');
+              
+              standardRelease.coverUrl = result.url;
+              standardRelease.artworkUrl = result.url;
+
+              uploadedCount++;
+            } catch (error) {
+              log(`✗ ${file.name}: ${error.message}`, 'error');
+            }
+          }
+        }
+
+        log('═══════════════════════════════', 'info');
+        log(`Upload Summary: ${uploadedCount}/${totalFiles} successful`, 'success');
+
+        if (uploadedCount === 0) {
+          throw new Error('All uploads failed');
+        }
+
+        updateProgress(90, 'Saving to Firebase...');
+        
+        log('═══════════════════════════════', 'info');
+        log('💾 Saving to Firebase...', 'info');
+        log('URLs being saved:', 'info');
+        log(`  Artwork: ${standardRelease.artworkUrl || 'MISSING'}`, standardRelease.artworkUrl ? 'success' : 'error');
+        log(`  Metadata: ${standardRelease.metadataUrl || 'MISSING'}`, standardRelease.metadataUrl ? 'success' : 'error');
+        standardRelease.tracks?.forEach((track, idx) => {
+          log(`  Track ${idx + 1}: ${track.title}`, 'info');
+          log(`    Preview: ${track.preview_url || 'MISSING'}`, track.preview_url ? 'success' : 'warning');
+          log(`    MP3: ${track.mp3Url || 'MISSING'}`, track.mp3Url ? 'success' : 'warning');
+          log(`    WAV: ${track.wavUrl || 'MISSING'}`, track.wavUrl ? 'success' : 'warning');
+          log(`    Primary: ${track.url || 'MISSING'}`, track.url ? 'success' : 'error');
+        });
+        
+        await updateMasterJSON(standardRelease);
+        
+        updateProgress(100, 'Complete!');
+        log('✅ COMPLETE! All URLs saved to Firebase', 'success');
+        log(`   Release ID: ${standardRelease.id}`, 'success');
+        log(`   Tracks: ${standardRelease.tracks.length}`, 'success');
+        log('═══════════════════════════════', 'info');
+
+        setTimeout(() => {
+          progressContainer.classList.remove('show');
+          successContainer.classList.add('show');
+        }, 1500);
+
+      } catch (error) {
+        console.error('Upload error:', error);
+        log('═══════════════════════════════', 'error');
+        log(`✗ ERROR: ${error.message}`, 'error');
+        log('═══════════════════════════════', 'error');
+        alert('Upload failed: ' + error.message);
+      }
+    }
+
+    function updateProgress(percent, text) {
+      progressFill.style.width = percent + '%';
+      progressFill.textContent = Math.round(percent) + '%';
+      progressText.textContent = text;
+    }
+
+    function log(message, type = 'info') {
+      console.log(`[${type.toUpperCase()}] ${message}`);
+      const logItem = document.createElement('div');
+      logItem.className = `log-item ${type}`;
+      logItem.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      progressLog.appendChild(logItem);
+      progressLog.scrollTop = progressLog.scrollHeight;
+    }
+
+    async function updateMasterJSON(newRelease) {
+      try {
+        log('Sending to Firebase...', 'info');
+        
+        const response = await fetch('/api/update-master-json', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ release: newRelease })
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to update Firebase');
+        }
+
+        log('✓ Firebase updated with ALL URLs', 'success');
+        log(`  Total releases: ${result.totalReleases}`, 'info');
+      } catch (error) {
+        console.error('Firebase error:', error);
+        log(`✗ Firebase failed: ${error.message}`, 'error');
+        throw error;
+      }
+    }
+  </script>
+</body>
+</html>

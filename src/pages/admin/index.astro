@@ -1,0 +1,535 @@
+---
+// /src/pages/admin/index.astro
+// Fresh Wax Admin Dashboard - Optimised with Partner System
+
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore, FieldPath } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+// Fetch stats using count() aggregation where possible (much more efficient)
+// Note: Firestore count() requires specific setup, using optimised queries as fallback
+async function getCollectionCount(collection: string, conditions?: { field: string; op: any; value: any }[]) {
+  let query: any = db.collection(collection);
+  if (conditions) {
+    conditions.forEach(c => {
+      query = query.where(c.field, c.op, c.value);
+    });
+  }
+  const snapshot = await query.select().get(); // select() returns only document refs, not data
+  return snapshot.size;
+}
+
+// Fetch all stats in parallel for efficiency
+const [
+  // Partners
+  totalPartners,
+  pendingArtists,
+  pendingDJs,
+  pendingMerchSuppliers,
+  approvedPartners,
+  
+  // Releases
+  totalReleases,
+  liveReleases,
+  pendingReleases,
+  draftReleases,
+  
+  // Other content
+  totalMerch,
+  totalDJMixes,
+  totalCustomers,
+  totalOrders,
+  
+  // Sales data
+  ordersSnapshot
+] = await Promise.all([
+  // Partners counts
+  getCollectionCount('artists'),
+  getCollectionCount('artists', [
+    { field: 'approved', op: '==', value: false },
+    { field: 'isArtist', op: '==', value: true }
+  ]),
+  getCollectionCount('artists', [
+    { field: 'approved', op: '==', value: false },
+    { field: 'isDJ', op: '==', value: true }
+  ]),
+  getCollectionCount('artists', [
+    { field: 'approved', op: '==', value: false },
+    { field: 'isMerchSupplier', op: '==', value: true }
+  ]),
+  getCollectionCount('artists', [{ field: 'approved', op: '==', value: true }]),
+  
+  // Releases counts
+  getCollectionCount('releases'),
+  getCollectionCount('releases', [{ field: 'status', op: '==', value: 'live' }]),
+  getCollectionCount('releases', [{ field: 'status', op: '==', value: 'pending' }]),
+  getCollectionCount('releases', [{ field: 'status', op: '==', value: 'draft' }]),
+  
+  // Other content
+  getCollectionCount('merch'),
+  getCollectionCount('dj-mixes'),
+  getCollectionCount('customers'),
+  getCollectionCount('orders'),
+  
+  // Get orders for sales calculation (need actual data here)
+  db.collection('orders').where('status', '!=', 'cancelled').select('total', 'platformFee').get()
+]);
+
+// Calculate sales totals
+let totalSales = 0;
+let platformFees = 0;
+ordersSnapshot.forEach(doc => {
+  const data = doc.data();
+  totalSales += data.total || 0;
+  platformFees += data.platformFee || 0;
+});
+
+// Calculate total pending partners
+const totalPending = pendingArtists + pendingDJs + pendingMerchSuppliers;
+
+// Format currency
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount);
+};
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | Fresh Wax</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .header-links {
+      display: flex;
+      gap: 1rem;
+    }
+    
+    .header-links a {
+      color: #a0a0a0;
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+    
+    .header-links a:hover {
+      color: #667eea;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 1.25rem;
+      transition: all 0.2s;
+    }
+    
+    .stat-card:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(102, 126, 234, 0.3);
+    }
+    
+    .stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #888;
+      margin-bottom: 0.5rem;
+    }
+    
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    
+    .stat-value.currency {
+      color: #4ade80;
+    }
+    
+    .stat-value.pending {
+      color: #fbbf24;
+    }
+    
+    .stat-badge {
+      display: inline-block;
+      font-size: 0.625rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 9999px;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+    
+    .badge-live { background: #22c55e; color: #000; }
+    .badge-pending { background: #f59e0b; color: #000; }
+    .badge-draft { background: #6b7280; color: #fff; }
+    
+    /* Pending Breakdown */
+    .pending-breakdown {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.75rem;
+      font-size: 0.75rem;
+    }
+    
+    .pending-item {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    
+    .pending-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    
+    .dot-artist { background: #3b82f6; }
+    .dot-dj { background: #ec4899; }
+    .dot-merch { background: #8b5cf6; }
+    
+    /* Section Headers */
+    .section-header {
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #667eea;
+      margin: 2rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(102, 126, 234, 0.3);
+    }
+    
+    /* Action Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+    
+    .action-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 1.5rem 1rem;
+      text-decoration: none;
+      color: #e0e0e0;
+      transition: all 0.2s;
+      position: relative;
+      min-height: 120px;
+    }
+    
+    .action-card:hover {
+      background: rgba(102, 126, 234, 0.15);
+      border-color: rgba(102, 126, 234, 0.5);
+      transform: translateY(-2px);
+    }
+    
+    .action-card.highlight {
+      border-color: rgba(251, 191, 36, 0.5);
+      background: rgba(251, 191, 36, 0.1);
+    }
+    
+    .action-card.highlight:hover {
+      background: rgba(251, 191, 36, 0.2);
+    }
+    
+    .card-icon {
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .card-title {
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-align: center;
+    }
+    
+    .card-badge {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      background: #ef4444;
+      color: #fff;
+      font-size: 0.625rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 9999px;
+      min-width: 1.5rem;
+      text-align: center;
+    }
+    
+    .card-external {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      font-size: 0.625rem;
+      color: #666;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .cards-grid { grid-template-columns: repeat(2, 1fr); }
+      h1 { font-size: 1.5rem; }
+      .pending-breakdown { flex-wrap: wrap; }
+    }
+    
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .cards-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎛️ Admin Dashboard</h1>
+      <div class="header-links">
+        <a href="/">← Store</a>
+        <a href="/dj-mixes">DJ Mixes</a>
+        <a href="/admin/logout">Logout</a>
+      </div>
+    </header>
+
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+      <!-- Sales & Financial -->
+      <div class="stat-card">
+        <div class="stat-label">Total Sales</div>
+        <div class="stat-value currency">{formatCurrency(totalSales)}</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-label">Platform Fees</div>
+        <div class="stat-value currency">{formatCurrency(platformFees)}</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-label">Total Orders</div>
+        <div class="stat-value">{totalOrders}</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-label">Customers</div>
+        <div class="stat-value">{totalCustomers}</div>
+      </div>
+
+      <!-- Partners -->
+      <div class="stat-card">
+        <div class="stat-label">Pending Partners</div>
+        <div class="stat-value pending">{totalPending}</div>
+        {totalPending > 0 && (
+          <div class="pending-breakdown">
+            {pendingArtists > 0 && (
+              <div class="pending-item">
+                <span class="pending-dot dot-artist"></span>
+                <span>{pendingArtists} Artist{pendingArtists !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+            {pendingDJs > 0 && (
+              <div class="pending-item">
+                <span class="pending-dot dot-dj"></span>
+                <span>{pendingDJs} DJ{pendingDJs !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+            {pendingMerchSuppliers > 0 && (
+              <div class="pending-item">
+                <span class="pending-dot dot-merch"></span>
+                <span>{pendingMerchSuppliers} Merch</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-label">Total Partners</div>
+        <div class="stat-value">{totalPartners}</div>
+      </div>
+
+      <!-- Content -->
+      <div class="stat-card">
+        <div class="stat-label">Store Releases</div>
+        <div class="stat-value">
+          {liveReleases}
+          <span class="stat-badge badge-live">LIVE</span>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-label">Draft Releases</div>
+        <div class="stat-value">{draftReleases + pendingReleases}</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label">Total Releases</div>
+        <div class="stat-value">{totalReleases}</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-label">Merch Products</div>
+        <div class="stat-value">{totalMerch}</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-label">DJ Mixes</div>
+        <div class="stat-value">{totalDJMixes}</div>
+      </div>
+    </div>
+
+    <!-- Primary Workflow -->
+    <div class="section-header">Primary Workflow</div>
+    <div class="cards-grid">
+      <a href="/admin/artists/pending" class="action-card {totalPending > 0 ? 'highlight' : ''}">
+        {totalPending > 0 && <span class="card-badge">{totalPending}</span>}
+        <span class="card-icon">✅</span>
+        <span class="card-title">Partner Approvals</span>
+      </a>
+      
+      <a href="/admin/sync-release" class="action-card">
+        <span class="card-icon">📦</span>
+        <span class="card-title">Upload Release</span>
+      </a>
+      
+      <a href="/admin/releases/manage" class="action-card">
+        <span class="card-icon">💿</span>
+        <span class="card-title">Manage Releases</span>
+      </a>
+      
+      <a href="/admin/orders" class="action-card">
+        <span class="card-icon">📋</span>
+        <span class="card-title">Orders</span>
+      </a>
+      
+      <a href="/admin/analytics" class="action-card">
+        <span class="card-icon">📊</span>
+        <span class="card-title">Analytics</span>
+      </a>
+    </div>
+
+    <!-- Store Management -->
+    <div class="section-header">Store Management</div>
+    <div class="cards-grid">
+      <a href="/admin/merch/upload" class="action-card">
+        <span class="card-icon">👕</span>
+        <span class="card-title">Upload Merch</span>
+      </a>
+      
+      <a href="/admin/merch/manage" class="action-card">
+        <span class="card-icon">📦</span>
+        <span class="card-title">Manage Merch</span>
+      </a>
+      
+      <a href="/admin/merch/suppliers" class="action-card">
+        <span class="card-icon">🤝</span>
+        <span class="card-title">Suppliers</span>
+      </a>
+      
+      <a href="/admin/account/manage" class="action-card">
+        <span class="card-icon">👥</span>
+        <span class="card-title">Customers</span>
+      </a>
+      
+      <a href="/admin/artists/manage" class="action-card">
+        <span class="card-icon">🎤</span>
+        <span class="card-title">Partners</span>
+      </a>
+    </div>
+
+    <!-- DJ Mixes -->
+    <div class="section-header">DJ Mixes</div>
+    <div class="cards-grid">
+      <a href="/admin/dj-mixes/manage" class="action-card">
+        <span class="card-icon">🎧</span>
+        <span class="card-title">Manage Mixes</span>
+      </a>
+      
+      <a href="/dj-mixes" class="action-card">
+        <span class="card-icon">🌐</span>
+        <span class="card-title">Public Page</span>
+      </a>
+      
+      <a href="/upload-mix" class="action-card">
+        <span class="card-icon">⬆️</span>
+        <span class="card-title">Upload Mix</span>
+      </a>
+    </div>
+
+    <!-- Storage & System -->
+    <div class="section-header">Storage & System</div>
+    <div class="cards-grid">
+      <a href="https://dash.cloudflare.com" target="_blank" class="action-card">
+        <span class="card-external">↗</span>
+        <span class="card-icon">☁️</span>
+        <span class="card-title">R2 Storage</span>
+      </a>
+      
+      <a href="https://console.firebase.google.com" target="_blank" class="action-card">
+        <span class="card-external">↗</span>
+        <span class="card-icon">🔥</span>
+        <span class="card-title">Firebase Console</span>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

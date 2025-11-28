@@ -1,0 +1,263 @@
+---
+// src/pages/releases.astro
+// OPTIMIZED: Uses server-side grouping to minimize API calls
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import ReleasePlate from '../components/ReleasePlate.astro';
+import { getReleasesGroupedByLabel } from '../lib/releases';
+
+// OPTIMIZED: Get releases already grouped by label from Firebase
+const releasesByLabel = await getReleasesGroupedByLabel();
+
+// Sort labels alphabetically
+const sortedLabels = Object.keys(releasesByLabel).sort((a, b) => {
+  if (a === 'Unknown Label') return 1;
+  if (b === 'Unknown Label') return -1;
+  return a.localeCompare(b);
+});
+
+const totalReleases = Object.values(releasesByLabel).reduce((sum, releases) => sum + releases.length, 0);
+---
+
+<Layout title="Fresh Wax - All Releases">
+  <Header />
+  
+  <div class="flex min-h-screen" style="background: #000000;">
+    
+    <!-- Left Sidebar Navigation -->
+    <aside class="w-80 bg-gradient-to-b from-gray-800 to-gray-900 border-r-2 border-white sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto flex-shrink-0 hidden lg:block shadow-2xl">
+      <div class="p-6">
+        <!-- Header -->
+        <div class="mb-6 pb-6 border-b-2 border-red-600">
+          <h2 class="text-2xl font-black text-white mb-2 tracking-tight uppercase drop-shadow-lg" style="font-family: 'Space Grotesk', sans-serif;">
+            Labels
+          </h2>
+          <p class="text-sm text-gray-300">
+            {sortedLabels.length} label{sortedLabels.length !== 1 ? 's' : ''} • {totalReleases} release{totalReleases !== 1 ? 's' : ''}
+          </p>
+        </div>
+        
+        <!-- Labels Navigation -->
+        <nav class="space-y-1">
+          {sortedLabels.map((label) => (
+            <a 
+              href={`#label-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+              class="label-nav-link flex items-center justify-between p-3 rounded-lg hover:bg-gradient-to-r hover:from-red-600 hover:to-red-700 transition-all group border-2 border-transparent hover:border-white"
+              data-label-id={`label-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+            >
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-bold text-white truncate group-hover:text-white transition-colors">
+                  {label}
+                </div>
+                <div class="text-xs text-gray-400 mt-0.5">
+                  {releasesByLabel[label].length} release{releasesByLabel[label].length !== 1 ? 's' : ''}
+                </div>
+              </div>
+              <svg class="w-4 h-4 text-gray-400 group-hover:text-white transition-colors flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </a>
+          ))}
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Main Content Area - FIXED WIDTH -->
+    <main class="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div class="max-w-6xl mx-auto w-full">
+        <!-- Page Header -->
+        <header class="mb-12">
+          <div style="background: linear-gradient(to bottom, #1f2937 0%, #374151 100%); backdrop-filter: blur(20px); border-radius: 1rem; padding: 2.5rem 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); border: 2px solid rgba(255, 255, 255, 0.1); position: relative; overflow: hidden;">
+            
+            <!-- Background Pattern -->
+            <div style="position: absolute; inset: 0; opacity: 0.15; pointer-events: none;">
+              <div style="position: absolute; inset: 0; background-image: linear-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px); background-size: 40px 40px;"></div>
+            </div>
+            
+            <div style="text-align: center; position: relative; z-index: 1;">
+              <h1 style="font-family: 'Space Grotesk', sans-serif; font-size: 2.25rem; font-weight: 900; color: #ffffff; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5); margin: 0 0 0.75rem 0;">
+                All Releases
+              </h1>
+              <p style="color: #cbd5e1; font-size: 1rem; margin: 0; font-weight: 500; letter-spacing: 0.02em;">
+                Explore the library organised by label • {totalReleases} total releases
+              </p>
+            </div>
+          </div>
+        </header>
+
+        {totalReleases === 0 ? (
+          <div class="text-center py-20 bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-lg border-2 border-white">
+            <div class="text-6xl mb-4">🎵</div>
+            <h3 class="text-2xl font-bold text-white mb-2">No Releases Yet</h3>
+            <p class="text-gray-300 mb-6">New releases coming soon!</p>
+          </div>
+        ) : (
+          <div class="space-y-16">
+            {sortedLabels.map((label) => (
+              <section 
+                id={`label-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                class="label-section scroll-mt-24"
+              >
+                <!-- Label Header -->
+                <div class="mb-6">
+                  <div class="inline-block bg-gradient-to-r from-red-600 to-red-700 px-6 py-3 rounded-lg shadow-lg backdrop-blur-sm border-2 border-white">
+                    <div class="flex items-center gap-4">
+                      <div>
+                        <h2 class="text-3xl font-black text-white tracking-tight uppercase drop-shadow-md" style="font-family: 'Space Grotesk', sans-serif;">
+                          {label}
+                        </h2>
+                        <p class="text-sm text-gray-100 mt-0.5">
+                          {releasesByLabel[label].length} release{releasesByLabel[label].length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-full border border-white/40">
+                        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"/>
+                        </svg>
+                        <span class="text-xs font-bold text-white">Label</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Releases Grid -->
+                <div class="space-y-6 w-full">
+                  {releasesByLabel[label].map((release) => (
+                    <div 
+                      id={release.id} 
+                      class="release-item scroll-mt-24 w-full"
+                    >
+                      <ReleasePlate {...release} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
+    </main>
+  </div>
+
+  <Footer />
+
+  <script>
+    // Smooth scroll behavior for label links
+    document.querySelectorAll('.label-nav-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetId = link.getAttribute('href').substring(1);
+        const targetElement = document.getElementById(targetId);
+        
+        if (targetElement) {
+          targetElement.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+
+    // Highlight active label in sidebar as user scrolls
+    const observerOptions = {
+      root: null,
+      rootMargin: '-10% 0px -85% 0px',
+      threshold: 0.1
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          document.querySelectorAll('.label-nav-link').forEach(link => {
+            link.classList.remove('bg-gradient-to-r', 'from-red-600', 'to-red-700', 'border-white', 'shadow-lg');
+          });
+          
+          const activeLink = document.querySelector(`[data-label-id="${entry.target.id}"]`);
+          if (activeLink) {
+            activeLink.classList.add('bg-gradient-to-r', 'from-red-600', 'to-red-700', 'border-white', 'shadow-lg');
+            
+            activeLink.scrollIntoView({ 
+              behavior: 'smooth',
+              block: 'nearest'
+            });
+          }
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.label-section').forEach(section => {
+      observer.observe(section);
+    });
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700;900&display=swap');
+
+    aside::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    aside::-webkit-scrollbar-track {
+      background: rgba(31, 41, 55, 0.5);
+    }
+    
+    aside::-webkit-scrollbar-thumb {
+      background: linear-gradient(to bottom, #dc2626, #991b1b);
+      border-radius: 3px;
+    }
+    
+    aside::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(to bottom, #991b1b, #7f1d1d);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    .scroll-mt-24 {
+      scroll-margin-top: 6rem;
+    }
+
+    .release-item {
+      animation: fadeInUp 0.6s ease-out backwards;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .release-item:nth-child(1) { animation-delay: 0.05s; }
+    .release-item:nth-child(2) { animation-delay: 0.1s; }
+    .release-item:nth-child(3) { animation-delay: 0.15s; }
+    .release-item:nth-child(4) { animation-delay: 0.2s; }
+    .release-item:nth-child(5) { animation-delay: 0.25s; }
+
+    .label-nav-link {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .label-nav-link:active {
+      transform: scale(0.98);
+    }
+
+    @media (max-width: 640px) {
+      .label-nav-link {
+        padding: 0.5rem;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      aside {
+        display: none;
+      }
+    }
+  </style>
+</Layout>

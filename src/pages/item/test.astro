@@ -1,0 +1,77 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const id = 'FreshTest_ULR011-1763744862029';
+
+let release = null;
+let error = null;
+
+try {
+  const response = await fetch(`${Astro.url.origin}/api/get-release?id=${id}&admin=true`);
+  const data = await response.json();
+  
+  if (data.success) {
+    release = data.release;
+  } else {
+    error = data.error;
+  }
+} catch (err) {
+  error = err.message;
+}
+---
+
+<Layout title="Test">
+  <main style="background: #000; color: #fff; min-height: 100vh; padding: 2rem;">
+    <div style="max-width: 1200px; margin: 0 auto;">
+      <h1 style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem;">Release Data Test</h1>
+      
+      {error && (
+        <div style="background: #dc2626; color: white; padding: 1rem; margin-bottom: 1rem;">
+          Error: {error}
+        </div>
+      )}
+      
+      {release && (
+        <div style="background: white; color: black; padding: 2rem;">
+          <h2 style="font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem;">{release.releaseName}</h2>
+          <p style="font-size: 1.25rem; margin-bottom: 1rem;">{release.artistName}</p>
+          
+          <div style="margin-bottom: 1rem;">
+            <img src={release.coverArtUrl} alt="Cover" style="width: 300px; border: 4px solid black;" />
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div><strong>Label Code:</strong> {release.labelCode}</div>
+            <div><strong>Genre:</strong> {release.genre}</div>
+            <div><strong>Price:</strong> £{release.pricePerSale}</div>
+            <div><strong>Tracks:</strong> {release.tracks?.length || 0}</div>
+            <div><strong>Status:</strong> {release.status}</div>
+            <div><strong>Vinyl:</strong> {release.vinylRelease ? 'Yes' : 'No'}</div>
+          </div>
+          
+          <h3 style="font-size: 1.25rem; font-weight: bold; margin-top: 2rem; margin-bottom: 1rem;">Tracks:</h3>
+          <div style="space-y: 0.5rem;">
+            {release.tracks?.map((track, i) => (
+              <div style="border: 2px solid black; padding: 0.5rem; margin-bottom: 0.5rem;">
+                <strong>{i + 1}. {track.trackName}</strong>
+                <div style="font-size: 0.875rem; color: #666;">
+                  Duration: {track.duration || 'N/A'} | Key: {track.key || 'N/A'} | BPM: {track.bpm || 'N/A'}
+                </div>
+                <div style="font-size: 0.75rem; color: #999; font-family: monospace;">
+                  Preview: {track.previewUrl ? '✓' : '✗'} | 
+                  MP3: {track.mp3Url ? '✓' : '✗'} | 
+                  WAV: {track.wavUrl ? '✓' : '✗'}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <details style="margin-top: 2rem;">
+            <summary style="cursor: pointer; font-weight: bold; padding: 0.5rem; background: #f3f4f6;">View Raw JSON Data</summary>
+            <pre style="background: #f9fafb; padding: 1rem; overflow: auto; font-size: 0.75rem; margin-top: 0.5rem; border: 1px solid #e5e7eb;">{JSON.stringify(release, null, 2)}</pre>
+          </details>
+        </div>
+      )}
+    </div>
+  </main>
+</Layout>

@@ -1,0 +1,1474 @@
+---
+// src/pages/admin/artists/manage.astro
+// Admin Partner Management - 3 Role System (Artist, DJ, Merch Supplier)
+export const prerender = false;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Partner Management - Fresh Wax Admin</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+</head>
+<body>
+  <!-- Logo Header -->
+  <div class="admin-logo-header">
+    <img src="/logo.webp" alt="Fresh Wax" class="admin-logo">
+  </div>
+
+  <div class="admin-container">
+    <!-- Header -->
+    <div class="admin-header">
+      <h1>Partner Management</h1>
+      <a href="/admin" class="admin-back-btn">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Dashboard
+      </a>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-number" id="totalCount">0</span>
+        <span class="stat-label">Total Partners</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number" id="approvedCount">0</span>
+        <span class="stat-label">Approved</span>
+      </div>
+      <div class="stat-item pending">
+        <span class="stat-number" id="pendingCount">0</span>
+        <span class="stat-label">Pending</span>
+      </div>
+      <div class="stat-item role-stat">
+        <span class="stat-number" id="artistCount">0</span>
+        <span class="stat-label">Artists</span>
+      </div>
+      <div class="stat-item role-stat">
+        <span class="stat-number" id="djCount">0</span>
+        <span class="stat-label">DJs</span>
+      </div>
+      <div class="stat-item role-stat">
+        <span class="stat-number" id="merchCount">0</span>
+        <span class="stat-label">Merch Suppliers</span>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="admin-toolbar">
+      <div class="search-wrapper">
+        <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input 
+          type="text" 
+          id="searchInput" 
+          class="admin-search" 
+          placeholder="Search by name or email..."
+        >
+      </div>
+      <div class="filter-buttons">
+        <button class="admin-filter-btn active" data-filter="all">All</button>
+        <button class="admin-filter-btn" data-filter="approved">Approved</button>
+        <button class="admin-filter-btn" data-filter="pending">Pending</button>
+        <span class="filter-divider"></span>
+        <button class="admin-filter-btn role-filter" data-filter="artist">🎵 Artists</button>
+        <button class="admin-filter-btn role-filter" data-filter="dj">🎧 DJs</button>
+        <button class="admin-filter-btn role-filter" data-filter="merch">👕 Merch</button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="admin-loading">
+      <div class="admin-spinner"></div>
+      <p>Loading partners...</p>
+    </div>
+
+    <!-- Partners Table -->
+    <div id="artistsTable" class="admin-table-container" style="display: none;">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>WhatsApp</th>
+            <th>Roles</th>
+            <th>Status</th>
+            <th>Joined</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="artistsTableBody">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+      <h3>No partners found</h3>
+      <p>Try adjusting your search or filter criteria</p>
+    </div>
+  </div>
+
+  <!-- Edit Partner Modal -->
+  <div id="editModal" class="admin-modal-overlay">
+    <div class="admin-modal">
+      <div class="admin-modal-header">
+        <h2>Edit Partner</h2>
+        <button class="admin-modal-close" onclick="closeEditModal()">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="admin-modal-body">
+        <form id="editForm">
+          <input type="hidden" id="editArtistId">
+          
+          <div class="admin-form-group">
+            <label class="admin-form-label">Partner Name</label>
+            <input type="text" id="editArtistName" class="admin-form-input" required>
+          </div>
+
+          <div class="admin-form-group">
+            <label class="admin-form-label">Email</label>
+            <input type="email" id="editEmail" class="admin-form-input" required>
+          </div>
+
+          <div class="admin-form-group">
+            <label class="admin-form-label">WhatsApp Number</label>
+            <input type="tel" id="editPhone" class="admin-form-input" placeholder="WhatsApp">
+          </div>
+
+          <!-- Role Checkboxes - 3 Role System -->
+          <div class="admin-form-group">
+            <label class="admin-form-label">Account Roles</label>
+            <p class="form-hint">Select which features this partner can access</p>
+            <div class="role-checkboxes-admin">
+              <label class="role-checkbox-admin">
+                <input type="checkbox" id="editRoleArtist" name="roles" value="artist">
+                <span class="checkbox-box"></span>
+                <span class="role-info">
+                  <span class="role-icon">🎵</span>
+                  <span class="role-details">
+                    <span class="role-name">Artist / Label / Producer</span>
+                    <span class="role-desc">Upload releases, manage tracks, view analytics</span>
+                  </span>
+                </span>
+              </label>
+              <label class="role-checkbox-admin">
+                <input type="checkbox" id="editRoleDJ" name="roles" value="dj">
+                <span class="checkbox-box"></span>
+                <span class="role-info">
+                  <span class="role-icon">🎧</span>
+                  <span class="role-details">
+                    <span class="role-name">DJ</span>
+                    <span class="role-desc">Upload mixes and DJ sets</span>
+                  </span>
+                </span>
+              </label>
+              <label class="role-checkbox-admin">
+                <input type="checkbox" id="editRoleMerch" name="roles" value="merch">
+                <span class="checkbox-box"></span>
+                <span class="role-info">
+                  <span class="role-icon">👕</span>
+                  <span class="role-details">
+                    <span class="role-name">Merch Supplier</span>
+                    <span class="role-desc">View stock levels and sales (read-only)</span>
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="admin-form-group">
+            <label class="admin-form-label">Account Status</label>
+            <div class="status-toggle">
+              <label class="status-option">
+                <input type="radio" name="approvalStatus" value="true" id="statusApproved">
+                <span class="status-box approved">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Approved
+                </span>
+              </label>
+              <label class="status-option">
+                <input type="radio" name="approvalStatus" value="false" id="statusPending">
+                <span class="status-box pending">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Pending
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="admin-form-actions">
+            <button type="button" class="admin-btn-secondary" onclick="closeEditModal()">Cancel</button>
+            <button type="submit" class="admin-btn-primary" id="saveBtn">
+              <span class="btn-text">Save Changes</span>
+              <svg class="btn-spinner hidden" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="admin-modal-overlay">
+    <div class="admin-modal delete-modal">
+      <div class="admin-modal-header delete-header">
+        <h2>Delete Partner</h2>
+        <button class="admin-modal-close" onclick="closeDeleteModal()">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="admin-modal-body">
+        <div class="delete-warning">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div>
+            <h3>Are you sure?</h3>
+            <p>You are about to delete <strong id="deleteArtistName">this partner</strong>. This action cannot be undone.</p>
+          </div>
+        </div>
+        <input type="hidden" id="deleteArtistId">
+        <div class="admin-form-actions">
+          <button type="button" class="admin-btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+          <button type="button" class="admin-btn-danger" onclick="confirmDelete()">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete Partner
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast">
+    <span id="toastMessage"></span>
+  </div>
+</body>
+</html>
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+  }
+
+  .admin-logo-header {
+    background: #000;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: center;
+    border-bottom: 1px solid #222;
+  }
+
+  .admin-logo {
+    height: 50px;
+    width: auto;
+    background: #fff;
+    padding: 8px 16px;
+  }
+
+  .admin-container { 
+    max-width: 1400px; 
+    margin: 0 auto; 
+    padding: 1.5rem; 
+  }
+  
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .admin-header h1 {
+    font-size: 1.75rem;
+    color: #000;
+    font-weight: 700;
+  }
+
+  .admin-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: #000;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .admin-back-btn:hover {
+    background: #333;
+  }
+
+  .admin-back-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Stats Bar */
+  .stats-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    min-width: 120px;
+  }
+
+  .stat-item.pending {
+    border-color: #fbbf24;
+    background: #fffbeb;
+  }
+
+  .stat-item.role-stat {
+    border-color: #e0e7ff;
+    background: #eef2ff;
+  }
+
+  .stat-number {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #000;
+  }
+
+  .stat-item.pending .stat-number {
+    color: #b45309;
+  }
+
+  .stat-item.role-stat .stat-number {
+    color: #4338ca;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  /* Toolbar */
+  .admin-toolbar {
+    background: #fff;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .search-wrapper {
+    flex: 1;
+    min-width: 250px;
+    position: relative;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: #9ca3af;
+  }
+
+  .admin-search {
+    width: 100%;
+    padding: 0.625rem 0.75rem 0.625rem 2.5rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+  }
+
+  .admin-search:focus {
+    outline: none;
+    border-color: #000;
+  }
+
+  .filter-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-divider {
+    width: 1px;
+    height: 24px;
+    background: #e5e7eb;
+    margin: 0 0.25rem;
+  }
+
+  .admin-filter-btn {
+    padding: 0.5rem 1rem;
+    background: #fff;
+    color: #374151;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .admin-filter-btn.active {
+    background: #000;
+    color: #fff;
+    border-color: #000;
+  }
+
+  .admin-filter-btn.role-filter.active {
+    background: #4338ca;
+    border-color: #4338ca;
+  }
+
+  .admin-filter-btn:hover:not(.active) {
+    border-color: #000;
+  }
+
+  /* Table */
+  .admin-table-container {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .admin-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .admin-table thead {
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .admin-table th {
+    padding: 0.875rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .admin-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.9rem;
+    color: #374151;
+  }
+
+  .admin-table tbody tr:hover {
+    background: #fafafa;
+  }
+
+  .admin-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .artist-name {
+    font-weight: 600;
+    color: #000;
+  }
+
+  /* Role Badges in Table - 3 Role System */
+  .role-badges-cell {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .role-badge-small {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .role-badge-small.artist { background: #dbeafe; color: #1d4ed8; }
+  .role-badge-small.dj { background: #fce7f3; color: #be185d; }
+  .role-badge-small.merch { background: #ede9fe; color: #6d28d9; }
+  .role-badge-small.none { background: #f3f4f6; color: #6b7280; }
+
+  /* Status Badge */
+  .admin-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 100px;
+  }
+
+  .admin-status-badge.approved {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .admin-status-badge.pending {
+    background: #fef3c7;
+    color: #b45309;
+  }
+
+  .admin-status-badge svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Action Buttons */
+  .admin-action-btns {
+    display: flex;
+    gap: 6px;
+  }
+
+  .admin-btn-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #6b7280;
+  }
+
+  .admin-btn-icon:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+    color: #000;
+  }
+
+  .admin-btn-icon.delete:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+  }
+
+  .admin-btn-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Loading */
+  .admin-loading {
+    text-align: center;
+    padding: 4rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+  }
+
+  .admin-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e5e5;
+    border-top-color: #dc2626;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .admin-loading p {
+    color: #6b7280;
+    font-size: 0.9rem;
+  }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 4rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+  }
+
+  .empty-state svg {
+    width: 48px;
+    height: 48px;
+    color: #d1d5db;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state h3 {
+    font-size: 1.125rem;
+    color: #374151;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state p {
+    color: #6b7280;
+    font-size: 0.9rem;
+  }
+
+  /* Modal */
+  .admin-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    padding: 1rem;
+    overflow-y: auto;
+  }
+
+  .admin-modal-overlay.active {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 5vh;
+  }
+
+  .admin-modal {
+    background: #fff;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  .delete-modal {
+    max-width: 420px;
+  }
+
+  .admin-modal-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .delete-header {
+    background: #fef2f2;
+    border-bottom-color: #fecaca;
+  }
+
+  .delete-header h2 {
+    color: #991b1b;
+  }
+
+  .admin-modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #000;
+  }
+
+  .admin-modal-close {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+
+  .admin-modal-close:hover {
+    background: #f3f4f6;
+    color: #000;
+  }
+
+  .admin-modal-close svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .admin-modal-body {
+    padding: 1.5rem;
+  }
+
+  .admin-form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .admin-form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #374151;
+  }
+
+  .form-hint {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 0.75rem;
+  }
+
+  .admin-form-input {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+  }
+
+  .admin-form-input:focus {
+    outline: none;
+    border-color: #000;
+  }
+
+  /* Role Checkboxes in Modal - 3 Role System */
+  .role-checkboxes-admin {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .role-checkbox-admin {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .role-checkbox-admin:hover {
+    border-color: #000;
+    background: #fafafa;
+  }
+
+  .role-checkbox-admin input {
+    display: none;
+  }
+
+  .role-checkbox-admin input:checked + .checkbox-box {
+    background: #000;
+    border-color: #000;
+  }
+
+  .role-checkbox-admin input:checked + .checkbox-box::after {
+    display: block;
+  }
+
+  .role-checkbox-admin input:checked ~ .role-info .role-name {
+    color: #000;
+  }
+
+  .checkbox-box {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #d1d5db;
+    border-radius: 4px;
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.2s;
+    margin-top: 2px;
+  }
+
+  .checkbox-box::after {
+    content: '';
+    position: absolute;
+    display: none;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .role-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    flex: 1;
+  }
+
+  .role-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .role-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .role-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #374151;
+    transition: color 0.2s;
+  }
+
+  .role-desc {
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  /* Status Toggle */
+  .status-toggle {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .status-option {
+    flex: 1;
+    cursor: pointer;
+  }
+
+  .status-option input {
+    display: none;
+  }
+
+  .status-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+
+  .status-box svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .status-option input:checked + .status-box.approved {
+    background: #dcfce7;
+    border-color: #16a34a;
+    color: #166534;
+  }
+
+  .status-option input:checked + .status-box.pending {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    color: #b45309;
+  }
+
+  /* Delete Warning */
+  .delete-warning {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: #fef2f2;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+  }
+
+  .delete-warning svg {
+    width: 24px;
+    height: 24px;
+    color: #dc2626;
+    flex-shrink: 0;
+  }
+
+  .delete-warning h3 {
+    font-size: 1rem;
+    color: #991b1b;
+    margin-bottom: 0.25rem;
+  }
+
+  .delete-warning p {
+    font-size: 0.85rem;
+    color: #7f1d1d;
+  }
+
+  /* Form Actions */
+  .admin-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .admin-btn-primary {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background: #000;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .admin-btn-primary:hover {
+    background: #333;
+  }
+
+  .admin-btn-primary:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .admin-btn-secondary {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background: #fff;
+    color: #374151;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .admin-btn-secondary:hover {
+    border-color: #000;
+    color: #000;
+  }
+
+  .admin-btn-danger {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .admin-btn-danger:hover {
+    background: #b91c1c;
+  }
+
+  .admin-btn-danger svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .btn-spinner {
+    width: 18px;
+    height: 18px;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #000;
+    color: #fff;
+    padding: 0.875rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 2000;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  .toast.error {
+    background: #dc2626;
+  }
+
+  .toast.success {
+    background: #16a34a;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .admin-container { padding: 1rem; }
+    .admin-header { flex-direction: column; align-items: flex-start; }
+    .admin-header h1 { font-size: 1.5rem; }
+    .stats-bar { flex-direction: column; }
+    .stat-item { min-width: auto; }
+    .admin-toolbar { flex-direction: column; }
+    .search-wrapper { width: 100%; min-width: auto; }
+    .filter-buttons { width: 100%; justify-content: flex-start; }
+    .filter-divider { display: none; }
+    .admin-table-container { overflow-x: auto; }
+    .admin-table { min-width: 800px; }
+    .status-toggle { flex-direction: column; }
+  }
+</style>
+
+<script type="module">
+  // Admin Partner Management - 3 Role System
+  (function() {
+    const firebaseConfig = {
+      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      authDomain: "freshwax-store.firebaseapp.com",
+      projectId: "freshwax-store",
+      storageBucket: "freshwax-store.firebasestorage.app",
+      messagingSenderId: "675435782973",
+      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+    };
+
+    let auth = null;
+    let db = null;
+    let allArtists = [];
+    let currentFilter = 'all';
+    let currentRoleFilter = null;
+
+    async function initFirebase() {
+      if (auth && db) return;
+      
+      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+      const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+      const { getFirestore, collection, getDocs, doc, getDoc, updateDoc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+      
+      const app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getFirestore(app);
+      
+      window._firebase = { onAuthStateChanged, collection, getDocs, doc, getDoc, updateDoc, deleteDoc };
+    }
+
+    // Toast notification
+    function showToast(message, type = 'default') {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      
+      toast.className = 'toast';
+      if (type) toast.classList.add(type);
+      toastMessage.textContent = message;
+      toast.classList.add('show');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // Load partners
+    async function loadArtists() {
+      const { collection, getDocs } = window._firebase;
+      
+      try {
+        const querySnapshot = await getDocs(collection(db, 'artists'));
+        allArtists = [];
+        
+        querySnapshot.forEach((doc) => {
+          allArtists.push({ id: doc.id, ...doc.data() });
+        });
+
+        // Sort by date (newest first)
+        allArtists.sort((a, b) => {
+          const dateA = a.createdAt?.toDate?.() || a.registeredAt?.toDate?.() || new Date(0);
+          const dateB = b.createdAt?.toDate?.() || b.registeredAt?.toDate?.() || new Date(0);
+          return dateB - dateA;
+        });
+
+        console.log('[Admin] Loaded partners:', allArtists.length);
+
+        // Update stats
+        updateStats();
+
+        document.getElementById('loadingState').style.display = 'none';
+        renderArtists();
+      } catch (error) {
+        console.error('[Admin] Error loading partners:', error);
+        showToast('Failed to load partners', 'error');
+      }
+    }
+
+    // Update stats - 3 Role System
+    function updateStats() {
+      const total = allArtists.length;
+      const approved = allArtists.filter(a => a.approved === true).length;
+      const pending = total - approved;
+      
+      // Role counts (3 roles)
+      const artists = allArtists.filter(a => a.isArtist === true).length;
+      const djs = allArtists.filter(a => a.isDJ === true).length;
+      const merch = allArtists.filter(a => a.isMerchSupplier === true).length;
+
+      document.getElementById('totalCount').textContent = total;
+      document.getElementById('approvedCount').textContent = approved;
+      document.getElementById('pendingCount').textContent = pending;
+      document.getElementById('artistCount').textContent = artists;
+      document.getElementById('djCount').textContent = djs;
+      document.getElementById('merchCount').textContent = merch;
+    }
+
+    // Get role badges HTML - 3 Role System
+    function getRoleBadges(artist) {
+      const roles = [];
+      
+      if (artist.isArtist === true) {
+        roles.push('<span class="role-badge-small artist">🎵 Artist</span>');
+      }
+      if (artist.isDJ === true) {
+        roles.push('<span class="role-badge-small dj">🎧 DJ</span>');
+      }
+      if (artist.isMerchSupplier === true) {
+        roles.push('<span class="role-badge-small merch">👕 Merch</span>');
+      }
+      
+      if (roles.length === 0) {
+        return '<span class="role-badge-small none">No roles</span>';
+      }
+      
+      return roles.join('');
+    }
+
+    // Render partners table
+    function renderArtists() {
+      const tbody = document.getElementById('artistsTableBody');
+      const tableContainer = document.getElementById('artistsTable');
+      const emptyState = document.getElementById('emptyState');
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      
+      let filtered = allArtists.filter(artist => {
+        const matchesSearch = 
+          (artist.artistName?.toLowerCase().includes(searchTerm) || false) ||
+          (artist.email?.toLowerCase().includes(searchTerm) || false);
+        
+        const isApproved = artist.approved === true;
+        const isPending = artist.approved !== true;
+        
+        // Status filter
+        let matchesFilter = true;
+        if (currentFilter === 'approved') matchesFilter = isApproved;
+        else if (currentFilter === 'pending') matchesFilter = isPending;
+        
+        // Role filter (3 roles)
+        let matchesRoleFilter = true;
+        if (currentRoleFilter === 'artist') matchesRoleFilter = artist.isArtist === true;
+        else if (currentRoleFilter === 'dj') matchesRoleFilter = artist.isDJ === true;
+        else if (currentRoleFilter === 'merch') matchesRoleFilter = artist.isMerchSupplier === true;
+        
+        return matchesSearch && matchesFilter && matchesRoleFilter;
+      });
+
+      if (filtered.length === 0) {
+        tableContainer.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      tableContainer.style.display = 'block';
+      emptyState.style.display = 'none';
+
+      tbody.innerHTML = filtered.map(artist => {
+        const isApproved = artist.approved === true;
+        const joinedDate = (artist.createdAt?.toDate?.() || artist.registeredAt?.toDate?.() || null);
+        const joinedStr = joinedDate ? joinedDate.toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        }) : 'N/A';
+        
+        return `
+        <tr>
+          <td><span class="artist-name">${artist.artistName || 'N/A'}</span></td>
+          <td>${artist.email || 'N/A'}</td>
+          <td>${artist.phoneNumber || artist.whatsapp || '—'}</td>
+          <td>
+            <div class="role-badges-cell">
+              ${getRoleBadges(artist)}
+            </div>
+          </td>
+          <td>
+            <span class="admin-status-badge ${isApproved ? 'approved' : 'pending'}">
+              ${isApproved ? `
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                Approved
+              ` : `
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Pending
+              `}
+            </span>
+          </td>
+          <td>${joinedStr}</td>
+          <td>
+            <div class="admin-action-btns">
+              <button class="admin-btn-icon" onclick="editArtist('${artist.id}')" title="Edit Partner">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button class="admin-btn-icon delete" onclick="openDeleteModal('${artist.id}', '${(artist.artistName || '').replace(/'/g, "\\'")}')" title="Delete Partner">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `}).join('');
+    }
+
+    // Edit partner - 3 Role System
+    window.editArtist = function(artistId) {
+      const artist = allArtists.find(a => a.id === artistId);
+      if (!artist) return;
+
+      document.getElementById('editArtistId').value = artist.id;
+      document.getElementById('editArtistName').value = artist.artistName || '';
+      document.getElementById('editEmail').value = artist.email || '';
+      document.getElementById('editPhone').value = artist.phoneNumber || artist.whatsapp || '';
+      
+      // Set role checkboxes - 3 roles only
+      document.getElementById('editRoleArtist').checked = artist.isArtist === true;
+      document.getElementById('editRoleDJ').checked = artist.isDJ === true;
+      document.getElementById('editRoleMerch').checked = artist.isMerchSupplier === true;
+      
+      // Set status
+      if (artist.approved === true) {
+        document.getElementById('statusApproved').checked = true;
+      } else {
+        document.getElementById('statusPending').checked = true;
+      }
+
+      document.getElementById('editModal').classList.add('active');
+    };
+
+    window.closeEditModal = function() {
+      document.getElementById('editModal').classList.remove('active');
+    };
+
+    // Delete modal
+    window.openDeleteModal = function(artistId, artistName) {
+      document.getElementById('deleteArtistId').value = artistId;
+      document.getElementById('deleteArtistName').textContent = artistName || 'this partner';
+      document.getElementById('deleteModal').classList.add('active');
+    };
+
+    window.closeDeleteModal = function() {
+      document.getElementById('deleteModal').classList.remove('active');
+    };
+
+    window.confirmDelete = async function() {
+      const { doc, deleteDoc } = window._firebase;
+      const artistId = document.getElementById('deleteArtistId').value;
+      
+      try {
+        await deleteDoc(doc(db, 'artists', artistId));
+        showToast('Partner deleted successfully', 'success');
+        closeDeleteModal();
+        loadArtists();
+      } catch (error) {
+        console.error('[Admin] Error deleting partner:', error);
+        showToast('Failed to delete partner', 'error');
+      }
+    };
+
+    // Save partner changes - 3 Role System
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const { doc, updateDoc } = window._firebase;
+      const saveBtn = document.getElementById('saveBtn');
+      const btnText = saveBtn.querySelector('.btn-text');
+      const btnSpinner = saveBtn.querySelector('.btn-spinner');
+      
+      // Show loading
+      saveBtn.disabled = true;
+      btnText.textContent = 'Saving...';
+      btnSpinner.classList.remove('hidden');
+      
+      const artistId = document.getElementById('editArtistId').value;
+      
+      // Get selected roles - 3 roles only
+      const isArtist = document.getElementById('editRoleArtist').checked;
+      const isDJ = document.getElementById('editRoleDJ').checked;
+      const isMerchSupplier = document.getElementById('editRoleMerch').checked;
+      
+      // Build roles array
+      const roles = [];
+      if (isArtist) roles.push('artist');
+      if (isDJ) roles.push('dj');
+      if (isMerchSupplier) roles.push('merch');
+      
+      const updates = {
+        artistName: document.getElementById('editArtistName').value,
+        email: document.getElementById('editEmail').value,
+        phoneNumber: document.getElementById('editPhone').value,
+        // Role booleans - 3 roles only
+        isArtist: isArtist,
+        isDJ: isDJ,
+        isMerchSupplier: isMerchSupplier,
+        // Clear old role fields (if migrating from 4-role system)
+        isLabel: false,
+        isProducer: false,
+        // Roles array
+        roles: roles,
+        // Approval status
+        approved: document.querySelector('input[name="approvalStatus"]:checked').value === 'true'
+      };
+
+      try {
+        await updateDoc(doc(db, 'artists', artistId), updates);
+        showToast('Partner updated successfully', 'success');
+        closeEditModal();
+        loadArtists();
+      } catch (error) {
+        console.error('[Admin] Error updating partner:', error);
+        showToast('Failed to update partner', 'error');
+      } finally {
+        // Reset button
+        saveBtn.disabled = false;
+        btnText.textContent = 'Save Changes';
+        btnSpinner.classList.add('hidden');
+      }
+    });
+
+    // Search
+    document.getElementById('searchInput').addEventListener('input', renderArtists);
+
+    // Status filter buttons
+    document.querySelectorAll('.admin-filter-btn:not(.role-filter)').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.admin-filter-btn:not(.role-filter)').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        renderArtists();
+      });
+    });
+
+    // Role filter buttons
+    document.querySelectorAll('.admin-filter-btn.role-filter').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const wasActive = btn.classList.contains('active');
+        document.querySelectorAll('.admin-filter-btn.role-filter').forEach(b => b.classList.remove('active'));
+        
+        if (wasActive) {
+          // Toggle off - show all roles
+          currentRoleFilter = null;
+        } else {
+          btn.classList.add('active');
+          currentRoleFilter = btn.dataset.filter;
+        }
+        renderArtists();
+      });
+    });
+
+    // Close modals on overlay click
+    document.getElementById('editModal').addEventListener('click', (e) => {
+      if (e.target.id === 'editModal') closeEditModal();
+    });
+    
+    document.getElementById('deleteModal').addEventListener('click', (e) => {
+      if (e.target.id === 'deleteModal') closeDeleteModal();
+    });
+
+    // Initialize
+    async function init() {
+      await initFirebase();
+      
+      const { onAuthStateChanged, doc, getDoc } = window._firebase;
+      
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          window.location.href = '/admin/login';
+          return;
+        }
+
+        try {
+          const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+          if (!adminDoc.exists()) {
+            window.location.href = '/admin/login';
+            return;
+          }
+
+          loadArtists();
+        } catch (error) {
+          console.error('[Admin] Auth check error:', error);
+          window.location.href = '/admin/login';
+        }
+      });
+    }
+
+    init();
+  })();
+</script>

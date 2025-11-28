@@ -1,0 +1,206 @@
+<!-- src/components/AudioCoordinator.astro -->
+<!-- Central Audio Coordination - Ensures only one audio source plays at a time -->
+<!-- Modes: DJ Mix, Shuffle (preview clips), Tracklist Preview -->
+
+<script is:inline>
+  // ===========================================
+  // AUDIO MANAGER - Central Audio Coordination
+  // ===========================================
+  
+  (function() {
+    // Prevent duplicate initialization
+    if (window.AudioManager && window.AudioManager._initialized) {
+      console.log('[AudioManager] Already initialized, skipping');
+      return;
+    }
+    
+    window.AudioManager = {
+      _initialized: true,
+      
+      // Current mode: 'idle' | 'dj-mix' | 'shuffle' | 'tracklist-preview'
+      mode: 'idle',
+      
+      // For resuming DJ mix after tracklist preview
+      djMixShouldResume: false,
+      
+      // Get the global audio element (used for both DJ mixes and shuffle)
+      getGlobalAudio: function() {
+        return document.getElementById('global-audio');
+      },
+      
+      // Get all tracklist preview audio elements
+      getTracklistAudios: function() {
+        return Array.from(document.querySelectorAll('.track-audio'));
+      },
+      
+      // === MODE TRANSITIONS ===
+      
+      // DJ Mix started playing
+      onDjMixPlay: function() {
+        console.log('[AudioManager] DJ Mix started');
+        this.mode = 'dj-mix';
+        this.djMixShouldResume = false;
+        
+        // Stop any tracklist previews
+        this.stopAllTracklistPreviews();
+        
+        // Update shuffle button to show not shuffling
+        this.updateShuffleButtonUI(false);
+      },
+      
+      // Shuffle mode started
+      onShufflePlay: function() {
+        console.log('[AudioManager] Shuffle started');
+        this.mode = 'shuffle';
+        this.djMixShouldResume = false;
+        
+        // Stop any tracklist previews
+        this.stopAllTracklistPreviews();
+        
+        // Update shuffle button
+        this.updateShuffleButtonUI(true);
+      },
+      
+      // Shuffle mode stopped
+      onShuffleStop: function() {
+        console.log('[AudioManager] Shuffle stopped');
+        if (this.mode === 'shuffle') {
+          this.mode = 'idle';
+        }
+        this.updateShuffleButtonUI(false);
+      },
+      
+      // Tracklist preview started - pauses current playback
+      onTracklistPreviewPlay: function() {
+        console.log('[AudioManager] Tracklist preview started');
+        var audio = this.getGlobalAudio();
+        
+        // If DJ mix or shuffle is playing, pause it (will resume after)
+        if (audio && !audio.paused) {
+          if (this.mode === 'dj-mix') {
+            this.djMixShouldResume = true;
+            audio.pause();
+            console.log('[AudioManager] Paused DJ mix for tracklist preview');
+          } else if (this.mode === 'shuffle') {
+            // Stop shuffle completely when tracklist preview plays
+            audio.pause();
+            this.mode = 'idle';
+            this.updateShuffleButtonUI(false);
+            this.updateMiniPlayerForIdle();
+            console.log('[AudioManager] Stopped shuffle for tracklist preview');
+          }
+        }
+        
+        this.mode = 'tracklist-preview';
+      },
+      
+      // Tracklist preview stopped
+      onTracklistPreviewStop: function() {
+        console.log('[AudioManager] Tracklist preview stopped');
+        var self = this;
+        
+        if (this.mode === 'tracklist-preview') {
+          this.mode = 'idle';
+        }
+        
+        // Resume DJ mix if it was playing before
+        setTimeout(function() {
+          if (self.djMixShouldResume) {
+            var audio = self.getGlobalAudio();
+            if (audio && audio.paused && audio.src) {
+              audio.play().then(function() {
+                self.djMixShouldResume = false;
+                self.mode = 'dj-mix';
+                console.log('[AudioManager] Resumed DJ mix');
+              }).catch(function(err) {
+                console.warn('[AudioManager] Could not resume DJ mix:', err);
+              });
+            }
+          }
+        }, 100);
+      },
+      
+      // === CONTROL METHODS ===
+      
+      // Stop all tracklist previews
+      stopAllTracklistPreviews: function() {
+        this.getTracklistAudios().forEach(function(audio) {
+          if (!audio.paused) {
+            audio.pause();
+            audio.currentTime = 0;
+          }
+        });
+        
+        // Reset all play buttons
+        document.querySelectorAll('.play-button').forEach(function(btn) {
+          var playIcon = btn.querySelector('.play-icon');
+          var pauseIcon = btn.querySelector('.pause-icon');
+          if (playIcon) playIcon.classList.remove('hidden');
+          if (pauseIcon) pauseIcon.classList.add('hidden');
+        });
+        
+        // Reset now playing text
+        document.querySelectorAll('[data-now-playing-text]').forEach(function(el) {
+          el.textContent = 'No track selected';
+        });
+      },
+      
+      // Stop everything
+      stopAll: function() {
+        var audio = this.getGlobalAudio();
+        if (audio && !audio.paused) {
+          audio.pause();
+        }
+        this.stopAllTracklistPreviews();
+        this.mode = 'idle';
+        this.djMixShouldResume = false;
+        this.updateShuffleButtonUI(false);
+      },
+      
+      // === UI HELPERS ===
+      
+      updateShuffleButtonUI: function(isShuffling) {
+        var btn = document.getElementById('mini-shuffle-btn');
+        if (btn) {
+          if (isShuffling) {
+            btn.classList.add('active');
+            btn.title = 'Stop Shuffle';
+          } else {
+            btn.classList.remove('active');
+            btn.title = 'Shuffle Play';
+          }
+        }
+      },
+      
+      updateMiniPlayerForIdle: function() {
+        // Reset mini player display when going idle from shuffle
+        var titleEl = document.getElementById('mini-title');
+        var djEl = document.getElementById('mini-dj');
+        if (titleEl) titleEl.textContent = 'No mix loaded';
+        if (djEl) djEl.textContent = '--';
+      },
+      
+      // === STATE CHECKS ===
+      
+      isPlaying: function() {
+        var audio = this.getGlobalAudio();
+        return audio ? !audio.paused : false;
+      },
+      
+      getMode: function() {
+        return this.mode;
+      },
+      
+      // Debug helper
+      getState: function() {
+        return {
+          mode: this.mode,
+          djMixShouldResume: this.djMixShouldResume,
+          isPlaying: this.isPlaying()
+        };
+      }
+    };
+    
+    console.log('[AudioManager] Initialized');
+  })();
+</script>

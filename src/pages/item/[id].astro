@@ -1,0 +1,804 @@
+---
+// src/pages/item/[id].astro
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const { id } = Astro.params;
+
+console.log('[ITEM PAGE] Loading release:', id);
+
+let release = null;
+let error = null;
+
+try {
+  const apiUrl = `${Astro.url.origin}/api/get-release?id=${id}&admin=true`;
+  console.log('[ITEM PAGE] Fetching from:', apiUrl);
+  
+  const response = await fetch(apiUrl);
+  const data = await response.json();
+  
+  if (data.success && data.release) {
+    release = data.release;
+    console.log('[ITEM PAGE] ✓ Release loaded:', release.releaseName);
+  } else {
+    error = data.error || 'Release not found';
+  }
+} catch (err) {
+  console.error('[ITEM PAGE] ✗ Fetch error:', err);
+  error = 'Failed to load release';
+}
+
+const {
+  artistName = 'Unknown Artist',
+  releaseName = 'Untitled Release',
+  labelName = '',
+  labelCode = '',
+  genre = '',
+  coverArtUrl = '/logo.webp',
+  additionalArtwork = [],
+  tracks = [],
+  releaseDate = new Date().toISOString(),
+  pricePerSale = 0,
+  trackPrice = 1.00,
+  vinylRelease = false,
+  vinylRecordCount = '',
+  vinylPrice = 0,
+  overallRating = { average: 0, count: 0, total: 0 },
+  comments = [],
+  notes = '',
+  releaseDescription = '',
+  masteredBy = '',
+  copyrightHolder = '',
+  copyrightYear = new Date().getFullYear(),
+  recordingLocation = '',
+  recordingYear = '',
+  hasLimitedEdition = false,
+  limitedEditionDetails = '',
+  vinyl = {}
+} = release || {};
+
+// Parse social links from notes
+let socialLinks = [];
+let otherInfo = '';
+
+if (notes) {
+  const socialLinksTemp = [];
+  const otherLinesTemp = [];
+  const lines = notes.split('\n');
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    
+    if (trimmed.includes('soundcloud.com/') || trimmed.includes('SoundCloud:')) {
+      const url = trimmed.replace('SoundCloud:', '').trim();
+      socialLinksTemp.push({ platform: 'SoundCloud', url: url, icon: '🎧' });
+    } else if (trimmed.includes('instagram.com/') || trimmed.includes('Instagram:')) {
+      const url = trimmed.replace('Instagram:', '').trim();
+      socialLinksTemp.push({ platform: 'Instagram', url: url, icon: '📷' });
+    } else if (trimmed.includes('facebook.com/') || trimmed.includes('Facebook:')) {
+      const url = trimmed.replace('Facebook:', '').trim();
+      socialLinksTemp.push({ platform: 'Facebook', url: url, icon: '👥' });
+    } else if (trimmed.includes('spotify.com/') || trimmed.includes('Spotify:')) {
+      const url = trimmed.replace('Spotify:', '').trim();
+      socialLinksTemp.push({ platform: 'Spotify', url: url, icon: '🎵' });
+    } else if (trimmed.includes('bandcamp.com') || trimmed.includes('Bandcamp:')) {
+      const url = trimmed.replace('Bandcamp:', '').trim();
+      socialLinksTemp.push({ platform: 'Bandcamp', url: url, icon: '🎸' });
+    } else if (trimmed.includes('youtube.com/') || trimmed.includes('YouTube:')) {
+      const url = trimmed.replace('YouTube:', '').trim();
+      socialLinksTemp.push({ platform: 'YouTube', url: url, icon: '📺' });
+    } else {
+      otherLinesTemp.push(trimmed);
+    }
+  }
+  
+  socialLinks = socialLinksTemp;
+  otherInfo = otherLinesTemp.join('\n');
+}
+
+const tracksWithIds = tracks.map((track, index) => {
+  const displayNum = track.displayTrackNumber || track.trackNumber + 1 || (index + 1);
+  return {
+    id: `${id}-track-${displayNum}`,
+    title: track.trackName || `Track ${displayNum}`,
+    preview_url: track.previewUrl || null,
+    track_number: displayNum,
+    mp3Url: track.mp3Url,
+    wavUrl: track.wavUrl,
+    duration: track.duration || track.trackDuration || '',
+    key: track.key || '--',
+    bpm: track.bpm || '',
+    featured: track.featured || track.featuredArtist || '',
+    remixer: track.remixer || ''
+  };
+});
+
+tracksWithIds.sort((a, b) => a.track_number - b.track_number);
+
+const formattedDate = release ? new Date(releaseDate).toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric'
+}) : '';
+
+const vinylAvailable = vinylRelease && parseInt(vinylRecordCount || '0') > 0;
+const digitalPrice = pricePerSale || trackPrice * tracksWithIds.length;
+const displayGenre = genre.toLowerCase() === 'dnb' ? 'Drum and Bass' : genre;
+---
+
+<Layout title={release ? `${releaseName} - ${artistName} | Fresh Wax` : 'Release Not Found | Fresh Wax'}>
+  <Header />
+  
+  {!release ? (
+    <main style="min-height: 100vh; background: #000000; padding: 2rem 0;">
+      <div class="max-w-4xl mx-auto px-4">
+        <div class="bg-white border-2 border-black p-8 text-center">
+          <h1 class="text-3xl font-black text-black mb-4 uppercase">Release Not Found</h1>
+          <p class="text-lg font-bold text-black mb-2">ID: {id}</p>
+          <p class="text-gray-700 mb-6 font-semibold">{error || 'This release could not be loaded.'}</p>
+          <a href="/" class="inline-block bg-black text-white px-6 py-3 font-black hover:bg-gray-800 transition-colors uppercase border-2 border-black">
+            ← Back to Homepage
+          </a>
+        </div>
+      </div>
+    </main>
+  ) : (
+    <main style="min-height: 100vh; background: #000000; padding: 1rem 0;">
+      <div class="max-w-7xl mx-auto px-3 md:px-4">
+        
+        <a href="/" class="inline-flex items-center gap-2 text-white hover:text-gray-300 font-black mb-4 md:mb-6 transition-colors uppercase text-xs md:text-sm border-2 border-white px-3 md:px-4 py-2">
+          <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
+          Back to Releases
+        </a>
+
+        <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white p-4 md:p-8 mb-4 md:mb-6 shadow-xl">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+            
+            <div class="lg:col-span-1">
+              <img 
+                src={coverArtUrl} 
+                alt={`${releaseName} by ${artistName}`}
+                class="w-full border-2 md:border-4 border-white shadow-2xl mb-4 md:mb-6"
+                onerror="this.src='/logo.webp'"
+              />
+              
+              <!-- Digital and Vinyl Buttons -->
+              <div class="flex flex-col gap-2 mb-4 md:mb-6">
+                <button 
+                  data-release-id={id}
+                  data-product-type="digital"
+                  data-price={digitalPrice}
+                  data-title={releaseName}
+                  data-artist={artistName}
+                  data-artwork={coverArtUrl}
+                  class="add-to-cart bg-gradient-to-r from-black-600 to-black-700 hover:from-green-700 hover:to-green-800 text-white px-4 py-3 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-all font-black text-sm uppercase w-full"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                  </svg>
+                  Digital Download - £{digitalPrice.toFixed(2)}
+                </button>
+                
+                <button 
+                  data-release-id={id}
+                  data-product-type="vinyl"
+                  data-price={vinylPrice || 0}
+                  data-digital-price={digitalPrice}
+                  data-title={releaseName}
+                  data-artist={artistName}
+                  data-artwork={coverArtUrl}
+                  data-includes-digital="true"
+                  disabled={!vinylRelease || !vinylAvailable}
+                 
+                    class={`add-to-cart px-4 py-3 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-all font-black uppercase text-sm w-full ${
+                    vinylRelease && vinylAvailable
+                      ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-green-700 hover:to-green-800 text-white cursor-pointer' 
+                      : 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                  }`}
+                >
+                  <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                  </svg>
+                  {vinylRelease && vinylAvailable ? `Vinyl + Digital - £${vinylPrice?.toFixed(2)}` : 'Vinyl Unavailable'}
+                </button>
+              </div>
+              
+              {additionalArtwork && additionalArtwork.length > 0 && (
+                <div class="mt-4 md:mt-6">
+                  <h3 class="text-white font-black text-xs md:text-sm uppercase tracking-wide mb-2 md:mb-3 border-b-2 border-red-600 pb-2">Additional Artwork</h3>
+                  <div class="grid grid-cols-2 gap-2">
+                    {additionalArtwork.slice(0, 4).map((img) => (
+                      <img 
+                        src={img} 
+                        alt="Additional artwork"
+                        class="w-full aspect-square object-cover border-2 border-white shadow-lg cursor-pointer hover:border-red-600 transition-colors"
+                        onerror="this.src='/logo.webp'"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div class="lg:col-span-2 space-y-4 md:space-y-6">
+              <div>
+                <h1 class="text-3xl md:text-5xl font-black text-red-500 mb-2 md:mb-3 leading-tight uppercase drop-shadow-lg">{releaseName}</h1>
+                <p class="text-2xl md:text-3xl font-black text-white mb-1 md:mb-2 uppercase drop-shadow-md">{artistName}</p>
+                {copyrightHolder && <p class="text-lg md:text-xl font-bold text-gray-300">{copyrightHolder}</p>}
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 md:gap-3">
+                <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-2 md:p-3 border-2 border-gray-500 shadow-lg rounded-lg">
+                  <p class="text-xs text-gray-300 uppercase font-black mb-1">Release Date</p>
+                  <p class="text-xs md:text-sm text-white font-bold">{formattedDate}</p>
+                </div>
+                {genre && (
+                  <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-2 md:p-3 border-2 border-gray-500 shadow-lg rounded-lg">
+                    <p class="text-xs text-gray-300 uppercase font-black mb-1">Genre</p>
+                    <p class="text-xs md:text-sm text-white font-bold">{displayGenre}</p>
+                  </div>
+                )}
+                {labelCode && (
+                  <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-2 md:p-3 border-2 border-gray-500 shadow-lg rounded-lg">
+                    <p class="text-xs text-gray-300 uppercase font-black mb-1">Catalogue</p>
+                    <p class="text-xs md:text-sm text-white font-bold">{labelCode}</p>
+                  </div>
+                )}
+                <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-2 md:p-3 border-2 border-gray-500 shadow-lg rounded-lg">
+                  <p class="text-xs text-gray-300 uppercase font-black mb-1">Track Count</p>
+                  <p class="text-xs md:text-sm text-white font-bold">{tracksWithIds.length} {tracksWithIds.length === 1 ? 'Track' : 'Tracks'}</p>
+                </div>
+                <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-2 md:p-3 border-2 border-gray-500 shadow-lg rounded-lg">
+                  <p class="text-xs text-gray-300 uppercase font-black mb-1">Mastered By</p>
+                  <p class="text-xs md:text-sm text-white font-bold">{masteredBy || '—'}</p>
+                </div>
+                <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-2 md:p-3 border-2 border-gray-500 shadow-lg rounded-lg">
+                  <p class="text-xs text-gray-300 uppercase font-black mb-1">Recorded</p>
+                  <p class="text-xs md:text-sm text-white font-bold">{recordingLocation && recordingYear ? `${recordingLocation}, ${recordingYear}` : '—'}</p>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-center gap-2 md:gap-3 pt-3 md:pt-4 border-t-2 border-red-600 flex-wrap">
+                <div class="flex items-center gap-1 md:gap-2 bg-gradient-to-r from-gray-700 to-gray-600 px-3 md:px-4 py-2 border-2 border-gray-500 h-[38px] md:h-[42px] rounded-lg shadow-lg">
+                  <div class="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        class="rating-star transition-colors cursor-pointer"
+                        data-release-id={id}
+                        data-star={star}
+                        title={`Rate ${star} out of 5`}
+                      >
+                        <svg class="w-5 h-5 md:w-6 md:h-6" fill={star <= Math.round(overallRating?.average || 0) ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                        </svg>
+                      </button>
+                    ))}
+                  </div>
+                  <span class="text-xs md:text-sm font-black text-white">
+                    <span class="rating-value" data-release-id={id}>{(overallRating?.average || 0).toFixed(1)}</span>
+                    <span class="text-gray-400"> ({overallRating?.count || 0})</span>
+                  </span>
+                </div>
+
+                <button 
+                  id="scroll-to-comments"
+                  class="flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-red-600 hover:to-red-700 text-white border-2 border-gray-500 hover:border-red-400 transition-all font-black uppercase text-xs md:text-sm cursor-pointer rounded-lg shadow-lg"
+                  title="Jump to comments"
+                >
+                  <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                  </svg>
+                  <span class="hidden sm:inline">Comments</span>
+                  <span class="bg-red-600 text-white px-2 py-0.5 rounded-full text-xs font-black">{comments?.length || 0}</span>
+                </button>
+
+                <button 
+                  class="share-button flex items-center gap-1 md:gap-2 px-3 md:px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-red-600 hover:to-red-700 text-white border-2 border-gray-500 hover:border-red-400 transition-all font-black uppercase text-xs md:text-sm rounded-lg shadow-lg"
+                  data-release-id={id}
+                  data-title={releaseName}
+                  data-artist={artistName}
+                >
+                  <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                  </svg>
+                  <span class="hidden sm:inline">Share</span>
+                </button>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-3 md:p-6 mb-4 md:mb-6">
+          <div class="flex items-center justify-between mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 border-red-600">
+            <h2 class="text-lg md:text-2xl font-black text-white uppercase tracking-wider drop-shadow-lg">Tracklist</h2>
+            <span class="text-xs md:text-sm font-black text-white">£{trackPrice.toFixed(2)} per track</span>
+          </div>
+
+          <div class="space-y-2" id="full-track-list">
+            {tracksWithIds.map((track) => (
+              <div class="track-row px-2 md:px-4 py-3 md:py-4 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 border-2 border-gray-600 hover:border-red-600 transition-all shadow-md">
+                <div class="flex items-center gap-2 md:gap-6">
+                  <span class="text-base md:text-lg font-black text-red-500 w-6 md:w-8 text-center flex-shrink-0">
+                    {track.track_number}
+                  </span>
+                  
+                  <button 
+                    class="play-button flex-shrink-0 w-8 h-8 md:w-10 md:h-10 flex items-center justify-center bg-gradient-to-br from-red-600 to-red-800 text-white hover:from-red-700 hover:to-red-900 transition-all border-2 border-white shadow-lg rounded-full"
+                    data-track-id={track.id}
+                    data-release-id={id}
+                    title="Play"
+                  >
+                    <svg class="w-3 h-3 md:w-4 md:h-4 play-icon ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <svg class="w-3 h-3 md:w-4 md:h-4 pause-icon hidden" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                    </svg>
+                  </button>
+                  
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm md:text-lg font-black text-white truncate uppercase drop-shadow-md">
+                      {track.title}
+                      {track.featured && (
+                        <span class="text-xs md:text-base font-bold text-gray-300"> feat. {track.featured}</span>
+                      )}
+                      {track.remixer && (
+                        <span class="text-xs md:text-base font-bold text-gray-400"> ({track.remixer} Remix)</span>
+                      )}
+                    </p>
+                  </div>
+
+                  <div class="hidden lg:block">
+                    <canvas 
+                      class="track-waveform cursor-pointer bg-gray-900 border-2 border-gray-600 rounded shadow-inner"
+                      width="150"
+                      height="40"
+                      data-track-id={track.id}
+                      data-release-id={id}
+                    ></canvas>
+                  </div>
+
+                  <div class="hidden lg:flex items-center gap-8 text-xs text-gray-400 font-bold ml-8">
+                    <div class="text-center">
+                      <p class="text-gray-500 uppercase mb-1">Duration</p>
+                      <span class="text-white font-black">{track.duration && track.duration !== '0' && track.duration !== '0:00' ? track.duration : '--'}</span>
+                    </div>
+                    <div class="text-center">
+                      <p class="text-gray-500 uppercase mb-1">Key</p>
+                      <span class="text-white font-black">{track.key}</span>
+                    </div>
+                    <div class="text-center">
+                      <p class="text-gray-500 uppercase mb-1">BPM</p>
+                      <span class="text-white font-black">{track.bpm && track.bpm !== '' && track.bpm !== '0' ? track.bpm : '--'}</span>
+                    </div>
+                  </div>
+                  
+                  <button 
+                    class="buy-track flex-shrink-0 font-black text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 active:from-green-800 active:to-green-900 transition-all px-3 md:px-6 py-2 border-2 border-white shadow-lg uppercase text-xs md:text-sm"
+                    data-track-id={track.id}
+                    data-track-title={track.title}
+                    data-track-price={trackPrice}
+                    data-release-id={id}
+                    data-artist={artistName}
+                    data-artwork={coverArtUrl}
+                    title="Buy this track"
+                  >
+                    Buy
+                  </button>
+                </div>
+
+                {track.preview_url && (
+                  <audio class="hidden track-audio" data-track-id={track.id} data-release-id={id} preload="none">
+                    <source src={track.preview_url} type="audio/mpeg" />
+                  </audio>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- Release Info Box -->
+        {socialLinks.length > 0 && (
+          <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-4 md:p-6 mb-4 md:mb-6">
+            <h2 class="text-lg md:text-2xl font-black text-white uppercase tracking-wider mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 border-red-600 flex items-center gap-2 drop-shadow-lg">
+              <span>🔗</span> Connect
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {socialLinks.map((link) => (
+                <a 
+                  href={link.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  class="flex items-center gap-2 md:gap-3 p-3 md:p-4 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-red-600 hover:to-red-700 border-2 border-gray-600 hover:border-white transition-all group shadow-md"
+                >
+                  <span class="text-xl md:text-2xl">{link.icon}</span>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs md:text-sm font-black text-gray-400 group-hover:text-white uppercase transition-colors">{link.platform}</p>
+                    <p class="text-xs md:text-sm text-white font-semibold truncate transition-colors">{link.url}</p>
+                  </div>
+                  <svg class="w-4 h-4 md:w-5 md:h-5 text-gray-400 group-hover:text-white transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                  </svg>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(releaseDescription || otherInfo) && (
+          <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-4 md:p-6 mb-4 md:mb-6">
+            <h2 class="text-lg md:text-2xl font-black text-white uppercase tracking-wider mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 border-red-600 drop-shadow-lg">
+              About This Release
+            </h2>
+            <div class="bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-gray-600 p-4 md:p-5 rounded shadow-inner">
+              <p class="text-white text-sm md:text-base font-semibold leading-relaxed whitespace-pre-wrap">
+                {releaseDescription || otherInfo}
+              </p>
+            </div>
+          </div>
+        )}
+
+       <div id="comments-section" class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-4 md:p-6 mb-4 md:mb-6">
+  <h2 class="text-lg md:text-2xl font-black text-white uppercase tracking-wider mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 border-red-600 flex items-center gap-2 md:gap-3 drop-shadow-lg">
+    <svg class="w-5 h-5 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+    </svg>
+    Comments ({comments?.length || 0})
+  </h2>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+    <!-- Comment Input -->
+    <div class="bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-gray-600 p-4 md:p-5 rounded flex flex-col shadow-lg" style="height: auto; min-height: 400px; max-height: 600px;">
+      <h3 class="text-base md:text-lg font-black text-white uppercase mb-3 md:mb-4 flex-shrink-0 drop-shadow-md">Leave a Comment</h3>
+      <div class="space-y-3 md:space-y-4 flex-1 flex flex-col">
+        <input 
+          type="text" 
+          id="comment-username" 
+          placeholder="Login to make comments" 
+          maxlength="30"
+          readonly
+          class="w-full px-3 md:px-4 py-2 md:py-3 border-2 border-gray-600 bg-gray-800 text-white placeholder-gray-400 focus:outline-none font-semibold rounded flex-shrink-0 cursor-not-allowed text-sm md:text-base shadow-inner"
+        />
+        
+        <div class="pb-2 md:pb-3 border-b-2 border-gray-600 flex-shrink-0">
+          <p class="text-xs font-black text-gray-300 uppercase tracking-wide mb-2">Quick Emojis:</p>
+          <div class="grid grid-cols-8 gap-1 md:gap-2">
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="🔥" title="Fire">🔥</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="❤️" title="Heart">❤️</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="😍" title="Love">😍</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="🎵" title="Music">🎵</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="🎧" title="Headphones">🎧</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="💯" title="100">💯</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="👍" title="Thumbs up">👍</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="🙌" title="Hands up">🙌</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="💥" title="Boom">💥</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="⚡" title="Lightning">⚡</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="🎉" title="Party">🎉</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="🚀" title="Rocket">🚀</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="🔊" title="Speaker">🔊</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="💿" title="CD">💿</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="🎸" title="Guitar">🎸</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="🎹" title="Piano">🎹</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="🥁" title="Drums">🥁</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="🎤" title="Mic">🎤</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="👏" title="Clap">👏</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="💪" title="Strong">💪</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="✨" title="Sparkles">✨</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="🌟" title="Star">🌟</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="😎" title="Cool">😎</button>
+            <button type="button" class="emoji-btn text-xl md:text-2xl hover:scale-125 transition-transform bg-gray-800 hover:bg-red-600 rounded p-1" data-emoji="🤩" title="Star eyes">🤩</button>
+          </div>
+        </div>
+        
+        <textarea 
+          id="comment-text" 
+          placeholder="Write your comment... (login required, max 300 characters)" 
+          maxlength="300"
+          rows="4"
+          class="w-full px-3 md:px-4 py-2 md:py-3 border-2 border-gray-600 bg-gray-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600 resize-none font-semibold rounded flex-1 text-sm md:text-base shadow-inner"
+        ></textarea>
+        
+        <div class="flex items-center justify-between flex-shrink-0">
+          <span class="text-xs md:text-sm text-gray-400 font-bold">
+            <span id="char-count">0</span>/300
+          </span>
+          <button 
+            id="submit-comment-btn" 
+            class="px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 border-2 border-white shadow-lg transition-all font-black uppercase rounded transform hover:scale-105 active:scale-95 text-xs md:text-sm"
+          >
+            Post Comment
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comments Output -->
+    <div class="bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-gray-600 p-4 md:p-5 rounded flex flex-col shadow-lg" style="height: auto; min-height: 400px; max-height: 600px;">
+      <h3 class="text-base md:text-lg font-black text-white uppercase mb-3 md:mb-4 flex-shrink-0 drop-shadow-md">Recent Comments</h3>
+      <div id="comments-list" class="space-y-2 md:space-y-3 pr-2 flex-1 overflow-y-auto">
+        {comments && comments.length > 0 ? (
+          comments.slice(0, 5).map((comment) => (
+            <div class="comment-item p-2 md:p-3 bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-500 hover:border-red-600 transition-all rounded shadow-md">
+              <div class="flex items-start gap-2 md:gap-3">
+                <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg">
+                  <span class="text-white font-black text-xs md:text-sm">
+                    {(comment.userName || comment.username || 'Anonymous').charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-start gap-1 md:gap-2">
+                    <span class="font-black text-white text-xs md:text-sm uppercase drop-shadow-sm">{comment.userName || comment.username || 'Anonymous'}</span>
+                    <span class="text-xs text-gray-400 font-semibold">{new Date(comment.timestamp || comment.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                  </div>
+                  <p class="text-gray-200 font-semibold leading-relaxed text-xs md:text-sm mt-1">{comment.comment || comment.text}</p>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p class="text-center text-gray-400 py-8 font-bold text-sm md:text-base">No comments yet. Be the first!</p>
+        )}
+      </div>
+    </div>
+  </div>
+</div>
+
+        <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-4 md:p-6">
+          <h2 class="text-lg md:text-2xl font-black text-white uppercase tracking-wider mb-4 md:mb-6 pb-3 md:pb-4 border-b-2 border-red-600 drop-shadow-lg">You Might Also Like</h2>
+          <div class="relative">
+            <div id="suggestions-carousel" class="flex gap-3 md:gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth" style="scrollbar-width: thin;"></div>
+            <button id="carousel-prev" class="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-gradient-to-br from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 text-white p-3 border-2 border-white shadow-xl transition-all z-10 rounded-full">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </button>
+            <button id="carousel-next" class="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-gradient-to-br from-red-600 to-red-800 hover:from-red-700 hover:to-red-900 text-white p-3 border-2 border-white shadow-xl transition-all z-10 rounded-full">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  )}
+
+  <Footer />
+</Layout>
+
+<div id="share-modal" class="fixed inset-0 z-50 hidden">
+  <div class="fixed inset-0 bg-black bg-opacity-80 transition-opacity" id="share-modal-backdrop"></div>
+  <div class="fixed inset-0 flex items-center justify-center p-4">
+    <div class="bg-white max-w-md w-full transform transition-all border-4 border-black rounded-lg">
+      <div class="flex items-center justify-between p-4 border-b-4 border-black">
+        <h3 class="text-base md:text-lg font-black text-black uppercase">Share Release</h3>
+        <button id="share-modal-close" class="text-black hover:text-gray-600 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="p-4">
+        <p class="text-xs md:text-sm text-black font-bold mb-3">
+          <span id="share-modal-title"></span> by <span id="share-modal-artist"></span>
+        </p>
+        <div class="flex gap-2">
+          <input 
+            type="text" 
+            id="share-url-input" 
+            readonly 
+            class="flex-1 px-3 py-2 border-2 border-black text-xs md:text-sm font-mono bg-gray-100 text-black focus:outline-none focus:ring-2 focus:ring-black rounded"
+          />
+          <button 
+            id="copy-url-button" 
+            class="px-3 md:px-4 py-2 bg-black hover:bg-gray-800 text-white border-2 border-black transition-all font-black text-xs md:text-sm flex items-center gap-2 uppercase rounded"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            Copy
+          </button>
+        </div>
+        <p class="text-xs text-gray-600 font-bold mt-2" id="copy-feedback"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .rating-star {
+    color: #d1d5db;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .rating-star:hover {
+    color: #fbbf24;
+    transform: scale(1.1);
+  }
+
+  .rating-star svg[fill="currentColor"] {
+    color: #fbbf24;
+  }
+  
+  .rating-star:active {
+    transform: scale(0.95);
+  }
+
+  .emoji-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+
+  .emoji-btn:hover {
+    background: rgba(220, 38, 38, 0.8);
+    transform: scale(1.1);
+  }
+
+  .emoji-btn:active {
+    transform: scale(0.9);
+  }
+
+  .track-waveform {
+    transition: all 0.2s;
+  }
+
+  .track-waveform:hover {
+    transform: scale(1.05);
+  }
+
+  #suggestions-carousel::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  #suggestions-carousel::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border: 1px solid #000;
+    border-radius: 4px;
+  }
+
+  #suggestions-carousel::-webkit-scrollbar-thumb {
+    background: #000;
+    border: 1px solid #000;
+    border-radius: 4px;
+  }
+
+  #suggestions-carousel::-webkit-scrollbar-thumb:hover {
+    background: #374151;
+  }
+
+  .suggestion-card {
+    min-width: 160px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
+
+  @media (min-width: 768px) {
+    .suggestion-card {
+      min-width: 200px;
+    }
+  }
+
+  #comments-list::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #comments-list::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 3px;
+  }
+
+  #comments-list::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+    border-radius: 3px;
+  }
+
+  #comments-list::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+
+  /* Mobile touch optimization */
+  @media (max-width: 1023px) {
+    .track-waveform {
+      display: none;
+    }
+  }
+
+  /* Ensure buttons are touch-friendly on mobile */
+  @media (max-width: 767px) {
+    button, a {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+</style>
+
+<script is:inline>
+  // Ensure global mini player AND shuffle widget are paused when playing local track previews on item page
+  (function() {
+    function stopAllOtherAudio() {
+      // 1. Pause global mini player if it's playing
+      try {
+        var globalAudio = document.getElementById('global-audio');
+        if (globalAudio && !globalAudio.paused) {
+          globalAudio.pause();
+          console.log('[ItemPage] Paused global mini player');
+          
+          // Update mini player UI
+          var miniPlayIcon = document.getElementById('mini-play-icon');
+          var miniPauseIcon = document.getElementById('mini-pause-icon');
+          if (miniPlayIcon) miniPlayIcon.classList.remove('hidden');
+          if (miniPauseIcon) miniPauseIcon.classList.add('hidden');
+        }
+      } catch (err) {
+        console.log('[ItemPage] Could not pause global audio:', err);
+      }
+      
+      // 2. Pause shuffle widget if it's playing
+      try {
+        if (window.shuffleWidgetAudio && !window.shuffleWidgetAudio.paused) {
+          window.shuffleWidgetAudio.pause();
+          console.log('[ItemPage] Paused shuffle widget');
+          
+          // Update shuffle widget UI
+          var shuffleWidget = document.getElementById('shuffle-widget');
+          if (shuffleWidget) {
+            shuffleWidget.classList.remove('playing');
+          }
+          
+          var shuffleIconPlay = document.getElementById('shuffle-icon-play');
+          var shuffleIconPause = document.getElementById('shuffle-icon-pause');
+          var shuffleCtrlPlay = document.getElementById('shuffle-ctrl-play-icon');
+          var shuffleCtrlPause = document.getElementById('shuffle-ctrl-pause-icon');
+          
+          if (shuffleIconPlay) shuffleIconPlay.classList.remove('hidden');
+          if (shuffleIconPause) shuffleIconPause.classList.add('hidden');
+          if (shuffleCtrlPlay) shuffleCtrlPlay.classList.remove('hidden');
+          if (shuffleCtrlPause) shuffleCtrlPause.classList.add('hidden');
+        }
+      } catch (err) {
+        console.log('[ItemPage] Could not pause shuffle widget:', err);
+      }
+    }
+    
+    function initItemPageAudioControl() {
+      console.log('[ItemPage] Setting up audio control...');
+      
+      // Get all play buttons on the item page
+      var playButtons = document.querySelectorAll('#full-track-list .play-button');
+      
+      playButtons.forEach(function(button) {
+        // Add click handler that runs BEFORE the main handler (capture phase)
+        button.addEventListener('click', function(e) {
+          stopAllOtherAudio();
+        }, true); // Use capture phase to run before other handlers
+      });
+      
+      console.log('[ItemPage] Audio control set up for', playButtons.length, 'play buttons');
+    }
+    
+    // Initialize on DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initItemPageAudioControl);
+    } else {
+      initItemPageAudioControl();
+    }
+    
+    // Re-initialize after Astro page transitions
+    document.addEventListener('astro:page-load', initItemPageAudioControl);
+  })();
+</script>
+
+<script type="module" src="/item-page.js"></script>

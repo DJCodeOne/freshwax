@@ -1,0 +1,572 @@
+---
+// /src/pages/artist/dashboard.astro
+// Fresh Wax Partner Dashboard - 3 Role System
+// Roles: isArtist (releases), isDJ (mixes), isMerchSupplier (view stock/sales only)
+
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+// This would come from session/auth - placeholder for now
+// In production, get this from Firebase Auth session cookie
+const partnerId = Astro.cookies.get('partnerId')?.value || '';
+let partner = null;
+let stats = {
+  releases: 0,
+  liveReleases: 0,
+  mixes: 0,
+  mixPlays: 0,
+  merchProducts: 0,
+  merchSold: 0,
+  earnings: 0
+};
+
+if (partnerId) {
+  try {
+    const partnerDoc = await db.collection('artists').doc(partnerId).get();
+    if (partnerDoc.exists) {
+      partner = { id: partnerDoc.id, ...partnerDoc.data() };
+      
+      // Fetch stats based on role
+      if (partner.isArtist) {
+        const releasesSnap = await db.collection('releases')
+          .where('artistId', '==', partnerId)
+          .select('status')
+          .get();
+        stats.releases = releasesSnap.size;
+        stats.liveReleases = releasesSnap.docs.filter(d => d.data().status === 'live').length;
+      }
+      
+      if (partner.isDJ) {
+        const mixesSnap = await db.collection('dj-mixes')
+          .where('userId', '==', partnerId)
+          .select('plays')
+          .get();
+        stats.mixes = mixesSnap.size;
+        stats.mixPlays = mixesSnap.docs.reduce((sum, d) => sum + (d.data().plays || 0), 0);
+      }
+      
+      if (partner.isMerchSupplier) {
+        // Get merch linked to this supplier
+        const merchSnap = await db.collection('merch')
+          .where('supplierId', '==', partnerId)
+          .select('totalStock', 'totalSold')
+          .get();
+        stats.merchProducts = merchSnap.size;
+        stats.merchSold = merchSnap.docs.reduce((sum, d) => sum + (d.data().totalSold || 0), 0);
+        
+        // Calculate earnings from orders
+        // This is simplified - in production you'd have a proper earnings collection
+      }
+    }
+  } catch (e) {
+    console.error('Error fetching partner:', e);
+  }
+}
+
+// If not logged in, we'll show login prompt
+const isLoggedIn = !!partner;
+const isApproved = partner?.approved === true;
+
+// Determine roles
+const isArtist = partner?.isArtist || false;
+const isDJ = partner?.isDJ || false;
+const isMerchSupplier = partner?.isMerchSupplier || false;
+
+// Format number
+const formatNumber = (num) => new Intl.NumberFormat('en-GB').format(num || 0);
+const formatCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Partner Dashboard | Fresh Wax</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    /* Login Required */
+    .login-required {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+    }
+    
+    .login-required h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: #fff;
+    }
+    
+    .login-required p {
+      color: #888;
+      margin-bottom: 2rem;
+    }
+    
+    .login-btn {
+      display: inline-block;
+      padding: 0.75rem 2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    /* Pending Approval */
+    .pending-banner {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    
+    .pending-banner h2 {
+      color: #fbbf24;
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .pending-banner p {
+      color: #888;
+    }
+    
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    .welcome {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+    }
+    
+    .welcome-text h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    
+    .welcome-text p {
+      font-size: 0.875rem;
+      color: #888;
+    }
+    
+    .role-badges {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .role-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    
+    .role-artist { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .role-dj { background: rgba(236, 72, 153, 0.2); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3); }
+    .role-merch { background: rgba(139, 92, 246, 0.2); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+    
+    .header-links {
+      display: flex;
+      gap: 1rem;
+    }
+    
+    .header-links a {
+      color: #a0a0a0;
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+    
+    .header-links a:hover { color: #667eea; }
+    
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    
+    .stat-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 0.25rem;
+    }
+    
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    
+    .stat-value.green { color: #4ade80; }
+    .stat-value.purple { color: #a78bfa; }
+    .stat-value.pink { color: #f472b6; }
+    
+    /* Section */
+    .section-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #667eea;
+      margin: 2rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(102, 126, 234, 0.3);
+    }
+    
+    /* Action Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+    
+    .action-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 1.5rem 1rem;
+      text-decoration: none;
+      color: #e0e0e0;
+      transition: all 0.2s;
+      min-height: 120px;
+    }
+    
+    .action-card:hover {
+      background: rgba(102, 126, 234, 0.15);
+      border-color: rgba(102, 126, 234, 0.5);
+      transform: translateY(-2px);
+    }
+    
+    .action-card.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    
+    .card-icon {
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .card-title {
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-align: center;
+    }
+    
+    .card-subtitle {
+      font-size: 0.7rem;
+      color: #666;
+      margin-top: 0.25rem;
+    }
+    
+    /* Read Only Notice */
+    .readonly-notice {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: #a78bfa;
+      margin-bottom: 1rem;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      .welcome { flex-direction: column; align-items: flex-start; }
+      .cards-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    @media (max-width: 480px) {
+      .cards-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    {!isLoggedIn ? (
+      <!-- Not Logged In -->
+      <div class="login-required">
+        <h1>Partner Dashboard</h1>
+        <p>Please log in to access your dashboard.</p>
+        <a href="/login" class="login-btn">Log In</a>
+      </div>
+    ) : !isApproved ? (
+      <!-- Pending Approval -->
+      <div class="pending-banner">
+        <h2>⏳ Awaiting Approval</h2>
+        <p>Your account is pending admin approval. You'll receive an email once approved.</p>
+      </div>
+      
+      <header>
+        <div class="welcome">
+          <div class="avatar">{partner.artistName?.charAt(0) || '?'}</div>
+          <div class="welcome-text">
+            <h1>Welcome, {partner.artistName || 'Partner'}</h1>
+            <p>Account pending approval</p>
+          </div>
+        </div>
+        <div class="header-links">
+          <a href="/">← Store</a>
+          <a href="/artist/logout">Logout</a>
+        </div>
+      </header>
+      
+      <div class="section-title">Your Application</div>
+      <div class="cards-grid">
+        <div class="action-card disabled">
+          <span class="card-icon">📧</span>
+          <span class="card-title">{partner.email}</span>
+        </div>
+        <div class="action-card disabled">
+          <span class="card-icon">📅</span>
+          <span class="card-title">Applied</span>
+          <span class="card-subtitle">{partner.registeredAt?.toDate?.()?.toLocaleDateString('en-GB') || 'Recently'}</span>
+        </div>
+        <div class="action-card disabled">
+          <span class="card-icon">🏷️</span>
+          <span class="card-title">Role{(isArtist && isDJ) || (isArtist && isMerchSupplier) || (isDJ && isMerchSupplier) ? 's' : ''}</span>
+          <span class="card-subtitle">
+            {isArtist ? 'Artist' : ''}{isArtist && (isDJ || isMerchSupplier) ? ', ' : ''}
+            {isDJ ? 'DJ' : ''}{isDJ && isMerchSupplier ? ', ' : ''}
+            {isMerchSupplier ? 'Merch' : ''}
+          </span>
+        </div>
+      </div>
+    ) : (
+      <!-- Approved - Full Dashboard -->
+      <header>
+        <div class="welcome">
+          <div class="avatar">{partner.artistName?.charAt(0) || '?'}</div>
+          <div class="welcome-text">
+            <h1>Welcome back, {partner.artistName || 'Partner'}</h1>
+            <div class="role-badges">
+              {isArtist && <span class="role-badge role-artist">🎵 Artist</span>}
+              {isDJ && <span class="role-badge role-dj">🎧 DJ</span>}
+              {isMerchSupplier && <span class="role-badge role-merch">👕 Merch Supplier</span>}
+            </div>
+          </div>
+        </div>
+        <div class="header-links">
+          <a href="/">← Store</a>
+          <a href="/dj-mixes">DJ Mixes</a>
+          <a href="/artist/logout">Logout</a>
+        </div>
+      </header>
+
+      <!-- Stats based on role -->
+      <div class="stats-grid">
+        {isArtist && (
+          <>
+            <div class="stat-card">
+              <div class="stat-label">My Releases</div>
+              <div class="stat-value purple">{stats.releases}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Live in Store</div>
+              <div class="stat-value green">{stats.liveReleases}</div>
+            </div>
+          </>
+        )}
+        
+        {isDJ && (
+          <>
+            <div class="stat-card">
+              <div class="stat-label">My Mixes</div>
+              <div class="stat-value pink">{stats.mixes}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Total Plays</div>
+              <div class="stat-value">{formatNumber(stats.mixPlays)}</div>
+            </div>
+          </>
+        )}
+        
+        {isMerchSupplier && (
+          <>
+            <div class="stat-card">
+              <div class="stat-label">My Products</div>
+              <div class="stat-value purple">{stats.merchProducts}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Total Sold</div>
+              <div class="stat-value green">{stats.merchSold}</div>
+            </div>
+          </>
+        )}
+        
+        <div class="stat-card">
+          <div class="stat-label">Earnings</div>
+          <div class="stat-value green">{formatCurrency(stats.earnings)}</div>
+        </div>
+      </div>
+
+      <!-- Artist Actions -->
+      {isArtist && (
+        <>
+          <div class="section-title">Releases</div>
+          <div class="cards-grid">
+            <a href="/artist/upload-release" class="action-card">
+              <span class="card-icon">📦</span>
+              <span class="card-title">Upload Release</span>
+            </a>
+            <a href="/artist/releases" class="action-card">
+              <span class="card-icon">💿</span>
+              <span class="card-title">My Releases</span>
+            </a>
+            <a href="/artist/analytics" class="action-card">
+              <span class="card-icon">📊</span>
+              <span class="card-title">Analytics</span>
+            </a>
+          </div>
+        </>
+      )}
+
+      <!-- DJ Actions -->
+      {isDJ && (
+        <>
+          <div class="section-title">DJ Mixes</div>
+          <div class="cards-grid">
+            <a href="/upload-mix" class="action-card">
+              <span class="card-icon">⬆️</span>
+              <span class="card-title">Upload Mix</span>
+            </a>
+            <a href="/artist/mixes" class="action-card">
+              <span class="card-icon">🎧</span>
+              <span class="card-title">My Mixes</span>
+            </a>
+            <a href="/dj-mixes" class="action-card">
+              <span class="card-icon">🌐</span>
+              <span class="card-title">Public Page</span>
+            </a>
+          </div>
+        </>
+      )}
+
+      <!-- Merch Supplier Actions (Read Only) -->
+      {isMerchSupplier && (
+        <>
+          <div class="section-title">Merchandise</div>
+          <div class="readonly-notice">
+            ℹ️ View only — Contact Fresh Wax admin to add or update products
+          </div>
+          <div class="cards-grid">
+            <a href="/artist/merch" class="action-card">
+              <span class="card-icon">📦</span>
+              <span class="card-title">View Stock</span>
+            </a>
+            <a href="/artist/merch-sales" class="action-card">
+              <span class="card-icon">💰</span>
+              <span class="card-title">View Sales</span>
+            </a>
+          </div>
+        </>
+      )}
+
+      <!-- Account -->
+      <div class="section-title">Account</div>
+      <div class="cards-grid">
+        <a href="/artist/profile" class="action-card">
+          <span class="card-icon">👤</span>
+          <span class="card-title">Edit Profile</span>
+        </a>
+        <a href="/artist/payouts" class="action-card">
+          <span class="card-icon">💳</span>
+          <span class="card-title">Payouts</span>
+        </a>
+        <a href="/artist/settings" class="action-card">
+          <span class="card-icon">⚙️</span>
+          <span class="card-title">Settings</span>
+        </a>
+      </div>
+    )}
+  </div>
+  
+  <script>
+    // Check for Firebase Auth state on client side
+    // This supplements server-side auth check
+    
+    // Firebase would be initialized here to check auth state
+    // and redirect if needed
+  </script>
+</body>
+</html>

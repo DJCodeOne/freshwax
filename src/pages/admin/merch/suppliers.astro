@@ -1,0 +1,401 @@
+---
+// src/pages/admin/merch/suppliers.astro
+// Manage merch suppliers/consignment partners
+---
+
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Suppliers - Fresh Wax Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #000; }
+    
+    .header { background: #000; color: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; font-weight: 900; text-transform: uppercase; }
+    .header-nav { display: flex; gap: 15px; }
+    .header-nav a { color: #fff; text-decoration: none; padding: 8px 16px; border: 2px solid #fff; font-weight: 700; font-size: 12px; text-transform: uppercase; }
+    .header-nav a:hover { background: #fff; color: #000; }
+    
+    .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
+    
+    .page-layout { display: grid; grid-template-columns: 400px 1fr; gap: 30px; }
+    
+    /* Add Supplier Form */
+    .form-card { background: #fff; border: 3px solid #000; padding: 25px; }
+    .form-card h2 { font-size: 16px; font-weight: 900; text-transform: uppercase; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #000; }
+    
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-weight: 700; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; }
+    .form-label .required { color: #ff0000; }
+    .form-input, .form-select, .form-textarea { width: 100%; padding: 12px; border: 2px solid #000; font-size: 14px; font-family: inherit; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; box-shadow: 4px 4px 0 #000; }
+    .form-textarea { min-height: 80px; resize: vertical; }
+    .form-hint { font-size: 11px; color: #666; margin-top: 5px; }
+    
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    
+    .btn { padding: 12px 24px; border: 3px solid #000; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 14px; width: 100%; }
+    .btn-primary { background: #000; color: #fff; }
+    .btn-primary:hover { background: #fff; color: #000; }
+    
+    /* Suppliers List */
+    .suppliers-list { background: #fff; border: 3px solid #000; }
+    .suppliers-header { background: #000; color: #fff; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .suppliers-header h2 { font-size: 16px; font-weight: 900; text-transform: uppercase; }
+    .suppliers-header .count { font-size: 14px; opacity: 0.8; }
+    
+    .supplier-card { padding: 20px; border-bottom: 2px solid #eee; }
+    .supplier-card:last-child { border-bottom: none; }
+    .supplier-card:hover { background: #f9f9f9; }
+    
+    .supplier-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+    .supplier-info h3 { font-size: 18px; font-weight: 900; margin-bottom: 5px; }
+    .supplier-info .type { font-size: 12px; color: #666; text-transform: uppercase; }
+    .supplier-info .code { font-family: monospace; font-size: 12px; background: #f5f5f5; padding: 2px 8px; display: inline-block; margin-top: 5px; }
+    
+    .supplier-status { padding: 5px 12px; font-size: 12px; font-weight: 700; }
+    .supplier-status.active { background: #d4edda; color: #155724; }
+    .supplier-status.inactive { background: #f8d7da; color: #721c24; }
+    
+    .supplier-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
+    .stat { text-align: center; padding: 10px; background: #f5f5f5; }
+    .stat .value { font-size: 20px; font-weight: 900; }
+    .stat .label { font-size: 10px; color: #666; text-transform: uppercase; }
+    .stat.alert { background: #fff3cd; }
+    .stat.danger { background: #f8d7da; }
+    
+    .supplier-contact { font-size: 13px; color: #666; margin-bottom: 15px; }
+    .supplier-contact a { color: #000; }
+    
+    .supplier-actions { display: flex; gap: 10px; }
+    .action-btn { padding: 8px 15px; border: 2px solid #000; background: #fff; cursor: pointer; font-size: 11px; font-weight: 700; text-transform: uppercase; text-decoration: none; color: #000; display: inline-block; }
+    .action-btn:hover { background: #000; color: #fff; }
+    .action-btn.view-link { background: #000; color: #fff; }
+    .action-btn.view-link:hover { background: #fff; color: #000; }
+    
+    /* Access Code Display */
+    .access-code-display { background: #f5f5f5; border: 2px solid #000; padding: 15px; margin-top: 15px; }
+    .access-code-display h4 { font-size: 12px; text-transform: uppercase; margin-bottom: 10px; }
+    .access-code-display .code { font-family: monospace; font-size: 18px; font-weight: 900; letter-spacing: 2px; background: #fff; padding: 10px; border: 2px solid #000; display: inline-block; }
+    .access-code-display .copy-btn { margin-left: 10px; padding: 10px 15px; background: #000; color: #fff; border: none; cursor: pointer; font-weight: 700; font-size: 12px; }
+    .access-code-display p { font-size: 12px; color: #666; margin-top: 10px; }
+    
+    /* Toast */
+    .toast { position: fixed; bottom: 30px; right: 30px; padding: 20px 30px; background: #000; color: #fff; border: 3px solid #000; font-weight: 700; box-shadow: 8px 8px 0 rgba(0,0,0,0.2); z-index: 9999; transform: translateY(200px); opacity: 0; transition: all 0.3s; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: #00aa00; }
+    .toast.error { border-color: #ff0000; }
+    
+    .empty-state { padding: 40px; text-align: center; color: #666; }
+    
+    @media (max-width: 1000px) {
+      .page-layout { grid-template-columns: 1fr; }
+      .supplier-stats { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>👥 Manage Suppliers</h1>
+    <nav class="header-nav">
+      <a href="/admin/merch/upload">+ Add Product</a>
+      <a href="/admin/merch/manage">Manage Stock</a>
+      <a href="/admin">Admin Home</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="page-layout">
+      <!-- Add Supplier Form -->
+      <div>
+        <div class="form-card">
+          <h2>Add New Supplier</h2>
+          <form id="supplierForm">
+            <div class="form-group">
+              <label class="form-label">Supplier Name <span class="required">*</span></label>
+              <input type="text" class="form-input" id="supplierName" placeholder="e.g., Runnin' Records" required />
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Type <span class="required">*</span></label>
+                <select class="form-select" id="supplierType" required>
+                  <option value="label">Label</option>
+                  <option value="soundsystem">Sound System</option>
+                  <option value="dj">DJ</option>
+                  <option value="crew">Crew</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Code <span class="required">*</span></label>
+                <input type="text" class="form-input" id="supplierCode" placeholder="e.g., RUN" maxlength="5" style="text-transform: uppercase;" required />
+                <div class="form-hint">Short code for SKUs (max 5 chars)</div>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Default Cut (%)</label>
+              <input type="number" class="form-input" id="defaultCut" value="50" min="0" max="100" />
+              <div class="form-hint">Percentage they receive per sale</div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Contact Name</label>
+              <input type="text" class="form-input" id="contactName" placeholder="Main contact person" />
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" id="supplierEmail" placeholder="email@example.com" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Phone</label>
+                <input type="tel" class="form-input" id="supplierPhone" placeholder="07..." />
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Notes</label>
+              <textarea class="form-textarea" id="supplierNotes" placeholder="Any additional notes..."></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Add Supplier</button>
+          </form>
+          
+          <!-- Access Code Display (shown after creation) -->
+          <div class="access-code-display" id="accessCodeDisplay" style="display: none;">
+            <h4>⚠️ Supplier Portal Access Code</h4>
+            <span class="code" id="newAccessCode"></span>
+            <button class="copy-btn" onclick="copyAccessCode()">Copy</button>
+            <p>Share this code with the supplier so they can view their stock levels. This code is only shown once!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Suppliers List -->
+      <div class="suppliers-list">
+        <div class="suppliers-header">
+          <h2>Suppliers</h2>
+          <span class="count" id="supplierCount">Loading...</span>
+        </div>
+        <div id="suppliersList">
+          <div class="empty-state">Loading suppliers...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let suppliers = [];
+    let newSupplierCode = '';
+
+    document.addEventListener('DOMContentLoaded', loadSuppliers);
+
+    async function loadSuppliers() {
+      try {
+        const response = await fetch('/api/suppliers');
+        const data = await response.json();
+        
+        if (data.success) {
+          suppliers = data.suppliers || [];
+          renderSuppliers();
+        }
+      } catch (error) {
+        console.error('Error loading suppliers:', error);
+        document.getElementById('suppliersList').innerHTML = 
+          '<div class="empty-state">Error loading suppliers</div>';
+      }
+    }
+
+    function renderSuppliers() {
+      const container = document.getElementById('suppliersList');
+      document.getElementById('supplierCount').textContent = `${suppliers.length} supplier${suppliers.length !== 1 ? 's' : ''}`;
+      
+      if (suppliers.length === 0) {
+        container.innerHTML = '<div class="empty-state">No suppliers yet. Add your first supplier using the form.</div>';
+        return;
+      }
+      
+      container.innerHTML = suppliers.map(s => {
+        const lowStockAlert = (s.totalStock || 0) <= 10 && (s.totalStock || 0) > 0;
+        const outOfStock = (s.totalStock || 0) === 0 && (s.totalProducts || 0) > 0;
+        
+        return `
+          <div class="supplier-card" data-id="${s.id}">
+            <div class="supplier-top">
+              <div class="supplier-info">
+                <h3>${s.name}</h3>
+                <div class="type">${s.type}</div>
+                <div class="code">${s.code}</div>
+              </div>
+              <span class="supplier-status ${s.active !== false ? 'active' : 'inactive'}">
+                ${s.active !== false ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+            
+            <div class="supplier-stats">
+              <div class="stat">
+                <div class="value">${s.totalProducts || 0}</div>
+                <div class="label">Products</div>
+              </div>
+              <div class="stat ${lowStockAlert ? 'alert' : ''} ${outOfStock ? 'danger' : ''}">
+                <div class="value">${s.totalStock || 0}</div>
+                <div class="label">In Stock</div>
+              </div>
+              <div class="stat">
+                <div class="value">${s.totalSold || 0}</div>
+                <div class="label">Sold</div>
+              </div>
+              <div class="stat">
+                <div class="value">£${(s.totalRevenue || 0).toFixed(0)}</div>
+                <div class="label">Their Earnings</div>
+              </div>
+            </div>
+            
+            <div class="supplier-contact">
+              ${s.contactName ? `<strong>${s.contactName}</strong><br>` : ''}
+              ${s.email ? `<a href="mailto:${s.email}">${s.email}</a>` : ''}
+              ${s.email && s.phone ? ' • ' : ''}
+              ${s.phone ? s.phone : ''}
+              ${s.notes ? `<br><em style="color: #999; font-size: 12px;">${s.notes}</em>` : ''}
+            </div>
+            
+            <div class="supplier-actions">
+              <a href="/admin/merch/manage?supplier=${s.id}" class="action-btn">View Products</a>
+              <a href="/supplier-portal?code=${s.accessCode}" target="_blank" class="action-btn view-link">Portal Link</a>
+              <button class="action-btn" onclick="copyPortalLink('${s.accessCode}')">Copy Link</button>
+              <button class="action-btn" onclick="editSupplier('${s.id}')">Edit</button>
+              ${s.active !== false ? 
+                `<button class="action-btn" style="border-color: #ff0000; color: #ff0000;" onclick="deactivateSupplier('${s.id}')">Deactivate</button>` :
+                `<button class="action-btn" onclick="activateSupplier('${s.id}')">Activate</button>`
+              }
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('supplierForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const name = document.getElementById('supplierName').value.trim();
+      const type = document.getElementById('supplierType').value;
+      const code = document.getElementById('supplierCode').value.trim().toUpperCase();
+      const defaultCut = parseInt(document.getElementById('defaultCut').value) || 50;
+      const contactName = document.getElementById('contactName').value.trim();
+      const email = document.getElementById('supplierEmail').value.trim();
+      const phone = document.getElementById('supplierPhone').value.trim();
+      const notes = document.getElementById('supplierNotes').value.trim();
+      
+      if (!name || !type || !code) {
+        showToast('Please fill in required fields', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/suppliers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name, type, code, defaultCut, contactName, email, phone, notes
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Failed to create supplier');
+        }
+        
+        // Show access code
+        newSupplierCode = result.accessCode;
+        document.getElementById('newAccessCode').textContent = newSupplierCode;
+        document.getElementById('accessCodeDisplay').style.display = 'block';
+        
+        // Clear form
+        e.target.reset();
+        document.getElementById('defaultCut').value = '50';
+        
+        showToast('Supplier added successfully!', 'success');
+        loadSuppliers();
+        
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    });
+
+    function copyAccessCode() {
+      navigator.clipboard.writeText(newSupplierCode).then(() => {
+        showToast('Access code copied!', 'success');
+      });
+    }
+
+    function copyPortalLink(code) {
+      const link = `${window.location.origin}/supplier-portal?code=${code}`;
+      navigator.clipboard.writeText(link).then(() => {
+        showToast('Portal link copied!', 'success');
+      });
+    }
+
+    function editSupplier(id) {
+      // TODO: Implement edit modal
+      showToast('Edit functionality coming soon', 'info');
+    }
+
+    async function deactivateSupplier(id) {
+      if (!confirm('Are you sure you want to deactivate this supplier?')) return;
+      
+      try {
+        const response = await fetch('/api/suppliers', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ supplierId: id })
+        });
+        
+        if (!response.ok) throw new Error('Failed to deactivate');
+        
+        showToast('Supplier deactivated', 'success');
+        loadSuppliers();
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+
+    async function activateSupplier(id) {
+      try {
+        const response = await fetch('/api/suppliers', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ supplierId: id, active: true })
+        });
+        
+        if (!response.ok) throw new Error('Failed to activate');
+        
+        showToast('Supplier activated', 'success');
+        loadSuppliers();
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // Auto-uppercase code input
+    document.getElementById('supplierCode').addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+  </script>
+</body>
+</html>

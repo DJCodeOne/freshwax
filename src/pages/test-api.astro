@@ -1,0 +1,63 @@
+---
+// src/pages/test-api.astro
+// Test page to see what the API returns
+
+const response = await fetch('http://localhost:4321/api/get-releases');
+const data = await response.json();
+---
+
+<html>
+<head>
+  <title>API Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #00ff00;
+    }
+    pre {
+      background: #000;
+      padding: 20px;
+      overflow-x: auto;
+      border: 2px solid #00ff00;
+    }
+    h1 {
+      color: #00ff00;
+    }
+    .success {
+      color: #00ff00;
+    }
+    .error {
+      color: #ff0000;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Firebase API Test</h1>
+  
+  <h2>Response Status:</h2>
+  <p class={data.success ? 'success' : 'error'}>
+    {data.success ? '✅ SUCCESS' : '❌ FAILED'}
+  </p>
+
+  <h2>Release Count:</h2>
+  <p>{data.releases?.length || 0} releases found</p>
+
+  <h2>Raw API Response:</h2>
+  <pre>{JSON.stringify(data, null, 2)}</pre>
+
+  {data.releases && data.releases.length > 0 && (
+    <>
+      <h2>First Release Details:</h2>
+      <pre>{JSON.stringify(data.releases[0], null, 2)}</pre>
+    </>
+  )}
+
+  <h2>Actions:</h2>
+  <ul>
+    <li><a href="/">Go to Homepage</a></li>
+    <li><a href="/releases">Go to Releases Page</a></li>
+  </ul>
+</body>
+</html>

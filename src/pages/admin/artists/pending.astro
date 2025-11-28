@@ -1,0 +1,544 @@
+---
+// /src/pages/admin/artists/pending.astro
+// Fresh Wax Partner Approvals - 3 Role System (Artist, DJ, Merch Supplier)
+
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+// Fetch pending partners
+const pendingSnapshot = await db.collection('artists')
+  .where('approved', '==', false)
+  .orderBy('registeredAt', 'desc')
+  .get();
+
+const pendingPartners = pendingSnapshot.docs.map(doc => ({
+  id: doc.id,
+  ...doc.data(),
+  registeredAt: doc.data().registeredAt?.toDate?.() || new Date()
+}));
+
+// Count by role
+const counts = {
+  all: pendingPartners.length,
+  artists: pendingPartners.filter(p => p.isArtist).length,
+  djs: pendingPartners.filter(p => p.isDJ).length,
+  merch: pendingPartners.filter(p => p.isMerchSupplier).length
+};
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Partner Approvals | Fresh Wax Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .back-link {
+      color: #a0a0a0;
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+    
+    .back-link:hover { color: #667eea; }
+    
+    /* Filter Tabs */
+    .filter-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .filter-tab {
+      padding: 0.5rem 1rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: #a0a0a0;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .filter-tab:hover {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+    
+    .filter-tab.active {
+      background: rgba(102, 126, 234, 0.2);
+      border-color: rgba(102, 126, 234, 0.5);
+      color: #fff;
+    }
+    
+    .filter-count {
+      background: rgba(255,255,255,0.2);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .filter-tab.active .filter-count {
+      background: rgba(102, 126, 234, 0.5);
+    }
+    
+    /* Partner Cards */
+    .partners-grid {
+      display: grid;
+      gap: 1rem;
+    }
+    
+    .partner-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1rem;
+      align-items: center;
+      transition: all 0.3s;
+    }
+    
+    .partner-card:hover {
+      background: rgba(255,255,255,0.08);
+    }
+    
+    .partner-card.hidden {
+      display: none;
+    }
+    
+    .partner-card.removing {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    
+    .partner-info h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 0.25rem;
+    }
+    
+    .partner-email {
+      color: #888;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .partner-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    
+    .role-artist {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    
+    .role-dj {
+      background: rgba(236, 72, 153, 0.2);
+      color: #f472b6;
+      border: 1px solid rgba(236, 72, 153, 0.3);
+    }
+    
+    .role-merch {
+      background: rgba(139, 92, 246, 0.2);
+      color: #a78bfa;
+      border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+    
+    .registered-date {
+      color: #666;
+      font-size: 0.75rem;
+    }
+    
+    .partner-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-approve {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      color: #fff;
+    }
+    
+    .btn-approve:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+    }
+    
+    .btn-reject {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .btn-reject:hover {
+      background: rgba(239, 68, 68, 0.3);
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #888;
+    }
+    
+    .empty-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+    
+    .empty-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      padding: 1rem 1.5rem;
+      background: #22c55e;
+      color: #fff;
+      border-radius: 8px;
+      font-weight: 500;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+    
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    
+    .toast.error {
+      background: #ef4444;
+    }
+    
+    /* Responsive */
+    @media (max-width: 640px) {
+      .container { padding: 1rem; }
+      .partner-card {
+        grid-template-columns: 1fr;
+      }
+      .partner-actions {
+        justify-content: flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>✅ Partner Approvals</h1>
+      <a href="/admin" class="back-link">← Back to Dashboard</a>
+    </header>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-filter="all">
+        All <span class="filter-count">{counts.all}</span>
+      </button>
+      <button class="filter-tab" data-filter="artist">
+        🎵 Artists <span class="filter-count">{counts.artists}</span>
+      </button>
+      <button class="filter-tab" data-filter="dj">
+        🎧 DJs <span class="filter-count">{counts.djs}</span>
+      </button>
+      <button class="filter-tab" data-filter="merch">
+        👕 Merch Suppliers <span class="filter-count">{counts.merch}</span>
+      </button>
+    </div>
+
+    <!-- Partners List -->
+    {pendingPartners.length === 0 ? (
+      <div class="empty-state">
+        <div class="empty-icon">🎉</div>
+        <div class="empty-title">All caught up!</div>
+        <p>No pending partner approvals at the moment.</p>
+      </div>
+    ) : (
+      <div class="partners-grid">
+        {pendingPartners.map(partner => (
+          <div 
+            class="partner-card" 
+            data-id={partner.id}
+            data-roles={JSON.stringify({
+              artist: partner.isArtist || false,
+              dj: partner.isDJ || false,
+              merch: partner.isMerchSupplier || false
+            })}
+          >
+            <div class="partner-info">
+              <h3>{partner.artistName || partner.name || 'Unnamed'}</h3>
+              <div class="partner-email">{partner.email}</div>
+              <div class="partner-meta">
+                {partner.isArtist && (
+                  <span class="role-badge role-artist">🎵 Artist</span>
+                )}
+                {partner.isDJ && (
+                  <span class="role-badge role-dj">🎧 DJ</span>
+                )}
+                {partner.isMerchSupplier && (
+                  <span class="role-badge role-merch">👕 Merch Supplier</span>
+                )}
+                <span class="registered-date">
+                  Registered {partner.registeredAt.toLocaleDateString('en-GB', { 
+                    day: 'numeric', 
+                    month: 'short', 
+                    year: 'numeric' 
+                  })}
+                </span>
+              </div>
+            </div>
+            <div class="partner-actions">
+              <button class="btn btn-approve" onclick={`approvePartner('${partner.id}')`}>
+                Approve
+              </button>
+              <button class="btn btn-reject" onclick={`rejectPartner('${partner.id}')`}>
+                Reject
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Filter functionality
+    const filterTabs = document.querySelectorAll('.filter-tab');
+    const partnerCards = document.querySelectorAll('.partner-card');
+    
+    filterTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Update active state
+        filterTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        const filter = tab.dataset.filter;
+        
+        partnerCards.forEach(card => {
+          const roles = JSON.parse(card.dataset.roles);
+          
+          if (filter === 'all') {
+            card.classList.remove('hidden');
+          } else if (filter === 'artist' && roles.artist) {
+            card.classList.remove('hidden');
+          } else if (filter === 'dj' && roles.dj) {
+            card.classList.remove('hidden');
+          } else if (filter === 'merch' && roles.merch) {
+            card.classList.remove('hidden');
+          } else {
+            card.classList.add('hidden');
+          }
+        });
+      });
+    });
+
+    // Toast notification
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.toggle('error', isError);
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // Approve partner
+    async function approvePartner(id) {
+      const card = document.querySelector(`[data-id="${id}"]`);
+      const btn = card.querySelector('.btn-approve');
+      
+      btn.disabled = true;
+      btn.textContent = 'Approving...';
+      
+      try {
+        const response = await fetch('/api/admin/approve-partner', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ partnerId: id })
+        });
+        
+        if (!response.ok) throw new Error('Failed to approve');
+        
+        card.classList.add('removing');
+        setTimeout(() => card.remove(), 300);
+        
+        showToast('Partner approved successfully!');
+        updateCounts(-1, card.dataset.roles);
+        
+      } catch (error) {
+        console.error(error);
+        showToast('Failed to approve partner', true);
+        btn.disabled = false;
+        btn.textContent = 'Approve';
+      }
+    }
+
+    // Reject partner
+    async function rejectPartner(id) {
+      if (!confirm('Are you sure you want to reject this partner? This will delete their application.')) {
+        return;
+      }
+      
+      const card = document.querySelector(`[data-id="${id}"]`);
+      const btn = card.querySelector('.btn-reject');
+      
+      btn.disabled = true;
+      btn.textContent = 'Rejecting...';
+      
+      try {
+        const response = await fetch('/api/admin/reject-partner', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ partnerId: id })
+        });
+        
+        if (!response.ok) throw new Error('Failed to reject');
+        
+        card.classList.add('removing');
+        setTimeout(() => card.remove(), 300);
+        
+        showToast('Partner rejected');
+        updateCounts(-1, card.dataset.roles);
+        
+      } catch (error) {
+        console.error(error);
+        showToast('Failed to reject partner', true);
+        btn.disabled = false;
+        btn.textContent = 'Reject';
+      }
+    }
+
+    // Update filter counts
+    function updateCounts(delta, rolesJson) {
+      const roles = JSON.parse(rolesJson);
+      
+      // Update "All" count
+      const allTab = document.querySelector('[data-filter="all"] .filter-count');
+      allTab.textContent = parseInt(allTab.textContent) + delta;
+      
+      // Update role-specific counts
+      if (roles.artist) {
+        const tab = document.querySelector('[data-filter="artist"] .filter-count');
+        tab.textContent = parseInt(tab.textContent) + delta;
+      }
+      if (roles.dj) {
+        const tab = document.querySelector('[data-filter="dj"] .filter-count');
+        tab.textContent = parseInt(tab.textContent) + delta;
+      }
+      if (roles.merch) {
+        const tab = document.querySelector('[data-filter="merch"] .filter-count');
+        tab.textContent = parseInt(tab.textContent) + delta;
+      }
+      
+      // Check if empty
+      const remaining = document.querySelectorAll('.partner-card:not(.removing)').length;
+      if (remaining === 0) {
+        document.querySelector('.partners-grid').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🎉</div>
+            <div class="empty-title">All caught up!</div>
+            <p>No pending partner approvals at the moment.</p>
+          </div>
+        `;
+      }
+    }
+
+    // Make functions global
+    window.approvePartner = approvePartner;
+    window.rejectPartner = rejectPartner;
+  </script>
+</body>
+</html>

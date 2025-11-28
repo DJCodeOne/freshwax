@@ -1,0 +1,395 @@
+---
+// /src/pages/artist/merch-sales.astro
+// Merch Supplier Sales View (Read Only)
+// For partners with isMerchSupplier role to view their sales and earnings
+
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+// Get partner from session
+const partnerId = Astro.cookies.get('partnerId')?.value || '';
+let partner = null;
+let sales = [];
+let products = [];
+
+if (partnerId) {
+  try {
+    const partnerDoc = await db.collection('artists').doc(partnerId).get();
+    if (partnerDoc.exists) {
+      partner = { id: partnerDoc.id, ...partnerDoc.data() };
+      
+      // Fetch merch linked to this supplier
+      const merchSnap = await db.collection('merch')
+        .where('supplierId', '==', partnerId)
+        .get();
+      
+      const productIds = merchSnap.docs.map(doc => doc.id);
+      products = merchSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Fetch orders containing this supplier's products
+      // Note: This is simplified - in production you'd have a more efficient query structure
+      const ordersSnap = await db.collection('orders')
+        .where('status', '!=', 'cancelled')
+        .orderBy('status')
+        .orderBy('createdAt', 'desc')
+        .limit(100)
+        .get();
+      
+      // Filter orders to only include items from this supplier
+      ordersSnap.docs.forEach(doc => {
+        const order = doc.data();
+        const supplierItems = (order.items || []).filter(item => 
+          productIds.includes(item.productId) || item.supplierId === partnerId
+        );
+        
+        if (supplierItems.length > 0) {
+          sales.push({
+            id: doc.id,
+            orderDate: order.createdAt?.toDate?.() || new Date(),
+            status: order.status,
+            items: supplierItems,
+            total: supplierItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0)
+          });
+        }
+      });
+    }
+  } catch (e) {
+    console.error('Error fetching data:', e);
+  }
+}
+
+const isLoggedIn = !!partner;
+const isMerchSupplier = partner?.isMerchSupplier === true;
+
+// Calculate stats
+const totalOrders = sales.length;
+const totalRevenue = sales.reduce((sum, s) => sum + s.total, 0);
+const supplierCut = partner?.supplierCut || 70; // Default 70% to supplier
+const totalEarnings = totalRevenue * (supplierCut / 100);
+const pendingOrders = sales.filter(s => s.status === 'pending' || s.status === 'processing').length;
+
+// Format currency
+const formatCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Sales | Fresh Wax</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .back-link {
+      color: #a0a0a0;
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+    
+    .back-link:hover { color: #667eea; }
+    
+    .readonly-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      font-size: 0.875rem;
+      color: #a78bfa;
+    }
+    
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+    
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    
+    .stat-value.green { color: #4ade80; }
+    .stat-value.yellow { color: #fbbf24; }
+    
+    .stat-label {
+      font-size: 0.75rem;
+      color: #888;
+      margin-top: 0.25rem;
+    }
+    
+    .stat-note {
+      font-size: 0.7rem;
+      color: #666;
+      margin-top: 0.25rem;
+    }
+    
+    /* Sales Table */
+    .sales-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .sales-table th {
+      text-align: left;
+      padding: 1rem;
+      background: rgba(255,255,255,0.05);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #888;
+    }
+    
+    .sales-table td {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .sales-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .order-id {
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #888;
+    }
+    
+    .order-items {
+      font-size: 0.875rem;
+    }
+    
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.25rem 0;
+    }
+    
+    .item-name { color: #fff; }
+    .item-qty { color: #888; font-size: 0.8rem; }
+    
+    .order-total {
+      font-weight: 600;
+      color: #4ade80;
+    }
+    
+    .order-earnings {
+      color: #a78bfa;
+      font-size: 0.8rem;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+    
+    .status-pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+    .status-processing { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+    .status-shipped { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
+    .status-delivered, .status-completed { background: rgba(74, 222, 128, 0.2); color: #4ade80; }
+    
+    .order-date {
+      font-size: 0.8rem;
+      color: #888;
+    }
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #888;
+    }
+    
+    /* Unauthorized */
+    .unauthorized {
+      text-align: center;
+      padding: 4rem 2rem;
+    }
+    
+    .unauthorized h2 {
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      .sales-table { display: block; overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    {!isLoggedIn ? (
+      <div class="unauthorized">
+        <h2>Please log in</h2>
+        <p>You need to be logged in to view this page.</p>
+        <a href="/login" class="back-link" style="display: inline-block; margin-top: 1rem;">Go to Login →</a>
+      </div>
+    ) : !isMerchSupplier ? (
+      <div class="unauthorized">
+        <h2>Access Denied</h2>
+        <p>This page is only available to Merch Suppliers.</p>
+        <a href="/artist/dashboard" class="back-link" style="display: inline-block; margin-top: 1rem;">← Back to Dashboard</a>
+      </div>
+    ) : (
+      <>
+        <header>
+          <h1>💰 My Sales</h1>
+          <a href="/artist/dashboard" class="back-link">← Back to Dashboard</a>
+        </header>
+
+        <div class="readonly-banner">
+          👁️ <span>View Only — Sales are processed and paid out by Fresh Wax admin.</span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">{totalOrders}</div>
+            <div class="stat-label">Total Orders</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value yellow">{pendingOrders}</div>
+            <div class="stat-label">Pending</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{formatCurrency(totalRevenue)}</div>
+            <div class="stat-label">Total Revenue</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value green">{formatCurrency(totalEarnings)}</div>
+            <div class="stat-label">Your Earnings</div>
+            <div class="stat-note">{supplierCut}% of sales</div>
+          </div>
+        </div>
+
+        {sales.length === 0 ? (
+          <div class="empty-state">
+            <p>No sales yet. Once customers buy your products, sales will appear here.</p>
+          </div>
+        ) : (
+          <table class="sales-table">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Your Cut</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sales.map(sale => {
+                const yourCut = sale.total * (supplierCut / 100);
+                return (
+                  <tr>
+                    <td>
+                      <span class="order-id">#{sale.id.slice(-8).toUpperCase()}</span>
+                    </td>
+                    <td>
+                      <div class="order-items">
+                        {sale.items.map(item => (
+                          <div class="order-item">
+                            <span class="item-name">{item.name || item.title}</span>
+                            <span class="item-qty">×{item.quantity || 1}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td>
+                      <span class="order-total">{formatCurrency(sale.total)}</span>
+                    </td>
+                    <td>
+                      <span class="order-earnings">{formatCurrency(yourCut)}</span>
+                    </td>
+                    <td>
+                      <span class={`status-badge status-${sale.status}`}>
+                        {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="order-date">
+                        {sale.orderDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </>
+    )}
+  </div>
+</body>
+</html>

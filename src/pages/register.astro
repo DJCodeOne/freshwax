@@ -1,0 +1,957 @@
+---
+// src/pages/register.astro
+// Partner Registration - Artists, Labels, Producers, DJs, Merch Suppliers
+export const prerender = false;
+
+const response = Astro.response;
+response.headers.set('Cache-Control', 'no-store');
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Partner Registration - Fresh Wax</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+</head>
+<body>
+  <div class="split-container">
+    <!-- Left Side - Branding (hidden on mobile) -->
+    <div class="branding-side">
+      <div class="branding-content">
+        <a href="/" class="logo-link">
+          <div class="logo-wrapper">
+            <img src="/logo.webp" alt="Fresh Wax Logo" class="logo-image" />
+          </div>
+        </a>
+        <h2 class="welcome-text">Join Fresh Wax</h2>
+        <p class="tagline">Partner with us to reach drum and bass fans worldwide</p>
+        
+        <div class="features">
+          <div class="feature">
+            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+            </svg>
+            <span>Upload releases & DJ mixes</span>
+          </div>
+          <div class="feature">
+            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            <span>Sell vinyl, digital & merch</span>
+          </div>
+          <div class="feature">
+            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+            <span>Track orders & inventory</span>
+          </div>
+          <div class="feature">
+            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            <span>Secure payments & analytics</span>
+          </div>
+        </div>
+
+        <div class="approval-note">
+          <svg class="note-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>All accounts are reviewed before approval</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Side - Registration Form -->
+    <div class="form-side">
+      <div class="form-container">
+        <!-- Mobile Logo -->
+        <a href="/" class="mobile-logo">
+          <img src="/logo.webp" alt="Fresh Wax" />
+        </a>
+
+        <!-- Registration Form -->
+        <div id="registrationForm">
+          <div class="form-header">
+            <h2>Create Partner Account</h2>
+            <p>Join Fresh Wax to start uploading</p>
+          </div>
+
+          <div class="message error-message" id="errorMessage"></div>
+
+          <form id="registerForm" novalidate>
+            <!-- Role Selection -->
+            <div class="form-group">
+              <label class="role-label">
+                I am a... <span class="required-hint">(select all that apply)</span>
+              </label>
+              <div class="role-checkboxes" id="roleCheckboxes">
+                <label class="role-checkbox" data-role="artist">
+                  <input type="checkbox" name="roles" value="artist">
+                  <span class="checkbox-custom"></span>
+                  <span class="role-text">
+                    <span class="role-title">Artist / Label / Producer</span>
+                    <span class="role-desc">Release music on the store</span>
+                  </span>
+                </label>
+                <label class="role-checkbox" data-role="dj">
+                  <input type="checkbox" name="roles" value="dj">
+                  <span class="checkbox-custom"></span>
+                  <span class="role-text">
+                    <span class="role-title">DJ</span>
+                    <span class="role-desc">Upload mixes & sets</span>
+                  </span>
+                </label>
+                <label class="role-checkbox" data-role="merch">
+                  <input type="checkbox" name="roles" value="merch_supplier">
+                  <span class="checkbox-custom"></span>
+                  <span class="role-text">
+                    <span class="role-title">Merch Supplier</span>
+                    <span class="role-desc">Sell clothing & accessories</span>
+                  </span>
+                </label>
+              </div>
+              <p class="field-error" id="roleError"></p>
+            </div>
+
+            <div class="form-group">
+              <label for="displayName">Display Name</label>
+              <input type="text" id="displayName" name="displayName" required placeholder="Artist, label, DJ or business name">
+              <p class="field-error" id="nameError"></p>
+            </div>
+
+            <div class="form-group">
+              <label for="email">Email Address</label>
+              <input type="email" id="email" name="email" required placeholder="you@example.com">
+              <p class="field-error" id="emailError"></p>
+            </div>
+
+            <div class="form-group">
+              <label for="phoneNumber">Contact Number <span class="optional">(optional)</span></label>
+              <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="Phone or WhatsApp">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="password">Password</label>
+                <div class="password-wrapper">
+                  <input type="password" id="password" name="password" required placeholder="Min. 6 characters" minlength="6">
+                  <button type="button" class="toggle-pw" aria-label="Show password">
+                    <svg class="eye-show" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    <svg class="eye-hide" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                  </button>
+                </div>
+                <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+              </div>
+
+              <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <div class="password-wrapper">
+                  <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Re-enter password">
+                  <button type="button" class="toggle-pw" aria-label="Show password">
+                    <svg class="eye-show" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    <svg class="eye-hide" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                  </button>
+                </div>
+                <p class="field-error" id="passwordError"></p>
+              </div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+              <span class="btn-text">Create Account</span>
+              <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+              <svg class="btn-spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"></circle><path fill="currentColor" opacity="0.75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            </button>
+          </form>
+
+          <div class="form-footer">
+            <p>Already have an account? <a href="/login">Sign in</a></p>
+            <span class="divider"></span>
+            <p>Looking to buy music? <a href="/customer/register">Customer Registration →</a></p>
+          </div>
+          
+          <a href="/" class="back-link">← Back to Store</a>
+        </div>
+
+        <!-- Success Message -->
+        <div id="successMessage" class="success-container">
+          <div class="success-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <h2>Registration Successful!</h2>
+          <p>Your account is <strong>pending approval</strong>. We'll email you once approved.</p>
+          <div class="success-steps">
+            <div class="step"><span>1</span> Our team reviews your application</div>
+            <div class="step"><span>2</span> You'll receive an approval email</div>
+            <div class="step"><span>3</span> Log in and start uploading</div>
+          </div>
+          <a href="/" class="success-btn">Return to Store →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+    background: #000;
+  }
+
+  .split-container {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* Left Branding */
+  .branding-side {
+    flex: 1;
+    background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    color: #fff;
+    position: relative;
+  }
+
+  .branding-side::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: 
+      radial-gradient(circle at 20% 80%, rgba(220, 38, 38, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(220, 38, 38, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .branding-content {
+    max-width: 420px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .logo-wrapper {
+    background: #fff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    display: inline-block;
+    margin-bottom: 1.5rem;
+  }
+
+  .logo-image { max-width: 140px; display: block; }
+
+  .logo-link {
+    display: inline-block;
+    transition: opacity 0.2s;
+  }
+  .logo-link:hover { opacity: 0.9; }
+
+  .welcome-text {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+  }
+
+  .tagline {
+    font-size: 1rem;
+    opacity: 0.85;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+  }
+
+  .features {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .feature {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+    color: #e5e5e5;
+  }
+
+  .feature-icon {
+    width: 20px;
+    height: 20px;
+    color: #dc2626;
+    flex-shrink: 0;
+  }
+
+  .approval-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #fcd34d;
+  }
+
+  .note-icon {
+    width: 18px;
+    height: 18px;
+    color: #fbbf24;
+    flex-shrink: 0;
+  }
+
+  /* Right Form Side */
+  .form-side {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: #fff;
+    overflow-y: auto;
+  }
+
+  .form-container {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .mobile-logo {
+    display: none;
+    margin-bottom: 1.5rem;
+  }
+
+  .mobile-logo img {
+    height: 40px;
+  }
+
+  .form-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-header h2 {
+    font-size: 1.5rem;
+    color: #000;
+    margin-bottom: 0.25rem;
+    font-weight: 700;
+  }
+
+  .form-header p {
+    color: #6b7280;
+    font-size: 0.9rem;
+  }
+
+  /* Form Elements */
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 0.375rem;
+    color: #1f2937;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  .role-label {
+    margin-bottom: 0.625rem;
+  }
+
+  .required-hint, .optional {
+    font-weight: 400;
+    color: #9ca3af;
+    font-size: 0.8rem;
+  }
+
+  input[type="email"],
+  input[type="password"],
+  input[type="text"],
+  input[type="tel"] {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: #fff;
+    color: #1a202c;
+  }
+
+  input:focus {
+    outline: none;
+    border-color: #000;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+  }
+
+  input::placeholder { color: #9ca3af; }
+
+  input.error { border-color: #ef4444; }
+
+  .field-error {
+    font-size: 0.75rem;
+    color: #ef4444;
+    margin-top: 0.25rem;
+    min-height: 1rem;
+  }
+
+  /* Role Checkboxes */
+  .role-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .role-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .role-checkbox:hover {
+    border-color: #000;
+    background: #fafafa;
+  }
+
+  .role-checkbox.selected {
+    border-color: #000;
+    background: #f5f5f5;
+  }
+
+  .role-checkbox.selected[data-role="dj"] {
+    border-color: #3b82f6;
+    background: #eff6ff;
+  }
+
+  .role-checkbox.selected[data-role="merch"] {
+    border-color: #10b981;
+    background: #ecfdf5;
+  }
+
+  .role-checkbox input { display: none; }
+
+  .checkbox-custom {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #d1d5db;
+    border-radius: 4px;
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.15s;
+    margin-top: 1px;
+  }
+
+  .role-checkbox.selected .checkbox-custom {
+    background: #000;
+    border-color: #000;
+  }
+
+  .role-checkbox.selected[data-role="dj"] .checkbox-custom {
+    background: #3b82f6;
+    border-color: #3b82f6;
+  }
+
+  .role-checkbox.selected[data-role="merch"] .checkbox-custom {
+    background: #10b981;
+    border-color: #10b981;
+  }
+
+  .checkbox-custom::after {
+    content: '';
+    position: absolute;
+    display: none;
+    left: 5px;
+    top: 1px;
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .role-checkbox.selected .checkbox-custom::after {
+    display: block;
+  }
+
+  .role-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .role-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #374151;
+  }
+
+  .role-checkbox.selected .role-title {
+    color: #000;
+  }
+
+  .role-desc {
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  /* Password */
+  .password-wrapper {
+    position: relative;
+  }
+
+  .password-wrapper input {
+    padding-right: 2.5rem;
+  }
+
+  .toggle-pw {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    color: #9ca3af;
+    display: flex;
+  }
+
+  .toggle-pw:hover { color: #4b5563; }
+  .toggle-pw svg { width: 18px; height: 18px; }
+  .toggle-pw .eye-hide { display: none; }
+  .toggle-pw.showing .eye-show { display: none; }
+  .toggle-pw.showing .eye-hide { display: block; }
+
+  .strength-bar {
+    height: 3px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    margin-top: 0.375rem;
+    overflow: hidden;
+  }
+
+  .strength-fill {
+    height: 100%;
+    width: 0;
+    transition: all 0.3s;
+    border-radius: 2px;
+  }
+
+  .strength-fill.weak { width: 25%; background: #ef4444; }
+  .strength-fill.fair { width: 50%; background: #f59e0b; }
+  .strength-fill.good { width: 75%; background: #10b981; }
+  .strength-fill.strong { width: 100%; background: #059669; }
+
+  /* Submit Button */
+  .submit-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background: #000;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .submit-btn:hover:not(:disabled) {
+    background: #1f2937;
+    transform: translateY(-1px);
+  }
+
+  .submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .submit-btn .btn-icon { width: 18px; height: 18px; }
+  .submit-btn .btn-spinner { 
+    width: 18px; 
+    height: 18px; 
+    animation: spin 1s linear infinite;
+    display: none;
+  }
+
+  .submit-btn.loading .btn-icon { display: none; }
+  .submit-btn.loading .btn-spinner { display: block; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Error Message */
+  .message {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: none;
+  }
+
+  .error-message {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+
+  .error-message.show { display: block; }
+
+  /* Footer */
+  .form-footer {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #6b7280;
+  }
+
+  .form-footer a {
+    color: #dc2626;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .form-footer a:hover {
+    text-decoration: underline;
+  }
+
+  .form-footer .divider {
+    display: block;
+    height: 1px;
+    background: #e5e7eb;
+    margin: 1rem 0;
+  }
+
+  .back-link {
+    display: block;
+    text-align: center;
+    margin-top: 1rem;
+    color: #6b7280;
+    text-decoration: none;
+    font-size: 0.85rem;
+  }
+
+  .back-link:hover { color: #000; }
+
+  /* Success */
+  .success-container {
+    text-align: center;
+    display: none;
+  }
+
+  .success-container.show { display: block; }
+
+  .success-icon {
+    width: 64px;
+    height: 64px;
+    background: #dcfce7;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+  }
+
+  .success-icon svg {
+    width: 32px;
+    height: 32px;
+    color: #16a34a;
+  }
+
+  .success-container h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .success-container > p {
+    color: #4b5563;
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .success-steps {
+    background: #f9fafb;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+    text-align: left;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    font-size: 0.85rem;
+    color: #4b5563;
+  }
+
+  .step:not(:last-child) {
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .step span:first-child {
+    width: 20px;
+    height: 20px;
+    background: #000;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .success-btn {
+    display: inline-block;
+    padding: 0.625rem 1.25rem;
+    background: #000;
+    color: #fff;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+  }
+
+  .success-btn:hover { background: #1f2937; }
+
+  /* Tablet */
+  @media (max-width: 1024px) {
+    .branding-side { padding: 2rem 1.5rem; }
+    .branding-content { max-width: 360px; }
+    .welcome-text { font-size: 1.75rem; }
+  }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    .split-container { flex-direction: column; }
+    .branding-side { display: none; }
+    .mobile-logo { display: block; }
+    .form-side { padding: 1.5rem; }
+    .form-row { grid-template-columns: 1fr; gap: 0; }
+  }
+</style>
+
+<script type="module">
+  (function() {
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      authDomain: "freshwax-store.firebaseapp.com",
+      projectId: "freshwax-store",
+      storageBucket: "freshwax-store.firebasestorage.app",
+      messagingSenderId: "675435782973",
+      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+    };
+
+    let firebase = null;
+
+    // Lazy load Firebase only when form is submitted
+    async function getFirebase() {
+      if (firebase) return firebase;
+      
+      const [{ initializeApp }, { getAuth, createUserWithEmailAndPassword, signOut }, { getFirestore, doc, setDoc }] = await Promise.all([
+        import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js'),
+        import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'),
+        import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js')
+      ]);
+      
+      const app = initializeApp(firebaseConfig);
+      firebase = {
+        auth: getAuth(app),
+        db: getFirestore(app),
+        createUserWithEmailAndPassword,
+        signOut,
+        doc,
+        setDoc
+      };
+      
+      return firebase;
+    }
+
+    // DOM helpers
+    const $ = id => document.getElementById(id);
+    const form = $('registerForm');
+    const submitBtn = $('submitBtn');
+    const errorMsg = $('errorMessage');
+    const successDiv = $('successMessage');
+    const regDiv = $('registrationForm');
+    const strengthFill = $('strengthFill');
+
+    // Role checkbox handling with JS (better browser support than :has())
+    document.querySelectorAll('.role-checkbox').forEach(label => {
+      const input = label.querySelector('input');
+      input.addEventListener('change', () => {
+        label.classList.toggle('selected', input.checked);
+        $('roleError').textContent = '';
+      });
+    });
+
+    // Password toggle
+    document.querySelectorAll('.toggle-pw').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = btn.previousElementSibling;
+        const isPassword = input.type === 'password';
+        input.type = isPassword ? 'text' : 'password';
+        btn.classList.toggle('showing', isPassword);
+      });
+    });
+
+    // Password strength indicator
+    $('password').addEventListener('input', e => {
+      const pw = e.target.value;
+      let strength = 0;
+      if (pw.length >= 6) strength++;
+      if (pw.length >= 8) strength++;
+      if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) strength++;
+      if (/[0-9]/.test(pw)) strength++;
+      if (/[^a-zA-Z0-9]/.test(pw)) strength++;
+      
+      strengthFill.className = 'strength-fill';
+      if (pw.length > 0) {
+        strengthFill.classList.add(['weak', 'weak', 'fair', 'good', 'strong'][Math.min(strength, 4)]);
+      }
+    });
+
+    // Helper functions
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.classList.add('show');
+    }
+
+    function clearErrors() {
+      errorMsg.classList.remove('show');
+      ['roleError', 'nameError', 'emailError', 'passwordError'].forEach(id => {
+        $(id).textContent = '';
+      });
+    }
+
+    function setLoading(loading) {
+      submitBtn.disabled = loading;
+      submitBtn.classList.toggle('loading', loading);
+      submitBtn.querySelector('.btn-text').textContent = loading ? 'Creating...' : 'Create Account';
+    }
+
+    function getSelectedRoles() {
+      return Array.from(document.querySelectorAll('input[name="roles"]:checked')).map(c => c.value);
+    }
+
+    // Form submission
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      clearErrors();
+
+      const roles = getSelectedRoles();
+      const name = $('displayName').value.trim();
+      const email = $('email').value.trim();
+      const phone = $('phoneNumber').value.trim();
+      const password = $('password').value;
+      const confirm = $('confirmPassword').value;
+
+      // Validation
+      let valid = true;
+
+      if (roles.length === 0) {
+        $('roleError').textContent = 'Please select at least one role';
+        valid = false;
+      }
+
+      if (!name) {
+        $('nameError').textContent = 'Display name is required';
+        valid = false;
+      }
+
+      if (!email) {
+        $('emailError').textContent = 'Email is required';
+        valid = false;
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        $('emailError').textContent = 'Please enter a valid email';
+        valid = false;
+      }
+
+      if (password.length < 6) {
+        $('passwordError').textContent = 'Password must be at least 6 characters';
+        valid = false;
+      } else if (password !== confirm) {
+        $('passwordError').textContent = 'Passwords do not match';
+        valid = false;
+      }
+
+      if (!valid) return;
+
+      setLoading(true);
+
+      try {
+        const fb = await getFirebase();
+        
+        // Create user - 1 Firebase Auth API call
+        const { user } = await fb.createUserWithEmailAndPassword(fb.auth, email, password);
+
+        // Create artist document - 1 Firestore write
+        await fb.setDoc(fb.doc(fb.db, 'artists', user.uid), {
+          uid: user.uid,
+          displayName: name,
+          email,
+          phoneNumber: phone,
+          isArtist: roles.includes('artist'),
+          isDJ: roles.includes('dj'),
+          isMerchSupplier: roles.includes('merch_supplier'),
+          roles,
+          approved: false,
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        });
+
+        // Sign out - user must wait for approval
+        await fb.signOut(fb.auth);
+
+        // Show success state
+        regDiv.style.display = 'none';
+        successDiv.classList.add('show');
+
+      } catch (err) {
+        setLoading(false);
+        
+        const messages = {
+          'auth/email-already-in-use': 'An account with this email already exists',
+          'auth/invalid-email': 'Please enter a valid email address',
+          'auth/weak-password': 'Password is too weak',
+          'auth/network-request-failed': 'Network error. Check your connection'
+        };
+        
+        showError(messages[err.code] || 'Registration failed. Please try again.');
+      }
+    });
+
+    // Clear field errors on input
+    $('displayName').addEventListener('input', () => $('nameError').textContent = '');
+    $('email').addEventListener('input', () => $('emailError').textContent = '');
+    $('password').addEventListener('input', () => $('passwordError').textContent = '');
+    $('confirmPassword').addEventListener('input', () => $('passwordError').textContent = '');
+  })();
+</script>

@@ -1,0 +1,562 @@
+---
+// src/pages/admin/merch/manage.astro
+// Comprehensive merch inventory management dashboard
+---
+
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Merch - Fresh Wax Admin</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #000; }
+    
+    .header { background: #000; color: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; font-weight: 900; text-transform: uppercase; }
+    .header-nav { display: flex; gap: 15px; }
+    .header-nav a { color: #fff; text-decoration: none; padding: 8px 16px; border: 2px solid #fff; font-weight: 700; font-size: 12px; text-transform: uppercase; }
+    .header-nav a:hover { background: #fff; color: #000; }
+    .header-nav a.primary { background: #fff; color: #000; }
+    .header-nav a.primary:hover { background: #000; color: #fff; border-color: #fff; }
+    
+    .container { max-width: 1600px; margin: 0 auto; padding: 30px; }
+    
+    /* Stats Cards */
+    .stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; margin-bottom: 30px; }
+    .stat-card { background: #fff; border: 3px solid #000; padding: 20px; }
+    .stat-card .value { font-size: 32px; font-weight: 900; }
+    .stat-card .label { font-size: 12px; color: #666; text-transform: uppercase; margin-top: 5px; }
+    .stat-card.alert { background: #fff3cd; border-color: #ff9900; }
+    .stat-card.danger { background: #f8d7da; border-color: #ff0000; }
+    
+    /* Filters */
+    .filters { background: #fff; border: 3px solid #000; padding: 20px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+    .filter-group { display: flex; align-items: center; gap: 10px; }
+    .filter-group label { font-weight: 700; font-size: 12px; text-transform: uppercase; }
+    .filter-group select, .filter-group input { padding: 10px 15px; border: 2px solid #000; font-size: 14px; }
+    .filter-group input[type="text"] { width: 200px; }
+    .filter-btn { padding: 10px 20px; background: #000; color: #fff; border: 2px solid #000; font-weight: 700; cursor: pointer; font-size: 12px; text-transform: uppercase; }
+    .filter-btn:hover { background: #fff; color: #000; }
+    .filter-btn.clear { background: #fff; color: #000; }
+    
+    /* Product Table */
+    .products-table { width: 100%; background: #fff; border-collapse: collapse; border: 3px solid #000; }
+    .products-table th { background: #000; color: #fff; padding: 15px; text-align: left; font-size: 12px; text-transform: uppercase; position: sticky; top: 60px; }
+    .products-table td { padding: 15px; border-bottom: 2px solid #eee; vertical-align: middle; }
+    .products-table tr:hover { background: #f9f9f9; }
+    
+    .product-cell { display: flex; align-items: center; gap: 15px; }
+    .product-cell img { width: 60px; height: 60px; object-fit: cover; border: 2px solid #000; }
+    .product-info h3 { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+    .product-info .sku { font-family: monospace; font-size: 11px; color: #666; }
+    .product-info .category { font-size: 11px; color: #999; }
+    
+    .stock-badge { padding: 5px 10px; font-size: 12px; font-weight: 700; display: inline-block; }
+    .stock-badge.in-stock { background: #d4edda; color: #155724; }
+    .stock-badge.low-stock { background: #fff3cd; color: #856404; }
+    .stock-badge.out-of-stock { background: #f8d7da; color: #721c24; }
+    
+    .price-cell .retail { font-weight: 700; font-size: 16px; }
+    .price-cell .sale { color: #ff0000; }
+    .price-cell .cost { font-size: 11px; color: #666; }
+    
+    .actions-cell { display: flex; gap: 8px; }
+    .action-btn { padding: 8px 12px; border: 2px solid #000; background: #fff; cursor: pointer; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .action-btn:hover { background: #000; color: #fff; }
+    .action-btn.delete { border-color: #ff0000; color: #ff0000; }
+    .action-btn.delete:hover { background: #ff0000; color: #fff; }
+    
+    /* Stock Quick Edit */
+    .stock-edit { display: flex; align-items: center; gap: 5px; }
+    .stock-edit input { width: 60px; padding: 5px; border: 2px solid #000; text-align: center; font-weight: 700; }
+    .stock-edit button { width: 30px; height: 30px; border: 2px solid #000; background: #fff; cursor: pointer; font-weight: 900; font-size: 16px; }
+    .stock-edit button:hover { background: #000; color: #fff; }
+    
+    /* Modal */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; overflow-y: auto; padding: 30px; }
+    .modal.active { display: flex; align-items: flex-start; justify-content: center; }
+    .modal-content { background: #fff; border: 3px solid #000; max-width: 800px; width: 100%; margin: 50px 0; }
+    .modal-header { background: #000; color: #fff; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h2 { font-size: 18px; font-weight: 900; text-transform: uppercase; }
+    .modal-close { background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; font-weight: 900; }
+    .modal-body { padding: 25px; }
+    
+    /* Variant Stock Modal */
+    .variant-list { max-height: 400px; overflow-y: auto; }
+    .variant-row { display: flex; align-items: center; justify-content: space-between; padding: 15px; border-bottom: 2px solid #eee; }
+    .variant-row:last-child { border-bottom: none; }
+    .variant-info { display: flex; align-items: center; gap: 10px; }
+    .variant-info .swatch { width: 24px; height: 24px; border: 2px solid #000; }
+    .variant-info .details { font-weight: 700; }
+    .variant-info .sku { font-family: monospace; font-size: 11px; color: #666; }
+    .variant-stock { display: flex; align-items: center; gap: 10px; }
+    .variant-stock input { width: 80px; padding: 10px; border: 2px solid #000; text-align: center; font-weight: 700; font-size: 16px; }
+    .variant-stock .sold { font-size: 11px; color: #666; }
+    
+    .modal-actions { display: flex; gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 2px solid #000; }
+    .modal-actions button { flex: 1; padding: 15px; border: 3px solid #000; font-weight: 900; cursor: pointer; font-size: 14px; text-transform: uppercase; }
+    .modal-actions .save-btn { background: #000; color: #fff; }
+    .modal-actions .save-btn:hover { background: #fff; color: #000; }
+    .modal-actions .cancel-btn { background: #fff; color: #000; }
+    .modal-actions .cancel-btn:hover { background: #f5f5f5; }
+    
+    /* Toast */
+    .toast { position: fixed; bottom: 30px; right: 30px; padding: 20px 30px; background: #000; color: #fff; border: 3px solid #000; font-weight: 700; box-shadow: 8px 8px 0 rgba(0,0,0,0.2); z-index: 9999; transform: translateY(200px); opacity: 0; transition: all 0.3s; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: #00aa00; }
+    .toast.error { border-color: #ff0000; }
+    
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .stats-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .filters { flex-direction: column; align-items: stretch; }
+      .products-table { font-size: 12px; }
+      .products-table th, .products-table td { padding: 10px; }
+      .product-cell img { width: 40px; height: 40px; }
+    }
+
+    .loading { text-align: center; padding: 60px; color: #666; }
+    .empty-state { text-align: center; padding: 60px; background: #fff; border: 3px solid #000; }
+    .empty-state h3 { font-size: 24px; margin-bottom: 10px; }
+    .empty-state p { color: #666; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>📦 Manage Merch</h1>
+    <nav class="header-nav">
+      <a href="/admin/merch/upload" class="primary">+ Add Product</a>
+      <a href="/admin/merch/suppliers">Suppliers</a>
+      <a href="/merch" target="_blank">View Store</a>
+      <a href="/admin">Admin Home</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="value" id="statTotal">-</div>
+        <div class="label">Total Products</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="statInStock">-</div>
+        <div class="label">In Stock</div>
+      </div>
+      <div class="stat-card alert" id="statLowStockCard">
+        <div class="value" id="statLowStock">-</div>
+        <div class="label">Low Stock</div>
+      </div>
+      <div class="stat-card danger" id="statOutCard">
+        <div class="value" id="statOutOfStock">-</div>
+        <div class="label">Out of Stock</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="statFeatured">-</div>
+        <div class="label">Featured</div>
+      </div>
+      <div class="stat-card">
+        <div class="value" id="statOnSale">-</div>
+        <div class="label">On Sale</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <div class="filter-group">
+        <label>Search:</label>
+        <input type="text" id="filterSearch" placeholder="Name, SKU..." />
+      </div>
+      <div class="filter-group">
+        <label>Type:</label>
+        <select id="filterType">
+          <option value="">All Types</option>
+          <option value="tshirt">T-Shirt</option>
+          <option value="hoodie">Hoodie</option>
+          <option value="cap">Cap</option>
+          <option value="mug">Mug</option>
+          <option value="ashtray">Ashtray</option>
+          <option value="grinder">Grinder</option>
+          <option value="keyring">Keyring</option>
+          <option value="sticker">Sticker</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Category:</label>
+        <select id="filterCategory">
+          <option value="">All Categories</option>
+          <option value="freshwax">Fresh Wax</option>
+          <option value="label">Labels</option>
+          <option value="soundsystem">Sound Systems</option>
+          <option value="dj">DJs</option>
+          <option value="crew">Crews</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Stock:</label>
+        <select id="filterStock">
+          <option value="">All</option>
+          <option value="instock">In Stock</option>
+          <option value="low">Low Stock</option>
+          <option value="out">Out of Stock</option>
+        </select>
+      </div>
+      <button class="filter-btn" onclick="applyFilters()">Filter</button>
+      <button class="filter-btn clear" onclick="clearFilters()">Clear</button>
+    </div>
+
+    <!-- Products Table -->
+    <div id="productsContainer">
+      <div class="loading">Loading products...</div>
+    </div>
+  </div>
+
+  <!-- Stock Edit Modal -->
+  <div class="modal" id="stockModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Stock - <span id="modalProductName"></span></h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="variant-list" id="variantList"></div>
+        <div class="modal-actions">
+          <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+          <button class="save-btn" onclick="saveStockChanges()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let allProducts = [];
+    let filteredProducts = [];
+    let currentEditProduct = null;
+
+    // Load products on page load
+    document.addEventListener('DOMContentLoaded', loadProducts);
+
+    async function loadProducts() {
+      try {
+        const response = await fetch('/api/get-merch?published=all');
+        const data = await response.json();
+        
+        if (data.success) {
+          allProducts = data.products;
+          filteredProducts = [...allProducts];
+          updateStats(data.stats);
+          renderProducts();
+        } else {
+          throw new Error(data.error || 'Failed to load products');
+        }
+      } catch (error) {
+        console.error('Error loading products:', error);
+        document.getElementById('productsContainer').innerHTML = `
+          <div class="empty-state">
+            <h3>Error Loading Products</h3>
+            <p>${error.message}</p>
+            <button class="filter-btn" onclick="loadProducts()">Retry</button>
+          </div>
+        `;
+      }
+    }
+
+    function updateStats(stats) {
+      document.getElementById('statTotal').textContent = stats.total || 0;
+      document.getElementById('statInStock').textContent = stats.inStock || 0;
+      document.getElementById('statLowStock').textContent = stats.lowStock || 0;
+      document.getElementById('statOutOfStock').textContent = stats.outOfStock || 0;
+      document.getElementById('statFeatured').textContent = stats.featured || 0;
+      document.getElementById('statOnSale').textContent = stats.onSale || 0;
+      
+      // Highlight alerts
+      document.getElementById('statLowStockCard').style.display = stats.lowStock > 0 ? 'block' : 'block';
+      document.getElementById('statOutCard').style.display = stats.outOfStock > 0 ? 'block' : 'block';
+    }
+
+    function renderProducts() {
+      const container = document.getElementById('productsContainer');
+      
+      if (filteredProducts.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <h3>No Products Found</h3>
+            <p>Try adjusting your filters or add a new product.</p>
+            <a href="/admin/merch/upload" class="filter-btn" style="display: inline-block; text-decoration: none; margin-top: 10px;">+ Add Product</a>
+          </div>
+        `;
+        return;
+      }
+      
+      const rows = filteredProducts.map(p => {
+        const stockClass = p.isOutOfStock ? 'out-of-stock' : (p.isLowStock ? 'low-stock' : 'in-stock');
+        const stockText = p.isOutOfStock ? 'Out of Stock' : (p.isLowStock ? 'Low Stock' : 'In Stock');
+        
+        return `
+          <tr data-id="${p.id}">
+            <td>
+              <div class="product-cell">
+                <img src="${p.primaryImage || '/placeholder.jpg'}" alt="${p.name}" />
+                <div class="product-info">
+                  <h3>${p.name}</h3>
+                  <div class="sku">${p.sku}</div>
+                  <div class="category">${p.categoryName} • ${p.productTypeName}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="price-cell">
+                ${p.onSale ? `<div class="retail sale">£${p.salePrice.toFixed(2)}</div>` : `<div class="retail">£${p.retailPrice.toFixed(2)}</div>`}
+                ${p.onSale ? `<div class="cost" style="text-decoration: line-through;">£${p.retailPrice.toFixed(2)}</div>` : ''}
+                ${p.costPrice ? `<div class="cost">Cost: £${p.costPrice.toFixed(2)}</div>` : ''}
+              </div>
+            </td>
+            <td>
+              <span class="stock-badge ${stockClass}">${p.totalStock} units</span>
+              <div style="font-size: 11px; color: #666; margin-top: 3px;">${stockText}</div>
+            </td>
+            <td>
+              ${p.supplierName || 'Fresh Wax'}
+              ${p.supplierCut ? `<div style="font-size: 11px; color: #666;">${p.supplierCut}% cut</div>` : ''}
+            </td>
+            <td>
+              <div class="actions-cell">
+                <button class="action-btn" onclick="openStockModal('${p.id}')">Stock</button>
+                <button class="action-btn" onclick="editProduct('${p.id}')">Edit</button>
+                <button class="action-btn" onclick="toggleFeatured('${p.id}', ${!p.featured})">${p.featured ? '★' : '☆'}</button>
+                <button class="action-btn delete" onclick="deleteProduct('${p.id}')">Delete</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      container.innerHTML = `
+        <table class="products-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Price</th>
+              <th>Stock</th>
+              <th>Supplier</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function applyFilters() {
+      const search = document.getElementById('filterSearch').value.toLowerCase();
+      const type = document.getElementById('filterType').value;
+      const category = document.getElementById('filterCategory').value;
+      const stock = document.getElementById('filterStock').value;
+      
+      filteredProducts = allProducts.filter(p => {
+        // Search
+        if (search && !p.name.toLowerCase().includes(search) && !p.sku.toLowerCase().includes(search)) {
+          return false;
+        }
+        
+        // Type
+        if (type && p.productType !== type) return false;
+        
+        // Category
+        if (category && p.category !== category) return false;
+        
+        // Stock
+        if (stock === 'instock' && p.totalStock <= 0) return false;
+        if (stock === 'low' && !p.isLowStock) return false;
+        if (stock === 'out' && !p.isOutOfStock) return false;
+        
+        return true;
+      });
+      
+      renderProducts();
+    }
+
+    function clearFilters() {
+      document.getElementById('filterSearch').value = '';
+      document.getElementById('filterType').value = '';
+      document.getElementById('filterCategory').value = '';
+      document.getElementById('filterStock').value = '';
+      filteredProducts = [...allProducts];
+      renderProducts();
+    }
+
+    // Search on enter
+    document.getElementById('filterSearch').addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') applyFilters();
+    });
+
+    function openStockModal(productId) {
+      const product = allProducts.find(p => p.id === productId);
+      if (!product) return;
+      
+      currentEditProduct = product;
+      document.getElementById('modalProductName').textContent = product.name;
+      
+      const variantList = document.getElementById('variantList');
+      const variants = product.variantStock || {};
+      
+      let html = '';
+      
+      Object.entries(variants).forEach(([key, v]) => {
+        const label = v.size && v.color ? `${v.size} - ${v.color}` : 
+                     v.size ? v.size : 
+                     v.color ? v.color : 'Default';
+        
+        html += `
+          <div class="variant-row" data-key="${key}">
+            <div class="variant-info">
+              ${v.colorHex ? `<div class="swatch" style="background: ${v.colorHex};"></div>` : ''}
+              <div>
+                <div class="details">${label}</div>
+                <div class="sku">${v.sku || key}</div>
+              </div>
+            </div>
+            <div class="variant-stock">
+              <input type="number" class="variant-stock-input" data-key="${key}" value="${v.stock || 0}" min="0" />
+              <div class="sold">Sold: ${v.sold || 0}</div>
+            </div>
+          </div>
+        `;
+      });
+      
+      variantList.innerHTML = html || '<p style="padding: 20px; color: #666;">No variants configured</p>';
+      
+      document.getElementById('stockModal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('stockModal').classList.remove('active');
+      currentEditProduct = null;
+    }
+
+    async function saveStockChanges() {
+      if (!currentEditProduct) return;
+      
+      const inputs = document.querySelectorAll('#variantList .variant-stock-input');
+      const updates = [];
+      
+      inputs.forEach(input => {
+        const key = input.dataset.key;
+        const newStock = parseInt(input.value) || 0;
+        const currentStock = currentEditProduct.variantStock[key]?.stock || 0;
+        
+        if (newStock !== currentStock) {
+          const diff = newStock - currentStock;
+          updates.push({
+            productId: currentEditProduct.id,
+            variantKey: key,
+            operation: 'adjust',
+            quantity: diff,
+            notes: 'Manual stock adjustment from admin'
+          });
+        }
+      });
+      
+      if (updates.length === 0) {
+        showToast('No changes to save', 'info');
+        closeModal();
+        return;
+      }
+      
+      try {
+        for (const update of updates) {
+          const response = await fetch('/api/update-stock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(update)
+          });
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to update stock');
+          }
+        }
+        
+        showToast('Stock updated successfully', 'success');
+        closeModal();
+        loadProducts();
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+
+    function editProduct(productId) {
+      window.location.href = `/admin/merch/edit?id=${productId}`;
+    }
+
+    async function toggleFeatured(productId, featured) {
+      try {
+        const formData = new FormData();
+        formData.append('productId', productId);
+        formData.append('featured', featured.toString());
+        
+        const response = await fetch('/api/update-merch', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) throw new Error('Failed to update');
+        
+        showToast(featured ? 'Product featured' : 'Product unfeatured', 'success');
+        loadProducts();
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+
+    async function deleteProduct(productId) {
+      const product = allProducts.find(p => p.id === productId);
+      if (!product) return;
+      
+      if (!confirm(`Are you sure you want to delete "${product.name}"?\n\nThis action cannot be undone.`)) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/delete-merch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Failed to delete');
+        }
+        
+        showToast('Product deleted', 'success');
+        loadProducts();
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // Close modal on background click
+    document.getElementById('stockModal').addEventListener('click', (e) => {
+      if (e.target.id === 'stockModal') closeModal();
+    });
+  </script>
+</body>
+</html>

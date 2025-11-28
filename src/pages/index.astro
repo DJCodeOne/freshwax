@@ -1,0 +1,160 @@
+---
+// src/pages/index.astro
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import ReleasePlate from '../components/ReleasePlate.astro';
+
+import { getReleasesForPage } from '../lib/releases';
+
+// Get the 20 most recent published releases for homepage from Firebase
+const featuredReleases = await getReleasesForPage(20);
+---
+
+<Layout title="Fresh Wax - Jungle & Drum and Bass">
+  <Header />
+  
+  <main style="min-height: 100vh; background: #000000; position: relative;">
+
+    <!-- Welcome Hero Section -->
+    <section style="background: radial-gradient(ellipse at center, #000000 0%, #1a1a1a 50%, #2d2d2d 100%); color: white; padding: 5rem 0; position: relative; overflow: hidden; box-shadow: inset 0 -2px 40px rgba(220, 38, 38, 0.1);">
+      
+      <!-- Grid overlay -->
+      <div style="position: absolute; inset: 0; background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px); background-size: 50px 50px;"></div>
+      
+      <div style="max-width: 80rem; margin: 0 auto; padding: 0 1.5rem; text-align: center; position: relative; z-index: 10;">
+        <div class="hero-content" style="animation: fadeInUp 1.2s ease-out;">
+          <h1 style="font-family: 'Space Grotesk', sans-serif; font-size: 5.5rem; font-weight: 900; margin-bottom: 0.5rem; letter-spacing: -0.02em; text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 80px rgba(220, 38, 38, 0.2); line-height: 0.95; text-transform: uppercase;">
+            FRESH WAX
+          </h1>
+          <p style="font-size: 1.25rem; color: #f9fafb; font-weight: 300; letter-spacing: 0.3em; margin-bottom: 2.5rem; text-transform: uppercase; opacity: 0.9;">
+            Jungle & Drum and Bass
+          </p>
+          <div class="glass-panel" style="display: inline-flex; align-items: center; gap: 1.5rem; padding: 16px 40px; background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 100px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 0 80px rgba(220, 38, 38, 0.1); margin-bottom: 3rem;">
+            <span style="font-size: 0.95rem; color: #ffffff; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">Vinyl</span>
+            <span style="color: rgba(220, 38, 38, 1); font-size: 0.75rem;">●</span>
+            <span style="font-size: 0.95rem; color: #ffffff; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">Digital</span>
+            <span style="color: rgba(220, 38, 38, 1); font-size: 0.75rem;">●</span>
+            <span style="font-size: 0.95rem; color: #ffffff; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">DJ Mixes</span>
+            <span style="color: rgba(220, 38, 38, 1); font-size: 0.75rem;">●</span>
+            <span style="font-size: 0.95rem; color: #ffffff; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">Merch</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 1rem;">
+            <div style="height: 2px; width: 3rem; background: linear-gradient(to right, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
+            <div style="position: relative; height: 3px; width: 4rem; background: rgba(220, 38, 38, 0.2); border-radius: 2px; overflow: hidden;">
+              <div style="position: absolute; top: 0; height: 100%; width: 100%; background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.4) 20%, #dc2626 50%, rgba(220, 38, 38, 0.4) 80%, transparent); border-radius: 2px; animation: kittScanner 2.6s ease-in-out infinite; box-shadow: 0 0 20px rgba(220, 38, 38, 0.8), 0 0 40px rgba(220, 38, 38, 0.6);"></div>
+            </div>
+            <div style="height: 2px; width: 3rem; background: linear-gradient(to left, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Releases Section -->
+    <section style="max-width: 72rem; margin: 0 auto; padding: 3rem 1.5rem;">
+      <!-- Header Container -->
+      <div style="background: linear-gradient(to bottom, #1f2937 0%, #374151 100%); backdrop-filter: blur(20px); border-radius: 1rem; padding: 2.5rem 2rem; margin-bottom: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); border: 2px solid rgba(255, 255, 255, 0.1); position: relative; overflow: hidden;">
+        
+        <!-- Background Pattern -->
+        <div style="position: absolute; inset: 0; opacity: 0.15; pointer-events: none;">
+          <div style="position: absolute; inset: 0; background-image: linear-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px); background-size: 40px 40px;"></div>
+        </div>
+        
+        <div style="text-align: center; position: relative; z-index: 1;">
+          <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 2.25rem; font-weight: 900; color: #ffffff; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5); margin: 0 0 0.75rem 0;">
+            Latest Releases
+          </h2>
+          <p style="color: #cbd5e1; font-size: 1rem; margin: 0; font-weight: 500; letter-spacing: 0.02em;">
+            Freshly pressed and ready to drop • {featuredReleases.length} most recent
+          </p>
+        </div>
+      </div>
+
+      {featuredReleases.length === 0 ? (
+        <div style="text-align: center; padding: 5rem 0; background: linear-gradient(to bottom, #374151, #1f2937); border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 2px solid rgba(255, 255, 255, 0.1);">
+          <div style="font-size: 4rem; margin-bottom: 1.5rem;">🎵</div>
+          <h3 style="font-size: 1.5rem; font-weight: 700; color: #ffffff; margin-bottom: 0.75rem;">No Releases Yet</h3>
+          <p style="color: #cbd5e1; margin-bottom: 1.5rem; font-size: 1.125rem;">New releases coming soon!</p>
+        </div>
+      ) : (
+        <div style="margin-top: 1.5rem;">
+          {featuredReleases.map((release) => (
+            <div id={release.id} style="scroll-margin-top: 1.5rem;" class="release-item">
+              <ReleasePlate {...release} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {featuredReleases.length > 0 && (
+        <div style="margin-top: 4rem; text-align: center;">
+          <a 
+            href="/releases" 
+            class="cta-button"
+            style="display: inline-block; background: linear-gradient(to right, #dc2626, #991b1b); color: white; padding: 1rem 2.5rem; border-radius: 0.5rem; font-weight: 700; font-size: 1.125rem; text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); transition: all 0.3s; position: relative; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.2);"
+          >
+            View All Releases →
+          </a>
+        </div>
+      )}
+    </section>
+
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@700;900&display=swap');
+
+  @keyframes kittScanner {
+    0% { left: -100%; opacity: 0; }
+    5% { opacity: 1; }
+    45% { opacity: 1; }
+    50% { left: 100%; opacity: 0; }
+    55% { opacity: 1; }
+    95% { opacity: 1; }
+    100% { left: -100%; opacity: 0; }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .cta-button:hover {
+    background: linear-gradient(to right, #991b1b, #7f1d1d);
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+  }
+
+  .release-item {
+    animation: fadeInUp 0.6s ease-out backwards;
+  }
+
+  .release-item:nth-child(1) { animation-delay: 0.05s; }
+  .release-item:nth-child(2) { animation-delay: 0.1s; }
+  .release-item:nth-child(3) { animation-delay: 0.15s; }
+  .release-item:nth-child(4) { animation-delay: 0.2s; }
+  .release-item:nth-child(5) { animation-delay: 0.25s; }
+
+  @media (max-width: 640px) {
+    .hero-content h1 {
+      font-size: 3rem !important;
+    }
+    .glass-panel {
+      padding: 10px 20px !important;
+      flex-direction: column !important;
+      gap: 0.5rem !important;
+    }
+    .glass-panel span[style*="color: rgba(220, 38, 38"] {
+      display: none !important;
+    }
+  }
+</style>

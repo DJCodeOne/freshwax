@@ -1,0 +1,1559 @@
+---
+// src/pages/admin/releases/edit/[id].astro
+// FINAL VERSION - Exact Firebase field mapping based on actual collection data
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+const { id } = Astro.params;
+
+// Fetch release from Firebase
+let release = null;
+let errorMessage = '';
+
+try {
+  const releaseDoc = await db.collection('releases').doc(id).get();
+  
+  if (releaseDoc.exists) {
+    release = { id: releaseDoc.id, ...releaseDoc.data() };
+  } else {
+    errorMessage = 'Release not found';
+  }
+} catch (error) {
+  console.error('[EDIT] Error loading release:', error);
+  errorMessage = error instanceof Error ? error.message : 'Unknown error';
+}
+
+if (!release) {
+  return Astro.redirect('/admin/releases/manage');
+}
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Release - {release.releaseName} - Fresh Wax Admin</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      background: #000000;
+      min-height: 100vh;
+      color: #ffffff;
+    }
+
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header-bar {
+      background: #ffffff;
+      border: 2px solid #ffffff;
+      padding: 20px 30px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo { height: 60px; width: auto; }
+
+    .back-btn {
+      padding: 10px 20px;
+      background: #000000;
+      color: #ffffff;
+      border: 2px solid #000000;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+
+    .back-btn:hover {
+      background: #dc2626;
+      border-color: #dc2626;
+    }
+
+    .page-header {
+      background: #ffffff;
+      border: 2px solid #ffffff;
+      padding: 30px;
+      margin-bottom: 30px;
+      color: #000000;
+    }
+
+    .page-header h1 {
+      font-size: 28px;
+      font-weight: 900;
+      margin: 0 0 8px 0;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .page-header .release-meta {
+      font-family: monospace;
+      font-size: 12px;
+      margin-top: 8px;
+      color: #666666;
+    }
+
+    .page-header .release-meta span {
+      display: inline-block;
+      margin-right: 20px;
+    }
+
+    .page-header .release-meta .label {
+      color: #999999;
+    }
+
+    .page-header .release-meta .value {
+      color: #dc2626;
+      font-weight: 700;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+    }
+
+    .edit-section {
+      background: #ffffff;
+      border: 2px solid #ffffff;
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 900;
+      color: #000000;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #000000;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      color: #000000;
+      letter-spacing: 0.5px;
+    }
+
+    .form-label .required {
+      color: #dc2626;
+    }
+
+    .form-label .hint {
+      color: #666666;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: none;
+      margin-left: 6px;
+    }
+
+    .form-input,
+    .form-textarea,
+    .form-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid #000000;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      background: #ffffff;
+      color: #000000;
+      transition: all 0.2s;
+    }
+
+    .form-input:focus,
+    .form-textarea:focus,
+    .form-select:focus {
+      outline: none;
+      border-color: #dc2626;
+      box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1);
+    }
+
+    .form-input:read-only {
+      background: #f5f5f5;
+      color: #666666;
+      cursor: not-allowed;
+      border-style: dashed;
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 15px;
+    }
+
+    .form-row-4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 15px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border: 2px solid #000000;
+      background: #f9f9f9;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .checkbox-group:hover {
+      background: #ffffff;
+      border-color: #dc2626;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #dc2626;
+    }
+
+    .checkbox-label {
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      flex: 1;
+      letter-spacing: 0.5px;
+      color: #000000;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 15px;
+      margin-top: 30px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 16px;
+      border: 2px solid #000000;
+      font-size: 13px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn-primary {
+      background: #16a34a;
+      color: #ffffff;
+      border-color: #16a34a;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #15803d;
+      border-color: #15803d;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    }
+
+    .btn-secondary {
+      background: #000000;
+      color: #ffffff;
+      border-color: #000000;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #ffffff;
+      color: #000000;
+      transform: translateY(-2px);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .success-message {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #16a34a;
+      color: white;
+      padding: 15px 25px;
+      border: 2px solid #16a34a;
+      font-weight: 900;
+      z-index: 10000;
+      display: none;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .success-message.show {
+      display: block;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .track-list {
+      margin-top: 20px;
+    }
+
+    .track-item {
+      background: #f9f9f9;
+      border: 2px solid #000000;
+      padding: 20px;
+      margin-bottom: 15px;
+      cursor: move;
+      transition: all 0.2s;
+    }
+
+    .track-item:hover {
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .track-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 15px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e5e5e5;
+    }
+
+    .track-number {
+      font-size: 18px;
+      font-weight: 900;
+      color: #dc2626;
+      min-width: 40px;
+    }
+
+    .track-drag-handle {
+      font-size: 20px;
+      color: #999999;
+      cursor: move;
+    }
+
+    .url-display {
+      font-family: monospace;
+      font-size: 11px;
+      color: #666666;
+      word-break: break-all;
+      padding: 8px;
+      background: #f5f5f5;
+      border: 1px dashed #cccccc;
+      margin-top: 5px;
+    }
+
+    .info-box {
+      background: #fffbeb;
+      border: 2px solid #fbbf24;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+
+    .info-box-title {
+      font-size: 12px;
+      font-weight: 900;
+      color: #92400e;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .info-box-content {
+      font-size: 12px;
+      color: #78350f;
+      line-height: 1.5;
+      font-weight: 600;
+    }
+
+    .info-box.info-blue {
+      background: #eff6ff;
+      border-color: #3b82f6;
+    }
+
+    .info-box.info-blue .info-box-title { color: #1e40af; }
+    .info-box.info-blue .info-box-content { color: #1e3a8a; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin-top: 15px;
+    }
+
+    .stat-box {
+      background: #f9f9f9;
+      border: 2px solid #000000;
+      padding: 15px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #666666;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 900;
+      color: #000000;
+    }
+
+    .social-link-item {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .social-link-item input { flex: 1; }
+
+    .btn-remove {
+      padding: 10px 15px;
+      background: #dc2626;
+      color: #ffffff;
+      border: 2px solid #dc2626;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .btn-remove:hover {
+      background: #b91c1c;
+      border-color: #b91c1c;
+    }
+
+    .btn-add {
+      padding: 10px 20px;
+      background: #000000;
+      color: #ffffff;
+      border: 2px solid #000000;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 11px;
+      text-transform: uppercase;
+      margin-top: 10px;
+    }
+
+    .btn-add:hover {
+      background: #16a34a;
+      border-color: #16a34a;
+    }
+
+    .field-group-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #666666;
+      margin: 20px 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #cccccc;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .track-urls {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed #e5e5e5;
+    }
+
+    .track-url-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .track-url-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #666666;
+      text-transform: uppercase;
+      min-width: 60px;
+    }
+
+    .track-url-value {
+      font-family: monospace;
+      font-size: 10px;
+      color: #999999;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .track-url-status { font-size: 14px; }
+
+    .copy-holder-btn {
+      padding: 6px 12px;
+      background: #e5e5e5;
+      border: 1px solid #cccccc;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      margin-left: 10px;
+    }
+
+    .copy-holder-btn:hover {
+      background: #dc2626;
+      color: #ffffff;
+      border-color: #dc2626;
+    }
+
+    .quick-action-btn {
+      padding: 8px 16px;
+      background: #000000;
+      color: #ffffff;
+      border: 2px solid #000000;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      margin-right: 10px;
+      margin-top: 8px;
+      transition: all 0.2s;
+    }
+
+    .quick-action-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    #goLiveBtn:hover {
+      background: #16a34a;
+      border-color: #16a34a;
+    }
+
+    #takeDownBtn:hover {
+      background: #dc2626;
+      border-color: #dc2626;
+    }
+
+    @media (max-width: 1200px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .container { padding: 15px; }
+      .header-bar { flex-direction: column; gap: 15px; }
+      .form-row-2, .form-row-3, .form-row-4 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-bar">
+      <img src="/logo.webp" alt="Fresh Wax" class="logo" onerror="this.style.display='none'">
+      <div style="display: flex; gap: 10px;">
+        <button type="button" id="refreshBtn" class="back-btn" style="background: #16a34a; border-color: #16a34a;">
+          🔄 Refresh
+        </button>
+        <a href="/admin/releases/manage" class="back-btn">← Back to Releases</a>
+      </div>
+    </div>
+
+    <div class="page-header">
+      <h1>✏️ Edit Release</h1>
+      <div class="release-meta">
+        <span><span class="label">ID:</span> <span class="value">{release.id}</span></span>
+        <span><span class="label">Status:</span> <span class="value">{release.status}</span></span>
+        {release.r2FolderName && (
+          <span><span class="label">R2:</span> <span class="value">{release.r2FolderName}</span></span>
+        )}
+      </div>
+    </div>
+
+    <form id="editForm">
+      
+      <div class="grid-2">
+        <!-- LEFT COLUMN -->
+        <div>
+          
+          <!-- BASIC INFORMATION -->
+          <div class="edit-section">
+            <h2 class="section-title">📝 Basic Information</h2>
+            
+            <div class="form-group">
+              <label class="form-label">Release Title <span class="required">*</span></label>
+              <input type="text" name="releaseName" class="form-input" value={release.releaseName || ''} required />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Artist Name <span class="required">*</span></label>
+              <input type="text" name="artistName" class="form-input" value={release.artistName || ''} required />
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">
+                  Label Name
+                  <button type="button" class="copy-holder-btn" id="copyFromCopyrightBtn">← Copy from Copyright Holder</button>
+                </label>
+                <input type="text" name="labelName" class="form-input" id="labelNameInput" value={release.labelName || release.copyrightHolder || ''} />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Catalog Number</label>
+                <input type="text" name="labelCode" class="form-input" value={release.labelCode || ''} />
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">Genre</label>
+                <input type="text" name="genre" class="form-input" value={release.genre || ''} />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Release Type</label>
+                <select name="releaseType" class="form-select">
+                  <option value="EP" selected={release.releaseType === 'EP' || !release.releaseType}>EP</option>
+                  <option value="Album" selected={release.releaseType === 'Album'}>Album</option>
+                  <option value="Single" selected={release.releaseType === 'Single'}>Single</option>
+                  <option value="Compilation" selected={release.releaseType === 'Compilation'}>Compilation</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-group-title">Dates</div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">Store Release Date <span class="hint">(When it goes live on Fresh Wax)</span></label>
+                <input type="date" name="releaseDate" class="form-input" id="releaseDateInput" value={release.createdAt?.split('T')[0] || ''} />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Original Release Date <span class="hint">(When music was originally released)</span></label>
+                <input type="date" name="originalReleaseDate" class="form-input" value={release.originalReleaseDate?.split('T')[0] || release.releaseDate?.split('T')[0] || ''} />
+              </div>
+            </div>
+
+            <div class="field-group-title">Credits</div>
+
+            <div class="form-group">
+              <label class="form-label">Mastered By</label>
+              <input type="text" name="masteredBy" class="form-input" value={release.masteredBy || ''} />
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">Primary Language</label>
+                <input type="text" name="primaryLanguage" class="form-input" value={release.primaryLanguage || 'English'} />
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-group">
+                  <input type="checkbox" name="hasExplicitContent" checked={release.hasExplicitContent || false} />
+                  <span class="checkbox-label">⚠️ Explicit Content</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Release Description</label>
+              <textarea name="releaseDescription" class="form-textarea" placeholder="Description...">{release.releaseDescription || ''}</textarea>
+            </div>
+
+            <div class="field-group-title">Admin Notes <span style="font-weight: 400; text-transform: none;">(metadata.notes - internal)</span></div>
+
+            <div class="form-group">
+              <label class="form-label">Artist Social Links <span class="hint">(SoundCloud, Facebook, Instagram, etc.)</span></label>
+              <textarea name="artistSocialLinks" class="form-textarea" style="min-height: 80px;" placeholder="One link per line..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Other Notes <span class="hint">(General internal notes)</span></label>
+              <textarea name="otherNotes" class="form-textarea" style="min-height: 60px;" placeholder="Any other internal notes..."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Track Listing <span class="hint">(Plain text backup)</span></label>
+              <textarea name="trackListing" class="form-textarea" style="min-height: 60px;" placeholder="Track names separated by newlines...">{release.trackListing || ''}</textarea>
+            </div>
+          </div>
+
+          <!-- PRICING -->
+          <div class="edit-section">
+            <h2 class="section-title">💰 Pricing</h2>
+            
+            <div class="form-row-3">
+              <div class="form-group">
+                <label class="form-label">Digital Album (£) <span class="hint">pricePerSale</span></label>
+                <input type="number" name="pricePerSale" class="form-input" step="0.01" min="0" value={release.pricePerSale ?? release.pricing?.digital ?? 0} />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Per Track (£) <span class="hint">trackPrice</span></label>
+                <input type="number" name="trackPrice" class="form-input" step="0.01" min="0" value={release.trackPrice ?? release.pricing?.track ?? 1.00} />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Vinyl (£) <span class="hint">vinylPrice</span></label>
+                <input type="number" name="vinylPrice" class="form-input" step="0.01" min="0" value={release.vinylPrice ?? release.pricing?.vinyl ?? release.vinyl?.price ?? 0} />
+              </div>
+            </div>
+          </div>
+
+          <!-- VINYL OPTIONS -->
+          <div class="edit-section">
+            <h2 class="section-title">💿 Vinyl Release</h2>
+            
+            <div class="form-group">
+              <label class="checkbox-group">
+                <input type="checkbox" name="vinylRelease" id="vinylRelease" checked={release.vinylRelease || release.vinyl?.available || false} />
+                <span class="checkbox-label">Vinyl Available</span>
+              </label>
+            </div>
+
+            <div id="vinylOptions" style={release.vinylRelease || release.vinyl?.available ? '' : 'display: none'}>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label class="form-label">Stock Count <span class="hint">vinylRecordCount</span></label>
+                  <input type="text" name="vinylRecordCount" class="form-input" value={release.vinylRecordCount || release.vinyl?.recordCount || ''} placeholder="e.g., 100" />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Pressing Plant</label>
+                  <input type="text" name="pressingPlant" class="form-input" value={release.pressingPlant || release.vinyl?.pressingPlant || ''} />
+                </div>
+              </div>
+
+              <div class="form-row-3">
+                <div class="form-group">
+                  <label class="form-label">RPM <span class="hint">vinylRPM</span></label>
+                  <select name="vinylRPM" class="form-select">
+                    <option value="">-</option>
+                    <option value="33 RPM" selected={release.vinylRPM === '33 RPM' || release.vinyl?.rpm === '33'}>33 RPM</option>
+                    <option value="45 RPM" selected={release.vinylRPM === '45 RPM' || release.vinyl?.rpm === '45'}>45 RPM</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Size <span class="hint">vinylSize</span></label>
+                  <select name="vinylSize" class="form-select">
+                    <option value="">-</option>
+                    <option value='7"' selected={release.vinylSize === '7' || release.vinylSize === '7"' || release.vinyl?.size === '7"'}>7"</option>
+                    <option value='10"' selected={release.vinylSize === '10' || release.vinylSize === '10"' || release.vinyl?.size === '10"'}>10"</option>
+                    <option value='12"' selected={release.vinylSize === '12' || release.vinylSize === '12"' || release.vinyl?.size === '12"'}>12"</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Weight <span class="hint">vinylWeight</span></label>
+                  <select name="vinylWeight" class="form-select">
+                    <option value="">-</option>
+                    <option value="140g" selected={release.vinylWeight === '140g' || release.vinyl?.weight === '140g'}>140g</option>
+                    <option value="180g" selected={release.vinylWeight === '180g' || release.vinyl?.weight === '180g'}>180g</option>
+                    <option value="200g" selected={release.vinylWeight === '200g' || release.vinyl?.weight === '200g'}>200g</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Expected Shipping Date</label>
+                <input type="date" name="expectedShippingDate" class="form-input" value={release.expectedShippingDate?.split('T')[0] || release.vinyl?.expectedShippingDate?.split('T')[0] || ''} />
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-group">
+                  <input type="checkbox" name="hasLimitedEdition" id="hasLimitedEdition" checked={release.hasLimitedEdition || release.vinyl?.limitedEdition !== null || false} />
+                  <span class="checkbox-label">⭐ Limited Edition</span>
+                </label>
+              </div>
+
+              <div id="limitedEditionOptions" style={release.hasLimitedEdition || release.vinyl?.limitedEdition ? '' : 'display: none'}>
+                <div class="form-group">
+                  <label class="form-label">Limited Edition Type</label>
+                  <select name="limitedEditionType" class="form-select">
+                    <option value="">Select Type</option>
+                    <option value="Numbered" selected={release.limitedEditionType === 'Numbered' || release.vinyl?.limitedEdition?.type === 'Numbered'}>Numbered</option>
+                    <option value="Colored Vinyl" selected={release.limitedEditionType === 'Colored Vinyl' || release.vinyl?.limitedEdition?.type === 'Colored Vinyl'}>Colored Vinyl</option>
+                    <option value="Test Pressing" selected={release.limitedEditionType === 'Test Pressing' || release.vinyl?.limitedEdition?.type === 'Test Pressing'}>Test Pressing</option>
+                    <option value="Other" selected={release.limitedEditionType === 'Other' || release.vinyl?.limitedEdition?.type === 'Other'}>Other</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Details</label>
+                  <textarea name="limitedEditionDetails" class="form-textarea" style="min-height: 60px;">{release.limitedEditionDetails || release.vinyl?.limitedEdition?.details || ''}</textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CONTACT INFO -->
+          <div class="edit-section">
+            <h2 class="section-title">📧 Contact Information</h2>
+            
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">Submitted By</label>
+                <input type="text" name="submittedBy" class="form-input" value={release.submittedBy || release.metadata?.submittedBy || ''} />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-input" value={release.email || release.metadata?.email || ''} />
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div>
+          
+          <!-- COPYRIGHT & PUBLISHING -->
+          <div class="edit-section">
+            <h2 class="section-title">©️ Copyright & Publishing</h2>
+            
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">Copyright Year</label>
+                <input type="number" name="copyrightYear" class="form-input" value={release.copyrightYear || new Date().getFullYear()} min="1900" max={new Date().getFullYear() + 1} />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  Copyright Holder
+                  <button type="button" class="copy-holder-btn" id="copyLabelBtn">← Copy Label Name</button>
+                </label>
+                <input type="text" name="copyrightHolder" class="form-input" id="copyrightHolderInput" value={release.copyrightHolder || ''} />
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">Publishing Rights</label>
+                <input type="text" name="publishingRights" class="form-input" value={release.publishingRights || 'All Rights Reserved'} />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Publishing Company</label>
+                <input type="text" name="publishingCompany" class="form-input" value={release.publishingCompany || ''} />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">UPC/EAN Code <span class="hint">(12-13 digits)</span></label>
+              <input type="text" name="upcEanCode" class="form-input" value={release.upcEanCode || ''} placeholder="e.g., 123456789012" />
+            </div>
+          </div>
+
+          <!-- RECORDING INFO -->
+          <div class="edit-section">
+            <h2 class="section-title">🎙️ Recording Information</h2>
+            
+            <div class="form-row-2">
+              <div class="form-group">
+                <label class="form-label">Recording Location</label>
+                <input type="text" name="recordingLocation" class="form-input" value={release.recordingLocation || ''} />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Recording Year</label>
+                <input type="text" name="recordingYear" class="form-input" value={release.recordingYear || ''} />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-group">
+                <input type="checkbox" name="isPreviouslyReleased" id="isPreviouslyReleased" checked={release.isPreviouslyReleased || false} />
+                <span class="checkbox-label">Previously Released</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- PRE-ORDER -->
+          <div class="edit-section">
+            <h2 class="section-title">📅 Pre-Order Options</h2>
+            
+            <div class="form-group">
+              <label class="checkbox-group">
+                <input type="checkbox" name="hasPreOrder" id="hasPreOrder" checked={release.hasPreOrder || false} />
+                <span class="checkbox-label">Enable Pre-Order</span>
+              </label>
+            </div>
+
+            <div id="preOrderOptions" style={release.hasPreOrder ? '' : 'display: none'}>
+              <div class="form-group">
+                <label class="form-label">Pre-Order Date</label>
+                <input type="date" name="preOrderDate" class="form-input" value={release.preOrderDate?.split('T')[0] || ''} />
+              </div>
+            </div>
+          </div>
+
+          <!-- STATUS -->
+          <div class="edit-section">
+            <h2 class="section-title">👁️ Status & Visibility</h2>
+            
+            <div class="form-group">
+              <label class="form-label">Release Status <span class="hint">(Controls store visibility)</span></label>
+              <select name="status" class="form-select" id="statusSelect">
+                <option value="pending" selected={release.status === 'pending'}>⏳ Pending - Awaiting review</option>
+                <option value="live" selected={release.status === 'live'}>✅ Live - Visible on store</option>
+                <option value="hidden" selected={release.status === 'hidden'}>👁️ Hidden - Not visible</option>
+                <option value="rejected" selected={release.status === 'rejected'}>❌ Rejected - Declined</option>
+              </select>
+            </div>
+
+            <div class="info-box" style="margin-top: 15px; margin-bottom: 0;">
+              <div class="info-box-title">💡 Quick Actions</div>
+              <div class="info-box-content">
+                <button type="button" class="quick-action-btn" id="goLiveBtn">🚀 Go Live</button>
+                <button type="button" class="quick-action-btn" id="takeDownBtn">🔒 Take Down</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ARTWORK -->
+          <div class="edit-section">
+            <h2 class="section-title">🖼️ Artwork</h2>
+            
+            <div class="info-box info-blue">
+              <div class="info-box-title">ℹ️ Read-Only</div>
+              <div class="info-box-content">Artwork URLs stored in R2. Re-upload to change.</div>
+            </div>
+
+            {release.coverArtUrl && (
+              <div class="form-group">
+                <img src={release.coverArtUrl} alt="Cover Art" style="max-width: 100%; border: 2px solid #000000;" />
+                <div class="url-display" style="margin-top: 10px;">{release.coverArtUrl}</div>
+              </div>
+            )}
+
+            {release.artwork?.additional && release.artwork.additional.length > 0 && (
+              <div class="form-group" style="margin-top: 15px;">
+                <label class="form-label">Additional Artwork ({release.artwork.additional.length})</label>
+                {release.artwork.additional.map((url: string) => (
+                  <div class="url-display" style="margin-top: 5px;">{url}</div>
+                ))}
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TRACKS (Full Width) -->
+      <div class="edit-section">
+        <h2 class="section-title">🎵 Tracks ({release.tracks?.length || 0})</h2>
+        
+        <div class="info-box">
+          <div class="info-box-title">💡 Drag & Drop to Reorder</div>
+          <div class="info-box-content">Audio URLs are read-only. Edit metadata below.</div>
+        </div>
+
+        <div class="track-list" id="trackList">
+          {release.tracks && release.tracks.map((track: any, index: number) => (
+            <div class="track-item" data-track-index={index} draggable="true">
+              <div class="track-header">
+                <span class="track-drag-handle">⋮⋮</span>
+                <span class="track-number">#{track.displayTrackNumber || track.trackNumber + 1 || index + 1}</span>
+                <input type="text" name={'track_' + index + '_trackName'} class="form-input" value={track.trackName || ''} placeholder="Track Name" style="flex: 1; margin: 0;" />
+              </div>
+
+              <div class="form-row-4">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">BPM</label>
+                  <input type="number" name={'track_' + index + '_bpm'} class="form-input" value={track.bpm || ''} placeholder="170" min="60" max="300" />
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">Key</label>
+                  <select name={'track_' + index + '_key'} class="form-select">
+                    <option value="" selected={!track.key || track.key === '--'}>--</option>
+                    <option value="A min" selected={track.key === 'A min'}>A min</option>
+                    <option value="A maj" selected={track.key === 'A maj'}>A maj</option>
+                    <option value="A# min" selected={track.key === 'A# min'}>A# min</option>
+                    <option value="A# maj" selected={track.key === 'A# maj'}>A# maj</option>
+                    <option value="B min" selected={track.key === 'B min'}>B min</option>
+                    <option value="B maj" selected={track.key === 'B maj'}>B maj</option>
+                    <option value="C min" selected={track.key === 'C min'}>C min</option>
+                    <option value="C maj" selected={track.key === 'C maj'}>C maj</option>
+                    <option value="C# min" selected={track.key === 'C# min'}>C# min</option>
+                    <option value="C# maj" selected={track.key === 'C# maj'}>C# maj</option>
+                    <option value="D min" selected={track.key === 'D min'}>D min</option>
+                    <option value="D maj" selected={track.key === 'D maj'}>D maj</option>
+                    <option value="D# min" selected={track.key === 'D# min'}>D# min</option>
+                    <option value="D# maj" selected={track.key === 'D# maj'}>D# maj</option>
+                    <option value="E min" selected={track.key === 'E min'}>E min</option>
+                    <option value="E maj" selected={track.key === 'E maj'}>E maj</option>
+                    <option value="F min" selected={track.key === 'F min'}>F min</option>
+                    <option value="F maj" selected={track.key === 'F maj'}>F maj</option>
+                    <option value="F# min" selected={track.key === 'F# min'}>F# min</option>
+                    <option value="F# maj" selected={track.key === 'F# maj'}>F# maj</option>
+                    <option value="G min" selected={track.key === 'G min'}>G min</option>
+                    <option value="G maj" selected={track.key === 'G maj'}>G maj</option>
+                    <option value="G# min" selected={track.key === 'G# min'}>G# min</option>
+                    <option value="G# maj" selected={track.key === 'G# maj'}>G# maj</option>
+                  </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">Duration</label>
+                  <input type="text" name={'track_' + index + '_duration'} class="form-input" value={track.duration || ''} placeholder="5:12" />
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">ISRC Code</label>
+                  <input type="text" name={'track_' + index + '_trackISRC'} class="form-input" value={track.trackISRC || ''} placeholder="GBxxx0000000" />
+                </div>
+              </div>
+
+              <div class="form-row-2" style="margin-top: 15px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">Featured Artist</label>
+                  <input type="text" name={'track_' + index + '_featured'} class="form-input" value={track.featured || ''} placeholder="ft. Artist Name" />
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">Remixer</label>
+                  <input type="text" name={'track_' + index + '_remixer'} class="form-input" value={track.remixer || ''} placeholder="Remixer Name" />
+                </div>
+              </div>
+
+              <div class="track-urls">
+                <div class="track-url-item">
+                  <span class="track-url-label">Preview:</span>
+                  <span class="track-url-status">{track.previewUrl ? '✅' : '❌'}</span>
+                  <span class="track-url-value">{track.previewUrl || 'N/A'}</span>
+                </div>
+                <div class="track-url-item">
+                  <span class="track-url-label">MP3:</span>
+                  <span class="track-url-status">{track.mp3Url ? '✅' : '❌'}</span>
+                  <span class="track-url-value">{track.mp3Url || 'N/A'}</span>
+                </div>
+                <div class="track-url-item">
+                  <span class="track-url-label">WAV:</span>
+                  <span class="track-url-status">{track.wavUrl ? '✅' : '❌'}</span>
+                  <span class="track-url-value">{track.wavUrl || 'N/A'}</span>
+                </div>
+              </div>
+
+              <input type="hidden" name={'track_' + index + '_trackNumber'} value={track.trackNumber ?? index} />
+              <input type="hidden" name={'track_' + index + '_displayTrackNumber'} value={track.displayTrackNumber || index + 1} />
+              <input type="hidden" name={'track_' + index + '_previewUrl'} value={track.previewUrl || ''} />
+              <input type="hidden" name={'track_' + index + '_mp3Url'} value={track.mp3Url || ''} />
+              <input type="hidden" name={'track_' + index + '_wavUrl'} value={track.wavUrl || ''} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- RATINGS & STATS -->
+      <div class="edit-section">
+        <h2 class="section-title">📊 Ratings & Statistics (Read-Only)</h2>
+        
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">Avg Rating</div>
+            <div class="stat-value">{(release.ratings?.average || 0).toFixed(1)} ⭐</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Total Ratings</div>
+            <div class="stat-value">{release.ratings?.count || 0}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">5-Star</div>
+            <div class="stat-value">{release.ratings?.fiveStarCount || release.fiveStarCount || 0}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Comments</div>
+            <div class="stat-value">{release.comments?.length || 0}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Tracks</div>
+            <div class="stat-value">{release.stats?.totalTracks || release.tracks?.length || 0}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Previews</div>
+            <div class="stat-value">{release.stats?.totalPreviews || 0}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Plays</div>
+            <div class="stat-value">{release.stats?.plays || 0}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Downloads</div>
+            <div class="stat-value">{release.stats?.downloads || 0}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Views</div>
+            <div class="stat-value">{release.stats?.views || 0}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TIMESTAMPS -->
+      <div class="edit-section">
+        <h2 class="section-title">🕐 Timestamps (Read-Only)</h2>
+        <div class="form-row-4">
+          <div class="form-group">
+            <label class="form-label">Uploaded At</label>
+            <input type="text" class="form-input" id="uploadedAtDisplay" value="" readonly />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Created At</label>
+            <input type="text" class="form-input" id="createdAtDisplay" value="" readonly />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Processed At</label>
+            <input type="text" class="form-input" id="processedAtDisplay" value="" readonly />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Updated</label>
+            <input type="text" class="form-input" id="updatedAtDisplay" value="" readonly />
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="button-row">
+        <button type="button" class="btn btn-secondary" onclick="window.history.back()">← Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveBtn">✓ Save All Changes</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="success-message" id="successMessage">✅ Release Updated Successfully!</div>
+
+  <script define:vars={{ releaseId: release.id, existingSocialLinks: JSON.stringify(release.socialLinks || {}), trackCount: release.tracks?.length || 0, existingNotes: release.metadata?.notes || '', timestamps: JSON.stringify({ uploadedAt: release.uploadedAt || null, createdAt: release.createdAt || null, processedAt: release.processedAt || null, updatedAt: release.updatedAt || null }) }}>
+    var socialLinks = JSON.parse(existingSocialLinks);
+    var timestampData = JSON.parse(timestamps);
+    
+    // Format timestamp to human readable
+    function formatTimestamp(isoString) {
+      if (!isoString) return 'Unknown';
+      try {
+        var date = new Date(isoString);
+        if (isNaN(date.getTime())) return 'Invalid date';
+        
+        var day = date.getDate();
+        var month = date.toLocaleString('en-GB', { month: 'short' });
+        var year = date.getFullYear();
+        var hours = date.getHours().toString().padStart(2, '0');
+        var mins = date.getMinutes().toString().padStart(2, '0');
+        
+        return day + ' ' + month + ' ' + year + ' at ' + hours + ':' + mins;
+      } catch (e) {
+        return 'Unknown';
+      }
+    }
+    
+    // Initialize timestamp displays
+    document.getElementById('uploadedAtDisplay').value = formatTimestamp(timestampData.uploadedAt);
+    document.getElementById('createdAtDisplay').value = formatTimestamp(timestampData.createdAt);
+    document.getElementById('processedAtDisplay').value = formatTimestamp(timestampData.processedAt);
+    document.getElementById('updatedAtDisplay').value = formatTimestamp(timestampData.updatedAt);
+    
+    // Parse existing notes into social links and other notes
+    function parseExistingNotes(notes) {
+      if (!notes) return { socialLinks: '', otherNotes: '' };
+      
+      var lines = notes.split('\n');
+      var socialLinks = [];
+      var otherNotes = [];
+      
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line) continue;
+        
+        // Check if line contains a URL (social link)
+        if (line.indexOf('http://') !== -1 || line.indexOf('https://') !== -1) {
+          // Extract just the URL if there's a label
+          var urlMatch = line.match(/(https?:\/\/[^\s]+)/);
+          if (urlMatch) {
+            socialLinks.push(urlMatch[1]);
+          }
+        } else if (line.indexOf('SoundCloud:') !== -1 || line.indexOf('Facebook:') !== -1 || 
+                   line.indexOf('Instagram:') !== -1 || line.indexOf('Twitter:') !== -1 ||
+                   line.indexOf('Bandcamp:') !== -1 || line.indexOf('Spotify:') !== -1) {
+          // Line has label but URL might be on same line or missing
+          var parts = line.split(/:\s*/);
+          if (parts.length > 1 && parts[1]) {
+            socialLinks.push(parts[1]);
+          }
+        } else {
+          otherNotes.push(line);
+        }
+      }
+      
+      return {
+        socialLinks: socialLinks.join('\n'),
+        otherNotes: otherNotes.join('\n')
+      };
+    }
+    
+    // Initialize notes fields
+    var parsedNotes = parseExistingNotes(existingNotes);
+    document.querySelector('textarea[name="artistSocialLinks"]').value = parsedNotes.socialLinks;
+    document.querySelector('textarea[name="otherNotes"]').value = parsedNotes.otherNotes;
+    
+    // Copy Label Name to Copyright Holder
+    document.getElementById('copyLabelBtn').addEventListener('click', function() {
+      var labelName = document.getElementById('labelNameInput').value;
+      if (labelName) {
+        document.getElementById('copyrightHolderInput').value = labelName;
+      }
+    });
+    
+    // Copy Copyright Holder to Label Name
+    document.getElementById('copyFromCopyrightBtn').addEventListener('click', function() {
+      var copyrightHolder = document.getElementById('copyrightHolderInput').value;
+      if (copyrightHolder) {
+        document.getElementById('labelNameInput').value = copyrightHolder;
+      }
+    });
+    
+    // Quick action buttons for status
+    document.getElementById('goLiveBtn').addEventListener('click', function() {
+      document.getElementById('statusSelect').value = 'live';
+    });
+    
+    document.getElementById('takeDownBtn').addEventListener('click', function() {
+      document.getElementById('statusSelect').value = 'hidden';
+    });
+    
+    // Refresh button
+    document.getElementById('refreshBtn').addEventListener('click', function() {
+      if (!confirm('Reload from Firebase? Unsaved changes will be lost.')) return;
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = '🔄 Refreshing...';
+      
+      fetch('/api/get-release?id=' + releaseId + '&admin=true')
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+          if (result.success) {
+            alert('✅ Refreshed! Reloading...');
+            window.location.reload();
+          } else {
+            alert('❌ Failed: ' + (result.error || 'Unknown'));
+            btn.disabled = false;
+            btn.textContent = '🔄 Refresh';
+          }
+        })
+        .catch(function(error) {
+          alert('❌ Error: ' + error.message);
+          btn.disabled = false;
+          btn.textContent = '🔄 Refresh';
+        });
+    });
+    
+    // Social links now handled via Artist Social Links textarea
+    // The socialLinks object is kept for backward compatibility in form submission
+    
+    // Toggle sections
+    var toggles = [
+      { checkbox: 'vinylRelease', target: 'vinylOptions' },
+      { checkbox: 'hasLimitedEdition', target: 'limitedEditionOptions' },
+      { checkbox: 'hasPreOrder', target: 'preOrderOptions' }
+    ];
+    
+    toggles.forEach(function(config) {
+      var el = document.getElementById(config.checkbox);
+      var targetEl = document.getElementById(config.target);
+      if (el && targetEl) {
+        el.addEventListener('change', function(e) {
+          targetEl.style.display = e.target.checked ? '' : 'none';
+        });
+      }
+    });
+
+    // Track drag and drop
+    var draggedTrack = null;
+    
+    function initTrackDragDrop() {
+      var items = document.querySelectorAll('.track-item');
+      for (var i = 0; i < items.length; i++) {
+        (function(item) {
+          item.addEventListener('dragstart', function() {
+            draggedTrack = item;
+            item.style.opacity = '0.5';
+          });
+          
+          item.addEventListener('dragend', function() {
+            item.style.opacity = '1';
+          });
+          
+          item.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            var trackList = document.getElementById('trackList');
+            var afterElement = getDragAfterElement(trackList, e.clientY);
+            if (afterElement == null) {
+              trackList.appendChild(draggedTrack);
+            } else {
+              trackList.insertBefore(draggedTrack, afterElement);
+            }
+          });
+        })(items[i]);
+      }
+    }
+
+    function getDragAfterElement(container, y) {
+      var elements = container.querySelectorAll('.track-item:not(.dragging)');
+      var closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+      
+      for (var i = 0; i < elements.length; i++) {
+        var child = elements[i];
+        var box = child.getBoundingClientRect();
+        var offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+          closest = { offset: offset, element: child };
+        }
+      }
+      
+      return closest.element;
+    }
+    
+    initTrackDragDrop();
+
+    // Form submission
+    var editForm = document.getElementById('editForm');
+    var saveBtn = document.getElementById('saveBtn');
+    var successMessage = document.getElementById('successMessage');
+
+    editForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      var formData = new FormData(editForm);
+      
+      // Build tracks array
+      var tracks = [];
+      var trackItems = document.querySelectorAll('.track-item');
+      
+      for (var i = 0; i < trackItems.length; i++) {
+        var item = trackItems[i];
+        var oldIndex = parseInt(item.getAttribute('data-track-index'));
+        
+        var track = {
+          trackNumber: i,
+          displayTrackNumber: i + 1,
+          trackName: formData.get('track_' + oldIndex + '_trackName') || '',
+          bpm: parseInt(formData.get('track_' + oldIndex + '_bpm')) || 0,
+          key: formData.get('track_' + oldIndex + '_key') || '',
+          duration: formData.get('track_' + oldIndex + '_duration') || '',
+          trackISRC: formData.get('track_' + oldIndex + '_trackISRC') || '',
+          featured: formData.get('track_' + oldIndex + '_featured') || '',
+          remixer: formData.get('track_' + oldIndex + '_remixer') || '',
+          previewUrl: formData.get('track_' + oldIndex + '_previewUrl') || '',
+          mp3Url: formData.get('track_' + oldIndex + '_mp3Url') || '',
+          wavUrl: formData.get('track_' + oldIndex + '_wavUrl') || '',
+          ratings: { average: 0, count: 0, total: 0 },
+          comments: []
+        };
+        
+        tracks.push(track);
+      }
+      
+      // Build social links - preserve existing socialLinks object
+      // Social links are now managed via metadata.notes (Artist Social Links field)
+      var socialLinksData = socialLinks || {};
+      
+      // Build vinyl nested object
+      var vinylEnabled = formData.get('vinylRelease') === 'on';
+      var vinylObj = null;
+      
+      if (vinylEnabled) {
+        var limitedEdObj = null;
+        if (formData.get('hasLimitedEdition') === 'on') {
+          limitedEdObj = {
+            type: formData.get('limitedEditionType') || null,
+            details: formData.get('limitedEditionDetails') || null
+          };
+        }
+        
+        vinylObj = {
+          available: true,
+          recordCount: parseInt(formData.get('vinylRecordCount')) || 1,
+          price: parseFloat(formData.get('vinylPrice')) || 0,
+          rpm: (formData.get('vinylRPM') || '').replace(' RPM', ''),
+          size: formData.get('vinylSize') || null,
+          weight: formData.get('vinylWeight') || null,
+          pressingPlant: formData.get('pressingPlant') || null,
+          expectedShippingDate: formData.get('expectedShippingDate') || null,
+          limitedEdition: limitedEdObj
+        };
+      }
+      
+      // Complete update object matching exact Firebase structure
+      var updates = {
+        id: releaseId,
+        
+        // Basic info
+        releaseName: formData.get('releaseName') || '',
+        artistName: formData.get('artistName') || '',
+        labelName: formData.get('labelName') || '',
+        labelCode: formData.get('labelCode') || '',
+        genre: formData.get('genre') || '',
+        releaseType: formData.get('releaseType') || 'EP',
+        releaseDate: formData.get('releaseDate') || '',
+        originalReleaseDate: formData.get('originalReleaseDate') || '',
+        officialReleaseDate: formData.get('originalReleaseDate') || null,
+        masteredBy: formData.get('masteredBy') || '',
+        primaryLanguage: formData.get('primaryLanguage') || 'English',
+        hasExplicitContent: formData.get('hasExplicitContent') === 'on',
+        releaseDescription: formData.get('releaseDescription') || '',
+        trackListing: formData.get('trackListing') || '',
+        
+        // Pricing (both flat and nested)
+        pricePerSale: parseFloat(formData.get('pricePerSale')) || 0,
+        trackPrice: parseFloat(formData.get('trackPrice')) || 1.00,
+        vinylPrice: parseFloat(formData.get('vinylPrice')) || 0,
+        pricing: {
+          digital: parseFloat(formData.get('pricePerSale')) || 0,
+          track: parseFloat(formData.get('trackPrice')) || 1.00,
+          vinyl: parseFloat(formData.get('vinylPrice')) || null
+        },
+        
+        // Vinyl (both flat and nested)
+        vinylRelease: vinylEnabled,
+        vinylRecordCount: formData.get('vinylRecordCount') || '',
+        vinylRPM: formData.get('vinylRPM') || '',
+        vinylSize: (formData.get('vinylSize') || '').replace('"', ''),
+        vinylWeight: formData.get('vinylWeight') || '',
+        pressingPlant: formData.get('pressingPlant') || '',
+        expectedShippingDate: formData.get('expectedShippingDate') || '',
+        hasLimitedEdition: formData.get('hasLimitedEdition') === 'on',
+        limitedEditionType: formData.get('limitedEditionType') || '',
+        limitedEditionDetails: formData.get('limitedEditionDetails') || '',
+        vinyl: vinylObj,
+        
+        // Copyright
+        copyrightYear: parseInt(formData.get('copyrightYear')) || new Date().getFullYear(),
+        copyrightHolder: formData.get('copyrightHolder') || '',
+        publishingRights: formData.get('publishingRights') || '',
+        publishingCompany: formData.get('publishingCompany') || '',
+        upcEanCode: formData.get('upcEanCode') || '',
+        
+        // Recording
+        recordingLocation: formData.get('recordingLocation') || '',
+        recordingYear: formData.get('recordingYear') || '',
+        isPreviouslyReleased: formData.get('isPreviouslyReleased') === 'on',
+        originalReleaseDate: formData.get('originalReleaseDate') || '',
+        
+        // Pre-order
+        hasPreOrder: formData.get('hasPreOrder') === 'on',
+        preOrderDate: formData.get('preOrderDate') || '',
+        
+        // Status
+        // Status
+        status: formData.get('status') || 'pending',
+        approved: formData.get('status') === 'live',
+        published: formData.get('status') === 'live',
+        featured: false,
+        
+        // Contact
+        submittedBy: formData.get('submittedBy') || '',
+        email: formData.get('email') || '',
+        
+        // Social & tracks
+        socialLinks: socialLinksData,
+        tracks: tracks,
+        
+        // Timestamp
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Combine artist social links and other notes back into metadata.notes
+      var artistSocialLinks = formData.get('artistSocialLinks') || '';
+      var otherNotes = formData.get('otherNotes') || '';
+      var combinedNotes = '';
+      
+      if (artistSocialLinks.trim()) {
+        combinedNotes += artistSocialLinks.trim();
+      }
+      if (otherNotes.trim()) {
+        if (combinedNotes) combinedNotes += '\n\n';
+        combinedNotes += otherNotes.trim();
+      }
+      
+      // Add metadata object
+      updates.metadata = {
+        submittedBy: formData.get('submittedBy') || '',
+        email: formData.get('email') || '',
+        notes: combinedNotes,
+        officialReleaseDate: formData.get('originalReleaseDate') || null
+      };
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      fetch('/api/update-release', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      })
+      .then(function(response) { return response.json().then(function(data) { return { ok: response.ok, data: data }; }); })
+      .then(function(result) {
+        if (result.ok && result.data.success) {
+          successMessage.classList.add('show');
+          setTimeout(function() { successMessage.classList.remove('show'); }, 3000);
+          saveBtn.textContent = '✓ Save All Changes';
+          saveBtn.disabled = false;
+        } else {
+          alert('❌ Failed: ' + (result.data.error || 'Unknown error'));
+          saveBtn.textContent = '✓ Save All Changes';
+          saveBtn.disabled = false;
+        }
+      })
+      .catch(function(error) {
+        alert('❌ Error: ' + error.message);
+        saveBtn.textContent = '✓ Save All Changes';
+        saveBtn.disabled = false;
+      });
+    });
+  </script>
+</body>
+</html>

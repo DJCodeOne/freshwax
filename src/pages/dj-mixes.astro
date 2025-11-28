@@ -1,0 +1,1274 @@
+---
+// src/pages/dj-mixes.astro
+// OPTIMIZED: Uses Firebase with client-side caching to reduce API calls
+// UPDATED: Single-column stacked layout with artwork left, details right
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+// Fetch mixes from Firebase API
+let mixes = [];
+
+try {
+  const response = await fetch(`${Astro.url.origin}/api/get-dj-mixes`);
+  
+  if (response.ok) {
+    const data = await response.json();
+    if (data.success && Array.isArray(data.mixes)) {
+      mixes = data.mixes;
+      console.log(`[DJ-MIXES PAGE] Loaded ${mixes.length} mixes`);
+      // Debug: log first mix to see field names
+      if (mixes.length > 0) {
+        console.log('[DJ-MIXES PAGE] First mix fields:', Object.keys(mixes[0]));
+        console.log('[DJ-MIXES PAGE] First mix duration fields:', {
+          durationSeconds: mixes[0].durationSeconds,
+          duration: mixes[0].duration,
+          duration_seconds: mixes[0].duration_seconds,
+          mixDuration: mixes[0].mixDuration
+        });
+      }
+    }
+  }
+} catch (error) {
+  console.error('[DJ-MIXES PAGE] Error loading mixes:', error);
+}
+
+// Helper function to format duration in human readable format
+function formatDuration(seconds) {
+  if (!seconds) return '--:--';
+  // Handle if seconds is a string
+  const numSeconds = typeof seconds === 'string' ? parseFloat(seconds) : seconds;
+  if (!numSeconds || isNaN(numSeconds)) return '--:--';
+  
+  const hrs = Math.floor(numSeconds / 3600);
+  const mins = Math.floor((numSeconds % 3600) / 60);
+  
+  if (hrs > 0) {
+    const hourWord = hrs === 1 ? 'hour' : 'hours';
+    const minWord = mins === 1 ? 'minute' : 'minutes';
+    if (mins > 0) {
+      return `${hrs} ${hourWord} ${mins} ${minWord}`;
+    }
+    return `${hrs} ${hourWord}`;
+  }
+  const minWord = mins === 1 ? 'minute' : 'minutes';
+  return `${mins} ${minWord}`;
+}
+
+// Helper to get duration from mix object - durationSeconds is the primary field from Firebase
+function getMixDuration(mix) {
+  // durationSeconds is the main field (number in seconds)
+  if (mix.durationSeconds && typeof mix.durationSeconds === 'number') {
+    return mix.durationSeconds;
+  }
+  // Fallback checks
+  return mix.duration_seconds || mix.mixDuration || null;
+}
+
+// Debug: Log first mix data on server
+if (mixes.length > 0) {
+  console.log('[DJ-MIXES] First mix durationSeconds:', mixes[0].durationSeconds);
+  console.log('[DJ-MIXES] Formatted:', formatDuration(mixes[0].durationSeconds));
+}
+---
+
+<Layout title="DJ Mixes - Fresh Wax">
+  <Header />
+  
+  <main style="min-height: 100vh; background: #000000 url('/logo.webp') center/cover no-repeat fixed; position: relative;">
+    
+    <!-- Hero Section -->
+    <section style="background: radial-gradient(ellipse at center, #000000 0%, #1a1a1a 50%, #2d2d2d 100%); color: white; padding: 5.5rem 0; position: relative; overflow: hidden; z-index: 10; box-shadow: inset 0 -2px 40px rgba(220, 38, 38, 0.1);">
+      <!-- Grid overlay -->
+      <div style="position: absolute; inset: 0; background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px); background-size: 55px 55px;"></div>
+      
+      <div style="max-width: 88rem; margin: 0 auto; padding: 0 1.65rem; text-align: center; position: relative; z-index: 10;">
+        <div class="hero-content" style="animation: fadeInUp 1.2s ease-out;">
+          <h1 style="font-family: 'Space Grotesk', sans-serif; font-size: 6.05rem; font-weight: 900; margin-bottom: 0.55rem; letter-spacing: -0.02em; text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 80px rgba(220, 38, 38, 0.2); line-height: 0.95; text-transform: uppercase;">
+            FRESH SESSIONS
+          </h1>
+          <p style="font-size: 1.375rem; color: #f9fafb; font-weight: 300; letter-spacing: 0.3em; margin-bottom: 2.75rem; text-transform: uppercase; opacity: 0.9;">
+            Jungle & Drum and Bass DJ Sets
+          </p>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 1.1rem;">
+            <div style="height: 2px; width: 3.3rem; background: linear-gradient(to right, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
+            <div style="position: relative; height: 3px; width: 4.4rem; background: rgba(220, 38, 38, 0.2); border-radius: 2px; overflow: hidden;">
+              <div style="position: absolute; top: 0; height: 100%; width: 100%; background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.4) 20%, #dc2626 50%, rgba(220, 38, 38, 0.4) 80%, transparent); border-radius: 2px; animation: kittScanner 2.6s ease-in-out infinite; box-shadow: 0 0 20px rgba(220, 38, 38, 0.8), 0 0 40px rgba(220, 38, 38, 0.6);"></div>
+            </div>
+            <div style="height: 2px; width: 3.3rem; background: linear-gradient(to left, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mixes Section -->
+    <section style="max-width: 61.6rem; margin: 0 auto; padding: 3.3rem 1.65rem;">
+      <!-- Header Container -->
+      <div style="background: linear-gradient(to bottom, #1f2937 0%, #374151 100%); backdrop-filter: blur(20px); border-radius: 1.1rem; padding: 2.75rem 2.2rem; margin-bottom: 2.2rem; box-shadow: 0 22px 27.5px -5.5px rgba(0, 0, 0, 0.3); border: 2px solid rgba(255, 255, 255, 0.1); position: relative; overflow: hidden;">
+        
+        <!-- Background Pattern -->
+        <div style="position: absolute; inset: 0; opacity: 0.15; pointer-events: none;">
+          <div style="position: absolute; inset: 0; background-image: linear-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px); background-size: 44px 44px;"></div>
+        </div>
+        
+        <div style="text-align: center; position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.1rem;">
+          <div style="flex: 1; min-width: 220px;">
+            <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 2.475rem; font-weight: 900; color: #ffffff; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5); margin: 0 0 0.825rem 0; text-align: left;">
+              Latest Mixes
+            </h2>
+            <p style="color: #cbd5e1; font-size: 1.1rem; margin: 0; font-weight: 500; letter-spacing: 0.02em; text-align: left;">
+              Stream or download full DJ sets • {mixes.length} available
+            </p>
+          </div>
+          <a 
+            href="/upload-mix" 
+            style="display: inline-block; background: linear-gradient(to right, #dc2626, #991b1b); color: white; padding: 0.9625rem 2.2rem; border-radius: 0.55rem; font-weight: 700; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none; box-shadow: 0 11px 16.5px -3.3px rgba(0, 0, 0, 0.3); transition: all 0.3s; border: 2px solid rgba(255, 255, 255, 0.2); white-space: nowrap;"
+            class="upload-mix-btn"
+          >
+            📤 Upload Mix
+          </a>
+        </div>
+      </div>
+
+      {mixes.length === 0 ? (
+        <div style="text-align: center; padding: 5.5rem 0; background: linear-gradient(to bottom, #374151, #1f2937); border-radius: 0.825rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); border: 2px solid rgba(255, 255, 255, 0.1);">
+          <div style="font-size: 4.4rem; margin-bottom: 1.65rem;">🎧</div>
+          <h3 style="font-size: 1.65rem; font-weight: 700; color: #ffffff; margin-bottom: 0.825rem;">No Mixes Yet</h3>
+          <p style="color: #cbd5e1; margin-bottom: 1.65rem; font-size: 1.2375rem;">New mixes coming soon!</p>
+        </div>
+      ) : (
+        <div class="mixes-list">
+          {mixes.map((mix, index) => (
+            <article 
+              class="mix-card"
+              data-mix-id={mix.id}
+              data-upload-date={mix.upload_date}
+              data-audio-url={mix.audio_url}
+              data-title={mix.title}
+              data-dj={mix.dj_name}
+              data-artwork={mix.artwork_url}
+              data-duration={getMixDuration(mix)}
+            >
+              <!-- Artwork -->
+              <div class="mix-artwork-container">
+                <img 
+                  src={mix.artwork_url} 
+                  alt={mix.title}
+                  class="mix-artwork"
+                  onerror="this.src='/logo.webp'"
+                />
+              </div>
+
+              <!-- Mix Info -->
+              <div class="mix-info">
+                <div class="mix-header">
+                  <h3 class="mix-title">{mix.title}</h3>
+                  <p class="mix-dj">{mix.dj_name}</p>
+                </div>
+                
+                <!-- Meta Row -->
+                <div class="mix-meta-row">
+                  <span class="meta-item">
+                    <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="duration-display" data-duration={getMixDuration(mix)} data-audio-url={mix.audio_url}>{formatDuration(getMixDuration(mix))}</span>
+                  </span>
+                  <span class="meta-item">
+                    <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {new Date(mix.upload_date).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                  </span>
+                  <span class="meta-item">
+                    <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                    </svg>
+                    {mix.genre || 'Jungle & D&B'}
+                  </span>
+                </div>
+
+                <!-- Stats Row -->
+                <div class="mix-stats">
+                  <span class="stat">
+                    <svg class="stat-icon" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <span class="plays-count" data-mix-id={mix.id}>{mix.plays || 0}</span> plays
+                  </span>
+                  <span class="stat">
+                    <svg class="stat-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                    </svg>
+                    <span class="downloads-count" data-mix-id={mix.id}>{mix.downloads || 0}</span> downloads
+                  </span>
+                  <span class="stat">
+                    <svg class="stat-icon" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                    <span class="likes-count" data-mix-id={mix.id}>{mix.likes || 0}</span> likes
+                  </span>
+                  <span class="stat">
+                    <svg class="stat-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <span class="comments-count" data-mix-id={mix.id}>{mix.commentCount || 0}</span> comments
+                  </span>
+                </div>
+
+                <!-- Action Buttons - Order: Play, Like, Download, Share, Info -->
+                <div class="mix-actions">
+                  <!-- Play Button -->
+                  <button 
+                    class="action-btn play-btn-action"
+                    data-mix-id={mix.id}
+                    title="Play"
+                  >
+                    <svg class="btn-icon play-icon-btn" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <svg class="btn-icon pause-icon-btn hidden" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                    </svg>
+                    <span class="btn-text play-text-btn">Play</span>
+                  </button>
+
+                  <!-- Like Button -->
+                  <button 
+                    class="action-btn like-btn"
+                    data-mix-id={mix.id}
+                    data-liked="false"
+                    title="Like"
+                  >
+                    <svg class="btn-icon like-icon-btn" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <span class="btn-text like-text-btn">Like</span>
+                    <span class="btn-text liked-text-btn" style="display: none;">Liked</span>
+                  </button>
+
+                  <!-- Download Button -->
+                  <button 
+                    class="action-btn primary download-btn"
+                    data-mix-id={mix.id}
+                    data-audio-url={mix.audio_url}
+                    data-title={mix.title}
+                    data-dj={mix.dj_name}
+                  >
+                    <svg class="btn-icon download-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                    </svg>
+                    <svg class="btn-icon check-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span class="btn-text">Download</span>
+                  </button>
+
+                  <!-- Share Button -->
+                  <button 
+                    class="action-btn share-btn"
+                    data-mix-id={mix.id}
+                    data-title={mix.title}
+                    data-dj={mix.dj_name}
+                    title="Share"
+                  >
+                    <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                    <span class="btn-text">Share</span>
+                  </button>
+
+                  <!-- Info Button -->
+                  <a 
+                    href={`/dj-mix/${mix.id}`}
+                    class="action-btn"
+                    title="View Details"
+                  >
+                    <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="btn-text">Info</span>
+                  </a>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  </main>
+
+  <!-- Share Modal -->
+  <div id="shareModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Share Mix</h3>
+        <button class="modal-close" id="closeShareModal">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtitle">
+          <span id="shareModalTitle"></span> by <span id="shareModalDJ"></span>
+        </p>
+        <div class="share-input-group">
+          <input type="text" id="shareLink" readonly />
+          <button id="copyShareButton">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            <span id="copyShareButtonText">Copy</span>
+          </button>
+        </div>
+        <p class="copy-feedback" id="copyFeedback"></p>
+      </div>
+    </div>
+  </div>
+
+  <Footer />
+</Layout>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@700;900&display=swap');
+
+  @keyframes kittScanner {
+    0% { left: -100%; opacity: 0; }
+    5% { opacity: 1; }
+    45% { opacity: 1; }
+    50% { left: 100%; opacity: 0; }
+    55% { opacity: 1; }
+    95% { opacity: 1; }
+    100% { left: -100%; opacity: 0; }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(33px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .upload-mix-btn:hover {
+    background: linear-gradient(to right, #991b1b, #7f1d1d);
+    transform: translateY(-2px);
+    box-shadow: 0 22px 27.5px -5.5px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Mixes List - Single Column */
+  .mixes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.375rem;
+  }
+
+  /* Mix Card - Horizontal Layout with Gradient */
+  .mix-card {
+    background: linear-gradient(to bottom, #000000 0%, #111827 40%, #374151 80%, #4b5563 100%);
+    border-radius: 1.1rem;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.6s ease-out backwards;
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    padding: 1.1rem;
+    gap: 1.65rem;
+  }
+
+  .mix-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(220, 38, 38, 0.5);
+    box-shadow: 0 22px 44px -11px rgba(0, 0, 0, 0.5), 0 0 33px rgba(220, 38, 38, 0.1);
+  }
+
+  .mix-card:nth-child(1) { animation-delay: 0.05s; }
+  .mix-card:nth-child(2) { animation-delay: 0.1s; }
+  .mix-card:nth-child(3) { animation-delay: 0.15s; }
+  .mix-card:nth-child(4) { animation-delay: 0.2s; }
+  .mix-card:nth-child(5) { animation-delay: 0.25s; }
+  .mix-card:nth-child(6) { animation-delay: 0.3s; }
+
+  /* Artwork Container - Fixed Size Left */
+  .mix-artwork-container {
+    position: relative;
+    width: 242px;
+    min-width: 242px;
+    height: 242px;
+    overflow: hidden;
+    flex-shrink: 0;
+    border-radius: 0.55rem;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .mix-artwork {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .mix-card:hover .mix-artwork {
+    transform: scale(1.05);
+  }
+
+  /* Mix Info - Right Side */
+  .mix-info {
+    flex: 1;
+    padding: 0.275rem 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.66rem;
+    min-width: 0;
+  }
+
+  .mix-header {
+    margin-bottom: 0.275rem;
+  }
+
+  .mix-title {
+    font-size: 1.925rem;
+    font-weight: 800;
+    color: #dc2626;
+    margin: 0 0 0.385rem 0;
+    text-transform: uppercase;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .mix-dj {
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: #f3f4f6;
+    margin: 0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Meta Row */
+  .mix-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 1.65rem;
+    flex-wrap: wrap;
+  }
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.44rem;
+    font-size: 1.1rem;
+    color: #d1d5db;
+    font-weight: 600;
+  }
+
+  .meta-icon {
+    width: 20px;
+    height: 20px;
+    color: #d1d5db;
+  }
+
+  /* Stats */
+  .mix-stats {
+    display: flex;
+    gap: 1.65rem;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    display: flex;
+    align-items: center;
+    gap: 0.44rem;
+    font-size: 0.99rem;
+    color: #9ca3af;
+    font-weight: 600;
+  }
+
+  .stat-icon {
+    width: 17.6px;
+    height: 17.6px;
+    color: #9ca3af;
+  }
+
+  /* Action Buttons */
+  .mix-actions {
+    display: flex;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.44rem;
+    padding: 0.55rem 0.935rem;
+    border-radius: 0.44rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    border: 2px solid #4b5563;
+    cursor: pointer;
+    text-decoration: none;
+    background: #374151;
+    color: #ffffff;
+  }
+
+  .action-btn:hover {
+    background: #4b5563;
+    border-color: #6b7280;
+  }
+
+  /* Play button - Green */
+  .action-btn.play-btn-action {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    border-color: #16a34a;
+  }
+
+  .action-btn.play-btn-action:hover {
+    background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+    border-color: #15803d;
+  }
+
+  /* Like button - Red on hover only */
+  .action-btn.like-btn:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    border-color: #dc2626;
+  }
+
+  /* When liked - show filled heart and swap text */
+  .like-btn[data-liked="true"] .like-icon-btn {
+    fill: #dc2626;
+    stroke: #dc2626;
+  }
+
+  .like-btn[data-liked="true"] .like-text-btn {
+    display: none !important;
+  }
+
+  .like-btn[data-liked="true"] .liked-text-btn {
+    display: inline !important;
+  }
+
+  /* Download button - Red/Primary */
+  .action-btn.primary {
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    border-color: #dc2626;
+  }
+
+  .action-btn.primary:hover {
+    background: linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%);
+    border-color: #b91c1c;
+  }
+
+  .action-btn .btn-icon {
+    width: 17.6px;
+    height: 17.6px;
+  }
+
+  .action-btn .btn-text {
+    display: inline;
+  }
+
+  /* Modal */
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.1rem;
+  }
+
+  .modal.hidden {
+    display: none;
+  }
+
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  .modal-content {
+    position: relative;
+    background: white;
+    border-radius: 0.825rem;
+    max-width: 30.8rem;
+    width: 100%;
+    border: 3px solid #000;
+    box-shadow: 0 27.5px 55px rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 1.375rem;
+    border-bottom: 3px solid #000;
+  }
+
+  .modal-header h3 {
+    font-size: 1.2375rem;
+    font-weight: 800;
+    color: #000;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6b7280;
+    transition: color 0.2s;
+  }
+
+  .modal-close:hover {
+    color: #000;
+  }
+
+  .modal-body {
+    padding: 1.375rem;
+  }
+
+  .modal-subtitle {
+    font-size: 0.9625rem;
+    color: #374151;
+    margin: 0 0 1.1rem 0;
+  }
+
+  .modal-subtitle span {
+    font-weight: 700;
+  }
+
+  .share-input-group {
+    display: flex;
+    gap: 0.55rem;
+  }
+
+  .share-input-group input {
+    flex: 1;
+    padding: 0.6875rem 0.9625rem;
+    border: 2px solid #000;
+    border-radius: 0.55rem;
+    font-family: monospace;
+    font-size: 0.88rem;
+    background: #f3f4f6;
+  }
+
+  .share-input-group button {
+    display: flex;
+    align-items: center;
+    gap: 0.4125rem;
+    padding: 0.6875rem 1.1rem;
+    background: #000;
+    color: white;
+    border: 2px solid #000;
+    border-radius: 0.55rem;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .share-input-group button:hover {
+    background: #374151;
+  }
+
+  .copy-feedback {
+    font-size: 0.825rem;
+    margin-top: 0.55rem;
+    min-height: 1.1rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .hero-content h1 {
+      font-size: 3.3rem !important;
+    }
+
+    .mix-card {
+      flex-direction: column;
+      padding: 0.825rem;
+      gap: 1.1rem;
+    }
+
+    .mix-artwork-container {
+      width: 100%;
+      min-width: 100%;
+      height: auto;
+      aspect-ratio: 1;
+    }
+
+    .mix-info {
+      padding: 0.55rem 0.275rem;
+    }
+
+    .mix-title {
+      font-size: 1.54rem;
+      white-space: normal;
+    }
+
+    .mix-dj {
+      font-size: 1.21rem;
+    }
+
+    .mix-meta-row {
+      gap: 1.375rem;
+    }
+
+    .meta-item {
+      font-size: 0.99rem;
+    }
+
+    .mix-stats {
+      gap: 1.1rem;
+    }
+
+    .stat {
+      font-size: 0.935rem;
+    }
+
+    .action-btn .btn-text {
+      display: none;
+    }
+
+    .action-btn.primary .btn-text {
+      display: inline;
+    }
+
+    .action-btn {
+      padding: 0.55rem 0.66rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .upload-mix-btn {
+      width: 100%;
+      text-align: center;
+    }
+
+    .mix-card {
+      padding: 0.66rem;
+    }
+
+    .mix-info {
+      padding: 0.275rem 0;
+      gap: 0.55rem;
+    }
+
+    .mix-title {
+      font-size: 1.375rem;
+    }
+
+    .mix-dj {
+      font-size: 1.1rem;
+    }
+
+    .mix-meta-row {
+      gap: 0.825rem;
+    }
+
+    .meta-item {
+      font-size: 0.935rem;
+    }
+
+    .mix-actions {
+      gap: 0.385rem;
+    }
+
+    .action-btn {
+      padding: 0.495rem 0.55rem;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .action-btn.primary {
+      flex: 2;
+    }
+  }
+</style>
+
+<script>
+  // Handle URL parameter to scroll to specific mix
+  const urlParams = new URLSearchParams(window.location.search);
+  const mixTimestamp = urlParams.get('mix');
+  if (mixTimestamp) {
+    setTimeout(() => {
+      const mixCard = document.querySelector(`.mix-card[data-upload-date="${mixTimestamp}"]`);
+      if (mixCard) {
+        mixCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        mixCard.style.border = '3px solid #dc2626';
+        setTimeout(() => {
+          mixCard.style.border = '';
+        }, 3000);
+      }
+    }, 500);
+  }
+
+  // Cache functions
+  const STATS_CACHE_KEY = 'freshwax_mix_stats_cache';
+  const CACHE_DURATION = 5 * 60 * 1000;
+
+  function updateCachedStat(mixId, statType, value) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(STATS_CACHE_KEY) || '{}');
+      if (!cached.stats) cached.stats = {};
+      if (!cached.stats[mixId]) cached.stats[mixId] = {};
+      cached.stats[mixId][statType] = value;
+      cached.timestamp = Date.now();
+      localStorage.setItem(STATS_CACHE_KEY, JSON.stringify(cached));
+    } catch (error) {
+      console.error('[Cache] Error:', error);
+    }
+  }
+
+  function updatePlayCount(mixId, newCount) {
+    document.querySelectorAll(`.plays-count[data-mix-id="${mixId}"]`).forEach(el => el.textContent = newCount);
+    updateCachedStat(mixId, 'plays', newCount);
+  }
+
+  function updateDownloadCount(mixId, newCount) {
+    document.querySelectorAll(`.downloads-count[data-mix-id="${mixId}"]`).forEach(el => el.textContent = newCount);
+    updateCachedStat(mixId, 'downloads', newCount);
+  }
+
+  function updateLikeCount(mixId, newCount) {
+    document.querySelectorAll(`.likes-count[data-mix-id="${mixId}"]`).forEach(el => el.textContent = newCount);
+    updateCachedStat(mixId, 'likes', newCount);
+  }
+
+  // API tracking functions
+  async function trackPlay(mixId) {
+    try {
+      const response = await fetch('/api/track-mix-play', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mixId })
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Error tracking play:', error);
+      return null;
+    }
+  }
+
+  async function trackDownload(mixId) {
+    try {
+      const response = await fetch('/api/track-mix-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mixId })
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Error tracking download:', error);
+      return null;
+    }
+  }
+
+  async function trackLike(mixId) {
+    try {
+      const response = await fetch('/api/track-mix-like', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mixId })
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Error tracking like:', error);
+      return null;
+    }
+  }
+
+  async function trackUnlike(mixId) {
+    try {
+      const response = await fetch('/api/track-mix-unlike', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mixId })
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Error tracking unlike:', error);
+      return null;
+    }
+  }
+
+  // Format duration helper for client-side
+  function formatDurationClient(seconds) {
+    if (!seconds || !isFinite(seconds)) return '--:--';
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    
+    if (hrs > 0) {
+      const hourWord = hrs === 1 ? 'hour' : 'hours';
+      const minWord = mins === 1 ? 'minute' : 'minutes';
+      if (mins > 0) {
+        return hrs + ' ' + hourWord + ' ' + mins + ' ' + minWord;
+      }
+      return hrs + ' ' + hourWord;
+    }
+    const minWord = mins === 1 ? 'minute' : 'minutes';
+    return mins + ' ' + minWord;
+  }
+
+  function initMixCards() {
+    console.log('[DJ-MIXES] Initializing mix cards...');
+
+    // Format durations - first try from data attribute, then fetch from audio metadata if needed
+    document.querySelectorAll('.duration-display').forEach(function(el) {
+      const duration = el.getAttribute('data-duration');
+      const audioUrl = el.getAttribute('data-audio-url');
+      const currentText = el.textContent;
+      
+      console.log('[DJ-MIXES] Duration check:', { duration, currentText, audioUrl: audioUrl ? 'yes' : 'no' });
+      
+      // If we have a valid duration from Firebase, use it
+      if (duration && duration !== '' && duration !== 'undefined' && duration !== 'null' && duration !== '0') {
+        const seconds = parseFloat(duration);
+        if (!isNaN(seconds) && seconds > 0) {
+          el.textContent = formatDurationClient(seconds);
+          console.log('[DJ-MIXES] Duration from data attr:', seconds, '->', el.textContent);
+          return;
+        }
+      }
+      
+      // If already showing a valid duration (not --:--), keep it
+      if (currentText && currentText !== '--:--' && !currentText.includes('--')) {
+        console.log('[DJ-MIXES] Keeping existing duration:', currentText);
+        return;
+      }
+      
+      // Otherwise, fetch duration from audio metadata
+      if (audioUrl) {
+        console.log('[DJ-MIXES] Fetching duration from audio...');
+        const tempAudio = new Audio();
+        tempAudio.preload = 'metadata';
+        
+        tempAudio.addEventListener('loadedmetadata', function() {
+          if (tempAudio.duration && isFinite(tempAudio.duration)) {
+            el.textContent = formatDurationClient(tempAudio.duration);
+            console.log('[DJ-MIXES] Duration loaded from audio:', formatDurationClient(tempAudio.duration));
+          }
+        });
+        
+        tempAudio.addEventListener('error', function() {
+          console.log('[DJ-MIXES] Could not load audio metadata for duration');
+        });
+        
+        tempAudio.src = audioUrl;
+      }
+    });
+
+    // Play buttons in action row
+    document.querySelectorAll('.play-btn-action').forEach(btn => {
+      if (btn.initialized) return;
+      btn.initialized = true;
+      
+      const card = btn.closest('.mix-card');
+      const mixId = card.getAttribute('data-mix-id');
+      const playIcon = btn.querySelector('.play-icon-btn');
+      const pauseIcon = btn.querySelector('.pause-icon-btn');
+      const playText = btn.querySelector('.play-text-btn');
+
+      // Check if this mix is currently playing
+      if (window.FreshWaxPlayer?.currentMix?.id === mixId && window.globalAudio && !window.globalAudio.paused) {
+        playIcon.classList.add('hidden');
+        pauseIcon.classList.remove('hidden');
+        if (playText) playText.textContent = 'Pause';
+      }
+
+      btn.onclick = function() {
+  const mixData = {
+    id: mixId,
+    title: card.getAttribute('data-title'),
+    dj_name: card.getAttribute('data-dj'),
+    artwork_url: card.getAttribute('data-artwork'),
+    audio_url: card.getAttribute('data-audio-url')
+  };
+
+  // Reset all other buttons
+  document.querySelectorAll('.play-btn-action').forEach(other => {
+    if (other !== btn) {
+      other.querySelector('.play-icon-btn').classList.remove('hidden');
+      other.querySelector('.pause-icon-btn').classList.add('hidden');
+      const otherText = other.querySelector('.play-text-btn');
+      if (otherText) otherText.textContent = 'Play';
+    }
+  });
+
+  // *** PAUSE SHUFFLE WIDGET IF PLAYING ***
+  if (window.shuffleWidgetAudio && !window.shuffleWidgetAudio.paused) {
+    window.shuffleWidgetAudio.pause();
+    console.log('[DJ-MIXES] Paused shuffle widget');
+    
+    var shuffleWidget = document.getElementById('shuffle-widget');
+    if (shuffleWidget) shuffleWidget.classList.remove('playing');
+    
+    var shuffleIconPlay = document.getElementById('shuffle-icon-play');
+    var shuffleIconPause = document.getElementById('shuffle-icon-pause');
+    var shuffleCtrlPlay = document.getElementById('shuffle-ctrl-play-icon');
+    var shuffleCtrlPause = document.getElementById('shuffle-ctrl-pause-icon');
+    
+    if (shuffleIconPlay) shuffleIconPlay.classList.remove('hidden');
+    if (shuffleIconPause) shuffleIconPause.classList.add('hidden');
+    if (shuffleCtrlPlay) shuffleCtrlPlay.classList.remove('hidden');
+    if (shuffleCtrlPause) shuffleCtrlPause.classList.add('hidden');
+  }
+
+  if (window.playMix && window.globalAudio) {
+    const isThisMix = window.FreshWaxPlayer?.currentMix?.id === mixId;
+    
+    if (isThisMix) {
+      if (window.globalAudio.paused) {
+        window.globalAudio.play().then(() => {
+          playIcon.classList.add('hidden');
+          pauseIcon.classList.remove('hidden');
+          if (playText) playText.textContent = 'Pause';
+        });
+      } else {
+        window.globalAudio.pause();
+        playIcon.classList.remove('hidden');
+        pauseIcon.classList.add('hidden');
+        if (playText) playText.textContent = 'Play';
+      }
+    } else {
+      window.playMix(mixData).then(() => {
+        playIcon.classList.add('hidden');
+        pauseIcon.classList.remove('hidden');
+        if (playText) playText.textContent = 'Pause';
+        
+        // Track play
+        const trackKey = 'tracked_' + mixId;
+        if (!window.FreshWaxPlayer[trackKey]) {
+          window.FreshWaxPlayer[trackKey] = true;
+          trackPlay(mixId).then(result => {
+            if (result?.plays !== undefined) {
+              updatePlayCount(mixId, result.plays);
+            }
+          });
+        }
+      });
+    }
+  }
+};
+    });
+
+    // Sync with global audio state
+    if (window.globalAudio) {
+      const syncButtons = () => {
+        const currentMixId = window.FreshWaxPlayer?.currentMix?.id;
+        const isPlaying = window.globalAudio && !window.globalAudio.paused;
+        
+        document.querySelectorAll('.play-btn-action').forEach(btn => {
+          const card = btn.closest('.mix-card');
+          const mixId = card.getAttribute('data-mix-id');
+          const playIcon = btn.querySelector('.play-icon-btn');
+          const pauseIcon = btn.querySelector('.pause-icon-btn');
+          const playText = btn.querySelector('.play-text-btn');
+          
+          if (mixId === currentMixId && isPlaying) {
+            playIcon.classList.add('hidden');
+            pauseIcon.classList.remove('hidden');
+            if (playText) playText.textContent = 'Pause';
+          } else {
+            playIcon.classList.remove('hidden');
+            pauseIcon.classList.add('hidden');
+            if (playText) playText.textContent = 'Play';
+          }
+        });
+      };
+      
+      window.globalAudio.addEventListener('play', syncButtons);
+      window.globalAudio.addEventListener('pause', syncButtons);
+      window.globalAudio.addEventListener('ended', syncButtons);
+    }
+
+    // Download buttons
+    document.querySelectorAll('.download-btn').forEach(btn => {
+      if (btn.initialized) return;
+      btn.initialized = true;
+      
+      btn.onclick = async (e) => {
+        e.preventDefault();
+        
+        const mixId = btn.getAttribute('data-mix-id');
+        const audioUrl = btn.getAttribute('data-audio-url');
+        const title = btn.getAttribute('data-title');
+        const dj = btn.getAttribute('data-dj');
+        const filename = (dj + ' - ' + title + '.mp3').replace(/[^a-z0-9\s\-\.]/gi, '_');
+        
+        const downloadIcon = btn.querySelector('.download-icon');
+        const checkIcon = btn.querySelector('.check-icon');
+        const btnText = btn.querySelector('.btn-text');
+        
+        btn.disabled = true;
+        if (btnText) btnText.textContent = 'Downloading...';
+        
+        // Track download
+        const result = await trackDownload(mixId);
+        if (result?.downloads !== undefined) {
+          updateDownloadCount(mixId, result.downloads);
+        }
+        
+        const proxyUrl = '/api/download-mix?url=' + encodeURIComponent(audioUrl) + '&filename=' + encodeURIComponent(filename);
+        
+        const a = document.createElement('a');
+        a.href = proxyUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Wait a few seconds then show "Please wait..."
+        setTimeout(() => {
+          if (btnText) btnText.textContent = 'Please wait...';
+        }, 10000);
+        
+        // Wait a few more seconds then show "Cleaning up..."
+        setTimeout(() => {
+          if (btnText) btnText.textContent = 'Cleaning up...';
+        }, 20000);
+        
+        // Return to normal state
+        setTimeout(() => {
+          downloadIcon.classList.remove('hidden');
+          checkIcon.classList.add('hidden');
+          if (btnText) btnText.textContent = 'Download';
+          btn.disabled = false;
+        }, 30000);
+      };
+    });
+
+    // Like buttons
+    document.querySelectorAll('.like-btn').forEach(btn => {
+      if (btn.initialized) return;
+      btn.initialized = true;
+      
+      const mixId = btn.getAttribute('data-mix-id');
+      const likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
+      const likeText = btn.querySelector('.like-text-btn');
+      const likedText = btn.querySelector('.liked-text-btn');
+      
+      if (likedMixes.includes(mixId)) {
+        btn.setAttribute('data-liked', 'true');
+        if (likeText) likeText.style.display = 'none';
+        if (likedText) likedText.style.display = 'inline';
+      }
+      
+      btn.onclick = async () => {
+        const isLiked = btn.getAttribute('data-liked') === 'true';
+        
+        if (isLiked) {
+          btn.setAttribute('data-liked', 'false');
+          if (likeText) likeText.style.display = 'inline';
+          if (likedText) likedText.style.display = 'none';
+          const liked = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
+          const idx = liked.indexOf(mixId);
+          if (idx > -1) {
+            liked.splice(idx, 1);
+            localStorage.setItem('liked-mixes', JSON.stringify(liked));
+          }
+          const result = await trackUnlike(mixId);
+          if (result?.likes !== undefined) updateLikeCount(mixId, result.likes);
+        } else {
+          btn.setAttribute('data-liked', 'true');
+          if (likeText) likeText.style.display = 'none';
+          if (likedText) likedText.style.display = 'inline';
+          const liked = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
+          if (!liked.includes(mixId)) {
+            liked.push(mixId);
+            localStorage.setItem('liked-mixes', JSON.stringify(liked));
+          }
+          const result = await trackLike(mixId);
+          if (result?.likes !== undefined) updateLikeCount(mixId, result.likes);
+        }
+      };
+    });
+
+    // Share buttons
+    document.querySelectorAll('.share-btn').forEach(btn => {
+      if (btn.initialized) return;
+      btn.initialized = true;
+      
+      btn.onclick = () => {
+        const title = btn.getAttribute('data-title');
+        const dj = btn.getAttribute('data-dj');
+        const card = btn.closest('.mix-card');
+        const uploadDate = card.getAttribute('data-upload-date');
+        const shareUrl = window.location.origin + '/dj-mixes?mix=' + uploadDate;
+        
+        document.getElementById('shareModalTitle').textContent = title;
+        document.getElementById('shareModalDJ').textContent = dj;
+        document.getElementById('shareLink').value = shareUrl;
+        document.getElementById('shareModal').classList.remove('hidden');
+      };
+    });
+  }
+
+  // Share modal
+  document.getElementById('closeShareModal')?.addEventListener('click', () => {
+    document.getElementById('shareModal').classList.add('hidden');
+  });
+
+  document.getElementById('shareModal')?.querySelector('.modal-backdrop')?.addEventListener('click', () => {
+    document.getElementById('shareModal').classList.add('hidden');
+  });
+
+  document.getElementById('copyShareButton')?.addEventListener('click', async () => {
+    const link = document.getElementById('shareLink').value;
+    const btnText = document.getElementById('copyShareButtonText');
+    const feedback = document.getElementById('copyFeedback');
+    
+    try {
+      await navigator.clipboard.writeText(link);
+      btnText.textContent = 'Copied!';
+      feedback.textContent = '✓ Link copied!';
+      feedback.style.color = '#16a34a';
+      
+      setTimeout(() => {
+        btnText.textContent = 'Copy';
+        feedback.textContent = '';
+      }, 2000);
+    } catch {
+      feedback.textContent = '✗ Failed';
+      feedback.style.color = '#dc2626';
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.getElementById('shareModal')?.classList.add('hidden');
+    }
+  });
+
+  // Initialize
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMixCards);
+  } else {
+    initMixCards();
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    setTimeout(initMixCards, 50);
+  });
+</script>

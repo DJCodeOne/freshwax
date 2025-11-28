@@ -1,0 +1,786 @@
+<!-- src/components/GlobalAudioPlayer.astro -->
+<!-- Persistent audio player for DJ MIXES and SHUFFLE mode -->
+<!-- Features: Spectrum analyser LEDs, shuffle mode, DJ mix mode -->
+
+<div id="global-audio-container" transition:persist="global-audio">
+  <audio id="global-audio" preload="metadata"></audio>
+</div>
+
+<!-- Mini Player (sticky bottom) -->
+<div 
+  id="mini-player" 
+  class="fixed bottom-0 left-0 right-0 z-50 transform translate-y-full transition-transform duration-300 ease-out"
+  transition:persist="mini-player"
+>
+  <div class="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-t-2 border-red-600 shadow-2xl backdrop-blur-sm">
+    <!-- Progress bar (clickable) -->
+    <div id="mini-progress-container" class="h-1 bg-gray-700 cursor-pointer group relative overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-r from-red-600/20 to-red-500/20 animate-pulse"></div>
+      <div id="mini-progress-bar" class="h-full bg-gradient-to-r from-red-600 via-red-500 to-red-600 transition-all duration-100 relative z-10 shadow-lg shadow-red-500/50" style="width: 0%">
+        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+      </div>
+    </div>
+    
+    <div class="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-3">
+      <div class="flex items-center gap-2 sm:gap-4">
+        
+        <!-- LEFT: Spectrum Analyser -->
+        <div id="spectrum-left" class="hidden sm:flex items-end gap-[2px] h-8 flex-shrink-0">
+          <div class="spectrum-bar" style="--bar-index: 0;"></div>
+          <div class="spectrum-bar" style="--bar-index: 1;"></div>
+          <div class="spectrum-bar" style="--bar-index: 2;"></div>
+          <div class="spectrum-bar" style="--bar-index: 3;"></div>
+          <div class="spectrum-bar" style="--bar-index: 4;"></div>
+          <div class="spectrum-bar" style="--bar-index: 5;"></div>
+          <div class="spectrum-bar" style="--bar-index: 6;"></div>
+          <div class="spectrum-bar" style="--bar-index: 7;"></div>
+        </div>
+        
+        <!-- Artwork + Track Info -->
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink-0">
+          <!-- Artwork -->
+          <a id="mini-artwork-link" href="#" class="flex-shrink-0 relative group">
+            <div class="absolute inset-0 bg-red-600 blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
+            <img 
+              id="mini-artwork" 
+              src="/logo.webp" 
+              alt="Now Playing"
+              class="w-10 h-10 sm:w-12 sm:h-12 border-2 border-white shadow-lg object-cover relative z-10 group-hover:scale-105 transition-transform duration-300"
+            />
+          </a>
+          
+          <!-- Track Info -->
+          <a id="mini-info-link" href="#" class="group min-w-0">
+            <p id="mini-title" class="text-white font-black text-xs sm:text-sm uppercase truncate max-w-[80px] sm:max-w-[160px] group-hover:text-red-500 transition-colors">No track loaded</p>
+            <p id="mini-dj" class="text-gray-400 font-bold text-[10px] sm:text-xs uppercase truncate max-w-[80px] sm:max-w-[160px]">--</p>
+          </a>
+        </div>
+        
+        <!-- CENTER: Controls (flex-grow to take remaining space) -->
+        <div class="flex items-center justify-center gap-2 sm:gap-3 flex-grow">
+          <!-- Duration -->
+          <div class="hidden md:flex items-center gap-1 text-[10px] sm:text-xs text-gray-400 font-mono flex-shrink-0 bg-black/30 px-2 py-1 rounded">
+            <span id="mini-current-time" class="text-red-500 font-bold">0:00</span>
+            <span class="text-gray-600">/</span>
+            <span id="mini-duration">0:00</span>
+          </div>
+          
+          <!-- Shuffle Button -->
+          <button id="mini-shuffle-btn" class="mini-shuffle-btn p-2 sm:p-2.5 text-gray-400 hover:text-white transition-all hover:scale-110 active:scale-95 rounded-full" title="Shuffle Play">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
+            </svg>
+          </button>
+          
+          <!-- Skip Back -->
+          <button id="mini-skip-back" class="p-1.5 sm:p-2 text-gray-400 hover:text-white transition-all hover:scale-110 active:scale-95" title="Back 10s / Previous">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z"/>
+            </svg>
+          </button>
+          
+          <!-- Play Button -->
+          <button id="mini-play-btn" class="relative p-3 sm:p-4 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 rounded-full text-white transition-all hover:scale-110 active:scale-95 shadow-lg shadow-red-600/50 flex-shrink-0">
+            <div class="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 to-transparent"></div>
+            <svg id="mini-play-icon" class="w-5 h-5 sm:w-6 sm:h-6 relative z-10" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            <svg id="mini-pause-icon" class="w-5 h-5 sm:w-6 sm:h-6 relative z-10 hidden" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+            </svg>
+          </button>
+          
+          <!-- Skip Forward -->
+          <button id="mini-skip-forward" class="p-1.5 sm:p-2 text-gray-400 hover:text-white transition-all hover:scale-110 active:scale-95" title="Forward 10s / Next">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z"/>
+            </svg>
+          </button>
+          
+          <!-- Volume -->
+          <div class="hidden md:flex items-center gap-2">
+            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0 3 3 0 010 4.242 1 1 0 11-1.414-1.414 1 1 0 000-1.414 1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+            <input type="range" id="mini-volume" min="0" max="100" value="70" class="w-16 h-1 bg-gray-600 rounded-full appearance-none cursor-pointer mini-volume-slider" />
+          </div>
+        </div>
+        
+        <!-- RIGHT: Mode + Spectrum + Close -->
+        <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <!-- Mode indicator -->
+          <span id="mini-mode-indicator" class="hidden sm:inline-block text-[10px] uppercase tracking-wider text-gray-500 bg-black/30 px-2 py-1 rounded"></span>
+          
+          <!-- RIGHT: Spectrum Analyser -->
+          <div id="spectrum-right" class="hidden sm:flex items-end gap-[2px] h-8 flex-shrink-0">
+            <div class="spectrum-bar" style="--bar-index: 7;"></div>
+            <div class="spectrum-bar" style="--bar-index: 6;"></div>
+            <div class="spectrum-bar" style="--bar-index: 5;"></div>
+            <div class="spectrum-bar" style="--bar-index: 4;"></div>
+            <div class="spectrum-bar" style="--bar-index: 3;"></div>
+            <div class="spectrum-bar" style="--bar-index: 2;"></div>
+            <div class="spectrum-bar" style="--bar-index: 1;"></div>
+            <div class="spectrum-bar" style="--bar-index: 0;"></div>
+          </div>
+          
+          <!-- Close button -->
+          <button id="mini-close" class="p-1.5 text-gray-500 hover:text-white transition-colors" title="Close player">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Spectrum analyser bars */
+  .spectrum-bar {
+    width: 4px;
+    min-height: 4px;
+    height: 4px;
+    background: linear-gradient(to top, #22c55e 0%, #22c55e 40%, #eab308 40%, #eab308 70%, #dc2626 70%, #dc2626 100%);
+    border-radius: 1px;
+    transition: height 0.05s ease-out;
+    box-shadow: 0 0 4px rgba(34, 197, 94, 0.3);
+  }
+  
+  .spectrum-bar.active {
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.5), 0 0 12px rgba(234, 179, 8, 0.3);
+  }
+  
+  /* Idle animation when not playing */
+  #mini-player:not(.playing) .spectrum-bar {
+    animation: idle-pulse 2s ease-in-out infinite;
+    animation-delay: calc(var(--bar-index) * 0.1s);
+  }
+  
+  @keyframes idle-pulse {
+    0%, 100% { height: 4px; opacity: 0.3; }
+    50% { height: 8px; opacity: 0.5; }
+  }
+  
+  /* When playing, bars are controlled by JS */
+  #mini-player.playing .spectrum-bar {
+    animation: none;
+    opacity: 1;
+  }
+
+  .mini-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #dc2626;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(220, 38, 38, 0.5);
+  }
+  
+  .mini-volume-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #dc2626;
+    cursor: pointer;
+    border: none;
+  }
+  
+  /* Shuffle button styles */
+  .mini-shuffle-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+  }
+  
+  .mini-shuffle-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  .mini-shuffle-btn.active {
+    color: #dc2626 !important;
+    background: rgba(220, 38, 38, 0.15);
+    border-color: rgba(220, 38, 38, 0.4);
+    box-shadow: 0 0 15px rgba(220, 38, 38, 0.3);
+  }
+  
+  .mini-shuffle-btn.loading {
+    opacity: 0.5;
+    pointer-events: none;
+    animation: pulse 1s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.8; }
+  }
+  
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
+  
+  #mini-player.visible {
+    transform: translateY(0);
+  }
+</style>
+
+<script is:inline>
+  // ===========================================
+  // GLOBAL AUDIO PLAYER WITH SHUFFLE & SPECTRUM
+  // ===========================================
+  
+  (function() {
+    // Prevent duplicate initialization
+    if (window.FreshWaxPlayer && window.FreshWaxPlayer._initialized) {
+      console.log('[MINI-PLAYER] Already initialized');
+      return;
+    }
+
+    window.FreshWaxPlayer = {
+      _initialized: true,
+      currentMix: null,
+      hasTrackedPlay: false,
+      
+      // Shuffle state
+      shuffleTracks: null,
+      shuffledQueue: [],
+      shuffleIndex: 0,
+      isShuffleMode: false
+    };
+
+    function formatTime(seconds) {
+      if (!seconds || !isFinite(seconds)) return '0:00';
+      var mins = Math.floor(seconds / 60);
+      var secs = Math.floor(seconds % 60);
+      return mins + ':' + (secs < 10 ? '0' : '') + secs;
+    }
+
+    // === SPECTRUM ANALYSER (Simulated - works without CORS) ===
+    var spectrumAnimationId = null;
+    var spectrumBars = { left: [], right: [] };
+    var barValues = [0, 0, 0, 0, 0, 0, 0, 0];
+    var targetValues = [0, 0, 0, 0, 0, 0, 0, 0];
+    
+    function initSpectrumBars() {
+      spectrumBars.left = document.querySelectorAll('#spectrum-left .spectrum-bar');
+      spectrumBars.right = document.querySelectorAll('#spectrum-right .spectrum-bar');
+    }
+    
+    function updateSpectrum() {
+      var audio = document.getElementById('global-audio');
+      var isPlaying = audio && !audio.paused && !audio.ended && audio.readyState > 2;
+      
+      if (isPlaying) {
+        // Generate pseudo-random values that look like music
+        for (var i = 0; i < 8; i++) {
+          // Bass frequencies (lower indices) tend to be stronger
+          var baseBias = 1 - (i * 0.08);
+          var randomness = Math.random();
+          
+          // Smooth transitions with some randomness
+          targetValues[i] = Math.min(32, Math.max(4, 
+            (randomness * 28 * baseBias) + 4 + (Math.sin(Date.now() / (200 + i * 50)) * 8)
+          ));
+        }
+      } else {
+        // When paused, slowly decay to minimum
+        for (var i = 0; i < 8; i++) {
+          targetValues[i] = 4;
+        }
+      }
+      
+      // Smooth interpolation
+      for (var i = 0; i < 8; i++) {
+        barValues[i] += (targetValues[i] - barValues[i]) * 0.3;
+        var height = Math.round(barValues[i]);
+        
+        if (spectrumBars.left[i]) {
+          spectrumBars.left[i].style.height = height + 'px';
+          if (height > 12) spectrumBars.left[i].classList.add('active');
+          else spectrumBars.left[i].classList.remove('active');
+        }
+        if (spectrumBars.right[i]) {
+          spectrumBars.right[i].style.height = height + 'px';
+          if (height > 12) spectrumBars.right[i].classList.add('active');
+          else spectrumBars.right[i].classList.remove('active');
+        }
+      }
+      
+      spectrumAnimationId = requestAnimationFrame(updateSpectrum);
+    }
+    
+    function startSpectrum() {
+      var miniPlayer = document.getElementById('mini-player');
+      if (miniPlayer) miniPlayer.classList.add('playing');
+      
+      initSpectrumBars();
+      
+      if (!spectrumAnimationId) {
+        updateSpectrum();
+      }
+    }
+    
+    function stopSpectrum() {
+      var miniPlayer = document.getElementById('mini-player');
+      if (miniPlayer) miniPlayer.classList.remove('playing');
+      
+      // Let the animation continue to show decay
+      // It will naturally settle to minimum values
+    }
+
+    function initMiniPlayer() {
+      console.log('[MINI-PLAYER] Initializing');
+      
+      var globalAudio = document.getElementById('global-audio');
+      var miniPlayer = document.getElementById('mini-player');
+      var miniPlayBtn = document.getElementById('mini-play-btn');
+      var miniProgressContainer = document.getElementById('mini-progress-container');
+      var miniVolume = document.getElementById('mini-volume');
+      var miniSkipBack = document.getElementById('mini-skip-back');
+      var miniSkipForward = document.getElementById('mini-skip-forward');
+      var miniClose = document.getElementById('mini-close');
+      var miniShuffleBtn = document.getElementById('mini-shuffle-btn');
+
+      if (!globalAudio || !miniPlayer) {
+        console.log('[MINI-PLAYER] Missing elements');
+        return;
+      }
+
+      window.globalAudio = globalAudio;
+
+      // === AUDIO EVENT LISTENERS ===
+      if (!globalAudio.hasListeners) {
+        globalAudio.hasListeners = true;
+
+        globalAudio.addEventListener('timeupdate', function() {
+          var currentTimeEl = document.getElementById('mini-current-time');
+          var progressBarEl = document.getElementById('mini-progress-bar');
+          if (currentTimeEl) currentTimeEl.textContent = formatTime(globalAudio.currentTime);
+          if (globalAudio.duration && progressBarEl) {
+            progressBarEl.style.width = (globalAudio.currentTime / globalAudio.duration * 100) + '%';
+          }
+        });
+
+        globalAudio.addEventListener('loadedmetadata', function() {
+          var durationEl = document.getElementById('mini-duration');
+          if (durationEl) durationEl.textContent = formatTime(globalAudio.duration);
+        });
+
+        globalAudio.addEventListener('play', function() {
+          var playIcon = document.getElementById('mini-play-icon');
+          var pauseIcon = document.getElementById('mini-pause-icon');
+          if (playIcon) playIcon.classList.add('hidden');
+          if (pauseIcon) pauseIcon.classList.remove('hidden');
+          startSpectrum();
+        });
+
+        globalAudio.addEventListener('pause', function() {
+          var playIcon = document.getElementById('mini-play-icon');
+          var pauseIcon = document.getElementById('mini-pause-icon');
+          if (playIcon) playIcon.classList.remove('hidden');
+          if (pauseIcon) pauseIcon.classList.add('hidden');
+          stopSpectrum();
+        });
+
+        globalAudio.addEventListener('ended', function() {
+          if (window.FreshWaxPlayer.isShuffleMode) {
+            playNextShuffleTrack();
+          } else {
+            var playIcon = document.getElementById('mini-play-icon');
+            var pauseIcon = document.getElementById('mini-pause-icon');
+            if (playIcon) playIcon.classList.remove('hidden');
+            if (pauseIcon) pauseIcon.classList.add('hidden');
+            stopSpectrum();
+          }
+        });
+        
+        globalAudio.addEventListener('error', function(e) {
+          console.error('[MINI-PLAYER] Audio error:', e);
+          if (window.FreshWaxPlayer.isShuffleMode) {
+            console.log('[MINI-PLAYER] Skipping to next track due to error');
+            playNextShuffleTrack();
+          }
+        });
+      }
+
+      // === PLAY/PAUSE BUTTON ===
+      if (miniPlayBtn) {
+        miniPlayBtn.onclick = function() {
+          if (!globalAudio.src) return;
+          
+          if (globalAudio.paused) {
+            globalAudio.play().catch(function(err) {
+              console.error('[MINI-PLAYER] Play failed:', err);
+            });
+          } else {
+            globalAudio.pause();
+          }
+        };
+      }
+
+      // === SKIP BUTTONS ===
+      if (miniSkipBack) {
+        miniSkipBack.onclick = function() {
+          if (window.FreshWaxPlayer.isShuffleMode) {
+            playPreviousShuffleTrack();
+          } else {
+            globalAudio.currentTime = Math.max(0, globalAudio.currentTime - 10);
+          }
+        };
+      }
+
+      if (miniSkipForward) {
+        miniSkipForward.onclick = function() {
+          if (window.FreshWaxPlayer.isShuffleMode) {
+            playNextShuffleTrack();
+          } else {
+            if (globalAudio.duration) {
+              globalAudio.currentTime = Math.min(globalAudio.duration, globalAudio.currentTime + 10);
+            }
+          }
+        };
+      }
+
+      // === VOLUME ===
+      if (miniVolume) {
+        miniVolume.oninput = function() {
+          globalAudio.volume = miniVolume.value / 100;
+        };
+      }
+
+      // === PROGRESS SEEK ===
+      if (miniProgressContainer) {
+        miniProgressContainer.onclick = function(e) {
+          if (!globalAudio.duration) return;
+          var rect = miniProgressContainer.getBoundingClientRect();
+          var progress = (e.clientX - rect.left) / rect.width;
+          globalAudio.currentTime = progress * globalAudio.duration;
+        };
+      }
+
+      // === CLOSE BUTTON ===
+      if (miniClose) {
+        miniClose.onclick = function() {
+          globalAudio.pause();
+          globalAudio.src = '';
+          miniPlayer.classList.remove('visible');
+          window.FreshWaxPlayer.currentMix = null;
+          window.FreshWaxPlayer.isShuffleMode = false;
+          stopSpectrum();
+          if (window.AudioManager) {
+            window.AudioManager.mode = 'idle';
+            window.AudioManager.updateShuffleButtonUI(false);
+          }
+          updateModeIndicator('');
+          
+          var titleEl = document.getElementById('mini-title');
+          var djEl = document.getElementById('mini-dj');
+          if (titleEl) titleEl.textContent = 'No track loaded';
+          if (djEl) djEl.textContent = '--';
+        };
+      }
+
+      // === SHUFFLE BUTTON ===
+      if (miniShuffleBtn) {
+        miniShuffleBtn.onclick = function() {
+          if (window.FreshWaxPlayer.isShuffleMode) {
+            stopShuffle();
+          } else {
+            startShuffle();
+          }
+        };
+      }
+
+      // Initialize volume
+      if (globalAudio.volume === 1) {
+        globalAudio.volume = 0.7;
+      }
+
+      // === SHUFFLE FUNCTIONS ===
+      
+      function startShuffle() {
+        console.log('[MINI-PLAYER] Starting shuffle');
+        var shuffleBtn = document.getElementById('mini-shuffle-btn');
+        if (shuffleBtn) shuffleBtn.classList.add('loading');
+        
+        // Priority 1: Pre-loaded tracks from page
+        if (window.SHUFFLE_TRACKS_CACHE && window.SHUFFLE_TRACKS_CACHE.length > 0) {
+          window.FreshWaxPlayer.shuffleTracks = window.SHUFFLE_TRACKS_CACHE;
+          console.log('[MINI-PLAYER] Using pre-cached tracks:', window.SHUFFLE_TRACKS_CACHE.length);
+          if (shuffleBtn) shuffleBtn.classList.remove('loading');
+          initShufflePlayback();
+          return;
+        }
+        
+        // Priority 2: Previously fetched tracks
+        if (window.FreshWaxPlayer.shuffleTracks && window.FreshWaxPlayer.shuffleTracks.length > 0) {
+          console.log('[MINI-PLAYER] Using previously fetched tracks');
+          if (shuffleBtn) shuffleBtn.classList.remove('loading');
+          initShufflePlayback();
+          return;
+        }
+        
+        // Priority 3: Fetch from API
+        console.log('[MINI-PLAYER] Fetching tracks from API...');
+        fetch('/api/get-shuffle-tracks')
+          .then(function(res) { 
+            if (!res.ok) throw new Error('API returned status ' + res.status);
+            return res.json(); 
+          })
+          .then(function(data) {
+            if (shuffleBtn) shuffleBtn.classList.remove('loading');
+            
+            if (data.success && data.tracks && data.tracks.length > 0) {
+              window.FreshWaxPlayer.shuffleTracks = data.tracks;
+              console.log('[MINI-PLAYER] Loaded', data.tracks.length, 'shuffle tracks from API');
+              initShufflePlayback();
+            } else {
+              console.warn('[MINI-PLAYER] No tracks returned:', data);
+              alert('No preview tracks available for shuffle.');
+            }
+          })
+          .catch(function(err) {
+            if (shuffleBtn) shuffleBtn.classList.remove('loading');
+            console.error('[MINI-PLAYER] Failed to fetch shuffle tracks:', err);
+            alert('Failed to load shuffle tracks.');
+          });
+      }
+      
+      function initShufflePlayback() {
+        var tracks = window.FreshWaxPlayer.shuffleTracks;
+        
+        if (!tracks || tracks.length === 0) {
+          console.error('[MINI-PLAYER] No tracks to shuffle');
+          return;
+        }
+        
+        if (window.FreshWaxPlayer.currentMix) {
+          window.FreshWaxPlayer.currentMix = null;
+        }
+        
+        // Fisher-Yates shuffle
+        var shuffled = tracks.slice();
+        for (var i = shuffled.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var temp = shuffled[i];
+          shuffled[i] = shuffled[j];
+          shuffled[j] = temp;
+        }
+        
+        window.FreshWaxPlayer.shuffledQueue = shuffled;
+        window.FreshWaxPlayer.shuffleIndex = 0;
+        window.FreshWaxPlayer.isShuffleMode = true;
+        
+        if (window.AudioManager) {
+          window.AudioManager.onShufflePlay();
+        }
+        
+        var shuffleBtn = document.getElementById('mini-shuffle-btn');
+        if (shuffleBtn) shuffleBtn.classList.add('active');
+        
+        var player = document.getElementById('mini-player');
+        if (player) player.classList.add('visible');
+        
+        updateModeIndicator('SHUFFLE');
+        playCurrentShuffleTrack();
+      }
+      
+      function playCurrentShuffleTrack() {
+        var queue = window.FreshWaxPlayer.shuffledQueue;
+        var index = window.FreshWaxPlayer.shuffleIndex;
+        
+        if (!queue || queue.length === 0) {
+          console.error('[MINI-PLAYER] Empty shuffle queue');
+          return;
+        }
+        
+        // Wrap around
+        if (index >= queue.length) {
+          window.FreshWaxPlayer.shuffleIndex = 0;
+          index = 0;
+          for (var i = queue.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var temp = queue[i];
+            queue[i] = queue[j];
+            queue[j] = temp;
+          }
+          console.log('[MINI-PLAYER] Queue wrapped, re-shuffled');
+        }
+        
+        var track = queue[index];
+        if (!track) {
+          console.error('[MINI-PLAYER] No track at index', index);
+          return;
+        }
+        
+        var trackTitle = track.title || track.trackName || track.name || 'Unknown Track';
+        var trackArtist = track.artist || track.artistName || 'Unknown Artist';
+        var trackArtwork = track.artwork || track.coverArtUrl || track.artworkUrl || '/logo.webp';
+        var trackAudioUrl = track.previewUrl || track.audioUrl || track.mp3Url;
+        var trackReleaseId = track.releaseId || '';
+        
+        console.log('[MINI-PLAYER] Playing shuffle track ' + (index + 1) + '/' + queue.length + ':', trackTitle, 'by', trackArtist);
+        
+        var titleEl = document.getElementById('mini-title');
+        var djEl = document.getElementById('mini-dj');
+        var artworkEl = document.getElementById('mini-artwork');
+        var artworkLink = document.getElementById('mini-artwork-link');
+        var infoLink = document.getElementById('mini-info-link');
+        
+        if (titleEl) titleEl.textContent = trackTitle;
+        if (djEl) djEl.textContent = trackArtist;
+        if (artworkEl) artworkEl.src = trackArtwork;
+        
+        var releaseUrl = trackReleaseId ? '/releases/' + trackReleaseId : '#';
+        if (artworkLink) artworkLink.href = releaseUrl;
+        if (infoLink) infoLink.href = releaseUrl;
+        
+        if (!trackAudioUrl) {
+          console.error('[MINI-PLAYER] Track has no audio URL, skipping');
+          playNextShuffleTrack();
+          return;
+        }
+        
+        var audio = document.getElementById('global-audio');
+        if (audio) {
+          audio.src = trackAudioUrl;
+          audio.load();
+          audio.play().catch(function(err) {
+            console.error('[MINI-PLAYER] Shuffle play error:', err);
+            setTimeout(function() {
+              playNextShuffleTrack();
+            }, 500);
+          });
+        }
+      }
+      
+      function playNextShuffleTrack() {
+        window.FreshWaxPlayer.shuffleIndex++;
+        playCurrentShuffleTrack();
+      }
+      
+      function playPreviousShuffleTrack() {
+        var audio = document.getElementById('global-audio');
+        if (audio && audio.currentTime > 3) {
+          audio.currentTime = 0;
+          return;
+        }
+        window.FreshWaxPlayer.shuffleIndex = Math.max(0, window.FreshWaxPlayer.shuffleIndex - 1);
+        playCurrentShuffleTrack();
+      }
+      
+      function stopShuffle() {
+        console.log('[MINI-PLAYER] Stopping shuffle');
+        window.FreshWaxPlayer.isShuffleMode = false;
+        
+        var audio = document.getElementById('global-audio');
+        if (audio) audio.pause();
+        
+        if (window.AudioManager) {
+          window.AudioManager.onShuffleStop();
+        }
+        
+        var shuffleBtn = document.getElementById('mini-shuffle-btn');
+        if (shuffleBtn) shuffleBtn.classList.remove('active');
+        
+        updateModeIndicator('');
+        var titleEl = document.getElementById('mini-title');
+        var djEl = document.getElementById('mini-dj');
+        if (titleEl) titleEl.textContent = 'No track loaded';
+        if (djEl) djEl.textContent = '--';
+        
+        if (!window.FreshWaxPlayer.currentMix) {
+          var player = document.getElementById('mini-player');
+          if (player) player.classList.remove('visible');
+        }
+      }
+      
+      function updateModeIndicator(mode) {
+        var indicator = document.getElementById('mini-mode-indicator');
+        if (indicator) {
+          if (mode) {
+            indicator.textContent = mode;
+            indicator.style.display = 'inline-block';
+          } else {
+            indicator.style.display = 'none';
+          }
+        }
+      }
+
+      // === PLAY MIX FUNCTION (for DJ mixes) ===
+      window.playMix = function(mixData) {
+        console.log('[MINI-PLAYER] playMix called:', mixData ? mixData.id : 'null');
+        if (!mixData || !mixData.audio_url) {
+          console.error('[MINI-PLAYER] Invalid mixData');
+          return Promise.reject('Invalid mix data');
+        }
+
+        if (window.FreshWaxPlayer.isShuffleMode) {
+          window.FreshWaxPlayer.isShuffleMode = false;
+          var shuffleBtn = document.getElementById('mini-shuffle-btn');
+          if (shuffleBtn) shuffleBtn.classList.remove('active');
+          if (window.AudioManager) {
+            window.AudioManager.updateShuffleButtonUI(false);
+          }
+        }
+        
+        if (window.AudioManager) {
+          window.AudioManager.onDjMixPlay();
+        }
+
+        var isSameMix = window.FreshWaxPlayer.currentMix && window.FreshWaxPlayer.currentMix.id === mixData.id;
+        var player = document.getElementById('mini-player');
+        var audio = document.getElementById('global-audio');
+        
+        if (!isSameMix) {
+          window.FreshWaxPlayer.currentMix = mixData;
+          window.FreshWaxPlayer.hasTrackedPlay = false;
+          
+          audio.src = mixData.audio_url;
+          audio.load();
+          
+          var titleEl = document.getElementById('mini-title');
+          var djEl = document.getElementById('mini-dj');
+          var artworkEl = document.getElementById('mini-artwork');
+          var artworkLink = document.getElementById('mini-artwork-link');
+          var infoLink = document.getElementById('mini-info-link');
+          
+          if (titleEl) titleEl.textContent = mixData.title || 'Unknown Mix';
+          if (djEl) djEl.textContent = mixData.dj_name || 'Unknown DJ';
+          if (artworkEl) artworkEl.src = mixData.artwork_url || '/logo.webp';
+          if (artworkLink) artworkLink.href = '/dj-mix/' + mixData.id;
+          if (infoLink) infoLink.href = '/dj-mix/' + mixData.id;
+          
+          updateModeIndicator('DJ MIX');
+        }
+
+        if (player) player.classList.add('visible');
+
+        return audio.play().then(function() {
+          console.log('[MINI-PLAYER] DJ mix playing');
+        }).catch(function(err) {
+          console.error('[MINI-PLAYER] Play error:', err);
+          throw err;
+        });
+      };
+
+      console.log('[MINI-PLAYER] Initialization complete');
+    }
+
+    // Initialize
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initMiniPlayer);
+    } else {
+      initMiniPlayer();
+    }
+    
+    document.addEventListener('astro:page-load', initMiniPlayer);
+  })();
+</script>

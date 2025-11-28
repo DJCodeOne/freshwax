@@ -1,0 +1,1081 @@
+---
+// /src/pages/admin/orders.astro
+// Fresh Wax Orders Management
+// Status flow: Digital = instant completed | Physical = pending → processing → shipped → delivered
+
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+// Fetch orders with customer info
+const ordersSnapshot = await db.collection('orders')
+  .orderBy('createdAt', 'desc')
+  .limit(100)
+  .get();
+
+const orders = await Promise.all(ordersSnapshot.docs.map(async doc => {
+  const data = doc.data();
+  
+  // Get customer info if available
+  let customerName = 'Guest';
+  let customerEmail = data.email || '';
+  
+  if (data.customerId || data.userId) {
+    try {
+      const customerDoc = await db.collection('customers').doc(data.customerId || data.userId).get();
+      if (customerDoc.exists) {
+        const customer = customerDoc.data();
+        customerName = customer.fullName || customer.name || 'Customer';
+        customerEmail = customer.email || customerEmail;
+      }
+    } catch (e) {}
+  }
+  
+  // Auto-deliver check: if shipped more than 14 days ago
+  let status = data.status || 'pending';
+  if (status === 'shipped' && data.shippedAt) {
+    const shippedDate = data.shippedAt.toDate?.() || new Date(data.shippedAt);
+    const daysSinceShipped = (Date.now() - shippedDate.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceShipped >= 14) {
+      status = 'delivered';
+      // Update in background (fire and forget)
+      db.collection('orders').doc(doc.id).update({ 
+        status: 'delivered',
+        deliveredAt: new Date(),
+        autoDelivered: true
+      }).catch(() => {});
+    }
+  }
+  
+  return {
+    id: doc.id,
+    ...data,
+    status,
+    customerName,
+    customerEmail,
+    createdAt: data.createdAt?.toDate?.() || new Date(),
+    shippedAt: data.shippedAt?.toDate?.() || null,
+    deliveredAt: data.deliveredAt?.toDate?.() || null
+  };
+}));
+
+// Order type detection
+function getOrderType(order) {
+  const hasPhysical = order.items?.some(item => 
+    item.type === 'vinyl' || item.type === 'merch' || item.isPhysical
+  );
+  const hasDigital = order.items?.some(item => 
+    item.type === 'digital' || item.type === 'release' || !item.isPhysical
+  );
+  
+  if (hasPhysical && hasDigital) return 'mixed';
+  if (hasPhysical) return 'physical';
+  return 'digital';
+}
+
+// Stats
+const stats = {
+  total: orders.length,
+  pending: orders.filter(o => o.status === 'pending').length,
+  processing: orders.filter(o => o.status === 'processing').length,
+  shipped: orders.filter(o => o.status === 'shipped').length,
+  delivered: orders.filter(o => o.status === 'delivered' || o.status === 'completed').length,
+  cancelled: orders.filter(o => o.status === 'cancelled').length
+};
+
+// Format currency
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+};
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orders | Fresh Wax Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .back-link {
+      color: #a0a0a0;
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+    
+    .back-link:hover { color: #667eea; }
+    
+    /* Stats Bar */
+    .stats-bar {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      font-size: 0.875rem;
+    }
+    
+    .stat-pill .count {
+      font-weight: 700;
+      color: #fff;
+    }
+    
+    .stat-pill.pending .count { color: #fbbf24; }
+    .stat-pill.processing .count { color: #60a5fa; }
+    .stat-pill.shipped .count { color: #a78bfa; }
+    .stat-pill.delivered .count { color: #4ade80; }
+    
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .filter-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #888;
+    }
+    
+    select, input[type="text"] {
+      padding: 0.5rem 1rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.875rem;
+    }
+    
+    select:focus, input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    input[type="text"] {
+      min-width: 200px;
+    }
+    
+    /* Orders Table */
+    .orders-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .orders-table th {
+      text-align: left;
+      padding: 1rem;
+      background: rgba(255,255,255,0.05);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #888;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .orders-table td {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      vertical-align: middle;
+    }
+    
+    .orders-table tr:hover td {
+      background: rgba(255,255,255,0.03);
+    }
+    
+    .order-id {
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #888;
+    }
+    
+    .customer-info .name {
+      font-weight: 500;
+      color: #fff;
+    }
+    
+    .customer-info .email {
+      font-size: 0.75rem;
+      color: #666;
+    }
+    
+    .order-total {
+      font-weight: 600;
+      color: #4ade80;
+    }
+    
+    .order-type {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 500;
+    }
+    
+    .type-digital { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+    .type-physical { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+    .type-mixed { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
+    
+    /* Status Badge & Dropdown */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    
+    .status-pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+    .status-processing { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+    .status-shipped { background: rgba(167, 139, 250, 0.2); color: #a78bfa; }
+    .status-delivered, .status-completed { background: rgba(74, 222, 128, 0.2); color: #4ade80; }
+    .status-cancelled { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    
+    .status-select {
+      padding: 0.35rem 0.5rem;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+    
+    .tracking-info {
+      font-size: 0.7rem;
+      color: #a78bfa;
+      margin-top: 0.25rem;
+    }
+    
+    .tracking-info a {
+      color: #a78bfa;
+      text-decoration: underline;
+    }
+    
+    .order-date {
+      font-size: 0.8rem;
+      color: #888;
+    }
+    
+    .order-date .time {
+      font-size: 0.7rem;
+      color: #666;
+    }
+    
+    /* Actions */
+    .btn-view {
+      padding: 0.35rem 0.75rem;
+      background: rgba(102, 126, 234, 0.2);
+      border: 1px solid rgba(102, 126, 234, 0.3);
+      border-radius: 6px;
+      color: #667eea;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-view:hover {
+      background: rgba(102, 126, 234, 0.3);
+    }
+    
+    /* Order Details Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    
+    .modal-overlay.active {
+      display: flex;
+    }
+    
+    .modal {
+      background: #1a1a2e;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .modal-header h2 {
+      font-size: 1.25rem;
+      color: #fff;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    
+    .modal-body {
+      padding: 1.5rem;
+    }
+    
+    .detail-section {
+      margin-bottom: 1.5rem;
+    }
+    
+    .detail-section h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 0.75rem;
+    }
+    
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .detail-row .label { color: #888; }
+    .detail-row .value { color: #fff; font-weight: 500; }
+    
+    .item-card {
+      display: flex;
+      gap: 1rem;
+      padding: 0.75rem;
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+    
+    .item-image {
+      width: 50px;
+      height: 50px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #333;
+    }
+    
+    .item-info .title {
+      font-weight: 500;
+      color: #fff;
+      font-size: 0.875rem;
+    }
+    
+    .item-info .meta {
+      font-size: 0.75rem;
+      color: #888;
+    }
+    
+    .item-price {
+      margin-left: auto;
+      font-weight: 600;
+      color: #4ade80;
+    }
+    
+    /* Status Timeline */
+    .status-timeline {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    
+    .timeline-step {
+      flex: 1;
+      text-align: center;
+      position: relative;
+    }
+    
+    .timeline-step::after {
+      content: '';
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      width: 100%;
+      height: 2px;
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .timeline-step:last-child::after {
+      display: none;
+    }
+    
+    .timeline-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      margin: 0 auto 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .timeline-step.active .timeline-dot {
+      background: #4ade80;
+      color: #000;
+    }
+    
+    .timeline-step.current .timeline-dot {
+      background: #667eea;
+      color: #fff;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.3);
+    }
+    
+    .timeline-label {
+      font-size: 0.65rem;
+      color: #666;
+    }
+    
+    .timeline-step.active .timeline-label,
+    .timeline-step.current .timeline-label {
+      color: #fff;
+    }
+    
+    /* Tracking Modal */
+    .tracking-modal {
+      max-width: 400px;
+    }
+    
+    .tracking-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .tracking-input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.9rem;
+    }
+    
+    .tracking-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .tracking-input::placeholder {
+      color: #666;
+    }
+    
+    .courier-select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.9rem;
+    }
+    
+    .tracking-buttons {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+    
+    .btn-cancel {
+      flex: 1;
+      padding: 0.75rem;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    
+    .btn-confirm {
+      flex: 1;
+      padding: 0.75rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 500;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    
+    .btn-confirm:hover {
+      opacity: 0.9;
+    }
+    
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      padding: 1rem 1.5rem;
+      background: #22c55e;
+      color: #fff;
+      border-radius: 8px;
+      font-weight: 500;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 1001;
+    }
+    
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    
+    .toast.error {
+      background: #ef4444;
+    }
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #888;
+    }
+    
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .orders-table { font-size: 0.875rem; }
+      .orders-table th, .orders-table td { padding: 0.75rem 0.5rem; }
+    }
+    
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      .orders-table { display: block; overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📋 Orders</h1>
+      <a href="/admin" class="back-link">← Back to Dashboard</a>
+    </header>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+      <div class="stat-pill">
+        <span>Total</span>
+        <span class="count">{stats.total}</span>
+      </div>
+      <div class="stat-pill pending">
+        <span>Pending</span>
+        <span class="count">{stats.pending}</span>
+      </div>
+      <div class="stat-pill processing">
+        <span>Processing</span>
+        <span class="count">{stats.processing}</span>
+      </div>
+      <div class="stat-pill shipped">
+        <span>Shipped</span>
+        <span class="count">{stats.shipped}</span>
+      </div>
+      <div class="stat-pill delivered">
+        <span>Delivered</span>
+        <span class="count">{stats.delivered}</span>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <div class="filter-group">
+        <span class="filter-label">Status:</span>
+        <select id="filterStatus">
+          <option value="all">All</option>
+          <option value="pending">Pending</option>
+          <option value="processing">Processing</option>
+          <option value="shipped">Shipped</option>
+          <option value="delivered">Delivered</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Type:</span>
+        <select id="filterType">
+          <option value="all">All</option>
+          <option value="digital">Digital</option>
+          <option value="physical">Physical</option>
+          <option value="mixed">Mixed</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <input type="text" id="searchInput" placeholder="Search order ID or customer...">
+      </div>
+    </div>
+
+    <!-- Orders Table -->
+    {orders.length === 0 ? (
+      <div class="empty-state">
+        <p>No orders yet.</p>
+      </div>
+    ) : (
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th>Order</th>
+            <th>Customer</th>
+            <th>Type</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="ordersBody">
+          {orders.map(order => {
+            const orderType = getOrderType(order);
+            return (
+              <tr 
+                data-id={order.id} 
+                data-status={order.status}
+                data-type={orderType}
+                data-search={`${order.id} ${order.customerName} ${order.customerEmail}`.toLowerCase()}
+              >
+                <td>
+                  <span class="order-id">#{order.id.slice(-8).toUpperCase()}</span>
+                </td>
+                <td>
+                  <div class="customer-info">
+                    <div class="name">{order.customerName}</div>
+                    <div class="email">{order.customerEmail}</div>
+                  </div>
+                </td>
+                <td>
+                  <span class={`order-type type-${orderType}`}>
+                    {orderType === 'digital' ? '💿 Digital' : orderType === 'physical' ? '📦 Physical' : '📦💿 Mixed'}
+                  </span>
+                </td>
+                <td>
+                  <span class="order-total">{formatCurrency(order.total)}</span>
+                </td>
+                <td>
+                  {orderType === 'digital' ? (
+                    <span class="status-badge status-completed">✓ Completed</span>
+                  ) : (
+                    <select 
+                      class="status-select" 
+                      data-order-id={order.id}
+                      onchange="updateStatus(this)"
+                    >
+                      <option value="pending" selected={order.status === 'pending'}>⏳ Pending</option>
+                      <option value="processing" selected={order.status === 'processing'}>🔄 Processing</option>
+                      <option value="shipped" selected={order.status === 'shipped'}>📬 Shipped</option>
+                      <option value="delivered" selected={order.status === 'delivered'}>✓ Delivered</option>
+                      <option value="cancelled" selected={order.status === 'cancelled'}>✗ Cancelled</option>
+                    </select>
+                  )}
+                </td>
+                <td>
+                  <div class="order-date">
+                    {order.createdAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    <div class="time">{order.createdAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+                  </div>
+                </td>
+                <td>
+                  <button class="btn-view" onclick={`viewOrder('${order.id}')`}>View</button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    )}
+  </div>
+
+  <!-- Tracking Info Modal -->
+  <div class="modal-overlay" id="trackingModal">
+    <div class="modal tracking-modal">
+      <div class="modal-header">
+        <h2>📬 Add Tracking Info</h2>
+        <button class="modal-close" onclick="closeTrackingModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="color: #888; font-size: 0.875rem; margin-bottom: 1rem;">
+          Add tracking details for order <strong id="trackingOrderId" style="color: #fff;"></strong>
+        </p>
+        <div class="tracking-form">
+          <select class="courier-select" id="trackingCourier">
+            <option value="">Select courier...</option>
+            <option value="royal-mail">Royal Mail</option>
+            <option value="royal-mail-tracked">Royal Mail Tracked</option>
+            <option value="parcelforce">Parcelforce</option>
+            <option value="dhl">DHL</option>
+            <option value="ups">UPS</option>
+            <option value="fedex">FedEx</option>
+            <option value="hermes">Evri (Hermes)</option>
+            <option value="dpd">DPD</option>
+            <option value="yodel">Yodel</option>
+            <option value="other">Other</option>
+          </select>
+          <input 
+            type="text" 
+            class="tracking-input" 
+            id="trackingNumber" 
+            placeholder="Tracking number (optional)"
+          >
+          <input 
+            type="text" 
+            class="tracking-input" 
+            id="trackingUrl" 
+            placeholder="Tracking URL (optional)"
+          >
+          <div class="tracking-buttons">
+            <button class="btn-cancel" onclick="closeTrackingModal()">Cancel</button>
+            <button class="btn-confirm" onclick="confirmShipped()">Mark as Shipped</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Details Modal -->
+  <div class="modal-overlay" id="orderModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Order Details</h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalContent">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- Store orders data for modal -->
+  <script define:vars={{ ordersData: orders }}>
+    window.ordersData = ordersData;
+  </script>
+
+  <script>
+    // Filters
+    const filterStatus = document.getElementById('filterStatus');
+    const filterType = document.getElementById('filterType');
+    const searchInput = document.getElementById('searchInput');
+    
+    function applyFilters() {
+      const status = filterStatus.value;
+      const type = filterType.value;
+      const search = searchInput.value.toLowerCase();
+      
+      document.querySelectorAll('#ordersBody tr').forEach(row => {
+        const matchStatus = status === 'all' || row.dataset.status === status;
+        const matchType = type === 'all' || row.dataset.type === type;
+        const matchSearch = !search || row.dataset.search.includes(search);
+        
+        row.style.display = matchStatus && matchType && matchSearch ? '' : 'none';
+      });
+    }
+    
+    filterStatus.addEventListener('change', applyFilters);
+    filterType.addEventListener('change', applyFilters);
+    searchInput.addEventListener('input', applyFilters);
+    
+    // Update order status
+    async function updateStatus(select) {
+      const orderId = select.dataset.orderId;
+      const newStatus = select.value;
+      const row = select.closest('tr');
+      
+      // If changing to shipped, show tracking modal
+      if (newStatus === 'shipped') {
+        openTrackingModal(orderId, select);
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/admin/update-order-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, status: newStatus })
+        });
+        
+        if (!response.ok) throw new Error('Failed to update');
+        
+        row.dataset.status = newStatus;
+        showToast(`Order updated to ${newStatus}`);
+        
+      } catch (error) {
+        console.error(error);
+        showToast('Failed to update order', true);
+      }
+    }
+    
+    // Tracking modal
+    let currentTrackingOrderId = null;
+    let currentTrackingSelect = null;
+    
+    function openTrackingModal(orderId, select) {
+      currentTrackingOrderId = orderId;
+      currentTrackingSelect = select;
+      document.getElementById('trackingOrderId').textContent = '#' + orderId.slice(-8).toUpperCase();
+      document.getElementById('trackingCourier').value = '';
+      document.getElementById('trackingNumber').value = '';
+      document.getElementById('trackingUrl').value = '';
+      document.getElementById('trackingModal').classList.add('active');
+    }
+    
+    function closeTrackingModal() {
+      document.getElementById('trackingModal').classList.remove('active');
+      // Reset select to previous value if cancelled
+      if (currentTrackingSelect) {
+        const order = window.ordersData.find(o => o.id === currentTrackingOrderId);
+        if (order) {
+          currentTrackingSelect.value = order.status;
+        }
+      }
+      currentTrackingOrderId = null;
+      currentTrackingSelect = null;
+    }
+    
+    async function confirmShipped() {
+      const courier = document.getElementById('trackingCourier').value;
+      const trackingNumber = document.getElementById('trackingNumber').value.trim();
+      const trackingUrl = document.getElementById('trackingUrl').value.trim();
+      
+      if (!courier) {
+        showToast('Please select a courier', true);
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/admin/update-order-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            orderId: currentTrackingOrderId, 
+            status: 'shipped',
+            tracking: {
+              courier,
+              trackingNumber: trackingNumber || null,
+              trackingUrl: trackingUrl || null
+            }
+          })
+        });
+        
+        if (!response.ok) throw new Error('Failed to update');
+        
+        // Update row
+        if (currentTrackingSelect) {
+          const row = currentTrackingSelect.closest('tr');
+          row.dataset.status = 'shipped';
+        }
+        
+        // Update local data
+        const orderIndex = window.ordersData.findIndex(o => o.id === currentTrackingOrderId);
+        if (orderIndex > -1) {
+          window.ordersData[orderIndex].status = 'shipped';
+          window.ordersData[orderIndex].tracking = { courier, trackingNumber, trackingUrl };
+        }
+        
+        showToast('Order marked as shipped!');
+        closeTrackingModal();
+        
+      } catch (error) {
+        console.error(error);
+        showToast('Failed to update order', true);
+      }
+    }
+    
+    // Close tracking modal on overlay click
+    document.getElementById('trackingModal').addEventListener('click', (e) => {
+      if (e.target.id === 'trackingModal') closeTrackingModal();
+    });
+    
+    // View order modal
+    function viewOrder(orderId) {
+      const order = window.ordersData.find(o => o.id === orderId);
+      if (!order) return;
+      
+      const statusSteps = ['pending', 'processing', 'shipped', 'delivered'];
+      const currentIndex = statusSteps.indexOf(order.status);
+      
+      document.getElementById('modalContent').innerHTML = `
+        <div class="detail-section">
+          <h3>Order Information</h3>
+          <div class="detail-row">
+            <span class="label">Order ID</span>
+            <span class="value">#${order.id}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Date</span>
+            <span class="value">${new Date(order.createdAt).toLocaleString('en-GB')}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Total</span>
+            <span class="value" style="color: #4ade80;">£${(order.total || 0).toFixed(2)}</span>
+          </div>
+          ${order.platformFee ? `
+          <div class="detail-row">
+            <span class="label">Platform Fee</span>
+            <span class="value">£${order.platformFee.toFixed(2)}</span>
+          </div>
+          ` : ''}
+        </div>
+        
+        <div class="detail-section">
+          <h3>Customer</h3>
+          <div class="detail-row">
+            <span class="label">Name</span>
+            <span class="value">${order.customerName}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Email</span>
+            <span class="value">${order.customerEmail}</span>
+          </div>
+          ${order.shippingAddress ? `
+          <div class="detail-row">
+            <span class="label">Address</span>
+            <span class="value">${order.shippingAddress}</span>
+          </div>
+          ` : ''}
+        </div>
+        
+        <div class="detail-section">
+          <h3>Items (${order.items?.length || 0})</h3>
+          ${(order.items || []).map(item => `
+            <div class="item-card">
+              <img class="item-image" src="${item.artwork || item.image || '/placeholder.jpg'}" alt="">
+              <div class="item-info">
+                <div class="title">${item.title || item.name}</div>
+                <div class="meta">${item.artist || ''} ${item.variant || item.size || ''}</div>
+              </div>
+              <div class="item-price">£${(item.price || 0).toFixed(2)}</div>
+            </div>
+          `).join('')}
+        </div>
+        
+        ${order.status !== 'completed' ? `
+        <div class="detail-section">
+          <h3>Status Timeline</h3>
+          <div class="status-timeline">
+            ${statusSteps.map((step, i) => `
+              <div class="timeline-step ${i < currentIndex ? 'active' : ''} ${i === currentIndex ? 'current' : ''}">
+                <div class="timeline-dot">${i < currentIndex ? '✓' : i + 1}</div>
+                <div class="timeline-label">${step.charAt(0).toUpperCase() + step.slice(1)}</div>
+              </div>
+            `).join('')}
+          </div>
+          ${order.shippedAt ? `<p style="font-size: 0.75rem; color: #888; margin-top: 1rem;">Shipped: ${new Date(order.shippedAt).toLocaleDateString('en-GB')}</p>` : ''}
+          ${order.autoDelivered ? `<p style="font-size: 0.75rem; color: #888;">Auto-delivered after 14 days</p>` : ''}
+        </div>
+        ` : ''}
+      `;
+      
+      document.getElementById('orderModal').classList.add('active');
+    }
+    
+    function closeModal() {
+      document.getElementById('orderModal').classList.remove('active');
+    }
+    
+    // Close modal on overlay click
+    document.getElementById('orderModal').addEventListener('click', (e) => {
+      if (e.target.id === 'orderModal') closeModal();
+    });
+    
+    // Toast
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.toggle('error', isError);
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    
+    // Make functions global
+    window.updateStatus = updateStatus;
+    window.viewOrder = viewOrder;
+    window.closeModal = closeModal;
+    window.openTrackingModal = openTrackingModal;
+    window.closeTrackingModal = closeTrackingModal;
+    window.confirmShipped = confirmShipped;
+  </script>
+</body>
+</html>
