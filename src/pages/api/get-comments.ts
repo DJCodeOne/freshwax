@@ -1,19 +1,9 @@
 // src/pages/api/get-comments.ts
+// Uses Firebase REST API - works on Cloudflare Pages (no Admin SDK)
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument } from '../../lib/firebase-rest';
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
+export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
   try {
@@ -30,9 +20,12 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
 
-    const releaseDoc = await db.collection('releases').doc(releaseId).get();
+    console.log(`[get-comments] Fetching comments for: ${releaseId}`);
+
+    // Fetch release document using REST API
+    const release = await getDocument('releases', releaseId);
     
-    if (!releaseDoc.exists) {
+    if (!release) {
       return new Response(JSON.stringify({ 
         success: false,
         error: 'Release not found' 
@@ -42,18 +35,29 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
 
-    const data = releaseDoc.data();
-    const comments = data?.comments || [];
+    // Get comments array from release
+    const comments = release.comments || [];
+    
+    // Sort by timestamp (newest first)
+    const sortedComments = [...comments].sort((a: any, b: any) => {
+      const dateA = new Date(a.timestamp || a.createdAt || 0).getTime();
+      const dateB = new Date(b.timestamp || b.createdAt || 0).getTime();
+      return dateB - dateA;
+    });
 
-    console.log(`[get-comments] Release: ${releaseId}, Comments: ${comments.length}`);
+    console.log(`[get-comments] ✓ Found ${sortedComments.length} comments for ${releaseId}`);
 
     return new Response(JSON.stringify({
       success: true,
-      comments: comments,
-      count: comments.length
+      comments: sortedComments,
+      count: sortedComments.length,
+      source: 'firebase-rest'
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=60, s-maxage=60'
+      }
     });
 
   } catch (error) {

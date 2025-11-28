@@ -1,103 +1,103 @@
 // src/pages/api/get-ratings-batch.ts
-// OPTIMIZED: Batch fetch ratings for multiple releases in ONE API call
+// Uses Firebase REST API - works on Cloudflare Pages (no Admin SDK)
+// Fetches ratings for multiple releases in one call
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
-
-export const POST: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request }) => {
   try {
-    const body = await request.json();
-    const { releaseIds } = body;
-    
-    if (!Array.isArray(releaseIds) || releaseIds.length === 0) {
+    const url = new URL(request.url);
+    const idsParam = url.searchParams.get('ids');
+
+    if (!idsParam) {
       return new Response(JSON.stringify({ 
         success: false,
-        error: 'Invalid releaseIds array' 
+        error: 'Release IDs required (comma-separated)' 
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const releaseIds = idsParam.split(',').map(id => id.trim()).filter(Boolean);
     
-    console.log(`[GET-RATINGS-BATCH] Fetching ratings for ${releaseIds.length} releases`);
+    if (releaseIds.length === 0) {
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'No valid release IDs provided' 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Limit batch size to prevent abuse
+    const maxBatchSize = 50;
+    const limitedIds = releaseIds.slice(0, maxBatchSize);
     
-    // Batch fetch all ratings in ONE query
-    const ratingsData: Record<string, { average: number; count: number }> = {};
-    
-    // Fetch ratings for all releases in a single batch
-    const ratingsPromises = releaseIds.map(async (releaseId) => {
-      try {
-        const doc = await db.collection('releases').doc(releaseId).get();
-        
-        if (doc.exists) {
-          const data = doc.data();
-          const ratings = data?.ratings || data?.overallRating || { average: 0, count: 0 };
+    console.log(`[get-ratings-batch] Fetching ratings for ${limitedIds.length} releases`);
+
+    // Fetch all releases in parallel using REST API
+    const results = await Promise.all(
+      limitedIds.map(async (releaseId) => {
+        try {
+          const release = await getDocument('releases', releaseId);
+          if (!release) {
+            return { id: releaseId, found: false };
+          }
           
+          const ratings = release.ratings || {};
           return {
-            releaseId,
+            id: releaseId,
+            found: true,
             average: ratings.average || 0,
-            count: ratings.count || 0
+            count: ratings.count || 0,
+            fiveStarCount: ratings.fiveStarCount || 0,
+            total: ratings.total || 0
           };
+        } catch (err) {
+          console.error(`[get-ratings-batch] Error fetching ${releaseId}:`, err);
+          return { id: releaseId, found: false, error: true };
         }
-        
-        return {
-          releaseId,
-          average: 0,
-          count: 0
-        };
-      } catch (error) {
-        console.error(`[GET-RATINGS-BATCH] Error fetching ${releaseId}:`, error);
-        return {
-          releaseId,
-          average: 0,
-          count: 0
+      })
+    );
+
+    // Convert to object keyed by release ID for easy lookup
+    const ratingsMap: Record<string, any> = {};
+    results.forEach(result => {
+      if (result.found) {
+        ratingsMap[result.id] = {
+          average: result.average,
+          count: result.count,
+          fiveStarCount: result.fiveStarCount,
+          total: result.total
         };
       }
     });
-    
-    const results = await Promise.all(ratingsPromises);
-    
-    // Convert to object keyed by releaseId
-    results.forEach(result => {
-      ratingsData[result.releaseId] = {
-        average: result.average,
-        count: result.count
-      };
-    });
-    
-    console.log(`[GET-RATINGS-BATCH] ✓ Returned ratings for ${Object.keys(ratingsData).length} releases`);
-    
-    return new Response(JSON.stringify({ 
+
+    console.log(`[get-ratings-batch] ✓ Returned ratings for ${Object.keys(ratingsMap).length}/${limitedIds.length} releases`);
+
+    return new Response(JSON.stringify({
       success: true,
-      ratings: ratingsData
+      ratings: ratingsMap,
+      requested: limitedIds.length,
+      found: Object.keys(ratingsMap).length,
+      source: 'firebase-rest'
     }), {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
+        'Cache-Control': 'public, max-age=60, s-maxage=60'
       }
     });
-    
+
   } catch (error) {
-    console.error('[GET-RATINGS-BATCH] Error:', error);
-    return new Response(JSON.stringify({ 
+    console.error('[get-ratings-batch] Error:', error);
+    return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to fetch ratings',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to fetch ratings batch'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -1,136 +1,114 @@
 // src/pages/api/get-merch.ts
-// Fetches merch products from Firebase with filtering options
-
+// Uses Firebase REST API - works on Cloudflare Pages (no Admin SDK)
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { queryCollection, getDocument } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
-// Initialize Firebase
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-    }),
-  });
-}
-
-const db = getFirestore();
-
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ request }) => {
+  const url = new URL(request.url);
+  const merchId = url.searchParams.get('id');
+  const limitParam = url.searchParams.get('limit');
+  const limit = limitParam ? parseInt(limitParam) : 50;
+  
   try {
-    console.log('[GET-MERCH] Fetching products from Firebase...');
-    
-    // Parse query parameters
-    const params = url.searchParams;
-    const category = params.get('category');
-    const productType = params.get('type');
-    const supplierId = params.get('supplier');
-    const publishedOnly = params.get('published') !== 'false';
-    const inStockOnly = params.get('inStock') === 'true';
-    const featured = params.get('featured') === 'true';
-    const limit = parseInt(params.get('limit') || '100');
-    
-    // Build query
-    let query: FirebaseFirestore.Query = db.collection('merch');
-    
-    if (publishedOnly) {
-      query = query.where('published', '==', true);
-    }
-    
-    if (category) {
-      query = query.where('category', '==', category);
-    }
-    
-    if (productType) {
-      query = query.where('productType', '==', productType);
-    }
-    
-    if (supplierId) {
-      query = query.where('supplierId', '==', supplierId);
-    }
-    
-    if (featured) {
-      query = query.where('featured', '==', true);
-    }
-    
-    // Execute query
-    const snapshot = await query.limit(limit).get();
-    
-    let products: any[] = [];
-    snapshot.forEach(doc => {
-      const data = doc.data();
+    // If specific ID requested, fetch single item
+    if (merchId) {
+      console.log(`[GET-MERCH] Fetching merch item: ${merchId}`);
       
-      // Filter in-stock if requested
-      if (inStockOnly && data.totalStock <= 0) {
-        return;
+      const item = await getDocument('merch', merchId);
+      
+      if (!item) {
+        return new Response(JSON.stringify({ 
+          success: false,
+          error: 'Merch item not found' 
+        }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
       
-      products.push({
-        id: doc.id,
-        ...data
+      return new Response(JSON.stringify({ 
+        success: true,
+        item,
+        source: 'firebase-rest'
+      }), {
+        status: 200,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=300, s-maxage=300'
+        }
       });
+    }
+    
+    // Otherwise, fetch all merch
+    console.log(`[GET-MERCH] Fetching up to ${limit} merch items...`);
+    
+    // Try to get published/active items first
+    let items = await queryCollection('merch', {
+      filters: [{ field: 'published', op: 'EQUAL', value: true }]
     });
     
-    // Sort by createdAt (newest first)
-    products.sort((a, b) => {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
+    // If no results, try 'active' field
+    if (items.length === 0) {
+      items = await queryCollection('merch', {
+        filters: [{ field: 'active', op: 'EQUAL', value: true }]
+      });
+    }
     
-    // Calculate summary stats
-    const stats = {
-      total: products.length,
-      inStock: products.filter(p => p.totalStock > 0).length,
-      outOfStock: products.filter(p => p.totalStock === 0).length,
-      lowStock: products.filter(p => p.isLowStock && p.totalStock > 0).length,
-      featured: products.filter(p => p.featured).length,
-      onSale: products.filter(p => p.onSale).length,
-    };
+    // If still no results, get all items
+    if (items.length === 0) {
+      const { listCollection } = await import('../../lib/firebase-rest');
+      const result = await listCollection('merch', limit);
+      items = result.documents;
+    }
     
-    // Group by category for navigation
-    const byCategory: Record<string, any[]> = {};
-    products.forEach(p => {
-      if (!byCategory[p.category]) {
-        byCategory[p.category] = [];
+    // Normalize merch data
+    const normalizedItems = items.map(item => ({
+      id: item.id,
+      name: item.name || item.title || 'Untitled Item',
+      description: item.description || '',
+      price: item.price || 0,
+      currency: item.currency || 'GBP',
+      images: item.images || (item.imageUrl ? [item.imageUrl] : []),
+      category: item.category || 'general',
+      inStock: item.inStock !== false && (item.stock === undefined || item.stock > 0),
+      stock: item.stock,
+      variants: item.variants || [],
+      ...item
+    }));
+    
+    // Sort by name or date added
+    normalizedItems.sort((a, b) => {
+      if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
+        return a.sortOrder - b.sortOrder;
       }
-      byCategory[p.category].push(p);
+      return (a.name || '').localeCompare(b.name || '');
     });
     
-    // Group by product type
-    const byType: Record<string, any[]> = {};
-    products.forEach(p => {
-      if (!byType[p.productType]) {
-        byType[p.productType] = [];
-      }
-      byType[p.productType].push(p);
-    });
+    // Apply limit
+    const limitedItems = limit > 0 ? normalizedItems.slice(0, limit) : normalizedItems;
     
-    console.log(`[GET-MERCH] ✓ Loaded ${products.length} products`);
+    console.log(`[GET-MERCH] ✓ Returning ${limitedItems.length} items`);
     
-    return new Response(JSON.stringify({
+    return new Response(JSON.stringify({ 
       success: true,
-      products: products,
-      stats: stats,
-      byCategory: byCategory,
-      byType: byType,
-      source: 'firebase'
+      items: limitedItems,
+      total: limitedItems.length,
+      source: 'firebase-rest'
     }), {
       status: 200,
-      headers: {
+      headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
+        'Cache-Control': 'public, max-age=300, s-maxage=300'
       }
     });
     
   } catch (error) {
     console.error('[GET-MERCH] Error:', error);
-    
-    return new Response(JSON.stringify({
+    return new Response(JSON.stringify({ 
       success: false,
-      error: 'Failed to fetch products',
+      error: 'Failed to fetch merch',
       details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,

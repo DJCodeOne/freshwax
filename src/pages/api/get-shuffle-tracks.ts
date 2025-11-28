@@ -1,95 +1,48 @@
 // src/pages/api/get-shuffle-tracks.ts
+// Uses Firebase REST API - works on Cloudflare Pages
 import type { APIRoute } from 'astro';
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { 
+  getLiveReleases, 
+  extractTracksFromReleases, 
+  shuffleArray 
+} from '../../lib/firebase-rest';
 
 export const prerender = false;
 
-// Initialize Firebase Admin
-if (!getApps().length) {
+export const GET: APIRoute = async ({ request }) => {
+  const startTime = Date.now();
+  
   try {
-    initializeApp({
-      credential: cert({
-        projectId: import.meta.env.FIREBASE_PROJECT_ID,
-        clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      }),
-    });
-    console.log('[get-shuffle-tracks] Firebase Admin initialized');
-  } catch (e) {
-    console.error('[get-shuffle-tracks] Firebase init error:', e);
-  }
-}
-
-export const GET: APIRoute = async () => {
-  try {
-    console.log('[get-shuffle-tracks] Fetching tracks...');
+    console.log('[get-shuffle-tracks] Fetching via REST API...');
     
-    const db = getFirestore();
+    // Fetch releases using REST API (no Admin SDK)
+    const releases = await getLiveReleases(30);
+    console.log(`[get-shuffle-tracks] Found ${releases.length} releases`);
     
-    if (!db) {
-      throw new Error('Firestore not initialized');
-    }
+    // Extract tracks with audio URLs
+    const allTracks = extractTracksFromReleases(releases);
+    console.log(`[get-shuffle-tracks] Extracted ${allTracks.length} tracks with audio`);
     
-    // Fetch published releases with tracks
-    const releasesSnap = await db.collection('releases')
-      .where('published', '==', true)
-      .limit(30)
-      .get();
+    // Shuffle and limit
+    const shuffled = shuffleArray(allTracks);
+    const result = shuffled.slice(0, 30);
     
-    console.log('[get-shuffle-tracks] Found', releasesSnap.size, 'published releases');
-    
-    const tracks: any[] = [];
-    
-    releasesSnap.docs.forEach(doc => {
-      const release = doc.data();
-      const releaseTracks = release.tracks || [];
-      
-      releaseTracks.forEach((track: any, index: number) => {
-        // Check for preview URL - handle various field names
-        const audioUrl = track.previewUrl || track.mp3Url || track.audioUrl || null;
-        
-        if (audioUrl) {
-          tracks.push({
-            id: doc.id + '-track-' + (track.trackNumber || index + 1),
-            releaseId: doc.id,
-            // Handle various field names for track title
-            title: track.trackName || track.title || track.name || ('Track ' + (index + 1)),
-            // Handle various field names for artist
-            artist: release.artistName || release.artist || 'Unknown Artist',
-            // Handle various field names for artwork
-            artwork: release.coverArtUrl || release.artworkUrl || '/logo.webp',
-            previewUrl: audioUrl
-          });
-        }
-      });
-    });
-    
-    console.log('[get-shuffle-tracks] Found', tracks.length, 'tracks with audio URLs');
-    
-    if (tracks.length === 0) {
-      console.log('[get-shuffle-tracks] No tracks with audio found. Check that releases have previewUrl or mp3Url in their tracks array.');
-    }
-    
-    // Shuffle the tracks (Fisher-Yates)
-    for (let i = tracks.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [tracks[i], tracks[j]] = [tracks[j], tracks[i]];
-    }
-    
-    // Return max 30 tracks
-    const result = tracks.slice(0, 30);
-    
-    console.log('[get-shuffle-tracks] ✓ Returning', result.length, 'shuffled tracks');
+    const duration = Date.now() - startTime;
+    console.log(`[get-shuffle-tracks] ✓ Returning ${result.length} tracks (${duration}ms)`);
     
     return new Response(JSON.stringify({
       success: true,
-      tracks: result
+      tracks: result,
+      meta: {
+        total: allTracks.length,
+        returned: result.length,
+        fetchTime: duration
+      }
     }), {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
+        'Cache-Control': 'public, max-age=300, s-maxage=300' // 5 min cache
       }
     });
     

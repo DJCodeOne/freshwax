@@ -1,128 +1,129 @@
 // src/pages/api/get-release.ts
+// Uses Firebase REST API - works on Cloudflare Pages (no Admin SDK)
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
+// Helper function to get label from release data
+function getLabelFromRelease(release: any): string {
+  return release.labelName || 
+         release.label || 
+         release.recordLabel || 
+         release.copyrightHolder || 
+         'Unknown Label';
 }
 
-const db = getFirestore();
+// Helper function to normalize ratings data
+function normalizeRatings(data: any): { average: number; count: number; total: number; fiveStarCount: number } {
+  const ratings = data.ratings || data.overallRating || {};
+  
+  return {
+    average: Number(ratings.average) || 0,
+    count: Number(ratings.count) || 0,
+    total: Number(ratings.total) || 0,
+    fiveStarCount: Number(ratings.fiveStarCount) || 0
+  };
+}
+
+// Normalize a release document
+function normalizeRelease(data: any, id: string): any {
+  if (!data) return null;
+  
+  return {
+    id,
+    ...data,
+    label: getLabelFromRelease(data),
+    ratings: normalizeRatings(data),
+    tracks: (data.tracks || []).map((track: any, index: number) => ({
+      ...track,
+      trackNumber: track.trackNumber || track.displayTrackNumber || (index + 1),
+      displayTrackNumber: track.displayTrackNumber || track.trackNumber || (index + 1),
+      previewUrl: track.previewUrl || track.preview_url || track.mp3Url || null,
+      duration: track.duration || null,
+      ratings: track.ratings ? {
+        average: Number(track.ratings.average) || 0,
+        count: Number(track.ratings.count) || 0,
+        total: Number(track.ratings.total) || 0
+      } : undefined
+    }))
+  };
+}
 
 export const GET: APIRoute = async ({ request }) => {
+  const url = new URL(request.url);
+  const releaseId = url.searchParams.get('id');
+  
+  if (!releaseId) {
+    return new Response(JSON.stringify({ 
+      success: false,
+      error: 'Release ID required' 
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  
+  console.log(`[GET-RELEASE] Fetching release: ${releaseId}`);
+  
   try {
-    const url = new URL(request.url);
-    const id = url.searchParams.get('id');
-    const adminMode = url.searchParams.get('admin') === 'true';
-
-    console.log('[GET-RELEASE] Fetching release:', id, 'Admin mode:', adminMode);
-
-    if (!id) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Release ID is required' 
-        }),
-        { 
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    const releaseDoc = await db.collection('releases').doc(id).get();
-
-    if (!releaseDoc.exists) {
-      console.log('[GET-RELEASE] Release not found:', id);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Release not found' 
-        }),
-        { 
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    const data = releaseDoc.data();
+    // Fetch single document using REST API
+    const release = await getDocument('releases', releaseId);
     
-    // Skip status check in admin mode OR if status is live/published
-    const isAccessible = adminMode || data?.status === 'live' || data?.published === true;
-    
-    if (!isAccessible) {
-      console.log('[GET-RELEASE] Release not published:', id);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Release not available' 
-        }),
-        { 
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
+    if (!release) {
+      console.log(`[GET-RELEASE] ✗ Not found: ${releaseId}`);
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Release not found' 
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
-
-    const release = {
-      id: releaseDoc.id,
-      ...data,
-      ratingsAverage: data?.ratings?.average || data?.ratingsAverage || 0,
-      ratingsCount: data?.ratings?.count || data?.ratingsCount || 0,
-      fiveStarCount: data?.ratings?.fiveStarCount || data?.fiveStarCount || 0,
-      overallRating: {
-        average: data?.overallRating?.average || data?.ratings?.average || 0,
-        count: data?.overallRating?.count || data?.ratings?.count || 0,
-        total: data?.overallRating?.total || data?.ratings?.total || 0
-      },
-      comments: data?.comments || [],
-      notes: data?.metadata?.notes || data?.notes || data?.releaseDescription || '',
-      releaseDate: data?.metadata?.officialReleaseDate || data?.releaseDate || new Date().toISOString(),
-      pricePerSale: data?.pricePerSale || data?.pricing?.digital || 0,
-      trackPrice: data?.trackPrice || data?.pricing?.track || 1.00,
-      vinylPrice: data?.vinylPrice || data?.pricing?.vinyl || 0,
-      coverArtUrl: data?.coverArtUrl || data?.artworkUrl || data?.artwork?.cover || null,
-      additionalArtwork: data?.additionalArtwork || data?.artwork?.additional || [],
-    };
-
-    console.log('[GET-RELEASE] Success:', release.releaseName, 'by', release.artistName);
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        release: release
-      }),
-      { 
-        status: 200,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate'
-        }
+    
+    // Check status
+    if (release.status !== 'live') {
+      console.log(`[GET-RELEASE] ✗ Status not live: ${releaseId} (status: ${release.status})`);
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Release not available' 
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Normalize the release data
+    const normalized = normalizeRelease(release, releaseId);
+    
+    console.log(`[GET-RELEASE] ✓ Returning:`, {
+      id: normalized.id,
+      artistName: normalized.artistName,
+      releaseName: normalized.releaseName,
+      trackCount: normalized.tracks?.length || 0
+    });
+    
+    return new Response(JSON.stringify({ 
+      success: true,
+      release: normalized,
+      source: 'firebase-rest'
+    }), {
+      status: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=300, s-maxage=300'
       }
-    );
-
+    });
+    
   } catch (error) {
     console.error('[GET-RELEASE] Error:', error);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: 'Failed to fetch release',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }),
-      { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
+    return new Response(JSON.stringify({ 
+      success: false,
+      error: 'Failed to fetch release',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 };
-
