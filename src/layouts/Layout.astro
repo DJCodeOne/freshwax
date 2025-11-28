@@ -13,25 +13,24 @@ interface Props {
 const { title } = Astro.props;
 
 // Pre-load shuffle tracks (avoids API call when shuffle is clicked)
-// Pre-load shuffle tracks - DISABLED FOR TESTING
 let shuffleTracks: any[] = [];
-// try {
-//   const releases = await getReleasesForPage(30);
-//   shuffleTracks = releases.flatMap(release => 
-//     (release.tracks || [])
-//       .filter((track: any) => track.previewUrl || track.mp3Url)
-//       .map((track: any, index: number) => ({
-//         id: release.id + '-track-' + (track.trackNumber || index + 1),
-//         title: track.trackName || 'Track ' + (index + 1),
-//         artist: release.artistName || 'Unknown Artist',
-//         releaseId: release.id,
-//         artwork: release.coverArtUrl || '/logo.webp',
-//         previewUrl: track.previewUrl || track.mp3Url
-//       }))
-//   );
-// } catch (e) {
-//   console.error('[Layout] Failed to pre-load shuffle tracks:', e);
-// }
+try {
+  const releases = await getReleasesForPage(30);
+  shuffleTracks = releases.flatMap(release => 
+    (release.tracks || [])
+      .filter((track: any) => track.previewUrl || track.mp3Url)
+      .map((track: any, index: number) => ({
+        id: release.id + '-track-' + (track.trackNumber || index + 1),
+        title: track.trackName || 'Track ' + (index + 1),
+        artist: release.artistName || 'Unknown Artist',
+        releaseId: release.id,
+        artwork: release.coverArtUrl || '/logo.webp',
+        previewUrl: track.previewUrl || track.mp3Url
+      }))
+  );
+} catch (e) {
+  console.error('[Layout] Failed to pre-load shuffle tracks:', e);
+}
 ---
 
 <!doctype html>
