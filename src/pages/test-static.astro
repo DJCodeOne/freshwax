@@ -1,0 +1,17 @@
+---
+// Simple test - Layout only, no Firebase
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout title="Test Page">
+  <Header />
+  <main style="min-height: 80vh; display: flex; align-items: center; justify-content: center; background: #111;">
+    <div style="text-align: center; color: white;">
+      <h1 style="font-size: 3rem; margin-bottom: 1rem;">Layout Works!</h1>
+      <p style="font-size: 1.25rem; opacity: 0.8;">Header, Footer, and Layout are loading correctly.</p>
+    </div>
+  </main>
+  <Footer />
+</Layout>
