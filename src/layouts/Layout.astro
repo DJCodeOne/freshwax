@@ -4,23 +4,65 @@ import '../styles/global.css';
 import { ViewTransitions } from 'astro:transitions';
 import GlobalAudioPlayer from '../components/GlobalAudioPlayer.astro';
 import AudioCoordinator from '../components/AudioCoordinator.astro';
+import SEO from '../components/SEO.astro';
 
 interface Props {
   title: string;
+  description?: string;
+  image?: string;
+  type?: 'website' | 'article' | 'product' | 'music.album';
+  noindex?: boolean;
+  product?: {
+    price: number;
+    currency?: string;
+    availability?: 'in_stock' | 'out_of_stock' | 'preorder';
+    sku?: string;
+  };
+  article?: {
+    publishedTime?: string;
+    modifiedTime?: string;
+    author?: string;
+  };
+  music?: {
+    artist?: string;
+    releaseDate?: string;
+    album?: string;
+  };
 }
 
-const { title } = Astro.props;
+const { 
+  title, 
+  description = 'Fresh Wax - Independent jungle and drum & bass record label. Digital downloads and limited edition vinyl.',
+  image,
+  type,
+  noindex,
+  product,
+  article,
+  music
+} = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
   <head>
     <meta charset="UTF-8" />
-    <meta name="description" content="Fresh Wax - Independent Music Store" />
-    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="generator" content={Astro.generator} />
-    <title>{title} - freshwax.co.uk</title>
+    
+    <!-- SEO Component -->
+    <SEO 
+      title={title}
+      description={description}
+      image={image}
+      type={type}
+      noindex={noindex}
+      product={product}
+      article={article}
+      music={music}
+    />
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

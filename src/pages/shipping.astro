@@ -1,0 +1,177 @@
+---
+// src/pages/shipping.astro
+import InfoPageLayout from '../layouts/InfoPageLayout.astro';
+---
+
+<InfoPageLayout 
+  title="Shipping Information" 
+  description="Fresh Wax shipping rates, delivery times, and international shipping information. Free UK shipping on orders over £50."
+>
+  <p class="text-xl text-gray-600 mb-8">
+    We ship worldwide from the United Kingdom. Find all the information you need about delivery times, costs, and tracking below.
+  </p>
+
+  <h2>UK Shipping</h2>
+  
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full border-collapse">
+      <thead>
+        <tr class="bg-black text-white">
+          <th class="p-3 text-left">Service</th>
+          <th class="p-3 text-left">Delivery Time</th>
+          <th class="p-3 text-left">Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b border-gray-200">
+          <td class="p-3 font-semibold">Royal Mail 2nd Class</td>
+          <td class="p-3">2-3 working days</td>
+          <td class="p-3">£3.50</td>
+        </tr>
+        <tr class="border-b border-gray-200 bg-gray-50">
+          <td class="p-3 font-semibold">Royal Mail 1st Class</td>
+          <td class="p-3">1-2 working days</td>
+          <td class="p-3">£4.95</td>
+        </tr>
+        <tr class="border-b border-gray-200">
+          <td class="p-3 font-semibold">Royal Mail Tracked 24</td>
+          <td class="p-3">Next working day</td>
+          <td class="p-3">£6.95</td>
+        </tr>
+        <tr class="border-b border-gray-200 bg-gray-50">
+          <td class="p-3 font-semibold">DPD Next Day</td>
+          <td class="p-3">Next working day</td>
+          <td class="p-3">£8.95</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-8">
+    <p class="font-semibold text-green-800">🎉 Free UK Shipping on orders over £50!</p>
+    <p class="text-green-700 text-sm">Automatically applied at checkout (Royal Mail 2nd Class)</p>
+  </div>
+
+  <h2>European Shipping</h2>
+  
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full border-collapse">
+      <thead>
+        <tr class="bg-black text-white">
+          <th class="p-3 text-left">Region</th>
+          <th class="p-3 text-left">Delivery Time</th>
+          <th class="p-3 text-left">Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b border-gray-200">
+          <td class="p-3 font-semibold">Western Europe</td>
+          <td class="p-3">5-7 working days</td>
+          <td class="p-3">From £8.95</td>
+        </tr>
+        <tr class="border-b border-gray-200 bg-gray-50">
+          <td class="p-3 font-semibold">Eastern Europe</td>
+          <td class="p-3">7-10 working days</td>
+          <td class="p-3">From £10.95</td>
+        </tr>
+        <tr class="border-b border-gray-200">
+          <td class="p-3 font-semibold">Tracked (all Europe)</td>
+          <td class="p-3">5-7 working days</td>
+          <td class="p-3">From £14.95</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bg-amber-50 border-l-4 border-amber-500 p-4 mb-8">
+    <p class="font-semibold text-amber-800">⚠️ EU Customers - Import Duties</p>
+    <p class="text-amber-700 text-sm">Since Brexit, orders to EU countries may be subject to customs duties and import VAT. These charges are the responsibility of the customer and vary by country.</p>
+  </div>
+
+  <h2>Rest of World</h2>
+  
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full border-collapse">
+      <thead>
+        <tr class="bg-black text-white">
+          <th class="p-3 text-left">Region</th>
+          <th class="p-3 text-left">Delivery Time</th>
+          <th class="p-3 text-left">Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b border-gray-200">
+          <td class="p-3 font-semibold">USA & Canada</td>
+          <td class="p-3">7-14 working days</td>
+          <td class="p-3">From £12.95</td>
+        </tr>
+        <tr class="border-b border-gray-200 bg-gray-50">
+          <td class="p-3 font-semibold">Australia & NZ</td>
+          <td class="p-3">10-21 working days</td>
+          <td class="p-3">From £14.95</td>
+        </tr>
+        <tr class="border-b border-gray-200">
+          <td class="p-3 font-semibold">Japan</td>
+          <td class="p-3">7-14 working days</td>
+          <td class="p-3">From £12.95</td>
+        </tr>
+        <tr class="border-b border-gray-200 bg-gray-50">
+          <td class="p-3 font-semibold">Rest of World</td>
+          <td class="p-3">14-28 working days</td>
+          <td class="p-3">From £15.95</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Digital Downloads</h2>
+  <p>
+    Digital downloads are available immediately after purchase. You'll receive an email with download links, and files will also be available in your account dashboard. Downloads are provided in multiple formats including WAV, FLAC, and MP3.
+  </p>
+
+  <h2>Vinyl Packaging</h2>
+  <p>We take great care in packaging vinyl records to ensure they arrive safely:</p>
+  <ul>
+    <li>All vinyl shipped in custom record mailers</li>
+    <li>Extra cardboard stiffeners for protection</li>
+    <li>"Do Not Bend" labels on all packages</li>
+    <li>Multiple records shipped in reinforced boxes</li>
+  </ul>
+
+  <h2>Order Processing</h2>
+  <ul>
+    <li>Orders placed before 2pm (UK time) on working days are dispatched same day</li>
+    <li>Orders placed after 2pm are dispatched the next working day</li>
+    <li>Pre-orders ship on or shortly after the release date</li>
+    <li>Orders containing pre-order items ship together when all items are available</li>
+  </ul>
+
+  <h2>Tracking Your Order</h2>
+  <p>
+    Once your order is dispatched, you'll receive an email with tracking information (where available). You can also track your order by logging into your account.
+  </p>
+  <p>
+    <strong>Note:</strong> Standard shipping services may not include full tracking. For guaranteed tracking, please select a tracked shipping option at checkout.
+  </p>
+
+  <h2>Delivery Issues</h2>
+  <h3>Missing Orders</h3>
+  <p>
+    If your order hasn't arrived within the expected timeframe, please wait a few extra days as postal services can experience delays. If it still hasn't arrived, contact us and we'll investigate.
+  </p>
+
+  <h3>Damaged Items</h3>
+  <p>
+    If your order arrives damaged, please take photos of the packaging and item, and contact us within 48 hours. We'll arrange a replacement or refund.
+  </p>
+
+  <h3>Wrong Address</h3>
+  <p>
+    Please double-check your shipping address before completing your order. We cannot be held responsible for orders sent to incorrect addresses provided by the customer.
+  </p>
+
+  <h2>Questions?</h2>
+  <p>
+    If you have any questions about shipping, please <a href="/contact">contact us</a> or email <a href="mailto:orders@freshwax.co.uk">orders@freshwax.co.uk</a>.
+  </p>
+</InfoPageLayout>

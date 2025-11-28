@@ -1,0 +1,210 @@
+---
+// src/pages/cookies.astro
+import InfoPageLayout from '../layouts/InfoPageLayout.astro';
+
+const lastUpdated = 'November 2024';
+---
+
+<InfoPageLayout 
+  title="Cookie Policy" 
+  description="Fresh Wax cookie policy. Learn about the cookies we use and how to manage your preferences."
+  lastUpdated={lastUpdated}
+>
+  <p class="text-xl text-gray-600 mb-8">
+    This policy explains how Fresh Wax uses cookies and similar technologies on our website.
+  </p>
+
+  <h2>What Are Cookies?</h2>
+  <p>
+    Cookies are small text files stored on your device when you visit a website. They help the website remember your preferences and understand how you use the site. Similar technologies include local storage, session storage, and pixels.
+  </p>
+
+  <h2>Types of Cookies We Use</h2>
+
+  <h3>Essential Cookies</h3>
+  <p>
+    These cookies are necessary for the website to function and cannot be disabled. They include:
+  </p>
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full border-collapse text-sm">
+      <thead>
+        <tr class="bg-black text-white">
+          <th class="p-3 text-left">Cookie</th>
+          <th class="p-3 text-left">Purpose</th>
+          <th class="p-3 text-left">Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b border-gray-200">
+          <td class="p-3 font-mono text-sm">session_id</td>
+          <td class="p-3">Maintains your login session</td>
+          <td class="p-3">Session</td>
+        </tr>
+        <tr class="border-b border-gray-200 bg-gray-50">
+          <td class="p-3 font-mono text-sm">cart</td>
+          <td class="p-3">Stores your shopping cart contents</td>
+          <td class="p-3">30 days</td>
+        </tr>
+        <tr class="border-b border-gray-200">
+          <td class="p-3 font-mono text-sm">csrf_token</td>
+          <td class="p-3">Security token to prevent cross-site attacks</td>
+          <td class="p-3">Session</td>
+        </tr>
+        <tr class="border-b border-gray-200 bg-gray-50">
+          <td class="p-3 font-mono text-sm">cookie_consent</td>
+          <td class="p-3">Remembers your cookie preferences</td>
+          <td class="p-3">1 year</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Functional Cookies</h3>
+  <p>
+    These cookies enable enhanced functionality and personalisation:
+  </p>
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full border-collapse text-sm">
+      <thead>
+        <tr class="bg-black text-white">
+          <th class="p-3 text-left">Cookie</th>
+          <th class="p-3 text-left">Purpose</th>
+          <th class="p-3 text-left">Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b border-gray-200">
+          <td class="p-3 font-mono text-sm">audio_preferences</td>
+          <td class="p-3">Remembers your audio player settings</td>
+          <td class="p-3">1 year</td>
+        </tr>
+        <tr class="border-b border-gray-200 bg-gray-50">
+          <td class="p-3 font-mono text-sm">recently_viewed</td>
+          <td class="p-3">Stores recently viewed products</td>
+          <td class="p-3">30 days</td>
+        </tr>
+        <tr class="border-b border-gray-200">
+          <td class="p-3 font-mono text-sm">filter_preferences</td>
+          <td class="p-3">Remembers your filter/sort preferences</td>
+          <td class="p-3">30 days</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Analytics Cookies</h3>
+  <p>
+    These cookies help us understand how visitors use our website:
+  </p>
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full border-collapse text-sm">
+      <thead>
+        <tr class="bg-black text-white">
+          <th class="p-3 text-left">Cookie</th>
+          <th class="p-3 text-left">Purpose</th>
+          <th class="p-3 text-left">Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b border-gray-200">
+          <td class="p-3 font-mono text-sm">_ga</td>
+          <td class="p-3">Google Analytics - distinguishes users</td>
+          <td class="p-3">2 years</td>
+        </tr>
+        <tr class="border-b border-gray-200 bg-gray-50">
+          <td class="p-3 font-mono text-sm">_ga_*</td>
+          <td class="p-3">Google Analytics - maintains session state</td>
+          <td class="p-3">2 years</td>
+        </tr>
+        <tr class="border-b border-gray-200">
+          <td class="p-3 font-mono text-sm">_gid</td>
+          <td class="p-3">Google Analytics - distinguishes users</td>
+          <td class="p-3">24 hours</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Marketing Cookies</h3>
+  <p>
+    These cookies are used to track visitors across websites to display relevant advertisements:
+  </p>
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full border-collapse text-sm">
+      <thead>
+        <tr class="bg-black text-white">
+          <th class="p-3 text-left">Cookie</th>
+          <th class="p-3 text-left">Purpose</th>
+          <th class="p-3 text-left">Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b border-gray-200">
+          <td class="p-3 font-mono text-sm">_fbp</td>
+          <td class="p-3">Facebook Pixel - advertising tracking</td>
+          <td class="p-3">3 months</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Managing Cookies</h2>
+  
+  <h3>Cookie Consent</h3>
+  <p>
+    When you first visit our website, you'll see a cookie banner asking for your consent to non-essential cookies. You can change your preferences at any time by clicking the "Cookie Settings" link in our website footer.
+  </p>
+
+  <h3>Browser Settings</h3>
+  <p>
+    You can also control cookies through your browser settings. Here's how to manage cookies in popular browsers:
+  </p>
+  <ul>
+    <li><a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener">Google Chrome</a></li>
+    <li><a href="https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer" target="_blank" rel="noopener">Mozilla Firefox</a></li>
+    <li><a href="https://support.apple.com/en-gb/guide/safari/sfri11471/mac" target="_blank" rel="noopener">Safari</a></li>
+    <li><a href="https://support.microsoft.com/en-us/windows/delete-and-manage-cookies-168dab11-0753-043d-7c16-ede5947fc64d" target="_blank" rel="noopener">Microsoft Edge</a></li>
+  </ul>
+
+  <h3>Opt-Out Links</h3>
+  <p>You can opt out of specific services using these links:</p>
+  <ul>
+    <li><a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener">Google Analytics Opt-Out</a></li>
+    <li><a href="https://www.facebook.com/help/568137493302217" target="_blank" rel="noopener">Facebook Ad Preferences</a></li>
+  </ul>
+
+  <h2>Impact of Disabling Cookies</h2>
+  <p>
+    If you disable cookies, some features of our website may not work correctly:
+  </p>
+  <ul>
+    <li>You may not be able to log in or stay logged in</li>
+    <li>Your shopping cart may not save between visits</li>
+    <li>Your preferences may not be remembered</li>
+    <li>Some pages may not display correctly</li>
+  </ul>
+
+  <h2>Third-Party Cookies</h2>
+  <p>
+    Some cookies on our site are set by third-party services. We use:
+  </p>
+  <ul>
+    <li><strong>Google Analytics:</strong> For website analytics</li>
+    <li><strong>Stripe:</strong> For payment processing</li>
+    <li><strong>Firebase:</strong> For authentication and database</li>
+    <li><strong>Cloudflare:</strong> For security and performance</li>
+  </ul>
+  <p>
+    These services have their own privacy policies that govern their use of cookies.
+  </p>
+
+  <h2>Updates to This Policy</h2>
+  <p>
+    We may update this Cookie Policy from time to time. The "Last updated" date at the top shows when this policy was last revised.
+  </p>
+
+  <h2>Contact Us</h2>
+  <p>
+    If you have questions about our use of cookies, please contact us at <a href="mailto:privacy@freshwax.co.uk">privacy@freshwax.co.uk</a>.
+  </p>
+</InfoPageLayout>
