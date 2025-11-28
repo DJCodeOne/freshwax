@@ -278,25 +278,19 @@
       var isPlaying = audio && !audio.paused && !audio.ended && audio.readyState > 2;
       
       if (isPlaying) {
-        // Generate pseudo-random values that look like music
         for (var i = 0; i < 8; i++) {
-          // Bass frequencies (lower indices) tend to be stronger
           var baseBias = 1 - (i * 0.08);
           var randomness = Math.random();
-          
-          // Smooth transitions with some randomness
           targetValues[i] = Math.min(32, Math.max(4, 
             (randomness * 28 * baseBias) + 4 + (Math.sin(Date.now() / (200 + i * 50)) * 8)
           ));
         }
       } else {
-        // When paused, slowly decay to minimum
         for (var i = 0; i < 8; i++) {
           targetValues[i] = 4;
         }
       }
       
-      // Smooth interpolation
       for (var i = 0; i < 8; i++) {
         barValues[i] += (targetValues[i] - barValues[i]) * 0.3;
         var height = Math.round(barValues[i]);
@@ -319,9 +313,7 @@
     function startSpectrum() {
       var miniPlayer = document.getElementById('mini-player');
       if (miniPlayer) miniPlayer.classList.add('playing');
-      
       initSpectrumBars();
-      
       if (!spectrumAnimationId) {
         updateSpectrum();
       }
@@ -330,9 +322,6 @@
     function stopSpectrum() {
       var miniPlayer = document.getElementById('mini-player');
       if (miniPlayer) miniPlayer.classList.remove('playing');
-      
-      // Let the animation continue to show decay
-      // It will naturally settle to minimum values
     }
 
     function initMiniPlayer() {
@@ -416,6 +405,12 @@
           if (!globalAudio.src) return;
           
           if (globalAudio.paused) {
+            // STOP any playing preview clips first
+            if (window.AudioManager) {
+              window.AudioManager.stopAllTracklistPreviews();
+              window.AudioManager.shouldResumeAfterPreview = false;
+            }
+            
             globalAudio.play().catch(function(err) {
               console.error('[MINI-PLAYER] Play failed:', err);
             });
@@ -428,6 +423,12 @@
       // === SKIP BUTTONS ===
       if (miniSkipBack) {
         miniSkipBack.onclick = function() {
+          // Stop any preview clips first
+          if (window.AudioManager) {
+            window.AudioManager.stopAllTracklistPreviews();
+            window.AudioManager.shouldResumeAfterPreview = false;
+          }
+          
           if (window.FreshWaxPlayer.isShuffleMode) {
             playPreviousShuffleTrack();
           } else {
@@ -438,6 +439,12 @@
 
       if (miniSkipForward) {
         miniSkipForward.onclick = function() {
+          // Stop any preview clips first
+          if (window.AudioManager) {
+            window.AudioManager.stopAllTracklistPreviews();
+            window.AudioManager.shouldResumeAfterPreview = false;
+          }
+          
           if (window.FreshWaxPlayer.isShuffleMode) {
             playNextShuffleTrack();
           } else {
@@ -459,6 +466,13 @@
       if (miniProgressContainer) {
         miniProgressContainer.onclick = function(e) {
           if (!globalAudio.duration) return;
+          
+          // Stop any preview clips first
+          if (window.AudioManager) {
+            window.AudioManager.stopAllTracklistPreviews();
+            window.AudioManager.shouldResumeAfterPreview = false;
+          }
+          
           var rect = miniProgressContainer.getBoundingClientRect();
           var progress = (e.clientX - rect.left) / rect.width;
           globalAudio.currentTime = progress * globalAudio.duration;
@@ -477,6 +491,7 @@
           if (window.AudioManager) {
             window.AudioManager.mode = 'idle';
             window.AudioManager.updateShuffleButtonUI(false);
+            window.AudioManager.shouldResumeAfterPreview = false;
           }
           updateModeIndicator('');
           
@@ -490,6 +505,12 @@
       // === SHUFFLE BUTTON ===
       if (miniShuffleBtn) {
         miniShuffleBtn.onclick = function() {
+          // Stop any preview clips first
+          if (window.AudioManager) {
+            window.AudioManager.stopAllTracklistPreviews();
+            window.AudioManager.shouldResumeAfterPreview = false;
+          }
+          
           if (window.FreshWaxPlayer.isShuffleMode) {
             stopShuffle();
           } else {
@@ -720,6 +741,12 @@
         if (!mixData || !mixData.audio_url) {
           console.error('[MINI-PLAYER] Invalid mixData');
           return Promise.reject('Invalid mix data');
+        }
+
+        // Stop any preview clips first
+        if (window.AudioManager) {
+          window.AudioManager.stopAllTracklistPreviews();
+          window.AudioManager.shouldResumeAfterPreview = false;
         }
 
         if (window.FreshWaxPlayer.isShuffleMode) {

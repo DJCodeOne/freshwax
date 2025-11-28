@@ -1,8 +1,30 @@
 // src/lib/firebase-rest.ts
 // Firebase REST API client - works on Cloudflare Pages (no Admin SDK needed)
+// WITH CACHING to reduce quota usage
 
 const PROJECT_ID = 'freshwax-store';
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+
+// Simple in-memory cache
+const cache = new Map<string, { data: any; expires: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCached(key: string): any | null {
+  const entry = cache.get(key);
+  if (entry && Date.now() < entry.expires) {
+    console.log(`[firebase-rest] Cache HIT: ${key}`);
+    return entry.data;
+  }
+  if (entry) {
+    cache.delete(key);
+  }
+  return null;
+}
+
+function setCache(key: string, data: any, ttl: number = CACHE_TTL): void {
+  cache.set(key, { data, expires: Date.now() + ttl });
+  console.log(`[firebase-rest] Cache SET: ${key} (TTL: ${ttl / 1000}s)`);
+}
 
 type FirestoreOp = 'EQUAL' | 'NOT_EQUAL' | 'LESS_THAN' | 'LESS_THAN_OR_EQUAL' | 'GREATER_THAN' | 'GREATER_THAN_OR_EQUAL' | 'ARRAY_CONTAINS';
 
@@ -16,6 +38,8 @@ interface QueryOptions {
   filters?: QueryFilter[];
   orderBy?: { field: string; direction?: 'ASCENDING' | 'DESCENDING' };
   limit?: number;
+  cacheKey?: string; // Optional custom cache key
+  cacheTTL?: number; // Optional custom TTL
 }
 
 // Convert JS values to Firestore REST format
@@ -82,6 +106,11 @@ export async function queryCollection(
   collection: string,
   options: QueryOptions = {}
 ): Promise<any[]> {
+  // Check cache first
+  const cacheKey = options.cacheKey || `query:${collection}:${JSON.stringify(options)}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
   const url = `${FIRESTORE_BASE}:runQuery`;
   
   const structuredQuery: any = {
@@ -143,9 +172,14 @@ export async function queryCollection(
     
     const data = await response.json();
     
-    return data
+    const results = data
       .filter((item: any) => item.document)
       .map((item: any) => parseDocument(item.document));
+    
+    // Cache the results
+    setCache(cacheKey, results, options.cacheTTL || CACHE_TTL);
+    
+    return results;
       
   } catch (error) {
     console.error('[firebase-rest] Query error:', error);
@@ -155,6 +189,10 @@ export async function queryCollection(
 
 // Get a single document by ID
 export async function getDocument(collection: string, docId: string): Promise<any | null> {
+  const cacheKey = `doc:${collection}:${docId}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
   const url = `${FIRESTORE_BASE}/${collection}/${docId}`;
   
   try {
@@ -167,7 +205,13 @@ export async function getDocument(collection: string, docId: string): Promise<an
     }
     
     const doc = await response.json();
-    return parseDocument(doc);
+    const parsed = parseDocument(doc);
+    
+    if (parsed) {
+      setCache(cacheKey, parsed);
+    }
+    
+    return parsed;
     
   } catch (error) {
     console.error('[firebase-rest] Get document error:', error);
@@ -207,23 +251,38 @@ export async function listCollection(
   }
 }
 
-// Helper: Get releases with status='live' or published=true
+// Helper: Get releases with status='live' - WITH 10 MINUTE CACHE
 export async function getLiveReleases(limit?: number): Promise<any[]> {
+  const cacheKey = `live-releases:${limit || 'all'}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
   // Try 'status' field first (your main pattern)
   let releases = await queryCollection('releases', {
     filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-    orderBy: { field: 'releaseDate', direction: 'DESCENDING' },
-    limit
+    limit,
+    cacheKey: `releases-status-live:${limit}`,
+    cacheTTL: 10 * 60 * 1000 // 10 minutes
   });
   
   // If no results, try 'published' field
   if (releases.length === 0) {
     releases = await queryCollection('releases', {
       filters: [{ field: 'published', op: 'EQUAL', value: true }],
-      limit
+      limit,
+      cacheKey: `releases-published:${limit}`,
+      cacheTTL: 10 * 60 * 1000
     });
   }
   
+  // Sort by releaseDate client-side since we can't always use orderBy
+  releases.sort((a, b) => {
+    const dateA = new Date(a.releaseDate || 0).getTime();
+    const dateB = new Date(b.releaseDate || 0).getTime();
+    return dateB - dateA;
+  });
+  
+  setCache(cacheKey, releases, 10 * 60 * 1000);
   return releases;
 }
 
@@ -263,4 +322,10 @@ export function shuffleArray<T>(array: T[]): T[] {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
+}
+
+// Clear cache (useful for admin operations)
+export function clearCache(): void {
+  cache.clear();
+  console.log('[firebase-rest] Cache cleared');
 }

@@ -1,4 +1,6 @@
 // public/item-page.js
+// FIXED: Uses lazy audio creation like ReleasePlate.astro
+// Audio elements are created on first play click, not pre-rendered
 
 // Utility functions
 function sanitizeComment(text) {
@@ -32,13 +34,12 @@ function formatDate(timestamp) {
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// Player initialization
+// Player initialization - FIXED with lazy audio creation
 function initPlayer() {
-  const releaseId = document.querySelector('[data-release-id]')?.getAttribute('data-release-id');
-  if (!releaseId) return;
+  const trackList = document.getElementById('full-track-list');
+  if (!trackList) return;
 
   const playButtons = document.querySelectorAll('.play-button');
-  const audioElements = document.querySelectorAll('.track-audio');
   const waveformCanvases = document.querySelectorAll('.track-waveform');
   
   let currentAudio = null;
@@ -46,6 +47,8 @@ function initPlayer() {
   let currentCanvas = null;
   
   const bars = 20;
+  
+  console.log('[Player] Initializing with', playButtons.length, 'play buttons');
   
   function drawWaveform(canvas, progress = 0, isPlaying = false) {
     if (!canvas) return;
@@ -96,48 +99,95 @@ function initPlayer() {
     });
   });
   
+  // Play buttons with LAZY AUDIO CREATION
   playButtons.forEach(button => {
+    const trackId = button.getAttribute('data-track-id');
+    const releaseId = button.getAttribute('data-release-id');
+    const previewUrl = button.getAttribute('data-preview-url');
+    const trackTitle = button.getAttribute('data-track-title') || 'Unknown Track';
+    
+    console.log('[Player] Button setup:', { trackId, previewUrl: previewUrl ? 'YES' : 'NO' });
+    
     button.addEventListener('click', () => {
-      const trackId = button.getAttribute('data-track-id');
-      const audio = document.querySelector(`.track-audio[data-track-id="${trackId}"]`);
-      const canvas = document.querySelector(`.track-waveform[data-track-id="${trackId}"]`);
+      console.log('[Player] Play clicked:', trackId, 'URL:', previewUrl);
       
-      console.log('[Player] Play button clicked for track:', trackId);
-      console.log('[Player] Audio element:', audio);
-      console.log('[Player] Canvas element:', canvas);
-      
-      if (!audio) {
-        console.error('[Player] No audio element found');
+      // Check if preview URL exists
+      if (!previewUrl) {
+        alert('Preview not available for this track');
         return;
       }
       
-      const source = audio.querySelector('source');
-      console.log('[Player] Audio source:', source?.src);
+      // *** NOTIFY AUDIOMANAGER - pause mini player ***
+      if (window.AudioManager) {
+        window.AudioManager.onTracklistPreviewPlay();
+      }
       
-      if (!source || !source.src) {
-        alert('Preview not available for this track');
-        return;
+      const canvas = document.querySelector(`.track-waveform[data-track-id="${trackId}"]`);
+      const playIcon = button.querySelector('.play-icon');
+      const pauseIcon = button.querySelector('.pause-icon');
+      
+      // Get or create audio element (LAZY CREATION)
+      let audio = document.querySelector(`.track-audio[data-track-id="${trackId}"]`);
+      
+      if (!audio) {
+        // Create audio element on first click
+        audio = document.createElement('audio');
+        audio.className = 'hidden track-audio';
+        audio.setAttribute('data-track-id', trackId);
+        audio.setAttribute('data-release-id', releaseId);
+        audio.preload = 'none';
+        audio.src = previewUrl;
+        document.getElementById('full-track-list').appendChild(audio);
+        
+        console.log('[Player] Created audio element for:', trackTitle, 'src:', previewUrl);
+        
+        // Set up event handlers
+        audio.addEventListener('timeupdate', () => {
+          if (audio === currentAudio && audio.duration && isFinite(audio.duration) && canvas) {
+            const progress = audio.currentTime / audio.duration;
+            drawWaveform(canvas, progress, !audio.paused);
+          }
+        });
+        
+        audio.addEventListener('ended', () => {
+          console.log('[Player] Track ended:', trackId);
+          if (playIcon) playIcon.classList.remove('hidden');
+          if (pauseIcon) pauseIcon.classList.add('hidden');
+          if (canvas) drawWaveform(canvas, 0, false);
+          currentAudio = null;
+          currentButton = null;
+          currentCanvas = null;
+          
+          // *** NOTIFY AUDIOMANAGER - allow mini player to resume ***
+          if (window.AudioManager) {
+            window.AudioManager.onTracklistPreviewStop();
+          }
+        });
+        
+        audio.addEventListener('loadedmetadata', () => {
+          console.log('[Player] Metadata loaded:', { trackId, duration: audio.duration });
+        });
+        
+        audio.addEventListener('error', (e) => {
+          console.error('[Player] Audio error:', { trackId, error: e, src: audio.src });
+        });
       }
       
       // Toggle play/pause for same track
       if (currentAudio === audio && !audio.paused) {
         console.log('[Player] Pausing current track');
         audio.pause();
-        button.querySelector('.play-icon')?.classList.remove('hidden');
-        button.querySelector('.pause-icon')?.classList.add('hidden');
+        if (playIcon) playIcon.classList.remove('hidden');
+        if (pauseIcon) pauseIcon.classList.add('hidden');
         
-        if (window.globalAudioManager) {
-          window.globalAudioManager.currentAudio = null;
-          window.globalAudioManager.currentButton = null;
+        // *** NOTIFY AUDIOMANAGER - track paused ***
+        if (window.AudioManager) {
+          window.AudioManager.onTracklistPreviewStop();
         }
         return;
       }
       
-      // Stop all other audio
-      if (window.globalAudioManager) {
-        window.globalAudioManager.stopAll();
-      }
-      
+      // Stop any other playing audio
       if (currentAudio && currentAudio !== audio) {
         console.log('[Player] Stopping previous track');
         currentAudio.pause();
@@ -151,58 +201,32 @@ function initPlayer() {
         }
       }
       
+      // Also stop any audio in ReleasePlate cards (if on same page somehow)
+      document.querySelectorAll('[data-release] .track-audio').forEach(a => {
+        if (!a.paused) {
+          a.pause();
+          a.currentTime = 0;
+        }
+      });
+      
       currentAudio = audio;
       currentButton = button;
       currentCanvas = canvas;
       
-      console.log('[Player] Playing track');
+      console.log('[Player] Playing track:', trackTitle);
       audio.play().then(() => {
-        console.log('[Player] Playback started successfully');
-        button.querySelector('.play-icon')?.classList.add('hidden');
-        button.querySelector('.pause-icon')?.classList.remove('hidden');
+        console.log('[Player] Playback started');
+        if (playIcon) playIcon.classList.add('hidden');
+        if (pauseIcon) pauseIcon.classList.remove('hidden');
       }).catch(err => {
         console.error('[Player] Play error:', err);
         alert('Could not play preview. The file may be unavailable.');
+        
+        // *** NOTIFY AUDIOMANAGER - play failed ***
+        if (window.AudioManager) {
+          window.AudioManager.onTracklistPreviewStop();
+        }
       });
-      
-      if (window.globalAudioManager) {
-        window.globalAudioManager.play(audio, button, 'release');
-      }
-    });
-  });
-  
-  audioElements.forEach(audio => {
-    const trackId = audio.getAttribute('data-track-id');
-    const canvas = document.querySelector(`.track-waveform[data-track-id="${trackId}"]`);
-    
-    audio.addEventListener('timeupdate', () => {
-      if (audio === currentAudio && audio.duration && isFinite(audio.duration) && canvas) {
-        const progress = audio.currentTime / audio.duration;
-        drawWaveform(canvas, progress, !audio.paused);
-      }
-    });
-    
-    audio.addEventListener('ended', () => {
-      console.log('[Player] Track ended:', trackId);
-      const button = document.querySelector(`.play-button[data-track-id="${trackId}"]`);
-      if (button) {
-        button.querySelector('.play-icon')?.classList.remove('hidden');
-        button.querySelector('.pause-icon')?.classList.add('hidden');
-      }
-      if (canvas) {
-        drawWaveform(canvas, 0, false);
-      }
-      currentAudio = null;
-      currentButton = null;
-      currentCanvas = null;
-    });
-    
-    audio.addEventListener('loadedmetadata', () => {
-      console.log('[Player] Audio metadata loaded:', { trackId, duration: audio.duration });
-    });
-    
-    audio.addEventListener('error', (e) => {
-      console.error('[Player] Audio error:', { trackId, error: e });
     });
   });
 }
@@ -302,74 +326,67 @@ async function initComments() {
   const charCount = document.getElementById('char-count');
   const commentsList = document.getElementById('comments-list');
 
-console.log('[Comments] Elements found:', {
-  commentText: !!commentText,
-  commentUsername: !!commentUsername,
-  submitBtn: !!submitBtn,
-  charCount: !!charCount,
-  commentsList: !!commentsList
-});
-
-// Function to update username field
-function updateUsernameField() {
-  const auth = window.firebaseAuth;
-  console.log('[Comments] Checking auth state:', { 
-    authExists: !!auth, 
-    currentUser: auth?.currentUser,
-    displayName: auth?.currentUser?.displayName,
-    email: auth?.currentUser?.email
+  console.log('[Comments] Elements found:', {
+    commentText: !!commentText,
+    commentUsername: !!commentUsername,
+    submitBtn: !!submitBtn,
+    charCount: !!charCount,
+    commentsList: !!commentsList
   });
-  
-  if (auth && auth.currentUser && commentUsername) {
-    const fullName = auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'User';
-    // Extract only the first name
-    const firstName = fullName.split(' ')[0];
-    console.log('[Comments] Setting username to:', firstName);
-    commentUsername.value = firstName;
-    // Keep the field readonly and styled as disabled
-    commentUsername.classList.add('bg-gray-100', 'cursor-not-allowed');
-    commentUsername.classList.remove('bg-white');
-    commentUsername.setAttribute('readonly', 'true');
-    commentUsername.placeholder = '';
-  } else {
-    // User not logged in
-    console.log('[Comments] User not logged in');
-    if (commentUsername) {
-      commentUsername.value = '';
-      commentUsername.placeholder = 'Login to make comments';
+
+  // Function to update username field
+  function updateUsernameField() {
+    const auth = window.firebaseAuth;
+    console.log('[Comments] Checking auth state:', { 
+      authExists: !!auth, 
+      currentUser: auth?.currentUser,
+      displayName: auth?.currentUser?.displayName,
+      email: auth?.currentUser?.email
+    });
+    
+    if (auth && auth.currentUser && commentUsername) {
+      const fullName = auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'User';
+      const firstName = fullName.split(' ')[0];
+      console.log('[Comments] Setting username to:', firstName);
+      commentUsername.value = firstName;
       commentUsername.classList.add('bg-gray-100', 'cursor-not-allowed');
       commentUsername.classList.remove('bg-white');
       commentUsername.setAttribute('readonly', 'true');
+      commentUsername.placeholder = '';
+    } else {
+      console.log('[Comments] User not logged in');
+      if (commentUsername) {
+        commentUsername.value = '';
+        commentUsername.placeholder = 'Login to make comments';
+        commentUsername.classList.add('bg-gray-100', 'cursor-not-allowed');
+        commentUsername.classList.remove('bg-white');
+        commentUsername.setAttribute('readonly', 'true');
+      }
     }
   }
-}
 
-// Try to update immediately
-updateUsernameField();
+  updateUsernameField();
 
-// Also listen for auth state changes
-if (window.firebaseAuth) {
-  window.firebaseAuth.onAuthStateChanged((user) => {
-    console.log('[Comments] Auth state changed:', user);
-    updateUsernameField();
-  });
-} else {
-  // Wait for firebaseAuth to be available
-  const checkAuth = setInterval(() => {
-    if (window.firebaseAuth) {
-      console.log('[Comments] Firebase auth now available');
-      clearInterval(checkAuth);
+  if (window.firebaseAuth) {
+    window.firebaseAuth.onAuthStateChanged((user) => {
+      console.log('[Comments] Auth state changed:', user);
       updateUsernameField();
-      window.firebaseAuth.onAuthStateChanged((user) => {
-        console.log('[Comments] Auth state changed:', user);
+    });
+  } else {
+    const checkAuth = setInterval(() => {
+      if (window.firebaseAuth) {
+        console.log('[Comments] Firebase auth now available');
+        clearInterval(checkAuth);
         updateUsernameField();
-      });
-    }
-  }, 100);
-  
-  // Stop checking after 5 seconds
-  setTimeout(() => clearInterval(checkAuth), 5000);
-}
+        window.firebaseAuth.onAuthStateChanged((user) => {
+          console.log('[Comments] Auth state changed:', user);
+          updateUsernameField();
+        });
+      }
+    }, 100);
+    
+    setTimeout(() => clearInterval(checkAuth), 5000);
+  }
 
   async function loadComments() {
     if (!commentsList) {
@@ -510,11 +527,9 @@ if (window.firebaseAuth) {
         console.log('[Comments] Submit response:', data);
         
         if (data.success) {
-          // Clear only the comment text, not the username
           if (commentText) commentText.value = '';
           if (charCount) charCount.textContent = '0';
           
-          // Re-populate the username field to ensure it doesn't disappear
           updateUsernameField();
           
           console.log('[Comments] Reloading comments after successful post');
@@ -764,7 +779,7 @@ document.addEventListener('click', (e) => {
 
 // Initialize when DOM is ready
 function initializeApp() {
-  console.log('[App] Initializing...');
+  console.log('[App] Initializing item page...');
   initPlayer();
   initRatings();
   initComments();
@@ -772,6 +787,7 @@ function initializeApp() {
   loadSuggestions();
   initCarousel();
   initScrollToComments();
+  console.log('[App] Item page initialized');
 }
 
 if (document.readyState === 'loading') {
@@ -779,3 +795,6 @@ if (document.readyState === 'loading') {
 } else {
   initializeApp();
 }
+
+// Astro page transitions
+document.addEventListener('astro:page-load', initializeApp);

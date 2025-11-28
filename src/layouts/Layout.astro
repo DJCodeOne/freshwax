@@ -4,33 +4,12 @@ import '../styles/global.css';
 import { ViewTransitions } from 'astro:transitions';
 import GlobalAudioPlayer from '../components/GlobalAudioPlayer.astro';
 import AudioCoordinator from '../components/AudioCoordinator.astro';
-import { getReleasesForPage } from '../lib/releases';
 
 interface Props {
   title: string;
 }
 
 const { title } = Astro.props;
-
-// Pre-load shuffle tracks (avoids API call when shuffle is clicked)
-let shuffleTracks: any[] = [];
-try {
-  const releases = await getReleasesForPage(30);
-  shuffleTracks = releases.flatMap(release => 
-    (release.tracks || [])
-      .filter((track: any) => track.previewUrl || track.mp3Url)
-      .map((track: any, index: number) => ({
-        id: release.id + '-track-' + (track.trackNumber || index + 1),
-        title: track.trackName || 'Track ' + (index + 1),
-        artist: release.artistName || 'Unknown Artist',
-        releaseId: release.id,
-        artwork: release.coverArtUrl || '/logo.webp',
-        previewUrl: track.previewUrl || track.mp3Url
-      }))
-  );
-} catch (e) {
-  console.error('[Layout] Failed to pre-load shuffle tracks:', e);
-}
 ---
 
 <!doctype html>
@@ -59,23 +38,15 @@ try {
       }
     </style>
     
-    <!-- ViewTransitions at the end -->
     <ViewTransitions />
   </head>
   <body>
-    <!-- Audio Coordinator MUST come first to set up AudioManager -->
+    <!-- Audio Coordinator MUST come first -->
     <AudioCoordinator />
-    
-    <!-- Pre-cache shuffle tracks (no API call needed) -->
-    {shuffleTracks.length > 0 && (
-      <script define:vars={{ shuffleTracksJson: JSON.stringify(shuffleTracks) }}>
-        window.SHUFFLE_TRACKS_CACHE = JSON.parse(shuffleTracksJson);
-      </script>
-    )}
     
     <slot />
     
-    <!-- Global Audio Player for DJ Mixes -->
+    <!-- Global Audio Player for DJ Mixes & Shuffle -->
     <GlobalAudioPlayer />
     
     <!-- Spacer for mini player -->
