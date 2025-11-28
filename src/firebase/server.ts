@@ -4,10 +4,12 @@ import { getFirestore } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin
 if (!getApps().length) {
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+  
   const serviceAccount: ServiceAccount = {
     projectId: "freshwax-store",
-    clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: privateKey?.replace(/\\n/g, '\n'),
   };
 
   initializeApp({
