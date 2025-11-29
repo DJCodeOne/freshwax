@@ -1,0 +1,344 @@
+---
+// src/components/SEO.astro
+// Production-grade SEO for music e-commerce
+
+interface Props {
+  title: string;
+  description: string;
+  canonical?: string;
+  image?: string;
+  imageAlt?: string;
+  type?: 'website' | 'article' | 'product' | 'music.album' | 'profile';
+  noindex?: boolean;
+  
+  // Product (vinyl, merch)
+  product?: {
+    price: number;
+    currency?: string;
+    availability?: 'InStock' | 'OutOfStock' | 'PreOrder' | 'LimitedAvailability';
+    sku?: string;
+    brand?: string;
+    condition?: 'NewCondition' | 'UsedCondition';
+    category?: string;
+    reviews?: { rating: number; count: number };
+  };
+  
+  // Music release
+  music?: {
+    artist: string;
+    releaseDate?: string;
+    genre?: string[];
+    label?: string;
+    format?: string[];
+    tracks?: { name: string; duration?: string }[];
+    isrc?: string;
+  };
+  
+  // Article/blog
+  article?: {
+    publishedTime: string;
+    modifiedTime?: string;
+    author?: string;
+    tags?: string[];
+  };
+}
+
+const {
+  title,
+  description,
+  canonical,
+  image = '/og-image.jpg',
+  imageAlt = title,
+  type = 'website',
+  noindex = false,
+  product,
+  music,
+  article
+} = Astro.props;
+
+const SITE = {
+  url: 'https://freshwax.co.uk',
+  name: 'Fresh Wax',
+  locale: 'en_GB',
+  twitter: '@freshwaxuk',
+  logo: 'https://freshwax.co.uk/logo.webp'
+};
+
+const fullTitle = title === 'Home' ? `${SITE.name} | Jungle & Drum and Bass Record Label` : `${title} | ${SITE.name}`;
+const canonicalUrl = canonical || new URL(Astro.url.pathname, SITE.url).href;
+const imageUrl = image.startsWith('http') ? image : new URL(image, SITE.url).href;
+
+// Organization Schema - appears in Google Knowledge Panel
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "RecordLabel",
+  "@id": `${SITE.url}/#organization`,
+  "name": SITE.name,
+  "url": SITE.url,
+  "logo": {
+    "@type": "ImageObject",
+    "url": SITE.logo,
+    "width": 512,
+    "height": 512
+  },
+  "image": SITE.logo,
+  "description": "Independent UK record label specialising in jungle and drum & bass music. Digital downloads and limited edition vinyl.",
+  "foundingDate": "2024",
+  "address": {
+    "@type": "PostalAddress",
+    "addressCountry": "GB",
+    "addressRegion": "England"
+  },
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "customer service",
+    "email": "info@freshwax.co.uk"
+  },
+  "sameAs": [
+    "https://facebook.com/freshwaxuk",
+    "https://instagram.com/freshwaxuk",
+    "https://twitter.com/freshwaxuk",
+    "https://soundcloud.com/freshwaxuk",
+    "https://www.youtube.com/@freshwaxuk"
+  ],
+  "genre": ["Jungle", "Drum and Bass", "Breakbeat"],
+  "knowsAbout": ["Jungle Music", "Drum and Bass", "Vinyl Records", "Electronic Music"]
+};
+
+// WebSite Schema - enables sitelinks search box
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": `${SITE.url}/#website`,
+  "url": SITE.url,
+  "name": SITE.name,
+  "publisher": { "@id": `${SITE.url}/#organization` },
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": `${SITE.url}/releases?search={search_term_string}`
+    },
+    "query-input": "required name=search_term_string"
+  }
+};
+
+// WebPage Schema
+const webpageSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": `${canonicalUrl}#webpage`,
+  "url": canonicalUrl,
+  "name": fullTitle,
+  "description": description,
+  "isPartOf": { "@id": `${SITE.url}/#website` },
+  "about": { "@id": `${SITE.url}/#organization` },
+  "inLanguage": "en-GB"
+};
+
+// Breadcrumb Schema
+const pathParts = Astro.url.pathname.split('/').filter(Boolean);
+const breadcrumbSchema = pathParts.length > 0 ? {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE.url },
+    ...pathParts.map((part, i) => ({
+      "@type": "ListItem",
+      "position": i + 2,
+      "name": decodeURIComponent(part).replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      "item": `${SITE.url}/${pathParts.slice(0, i + 1).join('/')}`
+    }))
+  ]
+} : null;
+
+// Product Schema (for vinyl, merch)
+const productSchema = product ? {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": title,
+  "description": description,
+  "image": imageUrl,
+  "brand": {
+    "@type": "Brand",
+    "name": product.brand || SITE.name
+  },
+  "offers": {
+    "@type": "Offer",
+    "url": canonicalUrl,
+    "price": product.price,
+    "priceCurrency": product.currency || "GBP",
+    "availability": `https://schema.org/${product.availability || 'InStock'}`,
+    "itemCondition": `https://schema.org/${product.condition || 'NewCondition'}`,
+    "seller": { "@id": `${SITE.url}/#organization` },
+    "shippingDetails": {
+      "@type": "OfferShippingDetails",
+      "shippingDestination": {
+        "@type": "DefinedRegion",
+        "addressCountry": "GB"
+      },
+      "deliveryTime": {
+        "@type": "ShippingDeliveryTime",
+        "handlingTime": { "@type": "QuantitativeValue", "minValue": 0, "maxValue": 1, "unitCode": "d" },
+        "transitTime": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 3, "unitCode": "d" }
+      }
+    },
+    "hasMerchantReturnPolicy": {
+      "@type": "MerchantReturnPolicy",
+      "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+      "merchantReturnDays": 14,
+      "returnMethod": "https://schema.org/ReturnByMail",
+      "returnFees": "https://schema.org/ReturnShippingFees"
+    }
+  },
+  ...(product.sku && { "sku": product.sku }),
+  ...(product.category && { "category": product.category }),
+  ...(product.reviews && {
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": product.reviews.rating,
+      "reviewCount": product.reviews.count,
+      "bestRating": 5,
+      "worstRating": 1
+    }
+  })
+} : null;
+
+// MusicAlbum Schema (for releases)
+const musicAlbumSchema = music ? {
+  "@context": "https://schema.org",
+  "@type": "MusicAlbum",
+  "name": title,
+  "description": description,
+  "image": imageUrl,
+  "url": canonicalUrl,
+  "byArtist": {
+    "@type": "MusicGroup",
+    "name": music.artist
+  },
+  "recordLabel": {
+    "@type": "RecordLabel",
+    "name": music.label || SITE.name
+  },
+  ...(music.releaseDate && { "datePublished": music.releaseDate }),
+  ...(music.genre && { "genre": music.genre }),
+  ...(music.format && { "musicReleaseFormat": music.format.map(f => 
+    f.toLowerCase().includes('vinyl') ? 'http://schema.org/VinylFormat' :
+    f.toLowerCase().includes('digital') ? 'http://schema.org/DigitalFormat' :
+    'http://schema.org/CDFormat'
+  )}),
+  ...(music.tracks && {
+    "numTracks": music.tracks.length,
+    "track": music.tracks.map((t, i) => ({
+      "@type": "MusicRecording",
+      "name": t.name,
+      "position": i + 1,
+      ...(t.duration && { "duration": t.duration })
+    }))
+  }),
+  ...(product && {
+    "offers": {
+      "@type": "Offer",
+      "url": canonicalUrl,
+      "price": product.price,
+      "priceCurrency": product.currency || "GBP",
+      "availability": `https://schema.org/${product.availability || 'InStock'}`
+    }
+  })
+} : null;
+
+// Article Schema
+const articleSchema = article ? {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": title,
+  "description": description,
+  "image": imageUrl,
+  "url": canonicalUrl,
+  "datePublished": article.publishedTime,
+  "dateModified": article.modifiedTime || article.publishedTime,
+  "author": {
+    "@type": "Organization",
+    "name": article.author || SITE.name
+  },
+  "publisher": { "@id": `${SITE.url}/#organization` },
+  "mainEntityOfPage": { "@id": `${canonicalUrl}#webpage` },
+  ...(article.tags && { "keywords": article.tags.join(', ') })
+} : null;
+---
+
+<!-- Essential Meta -->
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalUrl} />
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+{!noindex && <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />}
+
+<!-- Open Graph -->
+<meta property="og:type" content={music ? 'music.album' : product ? 'product' : article ? 'article' : type} />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={imageUrl} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content={imageAlt} />
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:locale" content={SITE.locale} />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:site" content={SITE.twitter} />
+<meta name="twitter:creator" content={SITE.twitter} />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={imageUrl} />
+<meta name="twitter:image:alt" content={imageAlt} />
+
+<!-- Music-specific OG -->
+{music && (
+  <>
+    <meta property="music:musician" content={music.artist} />
+    {music.releaseDate && <meta property="music:release_date" content={music.releaseDate} />}
+    {music.genre?.map(g => <meta property="music:genre" content={g} />)}
+  </>
+)}
+
+<!-- Product-specific OG -->
+{product && (
+  <>
+    <meta property="product:price:amount" content={String(product.price)} />
+    <meta property="product:price:currency" content={product.currency || 'GBP'} />
+    <meta property="product:availability" content={product.availability === 'OutOfStock' ? 'out of stock' : 'in stock'} />
+  </>
+)}
+
+<!-- Article-specific OG -->
+{article && (
+  <>
+    <meta property="article:published_time" content={article.publishedTime} />
+    {article.modifiedTime && <meta property="article:modified_time" content={article.modifiedTime} />}
+    {article.tags?.map(tag => <meta property="article:tag" content={tag} />)}
+  </>
+)}
+
+<!-- Technical SEO -->
+<meta name="author" content={SITE.name} />
+<meta name="publisher" content={SITE.name} />
+<meta name="theme-color" content="#000000" />
+<meta name="color-scheme" content="light" />
+<meta name="format-detection" content="telephone=no" />
+<meta http-equiv="x-ua-compatible" content="IE=edge" />
+
+<!-- Geo -->
+<meta name="geo.region" content="GB" />
+<meta name="geo.placename" content="United Kingdom" />
+
+<!-- Structured Data -->
+<script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
+<script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
+<script type="application/ld+json" set:html={JSON.stringify(webpageSchema)} />
+{breadcrumbSchema && <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />}
+{productSchema && <script type="application/ld+json" set:html={JSON.stringify(productSchema)} />}
+{musicAlbumSchema && <script type="application/ld+json" set:html={JSON.stringify(musicAlbumSchema)} />}
+{articleSchema && <script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />}

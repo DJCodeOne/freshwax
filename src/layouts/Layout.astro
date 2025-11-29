@@ -10,30 +10,40 @@ interface Props {
   title: string;
   description?: string;
   image?: string;
+  imageAlt?: string;
   type?: 'website' | 'article' | 'product' | 'music.album';
   noindex?: boolean;
   product?: {
     price: number;
     currency?: string;
-    availability?: 'in_stock' | 'out_of_stock' | 'preorder';
+    availability?: 'InStock' | 'OutOfStock' | 'PreOrder' | 'LimitedAvailability';
     sku?: string;
+    brand?: string;
+    condition?: 'NewCondition' | 'UsedCondition';
+    category?: string;
+    reviews?: { rating: number; count: number };
   };
   article?: {
-    publishedTime?: string;
+    publishedTime: string;
     modifiedTime?: string;
     author?: string;
+    tags?: string[];
   };
   music?: {
-    artist?: string;
+    artist: string;
     releaseDate?: string;
-    album?: string;
+    genre?: string[];
+    label?: string;
+    format?: string[];
+    tracks?: { name: string; duration?: string }[];
   };
 }
 
 const { 
   title, 
-  description = 'Fresh Wax - Independent jungle and drum & bass record label. Digital downloads and limited edition vinyl.',
+  description = 'Independent jungle and drum & bass record label. Digital downloads and limited edition vinyl pressings from the UK underground.',
   image,
+  imageAlt,
   type,
   noindex,
   product,
@@ -47,16 +57,28 @@ const {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <meta name="generator" content={Astro.generator} />
     
-    <!-- SEO Component -->
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://firestore.googleapis.com" />
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    
+    <!-- Critical fonts with display swap -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet" />
+    
+    <!-- SEO Component - all meta tags -->
     <SEO 
       title={title}
       description={description}
       image={image}
+      imageAlt={imageAlt}
       type={type}
       noindex={noindex}
       product={product}
@@ -64,23 +86,38 @@ const {
       music={music}
     />
     
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+    <ViewTransitions />
     
-    <style>
+    <style is:global>
+      /* Critical CSS inlined */
       body {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
       
       h1, h2, h3, h4, h5, h6 {
-        font-family: 'Bebas Neue', sans-serif;
+        font-family: 'Bebas Neue', Impact, sans-serif;
         letter-spacing: 0.02em;
       }
+      
+      /* Mini player spacer */
+      body:has(#mini-player.visible) #mini-player-spacer {
+        height: 70px;
+      }
+      
+      @media (min-width: 640px) {
+        body:has(#mini-player.visible) #mini-player-spacer {
+          height: 80px;
+        }
+      }
+      
+      /* Reduce CLS from images */
+      img {
+        max-width: 100%;
+        height: auto;
+      }
     </style>
-    
-    <ViewTransitions />
   </head>
   <body>
     <!-- Audio Coordinator MUST come first -->
@@ -95,15 +132,3 @@ const {
     <div id="mini-player-spacer" class="h-0 transition-all duration-300"></div>
   </body>
 </html>
-
-<style is:global>
-  body:has(#mini-player.visible) #mini-player-spacer {
-    height: 70px;
-  }
-  
-  @media (min-width: 640px) {
-    body:has(#mini-player.visible) #mini-player-spacer {
-      height: 80px;
-    }
-  }
-</style>
