@@ -1,12 +1,10 @@
----
 // src/pages/robots.txt.ts
-import type { APIRoute } from 'astro';
 
 export const prerender = true;
 
 const SITE_URL = 'https://freshwax.co.uk';
 
-export const GET: APIRoute = () => {
+export const GET = () => {
   const robotsTxt = `# Fresh Wax Robots.txt
 # https://freshwax.co.uk
 
