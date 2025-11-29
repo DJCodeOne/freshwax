@@ -1,6 +1,5 @@
 // src/pages/sitemap.xml.ts
 // Dynamic XML sitemap optimised for music e-commerce
-import { type APIRoute } from 'astro';
 import { queryCollection, getLiveReleases } from '../lib/firebase-rest';
 
 export const prerender = false;
@@ -42,7 +41,7 @@ function formatDate(date: any): string {
   }
 }
 
-export const GET: APIRoute = async () => {
+export const GET = async () => {
   const today = new Date().toISOString().split('T')[0];
   
   let releases: any[] = [];
