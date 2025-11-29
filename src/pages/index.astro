@@ -91,6 +91,42 @@
             margin-top: 2rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            position: relative;
+        }
+        
+        .construction-badge::before,
+        .construction-badge::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #dc2626;
+            border-radius: 50%;
+            animation: redPulse 1.5s ease-in-out infinite;
+            box-shadow: 0 0 8px rgba(220, 38, 38, 0.8), 0 0 16px rgba(220, 38, 38, 0.4);
+        }
+        
+        .construction-badge::before {
+            position: absolute;
+            left: -20px;
+        }
+        
+        .construction-badge::after {
+            position: absolute;
+            right: -20px;
+            animation-delay: 0.75s;
+        }
+        
+        @keyframes redPulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+                box-shadow: 0 0 8px rgba(220, 38, 38, 0.8), 0 0 16px rgba(220, 38, 38, 0.4);
+            }
+            50% {
+                opacity: 0.4;
+                transform: scale(1.3);
+                box-shadow: 0 0 12px rgba(220, 38, 38, 1), 0 0 24px rgba(220, 38, 38, 0.6);
+            }
         }
         
         .pulse {
@@ -136,24 +172,52 @@
         }
         
         .tag {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.15);
             padding: 0.5rem 1rem;
             border-radius: 25px;
             font-weight: 600;
             font-size: 0.875rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .tag:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
         }
         
         .merch-notice {
-            background: #1a1a1a;
-            border: 2px solid #333333;
+            background: rgba(26, 26, 26, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 2px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
             padding: 2rem;
             margin: 3rem auto;
             max-width: 700px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 
+                        inset 0 0 0 2px rgba(220, 38, 38, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            transition: all 0.4s ease;
+        }
+        
+        .merch-notice:hover {
+            background: rgba(26, 26, 26, 0.8);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 
+                        inset 0 0 0 2px rgba(220, 38, 38, 0.6),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                        0 0 40px rgba(220, 38, 38, 0.15);
+            transform: translateY(-4px);
         }
         
         .merch-header {
@@ -299,19 +363,15 @@
                 <div class="merch-details-grid">
                     <div class="merch-item">
                         <span class="checkmark">✓</span>
-                        <span><strong>Sale or Return:</strong> 1-3 per item/size to start (e.g., 1-3 of each t-shirt size) - only pay postage to us</span>
+                        <span><strong>Sale or Return:</strong> Only pay postage to us</span>
                     </div>
                     <div class="merch-item">
                         <span class="checkmark">✓</span>
-                        <span><strong>Live Stock Updates:</strong> We monitor inventory and you send more when running low or out of stock</span>
+                        <span><strong>Stock Management:</strong> You can monitor your stock and send more when running low </span>
                     </div>
                     <div class="merch-item">
                         <span class="checkmark">✓</span>
-                        <span><strong>Full Returns:</strong> If you want your stock back, we'll return everything at our cost</span>
-                    </div>
-                    <div class="merch-item">
-                        <span class="checkmark">✓</span>
-                        <span><strong>Professional Images:</strong> We photograph & describe all items</span>
+                        <span><strong>Images and Descriptions:</strong> We can provide these for all of your items</span>
                     </div>
                     <div class="merch-item">
                         <span class="checkmark">✓</span>
@@ -326,7 +386,7 @@
         </div>
         
         <div class="construction-badge">
-            <span class="pulse"></span>
+          
             Site Under Construction
         </div>
     </div>
