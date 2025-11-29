@@ -113,6 +113,20 @@
             }
         }
         
+        @keyframes kittScanner {
+            0% { left: -100%; opacity: 0; }
+            5% { opacity: 1; }
+            45% { opacity: 1; }
+            50% { left: 100%; opacity: 0; }
+            55% { opacity: 1; }
+            95% { opacity: 1; }
+            100% { left: -100%; opacity: 0; }
+        }
+        
+        .kitt-scanner {
+            animation: kittScanner 2.6s ease-in-out infinite;
+        }
+        
         .genre-tags {
             display: flex;
             gap: 1rem;
@@ -271,6 +285,14 @@
         
         <h1>Coming Soon</h1>
         
+        <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 2rem;">
+            <div style="height: 2px; width: 3rem; background: linear-gradient(to right, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
+            <div style="position: relative; height: 3px; width: 4rem; background: rgba(220, 38, 38, 0.2); border-radius: 2px; overflow: hidden;">
+                <div class="kitt-scanner" style="position: absolute; top: 0; height: 100%; width: 100%; background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.4) 20%, #dc2626 50%, rgba(220, 38, 38, 0.4) 80%, transparent); border-radius: 2px; box-shadow: 0 0 20px rgba(220, 38, 38, 0.8), 0 0 40px rgba(220, 38, 38, 0.6);"></div>
+            </div>
+            <div style="height: 2px; width: 3rem; background: linear-gradient(to left, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
+        </div>
+        
         <div class="description">
             <p class="subtitle">Online Store for the Latest in Vinyl & Digital</p>
             <p>Your destination for cutting-edge Jungle and Drum and Bass downloads, fresh vinyl releases, and exclusive merchandise.</p>
@@ -302,7 +324,7 @@
                     </div>
                     <div class="merch-item">
                         <span class="checkmark">✓</span>
-                        <span><strong>Live Stock Updates:</strong> You can monitor your stock and send more when running low</span>
+                        <span><strong>Live Stock Updates:</strong> You can monitor your stock and send more when running low.</span>
                     </div>
                     <div class="merch-item">
                         <span class="checkmark">✓</span>
@@ -319,9 +341,9 @@
                 </div>
             </div>
             
-            <a href="mailto:contact@freshwax.co.uk" class="merch-cta">
-                Get In Touch →
-            </a>
+            <p style="margin-top: 1.5rem; font-size: 0.95rem; color: #e5e5e5; font-weight: 600;">
+                Contact us: <a href="mailto:contact@freshwax.co.uk" style="color: #ffffff; text-decoration: underline;">contact@freshwax.co.uk</a>
+            </p>
         </div>
         
         <div class="construction-badge">
