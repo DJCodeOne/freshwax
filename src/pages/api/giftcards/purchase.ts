@@ -4,7 +4,6 @@
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { Resend } from 'resend';
 
 if (!getApps().length) {
   initializeApp({
@@ -18,9 +17,41 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-// Initialize Resend for emails
-const resend = new Resend(import.meta.env.RESEND_API_KEY);
-const FROM_EMAIL = 'Fresh Wax <noreply@freshwax.co.uk>';
+// Send email via Resend API (using fetch for Cloudflare compatibility)
+async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+  const RESEND_API_KEY = import.meta.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) {
+    console.error('[giftcards/purchase] No Resend API key configured');
+    return false;
+  }
+  
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Fresh Wax <noreply@freshwax.co.uk>',
+        to,
+        subject,
+        html
+      }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('[giftcards/purchase] Resend error:', response.status, error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('[giftcards/purchase] Email send error:', error);
+    return false;
+  }
+}
 
 // Generate gift card code
 function generateGiftCardCode(): string {
@@ -148,15 +179,12 @@ async function sendGiftCardEmail(
 </html>
     `;
     
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: toEmail,
-      subject,
-      html
-    });
+    const sent = await sendEmail(toEmail, subject, html);
     
-    console.log(`[giftcards/purchase] Email sent to ${toEmail}`);
-    return true;
+    if (sent) {
+      console.log(`[giftcards/purchase] Email sent to ${toEmail}`);
+    }
+    return sent;
   } catch (error) {
     console.error('[giftcards/purchase] Email error:', error);
     return false;

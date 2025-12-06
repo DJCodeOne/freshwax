@@ -34,6 +34,47 @@ export const prerender = false;
     </div>
   </div>
   
+  <!-- Not Eligible - Needs mix with likes -->
+  <div id="notEligible" class="not-eligible hidden">
+    <div class="not-eligible-content">
+      <div class="not-eligible-icon">🎧</div>
+      <h1>ALMOST <span class="red">THERE</span></h1>
+      <p id="eligibilityMessage">You need to build your reputation before accessing the DJ Lobby.</p>
+      
+      <div class="eligibility-requirements">
+        <h3>To Access DJ Lobby, You Need:</h3>
+        <div class="requirement-list">
+          <div id="reqMixes" class="requirement">
+            <span class="req-icon">❌</span>
+            <span class="req-text">At least 1 DJ mix uploaded</span>
+          </div>
+          <div id="reqLikes" class="requirement">
+            <span class="req-icon">❌</span>
+            <span class="req-text">At least 10 likes on one of your mixes</span>
+          </div>
+        </div>
+        
+        <div id="progressInfo" class="progress-info hidden">
+          <p>Your best mix: <span id="bestMixLikes">0</span>/10 likes</p>
+          <div class="progress-bar">
+            <div id="likesProgress" class="progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="eligibility-actions">
+        <a href="/account/upload-mix" class="action-btn primary">Upload a DJ Mix →</a>
+        <a href="/dj-mixes" class="action-btn secondary">View DJ Mixes</a>
+        <a href="/live" class="action-btn secondary">Back to Live</a>
+      </div>
+      
+      <div class="eligibility-why">
+        <h4>Why this requirement?</h4>
+        <p>This helps ensure our livestreams feature genuine DJs who play jungle and drum & bass music. Upload a quality mix, get your fans to show some love, and you'll be in the lobby in no time! 🔊</p>
+      </div>
+    </div>
+  </div>
+  
   <!-- Main Lobby -->
   <div id="mainLobby" class="lobby-container hidden">
     <header class="lobby-header">
@@ -78,65 +119,6 @@ export const prerender = false;
             <span class="end-text">End Stream</span>
           </button>
           <p id="endStreamStatus" class="end-stream-status">No active stream</p>
-        </div>
-        
-        <!-- My Stream Key & Details -->
-        <div class="stream-key-section">
-          <div class="section-header">
-            <h3>🔑 Your Stream Key</h3>
-            <span id="keyStatus" class="key-status">Checking...</span>
-          </div>
-          
-          <div id="keyNotAvailable" class="key-not-available">
-            <div class="lock-icon">🔒</div>
-            <p>Your stream key will be available <strong>15 minutes</strong> before your scheduled slot.</p>
-            <p id="nextSlotInfo" class="next-slot-info">You have no upcoming slots booked.</p>
-            <a href="/account/go-live" class="book-slot-link">Book a Slot →</a>
-          </div>
-          
-          <div id="keyAvailable" class="key-available hidden">
-            <div class="key-header">
-              <span class="unlocked-icon">🔓</span>
-              <div>
-                <strong id="slotTimeDisplay">Your slot: --:-- - --:--</strong>
-                <span id="countdownToSlot" class="countdown-text"></span>
-              </div>
-            </div>
-            
-            <div class="stream-credentials">
-              <div class="cred-row">
-                <label>RTMP Server URL</label>
-                <div class="cred-value">
-                  <code id="rtmpUrl">rtmp://stream.freshwax.co.uk/live</code>
-                  <button class="copy-btn" data-copy="rtmpUrl">Copy</button>
-                </div>
-              </div>
-              <div class="cred-row">
-                <label>Stream Key</label>
-                <div class="cred-value">
-                  <code id="myStreamKey">-</code>
-                  <button class="copy-btn" data-copy="myStreamKey">Copy</button>
-                </div>
-              </div>
-            </div>
-            
-            <div class="ready-section">
-              <p>Ready to go? Set yourself as ready so the stream transitions smoothly.</p>
-              <button id="setReadyBtn" class="ready-btn">
-                <span id="readyBtnText">✓ I'm Ready</span>
-              </button>
-              <p id="readyStatus" class="ready-status hidden">✓ You're set as ready. Stream will transition automatically when current DJ finishes.</p>
-            </div>
-          </div>
-          
-          <!-- Currently Live Controls -->
-          <div id="myStreamControls" class="my-stream-controls hidden">
-            <div class="live-badge">🔴 YOU ARE LIVE</div>
-            <div class="live-stats">
-              <span id="myStreamDuration">Duration: 00:00</span>
-            </div>
-            <button id="endStreamBtn" class="end-stream-btn">End Stream</button>
-          </div>
         </div>
         
         <!-- Takeover Section -->
@@ -270,6 +252,65 @@ export const prerender = false;
                 <span id="currentStreamTitle" class="stream-title">No stream</span>
               </div>
             </div>
+          </div>
+        </div>
+        
+        <!-- Stream Key Section (under video player) -->
+        <div class="stream-key-section">
+          <div class="section-header">
+            <h3>🔑 Your Stream Key</h3>
+            <span id="keyStatus" class="key-status">Checking...</span>
+          </div>
+          
+          <div id="keyNotAvailable" class="key-not-available">
+            <div class="lock-icon">🔒</div>
+            <p>Your stream key will be available <strong>15 minutes</strong> before your scheduled slot.</p>
+            <p id="nextSlotInfo" class="next-slot-info">You have no upcoming slots booked.</p>
+            <a href="/account/go-live" class="book-slot-link">Book a Slot →</a>
+          </div>
+          
+          <div id="keyAvailable" class="key-available hidden">
+            <div class="key-header">
+              <span class="unlocked-icon">🔓</span>
+              <div>
+                <strong id="slotTimeDisplay">Your slot: --:-- - --:--</strong>
+                <span id="countdownToSlot" class="countdown-text"></span>
+              </div>
+            </div>
+            
+            <div class="stream-credentials">
+              <div class="cred-row">
+                <label>RTMP Server URL</label>
+                <div class="cred-value">
+                  <code id="rtmpUrl">rtmp://stream.freshwax.co.uk/live</code>
+                  <button class="copy-btn" data-copy="rtmpUrl">Copy</button>
+                </div>
+              </div>
+              <div class="cred-row">
+                <label>Stream Key</label>
+                <div class="cred-value">
+                  <code id="myStreamKey">-</code>
+                  <button class="copy-btn" data-copy="myStreamKey">Copy</button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="ready-section">
+              <p>Ready to go? Set yourself as ready so the stream transitions smoothly.</p>
+              <button id="setReadyBtn" class="ready-btn">
+                <span id="readyBtnText">✓ I'm Ready</span>
+              </button>
+              <p id="readyStatus" class="ready-status hidden">✓ You're set as ready. Stream will transition automatically when current DJ finishes.</p>
+            </div>
+          </div>
+          
+          <!-- Currently Live Controls -->
+          <div id="myStreamControls" class="my-stream-controls hidden">
+            <div class="live-badge">🔴 YOU ARE LIVE</div>
+            <div class="live-stats">
+              <span id="myStreamDuration">Duration: 00:00</span>
+            </div>
+            <button id="endStreamBtn" class="end-stream-btn">End Stream</button>
           </div>
         </div>
       </div>
@@ -471,6 +512,164 @@ export const prerender = false;
     font-weight: 600;
   }
   
+  /* Not Eligible */
+  .not-eligible {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    z-index: 100;
+    overflow-y: auto;
+    padding: 2rem;
+  }
+  
+  .not-eligible-content {
+    text-align: center;
+    padding: 2rem;
+    max-width: 500px;
+    width: 100%;
+  }
+  
+  .not-eligible-icon { font-size: 4rem; margin-bottom: 1rem; }
+  
+  .not-eligible-content h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: #fff;
+    margin-bottom: 0.75rem;
+  }
+  
+  .not-eligible-content > p { color: #aaa; font-size: 1.1rem; margin-bottom: 1.5rem; }
+  
+  .eligibility-requirements {
+    background: rgba(0,0,0,0.3);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    text-align: left;
+  }
+  
+  .eligibility-requirements h3 {
+    color: #fff;
+    font-size: 1rem;
+    margin: 0 0 1rem 0;
+    text-align: center;
+  }
+  
+  .requirement-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .requirement {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+  }
+  
+  .requirement.met {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+  }
+  
+  .req-icon { font-size: 1.25rem; }
+  .req-text { color: #ccc; font-size: 0.95rem; }
+  .requirement.met .req-text { color: #4ade80; }
+  
+  .progress-info {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid #444;
+  }
+  
+  .progress-info p {
+    color: #fff;
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+    text-align: center;
+  }
+  
+  .progress-bar {
+    height: 8px;
+    background: #333;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #dc2626, #f97316);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+  
+  .eligibility-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .action-btn {
+    display: inline-block;
+    min-width: 200px;
+    padding: 0.875rem 1.5rem;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  
+  .action-btn.primary {
+    background: #dc2626;
+    color: #fff;
+  }
+  
+  .action-btn.primary:hover {
+    background: #b91c1c;
+    transform: translateY(-2px);
+  }
+  
+  .action-btn.secondary {
+    background: transparent;
+    border: 2px solid #555;
+    color: #ccc;
+  }
+  
+  .action-btn.secondary:hover {
+    border-color: #888;
+    color: #fff;
+  }
+  
+  .eligibility-why {
+    background: rgba(220, 38, 38, 0.1);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    border-radius: 10px;
+    padding: 1.25rem;
+    text-align: left;
+  }
+  
+  .eligibility-why h4 {
+    color: #f87171;
+    font-size: 0.9rem;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .eligibility-why p {
+    color: #ccc;
+    font-size: 0.875rem;
+    margin: 0;
+    line-height: 1.5;
+  }
+
   /* Header */
   .lobby-header {
     display: flex;
@@ -732,7 +931,7 @@ export const prerender = false;
     flex-direction: column;
     gap: 0.75rem;
     height: 100%;
-    overflow: hidden;
+    overflow-y: auto;
   }
   
   .right-column {
@@ -794,7 +993,7 @@ export const prerender = false;
   }
   
   .preview-section {
-    flex: 1;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -2369,6 +2568,16 @@ export const prerender = false;
           avatar: result.avatarUrl || null,
           isAdmin: isAdmin
         };
+        
+        // Check eligibility (must have mix with 10+ likes)
+        const eligibilityResponse = await fetch(`/api/check-dj-eligibility?userId=${userId}`);
+        const eligibility = await eligibilityResponse.json();
+        
+        if (!eligibility.eligible && !isAdmin) {
+          showNotEligible(eligibility);
+          return;
+        }
+        
         showLobby();
         initLobby();
       } else {
@@ -2377,6 +2586,38 @@ export const prerender = false;
     } catch (e) {
       console.error('Access check failed:', e);
       showAccessDenied();
+    }
+  }
+  
+  function showNotEligible(eligibility) {
+    document.getElementById('authGate').classList.add('hidden');
+    document.getElementById('accessDenied').classList.add('hidden');
+    document.getElementById('notEligible').classList.remove('hidden');
+    
+    // Update message
+    document.getElementById('eligibilityMessage').textContent = eligibility.message || 'You need to build your reputation before accessing the DJ Lobby.';
+    
+    // Update requirements
+    const reqMixes = document.getElementById('reqMixes');
+    const reqLikes = document.getElementById('reqLikes');
+    
+    if (eligibility.mixCount > 0) {
+      reqMixes.classList.add('met');
+      reqMixes.querySelector('.req-icon').textContent = '✅';
+    }
+    
+    if (eligibility.qualifyingMixes > 0) {
+      reqLikes.classList.add('met');
+      reqLikes.querySelector('.req-icon').textContent = '✅';
+    }
+    
+    // Show progress if they have mixes but need likes
+    if (eligibility.reason === 'insufficient_likes' && eligibility.bestMixLikes !== undefined) {
+      const progressInfo = document.getElementById('progressInfo');
+      progressInfo.classList.remove('hidden');
+      document.getElementById('bestMixLikes').textContent = eligibility.bestMixLikes;
+      const progress = Math.min(100, (eligibility.bestMixLikes / eligibility.requiredLikes) * 100);
+      document.getElementById('likesProgress').style.width = progress + '%';
     }
   }
   

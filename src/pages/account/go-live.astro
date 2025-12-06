@@ -35,6 +35,49 @@ export const prerender = false;
         </details>
       </div>
       
+      <!-- Eligibility Check - DJ needs mixes with likes -->
+      <div id="notEligible" class="not-eligible hidden">
+        <div class="not-eligible-icon">🎧</div>
+        <h1>ALMOST <span class="red">THERE</span></h1>
+        <p id="eligibilityMessage">You need to build your reputation before going live.</p>
+        
+        <div class="eligibility-requirements">
+          <h3>To Go Live, You Need:</h3>
+          <div class="requirement-list">
+            <div id="reqMixes" class="requirement">
+              <span class="req-icon">❌</span>
+              <span class="req-text">At least 1 DJ mix uploaded</span>
+            </div>
+            <div id="reqLikes" class="requirement">
+              <span class="req-icon">❌</span>
+              <span class="req-text">At least 10 likes on one of your mixes</span>
+            </div>
+          </div>
+          
+          <div id="progressInfo" class="progress-info hidden">
+            <p>Your best mix: <span id="bestMixLikes">0</span>/10 likes</p>
+            <div class="progress-bar">
+              <div id="likesProgress" class="progress-fill" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="eligibility-actions">
+          <a href="/account/upload-mix" class="cta-btn primary">Upload a DJ Mix →</a>
+          <a href="/dj-mixes" class="cta-btn secondary">View DJ Mixes</a>
+        </div>
+        
+        <div class="eligibility-why">
+          <h4>Why this requirement?</h4>
+          <p>This helps ensure our livestreams feature genuine DJs who play jungle and drum & bass music. Upload a quality mix, get your fans to show some love, and you'll be live in no time! 🔊</p>
+        </div>
+        
+        <div id="adminBypassEligibility" class="admin-bypass hidden">
+          <p style="color: #22c55e; margin-top: 2rem;">Admin detected!</p>
+          <button id="bypassBtnEligibility" class="bypass-btn">Continue as Admin →</button>
+        </div>
+      </div>
+      
       <div id="streamDashboard" class="stream-dashboard hidden">
         <div class="dashboard-header">
           <h1>🎙️ GO <span class="red">LIVE</span></h1>
@@ -288,6 +331,32 @@ export const prerender = false;
   .not-approved-icon { font-size: 4rem; margin-bottom: 1.5rem; }
   .not-approved h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: #fff; margin: 0 0 1rem 0; }
   .not-approved p { color: #aaa; font-size: 1.125rem; margin-bottom: 2rem; }
+  
+  /* Eligibility Check Styles */
+  .not-eligible { text-align: center; padding: 3rem 2rem; background: rgba(255,255,255,0.05); border-radius: 16px; max-width: 600px; margin: 0 auto; }
+  .not-eligible-icon { font-size: 4rem; margin-bottom: 1rem; }
+  .not-eligible h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: #fff; margin: 0 0 0.75rem 0; }
+  .not-eligible > p { color: #aaa; font-size: 1.125rem; margin-bottom: 1.5rem; }
+  .eligibility-requirements { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: left; }
+  .eligibility-requirements h3 { color: #fff; font-size: 1rem; margin: 0 0 1rem 0; text-align: center; }
+  .requirement-list { display: flex; flex-direction: column; gap: 0.75rem; }
+  .requirement { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; }
+  .requirement.met { background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); }
+  .req-icon { font-size: 1.25rem; }
+  .req-text { color: #ccc; font-size: 0.95rem; }
+  .requirement.met .req-text { color: #4ade80; }
+  .progress-info { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid #444; }
+  .progress-info p { color: #fff; font-size: 0.95rem; margin-bottom: 0.75rem; text-align: center; }
+  .progress-bar { height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #dc2626, #f97316); border-radius: 4px; transition: width 0.5s ease; }
+  .eligibility-actions { display: flex; flex-direction: column; gap: 0.75rem; align-items: center; margin-bottom: 1.5rem; }
+  .eligibility-actions .cta-btn { min-width: 250px; text-align: center; }
+  .eligibility-actions .cta-btn.secondary { background: transparent; border: 2px solid #666; color: #ccc; }
+  .eligibility-actions .cta-btn.secondary:hover { border-color: #888; color: #fff; }
+  .eligibility-why { background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 10px; padding: 1.25rem; text-align: left; }
+  .eligibility-why h4 { color: #f87171; font-size: 0.9rem; margin: 0 0 0.5rem 0; }
+  .eligibility-why p { color: #ccc; font-size: 0.875rem; margin: 0; line-height: 1.5; }
+  
   .red { color: #dc2626; }
   .cta-btn { display: inline-block; padding: 1rem 2rem; background: #dc2626; color: #fff; text-decoration: none; font-weight: 600; border-radius: 10px; }
   .admin-bypass { margin-top: 1.5rem; }
@@ -499,36 +568,115 @@ export const prerender = false;
       
       log('API response:', result);
       
-      // Anyone logged in can go live - just need their info for display
       artistData = {
         approved: true,
         artistName: result.partnerDisplayName || result.name || currentUser.email?.split('@')[0] || 'DJ',
         avatarUrl: result.avatarUrl || null,
         name: result.name || '',
+        isAdmin: result.isAdmin || false,
         ...result
       };
       
-      document.getElementById('authCheck').classList.add('hidden');
-      document.getElementById('streamDashboard').classList.remove('hidden');
-      await checkExistingStream(userId);
-      await loadPastStreams(userId);
-      setupEventListeners();
+      // Check eligibility (must have a mix with 10+ likes)
+      log('Checking DJ eligibility...');
+      const eligibilityResponse = await fetch(`/api/check-dj-eligibility?userId=${userId}`);
+      const eligibility = await eligibilityResponse.json();
+      
+      log('Eligibility result:', eligibility);
+      
+      if (!eligibility.eligible && !artistData.isAdmin) {
+        // Not eligible - show requirements
+        showEligibilityBlock(eligibility, artistData.isAdmin);
+        return;
+      }
+      
+      // If admin but not eligible, show admin bypass
+      if (!eligibility.eligible && artistData.isAdmin) {
+        showEligibilityBlock(eligibility, true);
+        return;
+      }
+      
+      // Eligible - show dashboard
+      showDashboard();
       
     } catch (error) {
       console.error('[GoLive] Error getting user info:', error);
       
-      // Even if API fails, still let them stream with basic info
-      artistData = {
-        approved: true,
-        artistName: currentUser.email?.split('@')[0] || 'DJ',
-        avatarUrl: null
-      };
+      // On error, check if admin before showing error state
+      try {
+        const adminCheck = await fetch(`/api/get-user-type?uid=${userId}`);
+        const adminResult = await adminCheck.json();
+        if (adminResult.isAdmin) {
+          artistData = {
+            approved: true,
+            artistName: currentUser.email?.split('@')[0] || 'DJ',
+            avatarUrl: null,
+            isAdmin: true
+          };
+          showDashboard();
+          return;
+        }
+      } catch (e) {}
       
-      document.getElementById('authCheck').classList.add('hidden');
-      document.getElementById('streamDashboard').classList.remove('hidden');
-      setupEventListeners();
+      // Show error state
+      document.getElementById('authCheck').innerHTML = `
+        <div class="not-approved-icon">⚠️</div>
+        <h1>ERROR</h1>
+        <p>Could not verify your eligibility. Please try again.</p>
+        <button onclick="location.reload()" class="cta-btn">Retry</button>
+      `;
     }
   }
+  
+  function showEligibilityBlock(eligibility, isAdmin) {
+    document.getElementById('authCheck').classList.add('hidden');
+    document.getElementById('notEligible').classList.remove('hidden');
+    
+    // Update message
+    document.getElementById('eligibilityMessage').textContent = eligibility.message || 'You need to build your reputation before going live.';
+    
+    // Update requirements
+    const reqMixes = document.getElementById('reqMixes');
+    const reqLikes = document.getElementById('reqLikes');
+    
+    if (eligibility.mixCount > 0) {
+      reqMixes.classList.add('met');
+      reqMixes.querySelector('.req-icon').textContent = '✅';
+    }
+    
+    if (eligibility.qualifyingMixes > 0) {
+      reqLikes.classList.add('met');
+      reqLikes.querySelector('.req-icon').textContent = '✅';
+    }
+    
+    // Show progress if they have mixes but need likes
+    if (eligibility.reason === 'insufficient_likes' && eligibility.bestMixLikes !== undefined) {
+      const progressInfo = document.getElementById('progressInfo');
+      progressInfo.classList.remove('hidden');
+      document.getElementById('bestMixLikes').textContent = eligibility.bestMixLikes;
+      const progress = Math.min(100, (eligibility.bestMixLikes / eligibility.requiredLikes) * 100);
+      document.getElementById('likesProgress').style.width = progress + '%';
+    }
+    
+    // Admin bypass
+    if (isAdmin) {
+      document.getElementById('adminBypassEligibility').classList.remove('hidden');
+    }
+  }
+  
+  function showDashboard() {
+    document.getElementById('authCheck').classList.add('hidden');
+    document.getElementById('notEligible').classList.add('hidden');
+    document.getElementById('streamDashboard').classList.remove('hidden');
+    checkExistingStream(currentUser.uid);
+    loadPastStreams(currentUser.uid);
+    setupEventListeners();
+  }
+  
+  // Admin bypass on eligibility screen
+  document.getElementById('bypassBtnEligibility')?.addEventListener('click', () => {
+    showDashboard();
+  });
   
   async function checkExistingStream(userId) {
     try {
