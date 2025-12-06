@@ -1,0 +1,901 @@
+---
+// src/pages/admin/users.astro
+// Fresh Wax User Management - All users in one place
+// Combines customers, artists, DJs, and merch suppliers
+import AdminLayout from '../../layouts/AdminLayout.astro';
+export const prerender = false;
+---
+
+<AdminLayout title="User Management" activeNav="users">
+  <Fragment slot="actions">
+    <button class="btn btn-outline" onclick="exportUsers()">
+      <span>📥</span> Export CSV
+    </button>
+  </Fragment>
+
+  <!-- Stats Bar -->
+  <div class="stats-grid mb-3">
+    <div class="stat-card">
+      <div class="stat-value" id="totalCount">0</div>
+      <div class="stat-label">Total Users</div>
+    </div>
+    <div class="stat-card info">
+      <div class="stat-value" id="customerCount">0</div>
+      <div class="stat-label">Customers</div>
+    </div>
+    <div class="stat-card success">
+      <div class="stat-value" id="proCount">0</div>
+      <div class="stat-label">Pro Accounts</div>
+    </div>
+    <div class="stat-card warning">
+      <div class="stat-value" id="pendingCount">0</div>
+      <div class="stat-label">Pending Approval</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="djCount">0</div>
+      <div class="stat-label">DJs</div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search by name, email..." class="search-input">
+    </div>
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-filter="all">All Users</button>
+      <button class="filter-tab" data-filter="customer">Customers</button>
+      <button class="filter-tab" data-filter="pro">Pro Accounts</button>
+      <button class="filter-tab" data-filter="pending">Pending</button>
+      <button class="filter-tab" data-filter="dj">DJs</button>
+      <button class="filter-tab" data-filter="artist">Artists</button>
+      <button class="filter-tab" data-filter="merch">Merch</button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loadingState" class="card">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p>Loading users...</p>
+    </div>
+  </div>
+
+  <!-- Users Table -->
+  <div id="usersTable" class="card" style="display: none;">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Contact</th>
+            <th>Roles</th>
+            <th>Status</th>
+            <th>Registered</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div id="emptyState" class="card" style="display: none;">
+    <div class="empty-state">
+      <div class="empty-icon">👥</div>
+      <h3>No users found</h3>
+      <p>Try adjusting your search or filter criteria</p>
+    </div>
+  </div>
+
+  <!-- Edit User Modal -->
+  <Fragment slot="modals">
+    <div id="editModal" class="modal-overlay">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <h2>Edit User</h2>
+          <button class="modal-close" onclick="closeModal('editModal')">×</button>
+        </div>
+        <div class="modal-body">
+          <form id="editForm">
+            <input type="hidden" id="editUserId">
+            <input type="hidden" id="editUserCollection">
+            
+            <!-- Basic Info -->
+            <div class="form-section">
+              <h3 class="form-section-title">Basic Information</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Display Name <span class="required">*</span></label>
+                  <input type="text" id="editDisplayName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Full Name</label>
+                  <input type="text" id="editFullName" class="form-input">
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Email <span class="required">*</span></label>
+                  <input type="email" id="editEmail" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Phone</label>
+                  <input type="tel" id="editPhone" class="form-input" placeholder="+44...">
+                </div>
+              </div>
+            </div>
+
+            <!-- Address -->
+            <div class="form-section">
+              <h3 class="form-section-title">Address</h3>
+              <div class="form-group">
+                <label class="form-label">Address Line 1</label>
+                <input type="text" id="editAddressLine1" class="form-input">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Address Line 2</label>
+                <input type="text" id="editAddressLine2" class="form-input">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">City</label>
+                  <input type="text" id="editCity" class="form-input">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Postcode</label>
+                  <input type="text" id="editPostcode" class="form-input">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Country</label>
+                <input type="text" id="editCountry" class="form-input" value="United Kingdom">
+              </div>
+            </div>
+
+            <!-- Roles -->
+            <div class="form-section">
+              <h3 class="form-section-title">Account Roles</h3>
+              <p class="form-hint mb-2">Select what this user can access</p>
+              <div class="role-cards">
+                <label class="role-card-select">
+                  <input type="checkbox" id="editRoleCustomer" name="roles" value="customer" checked>
+                  <div class="role-card-content">
+                    <span class="role-icon">🛒</span>
+                    <div class="role-info">
+                      <strong>Customer</strong>
+                      <span>Can browse and purchase from the store</span>
+                    </div>
+                    <span class="role-check">✓</span>
+                  </div>
+                </label>
+                <label class="role-card-select">
+                  <input type="checkbox" id="editRoleDJ" name="roles" value="dj">
+                  <div class="role-card-content">
+                    <span class="role-icon">🎧</span>
+                    <div class="role-info">
+                      <strong>DJ</strong>
+                      <span>Can upload DJ mixes (no approval needed)</span>
+                    </div>
+                    <span class="role-check">✓</span>
+                  </div>
+                </label>
+                <label class="role-card-select">
+                  <input type="checkbox" id="editRoleArtist" name="roles" value="artist">
+                  <div class="role-card-content">
+                    <span class="role-icon">🎵</span>
+                    <div class="role-info">
+                      <strong>Artist / Label / Producer</strong>
+                      <span>Upload releases, manage tracks (requires approval)</span>
+                    </div>
+                    <span class="role-check">✓</span>
+                  </div>
+                </label>
+                <label class="role-card-select">
+                  <input type="checkbox" id="editRoleMerch" name="roles" value="merch">
+                  <div class="role-card-content">
+                    <span class="role-icon">👕</span>
+                    <div class="role-info">
+                      <strong>Merch Supplier</strong>
+                      <span>Manage merchandise products (requires approval)</span>
+                    </div>
+                    <span class="role-check">✓</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Account Status -->
+            <div class="form-section">
+              <h3 class="form-section-title">Account Status</h3>
+              <div class="status-options">
+                <label class="status-option">
+                  <input type="radio" name="editStatus" value="approved" id="statusApproved">
+                  <div class="status-card approved">
+                    <span class="status-icon">✓</span>
+                    <div>
+                      <strong>Approved</strong>
+                      <span>Full access to Pro Dashboard</span>
+                    </div>
+                  </div>
+                </label>
+                <label class="status-option">
+                  <input type="radio" name="editStatus" value="pending" id="statusPending">
+                  <div class="status-card pending">
+                    <span class="status-icon">⏳</span>
+                    <div>
+                      <strong>Pending</strong>
+                      <span>Awaiting approval for Pro features</span>
+                    </div>
+                  </div>
+                </label>
+                <label class="status-option">
+                  <input type="radio" name="editStatus" value="suspended" id="statusSuspended">
+                  <div class="status-card suspended">
+                    <span class="status-icon">🚫</span>
+                    <div>
+                      <strong>Suspended</strong>
+                      <span>Account access revoked</span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Admin Notes -->
+            <div class="form-section">
+              <h3 class="form-section-title">Admin Notes</h3>
+              <textarea id="editNotes" class="form-input" rows="3" placeholder="Internal notes about this user..."></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveUser()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Approve Modal -->
+    <div id="approveModal" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Approve User</h2>
+          <button class="modal-close" onclick="closeModal('approveModal')">×</button>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you want to approve <strong id="approveUserName"></strong>?</p>
+          <p class="text-muted mt-1">They will gain access to the Pro Dashboard and can upload content.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('approveModal')">Cancel</button>
+          <button type="button" class="btn btn-success" onclick="confirmApprove()">Approve User</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div id="deleteModal" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>Delete User</h2>
+          <button class="modal-close" onclick="closeModal('deleteModal')">×</button>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you want to delete <strong id="deleteUserName"></strong>?</p>
+          <p class="text-danger mt-1">⚠️ This action cannot be undone. The user will lose access to their account.</p>
+          <div class="form-group mt-2">
+            <label class="checkbox-label">
+              <input type="checkbox" id="deleteConfirmCheck">
+              <span>I understand this will permanently delete this user</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled onclick="confirmDelete()">Delete User</button>
+        </div>
+      </div>
+    </div>
+  </Fragment>
+
+  <Fragment slot="scripts">
+    <script type="module">
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+      import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+      import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+      
+      const firebaseConfig = {
+        apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+        authDomain: "freshwax-store.firebaseapp.com",
+        projectId: "freshwax-store",
+        storageBucket: "freshwax-store.firebasestorage.app",
+        messagingSenderId: "675435782973",
+        appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+      };
+      
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      
+      let allUsers = [];
+      let currentFilter = 'all';
+      let currentUserId = null;
+      let currentUserCollection = null;
+      
+      onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          window.location.href = '/admin/login';
+          return;
+        }
+        loadUsers();
+      });
+      
+      async function loadUsers() {
+        try {
+          const usersMap = new Map();
+          
+          // Load from customers collection
+          const customersSnapshot = await getDocs(query(collection(db, 'customers'), orderBy('createdAt', 'desc')));
+          customersSnapshot.forEach(doc => {
+            const data = doc.data();
+            usersMap.set(doc.id, {
+              id: doc.id,
+              collection: 'customers',
+              displayName: data.displayName || data.name || data.fullName || 'Unknown',
+              fullName: data.fullName || data.name || '',
+              email: data.email || '',
+              phone: data.phone || '',
+              address: data.address || data.shippingAddress || null,
+              roles: {
+                customer: true,
+                dj: data.isDJ === true || data.roles?.dj === true,
+                artist: data.isArtist === true || data.roles?.artist === true,
+                merch: data.isMerchSupplier === true || data.roles?.merchSupplier === true
+              },
+              approved: data.approved === true,
+              suspended: data.suspended === true,
+              notes: data.adminNotes || '',
+              registeredAt: data.createdAt?.toDate?.() || data.registeredAt?.toDate?.() || null,
+              source: 'customers'
+            });
+          });
+          
+          // Load from users collection (merge with existing)
+          try {
+            const usersSnapshot = await getDocs(query(collection(db, 'users')));
+            usersSnapshot.forEach(doc => {
+              const data = doc.data();
+              if (usersMap.has(doc.id)) {
+                // Merge data
+                const existing = usersMap.get(doc.id);
+                existing.roles.dj = existing.roles.dj || data.isDJ === true || data.roles?.dj === true;
+                existing.roles.artist = existing.roles.artist || data.isArtist === true || data.roles?.artist === true;
+                existing.roles.merch = existing.roles.merch || data.isMerchSupplier === true || data.roles?.merchSupplier === true;
+                existing.approved = existing.approved || data.approved === true;
+                if (data.address) existing.address = data.address;
+              } else {
+                usersMap.set(doc.id, {
+                  id: doc.id,
+                  collection: 'users',
+                  displayName: data.displayName || data.name || 'Unknown',
+                  fullName: data.fullName || data.name || '',
+                  email: data.email || '',
+                  phone: data.phone || '',
+                  address: data.address || null,
+                  roles: {
+                    customer: true,
+                    dj: data.isDJ === true || data.roles?.dj === true,
+                    artist: data.isArtist === true || data.roles?.artist === true,
+                    merch: data.isMerchSupplier === true || data.roles?.merchSupplier === true
+                  },
+                  approved: data.approved === true,
+                  suspended: data.suspended === true,
+                  notes: data.adminNotes || '',
+                  registeredAt: data.createdAt?.toDate?.() || null,
+                  source: 'users'
+                });
+              }
+            });
+          } catch (e) { /* Collection may not exist */ }
+          
+          // Load from artists collection (for pro accounts)
+          try {
+            const artistsSnapshot = await getDocs(query(collection(db, 'artists')));
+            artistsSnapshot.forEach(doc => {
+              const data = doc.data();
+              if (usersMap.has(doc.id)) {
+                // Merge artist data
+                const existing = usersMap.get(doc.id);
+                existing.roles.artist = existing.roles.artist || data.isArtist === true;
+                existing.roles.merch = existing.roles.merch || data.isMerchSupplier === true;
+                existing.approved = existing.approved || data.approved === true;
+                existing.suspended = existing.suspended || data.suspended === true;
+                existing.notes = existing.notes || data.adminNotes || '';
+                existing.hasArtistRecord = true;
+              } else {
+                usersMap.set(doc.id, {
+                  id: doc.id,
+                  collection: 'artists',
+                  displayName: data.artistName || data.name || 'Unknown',
+                  fullName: data.name || data.fullName || '',
+                  email: data.email || '',
+                  phone: data.phone || data.whatsapp || '',
+                  address: null,
+                  roles: {
+                    customer: false,
+                    dj: false,
+                    artist: data.isArtist === true,
+                    merch: data.isMerchSupplier === true
+                  },
+                  approved: data.approved === true,
+                  suspended: data.suspended === true,
+                  notes: data.adminNotes || '',
+                  registeredAt: data.registeredAt?.toDate?.() || data.createdAt?.toDate?.() || null,
+                  source: 'artists',
+                  hasArtistRecord: true
+                });
+              }
+            });
+          } catch (e) { /* Collection may not exist */ }
+          
+          allUsers = Array.from(usersMap.values());
+          
+          // Sort by registration date (newest first)
+          allUsers.sort((a, b) => {
+            const dateA = a.registeredAt || new Date(0);
+            const dateB = b.registeredAt || new Date(0);
+            return dateB - dateA;
+          });
+          
+          updateStats();
+          renderUsers();
+          
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('usersTable').style.display = 'block';
+          
+        } catch (error) {
+          console.error('Error loading users:', error);
+          document.getElementById('loadingState').innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">❌</div>
+              <h3>Error loading users</h3>
+              <p>${error.message}</p>
+              <button class="btn btn-primary mt-2" onclick="location.reload()">Try Again</button>
+            </div>
+          `;
+        }
+      }
+      
+      function updateStats() {
+        document.getElementById('totalCount').textContent = allUsers.length;
+        document.getElementById('customerCount').textContent = allUsers.filter(u => u.roles.customer && !u.roles.artist && !u.roles.merch).length;
+        document.getElementById('proCount').textContent = allUsers.filter(u => u.approved && (u.roles.artist || u.roles.merch)).length;
+        document.getElementById('pendingCount').textContent = allUsers.filter(u => !u.approved && (u.roles.artist || u.roles.merch)).length;
+        document.getElementById('djCount').textContent = allUsers.filter(u => u.roles.dj).length;
+      }
+      
+      function renderUsers() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        
+        let filtered = allUsers.filter(u => {
+          // Search filter
+          const matchesSearch = !searchTerm || 
+            u.displayName.toLowerCase().includes(searchTerm) ||
+            u.email.toLowerCase().includes(searchTerm) ||
+            u.fullName.toLowerCase().includes(searchTerm);
+          
+          if (!matchesSearch) return false;
+          
+          // Tab filter
+          switch (currentFilter) {
+            case 'customer':
+              return u.roles.customer && !u.roles.artist && !u.roles.merch && !u.roles.dj;
+            case 'pro':
+              return u.approved && (u.roles.artist || u.roles.merch);
+            case 'pending':
+              return !u.approved && (u.roles.artist || u.roles.merch);
+            case 'dj':
+              return u.roles.dj;
+            case 'artist':
+              return u.roles.artist;
+            case 'merch':
+              return u.roles.merch;
+            default:
+              return true;
+          }
+        });
+        
+        const tbody = document.getElementById('usersTableBody');
+        const emptyState = document.getElementById('emptyState');
+        const tableWrapper = document.getElementById('usersTable');
+        
+        if (filtered.length === 0) {
+          tableWrapper.style.display = 'none';
+          emptyState.style.display = 'block';
+          return;
+        }
+        
+        tableWrapper.style.display = 'block';
+        emptyState.style.display = 'none';
+        
+        tbody.innerHTML = filtered.map(u => {
+          const roles = [];
+          if (u.roles.customer) roles.push('<span class="badge badge-secondary">Customer</span>');
+          if (u.roles.dj) roles.push('<span class="badge badge-info">🎧 DJ</span>');
+          if (u.roles.artist) roles.push('<span class="badge badge-purple">🎵 Artist</span>');
+          if (u.roles.merch) roles.push('<span class="badge badge-warning">👕 Merch</span>');
+          
+          let statusBadge = '<span class="badge badge-secondary">Basic</span>';
+          if (u.suspended) {
+            statusBadge = '<span class="badge badge-danger">Suspended</span>';
+          } else if (u.approved && (u.roles.artist || u.roles.merch)) {
+            statusBadge = '<span class="badge badge-success">Pro Approved</span>';
+          } else if (u.roles.artist || u.roles.merch) {
+            statusBadge = '<span class="badge badge-pending">Pending Approval</span>';
+          }
+          
+          const dateStr = u.registeredAt ? u.registeredAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+          
+          const needsApproval = !u.approved && !u.suspended && (u.roles.artist || u.roles.merch);
+          
+          return `
+            <tr data-id="${u.id}">
+              <td>
+                <div class="user-cell">
+                  <div class="avatar">${u.displayName.charAt(0).toUpperCase()}</div>
+                  <div>
+                    <div class="user-name">${u.displayName}</div>
+                    ${u.fullName && u.fullName !== u.displayName ? `<div class="text-muted text-sm">${u.fullName}</div>` : ''}
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div>${u.email}</div>
+                ${u.phone ? `<div class="text-muted text-sm">${u.phone}</div>` : ''}
+              </td>
+              <td>${roles.join(' ') || '<span class="text-muted">None</span>'}</td>
+              <td>${statusBadge}</td>
+              <td class="text-muted">${dateStr}</td>
+              <td class="text-right">
+                <div class="btn-group">
+                  ${needsApproval ? `
+                    <button class="btn btn-sm btn-success" onclick="quickApprove('${u.id}', '${u.displayName.replace(/'/g, "\\'")}', '${u.collection}')">Approve</button>
+                  ` : ''}
+                  <button class="btn btn-sm btn-secondary" onclick="editUser('${u.id}')">Edit</button>
+                  <button class="btn btn-sm btn-outline" onclick="deleteUser('${u.id}', '${u.displayName.replace(/'/g, "\\'")}')">🗑️</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+      
+      // Filter tabs
+      document.querySelectorAll('.filter-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentFilter = btn.dataset.filter;
+          renderUsers();
+        });
+      });
+      
+      document.getElementById('searchInput').addEventListener('input', () => renderUsers());
+      
+      // Delete confirmation checkbox
+      document.getElementById('deleteConfirmCheck')?.addEventListener('change', (e) => {
+        document.getElementById('confirmDeleteBtn').disabled = !e.target.checked;
+      });
+      
+      // Edit user
+      window.editUser = function(id) {
+        const user = allUsers.find(u => u.id === id);
+        if (!user) return;
+        
+        currentUserId = id;
+        currentUserCollection = user.collection;
+        
+        document.getElementById('editUserId').value = id;
+        document.getElementById('editUserCollection').value = user.collection;
+        document.getElementById('editDisplayName').value = user.displayName;
+        document.getElementById('editFullName').value = user.fullName;
+        document.getElementById('editEmail').value = user.email;
+        document.getElementById('editPhone').value = user.phone;
+        
+        // Address
+        const addr = user.address || {};
+        document.getElementById('editAddressLine1').value = addr.line1 || addr.address1 || '';
+        document.getElementById('editAddressLine2').value = addr.line2 || addr.address2 || '';
+        document.getElementById('editCity').value = addr.city || '';
+        document.getElementById('editPostcode').value = addr.postcode || addr.postalCode || '';
+        document.getElementById('editCountry').value = addr.country || 'United Kingdom';
+        
+        // Roles
+        document.getElementById('editRoleCustomer').checked = user.roles.customer;
+        document.getElementById('editRoleDJ').checked = user.roles.dj;
+        document.getElementById('editRoleArtist').checked = user.roles.artist;
+        document.getElementById('editRoleMerch').checked = user.roles.merch;
+        
+        // Status
+        if (user.suspended) document.getElementById('statusSuspended').checked = true;
+        else if (user.approved) document.getElementById('statusApproved').checked = true;
+        else document.getElementById('statusPending').checked = true;
+        
+        // Notes
+        document.getElementById('editNotes').value = user.notes;
+        
+        openModal('editModal');
+      };
+      
+      // Save user
+      window.saveUser = async function() {
+        if (!currentUserId) return;
+        
+        const status = document.querySelector('input[name="editStatus"]:checked')?.value;
+        const displayName = document.getElementById('editDisplayName').value;
+        const fullName = document.getElementById('editFullName').value;
+        
+        const address = {
+          line1: document.getElementById('editAddressLine1').value,
+          line2: document.getElementById('editAddressLine2').value,
+          city: document.getElementById('editCity').value,
+          postcode: document.getElementById('editPostcode').value,
+          country: document.getElementById('editCountry').value
+        };
+        
+        const roles = {
+          customer: document.getElementById('editRoleCustomer').checked,
+          dj: document.getElementById('editRoleDJ').checked,
+          artist: document.getElementById('editRoleArtist').checked,
+          merchSupplier: document.getElementById('editRoleMerch').checked
+        };
+        
+        const updates = {
+          displayName: displayName,
+          name: fullName || displayName,
+          fullName: fullName,
+          email: document.getElementById('editEmail').value,
+          phone: document.getElementById('editPhone').value,
+          address: address,
+          isDJ: roles.dj,
+          isArtist: roles.artist,
+          isMerchSupplier: roles.merchSupplier,
+          roles: roles,
+          approved: status === 'approved',
+          suspended: status === 'suspended',
+          adminNotes: document.getElementById('editNotes').value,
+          updatedAt: new Date().toISOString()
+        };
+        
+        try {
+          // Update customers collection
+          try {
+            await updateDoc(doc(db, 'customers', currentUserId), updates);
+          } catch (e) {
+            // If doesn't exist, create it
+            if (e.code === 'not-found') {
+              await setDoc(doc(db, 'customers', currentUserId), { ...updates, createdAt: new Date() });
+            }
+          }
+          
+          // Update users collection
+          try {
+            await updateDoc(doc(db, 'users', currentUserId), {
+              displayName: displayName,
+              approved: updates.approved,
+              roles: roles
+            });
+          } catch (e) {}
+          
+          // If artist/merch role, update artists collection
+          if (roles.artist || roles.merchSupplier) {
+            try {
+              const artistDoc = await getDoc(doc(db, 'artists', currentUserId));
+              if (artistDoc.exists()) {
+                await updateDoc(doc(db, 'artists', currentUserId), {
+                  artistName: displayName,
+                  name: fullName || displayName,
+                  email: updates.email,
+                  phone: updates.phone,
+                  isArtist: roles.artist,
+                  isMerchSupplier: roles.merchSupplier,
+                  approved: updates.approved,
+                  suspended: updates.suspended,
+                  adminNotes: updates.adminNotes,
+                  updatedAt: new Date().toISOString()
+                });
+              } else {
+                // Create artist record
+                await setDoc(doc(db, 'artists', currentUserId), {
+                  artistName: displayName,
+                  name: fullName || displayName,
+                  email: updates.email,
+                  phone: updates.phone,
+                  isArtist: roles.artist,
+                  isMerchSupplier: roles.merchSupplier,
+                  approved: updates.approved,
+                  suspended: updates.suspended,
+                  adminNotes: updates.adminNotes,
+                  registeredAt: new Date(),
+                  createdAt: new Date()
+                });
+              }
+            } catch (e) {
+            }
+          }
+          
+          closeModal('editModal');
+          showToast('User updated successfully');
+          loadUsers();
+        } catch (error) {
+          console.error('Save error:', error);
+          showToast('Error updating user: ' + error.message, 'error');
+        }
+      };
+      
+      // Quick approve
+      window.quickApprove = function(id, name, collection) {
+        currentUserId = id;
+        currentUserCollection = collection;
+        document.getElementById('approveUserName').textContent = name;
+        openModal('approveModal');
+      };
+      
+      window.confirmApprove = async function() {
+        if (!currentUserId) return;
+        try {
+          // Update all relevant collections
+          try {
+            await updateDoc(doc(db, 'customers', currentUserId), { approved: true, approvedAt: new Date().toISOString() });
+          } catch (e) {}
+          
+          try {
+            await updateDoc(doc(db, 'users', currentUserId), { approved: true });
+          } catch (e) {}
+          
+          try {
+            await updateDoc(doc(db, 'artists', currentUserId), { approved: true, approvedAt: new Date().toISOString() });
+          } catch (e) {}
+          
+          closeModal('approveModal');
+          showToast('User approved!', 'success');
+          loadUsers();
+        } catch (error) {
+          showToast('Error approving user: ' + error.message, 'error');
+        }
+      };
+      
+      // Delete user
+      window.deleteUser = function(id, name) {
+        currentUserId = id;
+        document.getElementById('deleteUserName').textContent = name;
+        document.getElementById('deleteConfirmCheck').checked = false;
+        document.getElementById('confirmDeleteBtn').disabled = true;
+        openModal('deleteModal');
+      };
+      
+      window.confirmDelete = async function() {
+        if (!currentUserId) return;
+        try {
+          // Delete from all collections
+          try { await deleteDoc(doc(db, 'customers', currentUserId)); } catch (e) {}
+          try { await deleteDoc(doc(db, 'users', currentUserId)); } catch (e) {}
+          try { await deleteDoc(doc(db, 'artists', currentUserId)); } catch (e) {}
+          
+          closeModal('deleteModal');
+          showToast('User deleted');
+          loadUsers();
+        } catch (error) {
+          showToast('Error deleting user: ' + error.message, 'error');
+        }
+      };
+      
+      // Export users
+      window.exportUsers = function() {
+        const headers = ['Display Name', 'Full Name', 'Email', 'Phone', 'Roles', 'Status', 'Registered'];
+        const rows = allUsers.map(u => {
+          const roles = [];
+          if (u.roles.customer) roles.push('Customer');
+          if (u.roles.dj) roles.push('DJ');
+          if (u.roles.artist) roles.push('Artist');
+          if (u.roles.merch) roles.push('Merch');
+          
+          let status = 'Basic';
+          if (u.suspended) status = 'Suspended';
+          else if (u.approved) status = 'Approved';
+          else if (u.roles.artist || u.roles.merch) status = 'Pending';
+          
+          return [
+            u.displayName,
+            u.fullName,
+            u.email,
+            u.phone,
+            roles.join(', '),
+            status,
+            u.registeredAt?.toISOString() || ''
+          ];
+        });
+        
+        const csv = [headers, ...rows].map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `freshwax-users-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Users exported');
+      };
+    </script>
+  </Fragment>
+</AdminLayout>
+
+<style>
+  .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; }
+  .stat-card { background: #fff; border: 2px solid #e5e5e5; padding: 1.25rem; text-align: center; }
+  .stat-card.success { border-color: #16a34a; }
+  .stat-card.warning { border-color: #d97706; }
+  .stat-card.info { border-color: #0ea5e9; }
+  .stat-value { font-size: 2rem; font-weight: 800; color: #000; line-height: 1; }
+  .stat-card.success .stat-value { color: #16a34a; }
+  .stat-card.warning .stat-value { color: #d97706; }
+  .stat-card.info .stat-value { color: #0ea5e9; }
+  .stat-label { font-size: 0.8rem; color: #666; margin-top: 0.5rem; }
+  
+  .form-section { margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e5e5e5; }
+  .form-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .form-section-title { font-size: 0.9rem; font-weight: 700; text-transform: uppercase; color: #666; margin-bottom: 1rem; }
+  
+  .role-cards { display: flex; flex-direction: column; gap: 0.75rem; }
+  .role-card-select { cursor: pointer; }
+  .role-card-select input { display: none; }
+  .role-card-content { display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 2px solid #e5e5e5; background: #fafafa; transition: all 0.2s; }
+  .role-card-select:hover .role-card-content { border-color: #ccc; }
+  .role-card-select input:checked + .role-card-content { border-color: #000; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  .role-card-content .role-icon { font-size: 1.5rem; }
+  .role-card-content .role-info { flex: 1; }
+  .role-card-content .role-info strong { display: block; font-size: 0.95rem; }
+  .role-card-content .role-info span { font-size: 0.8rem; color: #666; }
+  .role-card-content .role-check { width: 24px; height: 24px; border: 2px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: transparent; transition: all 0.2s; }
+  .role-card-select input:checked + .role-card-content .role-check { background: #000; border-color: #000; color: #fff; }
+  
+  .status-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+  .status-option { cursor: pointer; }
+  .status-option input { display: none; }
+  .status-card { padding: 1rem; border: 2px solid #e5e5e5; text-align: center; transition: all 0.2s; }
+  .status-card .status-icon { font-size: 1.5rem; display: block; margin-bottom: 0.5rem; }
+  .status-card strong { display: block; font-size: 0.9rem; }
+  .status-card span { font-size: 0.75rem; color: #666; }
+  .status-option input:checked + .status-card.approved { border-color: #16a34a; background: #f0fdf4; }
+  .status-option input:checked + .status-card.pending { border-color: #d97706; background: #fffbeb; }
+  .status-option input:checked + .status-card.suspended { border-color: #dc2626; background: #fef2f2; }
+  
+  .user-cell { display: flex; align-items: center; gap: 0.75rem; }
+  .user-name { font-weight: 600; }
+  .avatar { width: 40px; height: 40px; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0; }
+  
+  .loading-spinner { text-align: center; padding: 3rem; }
+  .spinner { width: 40px; height: 40px; border: 3px solid #e5e5e5; border-top-color: #dc2626; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  
+  .badge-purple { background: #7c3aed; color: #fff; }
+  .badge-pending { background: #d97706; color: #fff; }
+  .btn-group { display: flex; gap: 0.5rem; justify-content: flex-end; }
+  .btn-outline { background: transparent; border: 1px solid #ccc; color: #666; }
+  .btn-outline:hover { background: #f5f5f5; }
+  .text-sm { font-size: 0.8rem; }
+  .modal-lg { max-width: 700px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  
+  .checkbox-label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+  .checkbox-label input { width: 18px; height: 18px; }
+  
+  @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .status-options { grid-template-columns: 1fr; } .form-row { grid-template-columns: 1fr; } }
+  @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr; } }
+</style>

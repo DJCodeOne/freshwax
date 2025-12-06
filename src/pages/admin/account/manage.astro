@@ -403,7 +403,6 @@ loadCustomersAndOrders();
 // Load customers and orders
 async function loadCustomersAndOrders() {
 try {
-console.log('Starting to load customers...');
 
 // Load customers from the customers collection
 const customersSnapshot = await getDocs(collection(db, 'customers'));
@@ -411,7 +410,6 @@ const customerMap = new Map();
 
 customersSnapshot.forEach((doc) => {
 const customerData = doc.data();
-console.log('Customer found:', doc.id, customerData);
 
 customerMap.set(doc.id, {
 id: doc.id,
@@ -426,25 +424,37 @@ registeredAt: customerData.registeredAt
 });
 });
 
-console.log('Total customers loaded:', customerMap.size);
+
+// Create email-to-customer lookup for fallback matching
+const emailToCustomerMap = new Map();
+customerMap.forEach((customer, id) => {
+if (customer.email && customer.email !== 'N/A') {
+emailToCustomerMap.set(customer.email.toLowerCase(), id);
+}
+});
 
 // Load orders
-console.log('Starting to load orders...');
 const ordersSnapshot = await getDocs(collection(db, 'orders'));
 allOrders = [];
 
 ordersSnapshot.forEach((doc) => {
 const orderData = doc.data();
-console.log('Order found:', doc.id, orderData);
 allOrders.push({ id: doc.id, ...orderData });
 });
 
-console.log('Total orders loaded:', allOrders.length);
 
 // Link orders to customers
 allOrders.forEach(order => {
-// Try to find customer by customerId field in order
-const customerId = order.customerId || order.userId;
+// Try to find customer by customerId field in order (check multiple locations)
+let customerId = order.customerId || order.userId || order.customer?.userId;
+
+// Fallback: try to match by email
+if (!customerId || !customerMap.has(customerId)) {
+const orderEmail = (order.customer?.email || order.email || '').toLowerCase();
+if (orderEmail && emailToCustomerMap.has(orderEmail)) {
+customerId = emailToCustomerMap.get(orderEmail);
+}
+}
 
 if (customerId && customerMap.has(customerId)) {
 const customer = customerMap.get(customerId);
@@ -465,14 +475,13 @@ if (!customer.lastOrder || orderDate > new Date(customer.lastOrder)) {
 customer.lastOrder = orderDate.toISOString();
 }
 } else {
-console.warn('Order has no matching customer:', order.id, 'customerId:', customerId);
+console.warn('Order has no matching customer:', order.id, 'customerId:', customerId, 'email:', order.customer?.email);
 }
 });
 
 allCustomers = Array.from(customerMap.values());
 allCustomers.sort((a, b) => b.totalSpent - a.totalSpent);
 
-console.log('Final customers with orders:', allCustomers);
 
 // Update stats
 document.getElementById('totalCustomers').textContent = allCustomers.length;

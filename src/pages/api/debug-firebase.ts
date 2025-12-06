@@ -1,6 +1,13 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
+// Conditional logging - only logs in development
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -15,11 +22,11 @@ const db = getFirestore();
 
 export const GET = async () => {
   try {
-    console.log('🔍 Checking Firebase releases collection...');
+    log.info('🔍 Checking Firebase releases collection...');
     
     const releasesSnapshot = await db.collection('releases').get();
     
-    console.log('📊 Total documents:', releasesSnapshot.size);
+    log.info('📊 Total documents:', releasesSnapshot.size);
     
     const releases = [];
     releasesSnapshot.forEach(doc => {
@@ -28,8 +35,8 @@ export const GET = async () => {
         id: doc.id,
         ...data
       });
-      console.log('📄 Document ID:', doc.id);
-      console.log('📄 Document data:', JSON.stringify(data, null, 2));
+      log.info('📄 Document ID:', doc.id);
+      log.info('📄 Document data:', JSON.stringify(data, null, 2));
     });
 
     return new Response(JSON.stringify({

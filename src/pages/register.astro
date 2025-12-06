@@ -1,6 +1,8 @@
 ---
 // src/pages/register.astro
-// Partner Registration - Artists, Labels, Producers, DJs, Merch Suppliers
+// Single Registration Form - All user types
+// Customer & DJ = auto-approved
+// Artist/Producer/Label & Merch Seller = needs admin approval
 export const prerender = false;
 
 const response = Astro.response;
@@ -11,54 +13,66 @@ response.headers.set('Cache-Control', 'no-store');
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Partner Registration - Fresh Wax</title>
+  <title>Register - Fresh Wax</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
   <div class="split-container">
-    <!-- Left Side - Branding (hidden on mobile) -->
+    <!-- Left Side - Branding -->
     <div class="branding-side">
+      <!-- Animated background elements -->
+      <div class="bg-glow bg-glow-1"></div>
+      <div class="bg-glow bg-glow-2"></div>
+      <div class="grid-overlay"></div>
+      
       <div class="branding-content">
+        <!-- Logo on white background -->
         <a href="/" class="logo-link">
           <div class="logo-wrapper">
             <img src="/logo.webp" alt="Fresh Wax Logo" class="logo-image" />
           </div>
         </a>
-        <h2 class="welcome-text">Join Fresh Wax</h2>
-        <p class="tagline">Partner with us to reach drum and bass fans worldwide</p>
+        
+        <h2 class="welcome-text">Fresh <span class="text-red">Wax</span></h2>
+        <p class="tagline">Join the underground.<br>Jungle & drum and bass, direct to the people.</p>
         
         <div class="features">
           <div class="feature">
-            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-            </svg>
-            <span>Upload releases & DJ mixes</span>
+            <div class="feature-icon-wrapper">
+              <span class="feature-icon">🛒</span>
+            </div>
+            <div class="feature-text">
+              <strong>Shop Exclusive Releases</strong>
+              <span>Digital downloads & limited vinyl pressings</span>
+            </div>
           </div>
           <div class="feature">
-            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            <span>Sell vinyl, digital & merch</span>
+            <div class="feature-icon-wrapper">
+              <span class="feature-icon">🎧</span>
+            </div>
+            <div class="feature-text">
+              <strong>Share Your Mixes</strong>
+              <span>Upload DJ sets & connect with listeners</span>
+            </div>
           </div>
           <div class="feature">
-            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-            <span>Track orders & inventory</span>
+            <div class="feature-icon-wrapper">
+              <span class="feature-icon">🎵</span>
+            </div>
+            <div class="feature-text">
+              <strong>Release Your Music</strong>
+              <span>Artists & labels can sell directly to fans</span>
+            </div>
           </div>
           <div class="feature">
-            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            <span>Secure payments & analytics</span>
+            <div class="feature-icon-wrapper">
+              <span class="feature-icon">👕</span>
+            </div>
+            <div class="feature-text">
+              <strong>Sell Merchandise</strong>
+              <span>T-shirts, hoodies & more for your brand</span>
+            </div>
           </div>
-        </div>
-
-        <div class="approval-note">
-          <svg class="note-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>All accounts are reviewed before approval</span>
         </div>
       </div>
     </div>
@@ -74,884 +88,1053 @@ response.headers.set('Cache-Control', 'no-store');
         <!-- Registration Form -->
         <div id="registrationForm">
           <div class="form-header">
-            <h2>Create Partner Account</h2>
-            <p>Join Fresh Wax to start uploading</p>
+            <h2>Create Account</h2>
+            <p>Join the Fresh <span style="color: #dc2626;">Wax</span> community</p>
           </div>
 
           <div class="message error-message" id="errorMessage"></div>
 
           <form id="registerForm" novalidate>
-            <!-- Role Selection -->
+            <!-- Basic Info -->
             <div class="form-group">
-              <label class="role-label">
-                I am a... <span class="required-hint">(select all that apply)</span>
-              </label>
-              <div class="role-checkboxes" id="roleCheckboxes">
-                <label class="role-checkbox" data-role="artist">
-                  <input type="checkbox" name="roles" value="artist">
-                  <span class="checkbox-custom"></span>
-                  <span class="role-text">
-                    <span class="role-title">Artist / Label / Producer</span>
-                    <span class="role-desc">Release music on the store</span>
-                  </span>
-                </label>
-                <label class="role-checkbox" data-role="dj">
-                  <input type="checkbox" name="roles" value="dj">
-                  <span class="checkbox-custom"></span>
-                  <span class="role-text">
-                    <span class="role-title">DJ</span>
-                    <span class="role-desc">Upload mixes & sets</span>
-                  </span>
-                </label>
-                <label class="role-checkbox" data-role="merch">
-                  <input type="checkbox" name="roles" value="merch_supplier">
-                  <span class="checkbox-custom"></span>
-                  <span class="role-text">
-                    <span class="role-title">Merch Supplier</span>
-                    <span class="role-desc">Sell clothing & accessories</span>
-                  </span>
-                </label>
-              </div>
-              <p class="field-error" id="roleError"></p>
-            </div>
-
-            <div class="form-group">
-              <label for="displayName">Display Name</label>
-              <input type="text" id="displayName" name="displayName" required placeholder="Artist, label, DJ or business name">
+              <label for="fullName">Full Name <span class="required">*</span></label>
+              <input type="text" id="fullName" name="fullName" required placeholder="Your name" autocomplete="name" maxlength="60">
               <p class="field-error" id="nameError"></p>
             </div>
 
             <div class="form-group">
-              <label for="email">Email Address</label>
-              <input type="email" id="email" name="email" required placeholder="you@example.com">
+              <label for="email">Email Address <span class="required">*</span></label>
+              <input type="email" id="email" name="email" required placeholder="you@example.com" autocomplete="email">
               <p class="field-error" id="emailError"></p>
             </div>
 
             <div class="form-group">
-              <label for="phoneNumber">Contact Number <span class="optional">(optional)</span></label>
-              <input type="tel" id="phoneNumber" name="phoneNumber" placeholder="Phone or WhatsApp">
+              <label for="displayName">Display Name</label>
+              <input type="text" id="displayName" name="displayName" placeholder="How you want to be known" maxlength="30">
+              <p class="field-hint">Optional - defaults to your first name if left blank (max 30 characters)</p>
+              <p class="field-error" id="displayNameError"></p>
             </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label for="password">Password</label>
-                <div class="password-wrapper">
-                  <input type="password" id="password" name="password" required placeholder="Min. 6 characters" minlength="6">
-                  <button type="button" class="toggle-pw" aria-label="Show password">
-                    <svg class="eye-show" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                    <svg class="eye-hide" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
-                  </button>
-                </div>
-                <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+            <div class="form-group">
+              <label for="password">Password <span class="required">*</span></label>
+              <div class="password-wrapper">
+                <input type="password" id="password" name="password" required placeholder="At least 8 characters" autocomplete="new-password">
+                <button type="button" class="toggle-password" data-target="password" aria-label="Toggle password visibility">
+                  <svg class="eye-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
               </div>
+              <p class="field-error" id="passwordError"></p>
+            </div>
 
-              <div class="form-group">
-                <label for="confirmPassword">Confirm Password</label>
-                <div class="password-wrapper">
-                  <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Re-enter password">
-                  <button type="button" class="toggle-pw" aria-label="Show password">
-                    <svg class="eye-show" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                    <svg class="eye-hide" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
-                  </button>
-                </div>
-                <p class="field-error" id="passwordError"></p>
+            <div class="form-group">
+              <label for="confirmPassword">Confirm Password <span class="required">*</span></label>
+              <div class="password-wrapper">
+                <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Re-enter password" autocomplete="new-password">
+                <button type="button" class="toggle-password" data-target="confirmPassword" aria-label="Toggle password visibility">
+                  <svg class="eye-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
               </div>
+              <p class="field-error" id="confirmError"></p>
+            </div>
+
+            <!-- Optional Partner Roles -->
+            <div class="form-group partner-roles">
+              <label class="section-label">I want to also... <span class="hint">(optional - requires approval)</span></label>
+              <div class="role-options">
+                <label class="role-option">
+                  <input type="checkbox" name="roles" value="artist" class="role-checkbox">
+                  <span class="option-label">Release Music</span>
+                </label>
+                <label class="role-option">
+                  <input type="checkbox" name="roles" value="merch_supplier" class="role-checkbox">
+                  <span class="option-label">Sell Merch</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Approval notice -->
+            <div id="approvalNotice" class="approval-notice hidden">
+              <span class="notice-icon">⏳</span>
+              <div class="notice-text">
+                <strong>Approval Required</strong>
+                <p>Artist & merch accounts are reviewed within 24-48 hours. You can shop and upload mixes immediately.</p>
+              </div>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="termsAccept" name="termsAccept" required>
+                <span class="checkbox-custom"></span>
+                <span>I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a></span>
+              </label>
+              <p class="field-error" id="termsError"></p>
             </div>
 
             <button type="submit" class="submit-btn" id="submitBtn">
               <span class="btn-text">Create Account</span>
-              <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-              <svg class="btn-spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"></circle><path fill="currentColor" opacity="0.75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              <span class="btn-loading hidden">
+                <svg class="spinner" viewBox="0 0 24 24">
+                  <circle class="spinner-circle" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" />
+                </svg>
+                Creating...
+              </span>
             </button>
           </form>
 
           <div class="form-footer">
-            <p>Already have an account? <a href="/login">Sign in</a></p>
-            <span class="divider"></span>
-            <p>Looking to buy music? <a href="/customer/register">Customer Registration →</a></p>
+            <p>Already have an account? <a href="/login">Sign In</a></p>
           </div>
-          
-          <a href="/" class="back-link">← Back to Store</a>
         </div>
 
-        <!-- Success Message -->
-        <div id="successMessage" class="success-container">
-          <div class="success-icon">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <!-- Success State -->
+        <div id="successState" class="success-state hidden">
+          <div class="success-icon">✓</div>
+          <h2>Welcome to Fresh <span style="color: #dc2626;">Wax</span>!</h2>
+          <p id="successMessage">Your account has been created.</p>
+          
+          <!-- Gift Card Notice -->
+          <div id="giftCardNotice" class="gift-card-notice hidden">
+            <div class="gift-card-icon">🎁</div>
+            <h3>You've received £50 credit!</h3>
+            <p class="gift-card-desc">Here's your welcome gift card code:</p>
+            <div class="gift-card-code" id="giftCardCodeDisplay">FWGC-XXXX-XXXX-XXXX</div>
+            <p class="gift-card-hint">Redeem it in your <a href="/account/dashboard">account dashboard</a> or at <a href="/giftcards">giftcards</a></p>
           </div>
-          <h2>Registration Successful!</h2>
-          <p>Your account is <strong>pending approval</strong>. We'll email you once approved.</p>
-          <div class="success-steps">
-            <div class="step"><span>1</span> Our team reviews your application</div>
-            <div class="step"><span>2</span> You'll receive an approval email</div>
-            <div class="step"><span>3</span> Log in and start uploading</div>
+          
+          <div id="pendingNotice" class="pending-notice hidden">
+            <p><strong>Partner application submitted</strong></p>
+            <p class="small">We'll email you when approved. You can shop and upload mixes now!</p>
           </div>
-          <a href="/" class="success-btn">Return to Store →</a>
+          <a href="/account/dashboard" class="continue-btn">Go to Dashboard</a>
         </div>
       </div>
     </div>
   </div>
-</body>
-</html>
 
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    min-height: 100vh;
-    background: #000;
-  }
-
-  .split-container {
-    display: flex;
-    min-height: 100vh;
-  }
-
-  /* Left Branding */
-  .branding-side {
-    flex: 1;
-    background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem 2rem;
-    color: #fff;
-    position: relative;
-  }
-
-  .branding-side::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: 
-      radial-gradient(circle at 20% 80%, rgba(220, 38, 38, 0.15) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, rgba(220, 38, 38, 0.1) 0%, transparent 50%);
-    pointer-events: none;
-  }
-
-  .branding-content {
-    max-width: 420px;
-    position: relative;
-    z-index: 1;
-  }
-
-  .logo-wrapper {
-    background: #fff;
-    padding: 12px 20px;
-    border-radius: 8px;
-    display: inline-block;
-    margin-bottom: 1.5rem;
-  }
-
-  .logo-image { max-width: 140px; display: block; }
-
-  .logo-link {
-    display: inline-block;
-    transition: opacity 0.2s;
-  }
-  .logo-link:hover { opacity: 0.9; }
-
-  .welcome-text {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-    font-weight: 700;
-  }
-
-  .tagline {
-    font-size: 1rem;
-    opacity: 0.85;
-    margin-bottom: 2rem;
-    line-height: 1.5;
-  }
-
-  .features {
-    display: flex;
-    flex-direction: column;
-    gap: 0.875rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .feature {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 0.9rem;
-    color: #e5e5e5;
-  }
-
-  .feature-icon {
-    width: 20px;
-    height: 20px;
-    color: #dc2626;
-    flex-shrink: 0;
-  }
-
-  .approval-note {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    background: rgba(251, 191, 36, 0.1);
-    border: 1px solid rgba(251, 191, 36, 0.3);
-    border-radius: 6px;
-    font-size: 0.85rem;
-    color: #fcd34d;
-  }
-
-  .note-icon {
-    width: 18px;
-    height: 18px;
-    color: #fbbf24;
-    flex-shrink: 0;
-  }
-
-  /* Right Form Side */
-  .form-side {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    background: #fff;
-    overflow-y: auto;
-  }
-
-  .form-container {
-    width: 100%;
-    max-width: 480px;
-  }
-
-  .mobile-logo {
-    display: none;
-    margin-bottom: 1.5rem;
-  }
-
-  .mobile-logo img {
-    height: 40px;
-  }
-
-  .form-header {
-    margin-bottom: 1.5rem;
-  }
-
-  .form-header h2 {
-    font-size: 1.5rem;
-    color: #000;
-    margin-bottom: 0.25rem;
-    font-weight: 700;
-  }
-
-  .form-header p {
-    color: #6b7280;
-    font-size: 0.9rem;
-  }
-
-  /* Form Elements */
-  .form-group {
-    margin-bottom: 1rem;
-  }
-
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-
-  label {
-    display: block;
-    margin-bottom: 0.375rem;
-    color: #1f2937;
-    font-weight: 600;
-    font-size: 0.85rem;
-  }
-
-  .role-label {
-    margin-bottom: 0.625rem;
-  }
-
-  .required-hint, .optional {
-    font-weight: 400;
-    color: #9ca3af;
-    font-size: 0.8rem;
-  }
-
-  input[type="email"],
-  input[type="password"],
-  input[type="text"],
-  input[type="tel"] {
-    width: 100%;
-    padding: 0.625rem 0.875rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    background: #fff;
-    color: #1a202c;
-  }
-
-  input:focus {
-    outline: none;
-    border-color: #000;
-    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
-  }
-
-  input::placeholder { color: #9ca3af; }
-
-  input.error { border-color: #ef4444; }
-
-  .field-error {
-    font-size: 0.75rem;
-    color: #ef4444;
-    margin-top: 0.25rem;
-    min-height: 1rem;
-  }
-
-  /* Role Checkboxes */
-  .role-checkboxes {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .role-checkbox {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .role-checkbox:hover {
-    border-color: #000;
-    background: #fafafa;
-  }
-
-  .role-checkbox.selected {
-    border-color: #000;
-    background: #f5f5f5;
-  }
-
-  .role-checkbox.selected[data-role="dj"] {
-    border-color: #3b82f6;
-    background: #eff6ff;
-  }
-
-  .role-checkbox.selected[data-role="merch"] {
-    border-color: #10b981;
-    background: #ecfdf5;
-  }
-
-  .role-checkbox input { display: none; }
-
-  .checkbox-custom {
-    width: 18px;
-    height: 18px;
-    border: 2px solid #d1d5db;
-    border-radius: 4px;
-    flex-shrink: 0;
-    position: relative;
-    transition: all 0.15s;
-    margin-top: 1px;
-  }
-
-  .role-checkbox.selected .checkbox-custom {
-    background: #000;
-    border-color: #000;
-  }
-
-  .role-checkbox.selected[data-role="dj"] .checkbox-custom {
-    background: #3b82f6;
-    border-color: #3b82f6;
-  }
-
-  .role-checkbox.selected[data-role="merch"] .checkbox-custom {
-    background: #10b981;
-    border-color: #10b981;
-  }
-
-  .checkbox-custom::after {
-    content: '';
-    position: absolute;
-    display: none;
-    left: 5px;
-    top: 1px;
-    width: 5px;
-    height: 9px;
-    border: solid #fff;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-  }
-
-  .role-checkbox.selected .checkbox-custom::after {
-    display: block;
-  }
-
-  .role-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-  }
-
-  .role-title {
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: #374151;
-  }
-
-  .role-checkbox.selected .role-title {
-    color: #000;
-  }
-
-  .role-desc {
-    font-size: 0.75rem;
-    color: #9ca3af;
-  }
-
-  /* Password */
-  .password-wrapper {
-    position: relative;
-  }
-
-  .password-wrapper input {
-    padding-right: 2.5rem;
-  }
-
-  .toggle-pw {
-    position: absolute;
-    right: 0.5rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.25rem;
-    color: #9ca3af;
-    display: flex;
-  }
-
-  .toggle-pw:hover { color: #4b5563; }
-  .toggle-pw svg { width: 18px; height: 18px; }
-  .toggle-pw .eye-hide { display: none; }
-  .toggle-pw.showing .eye-show { display: none; }
-  .toggle-pw.showing .eye-hide { display: block; }
-
-  .strength-bar {
-    height: 3px;
-    background: #e5e7eb;
-    border-radius: 2px;
-    margin-top: 0.375rem;
-    overflow: hidden;
-  }
-
-  .strength-fill {
-    height: 100%;
-    width: 0;
-    transition: all 0.3s;
-    border-radius: 2px;
-  }
-
-  .strength-fill.weak { width: 25%; background: #ef4444; }
-  .strength-fill.fair { width: 50%; background: #f59e0b; }
-  .strength-fill.good { width: 75%; background: #10b981; }
-  .strength-fill.strong { width: 100%; background: #059669; }
-
-  /* Submit Button */
-  .submit-btn {
-    width: 100%;
-    padding: 0.75rem;
-    background: #000;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-  }
-
-  .submit-btn:hover:not(:disabled) {
-    background: #1f2937;
-    transform: translateY(-1px);
-  }
-
-  .submit-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .submit-btn .btn-icon { width: 18px; height: 18px; }
-  .submit-btn .btn-spinner { 
-    width: 18px; 
-    height: 18px; 
-    animation: spin 1s linear infinite;
-    display: none;
-  }
-
-  .submit-btn.loading .btn-icon { display: none; }
-  .submit-btn.loading .btn-spinner { display: block; }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Error Message */
-  .message {
-    padding: 0.75rem 1rem;
-    border-radius: 6px;
-    margin-bottom: 1rem;
-    font-size: 0.85rem;
-    font-weight: 500;
-    display: none;
-  }
-
-  .error-message {
-    background: #fef2f2;
-    color: #991b1b;
-    border: 1px solid #fecaca;
-  }
-
-  .error-message.show { display: block; }
-
-  /* Footer */
-  .form-footer {
-    margin-top: 1.5rem;
-    text-align: center;
-    font-size: 0.85rem;
-    color: #6b7280;
-  }
-
-  .form-footer a {
-    color: #dc2626;
-    text-decoration: none;
-    font-weight: 600;
-  }
-
-  .form-footer a:hover {
-    text-decoration: underline;
-  }
-
-  .form-footer .divider {
-    display: block;
-    height: 1px;
-    background: #e5e7eb;
-    margin: 1rem 0;
-  }
-
-  .back-link {
-    display: block;
-    text-align: center;
-    margin-top: 1rem;
-    color: #6b7280;
-    text-decoration: none;
-    font-size: 0.85rem;
-  }
-
-  .back-link:hover { color: #000; }
-
-  /* Success */
-  .success-container {
-    text-align: center;
-    display: none;
-  }
-
-  .success-container.show { display: block; }
-
-  .success-icon {
-    width: 64px;
-    height: 64px;
-    background: #dcfce7;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1rem;
-  }
-
-  .success-icon svg {
-    width: 32px;
-    height: 32px;
-    color: #16a34a;
-  }
-
-  .success-container h2 {
-    font-size: 1.25rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .success-container > p {
-    color: #4b5563;
-    font-size: 0.9rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .success-steps {
-    background: #f9fafb;
-    border-radius: 6px;
-    padding: 1rem;
-    margin-bottom: 1.25rem;
-    text-align: left;
-  }
-
-  .step {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem 0;
-    font-size: 0.85rem;
-    color: #4b5563;
-  }
-
-  .step:not(:last-child) {
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  .step span:first-child {
-    width: 20px;
-    height: 20px;
-    background: #000;
-    color: #fff;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-
-  .success-btn {
-    display: inline-block;
-    padding: 0.625rem 1.25rem;
-    background: #000;
-    color: #fff;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: background 0.2s;
-  }
-
-  .success-btn:hover { background: #1f2937; }
-
-  /* Tablet */
-  @media (max-width: 1024px) {
-    .branding-side { padding: 2rem 1.5rem; }
-    .branding-content { max-width: 360px; }
-    .welcome-text { font-size: 1.75rem; }
-  }
-
-  /* Mobile */
-  @media (max-width: 768px) {
-    .split-container { flex-direction: column; }
-    .branding-side { display: none; }
-    .mobile-logo { display: block; }
-    .form-side { padding: 1.5rem; }
-    .form-row { grid-template-columns: 1fr; gap: 0; }
-  }
-</style>
-
-<script type="module">
-  (function() {
-    // Firebase config
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getFirestore, doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    
     const firebaseConfig = {
       apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
-      authDomain: "freshwax-store.firebaseapp.com",
-      projectId: "freshwax-store",
-      storageBucket: "freshwax-store.firebasestorage.app",
-      messagingSenderId: "675435782973",
-      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+      authDomain: "fresh-wax.firebaseapp.com",
+      projectId: "fresh-wax",
+      storageBucket: "fresh-wax.firebasestorage.app",
+      messagingSenderId: "307622215498",
+      appId: "1:307622215498:web:e66cee39e098fe973c7081"
     };
+    
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    let firebase = null;
-
-    // Lazy load Firebase only when form is submitted
-    async function getFirebase() {
-      if (firebase) return firebase;
+    // Show/hide approval notice based on role selection
+    const roleCheckboxes = document.querySelectorAll('input[name="roles"]');
+    const approvalNotice = document.getElementById('approvalNotice');
+    
+    function updateFormState() {
+      const selectedRoles = Array.from(document.querySelectorAll('input[name="roles"]:checked')).map(cb => cb.value);
+      const needsApproval = selectedRoles.includes('artist') || selectedRoles.includes('merch_supplier');
       
-      const [{ initializeApp }, { getAuth, createUserWithEmailAndPassword, signOut }, { getFirestore, doc, setDoc }] = await Promise.all([
-        import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js'),
-        import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js'),
-        import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js')
-      ]);
-      
-      const app = initializeApp(firebaseConfig);
-      firebase = {
-        auth: getAuth(app),
-        db: getFirestore(app),
-        createUserWithEmailAndPassword,
-        signOut,
-        doc,
-        setDoc
-      };
-      
-      return firebase;
+      approvalNotice.classList.toggle('hidden', !needsApproval);
     }
+    
+    roleCheckboxes.forEach(cb => cb.addEventListener('change', updateFormState));
 
-    // DOM helpers
-    const $ = id => document.getElementById(id);
-    const form = $('registerForm');
-    const submitBtn = $('submitBtn');
-    const errorMsg = $('errorMessage');
-    const successDiv = $('successMessage');
-    const regDiv = $('registrationForm');
-    const strengthFill = $('strengthFill');
-
-    // Role checkbox handling with JS (better browser support than :has())
-    document.querySelectorAll('.role-checkbox').forEach(label => {
-      const input = label.querySelector('input');
-      input.addEventListener('change', () => {
-        label.classList.toggle('selected', input.checked);
-        $('roleError').textContent = '';
+    // Toggle password visibility for both fields
+    document.querySelectorAll('.toggle-password').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const targetId = this.getAttribute('data-target') || 'password';
+        const input = document.getElementById(targetId);
+        input.type = input.type === 'password' ? 'text' : 'password';
       });
     });
-
-    // Password toggle
-    document.querySelectorAll('.toggle-pw').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const input = btn.previousElementSibling;
-        const isPassword = input.type === 'password';
-        input.type = isPassword ? 'text' : 'password';
-        btn.classList.toggle('showing', isPassword);
-      });
-    });
-
-    // Password strength indicator
-    $('password').addEventListener('input', e => {
-      const pw = e.target.value;
-      let strength = 0;
-      if (pw.length >= 6) strength++;
-      if (pw.length >= 8) strength++;
-      if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) strength++;
-      if (/[0-9]/.test(pw)) strength++;
-      if (/[^a-zA-Z0-9]/.test(pw)) strength++;
-      
-      strengthFill.className = 'strength-fill';
-      if (pw.length > 0) {
-        strengthFill.classList.add(['weak', 'weak', 'fair', 'good', 'strong'][Math.min(strength, 4)]);
-      }
-    });
-
-    // Helper functions
-    function showError(msg) {
-      errorMsg.textContent = msg;
-      errorMsg.classList.add('show');
-    }
-
-    function clearErrors() {
-      errorMsg.classList.remove('show');
-      ['roleError', 'nameError', 'emailError', 'passwordError'].forEach(id => {
-        $(id).textContent = '';
-      });
-    }
-
-    function setLoading(loading) {
-      submitBtn.disabled = loading;
-      submitBtn.classList.toggle('loading', loading);
-      submitBtn.querySelector('.btn-text').textContent = loading ? 'Creating...' : 'Create Account';
-    }
-
-    function getSelectedRoles() {
-      return Array.from(document.querySelectorAll('input[name="roles"]:checked')).map(c => c.value);
-    }
 
     // Form submission
-    form.addEventListener('submit', async e => {
+    const form = document.getElementById('registerForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorMessage = document.getElementById('errorMessage');
+
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      clearErrors();
-
-      const roles = getSelectedRoles();
-      const name = $('displayName').value.trim();
-      const email = $('email').value.trim();
-      const phone = $('phoneNumber').value.trim();
-      const password = $('password').value;
-      const confirm = $('confirmPassword').value;
-
+      
+      // Clear errors
+      document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+      errorMessage.textContent = '';
+      errorMessage.style.display = 'none';
+      
+      // Get values
+      const fullName = document.getElementById('fullName').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const termsAccept = document.getElementById('termsAccept').checked;
+      const displayNameInput = document.getElementById('displayName').value.trim();
+      
+      // Use first name as default display name if not provided
+      const firstName = fullName.split(' ')[0];
+      const displayName = displayNameInput || firstName;
+      
+      const selectedRoles = Array.from(document.querySelectorAll('input[name="roles"]:checked')).map(cb => cb.value);
+      const needsApproval = selectedRoles.includes('artist') || selectedRoles.includes('merch_supplier');
+      
       // Validation
-      let valid = true;
-
-      if (roles.length === 0) {
-        $('roleError').textContent = 'Please select at least one role';
-        valid = false;
+      let hasErrors = false;
+      
+      if (!fullName) {
+        document.getElementById('nameError').textContent = 'Name is required';
+        hasErrors = true;
       }
-
-      if (!name) {
-        $('nameError').textContent = 'Display name is required';
-        valid = false;
-      }
-
+      
       if (!email) {
-        $('emailError').textContent = 'Email is required';
-        valid = false;
+        document.getElementById('emailError').textContent = 'Email is required';
+        hasErrors = true;
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        $('emailError').textContent = 'Please enter a valid email';
-        valid = false;
+        document.getElementById('emailError').textContent = 'Please enter a valid email';
+        hasErrors = true;
       }
-
-      if (password.length < 6) {
-        $('passwordError').textContent = 'Password must be at least 6 characters';
-        valid = false;
-      } else if (password !== confirm) {
-        $('passwordError').textContent = 'Passwords do not match';
-        valid = false;
+      
+      if (!password) {
+        document.getElementById('passwordError').textContent = 'Password is required';
+        hasErrors = true;
+      } else if (password.length < 8) {
+        document.getElementById('passwordError').textContent = 'Password must be at least 8 characters';
+        hasErrors = true;
       }
-
-      if (!valid) return;
-
-      setLoading(true);
-
+      
+      if (password !== confirmPassword) {
+        document.getElementById('confirmError').textContent = 'Passwords do not match';
+        hasErrors = true;
+      }
+      
+      if (!termsAccept) {
+        document.getElementById('termsError').textContent = 'You must accept the terms';
+        hasErrors = true;
+      }
+      
+      if (hasErrors) return;
+      
+      // Show loading
+      submitBtn.disabled = true;
+      submitBtn.querySelector('.btn-text').classList.add('hidden');
+      submitBtn.querySelector('.btn-loading').classList.remove('hidden');
+      
       try {
-        const fb = await getFirebase();
+        // Create auth account
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
         
-        // Create user - 1 Firebase Auth API call
-        const { user } = await fb.createUserWithEmailAndPassword(fb.auth, email, password);
-
-        // Create artist document - 1 Firestore write
-        await fb.setDoc(fb.doc(fb.db, 'artists', user.uid), {
+        // Update profile with display name
+        await updateProfile(user, { displayName: displayName });
+        
+        // Determine approval status
+        // Customer & DJ = auto-approved, Artist & Merch = needs approval
+        const isAutoApproved = !needsApproval;
+        
+        // Build user document
+        const userData = {
           uid: user.uid,
-          displayName: name,
-          email,
-          phoneNumber: phone,
-          isArtist: roles.includes('artist'),
-          isDJ: roles.includes('dj'),
-          isMerchSupplier: roles.includes('merch_supplier'),
-          roles,
-          approved: false,
-          status: 'pending',
-          createdAt: new Date().toISOString()
-        });
-
-        // Sign out - user must wait for approval
-        await fb.signOut(fb.auth);
-
-        // Show success state
-        regDiv.style.display = 'none';
-        successDiv.classList.add('show');
-
-      } catch (err) {
-        setLoading(false);
-        
-        const messages = {
-          'auth/email-already-in-use': 'An account with this email already exists',
-          'auth/invalid-email': 'Please enter a valid email address',
-          'auth/weak-password': 'Password is too weak',
-          'auth/network-request-failed': 'Network error. Check your connection'
+          email: email,
+          fullName: fullName,
+          displayName: displayName,
+          createdAt: serverTimestamp(),
+          roles: {
+            customer: true,  // All users can shop
+            dj: true,        // All users can upload mixes
+            artist: selectedRoles.includes('artist'),
+            merchSupplier: selectedRoles.includes('merch_supplier'),
+            admin: false
+          },
+          // Partner approval status
+          approved: isAutoApproved
         };
         
-        showError(messages[err.code] || 'Registration failed. Please try again.');
+        // If needs approval, add pending partner info
+        if (needsApproval) {
+          userData.partnerInfo = {
+            displayName: displayName,
+            approved: false,
+            appliedAt: serverTimestamp(),
+            pendingRoles: selectedRoles.filter(r => r === 'artist' || r === 'merch_supplier')
+          };
+        }
+        
+        // Save to unified users collection
+        await setDoc(doc(db, 'users', user.uid), userData);
+        
+        // Also save to customers collection for backwards compatibility
+        await setDoc(doc(db, 'customers', user.uid), {
+          uid: user.uid,
+          email: email,
+          fullName: fullName,
+          displayName: displayName,
+          createdAt: serverTimestamp()
+        });
+        
+        // If partner roles selected, also save to artists collection
+        if (needsApproval) {
+          await setDoc(doc(db, 'artists', user.uid), {
+            uid: user.uid,
+            email: email,
+            name: fullName,
+            artistName: displayName,
+            isArtist: selectedRoles.includes('artist'),
+            isMerchSupplier: selectedRoles.includes('merch_supplier'),
+            approved: false,
+            registeredAt: serverTimestamp()
+          });
+        }
+        
+        // Set cookies for auth
+        document.cookie = `customerId=${user.uid}; path=/; max-age=86400; SameSite=Lax`;
+        document.cookie = `userId=${user.uid}; path=/; max-age=86400; SameSite=Lax`;
+        
+        // Show success
+        document.getElementById('registrationForm').classList.add('hidden');
+        document.getElementById('successState').classList.remove('hidden');
+        
+        if (needsApproval) {
+          document.getElementById('pendingNotice').classList.remove('hidden');
+        }
+        
+      } catch (error) {
+        console.error('Registration error:', error);
+        
+        let message = 'Registration failed. Please try again.';
+        if (error.code === 'auth/email-already-in-use') {
+          message = 'An account with this email already exists. Try signing in instead.';
+        } else if (error.code === 'auth/weak-password') {
+          message = 'Password is too weak. Please use a stronger password.';
+        } else if (error.code === 'auth/invalid-email') {
+          message = 'Invalid email address.';
+        }
+        
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        
+        submitBtn.disabled = false;
+        submitBtn.querySelector('.btn-text').classList.remove('hidden');
+        submitBtn.querySelector('.btn-loading').classList.add('hidden');
       }
     });
+  </script>
 
-    // Clear field errors on input
-    $('displayName').addEventListener('input', () => $('nameError').textContent = '');
-    $('email').addEventListener('input', () => $('emailError').textContent = '');
-    $('password').addEventListener('input', () => $('passwordError').textContent = '');
-    $('confirmPassword').addEventListener('input', () => $('passwordError').textContent = '');
-  })();
-</script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #000;
+      color: #fff;
+      min-height: 100vh;
+    }
+    
+    .split-container {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    .branding-side {
+      flex: 1;
+      background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem;
+      border-right: 3px solid #dc2626;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    /* Animated background glows */
+    .bg-glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.4;
+      animation: float 8s ease-in-out infinite;
+    }
+    
+    .bg-glow-1 {
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(220, 38, 38, 0.3) 0%, transparent 70%);
+      top: 10%;
+      left: 10%;
+      animation-delay: 0s;
+    }
+    
+    .bg-glow-2 {
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(circle, rgba(220, 38, 38, 0.2) 0%, transparent 70%);
+      bottom: 20%;
+      right: 10%;
+      animation-delay: -4s;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(20px, -20px) scale(1.1); }
+    }
+    
+    /* Grid overlay */
+    .grid-overlay {
+      position: absolute;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+    
+    .branding-content {
+      max-width: 420px;
+      position: relative;
+      z-index: 10;
+      animation: fadeInUp 0.8s ease-out;
+    }
+    
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .logo-link {
+      display: inline-block;
+      margin-bottom: 2.5rem;
+    }
+    
+    .logo-wrapper {
+      background: #fff;
+      padding: 1.5rem 2.5rem;
+      border-radius: 16px;
+      display: inline-block;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .logo-wrapper:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.15);
+    }
+    
+    .logo-image {
+      height: 100px;
+      width: auto;
+      display: block;
+    }
+    
+    .welcome-text {
+      font-size: 3.5rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+    
+    .welcome-text .text-red {
+      color: #dc2626;
+      text-shadow: 0 0 40px rgba(220, 38, 38, 0.4);
+    }
+    
+    .tagline {
+      color: #bbb;
+      font-size: 1.25rem;
+      margin-bottom: 2.5rem;
+      line-height: 1.6;
+    }
+    
+    .features {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+    
+    .feature {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 0.5rem;
+      border-radius: 12px;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+    
+    .feature:hover {
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateX(4px);
+    }
+    
+    .feature-icon-wrapper {
+      width: 44px;
+      height: 44px;
+      background: rgba(220, 38, 38, 0.15);
+      border: 1px solid rgba(220, 38, 38, 0.3);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .feature-icon {
+      font-size: 1.25rem;
+    }
+    
+    .feature-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    
+    .feature-text strong {
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    
+    .feature-text span {
+      color: #aaa;
+      font-size: 0.9rem;
+    }
+    
+    .form-side {
+      flex: 1;
+      background: #fff;
+      color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+    
+    .form-container {
+      width: 100%;
+      max-width: 480px;
+      padding: 1rem 0;
+    }
+    
+    .mobile-logo {
+      display: none;
+    }
+    
+    .form-header {
+      margin-bottom: 1.75rem;
+    }
+    
+    .form-header h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 0.35rem;
+    }
+    
+    .form-header p {
+      color: #666;
+      font-size: 1.05rem;
+    }
+    
+    /* Form elements */
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    
+    .form-group label {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    
+    .section-label {
+      font-size: 1.1rem !important;
+      margin-bottom: 1rem !important;
+      font-weight: 700 !important;
+    }
+    
+    .required {
+      color: #dc2626;
+    }
+    
+    .hint {
+      font-weight: 400;
+      color: #888;
+      font-size: 0.9rem;
+    }
+    
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group input[type="password"] {
+      width: 100%;
+      padding: 1rem 1rem;
+      font-size: 1.05rem;
+      border: 2px solid #e5e5e5;
+      background: #fff;
+      transition: border-color 0.2s;
+    }
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: #000;
+    }
+    
+    .password-wrapper {
+      position: relative;
+    }
+    
+    .toggle-password {
+      position: absolute;
+      right: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #888;
+    }
+    
+    .eye-icon {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .field-error {
+      color: #dc2626;
+      font-size: 0.875rem;
+      margin-top: 0.4rem;
+      min-height: 1.2em;
+    }
+    
+    .field-hint {
+      color: #888;
+      font-size: 0.875rem;
+      margin-top: 0.4rem;
+    }
+    
+    /* Partner role options */
+    .partner-roles {
+      margin-bottom: 1rem;
+    }
+    
+    .role-options {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+    
+    .role-option {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      cursor: pointer;
+      padding: 0.6rem 1rem;
+      border: 2px solid #e5e5e5;
+      border-radius: 8px;
+      background: #fafafa;
+      transition: all 0.2s;
+    }
+    
+    .role-option:hover {
+      border-color: #ccc;
+      background: #f5f5f5;
+    }
+    
+    .role-checkbox {
+      width: 18px;
+      height: 18px;
+      accent-color: #dc2626;
+      cursor: pointer;
+    }
+    
+    .role-option:has(input:checked) {
+      border-color: #dc2626;
+      background: #fef2f2;
+    }
+    
+    .role-option:has(input:checked) .option-label {
+      color: #dc2626;
+      font-weight: 600;
+    }
+    
+    .option-label {
+      color: #333;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    
+    /* Approval notice */
+    .approval-notice {
+      display: flex;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: #fef3c7;
+      border: 1px solid #fbbf24;
+      margin-bottom: 1.25rem;
+    }
+    
+    .approval-notice.hidden {
+      display: none;
+    }
+    
+    .notice-icon {
+      font-size: 1.25rem;
+    }
+    
+    .notice-text strong {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 0.25rem;
+      color: #92400e;
+    }
+    
+    .notice-text p {
+      font-size: 0.8rem;
+      color: #a16207;
+      margin: 0;
+    }
+    
+    /* Checkbox group */
+    .checkbox-group .checkbox-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    
+    .checkbox-group input {
+      display: none;
+    }
+    
+    .checkbox-group .checkbox-custom {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #ccc;
+      flex-shrink: 0;
+      position: relative;
+      margin-top: 1px;
+    }
+    
+    .checkbox-group input:checked + .checkbox-custom {
+      background: #000;
+      border-color: #000;
+    }
+    
+    .checkbox-group input:checked + .checkbox-custom::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: 12px;
+    }
+    
+    .checkbox-group a {
+      color: #dc2626;
+    }
+    
+    /* Submit button */
+    .submit-btn {
+      width: 100%;
+      padding: 1.125rem;
+      background: #000;
+      color: #fff;
+      border: none;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 0.75rem;
+    }
+    
+    .submit-btn:hover {
+      background: #dc2626;
+    }
+    
+    .submit-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    
+    .btn-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    
+    .spinner {
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+    }
+    
+    .spinner-circle {
+      stroke-dasharray: 50;
+      stroke-dashoffset: 20;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .hidden {
+      display: none !important;
+    }
+    
+    .message {
+      padding: 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      display: none;
+    }
+    
+    .error-message {
+      background: #fee2e2;
+      border: 1px solid #dc2626;
+      color: #991b1b;
+    }
+    
+    .form-footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e5e5e5;
+      color: #666;
+    }
+    
+    .form-footer a {
+      color: #dc2626;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    
+    /* Success state */
+    .success-state {
+      text-align: center;
+      padding: 2rem 0;
+    }
+    
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background: #16a34a;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      margin: 0 auto 1.5rem;
+    }
+    
+    .success-state h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .success-state p {
+      color: #666;
+      margin-bottom: 1rem;
+    }
+    
+    .pending-notice {
+      background: #fef3c7;
+      border: 1px solid #fbbf24;
+      padding: 1rem;
+      margin: 1rem 0;
+      text-align: left;
+    }
+    
+    .pending-notice p {
+      color: #92400e;
+      margin: 0;
+    }
+    
+    .pending-notice .small {
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+    }
+    
+    /* Gift Card Notice */
+    .gift-card-notice {
+      background: linear-gradient(135deg, #1a0a3e 0%, #2d1b69 100%);
+      border: 2px solid #8b5cf6;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      text-align: center;
+      border-radius: 12px;
+    }
+    
+    .gift-card-icon {
+      font-size: 3rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .gift-card-notice h3 {
+      color: #c4b5fd;
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .gift-card-desc {
+      color: #a78bfa;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    
+    .gift-card-code {
+      background: #000;
+      border: 2px dashed #8b5cf6;
+      padding: 1rem 1.5rem;
+      font-family: 'Monaco', 'Consolas', monospace;
+      font-size: 1.25rem;
+      letter-spacing: 0.1em;
+      color: #e9d5ff;
+      margin-bottom: 1rem;
+      user-select: all;
+      cursor: pointer;
+    }
+    
+    .gift-card-hint {
+      color: #a78bfa;
+      font-size: 0.85rem;
+    }
+    
+    .gift-card-hint a {
+      color: #c4b5fd;
+    }
+    
+    .continue-btn {
+      display: inline-block;
+      padding: 1rem 2rem;
+      background: #000;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 700;
+      margin-top: 1rem;
+    }
+    
+    .continue-btn:hover {
+      background: #dc2626;
+    }
+    
+    /* Responsive */
+    @media (max-width: 900px) {
+      .branding-side {
+        display: none;
+      }
+      
+      .form-side {
+        padding: 1.5rem;
+        align-items: flex-start;
+        padding-top: 2rem;
+      }
+      
+      .form-container {
+        max-width: 100%;
+      }
+      
+      .mobile-logo {
+        display: block;
+        text-align: center;
+        margin-bottom: 1.5rem;
+      }
+      
+      .mobile-logo img {
+        height: 50px;
+      }
+      
+      .form-header h2 {
+        font-size: 1.5rem;
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .form-side {
+        padding: 1rem;
+        padding-top: 1.5rem;
+      }
+      
+      .form-header {
+        margin-bottom: 1.25rem;
+      }
+      
+      .form-group {
+        margin-bottom: 1rem;
+      }
+      
+      .form-group input[type="text"],
+      .form-group input[type="email"],
+      .form-group input[type="password"] {
+        padding: 1rem;
+        font-size: 16px; /* Prevents iOS zoom */
+      }
+      
+      .role-options {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      
+      .role-option {
+        padding: 0.75rem 1rem;
+      }
+      
+      .section-label {
+        font-size: 1rem !important;
+      }
+      
+      .submit-btn {
+        padding: 1rem;
+        font-size: 1.1rem;
+      }
+      
+      .approval-notice {
+        padding: 0.875rem;
+      }
+      
+      .notice-text strong {
+        font-size: 0.95rem;
+      }
+      
+      .notice-text p {
+        font-size: 0.85rem;
+      }
+      
+      .checkbox-group .checkbox-label {
+        font-size: 0.9rem;
+      }
+      
+      .checkbox-group .checkbox-custom {
+        width: 22px;
+        height: 22px;
+      }
+    }
+    
+    @media (max-width: 380px) {
+      .form-side {
+        padding: 0.75rem;
+      }
+    }
+  </style>
+</body>
+</html>

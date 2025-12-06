@@ -1,11 +1,16 @@
 // src/pages/api/track-mix-like.ts
-// OPTIMIZED: Tracks DJ mix likes in Firebase using atomic increments
+// Tracks DJ mix likes using atomic increments
 
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -31,13 +36,11 @@ export const POST: APIRoute = async ({ request }) => {
 
     const mixRef = db.collection('dj-mixes').doc(mixId);
 
-    // Use atomic increment
     await mixRef.update({
       likes: FieldValue.increment(1),
       last_liked_date: new Date().toISOString()
     });
 
-    // Get updated document
     const mixDoc = await mixRef.get();
     
     if (!mixDoc.exists) {
@@ -49,7 +52,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const mixData = mixDoc.data();
 
-    console.log(`[TRACK-LIKE] ✓ Mix ${mixId} like count: ${mixData?.likes || 0}`);
+    log.info('[track-mix-like] Mix', mixId, 'likes:', mixData?.likes || 0);
 
     return new Response(JSON.stringify({
       success: true,
@@ -60,7 +63,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error('[TRACK-LIKE] Error tracking like:', error);
+    log.error('[track-mix-like] Error:', error);
     return new Response(JSON.stringify({
       error: 'Failed to track like',
       details: error instanceof Error ? error.message : 'Unknown error'

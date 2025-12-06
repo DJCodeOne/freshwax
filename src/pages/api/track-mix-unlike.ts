@@ -1,11 +1,16 @@
 // src/pages/api/track-mix-unlike.ts
-// OPTIMIZED: Tracks DJ mix unlikes in Firebase using atomic increments
+// Tracks DJ mix unlikes using atomic decrements
 
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -31,13 +36,11 @@ export const POST: APIRoute = async ({ request }) => {
 
     const mixRef = db.collection('dj-mixes').doc(mixId);
 
-    // Use atomic decrement (increment by -1)
     await mixRef.update({
       likes: FieldValue.increment(-1),
       last_unliked_date: new Date().toISOString()
     });
 
-    // Get updated document
     const mixDoc = await mixRef.get();
     
     if (!mixDoc.exists) {
@@ -49,13 +52,12 @@ export const POST: APIRoute = async ({ request }) => {
 
     const mixData = mixDoc.data();
     
-    // Ensure likes doesn't go below 0
     const currentLikes = mixData?.likes || 0;
     if (currentLikes < 0) {
       await mixRef.update({ likes: 0 });
     }
 
-    console.log(`[TRACK-UNLIKE] ✓ Mix ${mixId} like count: ${Math.max(currentLikes, 0)}`);
+    log.info('[track-mix-unlike] Mix', mixId, 'likes:', Math.max(currentLikes, 0));
 
     return new Response(JSON.stringify({
       success: true,
@@ -66,7 +68,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error('[TRACK-UNLIKE] Error tracking unlike:', error);
+    log.error('[track-mix-unlike] Error:', error);
     return new Response(JSON.stringify({
       error: 'Failed to track unlike',
       details: error instanceof Error ? error.message : 'Unknown error'

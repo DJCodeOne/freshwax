@@ -43,38 +43,39 @@
     
     /* Suppliers List */
     .suppliers-list { background: #fff; border: 3px solid #000; }
-    .suppliers-header { background: #000; color: #fff; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
-    .suppliers-header h2 { font-size: 16px; font-weight: 900; text-transform: uppercase; }
+    .suppliers-header { background: #000; color: #fff; padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; }
+    .suppliers-header h2 { font-size: 18px; font-weight: 900; text-transform: uppercase; }
     .suppliers-header .count { font-size: 14px; opacity: 0.8; }
     
-    .supplier-card { padding: 20px; border-bottom: 2px solid #eee; }
+    .supplier-card { padding: 25px; border-bottom: 2px solid #eee; }
     .supplier-card:last-child { border-bottom: none; }
     .supplier-card:hover { background: #f9f9f9; }
     
-    .supplier-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
-    .supplier-info h3 { font-size: 18px; font-weight: 900; margin-bottom: 5px; }
-    .supplier-info .type { font-size: 12px; color: #666; text-transform: uppercase; }
-    .supplier-info .code { font-family: monospace; font-size: 12px; background: #f5f5f5; padding: 2px 8px; display: inline-block; margin-top: 5px; }
+    .supplier-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+    .supplier-info h3 { font-size: 22px; font-weight: 900; margin-bottom: 8px; }
+    .supplier-info .type { font-size: 14px; color: #666; text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+    .supplier-info .code { font-family: monospace; font-size: 14px; background: #f0f0f0; padding: 4px 12px; display: inline-block; border: 1px solid #ddd; font-weight: 700; }
     
-    .supplier-status { padding: 5px 12px; font-size: 12px; font-weight: 700; }
+    .supplier-status { padding: 8px 16px; font-size: 13px; font-weight: 700; text-transform: uppercase; }
     .supplier-status.active { background: #d4edda; color: #155724; }
     .supplier-status.inactive { background: #f8d7da; color: #721c24; }
     
-    .supplier-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
-    .stat { text-align: center; padding: 10px; background: #f5f5f5; }
-    .stat .value { font-size: 20px; font-weight: 900; }
-    .stat .label { font-size: 10px; color: #666; text-transform: uppercase; }
-    .stat.alert { background: #fff3cd; }
-    .stat.danger { background: #f8d7da; }
+    .supplier-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+    .stat { text-align: center; padding: 15px 10px; background: #f8f8f8; border: 1px solid #e5e5e5; }
+    .stat .value { font-size: 24px; font-weight: 900; margin-bottom: 4px; }
+    .stat .label { font-size: 11px; color: #666; text-transform: uppercase; font-weight: 600; }
+    .stat.alert { background: #fff3cd; border-color: #ffc107; }
+    .stat.danger { background: #f8d7da; border-color: #dc3545; }
     
-    .supplier-contact { font-size: 13px; color: #666; margin-bottom: 15px; }
-    .supplier-contact a { color: #000; }
+    .supplier-contact { font-size: 14px; color: #555; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-left: 3px solid #000; }
+    .supplier-contact strong { font-size: 15px; color: #000; display: block; margin-bottom: 5px; }
+    .supplier-contact a { color: #000; font-weight: 600; }
     
-    .supplier-actions { display: flex; gap: 10px; }
-    .action-btn { padding: 8px 15px; border: 2px solid #000; background: #fff; cursor: pointer; font-size: 11px; font-weight: 700; text-transform: uppercase; text-decoration: none; color: #000; display: inline-block; }
+    .supplier-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .action-btn { padding: 10px 18px; border: 2px solid #000; background: #fff; cursor: pointer; font-size: 12px; font-weight: 700; text-transform: uppercase; text-decoration: none; color: #000; display: inline-block; transition: all 0.2s; }
     .action-btn:hover { background: #000; color: #fff; }
     .action-btn.view-link { background: #000; color: #fff; }
-    .action-btn.view-link:hover { background: #fff; color: #000; }
+    .action-btn.view-link:hover { background: #333; }
     
     /* Access Code Display */
     .access-code-display { background: #f5f5f5; border: 2px solid #000; padding: 15px; margin-top: 15px; }
@@ -116,7 +117,7 @@
           <form id="supplierForm">
             <div class="form-group">
               <label class="form-label">Supplier Name <span class="required">*</span></label>
-              <input type="text" class="form-input" id="supplierName" placeholder="e.g., Runnin' Records" required />
+              <input type="text" class="form-input" id="supplierName" placeholder="e.g., Runnin' Records" required maxlength="30" />
             </div>
             
             <div class="form-row">
@@ -145,7 +146,7 @@
             
             <div class="form-group">
               <label class="form-label">Contact Name</label>
-              <input type="text" class="form-input" id="contactName" placeholder="Main contact person" />
+              <input type="text" class="form-input" id="contactName" placeholder="Main contact person" maxlength="30" />
             </div>
             
             <div class="form-row">

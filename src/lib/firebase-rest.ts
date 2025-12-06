@@ -2,17 +2,24 @@
 // Firebase REST API client - works on Cloudflare Pages (no Admin SDK needed)
 // WITH CACHING to reduce quota usage
 
+// Conditional logging - only logs in development
+const isDev = import.meta.env?.DEV ?? false;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 const PROJECT_ID = 'freshwax-store';
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
 // Simple in-memory cache
 const cache = new Map<string, { data: any; expires: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes default
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes default (extended for quota optimization)
 
 function getCached(key: string): any | null {
   const entry = cache.get(key);
   if (entry && Date.now() < entry.expires) {
-    console.log(`[firebase-rest] Cache HIT: ${key}`);
+    log.info(`[firebase-rest] Cache HIT: ${key}`);
     return entry.data;
   }
   if (entry) {
@@ -23,7 +30,7 @@ function getCached(key: string): any | null {
 
 function setCache(key: string, data: any, ttl: number = CACHE_TTL): void {
   cache.set(key, { data, expires: Date.now() + ttl });
-  console.log(`[firebase-rest] Cache SET: ${key} (TTL: ${ttl / 1000}s)`);
+  log.info(`[firebase-rest] Cache SET: ${key} (TTL: ${ttl / 1000}s)`);
 }
 
 type FirestoreOp = 'EQUAL' | 'NOT_EQUAL' | 'LESS_THAN' | 'LESS_THAN_OR_EQUAL' | 'GREATER_THAN' | 'GREATER_THAN_OR_EQUAL' | 'ARRAY_CONTAINS';
@@ -158,7 +165,7 @@ export async function queryCollection(
   }
   
   try {
-    console.log(`[firebase-rest] Querying ${collection}...`);
+    log.info(`[firebase-rest] Querying ${collection}...`);
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -177,7 +184,7 @@ export async function queryCollection(
       .filter((item: any) => item.document)
       .map((item: any) => parseDocument(item.document));
     
-    console.log(`[firebase-rest] Found ${results.length} documents in ${collection}`);
+    log.info(`[firebase-rest] Found ${results.length} documents in ${collection}`);
     
     // Cache the results
     setCache(cacheKey, results, options.cacheTTL || CACHE_TTL);
@@ -330,5 +337,5 @@ export function shuffleArray<T>(array: T[]): T[] {
 // Clear cache (useful for admin operations)
 export function clearCache(): void {
   cache.clear();
-  console.log('[firebase-rest] Cache cleared');
+  log.info('[firebase-rest] Cache cleared');
 }

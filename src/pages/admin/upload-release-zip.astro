@@ -1100,7 +1100,6 @@
     }
 
     function log(message, type = 'info') {
-      console.log(`[${type.toUpperCase()}] ${message}`);
       const logItem = document.createElement('div');
       logItem.className = `log-item ${type}`;
       logItem.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;

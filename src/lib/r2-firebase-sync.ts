@@ -6,6 +6,13 @@ import AdmZip from 'adm-zip';
 import * as path from 'path';
 import * as fs from 'fs';
 
+// Conditional logging - only logs in development
+const isDev = import.meta.env?.DEV ?? process.env.NODE_ENV !== 'production';
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 interface R2Config {
   accountId: string;
   accessKeyId: string;
@@ -65,11 +72,11 @@ export class R2FirebaseSync {
    * Main method: Process a packaged ZIP and sync everything
    */
   async processPackageAndSync(zipPath: string): Promise<string> {
-    console.log('📦 Starting package processing...');
+    log.info('📦 Starting package processing...');
 
     // Extract ZIP
     const extractDir = await this.extractZip(zipPath);
-    console.log(`✅ Extracted to: ${extractDir}`);
+    log.info(`✅ Extracted to: ${extractDir}`);
 
     // Find the release directory (should be releases/RELEASE_ID/)
     const releaseDirs = fs.readdirSync(path.join(extractDir, 'releases'));
@@ -79,7 +86,7 @@ export class R2FirebaseSync {
 
     const releaseId = releaseDirs[0];
     const releaseDir = path.join(extractDir, 'releases', releaseId);
-    console.log(`🎵 Processing release: ${releaseId}`);
+    log.info(`🎵 Processing release: ${releaseId}`);
 
     // Read metadata
     const metadataPath = path.join(releaseDir, 'firebase-metadata.json');
@@ -88,15 +95,15 @@ export class R2FirebaseSync {
     }
 
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
-    console.log(`📄 Loaded metadata for: ${metadata.artistName} - ${metadata.releaseName}`);
+    log.info(`📄 Loaded metadata for: ${metadata.artistName} - ${metadata.releaseName}`);
 
     // Upload files to R2
     await this.uploadToR2(releaseId, releaseDir);
-    console.log('✅ Files uploaded to R2');
+    log.info('✅ Files uploaded to R2');
 
     // Sync to Firebase
     await this.syncToFirebase(releaseId, metadata);
-    console.log('✅ Synced to Firebase');
+    log.info('✅ Synced to Firebase');
 
     // Cleanup
     this.cleanupExtractedFiles(extractDir);
@@ -134,7 +141,7 @@ export class R2FirebaseSync {
         const key = `releases/${releaseId}/artwork/${file}`;
         uploads.push(this.uploadFileToR2(filePath, key, 'image/webp'));
       }
-      console.log(`📸 Queued ${artworkFiles.length} artwork files`);
+      log.info(`📸 Queued ${artworkFiles.length} artwork files`);
     }
 
     // Upload previews
@@ -146,7 +153,7 @@ export class R2FirebaseSync {
         const key = `releases/${releaseId}/previews/${file}`;
         uploads.push(this.uploadFileToR2(filePath, key, 'audio/mpeg'));
       }
-      console.log(`🎵 Queued ${previewFiles.length} preview files`);
+      log.info(`🎵 Queued ${previewFiles.length} preview files`);
     }
 
     // Upload full tracks
@@ -159,12 +166,12 @@ export class R2FirebaseSync {
         const contentType = file.endsWith('.wav') ? 'audio/wav' : 'audio/mpeg';
         uploads.push(this.uploadFileToR2(filePath, key, contentType));
       }
-      console.log(`💿 Queued ${trackFiles.length} track files`);
+      log.info(`💿 Queued ${trackFiles.length} track files`);
     }
 
     // Wait for all uploads
     await Promise.all(uploads);
-    console.log(`✅ All files uploaded to R2`);
+    log.info(`✅ All files uploaded to R2`);
   }
 
   /**
@@ -181,7 +188,7 @@ export class R2FirebaseSync {
     });
 
     await this.r2Client.send(command);
-    console.log(`  ✓ Uploaded: ${key}`);
+    log.info(`  ✓ Uploaded: ${key}`);
   }
 
   /**
@@ -227,7 +234,7 @@ export class R2FirebaseSync {
 
     // Write to Firebase
     await this.db.collection(this.config.collections.releases).doc(releaseId).set(metadata, { merge: true });
-    console.log(`✅ Release ${releaseId} synced to Firebase with status: live`);
+    log.info(`✅ Release ${releaseId} synced to Firebase with status: live`);
   }
 
   /**
@@ -296,7 +303,7 @@ export class R2FirebaseSync {
    */
   async deleteRelease(releaseId: string): Promise<void> {
     await this.db.collection(this.config.collections.releases).doc(releaseId).delete();
-    console.log(`🗑️ Deleted release ${releaseId} from Firebase`);
+    log.info(`🗑️ Deleted release ${releaseId} from Firebase`);
   }
 
   /**
@@ -305,7 +312,7 @@ export class R2FirebaseSync {
   private cleanupExtractedFiles(extractDir: string): void {
     try {
       fs.rmSync(extractDir, { recursive: true, force: true });
-      console.log(`🧹 Cleaned up: ${extractDir}`);
+      log.info(`🧹 Cleaned up: ${extractDir}`);
     } catch (error) {
       console.warn(`⚠️ Could not cleanup ${extractDir}:`, error);
     }

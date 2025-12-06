@@ -2,9 +2,16 @@ import { R2FirebaseSync } from '../../lib/r2-firebase-sync';
 import * as fs from 'fs';
 import * as path from 'path';
 
-export const POST = async ({ request, locals }) => {
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+  warn: (...args: any[]) => isDev && console.warn(...args),
+};
+
+export const POST = async ({ request, locals }: any) => {
   try {
-    console.log('🔄 Sync release API called');
+    log.info('[sync-release] Sync release API called');
 
     const formData = await request.formData();
     const zipFile = formData.get('zipFile');
@@ -24,11 +31,11 @@ export const POST = async ({ request, locals }) => {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    const tempZipPath = path.join(tempDir, `upload-${Date.now()}.zip`);
+    const tempZipPath = path.join(tempDir, 'upload-' + Date.now() + '.zip');
     const buffer = Buffer.from(await zipFile.arrayBuffer());
     fs.writeFileSync(tempZipPath, buffer);
 
-    console.log(`📦 Saved ZIP to: ${tempZipPath}`);
+    log.info('[sync-release] Saved ZIP to:', tempZipPath);
 
     const env = locals?.runtime?.env || {};
     const config = {
@@ -57,7 +64,7 @@ export const POST = async ({ request, locals }) => {
       throw new Error('Firebase credentials not configured');
     }
 
-    console.log('✅ Configuration validated');
+    log.info('[sync-release] Configuration validated');
 
     const sync = new R2FirebaseSync(config);
     const releaseId = await sync.processPackageAndSync(tempZipPath);
@@ -65,20 +72,22 @@ export const POST = async ({ request, locals }) => {
     try {
       fs.unlinkSync(tempZipPath);
     } catch (e) {
-      console.warn('Could not delete temp ZIP:', e);
+      log.warn('[sync-release] Could not delete temp ZIP:', e);
     }
+
+    log.info('[sync-release] Success:', releaseId);
 
     return new Response(JSON.stringify({
       success: true,
       releaseId,
-      message: `Release ${releaseId} synced successfully`,
+      message: 'Release ' + releaseId + ' synced successfully',
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('❌ Sync failed:', error);
+    log.error('[sync-release] Sync failed:', error);
     
     return new Response(JSON.stringify({
       success: false,
@@ -91,7 +100,7 @@ export const POST = async ({ request, locals }) => {
   }
 };
 
-export const GET = async ({ url, locals }) => {
+export const GET = async ({ url, locals }: any) => {
   try {
     const env = locals?.runtime?.env || {};
     const config = {
@@ -119,7 +128,7 @@ export const GET = async ({ url, locals }) => {
     const featured = url.searchParams.get('featured');
     const limit = url.searchParams.get('limit');
     
-    const options = {};
+    const options: any = {};
     if (status) options.status = status;
     if (featured !== null) options.featured = featured === 'true';
     if (limit) options.limit = parseInt(limit);
@@ -128,17 +137,22 @@ export const GET = async ({ url, locals }) => {
     
     const releases = await sync.listReleases(options);
 
+    log.info('[sync-release] Listed', releases.length, 'releases');
+
     return new Response(JSON.stringify({
       success: true,
       releases,
       count: releases.length,
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=60'
+      }
     });
 
   } catch (error) {
-    console.error('❌ List releases failed:', error);
+    log.error('[sync-release] List releases failed:', error);
     
     return new Response(JSON.stringify({
       success: false,

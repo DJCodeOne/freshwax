@@ -5,6 +5,12 @@ import { getFirestore } from 'firebase-admin/firestore';
 
 export const prerender = false;
 
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args) => isDev && console.log(...args),
+  error: (...args) => console.error(...args),
+};
+
 // Initialize Firebase Admin
 if (!getApps().length) {
   initializeApp({
@@ -19,19 +25,12 @@ if (!getApps().length) {
 const db = getFirestore();
 
 export async function POST({ request }) {
-  console.log('\n========================================');
-  console.log('[APPROVE-RELEASE] POST REQUEST RECEIVED');
-  console.log('========================================\n');
-  
   try {
     const body = await request.json();
-    console.log('[APPROVE-RELEASE] Request body:', JSON.stringify(body, null, 2));
-    
     const { releaseId, action } = body;
     
     // Validate input
     if (!releaseId || !action) {
-      console.error('[APPROVE-RELEASE] ERROR: Missing releaseId or action');
       return new Response(JSON.stringify({ 
         success: false,
         error: 'releaseId and action are required' 
@@ -42,7 +41,6 @@ export async function POST({ request }) {
     }
 
     if (!['approve', 'reject'].includes(action)) {
-      console.error('[APPROVE-RELEASE] ERROR: Invalid action');
       return new Response(JSON.stringify({ 
         success: false,
         error: 'action must be "approve" or "reject"' 
@@ -52,14 +50,13 @@ export async function POST({ request }) {
       });
     }
 
-    console.log(`[APPROVE-RELEASE] Processing: ${action} release ${releaseId}`);
+    log.info(`[approve-release] ${action} release ${releaseId}`);
 
     // Get release from Firestore
     const releaseRef = db.collection('releases').doc(releaseId);
     const releaseDoc = await releaseRef.get();
     
     if (!releaseDoc.exists) {
-      console.error('[APPROVE-RELEASE] ERROR: Release not found');
       return new Response(JSON.stringify({ 
         success: false,
         error: 'Release not found',
@@ -71,7 +68,6 @@ export async function POST({ request }) {
     }
 
     const releaseData = releaseDoc.data();
-    console.log(`[APPROVE-RELEASE] Found release: "${releaseData.releaseName}" by ${releaseData.artistName}`);
 
     // Update release status
     const updateData = {
@@ -83,7 +79,6 @@ export async function POST({ request }) {
     };
 
     await releaseRef.update(updateData);
-    console.log(`[APPROVE-RELEASE] ✓ Release ${action}d successfully`);
 
     // Update master list
     try {
@@ -94,7 +89,6 @@ export async function POST({ request }) {
         const masterData = masterListDoc.data();
         const releasesList = masterData.releases || [];
         
-        // Find and update the release in master list
         const releaseIndex = releasesList.findIndex(r => r.id === releaseId);
         if (releaseIndex >= 0) {
           releasesList[releaseIndex] = {
@@ -108,17 +102,13 @@ export async function POST({ request }) {
             releases: releasesList,
             lastUpdated: new Date().toISOString()
           });
-          
-          console.log('[APPROVE-RELEASE] ✓ Updated master list');
         }
       }
     } catch (error) {
-      console.error('[APPROVE-RELEASE] Warning: Could not update master list:', error);
-      // Don't fail the whole operation if master list update fails
+      log.error('[approve-release] Warning: Could not update master list:', error.message);
     }
 
-    console.log('[APPROVE-RELEASE] ✓ SUCCESS - Approval process complete!');
-    console.log('========================================\n');
+    log.info(`[approve-release] ${action}d: ${releaseData.artistName} - ${releaseData.releaseName}`);
 
     return new Response(JSON.stringify({ 
       success: true,
@@ -133,18 +123,12 @@ export async function POST({ request }) {
     });
 
   } catch (error) {
-    console.error('\n========================================');
-    console.error('[APPROVE-RELEASE] CRITICAL ERROR');
-    console.error('========================================');
-    console.error('[APPROVE-RELEASE] Error message:', error.message);
-    console.error('[APPROVE-RELEASE] Error stack:', error.stack);
-    console.error('========================================\n');
+    log.error('[approve-release] Error:', error.message);
     
     return new Response(JSON.stringify({ 
       success: false,
       error: 'Internal server error',
-      message: error.message,
-      stack: error.stack
+      message: error.message
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

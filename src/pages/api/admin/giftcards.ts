@@ -1,0 +1,545 @@
+// src/pages/api/admin/giftcards.ts
+// Admin API for gift cards management - list, create, analytics
+
+import type { APIRoute } from 'astro';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { Resend } from 'resend';
+
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+const resend = new Resend(import.meta.env.RESEND_API_KEY);
+const FROM_EMAIL = 'Fresh Wax <noreply@freshwax.co.uk>';
+
+// GET: Fetch gift cards, user balances, and analytics
+export const GET: APIRoute = async ({ request }) => {
+  try {
+    const url = new URL(request.url);
+    const type = url.searchParams.get('type') || 'all';
+    
+    if (type === 'analytics') {
+      // Get analytics data
+      const [giftCardsSnap, userCreditsSnap] = await Promise.all([
+        db.collection('giftCards').get(),
+        db.collection('userCredits').get()
+      ]);
+      
+      let totalIssued = 0;
+      let totalRedeemed = 0;
+      let totalUnredeemed = 0;
+      let welcomeCardsIssued = 0;
+      let promoCardsIssued = 0;
+      
+      giftCardsSnap.docs.forEach(doc => {
+        const card = doc.data();
+        totalIssued += card.originalValue || 0;
+        
+        if (card.redeemedBy) {
+          totalRedeemed += card.originalValue || 0;
+        } else if (card.isActive) {
+          totalUnredeemed += card.currentBalance || 0;
+        }
+        
+        if (card.type === 'welcome') welcomeCardsIssued++;
+        if (card.type === 'promotional') promoCardsIssued++;
+      });
+      
+      let totalCreditBalance = 0;
+      let totalSpent = 0;
+      let usersWithCredit = 0;
+      
+      userCreditsSnap.docs.forEach(doc => {
+        const credit = doc.data();
+        if (credit.balance > 0) {
+          totalCreditBalance += credit.balance;
+          usersWithCredit++;
+        }
+        
+        // Calculate total spent from transactions
+        if (credit.transactions) {
+          credit.transactions.forEach(txn => {
+            if (txn.type === 'purchase' && txn.amount < 0) {
+              totalSpent += Math.abs(txn.amount);
+            }
+          });
+        }
+      });
+      
+      return new Response(JSON.stringify({
+        success: true,
+        analytics: {
+          giftCards: {
+            totalCards: giftCardsSnap.size,
+            totalValueIssued: totalIssued,
+            totalValueRedeemed: totalRedeemed,
+            totalValueUnredeemed: totalUnredeemed,
+            welcomeCardsIssued,
+            promoCardsIssued
+          },
+          credits: {
+            totalUsersWithCredit: usersWithCredit,
+            totalCreditBalance,
+            totalCreditSpent: totalSpent
+          }
+        }
+      }), { 
+        status: 200, 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+    }
+    
+    if (type === 'cards') {
+      // Get all gift cards
+      const cardsSnap = await db.collection('giftCards')
+        .orderBy('createdAt', 'desc')
+        .limit(100)
+        .get();
+      
+      const cards = cardsSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      return new Response(JSON.stringify({
+        success: true,
+        cards
+      }), { 
+        status: 200, 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+    }
+    
+    if (type === 'balances') {
+      // Get all user credit balances
+      const creditsSnap = await db.collection('userCredits')
+        .orderBy('balance', 'desc')
+        .get();
+      
+      // Get customer info for each
+      const balances = await Promise.all(creditsSnap.docs.map(async doc => {
+        const creditData = doc.data();
+        let customerInfo = { email: 'Unknown', name: 'Unknown' };
+        
+        try {
+          const customerDoc = await db.collection('customers').doc(doc.id).get();
+          if (customerDoc.exists) {
+            const customer = customerDoc.data();
+            customerInfo = {
+              email: customer.email || 'Unknown',
+              name: customer.displayName || customer.firstName || 'Unknown'
+            };
+          }
+        } catch (e) {}
+        
+        return {
+          userId: doc.id,
+          balance: creditData.balance || 0,
+          lastUpdated: creditData.lastUpdated,
+          transactionCount: creditData.transactions?.length || 0,
+          ...customerInfo
+        };
+      }));
+      
+      return new Response(JSON.stringify({
+        success: true,
+        balances: balances.filter(b => b.balance > 0 || b.transactionCount > 0)
+      }), { 
+        status: 200, 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+    }
+    
+    // Default: return everything
+    const [cardsSnap, creditsSnap] = await Promise.all([
+      db.collection('giftCards').orderBy('createdAt', 'desc').limit(50).get(),
+      db.collection('userCredits').orderBy('balance', 'desc').limit(50).get()
+    ]);
+    
+    return new Response(JSON.stringify({
+      success: true,
+      cards: cardsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+      balances: creditsSnap.docs.map(doc => ({ userId: doc.id, ...doc.data() }))
+    }), { 
+      status: 200, 
+      headers: { 'Content-Type': 'application/json' } 
+    });
+    
+  } catch (error) {
+    console.error('[admin/giftcards] GET Error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Failed to fetch gift card data'
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
+};
+
+// POST: Create gift card or adjust user balance
+export const POST: APIRoute = async ({ request }) => {
+  try {
+    const data = await request.json();
+    const { action, adminKey } = data;
+    
+    // Validate admin key
+    if (adminKey !== 'freshwax-admin-2024') {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Unauthorized'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+    
+    const now = new Date().toISOString();
+    
+    if (action === 'createCard') {
+      // Create a new gift card
+      const { value, type, description, expiresInDays } = data;
+      
+      if (!value || value <= 0) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Invalid value'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+      
+      // Generate code
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = 'FWGC-';
+      for (let i = 0; i < 12; i++) {
+        if (i > 0 && i % 4 === 0) code += '-';
+        code += chars[Math.floor(Math.random() * chars.length)];
+      }
+      
+      const expiresAt = expiresInDays 
+        ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
+        : null;
+      
+      const newCard = {
+        code,
+        originalValue: parseFloat(value),
+        currentBalance: parseFloat(value),
+        type: type || 'promotional',
+        description: description || `£${value} Gift Card`,
+        createdAt: now,
+        expiresAt,
+        isActive: true,
+        redeemedBy: null,
+        redeemedAt: null,
+        createdByAdmin: true
+      };
+      
+      await db.collection('giftCards').add(newCard);
+      
+      return new Response(JSON.stringify({
+        success: true,
+        giftCard: newCard
+      }), { 
+        status: 200, 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+    }
+    
+    if (action === 'adjustBalance') {
+      // Adjust a user's credit balance
+      const { userId, amount, reason } = data;
+      
+      if (!userId || amount === undefined) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'User ID and amount required'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+      
+      const adjustAmount = parseFloat(amount);
+      const creditRef = db.collection('userCredits').doc(userId);
+      const creditDoc = await creditRef.get();
+      
+      let newBalance: number;
+      const transactionId = `txn_admin_${Date.now()}`;
+      
+      if (creditDoc.exists) {
+        const currentBalance = creditDoc.data()?.balance || 0;
+        newBalance = Math.max(0, currentBalance + adjustAmount);
+        
+        await creditRef.update({
+          balance: newBalance,
+          lastUpdated: now,
+          transactions: FieldValue.arrayUnion({
+            id: transactionId,
+            type: 'admin_adjustment',
+            amount: adjustAmount,
+            description: reason || `Admin adjustment: ${adjustAmount >= 0 ? '+' : ''}£${adjustAmount.toFixed(2)}`,
+            createdAt: now,
+            balanceAfter: newBalance
+          })
+        });
+      } else {
+        newBalance = Math.max(0, adjustAmount);
+        await creditRef.set({
+          userId,
+          balance: newBalance,
+          lastUpdated: now,
+          transactions: [{
+            id: transactionId,
+            type: 'admin_adjustment',
+            amount: adjustAmount,
+            description: reason || `Admin credit: £${adjustAmount.toFixed(2)}`,
+            createdAt: now,
+            balanceAfter: newBalance
+          }]
+        });
+      }
+      
+      // Update customer doc
+      await db.collection('customers').doc(userId).update({
+        creditBalance: newBalance,
+        creditUpdatedAt: now
+      }).catch(() => {});
+      
+      return new Response(JSON.stringify({
+        success: true,
+        newBalance,
+        adjustment: adjustAmount
+      }), { 
+        status: 200, 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+    }
+    
+    if (action === 'deactivateCard') {
+      // Deactivate a gift card
+      const { cardId } = data;
+      
+      if (!cardId) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Card ID required'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+      
+      await db.collection('giftCards').doc(cardId).update({
+        isActive: false,
+        deactivatedAt: now,
+        deactivatedByAdmin: true
+      });
+      
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Card deactivated'
+      }), { 
+        status: 200, 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+    }
+    
+    if (action === 'reactivateCard') {
+      // Reactivate a cancelled gift card (for lost codes recovery)
+      const { cardId } = data;
+      
+      if (!cardId) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Card ID required'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+      
+      // Get the card to check it hasn't been redeemed
+      const cardDoc = await db.collection('giftCards').doc(cardId).get();
+      if (!cardDoc.exists) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Card not found'
+        }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      }
+      
+      const cardData = cardDoc.data();
+      if (cardData?.redeemedBy) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Cannot reactivate a redeemed card'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+      
+      await db.collection('giftCards').doc(cardId).update({
+        isActive: true,
+        reactivatedAt: now,
+        reactivatedByAdmin: true,
+        deactivatedAt: null,
+        deactivatedByAdmin: null
+      });
+      
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Card reactivated'
+      }), { 
+        status: 200, 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+    }
+    
+    if (action === 'resendEmail') {
+      // Resend gift card email to a different/same recipient
+      const { cardId, code, recipientEmail, recipientName } = data;
+      
+      if (!cardId || !recipientEmail) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Card ID and recipient email required'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+      
+      // Get the card details
+      const cardDoc = await db.collection('giftCards').doc(cardId).get();
+      if (!cardDoc.exists) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Card not found'
+        }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      }
+      
+      const cardData = cardDoc.data();
+      const amount = cardData?.originalValue || 0;
+      const cardCode = code || cardData?.code;
+      
+      // Send email
+      try {
+        const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #1a1a1a 0%, #000 100%); padding: 30px; text-align: center;">
+              <h1 style="margin: 0; font-size: 32px; color: #fff; font-weight: 400;">
+                Fresh <span style="color: #dc2626;">Wax</span>
+              </h1>
+              <p style="margin: 10px 0 0 0; color: #888; font-size: 14px;">Underground Music Store</p>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <span style="font-size: 60px;">🎁</span>
+              </div>
+              
+              <h2 style="font-size: 28px; color: #111; text-align: center; margin: 0 0 20px 0;">
+                Your Gift Card Code
+              </h2>
+              
+              <p style="color: #666; text-align: center; margin-bottom: 30px;">
+                ${recipientName ? `Hi ${recipientName},` : ''} Here's your Fresh Wax gift card code.
+              </p>
+              
+              <!-- Gift Card Box -->
+              <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-radius: 16px; padding: 30px; text-align: center; margin: 30px 0;">
+                <p style="color: #888; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 10px 0;">Gift Card Value</p>
+                <p style="font-size: 48px; color: #dc2626; font-weight: 700; margin: 0 0 20px 0;">£${amount}</p>
+                
+                <p style="color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 10px 0;">Your Redemption Code</p>
+                <div style="background: #111; border: 2px solid #dc2626; border-radius: 10px; padding: 15px 25px; display: inline-block;">
+                  <code style="font-size: 24px; color: #fff; letter-spacing: 3px; font-family: 'Monaco', 'Consolas', monospace;">${cardCode}</code>
+                </div>
+              </div>
+              
+              <!-- How to Use -->
+              <div style="background: #f9f9f9; border-radius: 12px; padding: 25px; margin: 30px 0;">
+                <h3 style="font-size: 18px; color: #111; margin: 0 0 15px 0;">How to Redeem</h3>
+                <ol style="color: #666; font-size: 15px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                  <li>Visit <a href="https://freshwax.co.uk/giftcards" style="color: #dc2626;">freshwax.co.uk/giftcards</a></li>
+                  <li>Sign in or create an account</li>
+                  <li>Enter your code above</li>
+                  <li>Start shopping!</li>
+                </ol>
+              </div>
+              
+              <!-- CTA Button -->
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="https://freshwax.co.uk/giftcards" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-size: 16px; font-weight: 600;">
+                  Redeem Your Gift Card →
+                </a>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f5f5f5; padding: 25px 30px; text-align: center; border-top: 1px solid #eee;">
+              <p style="color: #888; font-size: 13px; margin: 0;">
+                Fresh Wax - Underground Jungle & Drum and Bass<br>
+                <a href="https://freshwax.co.uk" style="color: #dc2626;">freshwax.co.uk</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+        `;
+        
+        await resend.emails.send({
+          from: FROM_EMAIL,
+          to: recipientEmail,
+          subject: `🎁 Your £${amount} Fresh Wax Gift Card Code`,
+          html
+        });
+        
+        // Update card with email record
+        await db.collection('giftCards').doc(cardId).update({
+          emailsSent: FieldValue.arrayUnion({
+            email: recipientEmail,
+            sentAt: now,
+            type: 'admin_resend'
+          }),
+          recipientEmail: recipientEmail,
+          recipientName: recipientName || cardData?.recipientName || null
+        });
+        
+        return new Response(JSON.stringify({
+          success: true,
+          message: `Email sent to ${recipientEmail}`
+        }), { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json' } 
+        });
+        
+      } catch (emailError) {
+        console.error('[admin/giftcards] Email error:', emailError);
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Failed to send email'
+        }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      }
+    }
+    
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Invalid action'
+    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    
+  } catch (error) {
+    console.error('[admin/giftcards] POST Error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Failed to process request'
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
+};

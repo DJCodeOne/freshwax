@@ -629,11 +629,9 @@ const validTracks = tracks.filter(t => t.previewUrl);
         }
         
         if (this.tracks.length === 0) {
-          console.log('[ShufflePlayer] No tracks available');
           return;
         }
         
-        console.log('[ShufflePlayer] Initialized with', this.tracks.length, 'tracks');
         
         // Cache DOM elements
         this.els = {
@@ -832,7 +830,6 @@ const validTracks = tracks.filter(t => t.previewUrl);
         // Update queue
         this.updateQueueDisplay();
         
-        console.log('[ShufflePlayer] Loaded:', track.title, 'by', track.artist);
       },
       
       playNext: function() {

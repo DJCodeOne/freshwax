@@ -1,0 +1,36 @@
+# Fresh Wax - robots.txt
+# https://freshwax.co.uk
+
+User-agent: *
+Allow: /
+
+# Block admin and account areas from indexing
+Disallow: /admin/
+Disallow: /account/
+Disallow: /artist/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /checkout
+Disallow: /cart
+Disallow: /order-confirmation
+Disallow: /upload-mix
+
+# Block search and filter pages to avoid duplicate content
+Disallow: /*?*search=
+Disallow: /*?*filter=
+Disallow: /*?*sort=
+Disallow: /*?*page=
+
+# Allow CSS and JS for rendering
+Allow: /*.css$
+Allow: /*.js$
+Allow: /*.webp$
+Allow: /*.jpg$
+Allow: /*.png$
+
+# Crawl delay (optional - be nice to server)
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://freshwax.co.uk/sitemap.xml

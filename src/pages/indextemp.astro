@@ -4,6 +4,7 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import ReleasePlate from '../components/ReleasePlate.astro';
+import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
 
 import { getReleasesForPage } from '../lib/releases';
 
@@ -24,8 +25,8 @@ const featuredReleases = await getReleasesForPage(20);
       
       <div style="max-width: 80rem; margin: 0 auto; padding: 0 1.5rem; text-align: center; position: relative; z-index: 10;">
         <div class="hero-content" style="animation: fadeInUp 1.2s ease-out;">
-          <h1 style="font-family: 'Space Grotesk', sans-serif; font-size: 5.5rem; font-weight: 900; margin-bottom: 0.5rem; letter-spacing: -0.02em; text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 80px rgba(220, 38, 38, 0.2); line-height: 0.95; text-transform: uppercase;">
-            FRESH WAX
+          <h1 class="main-title">
+            FRESH <span class="text-red">WAX</span>
           </h1>
           <p style="font-size: 1.25rem; color: #f9fafb; font-weight: 300; letter-spacing: 0.3em; margin-bottom: 2.5rem; text-transform: uppercase; opacity: 0.9;">
             Jungle & Drum and Bass
@@ -101,11 +102,40 @@ const featuredReleases = await getReleasesForPage(20);
 
   </main>
 
+  <FloatingShuffleButton />
   <Footer />
 </Layout>
 
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@700;900&display=swap');
+
+  .main-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 5.75rem;
+    font-weight: 900;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 80px rgba(220, 38, 38, 0.2);
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+
+  .main-title .text-red {
+    color: #dc2626;
+    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 60px rgba(220, 38, 38, 0.5);
+  }
+
+  @media (min-width: 768px) {
+    .main-title {
+      font-size: 6.75rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .main-title {
+      font-size: 7.25rem;
+    }
+  }
 
   @keyframes kittScanner {
     0% { left: -100%; opacity: 0; }
@@ -145,8 +175,8 @@ const featuredReleases = await getReleasesForPage(20);
   .release-item:nth-child(5) { animation-delay: 0.25s; }
 
   @media (max-width: 640px) {
-    .hero-content h1 {
-      font-size: 3rem !important;
+    .main-title {
+      font-size: 3.25rem !important;
     }
     .glass-panel {
       padding: 10px 20px !important;
@@ -155,6 +185,28 @@ const featuredReleases = await getReleasesForPage(20);
     }
     .glass-panel span[style*="color: rgba(220, 38, 38"] {
       display: none !important;
+    }
+  }
+  
+  /* Tablet optimizations */
+  @media (max-width: 768px) {
+    .main-title {
+      font-size: 4rem !important;
+    }
+  }
+  
+  /* Touch-friendly CTA button */
+  @media (hover: none) and (pointer: coarse) {
+    .cta-button {
+      min-height: 48px;
+      padding: 1rem 2rem;
+    }
+  }
+  
+  /* Safe area for notched devices */
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    main {
+      padding-bottom: env(safe-area-inset-bottom);
     }
   }
 </style>

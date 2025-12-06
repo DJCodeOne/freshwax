@@ -1,0 +1,1302 @@
+---
+// src/pages/order-confirmation/[id].astro
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+export const prerender = false;
+
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+const { id } = Astro.params;
+let order = null;
+let error = null;
+
+try {
+  const orderDoc = await db.collection('orders').doc(id).get();
+  if (orderDoc.exists) {
+    order = { id: orderDoc.id, ...orderDoc.data() };
+  } else {
+    error = 'Order not found';
+  }
+} catch (e) {
+  console.error('Error fetching order:', e);
+  error = 'Failed to load order';
+}
+
+const formatDate = (dateStr: string) => {
+  return new Date(dateStr).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+// For digital items, fetch download URLs directly from releases if not in order
+const enrichedItems = await Promise.all((order?.items || []).map(async (item: any) => {
+  
+  // Skip if not a digital item
+  if (item.type !== 'digital' && item.type !== 'release' && item.type !== 'track') {
+    return item;
+  }
+  
+  // If already has download URLs, use them
+  if (item.downloads?.tracks?.length > 0 && item.downloads.tracks[0]?.mp3Url) {
+    return item;
+  }
+  
+  // Fetch from release document
+  const releaseId = item.releaseId || item.productId || item.id;
+  if (!releaseId) {
+    return item;
+  }
+  
+  try {
+    const releaseDoc = await db.collection('releases').doc(releaseId).get();
+    
+    if (releaseDoc.exists) {
+      const releaseData = releaseDoc.data();
+      
+      
+      // If single track purchase, only include that track
+      if (item.type === 'track') {
+        // Try to find the track by various methods
+        let track = null;
+        
+        // Method 1: Match by trackId
+        if (item.trackId) {
+          track = (releaseData?.tracks || []).find((t: any) => 
+            t.id === item.trackId || 
+            t.trackId === item.trackId ||
+            String(t.trackNumber) === String(item.trackId)
+          );
+        }
+        
+        // Method 2: Match by track name from item name (e.g., "Code One - Brain Melt" -> "Brain Melt")
+        if (!track && item.name) {
+          const itemNameParts = item.name.split(' - ');
+          const trackNameFromItem = itemNameParts.length > 1 ? itemNameParts.slice(1).join(' - ') : item.name;
+          track = (releaseData?.tracks || []).find((t: any) => 
+            (t.trackName || t.name || '').toLowerCase() === trackNameFromItem.toLowerCase()
+          );
+        }
+        
+        // Method 3: Match by title field
+        if (!track && item.title) {
+          track = (releaseData?.tracks || []).find((t: any) => 
+            (t.trackName || t.name || '').toLowerCase() === item.title.toLowerCase()
+          );
+        }
+        
+        // Get artist and release name for filename
+        const artistName = releaseData?.artistName || item.artist || 'Unknown Artist';
+        const releaseName = releaseData?.releaseName || releaseData?.title || item.title || 'Release';
+        
+        if (track) {
+          return {
+            ...item,
+            downloads: {
+              artistName,
+              releaseName,
+              artworkUrl: releaseData?.artworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || null,
+              tracks: [{
+                name: track.trackName || track.name || item.title,
+                mp3Url: track.mp3Url || null,
+                wavUrl: track.wavUrl || null
+              }]
+            }
+          };
+        } else {
+          // Fallback: include all tracks if we can't find the specific one
+          return {
+            ...item,
+            downloads: {
+              artistName,
+              releaseName,
+              artworkUrl: releaseData?.artworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || null,
+              tracks: (releaseData?.tracks || []).map((t: any) => ({
+                name: t.trackName || t.name,
+                mp3Url: t.mp3Url || null,
+                wavUrl: t.wavUrl || null
+              }))
+            }
+          };
+        }
+      }
+      
+      // Full release - include all tracks
+      const artistName = releaseData?.artistName || item.artist || 'Unknown Artist';
+      const releaseName = releaseData?.releaseName || releaseData?.title || item.title || 'Release';
+      
+      return {
+        ...item,
+        downloads: {
+          artistName,
+          releaseName,
+          artworkUrl: releaseData?.artworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || null,
+          tracks: (releaseData?.tracks || []).map((track: any) => ({
+            name: track.trackName || track.name,
+            mp3Url: track.mp3Url || null,
+            wavUrl: track.wavUrl || null
+          }))
+        }
+      };
+    } else {
+    }
+  } catch (e) {
+    console.error('[order-confirmation] Error fetching release:', releaseId, e);
+  }
+  
+  return item;
+}));
+
+const digitalItems = enrichedItems.filter((item: any) => 
+  item.downloads?.tracks?.length > 0 || 
+  item.type === 'digital' || 
+  item.type === 'release' ||
+  item.type === 'track'
+) || [];
+
+// Group digital items by release to avoid duplicate artwork downloads
+const groupedDigitalItems: any[] = [];
+const releaseMap = new Map<string, any>();
+
+digitalItems.forEach((item: any) => {
+  const releaseId = item.releaseId || item.productId || item.id;
+  
+  if (releaseMap.has(releaseId)) {
+    // Add tracks to existing release group
+    const existing = releaseMap.get(releaseId);
+    if (item.downloads?.tracks) {
+      item.downloads.tracks.forEach((track: any) => {
+        // Avoid duplicate tracks
+        const trackExists = existing.downloads.tracks.some((t: any) => t.name === track.name);
+        if (!trackExists) {
+          existing.downloads.tracks.push(track);
+        }
+      });
+    }
+  } else {
+    // Create new release group
+    releaseMap.set(releaseId, {
+      ...item,
+      releaseId,
+      downloads: {
+        artistName: item.downloads?.artistName || item.artist || 'Unknown Artist',
+        releaseName: item.downloads?.releaseName || item.title || 'Release',
+        artworkUrl: item.downloads?.artworkUrl || item.image || null,
+        tracks: item.downloads?.tracks ? [...item.downloads.tracks] : []
+      }
+    });
+  }
+});
+
+releaseMap.forEach((item) => groupedDigitalItems.push(item));
+
+const physicalItems = enrichedItems.filter((item: any) => 
+  item.type === 'vinyl' || 
+  item.type === 'merch'
+) || [];
+---
+
+<Layout title="Order Confirmed - Fresh Wax" noindex={true}>
+  <Header />
+  
+  <main class="confirmation-main">
+    <div class="container">
+      {error ? (
+        <div class="error-state">
+          <h1>ORDER NOT FOUND</h1>
+          <p>{error}</p>
+          <a href="/" class="btn btn-primary">Go to Store</a>
+        </div>
+      ) : order && (
+        <>
+          <!-- Success Header -->
+          <div class="success-header">
+            <div class="success-badge">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1>ORDER CONFIRMED</h1>
+            <p class="order-ref">Order: <span>{order.orderNumber}</span></p>
+            <p class="email-sent">Confirmation sent to {order.customer.email}</p>
+          </div>
+          
+          <!-- Digital Downloads -->
+          {groupedDigitalItems.length > 0 && (
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  YOUR DOWNLOADS
+                </h2>
+                <span class="status ready">Ready</span>
+              </div>
+              <div class="card-body">
+                {groupedDigitalItems.map((item: any) => (
+                  <div class="download-release">
+                    <div class="release-header">
+                      <img src={item.image || item.downloads?.artworkUrl || '/logo.webp'} alt={item.downloads?.releaseName || item.name} class="release-art" />
+                      <div class="release-info">
+                        <h3>{item.downloads?.artistName} - {item.downloads?.releaseName}</h3>
+                        <p>
+                          {item.downloads?.tracks?.length === 1 ? 'Single Track' : 'Digital Release'}
+                          {item.downloads?.tracks?.length > 0 && ` · ${item.downloads.tracks.length} ${item.downloads.tracks.length === 1 ? 'track' : 'tracks'}`}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {item.downloads?.artworkUrl && (
+                      <div class="artwork-dl" style="margin-bottom: 1rem;">
+                        <button type="button" class="dl-btn art" data-url={item.downloads.artworkUrl} data-filename={`${item.downloads.artistName} - ${item.downloads.releaseName} - Artwork.jpg`}>
+                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          Download Artwork
+                        </button>
+                      </div>
+                    )}
+                    
+                    {item.downloads?.tracks?.length > 0 ? (
+                      <div class="track-list">
+                        {item.downloads.tracks.map((track: any, idx: number) => (
+                          <div class="track-row">
+                            <span class="track-name">
+                              <span class="num">{String(idx + 1).padStart(2, '0')}</span>
+                              {track.name}
+                            </span>
+                            <div class="dl-buttons">
+                              {track.mp3Url ? (
+                                <button type="button" class="dl-btn mp3" data-url={track.mp3Url} data-filename={`${item.downloads.artistName} - ${track.name} - ${item.downloads.releaseName}.mp3`}>
+                                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                  </svg>
+                                  MP3
+                                </button>
+                              ) : (
+                                <span style="font-size: 0.75rem; color: #999;">No MP3</span>
+                              )}
+                              {track.wavUrl ? (
+                                <button type="button" class="dl-btn wav" data-url={track.wavUrl} data-filename={`${item.downloads.artistName} - ${track.name} - ${item.downloads.releaseName}.wav`}>
+                                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                  </svg>
+                                  WAV
+                                </button>
+                              ) : (
+                                <span style="font-size: 0.75rem; color: #999;">No WAV</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style="background: #fef3c7; padding: 0.75rem; border-radius: 6px; font-size: 0.8125rem; color: #92400e;">
+                        No download files available for this item. Release ID: {item.releaseId || item.productId || 'unknown'}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <!-- Physical Items -->
+          {physicalItems.length > 0 && (
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                  PHYSICAL ITEMS
+                </h2>
+                <span class="status processing">Processing</span>
+              </div>
+              <div class="card-body">
+                {physicalItems.map((item: any) => (
+                  <div class="order-item">
+                    <img src={item.image || '/logo.webp'} alt={item.name} class="item-img" />
+                    <div class="item-details">
+                      <h4>{item.name}</h4>
+                      <span class="item-meta">
+                        {item.type}
+                        {item.size && ` · ${item.size}`}
+                        {item.color && ` · ${item.color}`}
+                        {item.quantity > 1 && ` · ×${item.quantity}`}
+                      </span>
+                    </div>
+                    <span class="item-price">£{(item.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <!-- Shipping -->
+          {order.shipping && (
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  SHIPPING TO
+                </h2>
+              </div>
+              <div class="card-body">
+                <div class="address-block">
+                  <strong>{order.customer.firstName} {order.customer.lastName}</strong><br>
+                  {order.shipping.address1}<br>
+                  {order.shipping.address2 && <>{order.shipping.address2}<br></>}
+                  {order.shipping.city}, {order.shipping.postcode}<br>
+                  {order.shipping.county && <>{order.shipping.county}<br></>}
+                  {order.shipping.country}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <!-- Order Summary -->
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">ORDER SUMMARY</h2>
+            </div>
+            <div class="totals-section">
+              <div class="total-line">
+                <span class="lbl">Subtotal</span>
+                <span class="val">£{order.totals.subtotal.toFixed(2)}</span>
+              </div>
+              <div class="total-line">
+                <span class="lbl">Shipping</span>
+                <span class={`val ${!order.hasPhysicalItems || order.totals.shipping === 0 ? 'green' : ''}`}>
+                  {order.hasPhysicalItems ? (order.totals.shipping === 0 ? 'FREE' : '£' + order.totals.shipping.toFixed(2)) : 'Digital'}
+                </span>
+              </div>
+              <div class="total-line grand">
+                <span class="lbl">TOTAL PAID</span>
+                <span class="val">£{order.totals.total.toFixed(2)}</span>
+              </div>
+              <p class="order-date">Ordered on {formatDate(order.createdAt)}</p>
+            </div>
+          </div>
+          
+          <!-- Actions -->
+          <div class="actions">
+            <a href="/" class="btn btn-primary">Continue Shopping</a>
+            <a href="/account/dashboard" class="btn btn-secondary">View Orders</a>
+          </div>
+        </>
+      )}
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .confirmation-main {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #111 0%, #1a1a1a 100%);
+    padding: 3rem 1.5rem;
+  }
+  
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  
+  /* Success Header */
+  .success-header {
+    text-align: center;
+    padding: 3rem 0;
+  }
+  
+  .success-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 90px;
+    height: 90px;
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    border-radius: 50%;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 32px rgba(34, 197, 94, 0.3);
+  }
+  
+  .success-badge svg {
+    width: 48px;
+    height: 48px;
+    color: #fff;
+  }
+  
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.5rem;
+    font-weight: 400;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.75rem;
+    color: #fff;
+  }
+  
+  .order-ref {
+    font-size: 1.25rem;
+    color: #22c55e;
+  }
+  
+  .order-ref span {
+    color: #fff;
+    font-weight: 600;
+  }
+  
+  .email-sent {
+    margin-top: 1rem;
+    font-size: 1rem;
+    color: #ef4444;
+  }
+  
+  /* Cards */
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    color: #000;
+  }
+  
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 2rem;
+    background: #f5f5f5;
+    border-bottom: 1px solid #e8e8e8;
+  }
+  
+  .card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    color: #000;
+    margin: 0;
+  }
+  
+  .card-title svg {
+    width: 24px;
+    height: 24px;
+    color: #dc2626;
+  }
+  
+  .card-body {
+    padding: 1.75rem 2rem;
+  }
+  
+  /* Status Badges */
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  
+  .status.ready {
+    background: #dcfce7;
+    color: #16a34a;
+  }
+  
+  .status.processing {
+    background: #fef9c3;
+    color: #a16207;
+  }
+  
+  /* Download Items */
+  .download-release {
+    padding: 1.5rem 0;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .download-release:last-child { border-bottom: none; }
+  .download-release:first-child { padding-top: 0; }
+  
+  .release-header {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .release-art {
+    width: 100px;
+    height: 100px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: #eee;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .release-info h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #000;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .release-info p {
+    font-size: 0.9375rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0;
+  }
+  
+  /* Track List */
+  .track-list {
+    background: #f8f8f8;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  .track-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1.5rem;
+    align-items: center;
+    padding: 1.125rem 1.5rem;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .track-row:last-child { border-bottom: none; }
+  
+  .track-row:hover {
+    background: #f0f0f0;
+  }
+  
+  .track-name {
+    font-size: 1.0625rem;
+    font-weight: 500;
+    color: #333;
+  }
+  
+  .track-name .num {
+    display: inline-block;
+    width: 32px;
+    color: #999;
+    font-weight: 600;
+  }
+  
+  /* Download Buttons */
+  .dl-buttons {
+    display: flex;
+    gap: 0.75rem;
+  }
+  
+  .dl-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    text-decoration: none;
+  }
+  
+  .dl-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .dl-btn.mp3 {
+    background: #22c55e;
+    color: #fff;
+  }
+  
+  .dl-btn.mp3:hover {
+    background: #16a34a;
+    transform: translateY(-2px);
+  }
+  
+  .dl-btn.wav {
+    background: #333;
+    color: #fff;
+  }
+  
+  .dl-btn.wav:hover {
+    background: #000;
+    transform: translateY(-2px);
+  }
+  
+  .dl-btn.art {
+    background: #2563eb;
+    color: #fff;
+  }
+  
+  .dl-btn.art:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+  }
+  
+  .dl-btn.downloading {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  
+  .artwork-dl {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid #eee;
+  }
+  
+  /* Order Items */
+  .order-item {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    gap: 1.25rem;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .order-item:last-child { border-bottom: none; }
+  
+  .item-img {
+    width: 72px;
+    height: 72px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: #eee;
+  }
+  
+  .item-details h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #000;
+    margin: 0 0 0.375rem 0;
+  }
+  
+  .item-meta {
+    font-size: 0.9375rem;
+    color: #888;
+    text-transform: uppercase;
+  }
+  
+  .item-price {
+    font-weight: 700;
+    font-size: 1.25rem;
+  }
+  
+  /* Address */
+  .address-block {
+    font-size: 1.0625rem;
+    line-height: 1.8;
+    color: #333;
+  }
+  
+  /* Totals */
+  .totals-section {
+    padding: 1.5rem 2rem;
+  }
+  
+  .total-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.625rem 0;
+    font-size: 1.0625rem;
+  }
+  
+  .total-line .lbl { color: #666; }
+  .total-line .val { font-weight: 600; color: #000; }
+  .total-line .val.green { color: #16a34a; }
+  
+  .total-line.grand {
+    margin-top: 1rem;
+    padding-top: 1.25rem;
+    border-top: 2px solid #000;
+  }
+  
+  .total-line.grand .lbl {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.375rem;
+    color: #000;
+  }
+  
+  .total-line.grand .val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+  }
+  
+  .order-date {
+    margin-top: 1.25rem;
+    font-size: 1rem;
+    color: #888;
+    text-align: center;
+  }
+  
+  /* Actions */
+  .actions {
+    display: flex;
+    gap: 1.25rem;
+    justify-content: center;
+    margin-top: 2.5rem;
+    padding-top: 2rem;
+  }
+  
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    padding: 1rem 2rem;
+    border-radius: 10px;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  
+  .btn-primary {
+    background: #fff;
+    color: #000;
+  }
+  
+  .btn-primary:hover {
+    background: #dc2626;
+    color: #fff;
+    transform: translateY(-2px);
+  }
+  
+  .btn-secondary {
+    background: rgba(255,255,255,0.1);
+    color: #ccc;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  
+  .btn-secondary:hover {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+  }
+  
+  /* Error */
+  .error-state {
+    text-align: center;
+    padding: 5rem 2.5rem;
+    background: #222;
+    border-radius: 16px;
+  }
+  
+  .error-state h1 { margin-bottom: 1rem; }
+  .error-state p { color: #888; margin-bottom: 2.5rem; font-size: 1.125rem; }
+  
+  /* Responsive - Tablet Landscape */
+  @media (max-width: 1024px) {
+    .container {
+      max-width: 100%;
+      padding: 0 1rem;
+    }
+    
+    .confirmation-main {
+      padding: 2.5rem 1rem;
+    }
+  }
+  
+  /* Responsive - Tablet Portrait */
+  @media (max-width: 768px) {
+    .confirmation-main {
+      padding: 2rem 1rem;
+    }
+    
+    .success-header {
+      padding: 2rem 0;
+    }
+    
+    .success-badge {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 1.5rem;
+    }
+    
+    .success-badge svg {
+      width: 40px;
+      height: 40px;
+    }
+    
+    h1 {
+      font-size: 2.75rem;
+    }
+    
+    .order-ref {
+      font-size: 1.125rem;
+    }
+    
+    .card-header {
+      padding: 1rem 1.5rem;
+    }
+    
+    .card-title {
+      font-size: 1.35rem;
+    }
+    
+    .card-body {
+      padding: 1.5rem;
+    }
+    
+    .release-header {
+      grid-template-columns: 90px 1fr;
+      gap: 1.25rem;
+    }
+    
+    .release-art {
+      width: 90px;
+      height: 90px;
+    }
+    
+    .release-info h3 {
+      font-size: 1.125rem;
+    }
+    
+    .track-row {
+      padding: 1rem 1.25rem;
+    }
+    
+    .track-name {
+      font-size: 1rem;
+    }
+    
+    .dl-btn {
+      padding: 0.625rem 1rem;
+      font-size: 0.875rem;
+    }
+    
+    .order-item {
+      grid-template-columns: 64px 1fr auto;
+      gap: 1rem;
+    }
+    
+    .item-img {
+      width: 64px;
+      height: 64px;
+    }
+    
+    .totals-section {
+      padding: 1.25rem 1.5rem;
+    }
+    
+    .total-line {
+      font-size: 1rem;
+    }
+    
+    .total-line.grand .lbl {
+      font-size: 1.25rem;
+    }
+    
+    .total-line.grand .val {
+      font-size: 1.5rem;
+    }
+    
+    .btn {
+      padding: 0.875rem 1.5rem;
+      font-size: 1rem;
+    }
+  }
+  
+  /* Responsive - Mobile Large */
+  @media (max-width: 600px) {
+    .confirmation-main {
+      padding: 1.5rem 0.75rem;
+    }
+    
+    .success-header {
+      padding: 1.5rem 0;
+    }
+    
+    .success-badge {
+      width: 72px;
+      height: 72px;
+      margin-bottom: 1.25rem;
+    }
+    
+    .success-badge svg {
+      width: 36px;
+      height: 36px;
+    }
+    
+    h1 {
+      font-size: 2.25rem;
+    }
+    
+    .order-ref {
+      font-size: 1rem;
+    }
+    
+    .email-sent {
+      font-size: 0.9375rem;
+    }
+    
+    .card {
+      border-radius: 12px;
+      margin-bottom: 1rem;
+    }
+    
+    .card-header {
+      padding: 0.875rem 1.25rem;
+    }
+    
+    .card-title {
+      font-size: 1.125rem;
+      gap: 0.5rem;
+    }
+    
+    .card-title svg {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .status {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.75rem;
+    }
+    
+    .card-body {
+      padding: 1.25rem;
+    }
+    
+    .download-release {
+      padding: 1.25rem 0;
+    }
+    
+    .release-header {
+      grid-template-columns: 80px 1fr;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    
+    .release-art {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+    }
+    
+    .release-info h3 {
+      font-size: 1rem;
+      margin-bottom: 0.375rem;
+    }
+    
+    .release-info p {
+      font-size: 0.8125rem;
+    }
+    
+    .artwork-dl {
+      margin-bottom: 1rem;
+    }
+    
+    .track-list {
+      border-radius: 8px;
+    }
+    
+    .track-row {
+      grid-template-columns: 1fr;
+      gap: 0.875rem;
+      padding: 1rem 1.125rem;
+    }
+    
+    .track-name {
+      font-size: 0.9375rem;
+    }
+    
+    .track-name .num {
+      width: 28px;
+    }
+    
+    .dl-buttons {
+      justify-content: flex-start;
+      gap: 0.625rem;
+    }
+    
+    .dl-btn {
+      padding: 0.625rem 1rem;
+      font-size: 0.8125rem;
+      border-radius: 6px;
+    }
+    
+    .dl-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+    
+    .order-item {
+      grid-template-columns: 56px 1fr auto;
+      gap: 0.875rem;
+      padding: 0.875rem 0;
+    }
+    
+    .item-img {
+      width: 56px;
+      height: 56px;
+      border-radius: 8px;
+    }
+    
+    .item-details h4 {
+      font-size: 0.9375rem;
+    }
+    
+    .item-meta {
+      font-size: 0.8125rem;
+    }
+    
+    .item-price {
+      font-size: 1rem;
+    }
+    
+    .address-block {
+      font-size: 0.9375rem;
+      line-height: 1.7;
+    }
+    
+    .totals-section {
+      padding: 1.125rem 1.25rem;
+    }
+    
+    .total-line {
+      font-size: 0.9375rem;
+      padding: 0.5rem 0;
+    }
+    
+    .total-line.grand {
+      margin-top: 0.75rem;
+      padding-top: 1rem;
+    }
+    
+    .total-line.grand .lbl {
+      font-size: 1.125rem;
+    }
+    
+    .total-line.grand .val {
+      font-size: 1.375rem;
+    }
+    
+    .order-date {
+      font-size: 0.875rem;
+      margin-top: 1rem;
+    }
+    
+    .actions {
+      flex-direction: column;
+      gap: 0.875rem;
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 0.875rem 1.5rem;
+      font-size: 0.9375rem;
+      border-radius: 8px;
+    }
+    
+    .error-state {
+      padding: 3rem 1.5rem;
+      border-radius: 12px;
+    }
+    
+    .error-state h1 {
+      font-size: 2rem;
+    }
+    
+    .error-state p {
+      font-size: 1rem;
+    }
+  }
+  
+  /* Responsive - Mobile Small */
+  @media (max-width: 400px) {
+    .confirmation-main {
+      padding: 1rem 0.5rem;
+    }
+    
+    h1 {
+      font-size: 1.875rem;
+    }
+    
+    .order-ref {
+      font-size: 0.9375rem;
+    }
+    
+    .card-header {
+      padding: 0.75rem 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    
+    .card-title {
+      font-size: 1rem;
+    }
+    
+    .card-body {
+      padding: 1rem;
+    }
+    
+    .release-header {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+    
+    .release-art {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto;
+    }
+    
+    .release-info {
+      text-align: center;
+    }
+    
+    .dl-buttons {
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    .dl-btn {
+      flex: 1;
+      min-width: 80px;
+      justify-content: center;
+    }
+    
+    .order-item {
+      grid-template-columns: 48px 1fr;
+      gap: 0.75rem;
+    }
+    
+    .item-img {
+      width: 48px;
+      height: 48px;
+    }
+    
+    .item-price {
+      grid-column: 2;
+      text-align: left;
+      margin-top: 0.25rem;
+    }
+    
+    .item-details h4 {
+      font-size: 0.875rem;
+    }
+    
+    .totals-section {
+      padding: 1rem;
+    }
+    
+    .actions {
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+    }
+  }
+  
+  /* Touch-friendly improvements */
+  @media (hover: none) and (pointer: coarse) {
+    .dl-btn {
+      min-height: 44px;
+    }
+    
+    .btn {
+      min-height: 48px;
+    }
+    
+    .track-row {
+      padding: 1rem 1.125rem;
+    }
+  }
+</style>
+
+<script>
+  // Download via server-side proxy to bypass CORS
+  async function downloadFile(url: string, filename: string, button: HTMLButtonElement) {
+    const originalText = button.innerHTML;
+    button.classList.add('downloading');
+    button.innerHTML = `<svg class="animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" stroke-width="2" opacity="0.25"/><path d="M4 12a8 8 0 018-8" stroke-width="2"/></svg> Downloading...`;
+    
+    try {
+      // Use server-side proxy to fetch the file
+      const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+      
+      const response = await fetch(proxyUrl);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Download failed: ${response.status}`);
+      }
+      
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      window.URL.revokeObjectURL(blobUrl);
+      
+      button.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Done!`;
+      
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.classList.remove('downloading');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Download error:', error);
+      button.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> Error`;
+      
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.classList.remove('downloading');
+      }, 2000);
+    }
+  }
+  
+  // Attach click handlers to all download buttons
+  document.querySelectorAll('.dl-btn[data-url]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const button = e.currentTarget as HTMLButtonElement;
+      const url = button.dataset.url;
+      const filename = button.dataset.filename || 'download';
+      
+      if (url) {
+        downloadFile(url, filename, button);
+      }
+    });
+  });
+</script>

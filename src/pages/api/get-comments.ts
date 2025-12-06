@@ -1,7 +1,13 @@
 // src/pages/api/get-comments.ts
-// Uses Firebase REST API - works on Cloudflare Pages (no Admin SDK)
+// Uses Firebase REST API - works on Cloudflare Pages
 import type { APIRoute } from 'astro';
 import { getDocument } from '../../lib/firebase-rest';
+
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
 
 export const prerender = false;
 
@@ -20,9 +26,8 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
 
-    console.log(`[get-comments] Fetching comments for: ${releaseId}`);
+    log.info('[get-comments] Fetching comments for:', releaseId);
 
-    // Fetch release document using REST API
     const release = await getDocument('releases', releaseId);
     
     if (!release) {
@@ -35,17 +40,15 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
 
-    // Get comments array from release
     const comments = release.comments || [];
     
-    // Sort by timestamp (newest first)
     const sortedComments = [...comments].sort((a: any, b: any) => {
       const dateA = new Date(a.timestamp || a.createdAt || 0).getTime();
       const dateB = new Date(b.timestamp || b.createdAt || 0).getTime();
       return dateB - dateA;
     });
 
-    console.log(`[get-comments] ✓ Found ${sortedComments.length} comments for ${releaseId}`);
+    log.info('[get-comments] Found', sortedComments.length, 'comments');
 
     return new Response(JSON.stringify({
       success: true,
@@ -61,7 +64,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error('[get-comments] Error:', error);
+    log.error('[get-comments] Error:', error);
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to fetch comments'

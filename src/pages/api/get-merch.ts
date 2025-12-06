@@ -1,7 +1,13 @@
 // src/pages/api/get-merch.ts
-// Uses Firebase REST API - works on Cloudflare Pages (no Admin SDK)
+// Uses Firebase REST API - works on Cloudflare Pages
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument } from '../../lib/firebase-rest';
+import { queryCollection, getDocument, listCollection } from '../../lib/firebase-rest';
+
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
 
 export const prerender = false;
 
@@ -12,9 +18,8 @@ export const GET: APIRoute = async ({ request }) => {
   const limit = limitParam ? parseInt(limitParam) : 50;
   
   try {
-    // If specific ID requested, fetch single item
     if (merchId) {
-      console.log(`[GET-MERCH] Fetching merch item: ${merchId}`);
+      log.info('[get-merch] Fetching merch item:', merchId);
       
       const item = await getDocument('merch', merchId);
       
@@ -41,29 +46,23 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
     
-    // Otherwise, fetch all merch
-    console.log(`[GET-MERCH] Fetching up to ${limit} merch items...`);
+    log.info('[get-merch] Fetching up to', limit, 'items');
     
-    // Try to get published/active items first
     let items = await queryCollection('merch', {
       filters: [{ field: 'published', op: 'EQUAL', value: true }]
     });
     
-    // If no results, try 'active' field
     if (items.length === 0) {
       items = await queryCollection('merch', {
         filters: [{ field: 'active', op: 'EQUAL', value: true }]
       });
     }
     
-    // If still no results, get all items
     if (items.length === 0) {
-      const { listCollection } = await import('../../lib/firebase-rest');
       const result = await listCollection('merch', limit);
       items = result.documents;
     }
     
-    // Normalize merch data
     const normalizedItems = items.map(item => ({
       id: item.id,
       name: item.name || item.title || 'Untitled Item',
@@ -78,7 +77,6 @@ export const GET: APIRoute = async ({ request }) => {
       ...item
     }));
     
-    // Sort by name or date added
     normalizedItems.sort((a, b) => {
       if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
         return a.sortOrder - b.sortOrder;
@@ -86,10 +84,9 @@ export const GET: APIRoute = async ({ request }) => {
       return (a.name || '').localeCompare(b.name || '');
     });
     
-    // Apply limit
     const limitedItems = limit > 0 ? normalizedItems.slice(0, limit) : normalizedItems;
     
-    console.log(`[GET-MERCH] ✓ Returning ${limitedItems.length} items`);
+    log.info('[get-merch] Returning', limitedItems.length, 'items');
     
     return new Response(JSON.stringify({ 
       success: true,
@@ -105,7 +102,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
     
   } catch (error) {
-    console.error('[GET-MERCH] Error:', error);
+    log.error('[get-merch] Error:', error);
     return new Response(JSON.stringify({ 
       success: false,
       error: 'Failed to fetch merch',

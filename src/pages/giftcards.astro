@@ -1,0 +1,1514 @@
+---
+// src/pages/giftcards.astro
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+export const prerender = false;
+---
+
+<Layout title="Gift Cards - Fresh Wax">
+  <Header />
+  
+  <main class="giftcards-main">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-content">
+        <div class="hero-icon">🎁</div>
+        <h1>GIFT <span class="red">CARDS</span></h1>
+        <p class="hero-subtitle">Give the gift of underground music</p>
+      </div>
+    </section>
+    
+    <!-- Redeem Section -->
+    <section class="redeem-section">
+      <div class="redeem-card">
+        <h2>Have a Gift Card?</h2>
+        <p>Enter your code in your dashboard or at checkout to credit your account</p>
+        
+        <div id="redeemContainer">
+          <div id="loginPrompt" class="login-prompt">
+            <p>Please <a href="/login" id="signInLink">sign in</a> or <a href="/register" id="registerLink">create an account</a> to redeem your gift card.</p>
+          </div>
+          
+          <form id="redeemForm" class="redeem-form hidden">
+            <div class="code-input-wrapper">
+              <input 
+                type="text" 
+                id="giftCardCode" 
+                placeholder="FWGC-XXXX-XXXX-XXXX" 
+                maxlength="19"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button type="submit" id="redeemBtn">
+                <span class="btn-text">Redeem</span>
+                <span class="btn-loading hidden">
+                  <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" /></svg>
+                </span>
+              </button>
+            </div>
+            <p id="redeemError" class="error-message"></p>
+            <p id="redeemSuccess" class="success-message"></p>
+          </form>
+        </div>
+        
+        <!-- Current Balance (shown when logged in) -->
+        <div id="balanceDisplay" class="balance-display hidden">
+          <div class="balance-label">Your Credit Balance</div>
+          <div class="balance-amount" id="creditBalance">£0.00</div>
+          <a href="/account/dashboard#credit" class="view-history-link">View transaction history →</a>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Info Section -->
+    <section class="info-section">
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-icon">🎵</div>
+          <h3>Digital Downloads</h3>
+          <p>Use your credit to buy exclusive jungle & drum and bass releases, tracks, and EPs.</p>
+        </div>
+        <div class="info-card">
+          <div class="info-icon">📀</div>
+          <h3>Vinyl Records</h3>
+          <p>Limited edition vinyl pressings from Underground Lair Recordings and partner labels.</p>
+        </div>
+        <div class="info-card">
+          <div class="info-icon">👕</div>
+          <h3>Merchandise</h3>
+          <p>Fresh Wax branded t-shirts, hoodies, and accessories.</p>
+        </div>
+        <div class="info-card">
+          <div class="info-icon">🎧</div>
+          <h3>DJ Mixes</h3>
+          <p>Support your favourite DJs and discover new underground sounds.</p>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Buy Gift Cards Section -->
+    <section class="buy-section">
+      <div class="buy-container">
+        <h2>Buy a Gift Card</h2>
+        <p class="buy-subtitle">Perfect for birthdays, Christmas, or just because. Send credit to any music lover.</p>
+        
+        <div class="amount-selector">
+          <button type="button" class="amount-btn" onclick="selectAmount(5, this)">£5</button>
+          <button type="button" class="amount-btn" onclick="selectAmount(10, this)">£10</button>
+          <button type="button" class="amount-btn" onclick="selectAmount(20, this)">£20</button>
+          <button type="button" class="amount-btn" onclick="selectAmount(50, this)">£50</button>
+          <button type="button" class="amount-btn" onclick="selectAmount(75, this)">£75</button>
+          <button type="button" class="amount-btn" onclick="selectAmount('custom', this)">Custom</button>
+        </div>
+        
+        <div id="customAmountWrapper" class="custom-amount-wrapper hidden">
+          <label for="customAmount">Enter amount (£5 - £500)</label>
+          <input type="number" id="customAmount" min="5" max="500" placeholder="Enter amount" />
+        </div>
+        
+        <div class="selected-amount">
+          <span class="amount-label">Gift Card Value:</span>
+          <span class="amount-value" id="selectedAmount">£0</span>
+        </div>
+        
+        <div class="recipient-section">
+          <h3 class="recipient-title">Recipient Details</h3>
+          
+          <div class="recipient-toggle">
+            <label class="toggle-option">
+              <input type="radio" name="recipientType" value="gift" checked />
+              <span class="toggle-label">🎁 Send as Gift</span>
+            </label>
+            <label class="toggle-option">
+              <input type="radio" name="recipientType" value="self" />
+              <span class="toggle-label">👤 For Myself</span>
+            </label>
+          </div>
+          
+          <div id="giftFields" class="gift-fields">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="recipientName">Recipient's Name</label>
+                <input type="text" id="recipientName" placeholder="Their name" maxlength="50" />
+              </div>
+              <div class="form-group">
+                <label for="recipientEmail">Recipient's Email *</label>
+                <input type="email" id="recipientEmail" placeholder="their@email.com" required />
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="giftMessage">Personal Message (optional)</label>
+              <textarea id="giftMessage" placeholder="Write a message to include in the email..." maxlength="500" rows="3"></textarea>
+              <span class="char-count"><span id="messageCount">0</span>/500</span>
+            </div>
+            
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" id="sendCopyToMe" checked />
+                <span>Send a copy to my email too</span>
+              </label>
+            </div>
+          </div>
+          
+          <div id="selfFields" class="self-fields hidden">
+            <div class="self-info">
+              <p class="self-note">The gift card code will be sent to you:</p>
+              <div class="self-details">
+                <div class="self-detail-row">
+                  <span class="self-label">Name:</span>
+                  <span class="self-value" id="selfNameDisplay">-</span>
+                </div>
+                <div class="self-detail-row">
+                  <span class="self-label">Email:</span>
+                  <span class="self-value" id="selfEmailDisplay">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="purchaseLoginPrompt" class="purchase-login-prompt">
+          <p>Please <a href="/login" id="purchaseSignInLink">sign in</a> or <a href="/register" id="purchaseRegisterLink">create an account</a> to purchase a gift card.</p>
+        </div>
+        
+        <div id="purchaseActions" class="purchase-actions hidden">
+          <button id="purchaseBtn" class="purchase-btn" disabled>
+            <span class="btn-text">Select an amount</span>
+            <span class="btn-loading hidden">
+              <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" /></svg>
+              Processing...
+            </span>
+          </button>
+          <p class="payment-note">Secure payment powered by Stripe</p>
+        </div>
+        
+        <p id="purchaseError" class="purchase-error"></p>
+        <div id="purchaseSuccess" class="purchase-success hidden">
+          <div class="success-icon">✅</div>
+          <h3>Gift Card Sent!</h3>
+          <p id="successMessage">Your gift card has been sent successfully.</p>
+          <div class="success-code">
+            <span>Gift Card Code:</span>
+            <code id="purchasedCode">FWGC-XXXX-XXXX-XXXX</code>
+            <button id="copyCodeBtn" class="copy-btn">Copy</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- How It Works -->
+    <section class="how-it-works">
+      <h2>How Gift Cards Work</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h4>Get a Code</h4>
+          <p>Receive a gift card code via email or from a friend</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h4>Redeem</h4>
+          <p>Enter your code above to add credit to your account</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h4>Shop</h4>
+          <p>Use your credit at checkout - it's automatically applied!</p>
+        </div>
+      </div>
+    </section>
+    
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .giftcards-main {
+    background: #f5f5f5;
+    min-height: 100vh;
+  }
+  
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #1a1a1a 0%, #000 50%, #1a0a0a 100%);
+    padding: 4rem 1.5rem;
+    text-align: center;
+    border-bottom: 3px solid #dc2626;
+  }
+  
+  .hero-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: bounce 2s ease-in-out infinite;
+  }
+  
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 10vw, 5rem);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    color: #fff;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .hero h1 .red {
+    color: #dc2626;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.25rem;
+    color: #888;
+    margin: 0;
+  }
+  
+  /* Redeem Section */
+  .redeem-section {
+    padding: 3rem 1.5rem;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .redeem-card {
+    background: #fff;
+    border: 3px solid #222;
+    border-radius: 16px;
+    padding: 2.5rem;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  
+  .redeem-card h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: #111;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .redeem-card > p {
+    color: #666;
+    margin: 0 0 2rem 0;
+  }
+  
+  .login-prompt {
+    background: #eef2ff;
+    border: 2px solid #6366f1;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .login-prompt p {
+    color: #4338ca;
+    margin: 0;
+  }
+  
+  .login-prompt a {
+    color: #4f46e5;
+    font-weight: 600;
+  }
+  
+  .redeem-form {
+    margin-bottom: 1.5rem;
+  }
+  
+  .code-input-wrapper {
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .code-input-wrapper input {
+    flex: 1;
+    padding: 1rem 1.25rem;
+    background: #f9f9f9;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    color: #111;
+    font-size: 1.125rem;
+    font-family: 'Monaco', 'Consolas', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  
+  .code-input-wrapper input:focus {
+    outline: none;
+    border-color: #dc2626;
+  }
+  
+  .code-input-wrapper input::placeholder {
+    color: #999;
+    letter-spacing: 0.05em;
+  }
+  
+  .code-input-wrapper button {
+    padding: 1rem 2rem;
+    background: #dc2626;
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 120px;
+  }
+  
+  .code-input-wrapper button:hover {
+    background: #b91c1c;
+  }
+  
+  .code-input-wrapper button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+  
+  .spinner {
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+  }
+  
+  .spinner circle {
+    stroke-dasharray: 50;
+    stroke-dashoffset: 20;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  .error-message {
+    color: #f87171;
+    margin: 1rem 0 0 0;
+    font-size: 0.9375rem;
+    display: none;
+  }
+  
+  .success-message {
+    color: #4ade80;
+    margin: 1rem 0 0 0;
+    font-size: 0.9375rem;
+    display: none;
+  }
+  
+  .balance-display {
+    background: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+    border: 2px solid #10b981;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  
+  .balance-label {
+    color: #6ee7b7;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+  }
+  
+  .balance-amount {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+  
+  .view-history-link {
+    color: #34d399;
+    font-size: 0.875rem;
+    text-decoration: none;
+  }
+  
+  .view-history-link:hover {
+    text-decoration: underline;
+  }
+  
+  /* Info Section */
+  .info-section {
+    padding: 3rem 1.5rem;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .info-card {
+    background: #fff;
+    border: 2px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  
+  .info-card:hover {
+    border-color: #dc2626;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  }
+  
+  .info-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .info-card h3 {
+    color: #111;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.75rem 0;
+  }
+  
+  .info-card p {
+    color: #555;
+    font-size: 1.0625rem;
+    margin: 0;
+    line-height: 1.6;
+  }
+  
+  /* Buy Section */
+  .buy-section {
+    padding: 3rem 1.5rem 4rem;
+    background: linear-gradient(135deg, #1a1a1a 0%, #000 50%, #1a0a0a 100%);
+    border-top: 3px solid #dc2626;
+  }
+  
+  .buy-container {
+    max-width: 700px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  
+  .buy-container h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: #fff;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .buy-subtitle {
+    color: #888;
+    font-size: 1.125rem;
+    margin: 0 0 2rem 0;
+  }
+  
+  .amount-selector {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .amount-btn {
+    padding: 1rem 1.5rem;
+    background: #222;
+    border: 2px solid #444;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 80px;
+  }
+  
+  .amount-btn:hover {
+    border-color: #dc2626;
+    background: #333;
+  }
+  
+  .amount-btn.active {
+    background: #dc2626;
+    border-color: #dc2626;
+  }
+  
+  .custom-amount-wrapper {
+    background: #222;
+    border: 2px solid #444;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .custom-amount-wrapper label {
+    display: block;
+    color: #888;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .custom-amount-wrapper input {
+    width: 100%;
+    max-width: 200px;
+    padding: 0.75rem 1rem;
+    background: #111;
+    border: 2px solid #555;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-align: center;
+  }
+  
+  .custom-amount-wrapper input:focus {
+    outline: none;
+    border-color: #dc2626;
+  }
+  
+  .selected-amount {
+    background: #111;
+    border: 2px solid #dc2626;
+    border-radius: 12px;
+    padding: 1.25rem 2rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .amount-label {
+    color: #888;
+    font-size: 1rem;
+  }
+  
+  .amount-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: #dc2626;
+  }
+  
+  .recipient-section {
+    background: #111;
+    border: 2px solid #333;
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: left;
+    margin-bottom: 1.5rem;
+  }
+  
+  .recipient-section h3,
+  .recipient-title {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 1.5rem 0;
+    text-align: center;
+  }
+  
+  .recipient-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .toggle-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+  
+  .toggle-option input {
+    display: none;
+  }
+  
+  .toggle-label {
+    padding: 0.75rem 1.5rem;
+    background: #222;
+    border: 2px solid #444;
+    border-radius: 8px;
+    color: #888;
+    font-size: 1rem;
+    transition: all 0.2s;
+  }
+  
+  .toggle-option input:checked + .toggle-label {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+  }
+  
+  .gift-fields, .self-fields {
+    margin-top: 1.5rem;
+  }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .form-group label {
+    display: block;
+    color: #888;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    background: #222;
+    border: 2px solid #444;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+  
+  .form-group input:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: #dc2626;
+  }
+  
+  .form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  
+  .char-count {
+    display: block;
+    text-align: right;
+    color: #666;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
+  
+  .checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: #aaa;
+    font-size: 0.9375rem;
+  }
+  
+  .checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #dc2626;
+  }
+  
+  .self-note {
+    color: #888;
+    font-size: 1rem;
+    text-align: center;
+    margin: 0 0 1rem 0;
+  }
+  
+  .self-info {
+    padding: 1.5rem;
+    background: #1a1a1a;
+    border-radius: 8px;
+    text-align: center;
+  }
+  
+  .self-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .self-detail-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .self-label {
+    color: #888;
+    font-size: 0.9375rem;
+  }
+  
+  .self-value {
+    color: #fff;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+  
+  #selfEmailDisplay {
+    color: #dc2626;
+  }
+  
+  .purchase-login-prompt {
+    background: #1a1a2e;
+    border: 2px solid #3730a3;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .purchase-login-prompt p {
+    color: #a5b4fc;
+    margin: 0;
+    font-size: 1rem;
+  }
+  
+  .purchase-login-prompt a {
+    color: #818cf8;
+    font-weight: 600;
+  }
+  
+  .purchase-actions {
+    text-align: center;
+  }
+  
+  .purchase-btn {
+    padding: 1.25rem 3rem;
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 280px;
+  }
+  
+  .purchase-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
+  }
+  
+  .purchase-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  .payment-note {
+    color: #666;
+    font-size: 0.875rem;
+    margin: 1rem 0 0 0;
+  }
+  
+  .purchase-error {
+    color: #f87171;
+    font-size: 1rem;
+    margin: 1rem 0 0 0;
+    display: none;
+  }
+  
+  .purchase-success {
+    background: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+    border: 2px solid #10b981;
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+  }
+  
+  .success-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+  
+  .purchase-success h3 {
+    color: #10b981;
+    font-size: 1.5rem;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .purchase-success p {
+    color: #a7f3d0;
+    margin: 0 0 1.5rem 0;
+  }
+  
+  .success-code {
+    background: #022c22;
+    border: 2px solid #10b981;
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  .success-code span {
+    color: #6ee7b7;
+    font-size: 0.875rem;
+  }
+  
+  .success-code code {
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 1.25rem;
+    color: #fff;
+    background: #064e3b;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    letter-spacing: 0.05em;
+  }
+  
+  .copy-btn {
+    padding: 0.5rem 1rem;
+    background: #10b981;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .copy-btn:hover {
+    background: #059669;
+  }
+  
+  @media (max-width: 600px) {
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+    
+    .amount-selector {
+      gap: 0.5rem;
+    }
+    
+    .amount-btn {
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      min-width: 70px;
+    }
+    
+    .recipient-toggle {
+      flex-direction: column;
+    }
+    
+    .purchase-btn {
+      width: 100%;
+      min-width: auto;
+    }
+    
+    .success-code {
+      flex-direction: column;
+    }
+  }
+  
+  /* How It Works */
+  .how-it-works {
+    padding: 3rem 1.5rem;
+    background: #fff;
+    border-top: 2px solid #e5e5e5;
+    border-bottom: 2px solid #e5e5e5;
+  }
+  
+  .how-it-works h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: #111;
+    text-align: center;
+    margin: 0 0 2.5rem 0;
+  }
+  
+  .steps {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  
+  .step {
+    flex: 1;
+    min-width: 200px;
+    max-width: 250px;
+    text-align: center;
+  }
+  
+  .step-number {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: #fff;
+    margin: 0 auto 1rem;
+  }
+  
+  .step h4 {
+    color: #111;
+    font-size: 1.125rem;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .step p {
+    color: #666;
+    font-size: 0.9375rem;
+    margin: 0;
+    line-height: 1.5;
+  }
+  
+  /* Welcome Offer */
+  .welcome-offer {
+    padding: 3rem 1.5rem 4rem;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  
+  .offer-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 3px solid #3730a3;
+    border-radius: 16px;
+    padding: 3rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .offer-badge {
+    position: absolute;
+    top: 1rem;
+    right: -2rem;
+    background: #dc2626;
+    color: #fff;
+    padding: 0.5rem 3rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    transform: rotate(45deg);
+  }
+  
+  .offer-card h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: #fff;
+    margin: 0 0 1rem 0;
+  }
+  
+  .offer-card > p {
+    color: #a5b4fc;
+    font-size: 1.125rem;
+    margin: 0 0 2rem 0;
+    line-height: 1.6;
+  }
+  
+  .cta-btn {
+    display: inline-block;
+    padding: 1rem 2.5rem;
+    background: #fff;
+    color: #000;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.125rem;
+    border-radius: 10px;
+    transition: all 0.2s;
+  }
+  
+  .cta-btn:hover {
+    background: #dc2626;
+    color: #fff;
+  }
+  
+  .hidden {
+    display: none !important;
+  }
+  
+  /* Responsive */
+  @media (max-width: 600px) {
+    .hero {
+      padding: 3rem 1rem;
+    }
+    
+    .hero-icon {
+      font-size: 3rem;
+    }
+    
+    .redeem-section {
+      padding: 2rem 1rem;
+    }
+    
+    .redeem-card {
+      padding: 1.5rem;
+    }
+    
+    .code-input-wrapper {
+      flex-direction: column;
+    }
+    
+    .code-input-wrapper button {
+      width: 100%;
+    }
+    
+    .balance-amount {
+      font-size: 2.5rem;
+    }
+    
+    .info-section {
+      padding: 2rem 1rem;
+    }
+    
+    .steps {
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .step {
+      max-width: 100%;
+    }
+    
+    .offer-card {
+      padding: 2rem 1.5rem;
+    }
+    
+    .offer-badge {
+      top: 0.75rem;
+      right: -2.5rem;
+      font-size: 0.65rem;
+    }
+  }
+</style>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+    authDomain: "fresh-wax.firebaseapp.com",
+    projectId: "fresh-wax",
+    storageBucket: "fresh-wax.firebasestorage.app",
+    messagingSenderId: "307622215498",
+    appId: "1:307622215498:web:e66cee39e098fe973c7081"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  
+  let currentUser = null;
+  
+  // Format code as user types
+  const codeInput = document.getElementById('giftCardCode');
+  if (codeInput) {
+    codeInput.addEventListener('input', (e) => {
+      let value = e.target.value.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g, '');
+      
+      // Add dashes after FWGC and every 4 chars
+      if (value.length > 4) {
+        const prefix = value.substring(0, 4);
+        const rest = value.substring(4);
+        const chunks = rest.match(/.{1,4}/g) || [];
+        value = prefix + '-' + chunks.join('-');
+      }
+      
+      e.target.value = value;
+    });
+  }
+  
+  // Handle redeem form
+  const redeemForm = document.getElementById('redeemForm');
+  if (redeemForm) {
+    redeemForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (!currentUser) {
+        document.getElementById('redeemError').textContent = 'Please sign in to redeem';
+        document.getElementById('redeemError').style.display = 'block';
+        return;
+      }
+      
+      const code = document.getElementById('giftCardCode').value.trim();
+      const btn = document.getElementById('redeemBtn');
+      const btnText = btn.querySelector('.btn-text');
+      const btnLoading = btn.querySelector('.btn-loading');
+      const errorEl = document.getElementById('redeemError');
+      const successEl = document.getElementById('redeemSuccess');
+      
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+      
+      btn.disabled = true;
+      btnText.classList.add('hidden');
+      btnLoading.classList.remove('hidden');
+      
+      try {
+        const response = await fetch('/api/giftcards/redeem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code,
+            userId: currentUser.uid
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          successEl.textContent = result.message;
+          successEl.style.display = 'block';
+          document.getElementById('giftCardCode').value = '';
+          
+          // Update balance display
+          const balanceEl = document.getElementById('creditBalance');
+          if (balanceEl) {
+            balanceEl.textContent = `£${result.newBalance.toFixed(2)}`;
+          }
+        } else {
+          errorEl.textContent = result.error || 'Failed to redeem gift card';
+          errorEl.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Redeem error:', error);
+        errorEl.textContent = 'Something went wrong. Please try again.';
+        errorEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+      }
+    });
+  }
+  
+  // Load user balance
+  async function loadBalance(userId) {
+    try {
+      const response = await fetch(`/api/giftcards/balance?userId=${userId}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        const balanceEl = document.getElementById('creditBalance');
+        const balanceDisplay = document.getElementById('balanceDisplay');
+        
+        if (balanceEl) {
+          balanceEl.textContent = `£${result.balance.toFixed(2)}`;
+        }
+        if (balanceDisplay) {
+          balanceDisplay.classList.remove('hidden');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading balance:', error);
+    }
+  }
+  
+  // Store user display name
+  let currentUserName = '';
+  
+  // Fetch user name from Firestore
+  async function fetchUserName(userId) {
+    try {
+      const response = await fetch(`/api/get-user-type?userId=${userId}`);
+      const result = await response.json();
+      if (result.success && result.displayName) {
+        currentUserName = result.displayName;
+      }
+    } catch (e) {
+      console.log('Could not fetch user name');
+    }
+  }
+  
+  // Auth state
+  onAuthStateChanged(auth, async (user) => {
+    currentUser = user;
+    
+    const loginPrompt = document.getElementById('loginPrompt');
+    const redeemFormEl = document.getElementById('redeemForm');
+    const purchaseLoginPrompt = document.getElementById('purchaseLoginPrompt');
+    const purchaseActions = document.getElementById('purchaseActions');
+    const selfEmailDisplay = document.getElementById('selfEmailDisplay');
+    const selfNameDisplay = document.getElementById('selfNameDisplay');
+    
+    if (user) {
+      // User is logged in - hide login prompts, show forms
+      loginPrompt?.classList.add('hidden');
+      redeemFormEl?.classList.remove('hidden');
+      purchaseLoginPrompt?.classList.add('hidden');
+      purchaseActions?.classList.remove('hidden');
+      loadBalance(user.uid);
+      
+      // Fetch user name
+      await fetchUserName(user.uid);
+      
+      // Update self displays
+      if (selfEmailDisplay) {
+        selfEmailDisplay.textContent = user.email || '-';
+      }
+      if (selfNameDisplay) {
+        selfNameDisplay.textContent = currentUserName || user.displayName || user.email?.split('@')[0] || '-';
+      }
+    } else {
+      // User is logged out - show login prompts
+      loginPrompt?.classList.remove('hidden');
+      redeemFormEl?.classList.add('hidden');
+      purchaseLoginPrompt?.classList.remove('hidden');
+      purchaseActions?.classList.add('hidden');
+      document.getElementById('balanceDisplay')?.classList.add('hidden');
+      
+      // Clear self displays
+      if (selfEmailDisplay) {
+        selfEmailDisplay.textContent = '-';
+      }
+      if (selfNameDisplay) {
+        selfNameDisplay.textContent = '-';
+      }
+      currentUserName = '';
+    }
+  });
+  
+  // Handle login link clicks - check auth state and redirect appropriately
+  function handleAuthLinkClick(e) {
+    e.preventDefault();
+    if (currentUser) {
+      // User is logged in, go to dashboard credit section
+      window.location.href = '/account/dashboard#credit';
+    } else {
+      // User is not logged in, go to appropriate page
+      const isRegister = e.target.textContent.toLowerCase().includes('create') || 
+                         e.target.href?.includes('register');
+      window.location.href = isRegister ? '/register' : '/login';
+    }
+  }
+  
+  // Attach click handlers to all auth links
+  document.getElementById('signInLink')?.addEventListener('click', handleAuthLinkClick);
+  document.getElementById('registerLink')?.addEventListener('click', handleAuthLinkClick);
+  document.getElementById('purchaseSignInLink')?.addEventListener('click', handleAuthLinkClick);
+  document.getElementById('purchaseRegisterLink')?.addEventListener('click', handleAuthLinkClick);
+  
+  // Amount selection - using global function for onclick handlers
+  let selectedAmount = 0;
+  const customAmountWrapper = document.getElementById('customAmountWrapper');
+  const customAmountInput = document.getElementById('customAmount');
+  const selectedAmountDisplay = document.getElementById('selectedAmount');
+  const purchaseBtn = document.getElementById('purchaseBtn');
+  
+  // Initialize display
+  if (selectedAmountDisplay) {
+    selectedAmountDisplay.textContent = '£0';
+  }
+  if (purchaseBtn) {
+    purchaseBtn.querySelector('.btn-text').textContent = 'Select an amount';
+    purchaseBtn.disabled = true;
+  }
+  
+  function updateSelectedAmount(amount) {
+    selectedAmount = amount;
+    if (selectedAmountDisplay) {
+      selectedAmountDisplay.textContent = `£${amount}`;
+    }
+    if (purchaseBtn) {
+      if (amount > 0) {
+        purchaseBtn.querySelector('.btn-text').textContent = `Purchase Gift Card - £${amount}`;
+        purchaseBtn.disabled = false;
+      } else {
+        purchaseBtn.querySelector('.btn-text').textContent = 'Select an amount';
+        purchaseBtn.disabled = true;
+      }
+    }
+  }
+  
+  // Global function for amount button clicks (called via onclick)
+  window.selectAmount = function(amount, btn) {
+    // Remove active class from all buttons
+    document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+    
+    // Add active to clicked button
+    btn.classList.add('active');
+    
+    if (amount === 'custom') {
+      customAmountWrapper?.classList.remove('hidden');
+      const customVal = parseInt(customAmountInput?.value) || 0;
+      updateSelectedAmount(customVal >= 5 ? customVal : 0);
+    } else {
+      customAmountWrapper?.classList.add('hidden');
+      updateSelectedAmount(parseInt(amount));
+    }
+  };
+  
+  customAmountInput?.addEventListener('input', (e) => {
+    let value = parseInt(e.target.value) || 0;
+    if (value > 500) {
+      value = 500;
+      e.target.value = 500;
+    }
+    updateSelectedAmount(value >= 5 ? value : 0);
+  });
+  
+  // Recipient type toggle
+  const recipientTypeInputs = document.querySelectorAll('input[name="recipientType"]');
+  const giftFields = document.getElementById('giftFields');
+  const selfFields = document.getElementById('selfFields');
+  
+  recipientTypeInputs.forEach(input => {
+    input.addEventListener('change', () => {
+      if (input.value === 'gift') {
+        giftFields?.classList.remove('hidden');
+        selfFields?.classList.add('hidden');
+      } else {
+        giftFields?.classList.add('hidden');
+        selfFields?.classList.remove('hidden');
+        
+        // Update self displays with current user info
+        const selfEmailDisplay = document.getElementById('selfEmailDisplay');
+        const selfNameDisplay = document.getElementById('selfNameDisplay');
+        
+        if (currentUser) {
+          if (selfEmailDisplay) {
+            selfEmailDisplay.textContent = currentUser.email || '-';
+          }
+          if (selfNameDisplay) {
+            selfNameDisplay.textContent = currentUserName || currentUser.displayName || currentUser.email?.split('@')[0] || '-';
+          }
+        }
+      }
+    });
+  });
+  
+  // Message character count
+  const giftMessage = document.getElementById('giftMessage');
+  const messageCount = document.getElementById('messageCount');
+  
+  giftMessage?.addEventListener('input', () => {
+    if (messageCount) {
+      messageCount.textContent = giftMessage.value.length;
+    }
+  });
+  
+  // Purchase gift card
+  purchaseBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    
+    const errorEl = document.getElementById('purchaseError');
+    
+    if (!currentUser) {
+      errorEl.textContent = 'Please sign in to purchase';
+      errorEl.style.display = 'block';
+      return;
+    }
+    
+    // Validate amount is selected
+    if (!selectedAmount || selectedAmount < 5) {
+      errorEl.textContent = 'Please select an amount (minimum £5)';
+      errorEl.style.display = 'block';
+      return;
+    }
+    
+    const recipientType = document.querySelector('input[name="recipientType"]:checked')?.value || 'gift';
+    const recipientName = document.getElementById('recipientName')?.value.trim() || '';
+    const recipientEmail = document.getElementById('recipientEmail')?.value.trim() || '';
+    const message = document.getElementById('giftMessage')?.value.trim() || '';
+    const sendCopyToMe = document.getElementById('sendCopyToMe')?.checked || false;
+    
+    // Validate recipient email for gifts
+    if (recipientType === 'gift' && !recipientEmail) {
+      errorEl.textContent = 'Please enter the recipient\'s email address';
+      errorEl.style.display = 'block';
+      return;
+    }
+    
+    // Email validation
+    if (recipientType === 'gift' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
+      errorEl.textContent = 'Please enter a valid email address';
+      errorEl.style.display = 'block';
+      return;
+    }
+    
+    const successEl = document.getElementById('purchaseSuccess');
+    const btnText = purchaseBtn.querySelector('.btn-text');
+    const btnLoading = purchaseBtn.querySelector('.btn-loading');
+    
+    errorEl.style.display = 'none';
+    successEl.classList.add('hidden');
+    
+    purchaseBtn.disabled = true;
+    btnText.classList.add('hidden');
+    btnLoading.classList.remove('hidden');
+    
+    // Use user's name for self purchase
+    const finalRecipientName = recipientType === 'self' 
+      ? (currentUserName || currentUser.displayName || currentUser.email?.split('@')[0] || '')
+      : recipientName;
+    
+    try {
+      const response = await fetch('/api/giftcards/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: selectedAmount,
+          buyerUserId: currentUser.uid,
+          buyerEmail: currentUser.email,
+          buyerName: currentUserName || currentUser.displayName || '',
+          recipientType,
+          recipientName: finalRecipientName,
+          recipientEmail: recipientType === 'gift' ? recipientEmail : currentUser.email,
+          message,
+          sendCopyToMe
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Hide purchase form, show success
+        document.querySelector('.recipient-section')?.classList.add('hidden');
+        document.querySelector('.purchase-actions')?.classList.add('hidden');
+        
+        successEl.classList.remove('hidden');
+        document.getElementById('purchasedCode').textContent = result.giftCard.code;
+        
+        if (recipientType === 'gift') {
+          document.getElementById('successMessage').textContent = 
+            `Gift card sent to ${recipientEmail}${sendCopyToMe ? ' and a copy to your email' : ''}.`;
+        } else {
+          document.getElementById('successMessage').textContent = 
+            `Gift card code sent to ${currentUser.email}.`;
+        }
+      } else {
+        errorEl.textContent = result.error || 'Failed to purchase gift card';
+        errorEl.style.display = 'block';
+        purchaseBtn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+      }
+    } catch (error) {
+      console.error('Purchase error:', error);
+      errorEl.textContent = 'Something went wrong. Please try again.';
+      errorEl.style.display = 'block';
+      purchaseBtn.disabled = false;
+      btnText.classList.remove('hidden');
+      btnLoading.classList.add('hidden');
+    }
+  });
+  
+  // Copy code button
+  document.getElementById('copyCodeBtn')?.addEventListener('click', () => {
+    const code = document.getElementById('purchasedCode')?.textContent;
+    if (code) {
+      navigator.clipboard.writeText(code);
+      document.getElementById('copyCodeBtn').textContent = 'Copied!';
+      setTimeout(() => {
+        document.getElementById('copyCodeBtn').textContent = 'Copy';
+      }, 2000);
+    }
+  });
+</script>

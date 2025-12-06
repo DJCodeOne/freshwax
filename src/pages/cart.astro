@@ -3,311 +3,171 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+
+export const prerender = false;
 ---
 
-<!DOCTYPE html>
-<html lang="en-GB">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Record Bag - Fresh Wax</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body style="margin: 0; padding: 0; background: #000; color: #fff; font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh;">
-  
+<Layout title="Record Bag - Fresh Wax" noindex={true}>
   <Header />
-
-  <main style="min-height: 100vh; padding: 1.25rem; max-width: 900px; margin: 0 auto;">
+  
+  <main class="cart-main">
     
     <!-- Page Header -->
-    <header style="margin-bottom: 2rem; padding-bottom: 1.25rem; border-bottom: 3px solid #ef4444;">
-      <h1 style="margin: 0; font-size: clamp(2.2rem, 6vw, 3rem); font-weight: 700; display: flex; align-items: center; gap: 0.625rem;">
-        <span style="font-size: 1.5em;">🎧</span>
-        Record Bag
-      </h1>
+    <header class="cart-header">
+      <h1>RECORD BAG</h1>
+      <a href="/" class="back-btn">← Continue Shopping</a>
     </header>
-
+    
     <div id="cart-content">
-      <!-- Cart items rendered by JavaScript -->
+      <div class="loading-state">Loading your bag...</div>
     </div>
     
   </main>
 
   <Footer />
+</Layout>
 
-  <script>
-    let cart = [];
-    
-    function loadCart() {
-      const stored = localStorage.getItem('cart');
-      cart = stored ? JSON.parse(stored) : [];
-      renderCart();
+<style>
+  :global(html), :global(body) {
+    background: #000 !important;
+  }
+  
+  .cart-main {
+    min-height: 100vh;
+    padding: 1.5rem;
+    max-width: 900px;
+    margin: 0 auto;
+    background: #000;
+  }
+  
+  .cart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 3px solid #ef4444;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .cart-header h1 {
+    margin: 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.2rem, 6vw, 3rem);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: #fff;
+  }
+  
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #fff;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.625rem 1.25rem;
+    background: #000;
+    border: 2px solid #fff;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  
+  .back-btn:hover {
+    background: #fff;
+    color: #000;
+  }
+  
+  .loading-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: #000;
+    border: 3px solid #fff;
+    border-radius: 12px;
+    color: #888;
+    font-size: 1.125rem;
+  }
+  
+  @media (max-width: 600px) {
+    .cart-main {
+      padding: 1rem 0.75rem;
     }
     
-    function saveCart() {
-      localStorage.setItem('cart', JSON.stringify(cart));
-      updateCartCount();
+    .cart-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.875rem;
     }
     
-    function updateCartCount() {
-      const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-      const cartCount = document.getElementById('cart-count');
-      if (cartCount) {
-        if (totalItems > 0) {
-          cartCount.textContent = totalItems.toString();
-          cartCount.classList.remove('hidden');
-        } else {
-          cartCount.classList.add('hidden');
-        }
-      }
+    .back-btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
+
+<style is:global>
+  /* Mobile-optimized cart items */
+  @media (max-width: 600px) {
+    #cart-content article {
+      grid-template-columns: 80px 1fr !important;
+      gap: 0.75rem !important;
+      padding: 1rem !important;
     }
     
-    function calculateTotals() {
-      const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const hasPhysicalItems = cart.some(item => 
-        item.productType === 'vinyl' || item.productType === 'merch' || 
-        item.type === 'vinyl' || item.type === 'merch'
-      );
-      const shipping = hasPhysicalItems && subtotal > 0 ? (subtotal >= 50 ? 0 : 4.99) : 0;
-      const total = subtotal + shipping;
-      return { subtotal, shipping, total, hasPhysicalItems };
+    #cart-content article > div:first-child {
+      width: 80px !important;
+      height: 80px !important;
     }
     
-    function updateQuantity(index, newQuantity) {
-      if (!newQuantity || newQuantity < 1) {
-        cart[index].quantity = 1;
-      } else if (newQuantity > 10) {
-        cart[index].quantity = 10;
-      } else {
-        cart[index].quantity = newQuantity;
-      }
-      saveCart();
-      renderCart();
+    #cart-content article > div:first-child img {
+      width: 80px !important;
+      height: 80px !important;
     }
     
-    function removeItem(index) {
-      cart.splice(index, 1);
-      saveCart();
-      renderCart();
+    #cart-content h3 {
+      font-size: 1rem !important;
     }
     
-    function refreshCart() {
-      renderCart();
+    /* Stack quantity controls and price */
+    #cart-content article > div:last-child > div:last-child {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 0.75rem !important;
     }
     
-    function renderCart() {
-      const container = document.getElementById('cart-content');
-      
-      if (cart.length === 0) {
-        container.innerHTML = `
-          <div style="text-align: center; padding: 5rem 2rem; background: #000; border: 3px solid #fff; border-radius: 16px;">
-            <div style="font-size: 5rem; margin-bottom: 1.25rem; filter: grayscale(1);">🎵</div>
-            <h2 style="margin: 0 0 0.625rem 0; font-size: 1.875rem; font-weight: 700; color: #fff;">Your bag is empty</h2>
-            <p style="margin: 0 0 2.5rem 0; color: #fff; font-size: 1.2rem;">Time to dig for some fresh wax</p>
-            <a href="/" style="display: inline-block; padding: 1.1rem 2.5rem; background: #fff; color: #000; text-decoration: none; font-weight: 700; font-size: 1.1rem; border-radius: 10px; transition: transform 0.2s, box-shadow 0.2s;"
-               onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 20px rgba(255,255,255,0.3)';"
-               onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
-              Browse Releases
-            </a>
-          </div>
-        `;
-        return;
-      }
-      
-      const { subtotal, shipping, total, hasPhysicalItems } = calculateTotals();
-      const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-      
-      container.innerHTML = `
-        <!-- Cart Items Section -->
-        <section style="margin-bottom: 2rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-            <h2 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.05em;">
-              ${itemCount} ${itemCount === 1 ? 'Item' : 'Items'}
-            </h2>
-            <button onclick="refreshCart()" 
-                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.1rem; background: transparent; border: 2px solid #fff; color: #fff; font-size: 1rem; font-weight: 600; border-radius: 8px; cursor: pointer; font-family: inherit; transition: all 0.2s;"
-                    onmouseover="this.style.background='#fff'; this.style.color='#000';"
-                    onmouseout="this.style.background='transparent'; this.style.color='#fff';">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-              </svg>
-              Refresh
-            </button>
-          </div>
-          
-          <div style="display: flex; flex-direction: column; gap: 1rem;">
-            ${cart.map((item, index) => `
-              <article style="display: grid; grid-template-columns: 100px 1fr; gap: 1.25rem; padding: 1.25rem; background: #000; border: 3px solid #fff; border-radius: 12px; transition: border-color 0.2s;"
-                       onmouseover="this.style.borderColor='#dc2626';"
-                       onmouseout="this.style.borderColor='#fff';">
-                
-                <!-- Product Image -->
-                <div style="width: 100px; height: 100px; border-radius: 8px; overflow: hidden; background: #111; border: 2px solid #fff;">
-                  <img src="${item.image}" alt="${item.name}" 
-                       style="width: 100%; height: 100%; object-fit: cover;" />
-                </div>
-                
-                <!-- Product Details -->
-                <div style="display: flex; flex-direction: column; min-width: 0;">
-                  
-                  <!-- Title & Type Row -->
-                  <div style="margin-bottom: 0.625rem;">
-                    <h3 style="margin: 0 0 0.375rem 0; font-size: 1.25rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                      ${item.name}
-                    </h3>
-                    <div style="display: flex; gap: 0.625rem; flex-wrap: wrap;">
-                      ${item.productType || item.type ? `
-                        <span style="display: inline-block; padding: 0.2rem 0.625rem; background: ${(item.productType || item.type) === 'vinyl' ? '#000' : '#052e16'}; color: ${(item.productType || item.type) === 'vinyl' ? '#fff' : '#22c55e'}; font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-radius: 5px; border: 2px solid ${(item.productType || item.type) === 'vinyl' ? '#fff' : '#22c55e'};">
-                          ${(item.productType || item.type)}
-                        </span>
-                      ` : ''}
-                      ${item.color ? `<span style="font-size: 0.95rem; color: #fff;">${item.color.name}</span>` : ''}
-                      ${item.size ? `<span style="font-size: 0.95rem; color: #fff;">Size: ${item.size}</span>` : ''}
-                    </div>
-                  </div>
-                  
-                  <!-- Price & Quantity Row -->
-                  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto;">
-                    
-                    <!-- Quantity Controls -->
-                    <div style="display: flex; align-items: center; gap: 0.25rem; background: #000; border: 2px solid #fff; border-radius: 8px; padding: 0.25rem;">
-                      <button onclick="updateQuantity(${index}, ${item.quantity - 1})" 
-                              ${item.quantity <= 1 ? 'disabled' : ''}
-                              style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: ${item.quantity <= 1 ? '#333' : '#fff'}; font-size: 1.5rem; font-weight: 700; cursor: ${item.quantity <= 1 ? 'not-allowed' : 'pointer'}; border-radius: 6px; transition: background 0.2s;"
-                              onmouseover="if(!this.disabled) this.style.background='#fff'; if(!this.disabled) this.style.color='#000';"
-                              onmouseout="this.style.background='transparent'; if(!this.disabled) this.style.color='#fff';">−</button>
-                      <span style="min-width: 2.5rem; text-align: center; font-weight: 700; font-size: 1.2rem; color: #fff;">${item.quantity}</span>
-                      <button onclick="updateQuantity(${index}, ${item.quantity + 1})" 
-                              ${item.quantity >= 10 ? 'disabled' : ''}
-                              style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; color: ${item.quantity >= 10 ? '#333' : '#fff'}; font-size: 1.5rem; font-weight: 700; cursor: ${item.quantity >= 10 ? 'not-allowed' : 'pointer'}; border-radius: 6px; transition: background 0.2s;"
-                              onmouseover="if(!this.disabled) this.style.background='#fff'; if(!this.disabled) this.style.color='#000';"
-                              onmouseout="this.style.background='transparent'; if(!this.disabled) this.style.color='#fff';">+</button>
-                    </div>
-                    
-                    <!-- Price & Remove -->
-                    <div style="text-align: right;">
-                      <div style="font-size: 1.375rem; font-weight: 700; color: #fff;">£${(item.price * item.quantity).toFixed(2)}</div>
-                      ${item.quantity > 1 ? `<div style="font-size: 0.875rem; color: #fff;">£${item.price.toFixed(2)} each</div>` : ''}
-                      <button onclick="removeItem(${index})" 
-                              style="margin-top: 0.375rem; padding: 0; background: none; border: none; color: #dc2626; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: color 0.2s;"
-                              onmouseover="this.style.color='#ef4444';"
-                              onmouseout="this.style.color='#dc2626';">
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </article>
-            `).join('')}
-          </div>
-          
-          <!-- Continue Shopping Link -->
-          <a href="/" style="display: inline-flex; align-items: center; gap: 0.625rem; margin-top: 1.25rem; color: #fff; text-decoration: none; font-size: 1.1rem; font-weight: 600; transition: color 0.2s; border-bottom: 2px solid transparent;"
-             onmouseover="this.style.borderColor='#fff';"
-             onmouseout="this.style.borderColor='transparent';">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            Continue shopping
-          </a>
-        </section>
-        
-        <!-- Order Summary Section -->
-        <section style="background: #000; border: 3px solid #fff; border-radius: 16px; padding: 1.5rem;">
-          
-          <!-- Summary Lines -->
-          <div style="margin-bottom: 1.25rem;">
-            <div style="display: flex; justify-content: space-between; padding: 0.625rem 0; color: #fff; font-size: 1.125rem; border-bottom: 2px solid #fff;">
-              <span style="font-weight: 600;">Subtotal</span>
-              <span style="font-weight: 700;">£${subtotal.toFixed(2)}</span>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; padding: 0.625rem 0; color: #fff; font-size: 1.125rem; border-bottom: 2px solid #fff;">
-              <span style="font-weight: 600;">Shipping</span>
-              ${hasPhysicalItems 
-                ? `<span style="color: ${shipping === 0 ? '#22c55e' : '#fff'}; font-weight: 700;">${shipping === 0 ? 'FREE' : '£' + shipping.toFixed(2)}</span>`
-                : `<span style="color: #22c55e; font-weight: 700;">Digital delivery</span>`
-              }
-            </div>
-            
-            ${hasPhysicalItems && shipping > 0 && subtotal < 50 ? `
-              <div style="margin: 1rem 0; padding: 0.875rem 1.1rem; background: #052e16; border: 2px solid #22c55e; border-radius: 8px; font-size: 1rem; font-weight: 600; color: #22c55e;">
-                <span style="margin-right: 0.375rem;">🚚</span> Add £${(50 - subtotal).toFixed(2)} more for free postage
-              </div>
-            ` : ''}
-            
-            ${hasPhysicalItems && shipping === 0 && subtotal >= 50 ? `
-              <div style="margin: 1rem 0; padding: 0.875rem 1.1rem; background: #052e16; border: 2px solid #fff; border-radius: 8px; font-size: 1rem; font-weight: 600; color: #22c55e;">
-                <span style="margin-right: 0.375rem;">✓</span> Free postage for digital downloads and orders over £50!
-              </div>
-            ` : ''}
-            
-            <!-- Total -->
-            <div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 1.25rem; margin-top: 1rem; border-top: 3px solid #ef4444;">
-              <span style="font-size: 1.25rem; font-weight: 700; color: #fff;">Total</span>
-              <span style="font-size: 1.875rem; font-weight: 700; color: #fff;">£${total.toFixed(2)}</span>
-            </div>
-          </div>
-          
-          <!-- Payment Methods -->
-          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-            <button onclick="payWithStripe()" 
-                    style="width: 100%; padding: 1rem 1.25rem; background: #fff; color: #000; border: 2px solid #fff; border-radius: 10px; font-size: 1.1rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.75rem;"
-                    onmouseover="this.style.background='#f0f0f0'; this.style.transform='translateY(-2px)';"
-                    onmouseout="this.style.background='#fff'; this.style.transform='none';">
-              <!-- Visa -->
-              <svg width="32" height="20" viewBox="0 0 48 32" fill="none" style="flex-shrink: 0;">
-                <rect width="48" height="32" rx="4" fill="#1A1F71"/>
-                <path d="M19.5 21H17L18.5 11H21L19.5 21ZM15.5 11L13.1 18L12.8 16.5L12.8 16.5L12 12.2C12 12.2 11.9 11 10.4 11H6.1L6 11.2C6 11.2 7.7 11.6 9.7 12.8L12 21H14.6L18.1 11H15.5ZM35 21H37.3L35.3 11H33.3C32 11 31.7 12 31.7 12L28 21H30.6L31.1 19.5H34.3L35 21ZM31.9 17.5L33.3 13.5L34.1 17.5H31.9ZM28 14L28.4 11.8C28.4 11.8 26.8 11.2 25.1 11.2C23.3 11.2 19.5 12 19.5 15.3C19.5 18.4 23.8 18.4 23.8 20C23.8 21.6 20 21.3 18.5 20.2L18.1 22.5C18.1 22.5 19.8 23.2 22.2 23.2C24.6 23.2 28 21.7 28 18.7C28 15.6 23.6 15.3 23.6 14C23.6 12.7 26.6 12.9 28 14Z" fill="white"/>
-              </svg>
-              <!-- Mastercard -->
-              <svg width="32" height="20" viewBox="0 0 48 32" fill="none" style="flex-shrink: 0;">
-                <rect width="48" height="32" rx="4" fill="#000"/>
-                <circle cx="18" cy="16" r="8" fill="#EB001B"/>
-                <circle cx="30" cy="16" r="8" fill="#F79E1B"/>
-                <path d="M24 10.5C25.8 12 27 14.3 27 16.9C27 19.5 25.8 21.8 24 23.3C22.2 21.8 21 19.5 21 16.9C21 14.3 22.2 12 24 10.5Z" fill="#FF5F00"/>
-              </svg>
-              <span style="display: flex; align-items: center; gap: 0.5rem;">
-                Pay with Card
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink: 0;">
-                  
-                </svg>
-              </span>
-            </button>
-            
-            <button onclick="payWithPayPal()" 
-                    style="width: 100%; padding: 1rem 1.25rem; background: #ffc439; color: #003087; border: 2px solid #fff; border-radius: 10px; font-size: 1.1rem; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.625rem;"
-                    onmouseover="this.style.background='#f0b429'; this.style.transform='translateY(-2px)';"
-                    onmouseout="this.style.background='#ffc439'; this.style.transform='none';">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="#003087" style="flex-shrink: 0;">
-                <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.72a.77.77 0 0 1 .757-.629h6.166c2.043 0 3.653.459 4.705 1.349 1.078.91 1.51 2.19 1.284 3.803-.031.222-.067.45-.111.678-.497 2.56-2.201 4.098-4.795 4.339l-.175.016h-1.6a.77.77 0 0 0-.76.629l-.792 4.32-.227 1.236a.641.641 0 0 1-.633.54H7.076v.336z"/>
-                <path d="M18.27 7.551c-.041.267-.091.539-.149.815-.737 3.53-3.257 4.747-6.476 4.747h-1.64a.79.79 0 0 0-.78.669l-.84 5.337-.238 1.51a.42.42 0 0 0 .415.486h2.917a.69.69 0 0 0 .682-.58l.028-.147.541-3.426.035-.19a.69.69 0 0 1 .682-.58h.429c2.779 0 4.954-1.129 5.591-4.394.266-1.363.128-2.5-.575-3.299a2.74 2.74 0 0 0-.622-.548z"/>
-              </svg>
-              Pay with PayPal
-            </button>
-          </div>
-          
-          <!-- Security Note -->
-          <p style="margin: 1.25rem 0 0 0; text-align: center; font-size: 0.875rem; font-weight: 600; color: #fff;">
-            🔒 Secure checkout
-          </p>
-        </section>
-      `;
+    /* Make quantity buttons touch-friendly */
+    #cart-content button {
+      min-height: 44px !important;
+      min-width: 44px !important;
     }
     
-    window.payWithStripe = function() {
-      alert('Stripe payment integration ready.');
-    };
+    /* Checkout button full width */
+    #cart-content a[href="/checkout"] {
+      width: 100% !important;
+      text-align: center !important;
+    }
+  }
+  
+  /* Tablet cart adjustments */
+  @media (min-width: 601px) and (max-width: 768px) {
+    #cart-content article {
+      gap: 1rem !important;
+    }
+  }
+  
+  /* Touch-friendly cart controls */
+  @media (hover: none) and (pointer: coarse) {
+    #cart-content button {
+      min-height: 44px !important;
+    }
     
-    window.payWithPayPal = function() {
-      alert('PayPal payment integration ready.');
-    };
-    
-    window.updateQuantity = updateQuantity;
-    window.removeItem = removeItem;
-    window.refreshCart = refreshCart;
-    
-    loadCart();
-  </script>
-</body>
-</html>
+    #cart-content a {
+      min-height: 48px !important;
+    }
+  }
+</style>
+
+<script is:inline src="/cart-page.js"></script>

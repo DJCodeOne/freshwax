@@ -8,6 +8,16 @@ import AdmZip from 'adm-zip';
 // CONFIGURATION
 //============================================================================
 
+const isDev = import.meta.env.DEV;
+
+// Production-ready logging - only outputs in development
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  debug: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args), // Always log errors
+  warn: (...args: any[]) => console.warn(...args),   // Always log warnings
+};
+
 const R2_CONFIG = {
   accountId: import.meta.env.R2_ACCOUNT_ID,
   accessKeyId: import.meta.env.R2_ACCESS_KEY_ID,
@@ -76,8 +86,6 @@ function createFolderName(metadata: any): string {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    console.log('📦 Received upload request');
-    
     const db = getFirebaseDb();
     
     const formData = await request.formData();
@@ -93,24 +101,18 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
     
-    console.log(`✓ Release ID: ${releaseId}`);
-    console.log(`✓ Package size: ${(packageFile.size / 1024 / 1024).toFixed(2)} MB`);
+    log.info(`[upload-final] Processing release: ${releaseId} (${(packageFile.size / 1024 / 1024).toFixed(2)} MB)`);
     
     const arrayBuffer = await packageFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    console.log('📦 Extracting ZIP package...');
     const zip = new AdmZip(buffer);
     const zipEntries = zip.getEntries();
     
-    console.log('📋 ZIP Contents:');
-    zipEntries.forEach(entry => {
-      if (!entry.isDirectory) {
-        console.log(`  - ${entry.entryName}`);
-      }
-    });
+    // Log ZIP contents in dev only
+    log.debug('[upload-final] ZIP contents:', zipEntries.filter(e => !e.isDirectory).map(e => e.entryName));
     
-    // STEP 1: Find metadata JSON to get release info
+    // STEP 1: Find metadata JSON
     let metadata: any = null;
     for (const entry of zipEntries) {
       if (entry.isDirectory) continue;
@@ -120,7 +122,7 @@ export const POST: APIRoute = async ({ request }) => {
           (entryPath.endsWith('.json') && entryPath.includes('metadata'))) {
         const content = entry.getData().toString('utf8');
         metadata = JSON.parse(content);
-        console.log('✓ Found metadata:', metadata.artistName, '-', metadata.releaseName);
+        log.info(`[upload-final] Found metadata: ${metadata.artistName} - ${metadata.releaseName}`);
         break;
       }
     }
@@ -136,7 +138,7 @@ export const POST: APIRoute = async ({ request }) => {
     
     // CREATE ORGANIZED FOLDER NAME
     const folderName = createFolderName(metadata);
-    console.log(`📁 NEW Folder name: ${folderName}`);
+    log.info(`[upload-final] R2 folder: ${folderName}`);
     
     // STEP 2: Extract the actual releaseId from the ZIP structure
     let zipReleaseId = releaseId;
@@ -145,14 +147,10 @@ export const POST: APIRoute = async ({ request }) => {
       const pathParts = firstEntry.entryName.split('/');
       if (pathParts.length >= 2) {
         zipReleaseId = pathParts[1];
-        console.log(`📁 OLD ZIP release folder: ${zipReleaseId}`);
       }
     }
     
-    console.log('☁️  Uploading files to R2 with NEW folder structure...');
-    console.log(`📁 TARGET FOLDER: releases/${folderName}/`);
-    
-    // Track uploaded files by category for URL mapping
+    // Track uploaded files by category
     const uploadedFiles = {
       artwork: [] as Array<{ filename: string; url: string; type: string }>,
       previews: [] as Array<{ filename: string; url: string; trackNumber: number }>,
@@ -168,44 +166,22 @@ export const POST: APIRoute = async ({ request }) => {
       const entryPath = entry.entryName;
       
       // Only process files in the releases folder
-      if (!entryPath.startsWith('releases/')) {
-        console.log(`⚠️ Skipping: ${entryPath} (not in releases folder)`);
-        continue;
-      }
+      if (!entryPath.startsWith('releases/')) continue;
       
-      // Split the path to extract components
-      // Example: "releases/OldFolder_123456/artwork/cover.webp"
       const pathParts = entryPath.split('/');
+      if (pathParts.length < 3) continue;
       
-      // pathParts[0] = "releases"
-      // pathParts[1] = "OldFolder_123456" (the old release folder)
-      // pathParts[2+] = "artwork/cover.webp" or "tracks/01-track.mp3"
-      
-      if (pathParts.length < 3) {
-        console.log(`⚠️ Skipping: ${entryPath} (invalid path structure)`);
-        continue;
-      }
-      
-      // Get everything after "releases/{oldFolder}/"
-      // Join pathParts[2] onwards to get "artwork/cover.webp" or "tracks/01-track.mp3"
       const relativePath = pathParts.slice(2).join('/');
-      
-      if (!relativePath) {
-        console.log(`⚠️ Skipping: ${entryPath} (empty relative path)`);
-        continue;
-      }
+      if (!relativePath) continue;
       
       const fileContent = entry.getData();
       const contentType = getContentType(entryPath);
       
-      // Build the NEW key with the new folder name
       const newKey = `releases/${folderName}/${relativePath}`;
       
       await uploadToR2(newKey, fileContent, contentType);
       
       const publicUrl = `${R2_CONFIG.publicDomain}/${newKey}`;
-      
-      // Categorize uploaded files
       const filename = relativePath.split('/').pop() || '';
       
       if (relativePath.startsWith('artwork/')) {
@@ -223,64 +199,31 @@ export const POST: APIRoute = async ({ request }) => {
       }
       
       filesUploaded++;
-      console.log(`✓ Uploaded ${filesUploaded}: ${newKey}`);
     }
     
-    console.log(`✅ Uploaded ${filesUploaded} files to R2`);
-    console.log(`📊 Artwork: ${uploadedFiles.artwork.length}, Previews: ${uploadedFiles.previews.length}, Tracks: ${uploadedFiles.tracks.length}`);
+    log.info(`[upload-final] Uploaded ${filesUploaded} files (artwork: ${uploadedFiles.artwork.length}, previews: ${uploadedFiles.previews.length}, tracks: ${uploadedFiles.tracks.length})`);
     
-    console.log('🔗 Building metadata with NEW R2 URLs...');
+    // Build metadata with URLs
     const updatedMetadata = buildMetadataWithUrls(metadata, uploadedFiles, folderName);
     
-    console.log('==========================================');
-    console.log('🔥 FIREBASE SYNC STARTING');
-    console.log('==========================================');
-    console.log('Document ID:', zipReleaseId);
-    console.log('Artist:', updatedMetadata.artistName);
-    console.log('Release:', updatedMetadata.releaseName);
-    console.log('Cover Art URL:', updatedMetadata.coverArtUrl);
-    console.log('Track Count:', updatedMetadata.tracks?.length || 0);
-    console.log('R2 Folder:', updatedMetadata.r2FolderName);
-    console.log('==========================================');
-
+    // Sync to Firebase
     try {
       await syncToFirebase(db, zipReleaseId, updatedMetadata);
-      console.log('✅ syncToFirebase() completed without error');
       
-      // VERIFY the document exists
-      console.log('🔍 Verifying document in Firebase...');
-      const verifyRef = db.collection('releases').doc(zipReleaseId);
-      const verifyDoc = await verifyRef.get();
+      // Verify the document exists
+      const verifyDoc = await db.collection('releases').doc(zipReleaseId).get();
       
-      if (verifyDoc.exists) {
-        const docData = verifyDoc.data();
-        console.log('✅✅✅ VERIFICATION SUCCESS ✅✅✅');
-        console.log('Document ID:', verifyDoc.id);
-        console.log('Artist Name:', docData?.artistName);
-        console.log('Release Name:', docData?.releaseName);
-        console.log('Status:', docData?.status);
-        console.log('Cover Art:', docData?.coverArtUrl);
-      } else {
-        console.error('❌❌❌ VERIFICATION FAILED ❌❌❌');
-        console.error('Document does NOT exist in Firebase after write!');
-        console.error('Document ID attempted:', zipReleaseId);
-        console.error('Collection: releases');
+      if (!verifyDoc.exists) {
+        log.error('[upload-final] Document verification failed - not found in Firebase');
+        throw new Error('Document not found after write');
       }
       
+      log.info(`[upload-final] Success: ${zipReleaseId} (${updatedMetadata.tracks?.length || 0} tracks)`);
+      
     } catch (fbError) {
-      console.error('==========================================');
-      console.error('❌ FIREBASE SYNC ERROR');
-      console.error('==========================================');
-      console.error('Error:', fbError);
-      console.error('Message:', fbError instanceof Error ? fbError.message : 'Unknown error');
-      console.error('Stack:', fbError instanceof Error ? fbError.stack : 'No stack trace');
-      console.error('==========================================');
+      log.error('[upload-final] Firebase sync failed:', fbError);
       throw new Error(`Firebase sync failed: ${fbError instanceof Error ? fbError.message : 'Unknown error'}`);
     }
-
-    console.log('==========================================');
-    console.log('✅ Process complete!');
-    console.log('==========================================');
     
     return new Response(JSON.stringify({
       success: true,
@@ -296,7 +239,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
     
   } catch (error) {
-    console.error('❌ Upload failed:', error);
+    log.error('[upload-final] Upload failed:', error);
     
     return new Response(JSON.stringify({
       error: error instanceof Error ? error.message : 'Upload failed',
@@ -377,10 +320,6 @@ function buildMetadataWithUrls(
   
   updated.additionalArtwork = additionalArtwork;
   
-  console.log('🎵 Building tracks array from uploaded files...');
-  console.log('   Uploaded tracks:', uploadedFiles.tracks.length);
-  console.log('   Uploaded previews:', uploadedFiles.previews.length);
-  
   // BUILD TRACKS ARRAY from uploaded files
   const tracksByNumber = new Map();
   
@@ -425,42 +364,30 @@ function buildMetadataWithUrls(
   if (metadata.trackListingJSON) {
     try {
       const trackMetadata = JSON.parse(metadata.trackListingJSON);
-      console.log('   Found track metadata:', trackMetadata.length, 'tracks');
       
       tracksArray.forEach((track, index) => {
         const metadataTrack = trackMetadata[index];
         if (metadataTrack) {
-          // Basic track info
           track.trackName = metadataTrack.trackName || metadataTrack.title || `Track ${track.trackNumber}`;
-          
-          // Duration
           track.duration = metadataTrack.duration || metadataTrack.trackDuration || '';
           track.trackDuration = metadataTrack.duration || metadataTrack.trackDuration || '';
-          
-          // Musical metadata
           track.key = metadataTrack.key || '--';
           track.bpm = metadataTrack.bpm || '';
-          
-          // ISRC codes (handle both field names)
           track.isrc = metadataTrack.trackISRC || metadataTrack.isrc || '';
           track.trackISRC = metadataTrack.trackISRC || metadataTrack.isrc || '';
-          
-          // Featured artists & remixers
           track.featured = metadataTrack.featured || '';
           track.featuredArtist = metadataTrack.featured || '';
           track.remixer = metadataTrack.remixer || '';
-          
         } else {
           track.trackName = `Track ${track.trackNumber}`;
           track.key = '--';
         }
       });
     } catch (e) {
-      console.error('Failed to parse trackListingJSON:', e);
+      log.error('[upload-final] Failed to parse trackListingJSON:', e);
       // Fallback to trackListing string
       if (metadata.trackListing && typeof metadata.trackListing === 'string') {
         const trackNames = metadata.trackListing.split('\n').map((name: string) => name.trim()).filter((name: string) => name);
-        console.log('   Using trackListing fallback:', trackNames);
         
         tracksArray.forEach((track, index) => {
           track.trackName = trackNames[index] || `Track ${track.trackNumber}`;
@@ -469,16 +396,13 @@ function buildMetadataWithUrls(
       }
     }
   } else if (metadata.trackListing && typeof metadata.trackListing === 'string') {
-    // No JSON, use plain text listing
     const trackNames = metadata.trackListing.split('\n').map((name: string) => name.trim()).filter((name: string) => name);
-    console.log('   Found track names in trackListing:', trackNames);
     
     tracksArray.forEach((track, index) => {
       track.trackName = trackNames[index] || `Track ${track.trackNumber}`;
       track.key = '--';
     });
   } else {
-    // No metadata - use generic names
     tracksArray.forEach((track) => {
       track.trackName = `Track ${track.trackNumber}`;
       track.key = '--';
@@ -487,20 +411,7 @@ function buildMetadataWithUrls(
   
   updated.tracks = tracksArray;
   
-  console.log('✅ Built tracks array:', tracksArray.length, 'tracks');
-  tracksArray.forEach((track) => {
-    console.log(`   ${track.trackNumber}. ${track.trackName}`);
-    console.log(`      Preview: ${track.previewUrl ? '✓' : '✗'}`);
-    console.log(`      MP3: ${track.mp3Url ? '✓' : '✗'}`);
-    console.log(`      WAV: ${track.wavUrl ? '✓' : '✗'}`);
-    if (track.featured) console.log(`      Featured: ${track.featured}`);
-    if (track.remixer) console.log(`      Remixer: ${track.remixer}`);
-    if (track.key && track.key !== '--') console.log(`      Key: ${track.key}`);
-    if (track.bpm) console.log(`      BPM: ${track.bpm}`);
-  });
-  
   // Ensure all other metadata fields are preserved
-  // These come from the form but need to be explicitly kept
   updated.labelName = metadata.labelName || '';
   updated.releaseDescription = metadata.releaseDescription || metadata.notes || '';
   updated.notes = metadata.notes || metadata.releaseDescription || '';
@@ -520,8 +431,6 @@ function buildMetadataWithUrls(
 }
 
 async function syncToFirebase(db: FirebaseFirestore.Firestore, releaseId: string, metadata: any): Promise<void> {
-  console.log('[syncToFirebase] Building release document...');
-  
   const releaseDoc = {
     id: releaseId,
     r2FolderName: metadata.r2FolderName,
@@ -593,18 +502,13 @@ async function syncToFirebase(db: FirebaseFirestore.Firestore, releaseId: string
     
     coverArtUrl: metadata.coverArtUrl || null,
     artworkUrl: metadata.coverArtUrl || null,
-    artwork: metadata.artwork || {
-      cover: null,
-      additional: [],
-    },
+    artwork: metadata.artwork || { cover: null, additional: [] },
     
     tracks: metadata.tracks || [],
-    
     trackListing: metadata.trackListing || [],
     
     submittedBy: metadata.submittedBy || null,
     email: metadata.email || null,
-    
     socialLinks: metadata.socialLinks || {},
     
     status: 'pending',
@@ -629,48 +533,17 @@ async function syncToFirebase(db: FirebaseFirestore.Firestore, releaseId: string
       officialReleaseDate: metadata.officialReleaseDate || null,
     },
     
-    ratings: {
-      average: 0,
-      count: 0,
-      total: 0,
-      fiveStarCount: 0,
-    },
+    ratings: { average: 0, count: 0, total: 0, fiveStarCount: 0 },
     ratingsAverage: 0,
     ratingsCount: 0,
     fiveStarCount: 0,
-    overallRating: {
-      average: 0,
-      count: 0,
-      total: 0,
-    },
+    overallRating: { average: 0, count: 0, total: 0 },
     comments: [],
     
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
   
-  console.log('[syncToFirebase] Document structure prepared');
-  console.log('[syncToFirebase] Document ID:', releaseId);
-  console.log('[syncToFirebase] Artist:', releaseDoc.artistName);
-  console.log('[syncToFirebase] Release:', releaseDoc.releaseName);
-  console.log('[syncToFirebase] Status:', releaseDoc.status);
-  console.log('[syncToFirebase] Cover Art URL:', releaseDoc.coverArtUrl);
-  
-  try {
-    const releaseRef = db.collection('releases').doc(releaseId);
-    console.log('[syncToFirebase] Writing to Firestore...');
-    console.log('[syncToFirebase] Collection: releases');
-    console.log('[syncToFirebase] Document ID:', releaseId);
-    
-    await releaseRef.set(releaseDoc);
-    
-    console.log('[syncToFirebase] ✅ SUCCESS - Document written to Firestore');
-    console.log('[syncToFirebase] Document path: releases/' + releaseId);
-    
-  } catch (error) {
-    console.error('[syncToFirebase] ❌ FAILED to write to Firestore:', error);
-    console.error('[syncToFirebase] Error details:', error instanceof Error ? error.message : 'Unknown error');
-    console.error('[syncToFirebase] Error stack:', error instanceof Error ? error.stack : 'No stack');
-    throw error;
-  }
+  const releaseRef = db.collection('releases').doc(releaseId);
+  await releaseRef.set(releaseDoc);
 }

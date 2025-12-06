@@ -3,6 +3,13 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
+// Conditional logging - only logs in development
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args) => isDev && console.log(...args),
+  error: (...args) => console.error(...args),
+};
+
 export const prerender = false;
 
 // Initialize Firebase Admin
@@ -31,7 +38,7 @@ export async function POST({ request }) {
       });
     }
 
-    console.log(`[Master JSON] Updating release: ${release.id}`);
+    log.info(`[Master JSON] Updating release: ${release.id}`);
     
     // Store in Firestore under 'releases' collection
     const releaseRef = db.collection('releases').doc(release.id);
@@ -48,12 +55,12 @@ export async function POST({ request }) {
       storage: 'r2' // Mark that this release uses R2 storage
     };
     
-    console.log(`[Master JSON] Status: ${releaseData.status}, Published: ${releaseData.published}, Approved: ${releaseData.approved}`);
+    log.info(`[Master JSON] Status: ${releaseData.status}, Published: ${releaseData.published}, Approved: ${releaseData.approved}`);
     
     // Set the document (will create or update)
     await releaseRef.set(releaseData, { merge: true });
     
-    console.log(`[Master JSON] ✓ Release stored in Firestore [STATUS: ${releaseData.status}]`);
+    log.info(`[Master JSON] ✓ Release stored in Firestore [STATUS: ${releaseData.status}]`);
     
     // Also maintain a master list document for quick access
     const masterListRef = db.collection('system').doc('releases-master');
@@ -84,11 +91,11 @@ export async function POST({ request }) {
     if (existingIndex >= 0) {
       // Update existing entry
       releasesList[existingIndex] = releaseSummary;
-      console.log(`[Master JSON] Updated existing release in master list`);
+      log.info(`[Master JSON] Updated existing release in master list`);
     } else {
       // Add new entry
       releasesList.push(releaseSummary);
-      console.log(`[Master JSON] Added new release to master list`);
+      log.info(`[Master JSON] Added new release to master list`);
     }
     
     // Update master list
@@ -98,7 +105,7 @@ export async function POST({ request }) {
       lastUpdated: new Date().toISOString()
     });
     
-    console.log(`[Master JSON] ✓ Master list updated (${releasesList.length} total releases)`);
+    log.info(`[Master JSON] ✓ Master list updated (${releasesList.length} total releases)`);
 
     return new Response(JSON.stringify({ 
       success: true,

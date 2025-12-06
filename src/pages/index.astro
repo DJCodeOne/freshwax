@@ -57,10 +57,14 @@
             margin-bottom: 1.5rem;
             font-weight: 900;
             letter-spacing: -0.02em;
-            background: linear-gradient(135deg, #ffffff 0%, #cccccc 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        }
+        
+        h1 .coming {
+            color: #ffffff;
+        }
+        
+        h1 .soon {
+            color: #dc2626;
         }
         
         .subtitle {
@@ -167,6 +171,24 @@
             animation: kittScanner 2.6s ease-in-out infinite;
         }
         
+        @keyframes liveGlow {
+            0%, 100% {
+                background: rgba(0, 0, 0, 0.8);
+                border-color: rgba(139, 0, 0, 0.6);
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 
+                            inset 0 1px 0 rgba(139, 0, 0, 0.2),
+                            0 0 15px rgba(139, 0, 0, 0.3);
+            }
+            50% {
+                background: rgba(80, 0, 0, 0.9);
+                border-color: rgba(139, 0, 0, 1);
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 
+                            inset 0 1px 0 rgba(139, 0, 0, 0.4),
+                            0 0 25px rgba(139, 0, 0, 0.6),
+                            0 0 40px rgba(139, 0, 0, 0.3);
+            }
+        }
+        
         .genre-tags {
             display: flex;
             gap: 1rem;
@@ -195,6 +217,44 @@
             border-color: rgba(255, 255, 255, 0.25);
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+        
+        .tag.live {
+            animation: liveGlow 3s ease-in-out infinite;
+            border: 2px solid rgba(139, 0, 0, 0.6);
+        }
+        
+        .tag.live:hover {
+            animation-play-state: paused;
+            background: rgba(100, 0, 0, 0.9);
+            border-color: rgba(180, 0, 0, 1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3), 
+                        0 0 30px rgba(139, 0, 0, 0.7);
+        }
+        
+        .live-icon {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #dc2626;
+            border-radius: 50%;
+            animation: livePulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes livePulse {
+            0%, 100% {
+                opacity: 1;
+                box-shadow: 0 0 4px rgba(220, 38, 38, 0.8);
+            }
+            50% {
+                opacity: 0.5;
+                box-shadow: 0 0 8px rgba(220, 38, 38, 1);
+            }
         }
         
         .merch-notice {
@@ -329,7 +389,7 @@
             >
         </div>
         
-        <h1>Coming Soon</h1>
+        <h1><span class="coming">Coming</span> <span class="soon">Soon</span></h1>
         
         <div class="description">
             <p class="subtitle">Online Store for the Latest in Vinyl & Digital</p>
@@ -342,7 +402,7 @@
                 <div style="height: 2px; width: 3rem; background: linear-gradient(to left, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
             </div>
             
-            <p>Your destination for cutting-edge Jungle and Drum and Bass downloads, fresh vinyl releases, and exclusive merchandise.</p>
+            <p>Your destination for cutting edge Jungle & Drum and Bass downloads, fresh vinyl releases, exclusive merchandise and Live streams.</p>
         </div>
         
         <div class="genre-tags">
@@ -350,6 +410,12 @@
             <span class="tag">⬇️ Digital</span>
             <span class="tag">🎧 DJ Mixes</span>
             <span class="tag">👕 Merch</span>
+            <span class="tag live">
+                <span class="live-icon">
+                    <span class="live-dot"></span>
+                    📡 Live
+                </span>
+            </span>
         </div>
         
         <!-- Merch Supplier Notice -->

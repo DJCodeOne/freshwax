@@ -1,8 +1,13 @@
 // src/pages/api/get-ratings-batch.ts
-// Uses Firebase REST API - works on Cloudflare Pages (no Admin SDK)
 // Fetches ratings for multiple releases in one call
 import type { APIRoute } from 'astro';
 import { getDocument } from '../../lib/firebase-rest';
+
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
 
 export const prerender = false;
 
@@ -33,13 +38,11 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
 
-    // Limit batch size to prevent abuse
     const maxBatchSize = 50;
     const limitedIds = releaseIds.slice(0, maxBatchSize);
     
-    console.log(`[get-ratings-batch] Fetching ratings for ${limitedIds.length} releases`);
+    log.info('[get-ratings-batch] Fetching ratings for', limitedIds.length, 'releases');
 
-    // Fetch all releases in parallel using REST API
     const results = await Promise.all(
       limitedIds.map(async (releaseId) => {
         try {
@@ -58,13 +61,12 @@ export const GET: APIRoute = async ({ request }) => {
             total: ratings.total || 0
           };
         } catch (err) {
-          console.error(`[get-ratings-batch] Error fetching ${releaseId}:`, err);
+          log.error('[get-ratings-batch] Error fetching', releaseId);
           return { id: releaseId, found: false, error: true };
         }
       })
     );
 
-    // Convert to object keyed by release ID for easy lookup
     const ratingsMap: Record<string, any> = {};
     results.forEach(result => {
       if (result.found) {
@@ -77,7 +79,7 @@ export const GET: APIRoute = async ({ request }) => {
       }
     });
 
-    console.log(`[get-ratings-batch] ✓ Returned ratings for ${Object.keys(ratingsMap).length}/${limitedIds.length} releases`);
+    log.info('[get-ratings-batch] Returned ratings for', Object.keys(ratingsMap).length, 'releases');
 
     return new Response(JSON.stringify({
       success: true,
@@ -94,7 +96,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error('[get-ratings-batch] Error:', error);
+    log.error('[get-ratings-batch] Error:', error);
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to fetch ratings batch'

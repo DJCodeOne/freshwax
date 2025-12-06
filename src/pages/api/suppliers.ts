@@ -7,6 +7,12 @@ import { getFirestore } from 'firebase-admin/firestore';
 
 export const prerender = false;
 
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 // Initialize Firebase
 if (!getApps().length) {
   initializeApp({
@@ -72,7 +78,10 @@ export const GET: APIRoute = async ({ url }) => {
         products: products
       }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, max-age=60'
+        }
       });
     }
     
@@ -91,7 +100,7 @@ export const GET: APIRoute = async ({ url }) => {
       }
       
       const supplierDoc = snapshot.docs[0];
-      const supplier = { id: supplierDoc.id, ...supplierDoc.data() };
+      const supplier: any = { id: supplierDoc.id, ...supplierDoc.data() };
       
       // Get their products
       const productsSnapshot = await db.collection('merch')
@@ -144,7 +153,10 @@ export const GET: APIRoute = async ({ url }) => {
         }
       }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, max-age=60'
+        }
       });
     }
     
@@ -159,17 +171,22 @@ export const GET: APIRoute = async ({ url }) => {
       });
     });
     
+    log.info('[suppliers] Listed', suppliers.length, 'suppliers');
+    
     return new Response(JSON.stringify({
       success: true,
       count: suppliers.length,
       suppliers: suppliers
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'private, max-age=60'
+      }
     });
     
   } catch (error) {
-    console.error('[SUPPLIERS] GET Error:', error);
+    log.error('[suppliers] GET Error:', error);
     
     return new Response(JSON.stringify({
       success: false,
@@ -208,8 +225,8 @@ export const POST: APIRoute = async ({ request }) => {
     
     // Generate supplier ID and access code
     const timestamp = Date.now();
-    const supplierId = `supplier_${code.toLowerCase()}_${timestamp}`;
-    const accessCode = `${code.toUpperCase()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const supplierId = 'supplier_' + code.toLowerCase() + '_' + timestamp;
+    const accessCode = code.toUpperCase() + '-' + Math.random().toString(36).substring(2, 8).toUpperCase();
     
     const supplierData = {
       id: supplierId,
@@ -241,7 +258,7 @@ export const POST: APIRoute = async ({ request }) => {
     
     await db.collection('merch-suppliers').doc(supplierId).set(supplierData);
     
-    console.log(`[SUPPLIERS] ✓ Created supplier: ${name} (${supplierId})`);
+    log.info('[suppliers] Created supplier:', name, '(' + supplierId + ')');
     
     return new Response(JSON.stringify({
       success: true,
@@ -254,7 +271,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
     
   } catch (error) {
-    console.error('[SUPPLIERS] POST Error:', error);
+    log.error('[suppliers] POST Error:', error);
     
     return new Response(JSON.stringify({
       success: false,
@@ -293,6 +310,8 @@ export const PUT: APIRoute = async ({ request }) => {
     
     await db.collection('merch-suppliers').doc(supplierId).update(updates);
     
+    log.info('[suppliers] Updated supplier:', supplierId);
+    
     return new Response(JSON.stringify({
       success: true,
       message: 'Supplier updated successfully'
@@ -302,7 +321,7 @@ export const PUT: APIRoute = async ({ request }) => {
     });
     
   } catch (error) {
-    console.error('[SUPPLIERS] PUT Error:', error);
+    log.error('[suppliers] PUT Error:', error);
     
     return new Response(JSON.stringify({
       success: false,
@@ -332,6 +351,8 @@ export const DELETE: APIRoute = async ({ request }) => {
       deactivatedAt: new Date().toISOString()
     });
     
+    log.info('[suppliers] Deactivated supplier:', supplierId);
+    
     return new Response(JSON.stringify({
       success: true,
       message: 'Supplier deactivated successfully'
@@ -341,7 +362,7 @@ export const DELETE: APIRoute = async ({ request }) => {
     });
     
   } catch (error) {
-    console.error('[SUPPLIERS] DELETE Error:', error);
+    log.error('[suppliers] DELETE Error:', error);
     
     return new Response(JSON.stringify({
       success: false,

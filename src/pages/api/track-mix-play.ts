@@ -1,11 +1,16 @@
 // src/pages/api/track-mix-play.ts
-// OPTIMIZED: Tracks DJ mix plays in Firebase using atomic increments
+// Tracks DJ mix plays using atomic increments
 
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -31,14 +36,11 @@ export const POST: APIRoute = async ({ request }) => {
 
     const mixRef = db.collection('dj-mixes').doc(mixId);
 
-    // Use atomic increment to update play count
-    // This is much more efficient than read-modify-write
     await mixRef.update({
       plays: FieldValue.increment(1),
       last_played_date: new Date().toISOString()
     });
 
-    // Get the updated document to return new count
     const mixDoc = await mixRef.get();
     
     if (!mixDoc.exists) {
@@ -50,7 +52,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const mixData = mixDoc.data();
 
-    console.log(`[TRACK-PLAY] ✓ Mix ${mixId} play count: ${mixData?.plays || 0}`);
+    log.info('[track-mix-play] Mix', mixId, 'plays:', mixData?.plays || 0);
 
     return new Response(JSON.stringify({
       success: true,
@@ -61,7 +63,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error('[TRACK-PLAY] Error tracking play:', error);
+    log.error('[track-mix-play] Error:', error);
     return new Response(JSON.stringify({
       error: 'Failed to track play',
       details: error instanceof Error ? error.message : 'Unknown error'

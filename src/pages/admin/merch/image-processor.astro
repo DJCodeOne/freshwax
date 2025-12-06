@@ -1,0 +1,510 @@
+---
+// src/pages/admin/merch/image-processor.astro
+// Bulk image processor - resize, convert to WebP, upload to R2
+export const prerender = false;
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Processor | Fresh Wax Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #0a0a0a; color: #fff; min-height: 100vh; }
+    
+    .header { background: #000; border-bottom: 2px solid #222; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.05em; }
+    .header h1 span { color: #dc2626; }
+    .header-nav { display: flex; gap: 1rem; }
+    .header-nav a { color: #fff; text-decoration: none; padding: 0.5rem 1rem; border: 2px solid #333; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: all 0.2s; }
+    .header-nav a:hover { border-color: #dc2626; color: #dc2626; }
+    
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    
+    .page-title { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, #dc2626, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .page-subtitle { color: #888; margin-bottom: 2rem; }
+    
+    .settings-row { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; align-items: flex-end; }
+    .setting-group { display: flex; flex-direction: column; gap: 0.5rem; }
+    .setting-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #888; }
+    .setting-input, .setting-select { padding: 0.75rem 1rem; background: #1a1a1a; border: 2px solid #333; color: #fff; font-size: 1rem; font-family: inherit; min-width: 150px; }
+    .setting-input:focus, .setting-select:focus { outline: none; border-color: #dc2626; }
+    
+    .drop-zone { border: 3px dashed #333; padding: 4rem 2rem; text-align: center; cursor: pointer; transition: all 0.3s; background: #111; border-radius: 12px; margin-bottom: 2rem; }
+    .drop-zone:hover, .drop-zone.dragover { border-color: #dc2626; background: #1a1a1a; }
+    .drop-zone-icon { font-size: 4rem; margin-bottom: 1rem; }
+    .drop-zone-text { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .drop-zone-hint { color: #666; font-size: 0.875rem; }
+    
+    .processing-status { display: none; text-align: center; padding: 2rem; background: #111; border: 2px solid #333; border-radius: 12px; margin-bottom: 2rem; }
+    .processing-status.show { display: block; }
+    .processing-spinner { width: 50px; height: 50px; border: 4px solid #333; border-top-color: #dc2626; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .processing-text { font-weight: 600; }
+    .processing-progress { width: 100%; height: 8px; background: #333; border-radius: 4px; margin-top: 1rem; overflow: hidden; }
+    .processing-progress-bar { height: 100%; background: linear-gradient(90deg, #dc2626, #f59e0b); width: 0%; transition: width 0.3s; }
+    
+    .results { display: none; }
+    .results.show { display: block; }
+    .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px solid #333; }
+    .results-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; }
+    .results-count { color: #888; }
+    
+    .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+    
+    .image-card { background: #111; border: 2px solid #333; border-radius: 8px; overflow: hidden; transition: all 0.2s; }
+    .image-card:hover { border-color: #dc2626; transform: translateY(-2px); }
+    .image-card.error { border-color: #dc2626; opacity: 0.6; }
+    .image-card.success { border-color: #22c55e; }
+    
+    .image-preview { aspect-ratio: 1; background: #0a0a0a; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+    .image-preview img { width: 100%; height: 100%; object-fit: contain; }
+    .image-preview .status-badge { position: absolute; top: 8px; right: 8px; padding: 0.25rem 0.5rem; font-size: 0.625rem; font-weight: 700; text-transform: uppercase; border-radius: 4px; }
+    .image-preview .status-badge.processing { background: #f59e0b; color: #000; }
+    .image-preview .status-badge.done { background: #22c55e; color: #000; }
+    .image-preview .status-badge.error { background: #dc2626; color: #fff; }
+    
+    .image-info { padding: 0.75rem; }
+    .image-name { font-weight: 600; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.25rem; }
+    .image-meta { font-size: 0.75rem; color: #666; display: flex; justify-content: space-between; }
+    .image-size-reduction { color: #22c55e; font-weight: 600; }
+    
+    .image-url { margin-top: 0.5rem; }
+    .image-url input { width: 100%; padding: 0.5rem; background: #0a0a0a; border: 1px solid #333; color: #fff; font-size: 0.75rem; font-family: monospace; }
+    .image-url input:focus { outline: none; border-color: #dc2626; }
+    
+    .copy-btn { width: 100%; padding: 0.5rem; margin-top: 0.5rem; background: #dc2626; border: none; color: #fff; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+    .copy-btn:hover { background: #b91c1c; }
+    .copy-btn.copied { background: #22c55e; }
+    
+    .actions-bar { display: flex; gap: 1rem; margin-top: 2rem; padding-top: 2rem; border-top: 2px solid #333; }
+    .btn { padding: 1rem 2rem; font-weight: 700; font-size: 0.875rem; text-transform: uppercase; cursor: pointer; border: 2px solid; transition: all 0.2s; }
+    .btn-primary { background: #dc2626; color: #fff; border-color: #dc2626; }
+    .btn-primary:hover { background: #b91c1c; border-color: #b91c1c; }
+    .btn-primary:disabled { background: #333; border-color: #333; cursor: not-allowed; }
+    .btn-secondary { background: transparent; color: #fff; border-color: #333; }
+    .btn-secondary:hover { border-color: #fff; }
+    
+    .all-urls { margin-top: 2rem; }
+    .all-urls textarea { width: 100%; height: 150px; padding: 1rem; background: #111; border: 2px solid #333; color: #fff; font-family: monospace; font-size: 0.875rem; resize: vertical; }
+    .all-urls textarea:focus { outline: none; border-color: #dc2626; }
+    .all-urls-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .all-urls-label { font-weight: 700; font-size: 0.875rem; text-transform: uppercase; }
+    
+    .toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; background: #22c55e; color: #fff; font-weight: 600; transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 2000; border-radius: 8px; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    
+    .info-box { background: #1a1a1a; border: 2px solid #333; padding: 1rem; margin-bottom: 2rem; border-radius: 8px; }
+    .info-box-title { font-weight: 700; margin-bottom: 0.5rem; color: #f59e0b; }
+    .info-box p { color: #888; font-size: 0.875rem; line-height: 1.6; }
+    .info-box ul { color: #888; font-size: 0.875rem; margin-left: 1.5rem; margin-top: 0.5rem; }
+    .info-box li { margin-bottom: 0.25rem; }
+    
+    @media (max-width: 768px) {
+      .settings-row { flex-direction: column; }
+      .setting-input, .setting-select { width: 100%; }
+      .image-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>Fresh <span>Wax</span> Image Processor</h1>
+    <nav class="header-nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/inventory">Inventory</a>
+      <a href="/admin/merch/upload">Add Product</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h1 class="page-title">Merch Image Processor</h1>
+    <p class="page-subtitle">Drop images to resize, convert to WebP, and upload to CDN</p>
+    
+    <div class="info-box">
+      <div class="info-box-title">📸 Image Specifications</div>
+      <p>Images will be automatically processed to meet Fresh Wax standards:</p>
+      <ul>
+        <li><strong>Main image:</strong> 800×800px WebP (high quality)</li>
+        <li><strong>Thumbnail:</strong> 400×400px WebP (optimised)</li>
+        <li><strong>Format:</strong> WebP with 85% quality</li>
+        <li><strong>Max file size:</strong> ~100KB per image</li>
+      </ul>
+    </div>
+    
+    <div class="settings-row">
+      <div class="setting-group">
+        <label class="setting-label">Main Size (px)</label>
+        <input type="number" class="setting-input" id="mainSize" value="800" min="400" max="1200">
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">Thumbnail Size (px)</label>
+        <input type="number" class="setting-input" id="thumbSize" value="400" min="200" max="600">
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">Quality (%)</label>
+        <input type="number" class="setting-input" id="quality" value="85" min="50" max="100">
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">Folder Name</label>
+        <input type="text" class="setting-input" id="folderName" placeholder="e.g., tshirt-black">
+      </div>
+    </div>
+    
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-zone-icon">📁</div>
+      <div class="drop-zone-text">Drop images here</div>
+      <div class="drop-zone-hint">or click to select files (PNG, JPG, JPEG, WebP)</div>
+      <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+    </div>
+    
+    <div class="processing-status" id="processingStatus">
+      <div class="processing-spinner"></div>
+      <div class="processing-text" id="processingText">Processing images...</div>
+      <div class="processing-progress">
+        <div class="processing-progress-bar" id="progressBar"></div>
+      </div>
+    </div>
+    
+    <div class="results" id="results">
+      <div class="results-header">
+        <div class="results-title">Processed Images</div>
+        <div class="results-count" id="resultsCount">0 images</div>
+      </div>
+      
+      <div class="image-grid" id="imageGrid"></div>
+      
+      <div class="all-urls">
+        <div class="all-urls-header">
+          <span class="all-urls-label">All URLs (for bulk copy)</span>
+          <button class="btn btn-secondary" onclick="copyAllUrls()" style="padding: 0.5rem 1rem; font-size: 0.75rem;">Copy All</button>
+        </div>
+        <textarea id="allUrlsTextarea" readonly placeholder="URLs will appear here after processing..."></textarea>
+      </div>
+      
+      <div class="actions-bar">
+        <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+        <button class="btn btn-primary" id="uploadBtn" onclick="uploadToR2()" disabled>Upload to CDN</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const processingStatus = document.getElementById('processingStatus');
+    const results = document.getElementById('results');
+    const imageGrid = document.getElementById('imageGrid');
+    
+    let processedImages = [];
+    
+    // Drag and drop handlers
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      handleFiles(e.dataTransfer.files);
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+      handleFiles(e.target.files);
+    });
+    
+    // Toast notification
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    
+    // Handle dropped/selected files
+    async function handleFiles(files) {
+      const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+      
+      if (imageFiles.length === 0) {
+        showToast('No valid image files found');
+        return;
+      }
+      
+      processingStatus.classList.add('show');
+      results.classList.remove('show');
+      processedImages = [];
+      
+      const mainSize = parseInt(document.getElementById('mainSize').value) || 800;
+      const thumbSize = parseInt(document.getElementById('thumbSize').value) || 400;
+      const quality = parseInt(document.getElementById('quality').value) || 85;
+      
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        document.getElementById('processingText').textContent = `Processing ${i + 1} of ${imageFiles.length}: ${file.name}`;
+        document.getElementById('progressBar').style.width = ((i + 1) / imageFiles.length * 100) + '%';
+        
+        try {
+          const processed = await processImage(file, mainSize, thumbSize, quality);
+          processedImages.push(processed);
+        } catch (err) {
+          processedImages.push({
+            originalName: file.name,
+            error: err.message
+          });
+        }
+        
+        // Small delay to show progress
+        await new Promise(r => setTimeout(r, 100));
+      }
+      
+      processingStatus.classList.remove('show');
+      renderResults();
+    }
+    
+    // Process single image
+    async function processImage(file, mainSize, thumbSize, quality) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        img.onload = () => {
+          const originalSize = file.size;
+          
+          // Main image
+          const mainCanvas = document.createElement('canvas');
+          const mainCtx = mainCanvas.getContext('2d');
+          mainCanvas.width = mainSize;
+          mainCanvas.height = mainSize;
+          
+          // Calculate crop for square
+          const size = Math.min(img.width, img.height);
+          const x = (img.width - size) / 2;
+          const y = (img.height - size) / 2;
+          
+          // Fill with white background (for transparency)
+          mainCtx.fillStyle = '#ffffff';
+          mainCtx.fillRect(0, 0, mainSize, mainSize);
+          mainCtx.drawImage(img, x, y, size, size, 0, 0, mainSize, mainSize);
+          
+          const mainDataUrl = mainCanvas.toDataURL('image/webp', quality / 100);
+          
+          // Thumbnail
+          const thumbCanvas = document.createElement('canvas');
+          const thumbCtx = thumbCanvas.getContext('2d');
+          thumbCanvas.width = thumbSize;
+          thumbCanvas.height = thumbSize;
+          
+          thumbCtx.fillStyle = '#ffffff';
+          thumbCtx.fillRect(0, 0, thumbSize, thumbSize);
+          thumbCtx.drawImage(img, x, y, size, size, 0, 0, thumbSize, thumbSize);
+          
+          const thumbDataUrl = thumbCanvas.toDataURL('image/webp', quality / 100);
+          
+          // Calculate sizes
+          const mainBlob = dataURLToBlob(mainDataUrl);
+          const thumbBlob = dataURLToBlob(thumbDataUrl);
+          
+          const baseName = file.name.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-');
+          
+          resolve({
+            originalName: file.name,
+            originalSize: originalSize,
+            baseName: baseName,
+            main: {
+              dataUrl: mainDataUrl,
+              blob: mainBlob,
+              size: mainBlob.size,
+              width: mainSize,
+              height: mainSize,
+              filename: baseName + '.webp'
+            },
+            thumb: {
+              dataUrl: thumbDataUrl,
+              blob: thumbBlob,
+              size: thumbBlob.size,
+              width: thumbSize,
+              height: thumbSize,
+              filename: baseName + '_thumb.webp'
+            },
+            totalNewSize: mainBlob.size + thumbBlob.size,
+            reduction: Math.round((1 - (mainBlob.size / originalSize)) * 100)
+          });
+        };
+        
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = URL.createObjectURL(file);
+      });
+    }
+    
+    // Convert data URL to Blob
+    function dataURLToBlob(dataUrl) {
+      const parts = dataUrl.split(',');
+      const mime = parts[0].match(/:(.*?);/)[1];
+      const bstr = atob(parts[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new Blob([u8arr], { type: mime });
+    }
+    
+    // Format bytes
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+    
+    // Render results
+    function renderResults() {
+      results.classList.add('show');
+      document.getElementById('resultsCount').textContent = processedImages.length + ' images';
+      
+      imageGrid.innerHTML = processedImages.map((img, idx) => {
+        if (img.error) {
+          return `
+            <div class="image-card error">
+              <div class="image-preview">
+                <span style="color: #dc2626;">Error</span>
+                <span class="status-badge error">Failed</span>
+              </div>
+              <div class="image-info">
+                <div class="image-name">${img.originalName}</div>
+                <div class="image-meta" style="color: #dc2626;">${img.error}</div>
+              </div>
+            </div>
+          `;
+        }
+        
+        return `
+          <div class="image-card" id="card-${idx}">
+            <div class="image-preview">
+              <img src="${img.main.dataUrl}" alt="${img.originalName}">
+              <span class="status-badge processing" id="badge-${idx}">Ready</span>
+            </div>
+            <div class="image-info">
+              <div class="image-name" title="${img.originalName}">${img.baseName}.webp</div>
+              <div class="image-meta">
+                <span>${formatBytes(img.originalSize)} → ${formatBytes(img.main.size)}</span>
+                <span class="image-size-reduction">-${img.reduction}%</span>
+              </div>
+              <div class="image-url" id="url-${idx}" style="display: none;">
+                <input type="text" readonly id="urlInput-${idx}">
+                <button class="copy-btn" onclick="copyUrl(${idx})">Copy URL</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      document.getElementById('uploadBtn').disabled = processedImages.filter(i => !i.error).length === 0;
+    }
+    
+    // Upload to R2
+    async function uploadToR2() {
+      const folderName = document.getElementById('folderName').value.trim() || 'merch-' + Date.now();
+      const btn = document.getElementById('uploadBtn');
+      btn.disabled = true;
+      btn.textContent = 'Uploading...';
+      
+      const urls = [];
+      
+      for (let i = 0; i < processedImages.length; i++) {
+        const img = processedImages[i];
+        if (img.error) continue;
+        
+        const badge = document.getElementById('badge-' + i);
+        badge.textContent = 'Uploading';
+        badge.className = 'status-badge processing';
+        
+        try {
+          // Upload main image
+          const formData = new FormData();
+          formData.append('file', img.main.blob, img.main.filename);
+          formData.append('folder', 'merch/' + folderName);
+          formData.append('filename', img.main.filename);
+          
+          const response = await fetch('/api/upload-merch-image', {
+            method: 'POST',
+            body: formData
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            img.uploadedUrl = data.url;
+            urls.push(data.url);
+            
+            badge.textContent = 'Done';
+            badge.className = 'status-badge done';
+            document.getElementById('card-' + i).classList.add('success');
+            
+            const urlDiv = document.getElementById('url-' + i);
+            urlDiv.style.display = 'block';
+            document.getElementById('urlInput-' + i).value = data.url;
+          } else {
+            throw new Error(data.error || 'Upload failed');
+          }
+        } catch (err) {
+          badge.textContent = 'Error';
+          badge.className = 'status-badge error';
+          console.error('Upload error:', err);
+        }
+      }
+      
+      document.getElementById('allUrlsTextarea').value = urls.join('\n');
+      
+      btn.textContent = 'Upload to CDN';
+      btn.disabled = false;
+      
+      showToast(`Uploaded ${urls.length} images to CDN`);
+    }
+    
+    // Copy single URL
+    function copyUrl(idx) {
+      const input = document.getElementById('urlInput-' + idx);
+      input.select();
+      document.execCommand('copy');
+      
+      const btn = input.nextElementSibling;
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy URL';
+        btn.classList.remove('copied');
+      }, 2000);
+    }
+    
+    // Copy all URLs
+    function copyAllUrls() {
+      const textarea = document.getElementById('allUrlsTextarea');
+      textarea.select();
+      document.execCommand('copy');
+      showToast('All URLs copied to clipboard');
+    }
+    
+    // Clear all
+    function clearAll() {
+      processedImages = [];
+      results.classList.remove('show');
+      imageGrid.innerHTML = '';
+      document.getElementById('allUrlsTextarea').value = '';
+      fileInput.value = '';
+    }
+  </script>
+</body>
+</html>

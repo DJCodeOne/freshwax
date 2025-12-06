@@ -1,0 +1,916 @@
+---
+// /src/pages/artist/releases.astro
+// My Releases - View, edit and manage music releases
+
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+const partnerId = Astro.cookies.get('partnerId')?.value || '';
+let partner = null;
+let releases: any[] = [];
+
+if (partnerId) {
+  try {
+    const partnerDoc = await db.collection('artists').doc(partnerId).get();
+    if (partnerDoc.exists) {
+      partner = { id: partnerDoc.id, ...partnerDoc.data() };
+      
+      // Get releases for this artist
+      const releasesSnap = await db.collection('releases')
+        .where('artistId', '==', partnerId)
+        .get();
+      
+      releases = releasesSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Sort by createdAt descending
+      releases.sort((a, b) => {
+        const dateA = a.createdAt || a.uploadedAt || '';
+        const dateB = b.createdAt || b.uploadedAt || '';
+        return dateB.localeCompare(dateA);
+      });
+    }
+  } catch (e) {
+    console.error('Error fetching releases:', e);
+  }
+}
+
+const isLoggedIn = !!partner;
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return 'Unknown';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(price || 0);
+};
+
+const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num || 0);
+
+// Musical keys list
+const musicalKeys = [
+  'C Major', 'C Minor', 'C# Major', 'C# Minor',
+  'D Major', 'D Minor', 'D# Major', 'D# Minor',
+  'E Major', 'E Minor',
+  'F Major', 'F Minor', 'F# Major', 'F# Minor',
+  'G Major', 'G Minor', 'G# Major', 'G# Minor',
+  'A Major', 'A Minor', 'A# Major', 'A# Minor',
+  'B Major', 'B Minor'
+];
+
+export const prerender = false;
+---
+
+<Layout title="My Releases | Fresh Wax">
+  <Header />
+  
+  <main class="releases-main">
+    <div class="container">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="header-left">
+          <a href="/artist/dashboard" class="back-link">← Dashboard</a>
+          <h1>My Releases</h1>
+          <p>View, edit and manage your music catalogue</p>
+        </div>
+        <div class="header-actions">
+          <a href="/artist/release-stats" class="stats-btn">
+            📊 Analytics
+          </a>
+          <a href="https://freshwax-uploader.pages.dev" target="_blank" class="upload-btn">
+            <span>+</span> Upload Release
+          </a>
+        </div>
+      </div>
+
+      {!isLoggedIn ? (
+        <div class="login-prompt">
+          <p>Please log in to view your releases.</p>
+          <a href="/login" class="login-btn">Sign In</a>
+        </div>
+      ) : releases.length === 0 ? (
+        <div class="empty-state">
+          <div class="empty-icon">💿</div>
+          <h2>No releases yet</h2>
+          <p>Upload your first release to get started!</p>
+          <a href="https://freshwax-uploader.pages.dev" target="_blank" class="upload-btn">Upload Release</a>
+        </div>
+      ) : (
+        <div class="releases-list">
+          {releases.map((release) => (
+            <div class="release-card" data-release-id={release.id}>
+              <!-- Release Header -->
+              <div class="release-header">
+                <img 
+                  src={release.artworkUrl || release.artwork_url || '/logo.webp'} 
+                  alt={release.title}
+                  class="release-artwork"
+                />
+                <div class="release-info">
+                  <h2>{release.title}</h2>
+                  <p class="release-artist">{release.artistName || release.artist}</p>
+                  <div class="release-meta">
+                    <span class="meta-item">
+                      <span class="meta-icon">📅</span>
+                      {formatDate(release.createdAt || release.uploadedAt)}
+                    </span>
+                    <span class="meta-item">
+                      <span class="meta-icon">🎵</span>
+                      {release.genre || 'Jungle'}
+                    </span>
+                    <span class={`status-badge ${release.status || 'pending'}`}>
+                      {release.status === 'live' ? '🟢 Live' : '🟡 Pending'}
+                    </span>
+                  </div>
+                </div>
+                <div class="release-actions">
+                  <a href={`/release/${release.id}`} class="action-btn view" target="_blank">
+                    View
+                  </a>
+                </div>
+              </div>
+
+              <!-- Stats Row -->
+              <div class="stats-row">
+                <div class="stat">
+                  <span class="stat-value">{formatNumber(release.plays || 0)}</span>
+                  <span class="stat-label">Plays</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-value">{formatNumber(release.sales || 0)}</span>
+                  <span class="stat-label">Sales</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-value green">{formatPrice(release.price || 0)}</span>
+                  <span class="stat-label">Price</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-value">{release.bpm || '-'}</span>
+                  <span class="stat-label">BPM</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-value">{release.key || '-'}</span>
+                  <span class="stat-label">Key</span>
+                </div>
+              </div>
+
+              <!-- Editable Fields -->
+              <div class="edit-section">
+                <div class="section-header">
+                  <h3>Release Details</h3>
+                  <button class="edit-toggle-btn" data-release-id={release.id}>
+                    <span class="edit-icon">✏️</span> Edit
+                  </button>
+                </div>
+                
+                <!-- View Mode -->
+                <div class="details-view" data-release-id={release.id}>
+                  <div class="details-grid">
+                    <div class="detail-item">
+                      <span class="detail-label">BPM</span>
+                      <span class="detail-value">{release.bpm || 'Not set'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">Key</span>
+                      <span class="detail-value">{release.key || 'Not set'}</span>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">Price</span>
+                      <span class="detail-value">{formatPrice(release.price || 0)}</span>
+                    </div>
+                  </div>
+                  <div class="description-view">
+                    <span class="detail-label">Description</span>
+                    <p class="detail-value">{release.description || 'No description'}</p>
+                  </div>
+                </div>
+                
+                <!-- Edit Mode -->
+                <div class="details-edit hidden" data-release-id={release.id}>
+                  <div class="edit-grid">
+                    <div class="edit-field">
+                      <label>BPM</label>
+                      <input 
+                        type="number" 
+                        class="edit-input bpm-input"
+                        data-release-id={release.id}
+                        value={release.bpm || ''}
+                        placeholder="e.g. 174"
+                        min="60"
+                        max="220"
+                      />
+                    </div>
+                    <div class="edit-field">
+                      <label>Key</label>
+                      <select class="edit-input key-input" data-release-id={release.id}>
+                        <option value="">Select key...</option>
+                        {musicalKeys.map(key => (
+                          <option value={key} selected={release.key === key}>{key}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div class="edit-field">
+                      <label>Price (£)</label>
+                      <input 
+                        type="number" 
+                        class="edit-input price-input"
+                        data-release-id={release.id}
+                        value={release.price || ''}
+                        placeholder="e.g. 1.49"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+                  <div class="edit-field full-width">
+                    <label>Description</label>
+                    <textarea 
+                      class="edit-input description-input"
+                      data-release-id={release.id}
+                      placeholder="Describe your release..."
+                      maxlength="500"
+                    >{release.description || ''}</textarea>
+                    <span class="char-count"><span class="current">{(release.description || '').length}</span>/500</span>
+                  </div>
+                  <div class="edit-actions">
+                    <button class="cancel-edit-btn" data-release-id={release.id}>Cancel</button>
+                    <button class="save-edit-btn" data-release-id={release.id}>Save Changes</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .releases-main {
+    min-height: calc(100vh - 200px);
+    background: #f5f5f5;
+    padding: 2rem 0;
+  }
+  
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+  
+  /* Page Header */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .header-left h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: #000;
+    margin: 0.5rem 0 0.25rem;
+  }
+  
+  .header-left p {
+    color: #666;
+    font-size: 1.0625rem;
+  }
+  
+  .back-link {
+    color: #666;
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  
+  .back-link:hover {
+    color: #000;
+  }
+  
+  .header-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+  
+  .stats-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #f0f0f0;
+    color: #333;
+    padding: 0.875rem 1.25rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.2s;
+    border: 2px solid #e5e5e5;
+  }
+  
+  .stats-btn:hover {
+    background: #e5e5e5;
+    border-color: #ccc;
+  }
+  
+  .upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #000;
+    color: #fff;
+    padding: 0.875rem 1.5rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.2s;
+  }
+  
+  .upload-btn:hover {
+    background: #222;
+    transform: translateY(-2px);
+  }
+  
+  .upload-btn span {
+    font-size: 1.25rem;
+    font-weight: 300;
+  }
+  
+  /* Login/Empty States */
+  .login-prompt, .empty-state {
+    background: #fff;
+    border: 2px solid #e5e5e5;
+    border-radius: 16px;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+  
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+  
+  .empty-state h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .empty-state p {
+    color: #666;
+    margin-bottom: 1.5rem;
+    font-size: 1.0625rem;
+  }
+  
+  .login-btn {
+    display: inline-block;
+    background: #000;
+    color: #fff;
+    padding: 0.875rem 2rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  
+  /* Releases List */
+  .releases-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .release-card {
+    background: #fff;
+    border: 2px solid #e5e5e5;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.2s;
+  }
+  
+  .release-card:hover {
+    border-color: #ccc;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  }
+  
+  /* Release Header */
+  .release-header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.5rem;
+    border-bottom: 2px solid #e5e5e5;
+  }
+  
+  .release-artwork {
+    width: 100px;
+    height: 100px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 2px solid #e5e5e5;
+    flex-shrink: 0;
+  }
+  
+  .release-info {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .release-info h2 {
+    font-size: 1.375rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .release-artist {
+    font-size: 1.0625rem;
+    color: #666;
+    margin: 0 0 0.5rem;
+  }
+  
+  .release-meta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.9375rem;
+    color: #888;
+  }
+  
+  .meta-icon {
+    font-size: 1rem;
+  }
+  
+  .status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+  }
+  
+  .status-badge.live {
+    background: #dcfce7;
+    color: #16a34a;
+  }
+  
+  .status-badge.pending {
+    background: #fef3c7;
+    color: #d97706;
+  }
+  
+  .release-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .action-btn {
+    padding: 0.625rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .action-btn.view {
+    background: #f0f0f0;
+    color: #333;
+  }
+  
+  .action-btn.view:hover {
+    background: #000;
+    color: #fff;
+  }
+  
+  /* Stats Row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: #fafafa;
+    border-bottom: 2px solid #e5e5e5;
+  }
+  
+  .stat {
+    text-align: center;
+  }
+  
+  .stat-value {
+    display: block;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: #000;
+    line-height: 1;
+  }
+  
+  .stat-value.green { color: #16a34a; }
+  
+  .stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-top: 0.25rem;
+  }
+  
+  /* Edit Section */
+  .edit-section {
+    padding: 1.5rem;
+  }
+  
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .section-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #666;
+    margin: 0;
+  }
+  
+  .edit-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.5rem 0.875rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  
+  .edit-toggle-btn:hover {
+    background: #f0f0f0;
+    color: #000;
+  }
+  
+  /* View Mode */
+  .details-view.hidden {
+    display: none;
+  }
+  
+  .details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .detail-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  
+  .detail-value {
+    font-size: 1.0625rem;
+    color: #333;
+  }
+  
+  .description-view {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .description-view p {
+    font-size: 1rem;
+    color: #333;
+    line-height: 1.5;
+    margin: 0;
+  }
+  
+  /* Edit Mode */
+  .details-edit.hidden {
+    display: none;
+  }
+  
+  .edit-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .edit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .edit-field.full-width {
+    grid-column: 1 / -1;
+  }
+  
+  .edit-field label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .edit-input {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e5e5;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  
+  .edit-input:focus {
+    outline: none;
+    border-color: #000;
+  }
+  
+  textarea.edit-input {
+    min-height: 100px;
+    resize: vertical;
+  }
+  
+  .char-count {
+    font-size: 0.8125rem;
+    color: #888;
+    text-align: right;
+    margin-top: 0.25rem;
+  }
+  
+  .edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+  
+  .cancel-edit-btn {
+    padding: 0.75rem 1.5rem;
+    background: #f0f0f0;
+    border: 2px solid #e5e5e5;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .cancel-edit-btn:hover {
+    background: #e5e5e5;
+    color: #333;
+  }
+  
+  .save-edit-btn {
+    padding: 0.75rem 1.5rem;
+    background: #000;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .save-edit-btn:hover {
+    background: #222;
+  }
+  
+  .save-edit-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .page-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .header-actions {
+      flex-direction: column;
+    }
+    
+    .stats-btn, .upload-btn {
+      text-align: center;
+      justify-content: center;
+    }
+    
+    .release-header {
+      flex-direction: column;
+      text-align: center;
+    }
+    
+    .release-artwork {
+      width: 120px;
+      height: 120px;
+    }
+    
+    .release-meta {
+      justify-content: center;
+    }
+    
+    .release-actions {
+      width: 100%;
+    }
+    
+    .action-btn {
+      flex: 1;
+      text-align: center;
+    }
+    
+    .stats-row {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .stats-row .stat:nth-child(4),
+    .stats-row .stat:nth-child(5) {
+      grid-column: span 1;
+    }
+    
+    .details-grid, .edit-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .stats-row {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .stat-value {
+      font-size: 1.25rem;
+    }
+  }
+</style>
+
+<script type="module">
+  // Toggle edit mode
+  document.querySelectorAll('.edit-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const releaseId = btn.dataset.releaseId;
+      const viewEl = document.querySelector(`.details-view[data-release-id="${releaseId}"]`);
+      const editEl = document.querySelector(`.details-edit[data-release-id="${releaseId}"]`);
+      
+      viewEl?.classList.add('hidden');
+      editEl?.classList.remove('hidden');
+      btn.style.display = 'none';
+    });
+  });
+  
+  // Cancel edit
+  document.querySelectorAll('.cancel-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const releaseId = btn.dataset.releaseId;
+      const viewEl = document.querySelector(`.details-view[data-release-id="${releaseId}"]`);
+      const editEl = document.querySelector(`.details-edit[data-release-id="${releaseId}"]`);
+      const toggleBtn = document.querySelector(`.edit-toggle-btn[data-release-id="${releaseId}"]`);
+      
+      editEl?.classList.add('hidden');
+      viewEl?.classList.remove('hidden');
+      if (toggleBtn) toggleBtn.style.display = '';
+    });
+  });
+  
+  // Character count for description
+  document.querySelectorAll('.description-input').forEach(textarea => {
+    const releaseId = textarea.dataset.releaseId;
+    const charCount = textarea.closest('.edit-field')?.querySelector('.char-count .current');
+    
+    textarea.addEventListener('input', () => {
+      if (charCount) {
+        charCount.textContent = textarea.value.length;
+      }
+    });
+  });
+  
+  // Save changes
+  document.querySelectorAll('.save-edit-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const releaseId = btn.dataset.releaseId;
+      const card = document.querySelector(`.release-card[data-release-id="${releaseId}"]`);
+      
+      const bpmInput = card.querySelector(`.bpm-input[data-release-id="${releaseId}"]`);
+      const keyInput = card.querySelector(`.key-input[data-release-id="${releaseId}"]`);
+      const priceInput = card.querySelector(`.price-input[data-release-id="${releaseId}"]`);
+      const descInput = card.querySelector(`.description-input[data-release-id="${releaseId}"]`);
+      
+      const data = {
+        id: releaseId,
+        bpm: bpmInput?.value ? parseInt(bpmInput.value) : null,
+        key: keyInput?.value || null,
+        price: priceInput?.value ? parseFloat(priceInput.value) : null,
+        description: descInput?.value?.trim() || null
+      };
+      
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+      
+      try {
+        const response = await fetch('/api/update-release', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Update view values
+          const viewEl = card.querySelector(`.details-view[data-release-id="${releaseId}"]`);
+          const detailValues = viewEl?.querySelectorAll('.detail-value');
+          if (detailValues) {
+            detailValues[0].textContent = data.bpm || 'Not set';
+            detailValues[1].textContent = data.key || 'Not set';
+            detailValues[2].textContent = data.price ? `£${data.price.toFixed(2)}` : '£0.00';
+          }
+          
+          const descView = viewEl?.querySelector('.description-view p');
+          if (descView) {
+            descView.textContent = data.description || 'No description';
+          }
+          
+          // Update stats row
+          const statValues = card.querySelectorAll('.stats-row .stat-value');
+          if (statValues[2]) statValues[2].textContent = data.price ? `£${data.price.toFixed(2)}` : '£0.00';
+          if (statValues[3]) statValues[3].textContent = data.bpm || '-';
+          if (statValues[4]) statValues[4].textContent = data.key || '-';
+          
+          // Close edit mode
+          const editEl = card.querySelector(`.details-edit[data-release-id="${releaseId}"]`);
+          const toggleBtn = card.querySelector(`.edit-toggle-btn[data-release-id="${releaseId}"]`);
+          
+          editEl?.classList.add('hidden');
+          viewEl?.classList.remove('hidden');
+          if (toggleBtn) toggleBtn.style.display = '';
+        } else {
+          alert(result.error || 'Failed to save changes');
+        }
+      } catch (error) {
+        console.error('Error saving:', error);
+        alert('Failed to save changes. Please try again.');
+      }
+      
+      btn.textContent = 'Save Changes';
+      btn.disabled = false;
+    });
+  });
+</script>

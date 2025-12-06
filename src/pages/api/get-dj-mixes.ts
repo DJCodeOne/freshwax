@@ -5,30 +5,47 @@ import { queryCollection } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 export const GET: APIRoute = async ({ request }) => {
   const url = new URL(request.url);
   const limitParam = url.searchParams.get('limit');
+  const userId = url.searchParams.get('userId');
   const limit = limitParam ? parseInt(limitParam) : 50;
   
-  console.log(`[GET-DJ-MIXES] Fetching up to ${limit} mixes via REST API...`);
+  log.info('[get-dj-mixes] Fetching mixes, userId:', userId, 'limit:', limit);
   
   try {
-    // Query mixes - try 'published' field first, then 'status'
-    let mixes = await queryCollection('dj-mixes', {
-      filters: [{ field: 'published', op: 'EQUAL', value: true }]
-    });
+    let mixes: any[] = [];
     
-    // If no results with 'published', try 'status'
-    if (mixes.length === 0) {
+    // If userId provided, filter by userId
+    if (userId) {
       mixes = await queryCollection('dj-mixes', {
-        filters: [{ field: 'status', op: 'EQUAL', value: 'live' }]
+        filters: [{ field: 'userId', op: 'EQUAL', value: userId }]
       });
-    }
-    
-    // If still no results, try without filter (get all)
-    if (mixes.length === 0) {
-      const { documents } = await import('../../lib/firebase-rest').then(m => m.listCollection('dj-mixes', limit));
-      mixes = documents;
+      log.info('[get-dj-mixes] Found', mixes.length, 'mixes for user');
+    } else {
+      // Query mixes - try 'published' field first, then 'status'
+      mixes = await queryCollection('dj-mixes', {
+        filters: [{ field: 'published', op: 'EQUAL', value: true }]
+      });
+      
+      // If no results with 'published', try 'status'
+      if (mixes.length === 0) {
+        mixes = await queryCollection('dj-mixes', {
+          filters: [{ field: 'status', op: 'EQUAL', value: 'live' }]
+        });
+      }
+      
+      // If still no results, try without filter (get all)
+      if (mixes.length === 0) {
+        const { documents } = await import('../../lib/firebase-rest').then(m => m.listCollection('dj-mixes', limit));
+        mixes = documents;
+      }
     }
     
     // Normalize mix data
@@ -58,7 +75,7 @@ export const GET: APIRoute = async ({ request }) => {
     // Apply limit
     const limitedMixes = limit > 0 ? normalizedMixes.slice(0, limit) : normalizedMixes;
     
-    console.log(`[GET-DJ-MIXES] ✓ Loaded ${mixes.length} mixes, returning ${limitedMixes.length}`);
+    log.info('[get-dj-mixes] Loaded', mixes.length, 'mixes, returning', limitedMixes.length);
     
     return new Response(JSON.stringify({ 
       success: true,
@@ -74,7 +91,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
     
   } catch (error) {
-    console.error('[GET-DJ-MIXES] Error:', error);
+    log.error('[get-dj-mixes] Error:', error);
     return new Response(JSON.stringify({ 
       success: false,
       error: 'Failed to fetch DJ mixes',

@@ -5,6 +5,12 @@ import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -17,7 +23,7 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-// Profanity filter - common profane words (can be expanded)
+// Profanity filter - common profane words
 const PROFANITY_LIST = [
   'fuck', 'fucking', 'fucker', 'fucked', 'fucks', 'fuk', 'fck',
   'shit', 'shite', 'shitting', 'bullshit',
@@ -41,11 +47,10 @@ const PROFANITY_LIST = [
   'pussy', 'pussies'
 ];
 
-// Check for profanity (handles common obfuscation like f*ck, f.u.c.k, etc)
 function containsProfanity(text: string): { found: boolean; word?: string } {
   const normalizedText = text
     .toLowerCase()
-    .replace(/[*@#$%!.]/g, '') // Remove common obfuscation chars
+    .replace(/[*@#$%!.]/g, '')
     .replace(/0/g, 'o')
     .replace(/1/g, 'i')
     .replace(/3/g, 'e')
@@ -54,12 +59,10 @@ function containsProfanity(text: string): { found: boolean; word?: string } {
     .replace(/\s+/g, ' ');
   
   for (const word of PROFANITY_LIST) {
-    // Check for whole word match
     const regex = new RegExp(`\\b${word}\\b`, 'i');
     if (regex.test(normalizedText)) {
       return { found: true, word };
     }
-    // Check for word without spaces (e.g., "f u c k")
     const spacedWord = word.split('').join('\\s*');
     const spacedRegex = new RegExp(spacedWord, 'i');
     if (spacedRegex.test(normalizedText)) {
@@ -69,7 +72,6 @@ function containsProfanity(text: string): { found: boolean; word?: string } {
   return { found: false };
 }
 
-// Check for URLs/links
 function containsLinks(text: string): boolean {
   const urlPatterns = [
     /https?:\/\/[^\s]+/i,
@@ -78,15 +80,12 @@ function containsLinks(text: string): boolean {
     /bit\.ly|tinyurl|goo\.gl|t\.co|ow\.ly|buff\.ly|dlvr\.it/i,
     /discord\.(gg|com)|telegram\.(me|org)|whatsapp\.com/i
   ];
-  
   return urlPatterns.some(pattern => pattern.test(text));
 }
 
-// Check for spam patterns
 function containsSpam(text: string): { isSpam: boolean; reason?: string } {
   const lowerText = text.toLowerCase();
   
-  // Check for excessive caps (more than 50% caps in text longer than 10 chars)
   if (text.length > 10) {
     const capsCount = (text.match(/[A-Z]/g) || []).length;
     const letterCount = (text.match(/[a-zA-Z]/g) || []).length;
@@ -95,12 +94,6 @@ function containsSpam(text: string): { isSpam: boolean; reason?: string } {
     }
   }
   
-  // Check for repeated characters (e.g., "heeeeelp")
-  if (/(.)\1{4,}/i.test(text)) {
-    return { isSpam: true, reason: 'Repeated characters' };
-  }
-  
-  // Check for spam keywords
   const spamKeywords = [
     'buy now', 'click here', 'free money', 'make money fast',
     'work from home', 'earn cash', 'bitcoin', 'crypto invest',
@@ -116,12 +109,10 @@ function containsSpam(text: string): { isSpam: boolean; reason?: string } {
     }
   }
   
-  // Check for phone numbers
   if (/(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/.test(text)) {
     return { isSpam: true, reason: 'Phone numbers not allowed' };
   }
   
-  // Check for email addresses
   if (/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(text)) {
     return { isSpam: true, reason: 'Email addresses not allowed' };
   }
@@ -129,20 +120,16 @@ function containsSpam(text: string): { isSpam: boolean; reason?: string } {
   return { isSpam: false };
 }
 
-// Main content validation function
 function validateContent(text: string): { valid: boolean; error?: string } {
-  // Check for profanity
   const profanityCheck = containsProfanity(text);
   if (profanityCheck.found) {
     return { valid: false, error: 'Please keep comments clean and respectful' };
   }
   
-  // Check for links
   if (containsLinks(text)) {
     return { valid: false, error: 'Links are not allowed in comments' };
   }
   
-  // Check for spam
   const spamCheck = containsSpam(text);
   if (spamCheck.isSpam) {
     return { valid: false, error: spamCheck.reason || 'Comment flagged as spam' };
@@ -153,11 +140,10 @@ function validateContent(text: string): { valid: boolean; error?: string } {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const { mixId, comment, userName, userId } = await request.json();
+    const { mixId, comment, userName, userId, gifUrl } = await request.json();
 
-    console.log('[add-mix-comment] Received request:', { mixId, userName, userId });
+    log.info('[add-mix-comment] Received request:', { mixId, userName, userId, hasGif: !!gifUrl });
 
-    // Validate user is logged in
     if (!userId) {
       return new Response(JSON.stringify({ 
         success: false,
@@ -168,8 +154,7 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Validate inputs
-    if (!mixId || !comment?.trim() || !userName?.trim()) {
+    if (!mixId || (!comment?.trim() && !gifUrl) || !userName?.trim()) {
       return new Response(JSON.stringify({ 
         success: false,
         error: 'Missing required fields' 
@@ -179,7 +164,17 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Validate lengths
+    // Validate gifUrl if provided (must be from Giphy)
+    if (gifUrl && !gifUrl.includes('giphy.com')) {
+      return new Response(JSON.stringify({ 
+        success: false,
+        error: 'Invalid GIF URL' 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     if (userName.trim().length > 30) {
       return new Response(JSON.stringify({ 
         success: false,
@@ -200,7 +195,6 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Validate comment content (profanity, links, spam)
     const contentValidation = validateContent(comment);
     if (!contentValidation.valid) {
       return new Response(JSON.stringify({ 
@@ -212,7 +206,6 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Also validate username
     const usernameValidation = validateContent(userName);
     if (!usernameValidation.valid) {
       return new Response(JSON.stringify({ 
@@ -224,7 +217,6 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Get mix from Firebase
     const mixRef = db.collection('dj-mixes').doc(mixId);
     const mixDoc = await mixRef.get();
     
@@ -238,36 +230,32 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const mixData = mixDoc.data();
-
-    // Initialize comments array if needed
+    const mixData = mixDoc.data() || {};
     if (!mixData.comments) {
       mixData.comments = [];
     }
 
-    // Create new comment
     const newComment = {
-      id: `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: 'comment_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       userId,
       userName: userName.trim(),
-      comment: comment.trim(),
+      comment: comment?.trim() || '',
+      gifUrl: gifUrl || null,
       timestamp: new Date().toISOString(),
       createdAt: new Date().toISOString()
     };
 
-    console.log('[add-mix-comment] Adding comment:', newComment);
+    log.info('[add-mix-comment] Adding comment:', newComment);
 
-    // Add comment to array
     mixData.comments.push(newComment);
 
-    // Save to Firebase
     await mixRef.update({
       comments: mixData.comments,
       commentCount: mixData.comments.length,
       updatedAt: new Date().toISOString()
     });
 
-    console.log('[add-mix-comment] ✓ Comment saved to Firebase');
+    log.info('[add-mix-comment] Comment saved');
 
     return new Response(JSON.stringify({
       success: true,
@@ -279,7 +267,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error('[add-mix-comment] Error:', error);
+    log.error('[add-mix-comment] Error:', error);
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to save comment',

@@ -6,9 +6,14 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 export const prerender = false;
 
-// R2 Configuration
 const R2_CONFIG = {
   accountId: import.meta.env.R2_ACCOUNT_ID,
   accessKeyId: import.meta.env.R2_ACCESS_KEY_ID,
@@ -17,7 +22,6 @@ const R2_CONFIG = {
   publicDomain: import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
 };
 
-// Initialize Firebase
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -30,10 +34,9 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-// Initialize R2 Client
 const s3Client = new S3Client({
   region: 'auto',
-  endpoint: `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`,
+  endpoint: 'https://' + R2_CONFIG.accountId + '.r2.cloudflarestorage.com',
   credentials: {
     accessKeyId: R2_CONFIG.accessKeyId,
     secretAccessKey: R2_CONFIG.secretAccessKey,
@@ -53,9 +56,8 @@ export const POST: APIRoute = async ({ request }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     
-    console.log(`[UPDATE-MERCH] Updating product: ${productId}`);
+    log.info('[update-merch] Updating product:', productId);
     
-    // Get existing product
     const productRef = db.collection('merch').doc(productId);
     const productDoc = await productRef.get();
     
@@ -68,12 +70,10 @@ export const POST: APIRoute = async ({ request }) => {
     
     const existingProduct = productDoc.data()!;
     
-    // Build update object from form data
     const updates: any = {
       updatedAt: new Date().toISOString()
     };
     
-    // Text fields
     const textFields = [
       'name', 'description', 'sku', 'category', 'categoryName',
       'supplierId', 'supplierName', 'supplierCode'
@@ -86,7 +86,6 @@ export const POST: APIRoute = async ({ request }) => {
       }
     });
     
-    // Number fields
     const numberFields = [
       'costPrice', 'retailPrice', 'salePrice', 'supplierCut', 'lowStockThreshold'
     ];
@@ -98,7 +97,6 @@ export const POST: APIRoute = async ({ request }) => {
       }
     });
     
-    // Boolean fields
     const booleanFields = ['published', 'featured', 'onSale'];
     
     booleanFields.forEach(field => {
@@ -108,21 +106,19 @@ export const POST: APIRoute = async ({ request }) => {
       }
     });
     
-    // Handle sale price logic
     if (updates.salePrice !== undefined && updates.retailPrice !== undefined) {
       updates.onSale = updates.salePrice > 0 && updates.salePrice < updates.retailPrice;
     } else if (updates.salePrice !== undefined) {
       updates.onSale = updates.salePrice > 0 && updates.salePrice < existingProduct.retailPrice;
     }
     
-    // JSON fields (sizes, colors)
     const sizesJson = formData.get('sizes');
     if (sizesJson) {
       try {
         updates.sizes = JSON.parse(sizesJson as string);
         updates.hasSizes = updates.sizes.length > 0;
       } catch (e) {
-        console.error('Error parsing sizes JSON');
+        log.error('Error parsing sizes JSON');
       }
     }
     
@@ -132,22 +128,19 @@ export const POST: APIRoute = async ({ request }) => {
         updates.colors = JSON.parse(colorsJson as string);
         updates.hasColors = updates.colors.length > 0;
       } catch (e) {
-        console.error('Error parsing colors JSON');
+        log.error('Error parsing colors JSON');
       }
     }
     
-    // Handle new images
     const newImageCount = parseInt(formData.get('newImageCount') as string || '0');
     const deleteImageIndexes = formData.get('deleteImages');
     
     let images = [...(existingProduct.images || [])];
     
-    // Delete specified images
     if (deleteImageIndexes) {
       try {
         const indexesToDelete = JSON.parse(deleteImageIndexes as string) as number[];
         
-        // Delete from R2
         for (const idx of indexesToDelete) {
           const imageToDelete = images[idx];
           if (imageToDelete && imageToDelete.key) {
@@ -158,37 +151,35 @@ export const POST: APIRoute = async ({ request }) => {
                   Key: imageToDelete.key
                 })
               );
-              console.log(`[UPDATE-MERCH] ✓ Deleted image: ${imageToDelete.key}`);
+              log.info('[update-merch] Deleted image:', imageToDelete.key);
             } catch (e) {
-              console.error(`[UPDATE-MERCH] Failed to delete image from R2: ${imageToDelete.key}`);
+              log.error('[update-merch] Failed to delete image from R2');
             }
           }
         }
         
-        // Remove from array (in reverse order to maintain indexes)
         indexesToDelete.sort((a, b) => b - a).forEach(idx => {
           images.splice(idx, 1);
         });
       } catch (e) {
-        console.error('Error parsing deleteImages');
+        log.error('Error parsing deleteImages');
       }
     }
     
-    // Upload new images
     if (newImageCount > 0) {
       const folderPath = existingProduct.r2FolderPath;
       const startIndex = images.length;
       
       for (let i = 0; i < newImageCount; i++) {
-        const imageFile = formData.get(`newImage_${i}`) as File;
+        const imageFile = formData.get('newImage_' + i) as File;
         
         if (!imageFile || imageFile.size === 0) continue;
         
-        console.log(`[UPDATE-MERCH] Uploading new image ${i + 1}/${newImageCount}...`);
+        log.info('[update-merch] Uploading new image', i + 1);
         
         const imageBuffer = await imageFile.arrayBuffer();
         const imageExt = imageFile.name.split('.').pop() || 'jpg';
-        const imageKey = `${folderPath}/image_${startIndex + i}_${Date.now()}.${imageExt}`;
+        const imageKey = folderPath + '/image_' + (startIndex + i) + '_' + Date.now() + '.' + imageExt;
         
         await s3Client.send(
           new PutObjectCommand({
@@ -200,22 +191,20 @@ export const POST: APIRoute = async ({ request }) => {
           })
         );
         
-        const imageUrl = `${R2_CONFIG.publicDomain}/${imageKey}`;
+        const imageUrl = R2_CONFIG.publicDomain + '/' + imageKey;
         
         images.push({
           url: imageUrl,
           key: imageKey,
           index: startIndex + i,
-          isPrimary: images.length === 0 // First image becomes primary if no others
+          isPrimary: images.length === 0
         });
         
-        console.log(`[UPDATE-MERCH] ✓ Uploaded: ${imageUrl}`);
+        log.info('[update-merch] Uploaded:', imageUrl);
       }
     }
     
-    // Update primary image flag
     if (images.length > 0) {
-      // Ensure only one primary
       images = images.map((img, idx) => ({
         ...img,
         index: idx,
@@ -226,20 +215,17 @@ export const POST: APIRoute = async ({ request }) => {
       updates.primaryImage = images[0]?.url || null;
     }
     
-    // Recalculate stock status if threshold changed
     if (updates.lowStockThreshold !== undefined) {
       const currentStock = existingProduct.totalStock || 0;
       updates.isLowStock = currentStock <= updates.lowStockThreshold && currentStock > 0;
     }
     
-    // Update Firebase
     await productRef.update(updates);
     
-    // Get updated product
     const updatedDoc = await productRef.get();
     const updatedProduct = { id: updatedDoc.id, ...updatedDoc.data() };
     
-    console.log(`[UPDATE-MERCH] ✓ Product updated: ${productId}`);
+    log.info('[update-merch] Product updated:', productId);
     
     return new Response(JSON.stringify({
       success: true,
@@ -251,7 +237,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
     
   } catch (error) {
-    console.error('[UPDATE-MERCH] Error:', error);
+    log.error('[update-merch] Error:', error);
     
     return new Response(JSON.stringify({
       success: false,

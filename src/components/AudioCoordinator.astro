@@ -1,6 +1,6 @@
 <!-- src/components/AudioCoordinator.astro -->
 <!-- Central Audio Coordination - Ensures only one audio source plays at a time -->
-<!-- Modes: DJ Mix, Shuffle, Tracklist Preview -->
+<!-- Modes: idle | dj-mix | shuffle | tracklist-preview -->
 
 <script is:inline>
   // ===========================================
@@ -23,8 +23,15 @@
       shouldResumeAfterPreview: false,
       previousMode: 'idle',
       resumeTime: 0,
+      wasPlaying: false,
       
-      // Get the global audio element
+      // Track the currently playing preview (to avoid stopping wrong audio)
+      currentPreviewAudio: null,
+      
+      // Debounce flag to prevent rapid state changes
+      _stateChangeLock: false,
+      
+      // Get the global audio element (mini player)
       getGlobalAudio: function() {
         return document.getElementById('global-audio');
       },
@@ -34,128 +41,236 @@
         return Array.from(document.querySelectorAll('.track-audio'));
       },
       
+      // Lock state changes briefly to prevent race conditions
+      _lockState: function(duration) {
+        var self = this;
+        this._stateChangeLock = true;
+        setTimeout(function() {
+          self._stateChangeLock = false;
+        }, duration || 100);
+      },
+      
+      // ========================================
+      // MODE TRANSITIONS
+      // ========================================
+      
       // DJ Mix started playing
       onDjMixPlay: function() {
-        console.log('[AudioManager] DJ Mix started');
+        if (this._stateChangeLock) return;
+        
+        this._lockState(100);
         this.mode = 'dj-mix';
         this.shouldResumeAfterPreview = false;
+        this.wasPlaying = false;
+        
+        // Stop ALL other audio sources
         this.stopAllTracklistPreviews();
+        this.stopShuffleWidget();
         this.updateShuffleButtonUI(false);
+        
         if (window.FreshWaxPlayer) {
           window.FreshWaxPlayer.isShuffleMode = false;
         }
       },
       
-      // Shuffle mode started
+      // Shuffle mode started (mini player shuffle)
       onShufflePlay: function() {
-        console.log('[AudioManager] Shuffle started');
+        if (this._stateChangeLock) return;
+        
+        this._lockState(100);
         this.mode = 'shuffle';
         this.shouldResumeAfterPreview = false;
+        this.wasPlaying = false;
+        
+        // Stop ALL other audio sources
         this.stopAllTracklistPreviews();
+        this.stopShuffleWidget();
         this.updateShuffleButtonUI(true);
       },
       
       // Shuffle mode stopped
       onShuffleStop: function() {
-        console.log('[AudioManager] Shuffle stopped');
         if (this.mode === 'shuffle') {
           this.mode = 'idle';
         }
         this.updateShuffleButtonUI(false);
       },
       
-      // Tracklist preview started - pauses mini player
-      onTracklistPreviewPlay: function() {
-        console.log('[AudioManager] Preview starting, mode:', this.mode);
+      // ========================================
+      // TRACKLIST PREVIEW HANDLING
+      // ========================================
+      
+      // Called BEFORE a tracklist preview starts playing
+      onTracklistPreviewPlay: function(previewAudio) {
+        if (this._stateChangeLock) return;
+        
         var audio = this.getGlobalAudio();
         
+        // Store reference to the preview that's about to play
+        this.currentPreviewAudio = previewAudio || null;
+        
+        // If mini player is playing, pause it and remember to resume
         if (audio && !audio.paused) {
+          this.wasPlaying = true;
           this.shouldResumeAfterPreview = true;
           this.previousMode = this.mode;
           this.resumeTime = audio.currentTime;
           audio.pause();
-          console.log('[AudioManager] Paused mini player at', this.resumeTime.toFixed(1) + 's');
         } else {
+          this.wasPlaying = false;
           this.shouldResumeAfterPreview = false;
           this.previousMode = this.mode;
         }
         
+        // Also stop shuffle widget if playing
+        this.stopShuffleWidget();
+        
         this.mode = 'tracklist-preview';
       },
       
-      // Tracklist preview stopped - resume mini player if needed
-      onTracklistPreviewStop: function() {
-        console.log('[AudioManager] Preview stopped, shouldResume:', this.shouldResumeAfterPreview);
+      // Called when a tracklist preview stops (ended, paused, or error)
+      onTracklistPreviewStop: function(previewAudio) {
+        
+        // Only process if this is the currently tracked preview
+        if (previewAudio && this.currentPreviewAudio && previewAudio !== this.currentPreviewAudio) {
+          return;
+        }
+        
+        this.currentPreviewAudio = null;
+        
         var self = this;
         
+        // Small delay to allow for quick play/pause clicks
         setTimeout(function() {
-          if (self.shouldResumeAfterPreview) {
+          // Don't resume if state changed (user clicked mini player play)
+          if (self._stateChangeLock) {
+            return;
+          }
+          
+          if (self.shouldResumeAfterPreview && self.wasPlaying) {
             var audio = self.getGlobalAudio();
             
             if (audio && audio.paused && audio.src) {
-              if (self.resumeTime > 0) {
+              // Restore position
+              if (self.resumeTime > 0 && isFinite(self.resumeTime)) {
                 audio.currentTime = self.resumeTime;
               }
               
               audio.play().then(function() {
                 self.mode = self.previousMode;
                 self.shouldResumeAfterPreview = false;
+                self.wasPlaying = false;
                 self.resumeTime = 0;
-                console.log('[AudioManager] Resumed mini player');
               }).catch(function(err) {
                 console.warn('[AudioManager] Resume failed:', err.message);
                 self.mode = 'idle';
                 self.shouldResumeAfterPreview = false;
+                self.wasPlaying = false;
               });
             } else {
               self.mode = 'idle';
               self.shouldResumeAfterPreview = false;
+              self.wasPlaying = false;
             }
           } else {
             self.mode = 'idle';
           }
-        }, 150);
+        }, 100);
       },
       
-      // Stop all tracklist previews
+      // ========================================
+      // STOP METHODS
+      // ========================================
+      
+      // Stop all tracklist preview audio elements
       stopAllTracklistPreviews: function() {
+        var stoppedCount = 0;
+        
         this.getTracklistAudios().forEach(function(audio) {
           if (!audio.paused) {
             audio.pause();
             audio.currentTime = 0;
+            stoppedCount++;
           }
         });
         
+        // Reset all play button states - remove playing class and reset icons
         document.querySelectorAll('.play-button').forEach(function(btn) {
+          btn.classList.remove('playing');
           var playIcon = btn.querySelector('.play-icon');
           var pauseIcon = btn.querySelector('.pause-icon');
           if (playIcon) playIcon.classList.remove('hidden');
           if (pauseIcon) pauseIcon.classList.add('hidden');
         });
         
+        // Reset "now playing" text
         document.querySelectorAll('[data-now-playing-text]').forEach(function(el) {
           el.textContent = 'No track selected';
         });
+        
+        // Clear the current preview reference
+        this.currentPreviewAudio = null;
+        
+        // Cancel any pending resume
+        this.shouldResumeAfterPreview = false;
+        this.wasPlaying = false;
+      },
+      
+      // Stop the standalone shuffle widget (ShufflePlayer.astro)
+      stopShuffleWidget: function() {
+        if (window.shuffleWidgetAudio && !window.shuffleWidgetAudio.paused) {
+          window.shuffleWidgetAudio.pause();
+          
+          // Update shuffle widget UI
+          var shuffleWidget = document.getElementById('shuffle-widget');
+          if (shuffleWidget) shuffleWidget.classList.remove('playing');
+          
+          var shuffleIconPlay = document.getElementById('shuffle-icon-play');
+          var shuffleIconPause = document.getElementById('shuffle-icon-pause');
+          var shuffleCtrlPlay = document.getElementById('shuffle-ctrl-play-icon');
+          var shuffleCtrlPause = document.getElementById('shuffle-ctrl-pause-icon');
+          
+          if (shuffleIconPlay) shuffleIconPlay.classList.remove('hidden');
+          if (shuffleIconPause) shuffleIconPause.classList.add('hidden');
+          if (shuffleCtrlPlay) shuffleCtrlPlay.classList.remove('hidden');
+          if (shuffleCtrlPause) shuffleCtrlPause.classList.add('hidden');
+        }
+        
+        // Also stop ShufflePlayer component if it exists
+        if (window.ShufflePlayer && window.ShufflePlayer.audio && !window.ShufflePlayer.audio.paused) {
+          window.ShufflePlayer.audio.pause();
+        }
       },
       
       // Stop everything
       stopAll: function() {
+        
         var audio = this.getGlobalAudio();
         if (audio && !audio.paused) {
           audio.pause();
         }
+        
         this.stopAllTracklistPreviews();
+        this.stopShuffleWidget();
+        
         this.mode = 'idle';
         this.shouldResumeAfterPreview = false;
+        this.wasPlaying = false;
         this.previousMode = 'idle';
         this.resumeTime = 0;
+        this.currentPreviewAudio = null;
+        
         this.updateShuffleButtonUI(false);
+        
         if (window.FreshWaxPlayer) {
           window.FreshWaxPlayer.isShuffleMode = false;
         }
       },
       
-      // UI Helpers
+      // ========================================
+      // UI HELPERS
+      // ========================================
+      
       updateShuffleButtonUI: function(isShuffling) {
         var btn = document.getElementById('mini-shuffle-btn');
         if (btn) {
@@ -167,9 +282,34 @@
         }
       },
       
+      updateMiniPlayerUI: function(isPlaying) {
+        var playIcon = document.getElementById('mini-play-icon');
+        var pauseIcon = document.getElementById('mini-pause-icon');
+        
+        if (isPlaying) {
+          if (playIcon) playIcon.classList.add('hidden');
+          if (pauseIcon) pauseIcon.classList.remove('hidden');
+        } else {
+          if (playIcon) playIcon.classList.remove('hidden');
+          if (pauseIcon) pauseIcon.classList.add('hidden');
+        }
+      },
+      
+      // ========================================
+      // STATUS QUERIES
+      // ========================================
+      
       isPlaying: function() {
         var audio = this.getGlobalAudio();
         return audio ? !audio.paused : false;
+      },
+      
+      isMiniPlayerActive: function() {
+        return this.mode === 'dj-mix' || this.mode === 'shuffle';
+      },
+      
+      isPreviewPlaying: function() {
+        return this.mode === 'tracklist-preview';
       },
       
       getMode: function() {
@@ -177,6 +317,5 @@
       }
     };
     
-    console.log('[AudioManager] Ready');
   })();
 </script>

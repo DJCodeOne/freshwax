@@ -1,0 +1,774 @@
+---
+// src/pages/admin/inventory/index.astro
+// Stock inventory management - receive, adjust, and track merch stock
+export const prerender = false;
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory Management | Fresh Wax Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #f5f5f5; color: #000; min-height: 100vh; }
+    
+    .header { background: #000; color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.05em; }
+    .header-nav { display: flex; gap: 1rem; }
+    .header-nav a { color: #fff; text-decoration: none; padding: 0.5rem 1rem; border: 2px solid #fff; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: all 0.2s; }
+    .header-nav a:hover { background: #fff; color: #000; }
+    
+    .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+    
+    .page-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; margin-bottom: 0.5rem; color: #dc2626; }
+    .page-subtitle { color: #666; margin-bottom: 2rem; }
+    
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: #fff; border: 2px solid #000; padding: 1.5rem; text-align: center; }
+    .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: #000; }
+    .stat-value.warning { color: #f59e0b; }
+    .stat-value.danger { color: #dc2626; }
+    .stat-label { font-size: 0.75rem; text-transform: uppercase; color: #666; font-weight: 600; letter-spacing: 0.05em; }
+    
+    .section { background: #fff; border: 2px solid #000; margin-bottom: 2rem; }
+    .section-header { background: #000; color: #fff; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+    .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 0.05em; }
+    .section-body { padding: 1.5rem; }
+    
+    .tabs { display: flex; gap: 0; border-bottom: 2px solid #000; }
+    .tab { padding: 1rem 2rem; font-weight: 700; font-size: 0.875rem; text-transform: uppercase; cursor: pointer; border: none; background: #f5f5f5; transition: all 0.2s; }
+    .tab:hover { background: #e5e5e5; }
+    .tab.active { background: #000; color: #fff; }
+    
+    .tab-content { display: none; padding: 1.5rem; }
+    .tab-content.active { display: block; }
+    
+    /* Receive Stock Form */
+    .receive-form { display: grid; gap: 1.5rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+    .form-label { font-weight: 700; font-size: 0.75rem; text-transform: uppercase; }
+    .form-input, .form-select { padding: 0.75rem; border: 2px solid #000; font-size: 1rem; font-family: inherit; }
+    .form-input:focus, .form-select:focus { outline: none; border-color: #dc2626; }
+    
+    .product-search { position: relative; }
+    .product-search-results { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 2px solid #000; border-top: none; max-height: 300px; overflow-y: auto; z-index: 100; display: none; }
+    .product-search-results.show { display: block; }
+    .product-result { padding: 0.75rem 1rem; cursor: pointer; display: flex; gap: 1rem; align-items: center; border-bottom: 1px solid #eee; }
+    .product-result:hover { background: #f5f5f5; }
+    .product-result img { width: 40px; height: 40px; object-fit: cover; border: 1px solid #ddd; }
+    .product-result-info { flex: 1; }
+    .product-result-name { font-weight: 600; }
+    .product-result-sku { font-size: 0.75rem; color: #666; }
+    .product-result-stock { font-size: 0.875rem; font-weight: 700; }
+    
+    .selected-product { background: #f0fdf4; border: 2px solid #22c55e; padding: 1rem; display: none; gap: 1rem; align-items: center; margin-bottom: 1rem; }
+    .selected-product.show { display: flex; }
+    .selected-product img { width: 60px; height: 60px; object-fit: cover; }
+    .selected-product-info { flex: 1; }
+    .selected-product-name { font-weight: 700; font-size: 1.125rem; }
+    .selected-product-sku { font-size: 0.875rem; color: #666; }
+    .selected-product-clear { background: #dc2626; color: #fff; border: none; padding: 0.5rem 1rem; cursor: pointer; font-weight: 700; font-size: 0.75rem; }
+    
+    .variant-selector { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; margin: 1rem 0; }
+    .variant-option { padding: 0.75rem; border: 2px solid #ddd; cursor: pointer; text-align: center; transition: all 0.2s; }
+    .variant-option:hover { border-color: #000; }
+    .variant-option.selected { border-color: #dc2626; background: #fef2f2; }
+    .variant-option-label { font-weight: 600; font-size: 0.875rem; }
+    .variant-option-stock { font-size: 0.75rem; color: #666; }
+    
+    .btn { padding: 1rem 2rem; font-weight: 700; font-size: 0.875rem; text-transform: uppercase; cursor: pointer; border: 2px solid #000; transition: all 0.2s; }
+    .btn-primary { background: #000; color: #fff; }
+    .btn-primary:hover { background: #dc2626; border-color: #dc2626; }
+    .btn-success { background: #22c55e; color: #fff; border-color: #22c55e; }
+    .btn-success:hover { background: #16a34a; border-color: #16a34a; }
+    .btn-secondary { background: #fff; color: #000; }
+    .btn-secondary:hover { background: #f5f5f5; }
+    
+    /* Stock Table */
+    .stock-table { width: 100%; border-collapse: collapse; }
+    .stock-table th { background: #000; color: #fff; padding: 1rem; text-align: left; font-size: 0.75rem; text-transform: uppercase; font-weight: 700; }
+    .stock-table td { padding: 1rem; border-bottom: 1px solid #eee; }
+    .stock-table tr:hover { background: #f9f9f9; }
+    .stock-table .product-cell { display: flex; align-items: center; gap: 1rem; }
+    .stock-table .product-thumb { width: 50px; height: 50px; object-fit: cover; border: 1px solid #ddd; }
+    .stock-table .product-name { font-weight: 600; }
+    .stock-table .product-sku { font-size: 0.75rem; color: #666; }
+    
+    .stock-badge { padding: 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 700; border-radius: 4px; }
+    .stock-badge.in-stock { background: #dcfce7; color: #166534; }
+    .stock-badge.low-stock { background: #fef3c7; color: #92400e; }
+    .stock-badge.out-of-stock { background: #fee2e2; color: #991b1b; }
+    
+    .action-btns { display: flex; gap: 0.5rem; }
+    .action-btn { padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 700; border: 2px solid #000; background: #fff; cursor: pointer; transition: all 0.2s; }
+    .action-btn:hover { background: #000; color: #fff; }
+    .action-btn.receive { border-color: #22c55e; color: #22c55e; }
+    .action-btn.receive:hover { background: #22c55e; color: #fff; }
+    .action-btn.adjust { border-color: #f59e0b; color: #f59e0b; }
+    .action-btn.adjust:hover { background: #f59e0b; color: #fff; }
+    
+    /* Movement Log */
+    .movement-log { max-height: 400px; overflow-y: auto; }
+    .movement-item { display: flex; align-items: center; gap: 1rem; padding: 1rem; border-bottom: 1px solid #eee; }
+    .movement-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
+    .movement-icon.receive { background: #dcfce7; }
+    .movement-icon.sell { background: #fee2e2; }
+    .movement-icon.adjust { background: #fef3c7; }
+    .movement-icon.damaged { background: #fecaca; }
+    .movement-info { flex: 1; }
+    .movement-title { font-weight: 600; }
+    .movement-meta { font-size: 0.75rem; color: #666; }
+    .movement-qty { font-weight: 700; font-size: 1.125rem; }
+    .movement-qty.positive { color: #22c55e; }
+    .movement-qty.negative { color: #dc2626; }
+    
+    /* Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #fff; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { background: #000; color: #fff; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; }
+    .modal-close { background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
+    .modal-body { padding: 1.5rem; }
+    .modal-footer { padding: 1rem 1.5rem; border-top: 2px solid #eee; display: flex; justify-content: flex-end; gap: 1rem; }
+    
+    /* Toast */
+    .toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; background: #000; color: #fff; font-weight: 600; transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 2000; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: #22c55e; }
+    .toast.error { background: #dc2626; }
+    
+    /* Filters */
+    .filters { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+    .filter-group { display: flex; align-items: center; gap: 0.5rem; }
+    .filter-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+    .filter-select { padding: 0.5rem 1rem; border: 2px solid #000; font-weight: 600; }
+    .filter-input { padding: 0.5rem 1rem; border: 2px solid #000; width: 200px; }
+    
+    .empty-state { text-align: center; padding: 3rem; color: #666; }
+    .empty-state-icon { font-size: 3rem; margin-bottom: 1rem; }
+    
+    @media (max-width: 768px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .form-row { grid-template-columns: 1fr; }
+      .tabs { flex-wrap: wrap; }
+      .tab { flex: 1; min-width: 120px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>Fresh <span style="color: #dc2626;">Wax</span> Inventory</h1>
+    <nav class="header-nav">
+      <a href="/admin">Dashboard</a>
+      <a href="/admin/merch/upload">Add Product</a>
+      <a href="/admin/merch/image-processor">Image Tool</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h1 class="page-title">Inventory Management</h1>
+    <p class="page-subtitle">Receive stock, adjust quantities, and track inventory movements</p>
+    
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="totalProducts">-</div>
+        <div class="stat-label">Products</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalStock">-</div>
+        <div class="stat-label">Total Units</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value warning" id="lowStockCount">-</div>
+        <div class="stat-label">Low Stock</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value danger" id="outOfStockCount">-</div>
+        <div class="stat-label">Out of Stock</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="tabs">
+        <button class="tab active" data-tab="receive">Receive Stock</button>
+        <button class="tab" data-tab="stock">Stock Levels</button>
+        <button class="tab" data-tab="movements">Movement Log</button>
+      </div>
+      
+      <!-- Receive Stock Tab -->
+      <div class="tab-content active" id="tab-receive">
+        <div class="receive-form">
+          <div class="form-group product-search">
+            <label class="form-label">Search Product</label>
+            <input type="text" class="form-input" id="productSearch" placeholder="Type product name or SKU...">
+            <div class="product-search-results" id="searchResults"></div>
+          </div>
+          
+          <div class="selected-product" id="selectedProduct">
+            <img src="" alt="" id="selectedProductImage">
+            <div class="selected-product-info">
+              <div class="selected-product-name" id="selectedProductName"></div>
+              <div class="selected-product-sku" id="selectedProductSku"></div>
+            </div>
+            <button class="selected-product-clear" onclick="clearSelectedProduct()">Clear</button>
+          </div>
+          
+          <div class="form-group" id="variantSelectorGroup" style="display: none;">
+            <label class="form-label">Select Variant</label>
+            <div class="variant-selector" id="variantSelector"></div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Quantity to Receive</label>
+              <input type="number" class="form-input" id="receiveQty" min="1" value="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Operation</label>
+              <select class="form-select" id="operationType">
+                <option value="receive">Receive New Stock</option>
+                <option value="adjust">Adjust (+ or -)</option>
+                <option value="return">Customer Return</option>
+                <option value="damaged">Mark as Damaged</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Notes (Optional)</label>
+            <input type="text" class="form-input" id="receiveNotes" placeholder="e.g., Supplier delivery #12345">
+          </div>
+          
+          <button class="btn btn-success" id="submitReceive" disabled>
+            <span id="submitText">Receive Stock</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Stock Levels Tab -->
+      <div class="tab-content" id="tab-stock">
+        <div class="filters">
+          <div class="filter-group">
+            <span class="filter-label">Filter:</span>
+            <select class="filter-select" id="stockFilter">
+              <option value="all">All Products</option>
+              <option value="low">Low Stock Only</option>
+              <option value="out">Out of Stock Only</option>
+              <option value="in">In Stock Only</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <input type="text" class="filter-input" id="stockSearch" placeholder="Search products...">
+          </div>
+        </div>
+        
+        <table class="stock-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Category</th>
+              <th>Stock</th>
+              <th>Reserved</th>
+              <th>Sold</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="stockTableBody">
+            <tr>
+              <td colspan="7" class="empty-state">
+                <div class="empty-state-icon">📦</div>
+                <p>Loading inventory...</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Movement Log Tab -->
+      <div class="tab-content" id="tab-movements">
+        <div class="filters">
+          <div class="filter-group">
+            <span class="filter-label">Type:</span>
+            <select class="filter-select" id="movementFilter">
+              <option value="all">All Movements</option>
+              <option value="receive">Received</option>
+              <option value="sell">Sold</option>
+              <option value="adjust">Adjusted</option>
+              <option value="damaged">Damaged</option>
+              <option value="return">Returns</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="movement-log" id="movementLog">
+          <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <p>Loading movement history...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Quick Receive Modal -->
+  <div class="modal-overlay" id="quickReceiveModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Quick Stock Update</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="modalProductInfo" style="margin-bottom: 1rem;"></div>
+        <div class="form-group" id="modalVariants" style="margin-bottom: 1rem;"></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Quantity</label>
+            <input type="number" class="form-input" id="modalQty" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Operation</label>
+            <select class="form-select" id="modalOperation">
+              <option value="receive">Receive</option>
+              <option value="adjust">Adjust</option>
+              <option value="damaged">Damaged</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <input type="text" class="form-input" id="modalNotes" placeholder="Optional notes...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-success" onclick="submitModalUpdate()">Update Stock</button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let allProducts = [];
+    let selectedProduct = null;
+    let selectedVariant = null;
+    let modalProduct = null;
+    let modalVariant = null;
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+    
+    // Toast notification
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = 'toast ' + type + ' show';
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    
+    // Load all data
+    async function loadData() {
+      try {
+        const response = await fetch('/api/update-stock');
+        const data = await response.json();
+        
+        if (data.success) {
+          allProducts = data.products || [];
+          
+          document.getElementById('totalProducts').textContent = data.count || 0;
+          document.getElementById('totalStock').textContent = allProducts.reduce((sum, p) => sum + (p.totalStock || 0), 0).toLocaleString();
+          document.getElementById('lowStockCount').textContent = data.lowStockCount || 0;
+          document.getElementById('outOfStockCount').textContent = data.outOfStockCount || 0;
+          
+          renderStockTable();
+        }
+      } catch (err) {
+        console.error('Failed to load data:', err);
+      }
+      
+      loadMovements();
+    }
+    
+    // Load movement history
+    async function loadMovements() {
+      try {
+        const response = await fetch('/api/get-stock-movements');
+        const data = await response.json();
+        
+        if (data.success && data.movements) {
+          renderMovements(data.movements);
+        }
+      } catch (err) {
+        console.error('Failed to load movements');
+      }
+    }
+    
+    // Render stock table
+    function renderStockTable(filter = 'all', search = '') {
+      const tbody = document.getElementById('stockTableBody');
+      
+      let filtered = allProducts;
+      
+      if (filter === 'low') filtered = filtered.filter(p => p.isLowStock);
+      else if (filter === 'out') filtered = filtered.filter(p => p.isOutOfStock);
+      else if (filter === 'in') filtered = filtered.filter(p => p.totalStock > 0);
+      
+      if (search) {
+        const s = search.toLowerCase();
+        filtered = filtered.filter(p => 
+          (p.name || '').toLowerCase().includes(s) || 
+          (p.sku || '').toLowerCase().includes(s)
+        );
+      }
+      
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="empty-state-icon">📦</div><p>No products found</p></td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = filtered.map(product => {
+        let statusClass = 'in-stock';
+        let statusText = 'In Stock';
+        if (product.isOutOfStock) { statusClass = 'out-of-stock'; statusText = 'Out of Stock'; }
+        else if (product.isLowStock) { statusClass = 'low-stock'; statusText = 'Low Stock'; }
+        
+        return `
+          <tr>
+            <td>
+              <div class="product-cell">
+                <img src="${product.images?.[0]?.url || '/logo.webp'}" alt="" class="product-thumb">
+                <div>
+                  <div class="product-name">${product.name || 'Unknown'}</div>
+                  <div class="product-sku">${product.sku || '-'}</div>
+                </div>
+              </div>
+            </td>
+            <td>${product.category || '-'}</td>
+            <td><strong>${product.totalStock || 0}</strong></td>
+            <td>${product.reservedStock || 0}</td>
+            <td>${product.soldStock || 0}</td>
+            <td><span class="stock-badge ${statusClass}">${statusText}</span></td>
+            <td>
+              <div class="action-btns">
+                <button class="action-btn receive" onclick="openQuickReceive('${product.productId}')">+ Receive</button>
+                <button class="action-btn adjust" onclick="openQuickReceive('${product.productId}', 'adjust')">Adjust</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    // Render movements
+    function renderMovements(movements) {
+      const container = document.getElementById('movementLog');
+      
+      if (!movements || movements.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>No movements recorded yet</p></div>';
+        return;
+      }
+      
+      const icons = {
+        receive: '📥',
+        sell: '💰',
+        adjust: '📝',
+        damaged: '⚠️',
+        return: '↩️',
+        reserve: '🔒',
+        unreserve: '🔓'
+      };
+      
+      container.innerHTML = movements.slice(0, 50).map(m => {
+        const isPositive = m.stockDelta > 0;
+        const date = new Date(m.createdAt).toLocaleDateString('en-GB', { 
+          day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+        });
+        
+        return `
+          <div class="movement-item">
+            <div class="movement-icon ${m.type}">${icons[m.type] || '📦'}</div>
+            <div class="movement-info">
+              <div class="movement-title">${m.productName || 'Unknown Product'}</div>
+              <div class="movement-meta">${m.type.toUpperCase()} • ${m.variantKey || 'default'} • ${date}</div>
+              ${m.notes ? `<div class="movement-meta">${m.notes}</div>` : ''}
+            </div>
+            <div class="movement-qty ${isPositive ? 'positive' : 'negative'}">
+              ${isPositive ? '+' : ''}${m.stockDelta}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Product search
+    let searchTimeout;
+    document.getElementById('productSearch').addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      const query = e.target.value.trim().toLowerCase();
+      
+      if (query.length < 2) {
+        document.getElementById('searchResults').classList.remove('show');
+        return;
+      }
+      
+      searchTimeout = setTimeout(() => {
+        const results = allProducts.filter(p => 
+          (p.name || '').toLowerCase().includes(query) || 
+          (p.sku || '').toLowerCase().includes(query)
+        ).slice(0, 10);
+        
+        const container = document.getElementById('searchResults');
+        
+        if (results.length === 0) {
+          container.innerHTML = '<div class="product-result"><div class="product-result-info">No products found</div></div>';
+        } else {
+          container.innerHTML = results.map(p => `
+            <div class="product-result" onclick="selectProduct('${p.productId}')">
+              <img src="${p.images?.[0]?.url || '/logo.webp'}" alt="">
+              <div class="product-result-info">
+                <div class="product-result-name">${p.name}</div>
+                <div class="product-result-sku">${p.sku || '-'}</div>
+              </div>
+              <div class="product-result-stock">${p.totalStock || 0} units</div>
+            </div>
+          `).join('');
+        }
+        
+        container.classList.add('show');
+      }, 200);
+    });
+    
+    // Close search on click outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.product-search')) {
+        document.getElementById('searchResults').classList.remove('show');
+      }
+    });
+    
+    // Select product
+    function selectProduct(productId) {
+      const product = allProducts.find(p => p.productId === productId);
+      if (!product) return;
+      
+      selectedProduct = product;
+      selectedVariant = null;
+      
+      document.getElementById('searchResults').classList.remove('show');
+      document.getElementById('productSearch').value = '';
+      
+      document.getElementById('selectedProductImage').src = product.images?.[0]?.url || '/logo.webp';
+      document.getElementById('selectedProductName').textContent = product.name;
+      document.getElementById('selectedProductSku').textContent = product.sku || '-';
+      document.getElementById('selectedProduct').classList.add('show');
+      
+      // Show variants
+      const variantStock = product.variantStock || {};
+      const variantKeys = Object.keys(variantStock);
+      
+      if (variantKeys.length > 1) {
+        document.getElementById('variantSelectorGroup').style.display = 'block';
+        document.getElementById('variantSelector').innerHTML = variantKeys.map(key => {
+          const v = variantStock[key];
+          return `
+            <div class="variant-option" onclick="selectVariant('${key}')">
+              <div class="variant-option-label">${v.size || ''} ${v.color || ''}</div>
+              <div class="variant-option-stock">${v.stock || 0} in stock</div>
+            </div>
+          `;
+        }).join('');
+      } else if (variantKeys.length === 1) {
+        selectedVariant = variantKeys[0];
+        document.getElementById('variantSelectorGroup').style.display = 'none';
+      }
+      
+      updateSubmitButton();
+    }
+    
+    // Select variant
+    function selectVariant(key) {
+      selectedVariant = key;
+      document.querySelectorAll('.variant-option').forEach(el => el.classList.remove('selected'));
+      event.target.closest('.variant-option').classList.add('selected');
+      updateSubmitButton();
+    }
+    
+    // Clear selected product
+    function clearSelectedProduct() {
+      selectedProduct = null;
+      selectedVariant = null;
+      document.getElementById('selectedProduct').classList.remove('show');
+      document.getElementById('variantSelectorGroup').style.display = 'none';
+      updateSubmitButton();
+    }
+    
+    // Update submit button state
+    function updateSubmitButton() {
+      const btn = document.getElementById('submitReceive');
+      const hasProduct = selectedProduct !== null;
+      const hasVariant = selectedVariant !== null || Object.keys(selectedProduct?.variantStock || {}).length <= 1;
+      btn.disabled = !(hasProduct && hasVariant);
+    }
+    
+    // Submit receive
+    document.getElementById('submitReceive').addEventListener('click', async () => {
+      if (!selectedProduct || !selectedVariant) {
+        showToast('Please select a product and variant', 'error');
+        return;
+      }
+      
+      const qty = parseInt(document.getElementById('receiveQty').value) || 0;
+      const operation = document.getElementById('operationType').value;
+      const notes = document.getElementById('receiveNotes').value.trim();
+      
+      if (qty <= 0 && operation !== 'adjust') {
+        showToast('Please enter a valid quantity', 'error');
+        return;
+      }
+      
+      const btn = document.getElementById('submitReceive');
+      btn.disabled = true;
+      document.getElementById('submitText').textContent = 'Processing...';
+      
+      try {
+        const response = await fetch('/api/update-stock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId: selectedProduct.productId,
+            variantKey: selectedVariant,
+            operation: operation,
+            quantity: qty,
+            notes: notes
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showToast(`Stock updated: ${data.previousStock} → ${data.newStock}`, 'success');
+          clearSelectedProduct();
+          document.getElementById('receiveQty').value = 1;
+          document.getElementById('receiveNotes').value = '';
+          loadData();
+        } else {
+          showToast(data.error || 'Failed to update stock', 'error');
+        }
+      } catch (err) {
+        showToast('Error updating stock', 'error');
+      }
+      
+      btn.disabled = false;
+      document.getElementById('submitText').textContent = 'Receive Stock';
+    });
+    
+    // Stock filter
+    document.getElementById('stockFilter').addEventListener('change', (e) => {
+      renderStockTable(e.target.value, document.getElementById('stockSearch').value);
+    });
+    
+    document.getElementById('stockSearch').addEventListener('input', (e) => {
+      renderStockTable(document.getElementById('stockFilter').value, e.target.value);
+    });
+    
+    // Movement filter
+    document.getElementById('movementFilter').addEventListener('change', async (e) => {
+      // Would need to implement filtered API call
+    });
+    
+    // Quick receive modal
+    function openQuickReceive(productId, operation = 'receive') {
+      modalProduct = allProducts.find(p => p.productId === productId);
+      if (!modalProduct) return;
+      
+      document.getElementById('modalProductInfo').innerHTML = `
+        <strong>${modalProduct.name}</strong><br>
+        <span style="color: #666; font-size: 0.875rem;">${modalProduct.sku || '-'}</span>
+      `;
+      
+      const variantStock = modalProduct.variantStock || {};
+      const variantKeys = Object.keys(variantStock);
+      
+      if (variantKeys.length > 1) {
+        document.getElementById('modalVariants').innerHTML = `
+          <label class="form-label">Variant</label>
+          <select class="form-select" id="modalVariantSelect">
+            ${variantKeys.map(k => {
+              const v = variantStock[k];
+              return `<option value="${k}">${v.size || ''} ${v.color || ''} (${v.stock || 0})</option>`;
+            }).join('')}
+          </select>
+        `;
+        modalVariant = variantKeys[0];
+        document.getElementById('modalVariantSelect').addEventListener('change', (e) => {
+          modalVariant = e.target.value;
+        });
+      } else {
+        document.getElementById('modalVariants').innerHTML = '';
+        modalVariant = variantKeys[0] || 'default';
+      }
+      
+      document.getElementById('modalOperation').value = operation;
+      document.getElementById('modalQty').value = 1;
+      document.getElementById('modalNotes').value = '';
+      
+      document.getElementById('quickReceiveModal').classList.add('show');
+    }
+    
+    function closeModal() {
+      document.getElementById('quickReceiveModal').classList.remove('show');
+      modalProduct = null;
+      modalVariant = null;
+    }
+    
+    async function submitModalUpdate() {
+      if (!modalProduct || !modalVariant) return;
+      
+      const qty = parseInt(document.getElementById('modalQty').value) || 0;
+      const operation = document.getElementById('modalOperation').value;
+      const notes = document.getElementById('modalNotes').value.trim();
+      
+      try {
+        const response = await fetch('/api/update-stock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId: modalProduct.productId,
+            variantKey: modalVariant,
+            operation: operation,
+            quantity: qty,
+            notes: notes
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showToast(`Stock updated: ${data.previousStock} → ${data.newStock}`, 'success');
+          closeModal();
+          loadData();
+        } else {
+          showToast(data.error || 'Failed to update stock', 'error');
+        }
+      } catch (err) {
+        showToast('Error updating stock', 'error');
+      }
+    }
+    
+    // Initialize
+    loadData();
+  </script>
+</body>
+</html>

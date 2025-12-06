@@ -1,0 +1,527 @@
+---
+// src/pages/account/orders.astro
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+export const prerender = false;
+---
+
+<Layout title="My Orders - Fresh Wax" noindex={true}>
+  <Header />
+  
+  <main class="orders-main">
+    <div id="loadingScreen" class="loading-screen">
+      <div class="spinner"></div>
+      <p>Loading your orders...</p>
+    </div>
+
+    <div id="mainContent" class="hidden">
+      <div class="orders-header">
+        <h1>My Orders</h1>
+        <a href="/account/dashboard" class="back-link">← Back to Dashboard</a>
+      </div>
+      
+      <div id="ordersContainer" class="orders-list">
+        <div class="empty-state">
+          <p>Loading orders...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .orders-main {
+    min-height: 100vh;
+    background: #000;
+    padding: 2rem 1rem;
+  }
+  
+  .loading-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    color: #888;
+  }
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #333;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  .hidden { display: none !important; }
+  
+  #mainContent {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  
+  .orders-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  
+  .orders-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+  
+  .back-link {
+    color: #888;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: color 0.2s;
+  }
+  
+  .back-link:hover {
+    color: #fff;
+  }
+  
+  .orders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #888;
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 12px;
+  }
+  
+  .empty-state a {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.75rem 1.5rem;
+    background: #fff;
+    color: #000;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+  
+  .empty-state a:hover {
+    background: #e5e5e5;
+  }
+  
+  .order-card {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: #0a0a0a;
+    border-bottom: 1px solid #222;
+  }
+  
+  .order-info {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  
+  .order-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .order-info-label {
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .order-info-value {
+    font-weight: 600;
+    color: #fff;
+  }
+  
+  .order-status {
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .status-pending {
+    background: #3b2f00;
+    color: #fbbf24;
+  }
+  
+  .status-processing {
+    background: #172554;
+    color: #60a5fa;
+  }
+  
+  .status-completed, .status-paid {
+    background: #052e16;
+    color: #4ade80;
+  }
+  
+  .status-shipped {
+    background: #1e1b4b;
+    color: #a78bfa;
+  }
+  
+  .status-cancelled, .status-failed {
+    background: #450a0a;
+    color: #f87171;
+  }
+  
+  .order-items {
+    padding: 1rem 1.25rem;
+  }
+  
+  .order-item {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #222;
+  }
+  
+  .order-item:last-child {
+    border-bottom: none;
+  }
+  
+  .order-item-image {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #222;
+  }
+  
+  .order-item-details {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .order-item-name {
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.25rem;
+  }
+  
+  .order-item-meta {
+    font-size: 0.8125rem;
+    color: #888;
+  }
+  
+  .order-item-price {
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+  }
+  
+  .order-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: #0a0a0a;
+    border-top: 1px solid #222;
+  }
+  
+  .order-total {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  
+  .order-total span {
+    color: #dc2626;
+  }
+  
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #fff;
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .download-btn:hover {
+    background: #e5e5e5;
+  }
+  
+  .download-btn:disabled {
+    background: #333;
+    color: #666;
+    cursor: not-allowed;
+  }
+  
+  @media (max-width: 640px) {
+    .orders-header {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    
+    .order-header {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    
+    .order-info {
+      gap: 1rem;
+    }
+    
+    .order-footer {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: stretch;
+    }
+    
+    .download-btn {
+      justify-content: center;
+    }
+  }
+</style>
+
+<script is:inline>
+  // CORRECT Firebase config - matches login page
+  var firebaseConfig = {
+    apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store",
+    storageBucket: "freshwax-store.firebasestorage.app",
+    messagingSenderId: "675435782973",
+    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+  };
+  
+  var currentUser = null;
+  var ordersInitialized = false;
+  
+  function formatPrice(amount) {
+    return new Intl.NumberFormat('en-GB', { 
+      style: 'currency', 
+      currency: 'GBP' 
+    }).format(amount || 0);
+  }
+  
+  function formatDate(dateString) {
+    if (!dateString) return 'Unknown';
+    var date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+  }
+  
+  function getStatusClass(status) {
+    var statusLower = (status || '').toLowerCase();
+    if (statusLower === 'completed' || statusLower === 'paid') return 'status-completed';
+    if (statusLower === 'processing') return 'status-processing';
+    if (statusLower === 'shipped') return 'status-shipped';
+    if (statusLower === 'cancelled' || statusLower === 'failed') return 'status-cancelled';
+    return 'status-pending';
+  }
+  
+  function fetchOrders(userId) {
+    return fetch('/api/get-orders?customerId=' + userId)
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (data.success) {
+          return data.orders || [];
+        }
+        return [];
+      })
+      .catch(function(error) {
+        console.error('[Orders] Fetch error:', error);
+        return [];
+      });
+  }
+  
+  function renderOrders(orders) {
+    var container = document.getElementById('ordersContainer');
+    
+    if (!orders || orders.length === 0) {
+      container.innerHTML = 
+        '<div class="empty-state">' +
+          '<p>You haven\'t placed any orders yet</p>' +
+          '<a href="/releases">Browse Releases</a>' +
+        '</div>';
+      return;
+    }
+    
+    var html = '';
+    for (var i = 0; i < orders.length; i++) {
+      var order = orders[i];
+      var items = order.items || [];
+      
+      var itemsHtml = '';
+      for (var j = 0; j < items.length; j++) {
+        var item = items[j];
+        itemsHtml += 
+          '<div class="order-item">' +
+            '<img src="' + (item.image || '/logo.webp') + '" alt="' + (item.name || item.title || 'Item') + '" class="order-item-image" onerror="this.src=\'/logo.webp\'" />' +
+            '<div class="order-item-details">' +
+              '<div class="order-item-name">' + (item.name || item.title || 'Unknown Item') + '</div>' +
+              '<div class="order-item-meta">' + (item.type || 'Digital') + ' × ' + (item.quantity || 1) + '</div>' +
+            '</div>' +
+            '<div class="order-item-price">' + formatPrice(item.price) + '</div>' +
+          '</div>';
+      }
+      
+      var hasDigital = false;
+      for (var k = 0; k < items.length; k++) {
+        if (items[k].type === 'digital' || items[k].type === 'track' || !items[k].type) {
+          hasDigital = true;
+          break;
+        }
+      }
+      
+      var canDownload = hasDigital && 
+        (order.status === 'completed' || order.status === 'paid' || order.paymentStatus === 'paid');
+      
+      html += 
+        '<div class="order-card">' +
+          '<div class="order-header">' +
+            '<div class="order-info">' +
+              '<div class="order-info-item">' +
+                '<span class="order-info-label">Order</span>' +
+                '<span class="order-info-value">#' + (order.id || '').substring(0, 8).toUpperCase() + '</span>' +
+              '</div>' +
+              '<div class="order-info-item">' +
+                '<span class="order-info-label">Date</span>' +
+                '<span class="order-info-value">' + formatDate(order.createdAt) + '</span>' +
+              '</div>' +
+              '<div class="order-info-item">' +
+                '<span class="order-info-label">Items</span>' +
+                '<span class="order-info-value">' + items.length + '</span>' +
+              '</div>' +
+            '</div>' +
+            '<span class="order-status ' + getStatusClass(order.status) + '">' + (order.status || 'Pending') + '</span>' +
+          '</div>' +
+          '<div class="order-items">' + itemsHtml + '</div>' +
+          '<div class="order-footer">' +
+            '<div class="order-total">Total: <span>' + formatPrice(order.total) + '</span></div>' +
+            (canDownload ? '<button class="download-btn" data-order-id="' + order.id + '"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Downloads</button>' : '') +
+          '</div>' +
+        '</div>';
+    }
+    
+    container.innerHTML = html;
+    
+    // Attach download handlers
+    var downloadBtns = container.querySelectorAll('.download-btn');
+    for (var d = 0; d < downloadBtns.length; d++) {
+      downloadBtns[d].addEventListener('click', function() {
+        window.location.href = '/account/dashboard#downloads';
+      });
+    }
+  }
+  
+  function initOrders() {
+    if (ordersInitialized) return;
+    ordersInitialized = true;
+    
+    
+    Promise.all([
+      import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js'),
+      import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js')
+    ]).then(function(modules) {
+      var firebaseApp = modules[0];
+      var firebaseAuth = modules[1];
+      
+      var app;
+      try {
+        app = firebaseApp.getApp();
+      } catch (e) {
+        app = firebaseApp.initializeApp(firebaseConfig);
+      }
+      
+      var auth = firebaseAuth.getAuth(app);
+      
+      firebaseAuth.onAuthStateChanged(auth, function(user) {
+        
+        if (user) {
+          currentUser = user;
+          
+          fetchOrders(user.uid).then(function(orders) {
+            
+            renderOrders(orders);
+            
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+          }).catch(function(error) {
+            console.error('[Orders] Error:', error);
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+            document.getElementById('ordersContainer').innerHTML = 
+              '<div class="empty-state">' +
+                '<p>Error loading orders. Please try again.</p>' +
+                '<a href="/account/orders">Refresh</a>' +
+              '</div>';
+          });
+          
+        } else {
+          window.location.href = '/login?redirect=/account/orders';
+        }
+      });
+    }).catch(function(error) {
+      console.error('[Orders] Firebase load error:', error);
+      document.getElementById('loadingScreen').classList.add('hidden');
+      document.getElementById('mainContent').classList.remove('hidden');
+      document.getElementById('ordersContainer').innerHTML = 
+        '<div class="empty-state">' +
+          '<p>Error initializing. Please refresh the page.</p>' +
+          '<a href="/account/orders">Refresh</a>' +
+        '</div>';
+    });
+  }
+  
+  // Initialize
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initOrders);
+  } else {
+    initOrders();
+  }
+  
+  // Also handle Astro page transitions
+  document.addEventListener('astro:page-load', function() {
+    ordersInitialized = false;
+    initOrders();
+  });
+</script>

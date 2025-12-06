@@ -1,9 +1,15 @@
 // src/pages/api/publish-releases.js
-// UPDATED: Firebase-based publish system
+// Firebase-based publish system with production-ready logging
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 export const prerender = false;
+
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args) => isDev && console.log(...args),
+  error: (...args) => console.error(...args),
+};
 
 // Initialize Firebase Admin
 if (!getApps().length) {
@@ -19,52 +25,22 @@ if (!getApps().length) {
 const db = getFirestore();
 
 export async function POST({ request }) {
-  console.log('\n========================================');
-  console.log('[PUBLISH-RELEASES] POST REQUEST RECEIVED');
-  console.log('========================================\n');
-  
   try {
-    // Parse request body
     const body = await request.json();
-    console.log('[PUBLISH-RELEASES] Request body:', JSON.stringify(body, null, 2));
-    
     const { releaseIds } = body;
     
     // Validate input
-    if (!releaseIds) {
-      console.error('[PUBLISH-RELEASES] ERROR: No releaseIds provided');
+    if (!releaseIds || !Array.isArray(releaseIds) || releaseIds.length === 0) {
       return new Response(JSON.stringify({ 
-        error: 'No release IDs provided',
+        error: 'releaseIds must be a non-empty array',
         received: body
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
-    if (!Array.isArray(releaseIds)) {
-      console.error('[PUBLISH-RELEASES] ERROR: releaseIds is not an array:', typeof releaseIds);
-      return new Response(JSON.stringify({ 
-        error: 'releaseIds must be an array',
-        received: releaseIds,
-        type: typeof releaseIds
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    if (releaseIds.length === 0) {
-      console.error('[PUBLISH-RELEASES] ERROR: releaseIds array is empty');
-      return new Response(JSON.stringify({ 
-        error: 'releaseIds array is empty' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
 
-    console.log(`[PUBLISH-RELEASES] Publishing ${releaseIds.length} releases:`, releaseIds);
+    log.info(`[publish-releases] Publishing ${releaseIds.length} releases`);
 
     let updatedCount = 0;
     const notFound = [];
@@ -73,24 +49,18 @@ export async function POST({ request }) {
     
     // Process each release ID
     for (const releaseId of releaseIds) {
-      console.log(`[PUBLISH-RELEASES] Processing release ID: "${releaseId}"`);
-      
       try {
-        // Get release from Firestore
         const releaseRef = db.collection('releases').doc(releaseId);
         const releaseDoc = await releaseRef.get();
         
         if (!releaseDoc.exists) {
-          console.log(`[PUBLISH-RELEASES]   ✗ Release not found in Firebase`);
           notFound.push(releaseId);
           continue;
         }
         
         const release = releaseDoc.data();
-        console.log(`[PUBLISH-RELEASES]   ✓ Found release: "${release.title}" by ${release.artist}`);
         
         if (release.published) {
-          console.log(`[PUBLISH-RELEASES]   ⚠ Already published (skipping)`);
           alreadyPublished.push(releaseId);
           continue;
         }
@@ -104,15 +74,14 @@ export async function POST({ request }) {
         
         updatedCount++;
         successfullyPublished.push(releaseId);
-        console.log(`[PUBLISH-RELEASES]   ✓ Marked as published in Firebase`);
         
       } catch (error) {
-        console.error(`[PUBLISH-RELEASES]   ✗ Error processing release ${releaseId}:`, error);
+        log.error(`[publish-releases] Error processing ${releaseId}:`, error.message);
         notFound.push(releaseId);
       }
     }
     
-    // Also update the master list in Firebase
+    // Update master list in Firebase
     try {
       const masterListRef = db.collection('system').doc('releases-master');
       const masterListDoc = await masterListRef.get();
@@ -121,7 +90,6 @@ export async function POST({ request }) {
         const masterData = masterListDoc.data();
         const releasesList = masterData.releases || [];
         
-        // Update published status in master list
         releasesList.forEach(release => {
           if (successfullyPublished.includes(release.id)) {
             release.published = true;
@@ -134,76 +102,42 @@ export async function POST({ request }) {
           releases: releasesList,
           lastUpdated: new Date().toISOString()
         });
-        
-        console.log('[PUBLISH-RELEASES] ✓ Updated master list in Firebase');
       }
     } catch (error) {
-      console.error('[PUBLISH-RELEASES] Warning: Could not update master list:', error);
-      // Don't fail the whole operation if master list update fails
+      log.error('[publish-releases] Warning: Could not update master list:', error.message);
     }
 
-    console.log('\n[PUBLISH-RELEASES] Summary:');
-    console.log(`  - Successfully published: ${updatedCount}`);
-    console.log(`  - Already published: ${alreadyPublished.length}`);
-    console.log(`  - Not found: ${notFound.length}`);
+    log.info(`[publish-releases] Done: ${updatedCount} published, ${alreadyPublished.length} already published, ${notFound.length} not found`);
 
     if (updatedCount === 0 && notFound.length > 0) {
-      console.error('[PUBLISH-RELEASES] ERROR: No matching releases found');
-      
       return new Response(JSON.stringify({ 
         error: 'No matching releases found to publish',
         requestedIds: releaseIds,
-        notFound: notFound,
-        suggestion: 'Check that the release IDs match exactly (case-sensitive)'
+        notFound: notFound
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    if (updatedCount === 0 && alreadyPublished.length > 0) {
-      console.log('[PUBLISH-RELEASES] All selected releases were already published');
-      return new Response(JSON.stringify({ 
-        success: true,
-        message: 'All selected releases were already published',
-        alreadyPublished: alreadyPublished.length
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    console.log('[PUBLISH-RELEASES] ✓ SUCCESS - Publish complete!');
-    console.log('========================================\n');
-
     return new Response(JSON.stringify({ 
       success: true,
-      message: `Published ${updatedCount} release${updatedCount > 1 ? 's' : ''}`,
+      message: `Published ${updatedCount} release${updatedCount !== 1 ? 's' : ''}`,
       publishedCount: updatedCount,
       alreadyPublished: alreadyPublished.length,
       notFound: notFound.length,
-      details: {
-        successfullyPublished,
-        alreadyPublished,
-        notFound
-      }
+      details: { successfullyPublished, alreadyPublished, notFound }
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('\n========================================');
-    console.error('[PUBLISH-RELEASES] CRITICAL ERROR');
-    console.error('========================================');
-    console.error('[PUBLISH-RELEASES] Error message:', error.message);
-    console.error('[PUBLISH-RELEASES] Error stack:', error.stack);
-    console.error('========================================\n');
+    log.error('[publish-releases] Critical error:', error.message);
     
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      message: error.message,
-      stack: error.stack
+      message: error.message
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

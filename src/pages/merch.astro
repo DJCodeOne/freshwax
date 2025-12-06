@@ -4,7 +4,7 @@
 
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
+import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
 import { queryCollection } from '../lib/firebase-rest';
 
 export const prerender = false;
@@ -91,123 +91,104 @@ const productsJson = JSON.stringify(products.map(p => ({
 <Layout title="Merch">
   <Header />
   
-  <!-- Hero -->
-  <section class="bg-black text-white py-12 relative overflow-hidden">
-    <div class="absolute inset-0 opacity-5">
-      <div class="absolute inset-0" style="background-image: url('/logo.webp'); background-size: 200px; background-repeat: repeat; filter: grayscale(1);"></div>
-    </div>
-    <div class="container mx-auto px-4 relative z-10 text-center">
-      <h1 class="text-5xl md:text-7xl font-bold tracking-wide mb-4">OFFICIAL MERCH</h1>
-      <p class="text-gray-400 text-lg mb-6">Support the underground. Wear the sound.</p>
-      <div class="flex justify-center gap-8 text-center">
-        <div>
-          <div class="text-3xl font-bold">{totalProducts}</div>
-          <div class="text-xs text-gray-500 uppercase tracking-wider">Products</div>
+  <!-- Full Width Layout with Sidebar -->
+  <div class="merch-layout">
+    <!-- Filters Sidebar - Full Height -->
+    <aside class="merch-sidebar">
+      <div class="sidebar-inner">
+        
+        <!-- Category Filter -->
+        <div class="filter-section">
+          <div class="filter-header">Category</div>
+          <div class="filter-options">
+            <label class="filter-option">
+              <input type="radio" name="category" value="" checked class="filter-radio" />
+              <span>All Categories</span>
+            </label>
+            {Object.entries(categories).map(([key, name]) => (
+              <label class="filter-option">
+                <input type="radio" name="category" value={key} class="filter-radio" />
+                <span>{name}</span>
+              </label>
+            ))}
+          </div>
         </div>
-        <div>
-          <div class="text-3xl font-bold text-green-500">{inStockCount}</div>
-          <div class="text-xs text-gray-500 uppercase tracking-wider">In Stock</div>
-        </div>
-        {onSaleCount > 0 && (
-          <div>
-            <div class="text-3xl font-bold text-red-500">{onSaleCount}</div>
-            <div class="text-xs text-gray-500 uppercase tracking-wider">On Sale</div>
+
+        <!-- Product Type Filter -->
+        {Object.keys(productTypes).length > 0 && (
+          <div class="filter-section">
+            <div class="filter-header">Type</div>
+            <div class="filter-options">
+              <label class="filter-option">
+                <input type="radio" name="type" value="" checked class="filter-radio" />
+                <span>All Types</span>
+              </label>
+              {Object.entries(productTypes).map(([key, name]) => (
+                <label class="filter-option">
+                  <input type="radio" name="type" value={key} class="filter-radio" />
+                  <span>{name}</span>
+                </label>
+              ))}
+            </div>
           </div>
         )}
-      </div>
-    </div>
-  </section>
 
-  <!-- Main Content -->
-  <main class="bg-gray-50 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-      <div class="lg:grid lg:grid-cols-[260px_1fr] gap-8">
-        
-        <!-- Filters Sidebar -->
-        <aside class="mb-6 lg:mb-0">
-          <div class="lg:sticky lg:top-24 space-y-4">
-            
-            <!-- Category Filter -->
-            <div class="bg-white border-2 border-black">
-              <div class="bg-black text-white px-4 py-3 font-bold text-sm uppercase tracking-wide">Category</div>
-              <div class="p-4 space-y-2">
-                <label class="flex items-center gap-3 cursor-pointer hover:text-red-600 transition-colors">
-                  <input type="radio" name="category" value="" checked class="w-4 h-4 accent-black" />
-                  <span class="text-sm">All Categories</span>
-                </label>
-                {Object.entries(categories).map(([key, name]) => (
-                  <label class="flex items-center gap-3 cursor-pointer hover:text-red-600 transition-colors">
-                    <input type="radio" name="category" value={key} class="w-4 h-4 accent-black" />
-                    <span class="text-sm">{name}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <!-- Product Type Filter -->
-            {Object.keys(productTypes).length > 0 && (
-              <div class="bg-white border-2 border-black">
-                <div class="bg-black text-white px-4 py-3 font-bold text-sm uppercase tracking-wide">Type</div>
-                <div class="p-4 space-y-2">
-                  <label class="flex items-center gap-3 cursor-pointer hover:text-red-600 transition-colors">
-                    <input type="radio" name="type" value="" checked class="w-4 h-4 accent-black" />
-                    <span class="text-sm">All Types</span>
-                  </label>
-                  {Object.entries(productTypes).map(([key, name]) => (
-                    <label class="flex items-center gap-3 cursor-pointer hover:text-red-600 transition-colors">
-                      <input type="radio" name="type" value={key} class="w-4 h-4 accent-black" />
-                      <span class="text-sm">{name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+        <!-- Stock Filter -->
+        <div class="filter-section">
+          <div class="filter-header">Availability</div>
+          <div class="filter-options">
+            <label class="filter-option">
+              <input type="radio" name="stock" value="" checked class="filter-radio" />
+              <span>All</span>
+            </label>
+            <label class="filter-option">
+              <input type="radio" name="stock" value="in-stock" class="filter-radio" />
+              <span>In Stock Only</span>
+            </label>
+            {onSaleCount > 0 && (
+              <label class="filter-option">
+                <input type="radio" name="stock" value="on-sale" class="filter-radio" />
+                <span>On Sale</span>
+              </label>
             )}
-
-            <!-- Stock Filter -->
-            <div class="bg-white border-2 border-black">
-              <div class="bg-black text-white px-4 py-3 font-bold text-sm uppercase tracking-wide">Availability</div>
-              <div class="p-4 space-y-2">
-                <label class="flex items-center gap-3 cursor-pointer hover:text-red-600 transition-colors">
-                  <input type="radio" name="stock" value="" checked class="w-4 h-4 accent-black" />
-                  <span class="text-sm">All</span>
-                </label>
-                <label class="flex items-center gap-3 cursor-pointer hover:text-red-600 transition-colors">
-                  <input type="radio" name="stock" value="in-stock" class="w-4 h-4 accent-black" />
-                  <span class="text-sm">In Stock Only</span>
-                </label>
-                {onSaleCount > 0 && (
-                  <label class="flex items-center gap-3 cursor-pointer hover:text-red-600 transition-colors">
-                    <input type="radio" name="stock" value="on-sale" class="w-4 h-4 accent-black" />
-                    <span class="text-sm">On Sale</span>
-                  </label>
-                )}
-              </div>
-            </div>
-
-            <button id="clearFilters" class="w-full py-3 bg-white border-2 border-black font-bold text-sm uppercase tracking-wide hover:bg-black hover:text-white transition-colors">
-              Clear Filters
-            </button>
           </div>
-        </aside>
+        </div>
+
+        <button id="clearFilters" class="clear-filters-btn">
+          Clear Filters
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="merch-content">
+      <!-- Hero -->
+      <section class="merch-hero">
+        <div class="hero-pattern"></div>
+        <div class="hero-inner">
+          <h1 class="merch-title">OFFICIAL MERCH</h1>
+          <p class="hero-subtitle">Support the underground. Wear the sound.</p>
+        </div>
+      </section>
+
+      <!-- Products Section -->
+      <main class="products-main">
+        <!-- Header -->
+        <div class="products-header">
+          <p class="products-count">
+            Showing <strong id="visibleCount">{products.length}</strong> of <strong>{products.length}</strong> products
+          </p>
+          <select id="sortSelect" class="sort-select">
+            <option value="featured">Featured</option>
+            <option value="newest">Newest</option>
+            <option value="price-low">Price: Low → High</option>
+            <option value="price-high">Price: High → Low</option>
+            <option value="name">Name A-Z</option>
+          </select>
+        </div>
 
         <!-- Products Grid -->
-        <div>
-          <!-- Header -->
-          <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-            <p class="text-sm text-gray-600">
-              Showing <strong id="visibleCount" class="text-black">{products.length}</strong> of <strong>{products.length}</strong> products
-            </p>
-            <select id="sortSelect" class="px-4 py-2 border-2 border-black bg-white font-medium text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-black">
-              <option value="featured">Featured</option>
-              <option value="newest">Newest</option>
-              <option value="price-low">Price: Low → High</option>
-              <option value="price-high">Price: High → Low</option>
-              <option value="name">Name A-Z</option>
-            </select>
-          </div>
-
-          <!-- Products -->
-          <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div id="productsGrid" class="products-grid">
             {products.length === 0 ? (
               <div class="col-span-full bg-white border-2 border-gray-200 p-12 text-center">
                 <div class="text-6xl mb-4">👕</div>
@@ -245,40 +226,42 @@ const productsJson = JSON.stringify(products.map(p => ({
                   </div>
 
                   <!-- Image -->
-                  <div class="relative aspect-square overflow-hidden bg-gray-100">
-                    <img 
-                      src={product.primaryImage || product.images?.[0]?.url || '/logo.webp'} 
-                      alt={product.name}
-                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                      onerror="this.src='/logo.webp'"
-                    />
-                    <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <button 
-                        class="quick-view-btn px-6 py-3 bg-white text-black font-bold text-sm uppercase tracking-wide hover:bg-red-600 hover:text-white transition-colors"
-                        data-product={JSON.stringify(product)}
-                      >
-                        Quick View
-                      </button>
+                  <div class="p-4">
+                    <div class="relative aspect-square overflow-hidden bg-gray-100">
+                      <img 
+                        src={product.primaryImage || product.images?.[0]?.url || '/logo.webp'} 
+                        alt={product.name}
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                        onerror="this.src='/logo.webp'"
+                      />
+                      <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button 
+                          class="quick-view-btn px-6 py-3 bg-white text-black font-bold text-base uppercase tracking-wide hover:bg-red-600 hover:text-white transition-colors"
+                          data-product={JSON.stringify(product)}
+                        >
+                          Quick View
+                        </button>
+                      </div>
                     </div>
                   </div>
 
                   <!-- Info -->
-                  <div class="p-4">
-                    <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                  <div class="p-4 pt-0">
+                    <div class="text-lg text-gray-500 uppercase tracking-wide mb-1">
                       {product.categoryName || 'Fresh Wax'}
                     </div>
-                    <h3 class="font-bold text-lg mb-1 line-clamp-1">{product.name}</h3>
-                    <div class="text-sm text-gray-600 mb-3">{product.productTypeName || product.productType}</div>
+                    <h3 class="font-bold text-2xl mb-1 line-clamp-1">{product.name}</h3>
+                    <div class="text-xl text-gray-600 mb-2">{product.productTypeName || product.productType}</div>
                     
                     <div class="flex items-baseline gap-2">
                       {product.onSale && product.salePrice ? (
                         <>
-                          <span class="text-xl font-bold text-red-600">£{product.salePrice.toFixed(2)}</span>
-                          <span class="text-sm text-gray-400 line-through">£{product.retailPrice.toFixed(2)}</span>
+                          <span class="text-2xl font-bold text-red-600">£{product.salePrice.toFixed(2)}</span>
+                          <span class="text-lg text-gray-400 line-through">£{product.retailPrice.toFixed(2)}</span>
                         </>
                       ) : (
-                        <span class="text-xl font-bold">£{product.retailPrice.toFixed(2)}</span>
+                        <span class="text-2xl font-bold">£{product.retailPrice.toFixed(2)}</span>
                       )}
                     </div>
 
@@ -286,13 +269,13 @@ const productsJson = JSON.stringify(products.map(p => ({
                       <div class="flex gap-1 mt-3">
                         {product.colors.slice(0, 5).map((color: any) => (
                           <div 
-                            class="w-5 h-5 border-2 border-gray-300 hover:border-black transition-colors" 
+                            class="w-6 h-6 border-2 border-gray-300 hover:border-black transition-colors" 
                             style={`background-color: ${color.hex || '#ccc'}`}
                             title={color.name}
                           />
                         ))}
                         {product.colors.length > 5 && (
-                          <div class="w-5 h-5 border-2 border-gray-300 bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+                          <div class="w-6 h-6 border-2 border-gray-300 bg-gray-100 flex items-center justify-center text-xs text-gray-500">
                             +{product.colors.length - 5}
                           </div>
                         )}
@@ -303,47 +286,46 @@ const productsJson = JSON.stringify(products.map(p => ({
               ))
             )}
           </div>
-        </div>
+        </main>
       </div>
     </div>
-  </main>
 
   <!-- Quick View Modal -->
   <div id="quickViewModal" class="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 opacity-0 invisible transition-all duration-300">
-    <div class="bg-white border-3 border-black max-w-4xl w-full max-h-[90vh] overflow-y-auto transform translate-y-5 transition-transform duration-300">
-      <div class="bg-black text-white px-6 py-4 flex justify-between items-center sticky top-0">
-        <h3 class="font-bold uppercase tracking-wide">Quick View</h3>
-        <button id="closeModal" class="text-2xl hover:text-red-500 transition-colors">&times;</button>
+    <div class="bg-white border-3 border-black max-w-5xl w-full max-h-[90vh] overflow-y-auto transform translate-y-5 transition-transform duration-300">
+      <div class="bg-black text-white px-6 py-5 flex justify-between items-center sticky top-0">
+        <h3 class="font-bold text-2xl uppercase tracking-wide">Quick View</h3>
+        <button id="closeModal" class="text-4xl hover:text-red-500 transition-colors">&times;</button>
       </div>
       <div class="md:grid md:grid-cols-2">
         <!-- Images -->
-        <div class="bg-gray-100">
-          <img id="modalMainImage" src="/logo.webp" alt="" class="w-full aspect-square object-cover" />
-          <div id="modalThumbnails" class="flex gap-2 p-3 bg-gray-200"></div>
+        <div class="bg-gray-100 p-6">
+          <img id="modalMainImage" src="/logo.webp" alt="Product image" class="w-full aspect-square object-cover" />
+          <div id="modalThumbnails" class="flex gap-3 pt-4"></div>
         </div>
         <!-- Details -->
-        <div class="p-6 flex flex-col">
-          <div id="modalCategory" class="text-xs text-gray-500 uppercase tracking-wide">Category</div>
-          <h2 id="modalName" class="text-2xl font-bold mt-1 mb-2">Product Name</h2>
-          <div id="modalPrice" class="text-2xl font-bold mb-4">£0.00</div>
-          <p id="modalDescription" class="text-gray-600 text-sm leading-relaxed mb-6">Description</p>
+        <div class="p-8 flex flex-col">
+          <div id="modalCategory" class="text-xl text-gray-500 uppercase tracking-wide">Category</div>
+          <h2 id="modalName" class="text-4xl font-bold mt-2 mb-3">Product Name</h2>
+          <div id="modalPrice" class="text-4xl font-bold mb-6">£0.00</div>
+          <p id="modalDescription" class="text-gray-600 text-xl leading-relaxed mb-8">Description</p>
           
-          <div id="modalSizes" class="mb-4 hidden">
-            <div class="text-xs font-bold uppercase mb-2">Size</div>
-            <div id="modalSizeGrid" class="flex flex-wrap gap-2"></div>
+          <div id="modalSizes" class="mb-6 hidden">
+            <div class="text-xl font-bold uppercase mb-3">Size</div>
+            <div id="modalSizeGrid" class="flex flex-wrap gap-3"></div>
           </div>
           
-          <div id="modalColors" class="mb-4 hidden">
-            <div class="text-xs font-bold uppercase mb-2">Color</div>
-            <div id="modalColorGrid" class="flex flex-wrap gap-2"></div>
+          <div id="modalColors" class="mb-6 hidden">
+            <div class="text-xl font-bold uppercase mb-3">Colour</div>
+            <div id="modalColorGrid" class="flex flex-wrap gap-3"></div>
           </div>
           
-          <div id="modalStock" class="flex items-center gap-2 text-sm mb-6">
-            <span class="w-2 h-2 rounded-full bg-green-500"></span>
+          <div id="modalStock" class="flex items-center gap-3 text-xl mb-8">
+            <span class="w-3 h-3 rounded-full bg-green-500"></span>
             <span>In Stock</span>
           </div>
           
-          <button id="addToCartBtn" class="mt-auto w-full py-4 bg-black text-white font-bold uppercase tracking-wide hover:bg-red-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
+          <button id="addToCartBtn" class="mt-auto w-full py-5 bg-black text-white text-xl font-bold uppercase tracking-wide hover:bg-red-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
             Add to Cart
           </button>
         </div>
@@ -356,7 +338,14 @@ const productsJson = JSON.stringify(products.map(p => ({
     Added to cart!
   </div>
 
-  <Footer />
+  <FloatingShuffleButton />
+
+  <!-- Simple Footer -->
+  <footer class="bg-gray-900 text-gray-400 py-6 text-center text-sm relative z-50">
+    <div class="container mx-auto px-4">
+      <p>&copy; {new Date().getFullYear()} Fresh Wax Records. All rights reserved.</p>
+    </div>
+  </footer>
 </Layout>
 
 <script define:vars={{ productsJson }}>
@@ -368,11 +357,47 @@ const productsJson = JSON.stringify(products.map(p => ({
   let currentProduct: any = null;
   let selectedSize: string | null = null;
   let selectedColor: string | null = null;
+  let userCanPurchase = true;
 
   function init() {
     setupFilters();
     setupQuickView();
     setupModal();
+    checkUserPurchasePermission();
+  }
+
+  // Check if user is allowed to make purchases
+  async function checkUserPurchasePermission() {
+    try {
+      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+      const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+      
+      const firebaseConfig = {
+        apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+        authDomain: "freshwax-store.firebaseapp.com",
+        projectId: "freshwax-store",
+        storageBucket: "freshwax-store.firebasestorage.app",
+        messagingSenderId: "675435782973",
+        appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+      };
+      
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      
+      onAuthStateChanged(auth, async (user: any) => {
+        if (user) {
+          const response = await fetch('/api/get-user-type?uid=' + user.uid);
+          const data = await response.json();
+          
+          // Artists who are NOT also customers cannot buy
+          if (data.isArtist && !data.isCustomer) {
+            userCanPurchase = false;
+          }
+        }
+      });
+    } catch (e) {
+      console.error('Error checking user type:', e);
+    }
   }
 
   // Filters
@@ -481,6 +506,9 @@ const productsJson = JSON.stringify(products.map(p => ({
     const mainImg = document.getElementById('modalMainImage') as HTMLImageElement;
     const thumbs = document.getElementById('modalThumbnails') as HTMLElement;
     
+    // Set alt text for accessibility
+    mainImg.alt = product.name + ' - Fresh Wax merchandise';
+    
     const images = product.images || [];
     if (images.length === 0 && product.primaryImage) {
       images.push({ url: product.primaryImage });
@@ -492,7 +520,7 @@ const productsJson = JSON.stringify(products.map(p => ({
       if (images.length > 1) {
         thumbs.innerHTML = images.map((img: any, idx: number) => {
           const url = img.url || img;
-          return `<img src="${url}" class="w-16 h-16 object-cover border-2 ${idx === 0 ? 'border-black' : 'border-transparent'} cursor-pointer hover:border-black transition-colors" data-idx="${idx}" />`;
+          return `<img src="${url}" alt="${product.name} thumbnail ${idx + 1}" class="w-16 h-16 object-cover border-2 ${idx === 0 ? 'border-black' : 'border-transparent'} cursor-pointer hover:border-black transition-colors" data-idx="${idx}" />`;
         }).join('');
         thumbs.style.display = 'flex';
 
@@ -622,27 +650,65 @@ const productsJson = JSON.stringify(products.map(p => ({
   function addToCart() {
     if (!currentProduct) return;
 
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    // Check if user is allowed to make purchases
+    if (!userCanPurchase) {
+      alert('Artist accounts cannot make purchases. Please create a separate customer account to buy items from the store.');
+      return;
+    }
+
+    // Get customer ID from cookie
+    const cookies = document.cookie.split(';');
+    let customerId = null;
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'customerId' && value) {
+        customerId = value;
+        break;
+      }
+    }
+
+    if (!customerId) {
+      window.location.href = '/login?redirect=/merch';
+      return;
+    }
+
+    // Use customer-specific cart key
+    const cartKey = 'freshwax_cart_' + customerId;
+    let cartData = { items: [] };
+    try {
+      const stored = localStorage.getItem(cartKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        cartData = parsed.items ? parsed : { items: parsed };
+      }
+    } catch (e) {
+      console.error('[Merch] Cart parse error:', e);
+    }
+
+    const cart = cartData.items || [];
     const price = currentProduct.onSale && currentProduct.salePrice 
       ? currentProduct.salePrice 
       : currentProduct.retailPrice;
 
     const cartItem = {
       id: currentProduct.id,
+      productId: currentProduct.id,
       type: 'merch',
+      format: 'merch',
       name: currentProduct.name,
+      title: currentProduct.name,
       price,
       image: currentProduct.primaryImage || currentProduct.images?.[0]?.url || '/logo.webp',
+      artwork: currentProduct.primaryImage || currentProduct.images?.[0]?.url || '/logo.webp',
       size: selectedSize,
       color: selectedColor,
-      quantity: 1,
-      addedAt: new Date().toISOString()
+      quantity: 1
     };
 
     const variantKey = `${cartItem.id}-${cartItem.size || 'onesize'}-${cartItem.color || 'default'}`;
     const existingIdx = cart.findIndex((item: any) => {
       const itemKey = `${item.id}-${item.size || 'onesize'}-${item.color || 'default'}`;
-      return itemKey === variantKey;
+      return itemKey === variantKey && item.type === 'merch';
     });
 
     if (existingIdx >= 0) {
@@ -651,8 +717,21 @@ const productsJson = JSON.stringify(products.map(p => ({
       cart.push(cartItem);
     }
 
-    localStorage.setItem('cart', JSON.stringify(cart));
-    window.dispatchEvent(new CustomEvent('cartUpdated'));
+    // Save to customer-specific cart
+    const newCartData = {
+      items: cart,
+      updatedAt: new Date().toISOString()
+    };
+    localStorage.setItem(cartKey, JSON.stringify(newCartData));
+    
+    // Dispatch both event types for compatibility
+    window.dispatchEvent(new CustomEvent('cart-updated', { detail: newCartData }));
+    window.dispatchEvent(new CustomEvent('cartUpdated', { detail: newCartData }));
+
+    // Update cart badge
+    if (window.FreshWaxCart) {
+      window.FreshWaxCart.updateBadge();
+    }
 
     showToast('Added to cart!');
     closeModal();
@@ -676,6 +755,279 @@ const productsJson = JSON.stringify(products.map(p => ({
 </script>
 
 <style>
+  /* Full Height Layout */
+  .merch-layout {
+    display: flex;
+    min-height: calc(100vh - 80px); /* Subtract header height */
+  }
+
+  /* Sidebar - Fixed Full Height */
+  .merch-sidebar {
+    width: 260px;
+    background: #000;
+    flex-shrink: 0;
+    position: fixed;
+    top: 80px; /* Header height */
+    left: 0;
+    height: calc(100vh - 80px);
+    overflow-y: auto;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 2px solid #fff;
+  }
+
+  /* Add left margin to content to account for fixed sidebar */
+  .merch-content {
+    margin-left: 260px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-inner {
+    padding: 3rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    width: 100%;
+  }
+
+  .filter-section {
+    background: #1a1a1a;
+    border: 2px solid #333;
+  }
+
+  .filter-header {
+    background: #dc2626;
+    color: white;
+    padding: 0.75rem 1rem;
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .filter-options {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .filter-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    color: #ccc;
+    font-size: 0.875rem;
+    transition: color 0.2s;
+  }
+
+  .filter-option:hover {
+    color: #dc2626;
+  }
+
+  .filter-radio {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #dc2626;
+  }
+
+  .clear-filters-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background: #333;
+    border: 2px solid #555;
+    color: white;
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .clear-filters-btn:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+  }
+
+  /* Hero Section */
+  .merch-hero {
+    background: #000;
+    color: white;
+    padding: 3rem 0;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  .hero-pattern {
+    position: absolute;
+    inset: 0;
+    opacity: 0.05;
+    background-image: url('/logo.webp');
+    background-size: 200px;
+    background-repeat: repeat;
+    filter: grayscale(1);
+  }
+
+  .hero-inner {
+    position: relative;
+    z-index: 10;
+    padding: 0 1.5rem;
+  }
+
+  .hero-subtitle {
+    color: #9ca3af;
+    font-size: 1.125rem;
+  }
+
+  /* Products Section */
+  .products-main {
+    background: #f9fafb;
+    flex: 1;
+    padding: 2rem;
+  }
+
+  .products-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .products-count {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+
+  .products-count strong {
+    color: #000;
+  }
+
+  .sort-select {
+    padding: 0.5rem 1rem;
+    border: 2px solid #000;
+    background: white;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .sort-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #000;
+  }
+
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .products-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .products-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .products-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  .product-card {
+    max-width: 330px;
+    margin: 0 auto;
+  }
+
+  .product-card img {
+    aspect-ratio: 1;
+    object-fit: cover;
+  }
+
+  /* Title Styling */
+  .merch-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 5.75rem;
+    font-weight: 400;
+    margin-bottom: 1rem;
+    letter-spacing: 0.02em;
+    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 80px rgba(220, 38, 38, 0.2);
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+
+  @media (min-width: 768px) {
+    .merch-title {
+      font-size: 6.75rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .merch-title {
+      font-size: 7.25rem;
+    }
+  }
+
+  /* Mobile Responsive */
+  @media (max-width: 1023px) {
+    .merch-layout {
+      flex-direction: column;
+    }
+
+    .merch-sidebar {
+      width: 100%;
+      position: relative;
+      top: 0;
+      left: 0;
+      height: auto;
+      border-right: none;
+      border-bottom: 2px solid #fff;
+    }
+
+    .merch-content {
+      margin-left: 0;
+    }
+
+    .sidebar-inner {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .clear-filters-btn {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .merch-title {
+      font-size: 3.25rem;
+    }
+
+    .sidebar-inner {
+      grid-template-columns: 1fr;
+    }
+
+    .products-main {
+      padding: 1rem;
+    }
+  }
+
   .line-clamp-1 {
     display: -webkit-box;
     -webkit-line-clamp: 1;

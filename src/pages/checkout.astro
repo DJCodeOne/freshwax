@@ -1,0 +1,1169 @@
+---
+// src/pages/checkout.astro
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+export const prerender = false;
+---
+
+<Layout title="Checkout" noindex={true}>
+  <Header />
+  
+  <main class="checkout-main">
+    
+    <!-- Page Header -->
+    <header class="checkout-header">
+      <h1>CHECKOUT</h1>
+      <a href="/cart" class="back-btn">← Back to Cart</a>
+    </header>
+    
+    <!-- Test Banner -->
+    <div class="test-banner">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+      </svg>
+      Test Mode — No Payment Will Be Taken
+    </div>
+    
+    <div id="error-message" class="error-message"></div>
+    
+    <div id="checkout-content">
+      <div class="loading-state">
+        Loading your cart...
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .checkout-main {
+    min-height: 100vh;
+    padding: 1.5rem;
+    max-width: 900px;
+    margin: 0 auto;
+    background: #000;
+  }
+  
+  .checkout-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 3px solid #ef4444;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .checkout-header h1 {
+    margin: 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.2rem, 6vw, 3rem);
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: #fff;
+  }
+  
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #fff;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.625rem 1.25rem;
+    background: #000;
+    border: 2px solid #fff;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  
+  .back-btn:hover {
+    background: #fff;
+    color: #000;
+  }
+  
+  .test-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    background: linear-gradient(90deg, #2a2a00 0%, #3a3a00 50%, #2a2a00 100%);
+    border: 2px solid #555500;
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #dddd00;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: center;
+  }
+  
+  .error-message {
+    background: #1a0a0a;
+    border: 2px solid #dc2626;
+    color: #ff6b6b;
+    padding: 1.25rem 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+    display: none;
+  }
+  
+  .loading-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: #000;
+    border: 3px solid #fff;
+    border-radius: 12px;
+    color: #888;
+    font-size: 1.125rem;
+  }
+  
+  /* Responsive - Tablet */
+  @media (max-width: 768px) {
+    .checkout-main {
+      padding: 1.25rem 1rem;
+    }
+    
+    .checkout-header {
+      margin-bottom: 1.5rem;
+    }
+    
+    .back-btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.9375rem;
+    }
+    
+    .test-banner {
+      font-size: 0.875rem;
+      padding: 0.875rem 1.25rem;
+      flex-wrap: wrap;
+    }
+  }
+  
+  /* Responsive - Mobile */
+  @media (max-width: 600px) {
+    .checkout-main {
+      padding: 1rem 0.75rem;
+    }
+    
+    .checkout-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.875rem;
+      margin-bottom: 1.25rem;
+      padding-bottom: 1rem;
+    }
+    
+    .back-btn {
+      width: 100%;
+      justify-content: center;
+    }
+    
+    .test-banner {
+      font-size: 0.8125rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.04em;
+    }
+    
+    .loading-state {
+      padding: 3rem 1.5rem;
+      font-size: 1rem;
+    }
+  }
+  
+  /* Responsive - Small Mobile */
+  @media (max-width: 400px) {
+    .checkout-main {
+      padding: 0.75rem 0.5rem;
+    }
+    
+    .test-banner {
+      font-size: 0.75rem;
+    }
+  }
+  
+  /* Touch-friendly */
+  @media (hover: none) and (pointer: coarse) {
+    .back-btn {
+      min-height: 44px;
+    }
+  }
+</style>
+
+<style is:global>
+  /* Checkout Form Styles */
+  .checkout-layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 2rem;
+  }
+  
+  .checkout-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .form-section {
+    background: #000;
+    border: 3px solid #fff;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  
+  .form-section-header {
+    padding: 1rem 1.25rem;
+    background: #fff;
+    color: #000;
+  }
+  
+  .form-section-header h2 {
+    margin: 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.375rem;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+  
+  .form-section-body {
+    padding: 1.25rem;
+  }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+  
+  .form-group.full-width {
+    grid-column: 1 / -1;
+  }
+  
+  .form-group label {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #888;
+  }
+  
+  .form-group input,
+  .form-group select {
+    padding: 0.875rem 1rem;
+    background: #111;
+    border: 2px solid #333;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #fff;
+  }
+  
+  /* Order Summary Sidebar */
+  .order-summary-sidebar {
+    position: sticky;
+    top: 1.5rem;
+    background: #000;
+    border: 3px solid #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    height: fit-content;
+  }
+  
+  .summary-header {
+    padding: 1rem 1.25rem;
+    background: #fff;
+    color: #000;
+  }
+  
+  .summary-header h2 {
+    margin: 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.375rem;
+  }
+  
+  .summary-body {
+    padding: 1.25rem;
+  }
+  
+  .summary-item {
+    display: flex;
+    gap: 1rem;
+    padding: 0.875rem 0;
+    border-bottom: 1px solid #333;
+  }
+  
+  .summary-item-image {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+  
+  .summary-totals {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 2px solid #fff;
+  }
+  
+  .summary-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    font-size: 1rem;
+  }
+  
+  .summary-line.total {
+    font-size: 1.25rem;
+    font-weight: 700;
+    padding-top: 0.75rem;
+    margin-top: 0.5rem;
+    border-top: 2px solid #ef4444;
+  }
+  
+  .place-order-btn {
+    width: 100%;
+    padding: 1.125rem;
+    margin-top: 1.25rem;
+    background: #22c55e;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.125rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  
+  .place-order-btn:hover {
+    background: #16a34a;
+    transform: translateY(-2px);
+  }
+  
+  .place-order-btn:disabled {
+    background: #333;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  /* Responsive - Tablet */
+  @media (max-width: 900px) {
+    .checkout-layout {
+      grid-template-columns: 1fr;
+    }
+    
+    .order-summary-sidebar {
+      position: static;
+      order: -1;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .form-section-header {
+      padding: 0.875rem 1rem;
+    }
+    
+    .form-section-header h2 {
+      font-size: 1.25rem;
+    }
+    
+    .form-section-body {
+      padding: 1rem;
+    }
+    
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+    
+    .form-group input,
+    .form-group select {
+      padding: 0.75rem 0.875rem;
+      font-size: 0.9375rem;
+    }
+    
+    .summary-item-image {
+      width: 50px;
+      height: 50px;
+    }
+  }
+  
+  @media (max-width: 600px) {
+    .checkout-layout {
+      gap: 1.25rem;
+    }
+    
+    .form-section {
+      border-radius: 10px;
+    }
+    
+    .form-section-header {
+      padding: 0.75rem 1rem;
+    }
+    
+    .form-section-header h2 {
+      font-size: 1.125rem;
+    }
+    
+    .form-section-body {
+      padding: 0.875rem;
+    }
+    
+    .form-group label {
+      font-size: 0.75rem;
+    }
+    
+    .form-group input,
+    .form-group select {
+      padding: 0.625rem 0.75rem;
+      font-size: 0.875rem;
+    }
+    
+    .summary-body {
+      padding: 1rem;
+    }
+    
+    .summary-item {
+      padding: 0.75rem 0;
+    }
+    
+    .summary-item-image {
+      width: 48px;
+      height: 48px;
+    }
+    
+    .summary-line {
+      font-size: 0.9375rem;
+    }
+    
+    .summary-line.total {
+      font-size: 1.125rem;
+    }
+    
+    .place-order-btn {
+      padding: 1rem;
+      font-size: 1rem;
+    }
+  }
+  
+  @media (max-width: 400px) {
+    .form-section-body {
+      padding: 0.75rem;
+    }
+    
+    .summary-body {
+      padding: 0.875rem;
+    }
+  }
+  
+  /* Touch-friendly */
+  @media (hover: none) and (pointer: coarse) {
+    .form-group input,
+    .form-group select,
+    .place-order-btn {
+      min-height: 44px;
+    }
+  }
+</style>
+
+<script>
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+  import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store",
+    storageBucket: "freshwax-store.firebasestorage.app",
+    messagingSenderId: "675435782973",
+    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  
+  let currentUser = null;
+  let customerData = null;
+  let cart = [];
+  
+  function getCustomerIdFromCookie() {
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'customerId' && value) {
+        return value;
+      }
+    }
+    return null;
+  }
+  
+  function loadCart() {
+    try {
+      const customerId = getCustomerIdFromCookie();
+      if (!customerId) {
+        cart = [];
+        return cart;
+      }
+      
+      const cartKey = 'freshwax_cart_' + customerId;
+      const stored = localStorage.getItem(cartKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        cart = parsed.items ? parsed.items : (Array.isArray(parsed) ? parsed : []);
+      } else {
+        cart = [];
+      }
+    } catch (e) {
+      console.error('[Checkout] Cart parse error:', e);
+      cart = [];
+    }
+    return cart;
+  }
+  
+  // Check for duplicate audio purchases via API
+  async function checkDuplicatePurchases(userId) {
+    if (!userId) return { duplicates: [], ownedReleases: [] };
+    
+    try {
+      const response = await fetch('/api/check-duplicates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, cartItems: cart })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to check duplicates');
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (e) {
+      console.error('[Checkout] Error checking duplicate purchases:', e);
+      return { duplicates: [], ownedReleases: [] };
+    }
+  }
+  
+  // Remove duplicate items from cart
+  function removeDuplicatesFromCart(duplicates) {
+    const customerId = getCustomerIdFromCookie();
+    if (!customerId) return;
+    
+    const duplicateKeys = new Set(duplicates.map(d => {
+      const item = d.item;
+      if (item.trackId) {
+        return `${item.releaseId || item.productId || item.id}_${item.trackId}`;
+      }
+      return item.releaseId || item.productId || item.id;
+    }));
+    
+    cart = cart.filter(item => {
+      const key = item.trackId 
+        ? `${item.releaseId || item.productId || item.id}_${item.trackId}`
+        : (item.releaseId || item.productId || item.id);
+      return !duplicateKeys.has(key);
+    });
+    
+    // Save updated cart
+    const cartKey = 'freshwax_cart_' + customerId;
+    localStorage.setItem(cartKey, JSON.stringify({ items: cart, updatedAt: Date.now() }));
+    
+    // Dispatch cart update event
+    window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count: cart.reduce((sum, item) => sum + item.quantity, 0) } }));
+  }
+  
+  function calculateTotals() {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const hasPhysicalItems = cart.some(item => 
+      item.type === 'vinyl' || item.type === 'merch' || item.productType === 'vinyl' || item.productType === 'merch'
+    );
+    const shipping = hasPhysicalItems ? (subtotal >= 50 ? 0 : 4.99) : 0;
+    return { subtotal, shipping, hasPhysicalItems, total: subtotal + shipping };
+  }
+  
+  function getBadgeStyle(type) {
+    if (type === 'vinyl') return 'background: #000; color: #fff; border-color: #fff;';
+    if (type === 'merch') return 'background: #1e1b4b; color: #a5b4fc; border-color: #a5b4fc;';
+    return 'background: #052e16; color: #22c55e; border-color: #22c55e;';
+  }
+  
+  async function loadCustomerData(uid) {
+    try {
+      
+      // Try customers collection first - direct document lookup
+      const customerDoc = await getDoc(doc(db, 'customers', uid));
+      if (customerDoc.exists()) {
+        const data = customerDoc.data();
+        return data;
+      }
+      
+      // Try querying customers by uid field
+      const customersRef = collection(db, 'customers');
+      const q = query(customersRef, where('uid', '==', uid));
+      const customerSnap = await getDocs(q);
+      if (!customerSnap.empty) {
+        const data = customerSnap.docs[0].data();
+        return data;
+      }
+      
+      // Try users collection
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        return data;
+      }
+      
+    } catch (e) {
+      console.error('[Checkout] Error loading customer data:', e);
+    }
+    return null;
+  }
+  
+  // Postcode lookup function - uses free postcodes.io API
+  // Validates postcode and auto-fills city/county (street address entered manually)
+  async function lookupPostcode() {
+    const postcodeInput = document.getElementById('postcodeSearch');
+    const findBtn = document.getElementById('findAddressBtn');
+    const manualEntry = document.getElementById('manualAddressFields');
+    const manualEntryLink = document.getElementById('manualEntryLink');
+    const lookupError = document.getElementById('lookupError');
+    
+    const postcode = postcodeInput.value.trim();
+    
+    if (!postcode) {
+      lookupError.textContent = 'Please enter a postcode';
+      lookupError.style.color = '#ff6b6b';
+      lookupError.style.display = 'block';
+      return;
+    }
+    
+    // Update button state
+    findBtn.disabled = true;
+    findBtn.textContent = 'Validating...';
+    lookupError.style.display = 'none';
+    
+    try {
+      const response = await fetch(`/api/postcode-lookup?postcode=${encodeURIComponent(postcode)}`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Postcode not found');
+      }
+      
+      // Postcode validated! Auto-fill the location fields
+      document.getElementById('postcode').value = data.postcode;
+      document.getElementById('city').value = data.city || '';
+      document.getElementById('county').value = data.county || '';
+      
+      // Show success message
+      lookupError.textContent = '✓ Postcode verified! Please enter your street address below.';
+      lookupError.style.color = '#22c55e';
+      lookupError.style.display = 'block';
+      
+      // Show address fields for manual entry
+      manualEntry.style.display = 'block';
+      if (manualEntryLink) manualEntryLink.style.display = 'none';
+      
+      // Focus on address line 1 for quick entry
+      setTimeout(() => {
+        document.getElementById('address1')?.focus();
+      }, 100);
+      
+    } catch (error) {
+      lookupError.textContent = error.message || 'Failed to lookup postcode';
+      lookupError.style.color = '#ff6b6b';
+      lookupError.style.display = 'block';
+      // Show manual fields on error so user can still proceed
+      manualEntry.style.display = 'block';
+      if (manualEntryLink) manualEntryLink.style.display = 'none';
+    } finally {
+      findBtn.disabled = false;
+      findBtn.textContent = 'Verify Postcode';
+    }
+  }
+  
+  // Handle address selection (kept for backwards compatibility)
+  function handleAddressSelect(event) {
+    const value = event.target.value;
+    const manualEntry = document.getElementById('manualAddressFields');
+    manualEntry.style.display = 'block';
+  }
+  
+  function renderCheckout() {
+    const container = document.getElementById('checkout-content');
+    loadCart();
+    
+    if (cart.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 4rem 2rem; background: #000; border: 3px solid #fff; border-radius: 12px;">
+          <h2 style="font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; margin-bottom: 0.75rem; color: #fff;">YOUR CART IS EMPTY</h2>
+          <p style="font-size: 1.125rem; color: #888; margin-bottom: 2rem;">Add some items before checking out.</p>
+          <a href="/" style="display: inline-block; padding: 1rem 2.5rem; background: #fff; color: #000; text-decoration: none; border-radius: 10px; font-size: 1.125rem; font-weight: 600;">Browse Store</a>
+        </div>
+      `;
+      return;
+    }
+    
+    const { subtotal, shipping, hasPhysicalItems, total } = calculateTotals();
+    const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    
+    // Pre-fill from customer data
+    const cd = customerData || {};
+    
+    const email = currentUser?.email || cd.email || '';
+    const firstName = cd.firstName || cd.name?.split(' ')[0] || '';
+    const lastName = cd.lastName || cd.name?.split(' ').slice(1).join(' ') || '';
+    const phone = cd.phone || '';
+    const address1 = cd.address1 || cd.addressLine1 || '';
+    const address2 = cd.address2 || cd.addressLine2 || '';
+    const city = cd.city || '';
+    const county = cd.county || '';
+    const postcode = cd.postcode || '';
+    const country = cd.country || 'United Kingdom';
+    
+    
+    // Check if we have saved address data
+    const hasSavedAddress = address1 && city && postcode;
+    
+    container.innerHTML = `
+      <form id="checkoutForm">
+        <!-- Order Items -->
+        <div style="background: #000; border: 3px solid #fff; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden;">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: #111; border-bottom: 2px solid #333;">
+            <h2 style="font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">YOUR ORDER</h2>
+            <span style="font-size: 0.9375rem; color: #888; font-weight: 500;">${itemCount} ${itemCount === 1 ? 'item' : 'items'}</span>
+          </div>
+          <div style="padding: 1.25rem;">
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+              ${cart.map(item => {
+                const itemType = item.type || item.productType || 'digital';
+                return `
+                <article style="display: grid; grid-template-columns: 100px 1fr; gap: 1.25rem; padding: 1.25rem; background: #000; border: 3px solid #fff; border-radius: 12px;">
+                  <div style="width: 100px; height: 100px; border-radius: 8px; overflow: hidden; background: #111; border: 2px solid #fff; flex-shrink: 0;">
+                    <img src="${item.image}" alt="${item.name}" style="width: 100px; height: 100px; object-fit: cover; display: block;">
+                  </div>
+                  <div style="display: flex; flex-direction: column; min-width: 0;">
+                    <div style="margin-bottom: 0.625rem;">
+                      <h3 style="margin: 0 0 0.375rem 0; font-size: 1.25rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</h3>
+                      <div style="display: flex; gap: 0.625rem; flex-wrap: wrap; align-items: center;">
+                        <span style="display: inline-block; padding: 0.2rem 0.625rem; font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-radius: 5px; border: 2px solid; ${getBadgeStyle(itemType)}">${itemType}</span>
+                        ${item.color ? `<span style="font-size: 0.95rem; color: #a0a0a0;">${typeof item.color === 'object' ? item.color.name : item.color}</span>` : ''}
+                        ${item.size ? `<span style="font-size: 0.95rem; color: #a0a0a0;">Size: ${item.size}</span>` : ''}
+                      </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto;">
+                      ${item.quantity > 1 ? `
+                        <div style="display: flex; align-items: center; gap: 0.5rem; background: #000; border: 2px solid #fff; border-radius: 8px; padding: 0.5rem 1rem;">
+                          <span style="font-size: 0.875rem; color: #888;">Qty:</span>
+                          <span style="font-size: 1.125rem; font-weight: 700; color: #fff;">${item.quantity}</span>
+                        </div>
+                      ` : '<div></div>'}
+                      <div style="text-align: right;">
+                        <div style="font-size: 1.375rem; font-weight: 700; color: #fff;">£${(item.price * item.quantity).toFixed(2)}</div>
+                        ${item.quantity > 1 ? `<div style="font-size: 0.875rem; color: #888;">£${item.price.toFixed(2)} each</div>` : ''}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              `}).join('')}
+            </div>
+            
+            <!-- Totals -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; background: #111; border: 2px solid #fff; border-radius: 10px; margin-top: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+              <div style="display: flex; gap: 3rem;">
+                <div style="display: flex; flex-direction: column;">
+                  <span style="font-size: 0.875rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em;">Subtotal</span>
+                  <span style="font-size: 1.25rem; font-weight: 700; color: #fff;">£${subtotal.toFixed(2)}</span>
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                  <span style="font-size: 0.875rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em;">Shipping</span>
+                  <span style="font-size: 1.25rem; font-weight: 700; color: ${!hasPhysicalItems || shipping === 0 ? '#22c55e' : '#fff'};">${hasPhysicalItems ? (shipping === 0 ? 'FREE' : '£' + shipping.toFixed(2)) : 'Digital'}</span>
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <span style="font-family: 'Bebas Neue', sans-serif; font-size: 1.125rem; letter-spacing: 0.04em; color: #fff; display: block;">Total</span>
+                <span style="font-size: 2rem; font-weight: 700; color: #fff;">£${total.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Contact Details -->
+        <div style="background: #000; border: 3px solid #fff; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden;">
+          <div style="padding: 1rem 1.25rem; background: #111; border-bottom: 2px solid #333;">
+            <h2 style="font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">CONTACT DETAILS</h2>
+          </div>
+          <div style="padding: 1.25rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label for="firstName" style="font-size: 0.9375rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.04em;">First Name *</label>
+                <input type="text" id="firstName" name="firstName" required placeholder="John" value="${firstName}" style="width: 100%; padding: 1rem 1.25rem; background: #111; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1.125rem; font-family: inherit;">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label for="lastName" style="font-size: 0.9375rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.04em;">Last Name *</label>
+                <input type="text" id="lastName" name="lastName" required placeholder="Doe" value="${lastName}" style="width: 100%; padding: 1rem 1.25rem; background: #111; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1.125rem; font-family: inherit;">
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label for="email" style="font-size: 0.9375rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.04em;">Email Address *</label>
+                <input type="email" id="email" name="email" required placeholder="you@example.com" value="${email}" style="width: 100%; padding: 1rem 1.25rem; background: #111; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1.125rem; font-family: inherit;">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <label for="phone" style="font-size: 0.9375rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.04em;">Phone Number</label>
+                <input type="tel" id="phone" name="phone" placeholder="+44 7XXX XXXXXX" value="${phone}" style="width: 100%; padding: 1rem 1.25rem; background: #111; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1.125rem; font-family: inherit;">
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        ${hasPhysicalItems ? `
+        <!-- Postal Address -->
+        <div style="background: #000; border: 3px solid #fff; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden;">
+          <div style="padding: 1rem 1.25rem; background: #111; border-bottom: 2px solid #333;">
+            <h2 style="font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">POSTAL ADDRESS</h2>
+          </div>
+          <div style="padding: 1.25rem;">
+            
+            <!-- Postcode Lookup -->
+            <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 2px solid #222;">
+              <label style="font-size: 0.9375rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.5rem;">Verify Your Postcode</label>
+              <div style="display: flex; gap: 0.75rem;">
+                <input type="text" id="postcodeSearch" placeholder="Enter postcode (e.g. E1 6AN)" value="${postcode}" style="flex: 1; padding: 1rem 1.25rem; background: #111; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1.125rem; font-family: inherit; text-transform: uppercase;">
+                <button type="button" id="findAddressBtn" onclick="lookupPostcode()" style="padding: 1rem 1.5rem; background: #dc2626; color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
+                  Verify Postcode
+                </button>
+              </div>
+              <div id="lookupError" style="margin-top: 0.75rem; font-size: 0.875rem; color: #ff6b6b; display: none;"></div>
+            </div>
+            
+            <!-- Manual Address Fields -->
+            <div id="manualAddressFields" style="display: ${hasSavedAddress ? 'block' : 'none'};">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                  <label for="address1" style="font-size: 0.9375rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.04em;">Address Line 1 *</label>
+                  <input type="text" id="address1" name="address1" required placeholder="123 Music Street" value="${address1}" style="width: 100%; padding: 1rem 1.25rem; background: #111; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1.125rem; font-family: inherit;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                  <label for="address2" style="font-size: 0.9375rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.04em;">Address Line 2</label>
+                  <input type="text" id="address2" name="address2" placeholder="Flat 4B" value="${address2}" style="width: 100%; padding: 1rem 1.25rem; background: #111; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1.125rem; font-family: inherit;">
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                  <label for="city" style="font-size: 0.9375rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.04em;">City *</label>
+                  <input type="text" id="city" name="city" required placeholder="London" value="${city}" style="width: 100%; padding: 1rem 1.25rem; background: #111; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1.125rem; font-family: inherit;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                  <label for="postcode" style="font-size: 0.9375rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.04em;">Postcode *</label>
+                  <input type="text" id="postcode" name="postcode" required placeholder="E1 6AN" value="${postcode}" style="width: 100%; padding: 1rem 1.25rem; background: #111; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1.125rem; font-family: inherit; text-transform: uppercase;">
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                  <label for="county" style="font-size: 0.9375rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.04em;">County</label>
+                  <input type="text" id="county" name="county" placeholder="Greater London" value="${county}" style="width: 100%; padding: 1rem 1.25rem; background: #111; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1.125rem; font-family: inherit;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                  <label for="country" style="font-size: 0.9375rem; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.04em;">Country *</label>
+                  <select id="country" name="country" required style="width: 100%; padding: 1rem 1.25rem; background: #111; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1.125rem; font-family: inherit; cursor: pointer;">
+                    <option value="United Kingdom" ${country === 'United Kingdom' ? 'selected' : ''}>United Kingdom</option>
+                    <option value="Ireland" ${country === 'Ireland' ? 'selected' : ''}>Ireland</option>
+                    <option value="Germany" ${country === 'Germany' ? 'selected' : ''}>Germany</option>
+                    <option value="France" ${country === 'France' ? 'selected' : ''}>France</option>
+                    <option value="Netherlands" ${country === 'Netherlands' ? 'selected' : ''}>Netherlands</option>
+                    <option value="Belgium" ${country === 'Belgium' ? 'selected' : ''}>Belgium</option>
+                    <option value="USA" ${country === 'USA' ? 'selected' : ''}>United States</option>
+                    <option value="Canada" ${country === 'Canada' ? 'selected' : ''}>Canada</option>
+                    <option value="Australia" ${country === 'Australia' ? 'selected' : ''}>Australia</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Enter Manually Link (shown when fields hidden) -->
+            <div id="manualEntryLink" style="display: ${hasSavedAddress ? 'none' : 'block'}; margin-top: 1rem;">
+              <button type="button" onclick="document.getElementById('manualAddressFields').style.display='block'; document.getElementById('manualEntryLink').style.display='none';" style="background: none; border: none; color: #60a5fa; font-size: 0.9375rem; cursor: pointer; text-decoration: underline;">
+                Or enter address manually
+              </button>
+            </div>
+            
+            ${currentUser ? `
+            <label style="display: flex; align-items: center; gap: 0.875rem; margin-top: 1.5rem; padding: 1.25rem; background: #0a1628; border: 2px solid #1e40af; border-radius: 10px; cursor: pointer;">
+              <input type="checkbox" id="saveDetails" name="saveDetails" style="width: 24px; height: 24px; accent-color: #dc2626; cursor: pointer;">
+              <span style="font-size: 1rem; color: #60a5fa; font-weight: 500;">Save these details to my account for faster checkout next time</span>
+            </label>
+            ` : ''}
+          </div>
+        </div>
+        ` : ''}
+        
+        <!-- Payment -->
+        <div style="background: #000; border: 3px solid #fff; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden;">
+          <div style="padding: 1rem 1.25rem; background: #111; border-bottom: 2px solid #333;">
+            <h2 style="font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">PAYMENT</h2>
+          </div>
+          <div style="padding: 1.25rem;">
+            <p style="font-size: 1.125rem; color: #888; line-height: 1.8; text-align: center; padding: 1rem 0;">
+              This is a test checkout. No payment will be processed.<br>
+              Click the button below to complete your order and receive download links.
+            </p>
+            <button type="submit" id="submitBtn" style="width: 100%; padding: 1.25rem; margin-top: 1rem; background: #fff; color: #000; border: none; border-radius: 12px; font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.08em; cursor: pointer;">
+              COMPLETE ORDER — £${total.toFixed(2)}
+            </button>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 1rem; font-size: 0.9375rem; color: #666;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+              Secure Checkout
+            </div>
+          </div>
+        </div>
+      </form>
+    `;
+    
+    // Show duplicate warning if any found
+    if (duplicatePurchases && duplicatePurchases.length > 0) {
+      const itemsList = duplicatePurchases.map(d => `<li><strong>${d.item.name}</strong> - ${d.reason}</li>`).join('');
+      
+      const warningHtml = `
+        <div id="duplicate-warning" style="background: #7f1d1d; border: 3px solid #dc2626; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+          <div style="display: flex; align-items: flex-start; gap: 1rem;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
+              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div style="flex: 1;">
+              <h3 style="color: #fca5a5; font-size: 1.125rem; font-weight: 700; margin: 0 0 0.5rem 0;">You Already Own Some Items</h3>
+              <p style="color: #fecaca; font-size: 0.9375rem; margin: 0 0 1rem 0;">The following items are already in your purchase history:</p>
+              <ul style="color: #fecaca; font-size: 0.875rem; margin: 0 0 1rem 0; padding-left: 1.25rem;">${itemsList}</ul>
+              <button type="button" id="removeDuplicatesBtn" style="background: #dc2626; color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9375rem;">
+                Remove These Items From Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Insert at top of checkout content
+      container.insertAdjacentHTML('afterbegin', warningHtml);
+      
+      // Add click handler for remove button
+      document.getElementById('removeDuplicatesBtn')?.addEventListener('click', () => {
+        removeDuplicatesFromCart(duplicatePurchases);
+        document.getElementById('duplicate-warning')?.remove();
+        duplicatePurchases = [];
+        renderCheckout();
+      });
+    }
+    
+    // Make postcode lookup available globally
+    window.lookupPostcode = lookupPostcode;
+    
+    document.getElementById('checkoutForm').addEventListener('submit', handleSubmit);
+  }
+  
+  async function handleSubmit(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const errorMsg = document.getElementById('error-message');
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'PROCESSING...';
+    submitBtn.style.background = '#333';
+    submitBtn.style.color = '#666';
+    errorMsg.style.display = 'none';
+    
+    const form = e.target;
+    const { subtotal, shipping, hasPhysicalItems, total } = calculateTotals();
+    
+    // Save details to customer account if checkbox is checked
+    const saveDetails = form.saveDetails?.checked;
+    if (saveDetails && currentUser) {
+      try {
+        const customerRef = doc(db, 'customers', currentUser.uid);
+        await setDoc(customerRef, {
+          firstName: form.firstName.value,
+          lastName: form.lastName.value,
+          email: form.email.value,
+          phone: form.phone?.value || '',
+          address1: form.address1?.value || '',
+          address2: form.address2?.value || '',
+          city: form.city?.value || '',
+          county: form.county?.value || '',
+          postcode: form.postcode?.value || '',
+          country: form.country?.value || 'United Kingdom',
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (e) {
+        console.error('Error saving customer details:', e);
+      }
+    }
+    
+    const orderData = {
+      customer: {
+        email: form.email.value,
+        firstName: form.firstName.value,
+        lastName: form.lastName.value,
+        phone: form.phone?.value || '',
+        userId: currentUser?.uid || null
+      },
+      shipping: hasPhysicalItems ? {
+        address1: form.address1.value,
+        address2: form.address2?.value || '',
+        city: form.city.value,
+        county: form.county?.value || '',
+        postcode: form.postcode.value,
+        country: form.country.value
+      } : null,
+      items: cart.map(item => ({
+        id: item.id || item.productId,
+        productId: item.productId || item.id,
+        releaseId: item.releaseId || item.productId || item.id,
+        trackId: item.trackId || null,
+        name: item.name,
+        type: item.type || item.productType,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image || item.artwork,
+        artwork: item.artwork || item.image,
+        size: item.size || null,
+        color: typeof item.color === 'object' ? item.color.name : item.color || null,
+        artist: item.artist || null,
+        title: item.title || null
+      })),
+      totals: { subtotal, shipping, total },
+      hasPhysicalItems,
+      paymentMethod: 'test_mode',
+      paymentStatus: 'completed'
+    };
+    
+    try {
+      const response = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Clear customer-specific cart
+        const customerId = getCustomerIdFromCookie();
+        if (customerId) {
+          localStorage.removeItem('freshwax_cart_' + customerId);
+        }
+        localStorage.removeItem('cart'); // Also clear legacy cart
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { items: [] } }));
+        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
+        window.location.href = `/order-confirmation/${result.orderId}`;
+      } else {
+        throw new Error(result.error || 'Failed to create order');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      errorMsg.textContent = error.message || 'Something went wrong. Please try again.';
+      errorMsg.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = `COMPLETE ORDER — £${total.toFixed(2)}`;
+      submitBtn.style.background = '#fff';
+      submitBtn.style.color = '#000';
+    }
+  }
+  
+  // Check if logged-in user is a customer (only customers can buy)
+  async function checkUserType(uid) {
+    try {
+      const response = await fetch('/api/get-user-type?uid=' + uid);
+      const data = await response.json();
+      return data;
+    } catch (e) {
+      console.error('Error checking user type:', e);
+      return { isCustomer: false, isArtist: false };
+    }
+  }
+  
+  // Show access denied message for non-customers
+  function showAccessDenied() {
+    const container = document.getElementById('checkout-content');
+    container.innerHTML = `
+      <div style="text-align: center; padding: 4rem 2rem; background: #1a0a0a; border: 3px solid #dc2626; border-radius: 12px;">
+        <h2 style="font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; margin-bottom: 0.75rem; color: #ff6b6b;">CUSTOMER ACCOUNT REQUIRED</h2>
+        <p style="font-size: 1.125rem; color: #888; margin-bottom: 1rem;">Only customer accounts can make purchases.</p>
+        <p style="font-size: 1rem; color: #666; margin-bottom: 2rem;">If you're an artist, please create a separate customer account to buy items from the store.</p>
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+          <a href="/register" style="display: inline-block; padding: 1rem 2.5rem; background: #dc2626; color: #fff; text-decoration: none; border-radius: 10px; font-size: 1.125rem; font-weight: 600;">Create Customer Account</a>
+          <a href="/" style="display: inline-block; padding: 1rem 2.5rem; background: #333; color: #fff; text-decoration: none; border-radius: 10px; font-size: 1.125rem; font-weight: 600;">Back to Store</a>
+        </div>
+      </div>
+    `;
+  }
+  
+  let userTypeChecked = false;
+  let isAllowedToBuy = true;
+  let duplicatePurchases = [];
+  
+  onAuthStateChanged(auth, async (user) => {
+    currentUser = user;
+    
+    // If no Firebase auth AND no customerId cookie, redirect to login
+    const customerId = getCustomerIdFromCookie();
+    if (!user && !customerId) {
+      window.location.href = '/login?redirect=/checkout';
+      return;
+    }
+    
+    // If we have a cookie but no Firebase auth, still try to load customer data
+    // The cookie contains the user ID
+    const userId = user?.uid || customerId;
+    
+    if (userId) {
+      // Check if user is allowed to make purchases
+      const userType = await checkUserType(userId);
+      
+      // Artists who are NOT also customers cannot buy
+      if (userType.isArtist && !userType.isCustomer) {
+        isAllowedToBuy = false;
+        showAccessDenied();
+        return;
+      }
+      
+      customerData = await loadCustomerData(userId);
+      
+      // Load cart and check for duplicates
+      loadCart();
+      const { duplicates } = await checkDuplicatePurchases(userId);
+      duplicatePurchases = duplicates;
+    } else {
+      // No user at all - redirect to login
+      window.location.href = '/login?redirect=/checkout';
+      return;
+    }
+    
+    userTypeChecked = true;
+    renderCheckout();
+  });
+</script>

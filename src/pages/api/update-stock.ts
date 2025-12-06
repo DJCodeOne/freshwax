@@ -5,9 +5,14 @@ import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 export const prerender = false;
 
-// Initialize Firebase
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -20,12 +25,11 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-// Stock operation types
 type StockOperation = 'receive' | 'adjust' | 'sell' | 'return' | 'reserve' | 'unreserve' | 'damaged' | 'transfer';
 
 interface StockUpdate {
   productId: string;
-  variantKey?: string; // e.g., 'm_black' for Medium Black
+  variantKey?: string;
   operation: StockOperation;
   quantity: number;
   notes?: string;
@@ -47,9 +51,8 @@ export const POST: APIRoute = async ({ request }) => {
       userId = 'admin'
     } = body;
     
-    console.log(`[UPDATE-STOCK] ${operation.toUpperCase()} ${quantity} units for ${productId} (${variantKey})`);
+    log.info('[update-stock]', operation.toUpperCase(), quantity, 'units for', productId);
     
-    // Validate
     if (!productId || !operation || quantity === undefined) {
       return new Response(JSON.stringify({
         success: false,
@@ -64,7 +67,6 @@ export const POST: APIRoute = async ({ request }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     
-    // Get current product
     const productRef = db.collection('merch').doc(productId);
     const productDoc = await productRef.get();
     
@@ -78,11 +80,10 @@ export const POST: APIRoute = async ({ request }) => {
     const product = productDoc.data()!;
     const variantStock = product.variantStock || {};
     
-    // Check variant exists
     if (!variantStock[variantKey]) {
       return new Response(JSON.stringify({
         success: false,
-        error: `Variant '${variantKey}' not found for this product`
+        error: 'Variant not found: ' + variantKey
       }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
     
@@ -91,26 +92,22 @@ export const POST: APIRoute = async ({ request }) => {
     let newStock = previousStock;
     let stockDelta = 0;
     
-    // Calculate new stock based on operation
     switch (operation) {
       case 'receive':
-        // New stock received from supplier
         newStock = previousStock + quantity;
         stockDelta = quantity;
         break;
         
       case 'adjust':
-        // Manual adjustment (can be positive or negative)
         newStock = previousStock + quantity;
         stockDelta = quantity;
         break;
         
       case 'sell':
-        // Stock sold (decrease available, increase sold)
         if (previousStock < quantity) {
           return new Response(JSON.stringify({
             success: false,
-            error: `Insufficient stock. Available: ${previousStock}, Requested: ${quantity}`
+            error: 'Insufficient stock. Available: ' + previousStock
           }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
         newStock = previousStock - quantity;
@@ -119,18 +116,16 @@ export const POST: APIRoute = async ({ request }) => {
         break;
         
       case 'return':
-        // Stock returned (increase available, decrease sold)
         newStock = previousStock + quantity;
         stockDelta = quantity;
         variant.sold = Math.max(0, (variant.sold || 0) - quantity);
         break;
         
       case 'reserve':
-        // Reserve for pending order
         if (previousStock < quantity) {
           return new Response(JSON.stringify({
             success: false,
-            error: `Insufficient stock to reserve. Available: ${previousStock}`
+            error: 'Insufficient stock to reserve. Available: ' + previousStock
           }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
         newStock = previousStock - quantity;
@@ -139,14 +134,12 @@ export const POST: APIRoute = async ({ request }) => {
         break;
         
       case 'unreserve':
-        // Release reserved stock
         newStock = previousStock + quantity;
         stockDelta = quantity;
         variant.reserved = Math.max(0, (variant.reserved || 0) - quantity);
         break;
         
       case 'damaged':
-        // Write off damaged stock
         newStock = Math.max(0, previousStock - Math.abs(quantity));
         stockDelta = -Math.abs(quantity);
         break;
@@ -154,18 +147,15 @@ export const POST: APIRoute = async ({ request }) => {
       default:
         return new Response(JSON.stringify({
           success: false,
-          error: `Unknown operation: ${operation}`
+          error: 'Unknown operation: ' + operation
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     
-    // Ensure non-negative
     newStock = Math.max(0, newStock);
     
-    // Update variant
     variant.stock = newStock;
     variantStock[variantKey] = variant;
     
-    // Recalculate totals
     let totalStock = 0;
     let totalReserved = 0;
     let totalSold = 0;
@@ -176,7 +166,6 @@ export const POST: APIRoute = async ({ request }) => {
       totalSold += v.sold || 0;
     });
     
-    // Update product
     const updateData = {
       variantStock: variantStock,
       totalStock: totalStock,
@@ -189,8 +178,7 @@ export const POST: APIRoute = async ({ request }) => {
     
     await productRef.update(updateData);
     
-    // Log stock movement
-    const movementId = `movement_${Date.now()}`;
+    const movementId = 'movement_' + Date.now();
     await db.collection('merch-stock-movements').doc(movementId).set({
       id: movementId,
       productId: productId,
@@ -211,7 +199,6 @@ export const POST: APIRoute = async ({ request }) => {
       createdBy: userId
     });
     
-    // Update supplier stats if applicable
     if (product.supplierId && ['receive', 'sell', 'return', 'damaged'].includes(operation)) {
       try {
         const supplierUpdate: any = {
@@ -223,7 +210,6 @@ export const POST: APIRoute = async ({ request }) => {
         } else if (operation === 'sell') {
           supplierUpdate.totalStock = FieldValue.increment(-quantity);
           supplierUpdate.totalSold = FieldValue.increment(quantity);
-          // Calculate supplier revenue
           const supplierRevenue = (product.retailPrice * quantity * (product.supplierCut / 100));
           supplierUpdate.totalRevenue = FieldValue.increment(supplierRevenue);
         } else if (operation === 'return') {
@@ -236,11 +222,11 @@ export const POST: APIRoute = async ({ request }) => {
         
         await db.collection('merch-suppliers').doc(product.supplierId).update(supplierUpdate);
       } catch (e) {
-        console.log('Note: Could not update supplier stats');
+        log.info('Note: Could not update supplier stats');
       }
     }
     
-    console.log(`[UPDATE-STOCK] ✓ ${operation}: ${previousStock} → ${newStock}`);
+    log.info('[update-stock]', operation + ':', previousStock, '->', newStock);
     
     return new Response(JSON.stringify({
       success: true,
@@ -259,7 +245,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
     
   } catch (error) {
-    console.error('[UPDATE-STOCK] Error:', error);
+    log.error('[update-stock] Error:', error);
     
     return new Response(JSON.stringify({
       success: false,
@@ -272,7 +258,6 @@ export const POST: APIRoute = async ({ request }) => {
   }
 };
 
-// GET - Fetch stock for a product or all low-stock items
 export const GET: APIRoute = async ({ url }) => {
   try {
     const params = url.searchParams;
@@ -281,7 +266,6 @@ export const GET: APIRoute = async ({ url }) => {
     const supplierId = params.get('supplier');
     
     if (productId) {
-      // Get specific product stock
       const doc = await db.collection('merch').doc(productId).get();
       
       if (!doc.exists) {
@@ -311,7 +295,6 @@ export const GET: APIRoute = async ({ url }) => {
       });
     }
     
-    // Get all products (optionally filtered)
     let query: FirebaseFirestore.Query = db.collection('merch');
     
     if (lowStockOnly) {
@@ -345,7 +328,6 @@ export const GET: APIRoute = async ({ url }) => {
       });
     });
     
-    // Sort by stock level (lowest first)
     stockReport.sort((a, b) => a.totalStock - b.totalStock);
     
     return new Response(JSON.stringify({
@@ -360,7 +342,7 @@ export const GET: APIRoute = async ({ url }) => {
     });
     
   } catch (error) {
-    console.error('[GET-STOCK] Error:', error);
+    log.error('[get-stock] Error:', error);
     
     return new Response(JSON.stringify({
       success: false,

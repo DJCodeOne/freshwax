@@ -1,0 +1,1051 @@
+---
+// src/pages/account/go-live.astro
+// DJ streaming dashboard - start/stop streams, configure settings
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+export const prerender = false;
+---
+
+<Layout title="Go Live - Fresh Wax">
+  <Header />
+  
+  <main class="go-live-main">
+    <div class="container">
+      <div id="authCheck" class="auth-check">
+        <div class="loading-spinner"></div>
+        <p>Checking authorization...</p>
+      </div>
+      
+      <div id="notApproved" class="not-approved hidden">
+        <div class="not-approved-icon">🔒</div>
+        <h1>DJ ACCESS <span class="red">REQUIRED</span></h1>
+        <p>You need to be an approved DJ to go live on Fresh Wax.</p>
+        <a href="/partner" class="cta-btn">Apply to be a DJ →</a>
+        
+        <div id="adminBypass" class="admin-bypass hidden">
+          <p style="color: #22c55e; margin-top: 2rem;">Admin detected!</p>
+          <button id="bypassBtn" class="bypass-btn">Continue as Admin →</button>
+        </div>
+        
+        <details style="margin-top: 2rem; text-align: left; max-width: 400px; margin-left: auto; margin-right: auto;">
+          <summary style="color: #888; cursor: pointer;">Debug Info</summary>
+          <pre id="debugInfo" style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; color: #aaa; font-size: 0.75rem; overflow: auto; margin-top: 0.5rem;">Loading...</pre>
+        </details>
+      </div>
+      
+      <div id="streamDashboard" class="stream-dashboard hidden">
+        <div class="dashboard-header">
+          <h1>🎙️ GO <span class="red">LIVE</span></h1>
+          <p>Stream your set to Fresh Wax listeners</p>
+        </div>
+        
+        <div id="streamStatus" class="stream-status offline">
+          <div class="status-indicator">
+            <span class="status-dot"></span>
+            <span class="status-text">OFFLINE</span>
+          </div>
+          <div id="streamStats" class="stream-stats hidden">
+            <span>👁️ <span id="liveViewers">0</span></span>
+            <span>❤️ <span id="liveLikes">0</span></span>
+            <span>⏱️ <span id="liveDuration">0:00</span></span>
+          </div>
+        </div>
+        
+        <div id="streamConfig" class="stream-config">
+          <div class="config-section">
+            <h3>Stream Details</h3>
+            <div class="form-group">
+              <label for="streamTitle">Stream Title *</label>
+              <input type="text" id="streamTitle" placeholder="e.g. Saturday Night Jungle Session" maxlength="100" />
+            </div>
+            <div class="form-group">
+              <label for="streamDescription">Description</label>
+              <textarea id="streamDescription" placeholder="What's the vibe?" rows="3"></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="streamGenre">Genre</label>
+                <select id="streamGenre">
+                  <option value="Jungle / D&B">Jungle / D&B</option>
+                  <option value="Jungle">Jungle</option>
+                  <option value="Drum & Bass">Drum & Bass</option>
+                  <option value="Liquid D&B">Liquid D&B</option>
+                  <option value="Neurofunk">Neurofunk</option>
+                  <option value="Ragga Jungle">Ragga Jungle</option>
+                  <option value="Darkside">Darkside</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="streamSoftware">Streaming Software</label>
+                <select id="streamSoftware">
+                  <option value="obs">OBS Studio (Video/Audio)</option>
+                  <option value="butt">BUTT (Audio Only)</option>
+                  <option value="other">Other RTMP Software</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <div class="go-live-actions">
+            <button id="goLiveBtn" class="go-live-btn">🔴 GO LIVE</button>
+          </div>
+        </div>
+        
+        <!-- Connection Details Panel - shown after clicking Go Live -->
+        <div id="connectionDetails" class="connection-details hidden">
+          <div class="connection-header">
+            <h3>🎉 You're Ready to Stream!</h3>
+            <p>Copy these details into your streaming software, then start streaming.</p>
+          </div>
+          
+          <!-- Top End Stream Button - Always visible -->
+          <div class="top-end-stream">
+            <button id="endStreamBtnTop" class="end-stream-btn-top">⏹️ END STREAM</button>
+          </div>
+          
+          <!-- OBS Instructions -->
+          <div id="obsInstructions" class="software-instructions hidden">
+            <div class="instruction-card obs-card">
+              <h4>🎬 OBS Studio Setup</h4>
+              <ol>
+                <li>Open OBS and go to <strong>Settings → Stream</strong></li>
+                <li>Set Service to <strong>"Custom..."</strong></li>
+                <li>Copy the Server URL and Stream Key below</li>
+                <li>Click <strong>OK</strong>, then <strong>"Start Streaming"</strong></li>
+              </ol>
+            </div>
+            
+            <div class="connection-credentials">
+              <div class="credential-item">
+                <label>Server URL</label>
+                <div class="credential-value">
+                  <input type="text" id="obsServerUrl" readonly value="rtmp://stream.freshwax.co.uk:1935/live" />
+                  <button class="copy-btn" onclick="copyField('obsServerUrl')">📋 Copy</button>
+                </div>
+              </div>
+              <div class="credential-item">
+                <label>Stream Key</label>
+                <div class="credential-value">
+                  <input type="text" id="obsStreamKey" readonly />
+                  <button class="copy-btn" onclick="copyField('obsStreamKey')">📋 Copy</button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="recommended-settings">
+              <h5>Recommended OBS Settings:</h5>
+              <div class="settings-grid">
+                <div class="setting-item"><span class="setting-label">Video Bitrate:</span><span class="setting-value">2500-4000 kbps</span></div>
+                <div class="setting-item"><span class="setting-label">Audio Bitrate:</span><span class="setting-value">160-320 kbps</span></div>
+                <div class="setting-item"><span class="setting-label">Resolution:</span><span class="setting-value">1280x720 or 1920x1080</span></div>
+                <div class="setting-item"><span class="setting-label">Framerate:</span><span class="setting-value">30 fps</span></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- BUTT Instructions -->
+          <div id="buttInstructions" class="software-instructions hidden">
+            <div class="instruction-card butt-card">
+              <h4>🎙️ BUTT Setup</h4>
+              <ol>
+                <li>Open BUTT and click <strong>Settings</strong></li>
+                <li>Go to <strong>Main → Server Settings → Add</strong></li>
+                <li>Enter the details below</li>
+                <li>Click <strong>OK</strong>, then the <strong>Play ▶️</strong> button to stream</li>
+              </ol>
+            </div>
+            
+            <div class="connection-credentials">
+              <div class="credential-item">
+                <label>Type</label>
+                <div class="credential-value">
+                  <input type="text" readonly value="IceCast" />
+                </div>
+              </div>
+              <div class="credential-item">
+                <label>Address</label>
+                <div class="credential-value">
+                  <input type="text" id="buttAddress" readonly value="stream.freshwax.co.uk" />
+                  <button class="copy-btn" onclick="copyField('buttAddress')">📋 Copy</button>
+                </div>
+              </div>
+              <div class="credential-item">
+                <label>Port</label>
+                <div class="credential-value">
+                  <input type="text" id="buttPort" readonly value="8000" />
+                  <button class="copy-btn" onclick="copyField('buttPort')">📋 Copy</button>
+                </div>
+              </div>
+              <div class="credential-item">
+                <label>Mount Point</label>
+                <div class="credential-value">
+                  <input type="text" id="buttMount" readonly />
+                  <button class="copy-btn" onclick="copyField('buttMount')">📋 Copy</button>
+                </div>
+              </div>
+              <div class="credential-item">
+                <label>Username</label>
+                <div class="credential-value">
+                  <input type="text" readonly value="source" />
+                </div>
+              </div>
+              <div class="credential-item">
+                <label>Password (Stream Key)</label>
+                <div class="credential-value">
+                  <input type="text" id="buttPassword" readonly />
+                  <button class="copy-btn" onclick="copyField('buttPassword')">📋 Copy</button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="recommended-settings">
+              <h5>Recommended BUTT Settings:</h5>
+              <div class="settings-grid">
+                <div class="setting-item"><span class="setting-label">Format:</span><span class="setting-value">MP3</span></div>
+                <div class="setting-item"><span class="setting-label">Bitrate:</span><span class="setting-value">192-320 kbps</span></div>
+                <div class="setting-item"><span class="setting-label">Samplerate:</span><span class="setting-value">44100 Hz</span></div>
+                <div class="setting-item"><span class="setting-label">Channels:</span><span class="setting-value">Stereo</span></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Other RTMP Software Instructions -->
+          <div id="otherInstructions" class="software-instructions hidden">
+            <div class="instruction-card other-card">
+              <h4>📡 RTMP Connection Details</h4>
+              <p>Use these details with any RTMP-compatible streaming software (Streamlabs, XSplit, vMix, Wirecast, FFmpeg, etc.)</p>
+            </div>
+            
+            <div class="connection-credentials">
+              <div class="credential-item">
+                <label>RTMP URL</label>
+                <div class="credential-value">
+                  <input type="text" id="otherRtmpUrl" readonly value="rtmp://stream.freshwax.co.uk:1935/live" />
+                  <button class="copy-btn" onclick="copyField('otherRtmpUrl')">📋 Copy</button>
+                </div>
+              </div>
+              <div class="credential-item">
+                <label>Stream Key</label>
+                <div class="credential-value">
+                  <input type="text" id="otherStreamKey" readonly />
+                  <button class="copy-btn" onclick="copyField('otherStreamKey')">📋 Copy</button>
+                </div>
+              </div>
+              <div class="credential-item">
+                <label>Full RTMP URL (with key)</label>
+                <div class="credential-value">
+                  <input type="text" id="otherFullUrl" readonly />
+                  <button class="copy-btn" onclick="copyField('otherFullUrl')">📋 Copy</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="stream-status-live">
+            <div class="waiting-indicator">
+              <span class="pulse-dot"></span>
+              <span>Waiting for your stream to connect...</span>
+            </div>
+            <p class="stream-tip">Once you start streaming in your software, your stream will appear on Fresh Wax automatically.</p>
+          </div>
+          
+          <div class="end-stream-section">
+            <button id="endStreamBtn" class="end-stream-btn">⏹️ END STREAM</button>
+            <p class="end-stream-note">Click when you're finished streaming</p>
+          </div>
+        </div>
+        
+        
+        <div id="liveControls" class="live-controls hidden">
+          <h3>Stream Controls</h3>
+          <div class="live-info-card">
+            <div id="currentStreamTitle" class="live-title">Your Stream</div>
+            <a href="/live" target="_blank" class="view-link">View Stream →</a>
+          </div>
+        </div>
+        
+        <div class="past-streams">
+          <h3>📊 Stream History</h3>
+          <div id="pastStreamsList"><p class="no-streams">No past streams yet.</p></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .go-live-main { min-height: 100vh; background: linear-gradient(135deg, #1a1a2e, #2d1f3d); padding: 2rem 1rem; }
+  .container { max-width: 800px; margin: 0 auto; }
+  .auth-check { text-align: center; padding: 4rem 2rem; background: rgba(255,255,255,0.05); border-radius: 16px; }
+  .loading-spinner { width: 48px; height: 48px; border: 4px solid #444; border-top-color: #dc2626; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .auth-check p { color: #aaa; }
+  .not-approved { text-align: center; padding: 4rem 2rem; background: rgba(255,255,255,0.05); border-radius: 16px; }
+  .not-approved-icon { font-size: 4rem; margin-bottom: 1.5rem; }
+  .not-approved h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: #fff; margin: 0 0 1rem 0; }
+  .not-approved p { color: #aaa; font-size: 1.125rem; margin-bottom: 2rem; }
+  .red { color: #dc2626; }
+  .cta-btn { display: inline-block; padding: 1rem 2rem; background: #dc2626; color: #fff; text-decoration: none; font-weight: 600; border-radius: 10px; }
+  .admin-bypass { margin-top: 1.5rem; }
+  .bypass-btn { padding: 1rem 2rem; background: #22c55e; border: none; color: #fff; font-weight: 600; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
+  .bypass-btn:hover { background: #16a34a; transform: scale(1.05); }
+  .dashboard-header { text-align: center; margin-bottom: 2rem; }
+  .dashboard-header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: #fff; margin: 0; }
+  .dashboard-header p { color: #bbb; }
+  .stream-status { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; background: rgba(255,255,255,0.08); border: 3px solid #444; border-radius: 12px; margin-bottom: 1.5rem; }
+  .stream-status.live { border-color: #dc2626; background: linear-gradient(90deg, rgba(220,38,38,0.15), rgba(255,255,255,0.05)); }
+  .status-indicator { display: flex; align-items: center; gap: 0.75rem; }
+  .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #888; }
+  .stream-status.live .status-dot { background: #dc2626; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .status-text { font-weight: 700; font-size: 1.125rem; color: #aaa; letter-spacing: 0.1em; }
+  .stream-status.live .status-text { color: #dc2626; }
+  .stream-stats { display: flex; gap: 1.5rem; color: #fff; font-weight: 600; }
+  .stream-config { background: rgba(255,255,255,0.06); border: 2px solid #444; border-radius: 16px; padding: 2rem; margin-bottom: 1.5rem; }
+  .config-section { margin-bottom: 2rem; }
+  .config-section h3 { color: #fff; font-size: 1.25rem; margin: 0 0 1rem 0; padding-bottom: 0.75rem; border-bottom: 1px solid #444; }
+  .form-group { margin-bottom: 1.25rem; }
+  .form-group label { display: block; color: #ddd; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.875rem 1rem; background: rgba(255,255,255,0.08); border: 2px solid #555; border-radius: 8px; color: #fff; font-size: 1rem; }
+  .form-group select { background-color: #1a1a1a; }
+  .form-group select option { background: #1a1a1a; color: #fff; padding: 0.5rem; }
+  .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: #dc2626; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+  .stream-instructions { background: linear-gradient(135deg, #252550, #1e1b4b); border: 2px solid #4f46e5; border-radius: 12px; padding: 1.5rem; }
+  .stream-instructions h4 { color: #a5b4fc; margin: 0 0 1rem 0; }
+  .stream-instructions ol { color: #ddd; padding-left: 1.25rem; margin: 0 0 1rem 0; }
+  .stream-instructions a { color: #818cf8; }
+  .server-details { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+  .detail-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #444; color: #ccc; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-row span:last-child { color: #fff; font-family: monospace; }
+  .stream-key-section { background: rgba(220,38,38,0.1); border: 2px dashed #dc2626; border-radius: 8px; padding: 1rem; }
+  .stream-key-section label { display: block; color: #dc2626; font-weight: 600; margin-bottom: 0.75rem; }
+  .key-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .key-row input { flex: 1; padding: 0.75rem; background: rgba(255,255,255,0.1); border: 2px solid #555; border-radius: 6px; color: #fff; font-family: monospace; }
+  .key-row button { padding: 0.75rem; background: #444; border: none; border-radius: 6px; color: #fff; cursor: pointer; }
+  .generate-btn { width: 100%; padding: 0.75rem; background: #dc2626; border: none; border-radius: 6px; color: #fff; font-weight: 600; cursor: pointer; }
+  .go-live-actions { display: flex; justify-content: center; padding-top: 1rem; }
+  .go-live-btn { padding: 1.25rem 3rem; background: linear-gradient(135deg, #dc2626, #991b1b); border: none; border-radius: 12px; color: #fff; font-size: 1.25rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .go-live-btn:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(220, 38, 38, 0.5); }
+  .go-live-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .end-stream-btn { padding: 1.25rem 3rem; background: #dc2626; border: none; border-radius: 12px; color: #fff; font-size: 1.25rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .end-stream-btn:hover { background: #b91c1c; transform: scale(1.02); }
+  .end-stream-section { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #444; text-align: center; }
+  .end-stream-note { color: #888; font-size: 0.875rem; margin-top: 0.75rem; }
+  .top-end-stream { background: linear-gradient(135deg, rgba(220,38,38,0.2), rgba(153,27,27,0.2)); border: 2px solid #dc2626; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; text-align: center; }
+  .end-stream-btn-top { padding: 1rem 2.5rem; background: #dc2626; border: none; border-radius: 10px; color: #fff; font-size: 1.125rem; font-weight: 700; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(220,38,38,0.4); }
+  .end-stream-btn-top:hover { background: #b91c1c; transform: scale(1.05); box-shadow: 0 6px 20px rgba(220,38,38,0.5); }
+  
+  /* Connection Details Panel */
+  .connection-details { background: rgba(255,255,255,0.06); border: 2px solid #22c55e; border-radius: 16px; padding: 2rem; margin-bottom: 1.5rem; }
+  .connection-header { text-align: center; margin-bottom: 2rem; }
+  .connection-header h3 { color: #22c55e; font-size: 1.5rem; margin: 0 0 0.5rem 0; }
+  .connection-header p { color: #aaa; }
+  
+  .software-instructions { margin-bottom: 2rem; }
+  .instruction-card { background: rgba(255,255,255,0.08); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .instruction-card.obs-card { border-left: 4px solid #9146ff; }
+  .instruction-card.butt-card { border-left: 4px solid #22c55e; }
+  .instruction-card.other-card { border-left: 4px solid #f59e0b; }
+  .instruction-card h4 { color: #fff; margin: 0 0 1rem 0; }
+  .instruction-card ol { color: #ccc; padding-left: 1.25rem; margin: 0; }
+  .instruction-card li { margin-bottom: 0.5rem; }
+  
+  .connection-credentials { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .credential-item { margin-bottom: 1rem; }
+  .credential-item:last-child { margin-bottom: 0; }
+  .credential-item label { display: block; color: #888; font-size: 0.8125rem; font-weight: 600; margin-bottom: 0.375rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .credential-value { display: flex; gap: 0.5rem; }
+  .credential-value input { flex: 1; padding: 0.75rem 1rem; background: rgba(255,255,255,0.1); border: 2px solid #444; border-radius: 8px; color: #fff; font-family: 'Courier New', monospace; font-size: 0.9375rem; }
+  .credential-value .copy-btn { padding: 0.75rem 1rem; background: #444; border: none; border-radius: 8px; color: #fff; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .credential-value .copy-btn:hover { background: #22c55e; }
+  
+  .stream-status-live { text-align: center; padding: 1.5rem; background: rgba(34, 197, 94, 0.1); border: 2px dashed #22c55e; border-radius: 12px; margin-bottom: 1.5rem; }
+  .waiting-indicator { display: flex; align-items: center; justify-content: center; gap: 0.75rem; color: #22c55e; font-weight: 600; font-size: 1.125rem; margin-bottom: 0.5rem; }
+  .pulse-dot { width: 12px; height: 12px; background: #22c55e; border-radius: 50%; animation: pulse 1.5s infinite; }
+  .stream-tip { color: #888; font-size: 0.875rem; margin: 0; }
+  
+  /* Slot Countdown */
+  .slot-countdown { text-align: center; padding: 3rem 2rem; background: rgba(255,255,255,0.06); border: 2px solid #4f46e5; border-radius: 16px; }
+  .slot-countdown h3 { color: #a5b4fc; font-size: 1.5rem; margin: 0 0 0.5rem 0; }
+  .slot-countdown .slot-title { color: #fff; font-size: 1.25rem; font-weight: 600; margin: 0.5rem 0; }
+  .slot-countdown .slot-time { color: #888; margin-bottom: 1.5rem; }
+  .countdown-box { background: linear-gradient(135deg, #4f46e5, #7c3aed); border-radius: 12px; padding: 2rem; margin: 1.5rem auto; max-width: 300px; }
+  .countdown-number { display: block; font-size: 4rem; font-weight: 700; color: #fff; line-height: 1; }
+  .countdown-label { display: block; color: rgba(255,255,255,0.8); font-size: 0.875rem; margin-top: 0.5rem; }
+  .countdown-note { color: #888; font-size: 0.875rem; margin-top: 1.5rem; }
+  
+  /* Takeover Notification */
+  .takeover-notification { background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1)); border: 2px solid #f59e0b; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .takeover-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+  .takeover-icon { font-size: 1.5rem; }
+  .takeover-header h4 { color: #fbbf24; margin: 0; font-size: 1.125rem; }
+  .takeover-notification > p { color: #fff; margin: 0 0 1rem 0; }
+  .takeover-actions { display: flex; gap: 1rem; margin-bottom: 1rem; }
+  .takeover-approve { flex: 1; padding: 0.875rem; background: #22c55e; border: none; border-radius: 8px; color: #fff; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .takeover-approve:hover { background: #16a34a; transform: translateY(-2px); }
+  .takeover-deny { flex: 1; padding: 0.875rem; background: #444; border: 2px solid #666; border-radius: 8px; color: #fff; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .takeover-deny:hover { background: #dc2626; border-color: #dc2626; }
+  .takeover-note { color: #888; font-size: 0.8125rem; margin: 0; }
+  .live-controls { background: rgba(255,255,255,0.06); border: 2px solid #444; border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .live-controls h3 { color: #fff; margin: 0 0 1rem 0; }
+  .live-info-card { background: linear-gradient(90deg, rgba(220,38,38,0.15), rgba(255,255,255,0.05)); border: 2px solid #dc2626; border-radius: 10px; padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; }
+  .live-title { color: #fff; font-size: 1.25rem; font-weight: 600; }
+  .view-link { color: #dc2626; text-decoration: none; font-weight: 600; }
+  .past-streams { background: rgba(255,255,255,0.06); border: 2px solid #444; border-radius: 16px; padding: 1.5rem; }
+  .past-streams h3 { color: #fff; margin: 0 0 1rem 0; }
+  .no-streams { color: #888; text-align: center; padding: 2rem; }
+  .past-stream-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 0.75rem; }
+  .past-stream-info h4 { color: #fff; margin: 0 0 0.25rem 0; font-size: 1rem; }
+  
+  /* Connection Speed Test Styles */
+  .past-stream-date { color: #aaa; font-size: 0.875rem; }
+  .past-stream-stats { display: flex; gap: 1rem; color: #bbb; font-size: 0.875rem; }
+  .hidden { display: none !important; }
+  
+  /* Red5 specific styles */
+  .red5-instructions { background: linear-gradient(135deg, #2d2050 0%, #252550 100%); border-color: #dc2626; }
+  .red5-instructions h4 { color: #f87171; }
+  .red5-details { background: rgba(0,0,0,0.4); border: 1px solid #dc2626; }
+  
+  /* BUTT specific styles */
+  .butt-instructions { background: linear-gradient(135deg, #1e3a2f 0%, #1a2f25 100%); border-color: #22c55e; }
+  .butt-instructions h4 { color: #4ade80; }
+  .butt-details { background: rgba(0,0,0,0.4); border: 1px solid #22c55e; }
+  .butt-rtmp-guide { margin-top: 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid #22c55e; border-radius: 8px; }
+  .butt-rtmp-guide summary { padding: 0.75rem 1rem; color: #4ade80; cursor: pointer; font-weight: 600; }
+  .butt-rtmp-guide summary:hover { background: rgba(34, 197, 94, 0.15); }
+  .butt-rtmp-content { padding: 1rem; color: #ccc; }
+  .butt-rtmp-content ol { padding-left: 1.25rem; margin: 0.75rem 0; }
+  .butt-rtmp-content code { background: rgba(0,0,0,0.4); padding: 0.125rem 0.375rem; border-radius: 4px; color: #4ade80; font-size: 0.875rem; }
+  .butt-tip { margin-top: 1rem; padding: 0.75rem; background: rgba(34, 197, 94, 0.15); border-radius: 6px; font-size: 0.875rem; }
+  .config-desc { color: #bbb; margin-bottom: 1rem; font-size: 0.9375rem; }
+  .recommended-settings { background: rgba(255,255,255,0.08); border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+  .recommended-settings h5 { color: #34d399; margin: 0 0 0.75rem 0; font-size: 0.875rem; }
+  .settings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+  @media (max-width: 500px) { .settings-grid { grid-template-columns: 1fr; } }
+  .setting-item { display: flex; justify-content: space-between; padding: 0.5rem; background: rgba(255,255,255,0.06); border-radius: 4px; }
+  .setting-label { color: #aaa; font-size: 0.8125rem; }
+  .setting-value { color: #34d399; font-family: monospace; font-size: 0.8125rem; }
+  .key-warning { color: #fbbf24; font-size: 0.8125rem; margin-top: 0.75rem; padding: 0.5rem; background: rgba(251, 191, 36, 0.15); border-radius: 4px; }
+  .other-software { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #555; }
+  .other-software h5 { color: #aaa; margin: 0 0 0.5rem 0; font-size: 0.8125rem; }
+  .software-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .software-badge { padding: 0.25rem 0.75rem; background: rgba(255,255,255,0.12); border-radius: 20px; color: #ddd; font-size: 0.75rem; }
+  .copy-btn { padding: 0.25rem 0.75rem; background: #555; border: none; border-radius: 4px; color: #fff; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+  .copy-btn:hover { background: #dc2626; }
+</style>
+
+<script type="module">
+  import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+  import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+    authDomain: "fresh-wax.firebaseapp.com",
+    projectId: "fresh-wax",
+    storageBucket: "fresh-wax.firebasestorage.app",
+    messagingSenderId: "307622215498",
+    appId: "1:307622215498:web:e66cee39e098fe973c7081"
+  };
+
+  // Use existing app if already initialized, otherwise create new one
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  
+  let currentUser = null;
+  let artistData = null;
+  let currentStreamId = null;
+  let durationInterval = null;
+  
+  // Debug helper
+  function log(msg, data = null) {
+    console.log(`[GoLive] ${msg}`, data || '');
+  }
+  
+  // Check auth state when page loads
+  log('Page loaded, checking auth...');
+  
+  onAuthStateChanged(auth, async (user) => {
+    log('Auth state changed:', user ? user.email : 'no user');
+    
+    if (!user) {
+      log('No user, redirecting to login...');
+      window.location.href = '/login?redirect=/account/go-live';
+      return;
+    }
+    
+    currentUser = user;
+    log('User found:', { uid: user.uid, email: user.email });
+    await checkDJStatus(user.uid);
+  });
+  
+  async function checkDJStatus(userId) {
+    log('Checking user for:', userId);
+    
+    try {
+      // Get user info from API for display name/avatar
+      log('Calling /api/get-user-type...');
+      const response = await fetch(`/api/get-user-type?uid=${userId}`);
+      const result = await response.json();
+      
+      log('API response:', result);
+      
+      // Anyone logged in can go live - just need their info for display
+      artistData = {
+        approved: true,
+        artistName: result.partnerDisplayName || result.name || currentUser.email?.split('@')[0] || 'DJ',
+        avatarUrl: result.avatarUrl || null,
+        name: result.name || '',
+        ...result
+      };
+      
+      document.getElementById('authCheck').classList.add('hidden');
+      document.getElementById('streamDashboard').classList.remove('hidden');
+      await checkExistingStream(userId);
+      await loadPastStreams(userId);
+      setupEventListeners();
+      
+    } catch (error) {
+      console.error('[GoLive] Error getting user info:', error);
+      
+      // Even if API fails, still let them stream with basic info
+      artistData = {
+        approved: true,
+        artistName: currentUser.email?.split('@')[0] || 'DJ',
+        avatarUrl: null
+      };
+      
+      document.getElementById('authCheck').classList.add('hidden');
+      document.getElementById('streamDashboard').classList.remove('hidden');
+      setupEventListeners();
+    }
+  }
+  
+  async function checkExistingStream(userId) {
+    try {
+      const response = await fetch('/api/livestream/status');
+      const result = await response.json();
+      if (result.isLive && result.streams) {
+        const myStream = result.streams.find(s => s.djId === userId);
+        if (myStream) setLiveState(myStream);
+      }
+      
+      // Also check for upcoming booked slots
+      await checkUpcomingSlots(userId);
+    } catch (error) {
+      console.error('Error checking stream:', error);
+    }
+  }
+  
+  // Check for upcoming booked slots
+  async function checkUpcomingSlots(userId) {
+    try {
+      const response = await fetch(`/api/livestream/slots?djId=${userId}`);
+      const result = await response.json();
+      
+      if (!result.success || !result.slots) return;
+      
+      const now = Date.now();
+      
+      // Find slots that are upcoming, in_lobby, or live
+      const activeSlot = result.slots.find(slot => 
+        ['scheduled', 'in_lobby', 'live'].includes(slot.status) &&
+        new Date(slot.endTime).getTime() > now
+      );
+      
+      if (activeSlot) {
+        showSlotDetails(activeSlot);
+        
+        // Check for takeover requests on this slot
+        if (activeSlot.takeoverRequest && activeSlot.takeoverRequest.status === 'pending') {
+          showTakeoverRequest(activeSlot);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking slots:', error);
+    }
+  }
+  
+  // Show slot details with stream key
+  async function showSlotDetails(slot) {
+    const now = Date.now();
+    const startTime = new Date(slot.startTime).getTime();
+    const endTime = new Date(slot.endTime).getTime();
+    const isWithin30Mins = startTime - now <= 30 * 60 * 1000;
+    const isLive = slot.status === 'live';
+    const isInLobby = slot.status === 'in_lobby';
+    
+    // If not within 30 mins of start and not already live, don't show stream key yet
+    if (!isWithin30Mins && !isLive && !isInLobby) {
+      // Show countdown instead
+      const minsUntil = Math.ceil((startTime - now) / 60000);
+      document.getElementById('streamConfig').innerHTML = `
+        <div class="slot-countdown">
+          <h3>🎧 Your Slot is Booked!</h3>
+          <p class="slot-title">${slot.title}</p>
+          <p class="slot-time">${new Date(slot.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${new Date(slot.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
+          <div class="countdown-box">
+            <span class="countdown-number">${minsUntil}</span>
+            <span class="countdown-label">minutes until you can connect</span>
+          </div>
+          <p class="countdown-note">Your connection details will appear 30 minutes before your slot.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    // Get the stream key from the API
+    try {
+      const response = await fetch('/api/livestream/slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'getStreamKey',
+          slotId: slot.id,
+          djId: currentUser.uid
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        console.error('Failed to get stream key:', result.error);
+        return;
+      }
+      
+      // Store current slot info
+      currentStreamId = slot.id;
+      
+      // Populate the connection details
+      const software = result.software || 'obs';
+      
+      if (software === 'butt') {
+        document.getElementById('buttMount').value = result.mount;
+        document.getElementById('buttPassword').value = result.streamKey;
+        document.getElementById('buttInstructions').classList.remove('hidden');
+        document.getElementById('obsInstructions').classList.add('hidden');
+        document.getElementById('otherInstructions').classList.add('hidden');
+      } else {
+        document.getElementById('obsStreamKey').value = result.streamKey;
+        document.getElementById('otherStreamKey').value = result.streamKey;
+        document.getElementById('otherFullUrl').value = `${result.serverUrl}/${result.streamKey}`;
+        document.getElementById('obsInstructions').classList.remove('hidden');
+        document.getElementById('buttInstructions').classList.add('hidden');
+        document.getElementById('otherInstructions').classList.add('hidden');
+      }
+      
+      // Update header to show slot info
+      document.querySelector('.connection-header h3').textContent = isLive ? '🔴 You\'re Live!' : '🎧 Ready to Stream!';
+      document.querySelector('.connection-header p').innerHTML = `
+        <strong>${slot.title}</strong><br>
+        ${new Date(slot.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${new Date(slot.endTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+      `;
+      
+      // Show connection details, hide config form
+      document.getElementById('streamConfig').classList.add('hidden');
+      document.getElementById('connectionDetails').classList.remove('hidden');
+      
+      // Update status
+      if (isLive) {
+        document.querySelector('.waiting-indicator span').textContent = 'You are currently streaming!';
+        document.querySelector('.stream-status-live').style.borderColor = '#dc2626';
+        document.querySelector('.waiting-indicator').style.color = '#dc2626';
+      }
+      
+    } catch (error) {
+      console.error('Error getting stream key:', error);
+    }
+  }
+  
+  // Show takeover request notification
+  function showTakeoverRequest(slot) {
+    const request = slot.takeoverRequest;
+    
+    // Create takeover notification
+    const notification = document.createElement('div');
+    notification.id = 'takeoverNotification';
+    notification.className = 'takeover-notification';
+    notification.innerHTML = `
+      <div class="takeover-header">
+        <span class="takeover-icon">🔄</span>
+        <h4>Takeover Request</h4>
+      </div>
+      <p><strong>${request.requesterName}</strong> wants to take over your stream.</p>
+      <div class="takeover-actions">
+        <button class="takeover-approve" onclick="approveTakeover('${slot.id}')">✓ Approve</button>
+        <button class="takeover-deny" onclick="denyTakeover('${slot.id}')">✗ Deny</button>
+      </div>
+      <p class="takeover-note">If you approve, your stream key will be transferred to them.</p>
+    `;
+    
+    // Insert after connection header
+    const existingNotification = document.getElementById('takeoverNotification');
+    if (existingNotification) existingNotification.remove();
+    
+    const connectionDetails = document.getElementById('connectionDetails');
+    if (connectionDetails) {
+      connectionDetails.insertBefore(notification, connectionDetails.querySelector('.software-instructions'));
+    }
+  }
+  
+  // Approve takeover
+  window.approveTakeover = async function(slotId) {
+    if (!confirm('Are you sure you want to hand over your stream to this DJ?')) return;
+    
+    try {
+      const response = await fetch('/api/livestream/slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'approveTakeover',
+          slotId,
+          djId: currentUser.uid
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`Stream handed over to ${result.newDjName}. They now have your stream key.`);
+        // Redirect back to main stream config
+        document.getElementById('connectionDetails').classList.add('hidden');
+        document.getElementById('streamConfig').classList.remove('hidden');
+        currentStreamId = null;
+      } else {
+        alert(result.error || 'Failed to approve takeover');
+      }
+    } catch (error) {
+      console.error('Error approving takeover:', error);
+      alert('Failed to approve takeover');
+    }
+  };
+  
+  // Deny takeover
+  window.denyTakeover = async function(slotId) {
+    try {
+      const response = await fetch('/api/livestream/slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'denyTakeover',
+          slotId,
+          djId: currentUser.uid
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        const notification = document.getElementById('takeoverNotification');
+        if (notification) notification.remove();
+      } else {
+        alert(result.error || 'Failed to deny takeover');
+      }
+    } catch (error) {
+      console.error('Error denying takeover:', error);
+    }
+  };
+  
+  // Request takeover of current live stream
+  window.requestTakeover = async function(slotId) {
+    if (!confirm('Request to take over this stream? The current DJ will need to approve.')) return;
+    
+    try {
+      const response = await fetch('/api/livestream/slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'requestTakeover',
+          slotId,
+          requesterId: currentUser.uid,
+          requesterName: artistData?.artistName || artistData?.name || 'DJ',
+          requesterAvatar: artistData?.avatarUrl || null
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('Takeover request sent! Waiting for the current DJ to approve.');
+      } else {
+        alert(result.error || 'Failed to request takeover');
+      }
+    } catch (error) {
+      console.error('Error requesting takeover:', error);
+      alert('Failed to request takeover');
+    }
+  };
+  
+  async function loadPastStreams(userId) {
+    try {
+      // Use the slots API to get completed streams
+      const response = await fetch(`/api/livestream/slots?djId=${userId}`);
+      const result = await response.json();
+      
+      if (!result.success || !result.slots) return;
+      
+      // Filter to completed slots only
+      const completedSlots = result.slots.filter(s => s.status === 'completed');
+      if (completedSlots.length === 0) return;
+      
+      const list = document.getElementById('pastStreamsList');
+      if (!list) return;
+      
+      list.innerHTML = completedSlots.slice(0, 10).map(s => {
+        const date = new Date(s.endedAt || s.endTime).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        return `<div class="past-stream-item"><div class="past-stream-info"><h4>${s.title || 'Untitled Stream'}</h4><span class="past-stream-date">${date}</span></div><div class="past-stream-stats"><span>👁️ ${s.viewerPeak || 0}</span><span>⏱️ ${s.duration || 0}min</span></div></div>`;
+      }).join('');
+    } catch (error) {
+      console.error('Error loading past streams:', error);
+    }
+  }
+  
+  // Red5 Server Configuration
+  const RED5_CONFIG = {
+    serverHost: 'stream.freshwax.co.uk',
+    rtmpPort: 1935,
+    rtmpApp: 'live',
+    hlsPort: 5080,
+    getRtmpServerUrl: function() {
+      return `rtmp://${this.serverHost}:${this.rtmpPort}/${this.rtmpApp}`;
+    },
+    getHlsPlaybackUrl: function(streamKey) {
+      return `https://${this.serverHost}/hls/${streamKey}/index.m3u8`;
+    }
+  };
+  
+  function setupEventListeners() {
+    document.getElementById('goLiveBtn').addEventListener('click', goLive);
+    document.getElementById('endStreamBtn').addEventListener('click', endStream);
+    document.getElementById('endStreamBtnTop')?.addEventListener('click', endStream);
+  }
+  
+  // Generate a unique stream key
+  function generateStreamKey() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let key = 'fw_';
+    for (let i = 0; i < 20; i++) key += chars[Math.floor(Math.random() * chars.length)];
+    return key;
+  }
+  
+  // Copy field helper
+  window.copyField = function(fieldId) {
+    const input = document.getElementById(fieldId);
+    if (input) {
+      navigator.clipboard.writeText(input.value);
+      const btn = input.nextElementSibling;
+      if (btn) {
+        const originalText = btn.textContent;
+        btn.textContent = '✓ Copied!';
+        btn.style.background = '#22c55e';
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.background = '';
+        }, 2000);
+      }
+    }
+  }
+  
+  // Show connection details for selected software
+  function showConnectionDetails(streamKey) {
+    const software = document.getElementById('streamSoftware').value;
+    const mount = '/' + currentUser.uid.substring(0, 8);
+    
+    // Hide all software instructions
+    document.querySelectorAll('.software-instructions').forEach(el => el.classList.add('hidden'));
+    
+    // Show the selected software instructions
+    if (software === 'obs') {
+      document.getElementById('obsInstructions').classList.remove('hidden');
+      document.getElementById('obsStreamKey').value = streamKey;
+    } else if (software === 'butt') {
+      document.getElementById('buttInstructions').classList.remove('hidden');
+      document.getElementById('buttMount').value = mount;
+      document.getElementById('buttPassword').value = streamKey;
+    } else {
+      document.getElementById('otherInstructions').classList.remove('hidden');
+      document.getElementById('otherStreamKey').value = streamKey;
+      document.getElementById('otherFullUrl').value = `rtmp://stream.freshwax.co.uk:1935/live/${streamKey}`;
+    }
+    
+    // Show the connection details panel, hide the config form
+    document.getElementById('streamConfig').classList.add('hidden');
+    document.getElementById('connectionDetails').classList.remove('hidden');
+  }
+  
+  // Copy to clipboard helper
+  window.copyToClipboard = function(elementId) {
+    const text = document.getElementById(elementId).textContent;
+    navigator.clipboard.writeText(text);
+    alert('Copied to clipboard!');
+  };
+  
+  async function goLive() {
+    const title = document.getElementById('streamTitle').value.trim();
+    if (!title) { alert('Please enter a stream title'); return; }
+    
+    const software = document.getElementById('streamSoftware').value;
+    
+    const btn = document.getElementById('goLiveBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Starting...';
+    
+    // Generate a unique stream key for this session
+    const streamKey = generateStreamKey();
+    
+    // Determine stream type based on software selection
+    const streamType = software === 'butt' ? 'audio' : 'red5';
+    
+    // Build stream URLs based on type
+    let streamUrl = null;
+    let hlsUrl = null;
+    
+    if (streamType === 'red5') {
+      streamUrl = RED5_CONFIG.getRtmpServerUrl() + '/' + streamKey;
+      hlsUrl = RED5_CONFIG.getHlsPlaybackUrl(streamKey);
+    } else if (streamType === 'audio') {
+      streamUrl = 'https://stream.freshwax.co.uk:8000/live';
+    }
+    
+    try {
+      const response = await fetch('/api/livestream/slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'go_live_now',
+          djId: currentUser.uid,
+          djName: artistData?.artistName || artistData?.name || 'DJ',
+          title,
+          description: document.getElementById('streamDescription').value.trim(),
+          genre: document.getElementById('streamGenre').value,
+          streamType,
+          streamKey
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        currentStreamId = result.slot?.id;
+        // Show connection details with the generated key
+        showConnectionDetails(result.slot?.streamKey || streamKey);
+        
+        // Update the stream status
+        const statusEl = document.getElementById('streamStatus');
+        if (statusEl) {
+          statusEl.classList.remove('offline');
+          statusEl.classList.add('live');
+          statusEl.querySelector('.status-text').textContent = 'LIVE';
+        }
+      } else {
+        alert(result.error || 'Failed to start stream');
+        btn.disabled = false;
+        btn.textContent = '🔴 GO LIVE';
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to start stream');
+      btn.disabled = false;
+      btn.textContent = '🔴 GO LIVE';
+    }
+  }
+  
+  function setLiveState(stream) {
+    currentStreamId = stream.id;
+    document.getElementById('streamStatus').classList.add('live');
+    document.querySelector('.status-text').textContent = 'LIVE';
+    document.getElementById('streamStats').classList.remove('hidden');
+    document.getElementById('goLiveBtn').classList.add('hidden');
+    document.getElementById('endStreamBtn').classList.remove('hidden');
+    document.getElementById('liveControls').classList.remove('hidden');
+    document.getElementById('currentStreamTitle').textContent = stream.title;
+    
+    startDurationTimer(stream.startedAt);
+    startStatsPolling(stream.id);
+  }
+  
+  function startDurationTimer(startedAt) {
+    if (durationInterval) clearInterval(durationInterval);
+    function update() {
+      const diff = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+      const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
+      document.getElementById('liveDuration').textContent = h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`;
+    }
+    update();
+    durationInterval = setInterval(update, 1000);
+  }
+  
+  function startStatsPolling(streamId) {
+    setInterval(async () => {
+      try {
+        const response = await fetch(`/api/livestream/status?streamId=${streamId}`);
+        const result = await response.json();
+        if (result.success && result.stream) {
+          document.getElementById('liveViewers').textContent = result.stream.currentViewers || 0;
+          document.getElementById('liveLikes').textContent = result.stream.totalLikes || 0;
+        }
+      } catch (e) {}
+    }, 10000);
+  }
+  
+  async function endStream() {
+    if (!confirm('End your stream?')) return;
+    const btn = document.getElementById('endStreamBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Ending...';
+    
+    try {
+      const response = await fetch('/api/livestream/slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'endStream', slotId: currentStreamId, djId: currentUser.uid })
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        // Hide connection details, show config form
+        document.getElementById('connectionDetails').classList.add('hidden');
+        document.getElementById('streamConfig').classList.remove('hidden');
+        
+        // Reset status
+        const statusEl = document.getElementById('streamStatus');
+        if (statusEl) {
+          statusEl.classList.remove('live');
+          statusEl.classList.add('offline');
+          const statusText = statusEl.querySelector('.status-text');
+          if (statusText) statusText.textContent = 'OFFLINE';
+        }
+        
+        // Reset Go Live button
+        const goLiveBtn = document.getElementById('goLiveBtn');
+        if (goLiveBtn) {
+          goLiveBtn.disabled = false;
+          goLiveBtn.textContent = '🔴 GO LIVE';
+        }
+        
+        // Clear form for next stream
+        document.getElementById('streamTitle').value = '';
+        document.getElementById('streamDescription').value = '';
+        
+        if (durationInterval) clearInterval(durationInterval);
+        currentStreamId = null;
+        await loadPastStreams(currentUser.uid);
+      } else {
+        alert(result.error || 'Failed to end stream');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to end stream');
+    }
+    btn.disabled = false;
+    btn.textContent = '⏹️ END STREAM';
+  }
+</script>

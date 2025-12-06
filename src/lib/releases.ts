@@ -4,6 +4,13 @@
 
 import { db } from '../firebase/server';
 
+// Conditional logging - only logs in development
+const isDev = import.meta.env?.DEV ?? false;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 // Helper function to get label from release data
 function getLabelFromRelease(release: any): string {
   return release.labelName || 
@@ -69,10 +76,10 @@ export async function getAllReleases(): Promise<any[]> {
       }
     });
     
-    console.log(`[getAllReleases] Returning ${releases.length} releases`);
+    log.info(`[getAllReleases] Returning ${releases.length} releases`);
     
     if (releases.length > 0) {
-      console.log('[getAllReleases] First release:', {
+      log.info('[getAllReleases] First release:', {
         id: releases[0].id,
         label: releases[0].label,
         ratings: releases[0].ratings,
@@ -109,7 +116,7 @@ export async function getReleasesForPage(limit: number = 20): Promise<any[]> {
       }
     });
     
-    console.log(`[getReleasesForPage] Returning ${releases.length} releases (limit: ${limit})`);
+    log.info(`[getReleasesForPage] Returning ${releases.length} releases (limit: ${limit})`);
     return releases;
     
   } catch (error) {
@@ -128,25 +135,25 @@ export async function getReleaseById(id: string): Promise<any | null> {
   }
   
   try {
-    console.log(`[getReleaseById] Fetching: ${id}`);
+    log.info(`[getReleaseById] Fetching: ${id}`);
     const doc = await db.collection('releases').doc(id).get();
     
     if (!doc.exists) {
-      console.log(`[getReleaseById] ✗ Not found: ${id}`);
+      log.info(`[getReleaseById] ✗ Not found: ${id}`);
       return null;
     }
     
     const data = doc.data();
-    console.log(`[getReleaseById] Found, status: ${data?.status}`);
+    log.info(`[getReleaseById] Found, status: ${data?.status}`);
     
     if (!data || data.status !== 'live') {
-      console.log(`[getReleaseById] ✗ Status not live: ${id}`);
+      log.info(`[getReleaseById] ✗ Status not live: ${id}`);
       return null;
     }
     
     const result = normalizeRelease(doc);
     
-    console.log(`[getReleaseById] ✓ Returning:`, {
+    log.info(`[getReleaseById] ✓ Returning:`, {
       id: result.id,
       artistName: result.artistName,
       releaseName: result.releaseName,
@@ -169,7 +176,7 @@ export async function getReleasesGroupedByLabel(): Promise<Record<string, any[]>
   }
   
   try {
-    console.log('[getReleasesGroupedByLabel] Fetching and grouping releases');
+    log.info('[getReleasesGroupedByLabel] Fetching and grouping releases');
     const releases = await getAllReleases();
     const releasesByLabel: Record<string, any[]> = {};
     
@@ -190,10 +197,10 @@ export async function getReleasesGroupedByLabel(): Promise<Record<string, any[]>
       });
     });
     
-    console.log(`[getReleasesGroupedByLabel] ✓ Grouped ${releases.length} releases into ${Object.keys(releasesByLabel).length} labels`);
+    log.info(`[getReleasesGroupedByLabel] ✓ Grouped ${releases.length} releases into ${Object.keys(releasesByLabel).length} labels`);
     
     Object.keys(releasesByLabel).forEach(label => {
-      console.log(`  - ${label}: ${releasesByLabel[label].length} releases`);
+      log.info(`  - ${label}: ${releasesByLabel[label].length} releases`);
     });
     
     return releasesByLabel;
@@ -223,7 +230,7 @@ export async function getReleasesByArtist(artistName: string): Promise<any[]> {
     
     releases.sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
     
-    console.log(`[getReleasesByArtist] Found ${releases.length} releases for "${artistName}"`);
+    log.info(`[getReleasesByArtist] Found ${releases.length} releases for "${artistName}"`);
     return releases;
   } catch (error) {
     console.error('[getReleasesByArtist] Error:', error);
@@ -258,7 +265,7 @@ export async function getReleasesByLabel(labelName: string): Promise<any[]> {
     const releases = Array.from(releaseMap.values());
     releases.sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
     
-    console.log(`[getReleasesByLabel] Found ${releases.length} releases for "${labelName}"`);
+    log.info(`[getReleasesByLabel] Found ${releases.length} releases for "${labelName}"`);
     return releases;
   } catch (error) {
     console.error('[getReleasesByLabel] Error:', error);

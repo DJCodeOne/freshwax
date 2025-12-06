@@ -1,9 +1,15 @@
-// src/pages/api/update-release.js
+// src/pages/api/update-release.ts
 // Firebase-based release update API
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 export const prerender = false;
+
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
 
 // Initialize Firebase Admin
 if (!getApps().length) {
@@ -18,19 +24,17 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-export async function POST({ request }) {
-  console.log('\n========================================');
-  console.log('[UPDATE-RELEASE] POST REQUEST RECEIVED');
-  console.log('========================================\n');
+export async function POST({ request }: any) {
+  log.info('[update-release] POST request received');
   
   try {
     const updates = await request.json();
-    console.log('[UPDATE-RELEASE] Request body:', JSON.stringify(updates, null, 2));
+    log.info('[update-release] Request body:', JSON.stringify(updates, null, 2));
     
     const { id, ...updateData } = updates;
     
     if (!id) {
-      console.error('[UPDATE-RELEASE] ERROR: No release ID provided');
+      log.error('[update-release] No release ID provided');
       return new Response(JSON.stringify({ 
         error: 'Release ID is required' 
       }), {
@@ -39,14 +43,14 @@ export async function POST({ request }) {
       });
     }
 
-    console.log(`[UPDATE-RELEASE] Updating release: ${id}`);
+    log.info('[update-release] Updating release:', id);
 
     // Get release from Firestore
     const releaseRef = db.collection('releases').doc(id);
     const releaseDoc = await releaseRef.get();
     
     if (!releaseDoc.exists) {
-      console.error('[UPDATE-RELEASE] ERROR: Release not found');
+      log.error('[update-release] Release not found:', id);
       return new Response(JSON.stringify({ 
         error: 'Release not found',
         id: id
@@ -57,7 +61,7 @@ export async function POST({ request }) {
     }
 
     // Clean up undefined values (Firestore doesn't like them)
-    const cleanedData = {};
+    const cleanedData: any = {};
     for (const [key, value] of Object.entries(updateData)) {
       if (value !== undefined) {
         cleanedData[key] = value;
@@ -67,11 +71,11 @@ export async function POST({ request }) {
     // Add updatedAt timestamp
     cleanedData.updatedAt = new Date().toISOString();
 
-    console.log('[UPDATE-RELEASE] Cleaned data:', JSON.stringify(cleanedData, null, 2));
+    log.info('[update-release] Cleaned data:', JSON.stringify(cleanedData, null, 2));
 
     // Update in Firestore
     await releaseRef.update(cleanedData);
-    console.log('[UPDATE-RELEASE] ✓ Updated in Firestore');
+    log.info('[update-release] Updated in Firestore');
 
     // Also update the master list
     try {
@@ -80,10 +84,10 @@ export async function POST({ request }) {
       
       if (masterListDoc.exists) {
         const masterData = masterListDoc.data();
-        const releasesList = masterData.releases || [];
+        const releasesList = masterData?.releases || [];
         
         // Find and update the release in master list
-        const releaseIndex = releasesList.findIndex(r => r.id === id);
+        const releaseIndex = releasesList.findIndex((r: any) => r.id === id);
         if (releaseIndex >= 0) {
           // Update summary fields in master list
           releasesList[releaseIndex] = {
@@ -101,16 +105,15 @@ export async function POST({ request }) {
             lastUpdated: new Date().toISOString()
           });
           
-          console.log('[UPDATE-RELEASE] ✓ Updated master list');
+          log.info('[update-release] Updated master list');
         }
       }
     } catch (error) {
-      console.error('[UPDATE-RELEASE] Warning: Could not update master list:', error);
+      log.error('[update-release] Warning: Could not update master list:', error);
       // Don't fail the whole operation if master list update fails
     }
 
-    console.log('[UPDATE-RELEASE] ✓ SUCCESS - Update complete!');
-    console.log('========================================\n');
+    log.info('[update-release] Success - Update complete');
 
     return new Response(JSON.stringify({ 
       success: true,
@@ -121,18 +124,12 @@ export async function POST({ request }) {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
-    console.error('\n========================================');
-    console.error('[UPDATE-RELEASE] CRITICAL ERROR');
-    console.error('========================================');
-    console.error('[UPDATE-RELEASE] Error message:', error.message);
-    console.error('[UPDATE-RELEASE] Error stack:', error.stack);
-    console.error('========================================\n');
+  } catch (error: any) {
+    log.error('[update-release] Critical error:', error.message);
     
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      message: error.message,
-      stack: error.stack
+      message: error.message
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

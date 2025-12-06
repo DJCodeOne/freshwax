@@ -3,6 +3,12 @@ import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -45,7 +51,7 @@ export const GET: APIRoute = async ({ request }) => {
     const data = mixDoc.data();
     const comments = data?.comments || [];
 
-    console.log(`[get-mix-comments] Mix: ${mixId}, Comments: ${comments.length}`);
+    log.info(`[get-mix-comments] Mix: ${mixId}, Comments: ${comments.length}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -53,11 +59,14 @@ export const GET: APIRoute = async ({ request }) => {
       count: comments.length
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=60' // 1 minute cache
+      }
     });
 
   } catch (error) {
-    console.error('[get-mix-comments] Error:', error);
+    log.error('[get-mix-comments] Error:', error);
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to fetch comments'

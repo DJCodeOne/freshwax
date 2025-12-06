@@ -1,0 +1,1391 @@
+---
+// src/pages/admin/giftcards.astro
+// Admin dashboard for managing gift cards and user credits
+import AdminLayout from '../../layouts/AdminLayout.astro';
+
+export const prerender = false;
+---
+
+<AdminLayout title="Gift Cards - Admin">
+  <div class="giftcards-admin">
+    <div class="page-header">
+      <h1>🎁 Gift Cards & Credits</h1>
+      <p>Manage gift cards, user balances, and view analytics</p>
+    </div>
+    
+    <!-- Analytics Cards -->
+    <div class="analytics-grid" id="analyticsGrid">
+      <div class="stat-card purple">
+        <div class="stat-icon">🎫</div>
+        <div class="stat-content">
+          <div class="stat-value" id="totalCards">-</div>
+          <div class="stat-label">Total Gift Cards</div>
+        </div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-icon">💰</div>
+        <div class="stat-content">
+          <div class="stat-value" id="totalIssued">-</div>
+          <div class="stat-label">Total Value Issued</div>
+        </div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-icon">✅</div>
+        <div class="stat-content">
+          <div class="stat-value" id="totalRedeemed">-</div>
+          <div class="stat-label">Total Redeemed</div>
+        </div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-content">
+          <div class="stat-value" id="totalUnredeemed">-</div>
+          <div class="stat-label">Unredeemed Balance</div>
+        </div>
+      </div>
+      <div class="stat-card emerald">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+          <div class="stat-value" id="usersWithCredit">-</div>
+          <div class="stat-label">Users with Credit</div>
+        </div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-icon">🛒</div>
+        <div class="stat-content">
+          <div class="stat-value" id="totalSpent">-</div>
+          <div class="stat-label">Credit Spent</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="balances">User Balances</button>
+      <button class="tab" data-tab="cards">Gift Cards</button>
+      <button class="tab" data-tab="create">Create Card</button>
+      <button class="tab" data-tab="adjust">Adjust Balance</button>
+    </div>
+    
+    <!-- User Balances Tab -->
+    <div class="tab-content active" id="tab-balances">
+      <div class="section-header">
+        <h2>User Credit Balances</h2>
+        <button id="refreshBalances" class="refresh-btn">🔄 Refresh</button>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Email</th>
+              <th>Balance</th>
+              <th>Transactions</th>
+              <th>Last Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="balancesTable">
+            <tr><td colspan="6" class="loading">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Gift Cards Tab -->
+    <div class="tab-content" id="tab-cards">
+      <div class="section-header">
+        <h2>All Gift Cards</h2>
+        <div class="header-actions">
+          <input type="text" id="cardSearch" placeholder="Search by code..." class="search-input" />
+          <select id="cardStatusFilter" class="status-filter">
+            <option value="all">All Status</option>
+            <option value="active">Active (Unredeemed)</option>
+            <option value="redeemed">Redeemed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <button id="refreshCards" class="refresh-btn">🔄 Refresh</button>
+        </div>
+      </div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Type</th>
+              <th>Original</th>
+              <th>Balance</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th>Recipient</th>
+              <th>Redeemed By</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="cardsTable">
+            <tr><td colspan="9" class="loading">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Create Card Tab -->
+    <div class="tab-content" id="tab-create">
+      <div class="form-card">
+        <h2>Create New Gift Card</h2>
+        <form id="createCardForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="cardValue">Value (£)</label>
+              <input type="number" id="cardValue" min="1" max="500" step="0.01" value="50" required />
+            </div>
+            <div class="form-group">
+              <label for="cardType">Type</label>
+              <select id="cardType">
+                <option value="promotional">Promotional</option>
+                <option value="gift">Gift</option>
+                <option value="refund">Refund</option>
+                <option value="compensation">Compensation</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="cardDescription">Description</label>
+            <input type="text" id="cardDescription" placeholder="e.g. Summer Sale Promo Card" />
+          </div>
+          <div class="form-group">
+            <label for="cardExpiry">Expires In (Days)</label>
+            <input type="number" id="cardExpiry" min="0" max="365" value="365" />
+            <span class="hint">Set to 0 for no expiry</span>
+          </div>
+          <button type="submit" class="submit-btn">Create Gift Card</button>
+        </form>
+        
+        <div id="createdCardResult" class="result-card hidden">
+          <h3>✅ Gift Card Created!</h3>
+          <div class="card-code" id="newCardCode">FWGC-XXXX-XXXX-XXXX</div>
+          <button class="copy-btn" id="copyNewCode">Copy Code</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Adjust Balance Tab -->
+    <div class="tab-content" id="tab-adjust">
+      <div class="form-card">
+        <h2>Adjust User Balance</h2>
+        <form id="adjustBalanceForm">
+          <div class="form-group">
+            <label for="adjustUserId">User ID</label>
+            <input type="text" id="adjustUserId" placeholder="Firebase User ID" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="adjustAmount">Amount (£)</label>
+              <input type="number" id="adjustAmount" step="0.01" required />
+              <span class="hint">Positive to add, negative to deduct</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="adjustReason">Reason</label>
+            <input type="text" id="adjustReason" placeholder="e.g. Refund for order #123" required />
+          </div>
+          <button type="submit" class="submit-btn">Adjust Balance</button>
+        </form>
+        
+        <div id="adjustResult" class="result-card hidden">
+          <h3 id="adjustResultTitle">Balance Adjusted</h3>
+          <p id="adjustResultText"></p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- User Details Modal -->
+    <div id="userModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>User Credit History</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body" id="userModalBody">
+          Loading...
+        </div>
+      </div>
+    </div>
+    
+    <!-- Card Details Modal -->
+    <div id="cardModal" class="modal hidden">
+      <div class="modal-content modal-wide">
+        <div class="modal-header">
+          <h3>Gift Card Details</h3>
+          <button class="close-card-modal">&times;</button>
+        </div>
+        <div class="modal-body" id="cardModalBody">
+          Loading...
+        </div>
+        <div class="modal-actions" id="cardModalActions">
+        </div>
+      </div>
+    </div>
+    
+    <!-- Resend Email Modal -->
+    <div id="resendModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Resend Gift Card Email</h3>
+          <button class="close-resend-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="resendEmailForm">
+            <div class="form-group">
+              <label>Gift Card Code</label>
+              <input type="text" id="resendCardCode" readonly class="code-display" />
+            </div>
+            <div class="form-group">
+              <label for="resendEmail">Send to Email *</label>
+              <input type="email" id="resendEmail" required placeholder="recipient@email.com" />
+            </div>
+            <div class="form-group">
+              <label for="resendName">Recipient Name (optional)</label>
+              <input type="text" id="resendName" placeholder="Recipient name" />
+            </div>
+            <button type="submit" class="submit-btn">📧 Send Email</button>
+          </form>
+          <div id="resendResult" class="result-card hidden">
+            <p id="resendResultText"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .giftcards-admin {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .page-header {
+    margin-bottom: 2rem;
+  }
+  
+  .page-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #111;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .page-header p {
+    color: #666;
+    margin: 0;
+  }
+  
+  /* Analytics Grid */
+  .analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .stat-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-left: 4px solid #ddd;
+  }
+  
+  .stat-card.purple { border-left-color: #8b5cf6; }
+  .stat-card.green { border-left-color: #10b981; }
+  .stat-card.blue { border-left-color: #3b82f6; }
+  .stat-card.orange { border-left-color: #f59e0b; }
+  .stat-card.emerald { border-left-color: #059669; }
+  .stat-card.red { border-left-color: #ef4444; }
+  
+  .stat-icon {
+    font-size: 2rem;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111;
+  }
+  
+  .stat-label {
+    font-size: 0.8125rem;
+    color: #666;
+  }
+  
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .tab {
+    padding: 0.75rem 1.5rem;
+    background: none;
+    border: none;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.2s;
+  }
+  
+  .tab:hover {
+    background: #f3f4f6;
+    color: #111;
+  }
+  
+  .tab.active {
+    background: #111;
+    color: #fff;
+  }
+  
+  .tab-content {
+    display: none;
+  }
+  
+  .tab-content.active {
+    display: block;
+  }
+  
+  /* Section Header */
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .section-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  
+  .refresh-btn {
+    padding: 0.5rem 1rem;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .refresh-btn:hover {
+    background: #e5e7eb;
+  }
+  
+  .header-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  
+  .search-input {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    width: 200px;
+  }
+  
+  .search-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+  
+  .status-filter {
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background: #fff;
+    cursor: pointer;
+  }
+  
+  .status-filter:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+  
+  .code-display {
+    font-family: 'Monaco', 'Consolas', monospace;
+    background: #f3f4f6;
+    letter-spacing: 0.05em;
+  }
+  
+  .modal-wide {
+    max-width: 700px;
+  }
+  
+  .modal-actions {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  
+  .card-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .card-detail-item {
+    padding: 0.75rem;
+    background: #f9fafb;
+    border-radius: 6px;
+  }
+  
+  .card-detail-item label {
+    display: block;
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+  
+  .card-detail-item .value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #111;
+  }
+  
+  .card-code-display {
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 1.5rem;
+    background: #111;
+    color: #fff;
+    padding: 1rem;
+    text-align: center;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    letter-spacing: 0.1em;
+  }
+  
+  /* Tables */
+  .table-container {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .data-table th {
+    background: #f9fafb;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    color: #666;
+  }
+  
+  .data-table td {
+    font-size: 0.9375rem;
+  }
+  
+  .data-table tr:hover {
+    background: #f9fafb;
+  }
+  
+  .data-table .loading {
+    text-align: center;
+    color: #888;
+    padding: 2rem;
+  }
+  
+  .balance-amount {
+    font-weight: 700;
+    color: #10b981;
+  }
+  
+  .status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .status-badge.active {
+    background: #d1fae5;
+    color: #059669;
+  }
+  
+  .status-badge.redeemed {
+    background: #dbeafe;
+    color: #2563eb;
+  }
+  
+  .status-badge.inactive {
+    background: #fee2e2;
+    color: #dc2626;
+  }
+  
+  .action-btn {
+    padding: 0.375rem 0.75rem;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    margin-right: 0.5rem;
+    transition: all 0.2s;
+  }
+  
+  .action-btn:hover {
+    background: #e5e7eb;
+  }
+  
+  .action-btn.danger {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #dc2626;
+  }
+  
+  .action-btn.danger:hover {
+    background: #fecaca;
+  }
+  
+  .action-btn.success {
+    background: #d1fae5;
+    border-color: #a7f3d0;
+    color: #059669;
+  }
+  
+  .action-btn.success:hover {
+    background: #a7f3d0;
+  }
+  
+  .action-btn.small {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .action-cell {
+    white-space: nowrap;
+  }
+  
+  .action-cell .action-btn {
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  /* Forms */
+  .form-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    max-width: 600px;
+  }
+  
+  .form-card h2 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.25rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+  
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #333;
+    font-size: 0.875rem;
+  }
+  
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+  
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #111;
+  }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  
+  .hint {
+    display: block;
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 0.25rem;
+  }
+  
+  .submit-btn {
+    width: 100%;
+    padding: 1rem;
+    background: #111;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .submit-btn:hover {
+    background: #333;
+  }
+  
+  .submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .result-card {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background: #d1fae5;
+    border-radius: 8px;
+    text-align: center;
+  }
+  
+  .result-card h3 {
+    margin: 0 0 1rem 0;
+    color: #059669;
+  }
+  
+  .card-code {
+    font-family: monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    background: #fff;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+  
+  .copy-btn {
+    padding: 0.5rem 1.5rem;
+    background: #10b981;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  
+  /* Modal */
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  
+  .modal-content {
+    background: #fff;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .modal-header h3 {
+    margin: 0;
+  }
+  
+  .close-modal {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #888;
+  }
+  
+  .modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+  }
+  
+  .transaction-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .transaction-item:last-child {
+    border-bottom: none;
+  }
+  
+  .txn-positive {
+    color: #10b981;
+    font-weight: 600;
+  }
+  
+  .txn-negative {
+    color: #ef4444;
+    font-weight: 600;
+  }
+  
+  .hidden {
+    display: none !important;
+  }
+  
+  @media (max-width: 768px) {
+    .giftcards-admin {
+      padding: 1rem;
+    }
+    
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+    
+    .tabs {
+      overflow-x: auto;
+    }
+    
+    .data-table {
+      font-size: 0.875rem;
+    }
+    
+    .data-table th,
+    .data-table td {
+      padding: 0.75rem 0.5rem;
+    }
+  }
+</style>
+
+<script type="module">
+  const ADMIN_KEY = 'freshwax-admin-2024';
+  
+  // Load analytics
+  async function loadAnalytics() {
+    try {
+      const response = await fetch('/api/admin/giftcards?type=analytics');
+      const result = await response.json();
+      
+      if (result.success) {
+        const { giftCards, credits } = result.analytics;
+        
+        document.getElementById('totalCards').textContent = giftCards.totalCards;
+        document.getElementById('totalIssued').textContent = `£${giftCards.totalValueIssued.toFixed(2)}`;
+        document.getElementById('totalRedeemed').textContent = `£${giftCards.totalValueRedeemed.toFixed(2)}`;
+        document.getElementById('totalUnredeemed').textContent = `£${giftCards.totalValueUnredeemed.toFixed(2)}`;
+        document.getElementById('usersWithCredit').textContent = credits.totalUsersWithCredit;
+        document.getElementById('totalSpent').textContent = `£${credits.totalCreditSpent.toFixed(2)}`;
+      }
+    } catch (error) {
+      console.error('Error loading analytics:', error);
+    }
+  }
+  
+  // Load user balances
+  async function loadBalances() {
+    const tbody = document.getElementById('balancesTable');
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading...</td></tr>';
+    
+    try {
+      const response = await fetch('/api/admin/giftcards?type=balances');
+      const result = await response.json();
+      
+      if (result.success && result.balances.length > 0) {
+        tbody.innerHTML = result.balances.map(b => {
+          const date = b.lastUpdated ? new Date(b.lastUpdated).toLocaleDateString('en-GB') : '-';
+          return `
+            <tr>
+              <td>${b.name || 'Unknown'}</td>
+              <td>${b.email || 'Unknown'}</td>
+              <td class="balance-amount">£${b.balance.toFixed(2)}</td>
+              <td>${b.transactionCount}</td>
+              <td>${date}</td>
+              <td>
+                <button class="action-btn" onclick="viewUserHistory('${b.userId}')">View</button>
+                <button class="action-btn" onclick="quickAdjust('${b.userId}')">Adjust</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } else {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading">No user balances found</td></tr>';
+      }
+    } catch (error) {
+      console.error('Error loading balances:', error);
+      tbody.innerHTML = '<tr><td colspan="6" class="loading">Error loading data</td></tr>';
+    }
+  }
+  
+  // Store all cards for filtering
+  let allCards = [];
+  
+  // Load gift cards
+  async function loadCards() {
+    const tbody = document.getElementById('cardsTable');
+    tbody.innerHTML = '<tr><td colspan="9" class="loading">Loading...</td></tr>';
+    
+    try {
+      const response = await fetch('/api/admin/giftcards?type=cards');
+      const result = await response.json();
+      
+      if (result.success && result.cards.length > 0) {
+        allCards = result.cards;
+        renderCards(allCards);
+      } else {
+        tbody.innerHTML = '<tr><td colspan="9" class="loading">No gift cards found</td></tr>';
+      }
+    } catch (error) {
+      console.error('Error loading cards:', error);
+      tbody.innerHTML = '<tr><td colspan="9" class="loading">Error loading data</td></tr>';
+    }
+  }
+  
+  function renderCards(cards) {
+    const tbody = document.getElementById('cardsTable');
+    const searchTerm = document.getElementById('cardSearch')?.value.toUpperCase() || '';
+    const statusFilter = document.getElementById('cardStatusFilter')?.value || 'all';
+    
+    // Filter cards
+    let filtered = cards.filter(card => {
+      // Search filter
+      if (searchTerm && !card.code.toUpperCase().includes(searchTerm)) {
+        return false;
+      }
+      
+      // Status filter
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'active' && (card.redeemedBy || !card.isActive)) return false;
+        if (statusFilter === 'redeemed' && !card.redeemedBy) return false;
+        if (statusFilter === 'cancelled' && card.isActive) return false;
+      }
+      
+      return true;
+    });
+    
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" class="loading">No gift cards match your filters</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = filtered.map(card => {
+      const created = new Date(card.createdAt).toLocaleDateString('en-GB');
+      let status = 'active';
+      let statusText = 'Active';
+      
+      if (card.redeemedBy) {
+        status = 'redeemed';
+        statusText = 'Redeemed';
+      } else if (!card.isActive) {
+        status = 'inactive';
+        statusText = 'Cancelled';
+      }
+      
+      const recipientEmail = card.recipientEmail || '-';
+      const redeemedByShort = card.redeemedBy ? card.redeemedBy.substring(0, 8) + '...' : '-';
+      
+      return `
+        <tr>
+          <td style="font-family: monospace; font-size: 0.8125rem;">${card.code}</td>
+          <td>${card.type || 'Gift'}</td>
+          <td>£${(card.originalValue || 0).toFixed(2)}</td>
+          <td>£${(card.currentBalance || 0).toFixed(2)}</td>
+          <td><span class="status-badge ${status}">${statusText}</span></td>
+          <td>${created}</td>
+          <td style="font-size: 0.8125rem;">${recipientEmail !== '-' ? recipientEmail.substring(0, 20) + (recipientEmail.length > 20 ? '...' : '') : '-'}</td>
+          <td style="font-size: 0.8125rem;">${redeemedByShort}</td>
+          <td class="action-cell">
+            <button class="action-btn small" onclick="viewCardDetails('${card.id}')">View</button>
+            <button class="action-btn small" onclick="copyCode('${card.code}')">Copy</button>
+            ${card.isActive && !card.redeemedBy ? `<button class="action-btn small" onclick="resendCardEmail('${card.id}', '${card.code}', '${card.recipientEmail || ''}')">📧</button>` : ''}
+            ${card.isActive && !card.redeemedBy ? `<button class="action-btn danger small" onclick="cancelCard('${card.id}')">Cancel</button>` : ''}
+            ${!card.isActive && !card.redeemedBy ? `<button class="action-btn success small" onclick="reactivateCard('${card.id}')">Reactivate</button>` : ''}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+  
+  // Search and filter listeners
+  document.getElementById('cardSearch')?.addEventListener('input', () => renderCards(allCards));
+  document.getElementById('cardStatusFilter')?.addEventListener('change', () => renderCards(allCards));
+  
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      tab.classList.add('active');
+      document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+      
+      // Load data for tab
+      if (tab.dataset.tab === 'balances') loadBalances();
+      if (tab.dataset.tab === 'cards') loadCards();
+    });
+  });
+  
+  // Refresh buttons
+  document.getElementById('refreshBalances').addEventListener('click', loadBalances);
+  document.getElementById('refreshCards').addEventListener('click', loadCards);
+  
+  // Create card form
+  document.getElementById('createCardForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+    
+    try {
+      const response = await fetch('/api/admin/giftcards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'createCard',
+          adminKey: ADMIN_KEY,
+          value: parseFloat(document.getElementById('cardValue').value),
+          type: document.getElementById('cardType').value,
+          description: document.getElementById('cardDescription').value,
+          expiresInDays: parseInt(document.getElementById('cardExpiry').value) || 0
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        document.getElementById('newCardCode').textContent = result.giftCard.code;
+        document.getElementById('createdCardResult').classList.remove('hidden');
+        loadAnalytics();
+      } else {
+        alert(result.error || 'Failed to create card');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to create card');
+    }
+    
+    btn.disabled = false;
+    btn.textContent = 'Create Gift Card';
+  });
+  
+  // Adjust balance form
+  document.getElementById('adjustBalanceForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+    
+    try {
+      const amount = parseFloat(document.getElementById('adjustAmount').value);
+      
+      const response = await fetch('/api/admin/giftcards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'adjustBalance',
+          adminKey: ADMIN_KEY,
+          userId: document.getElementById('adjustUserId').value,
+          amount,
+          reason: document.getElementById('adjustReason').value
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        const resultDiv = document.getElementById('adjustResult');
+        resultDiv.classList.remove('hidden');
+        document.getElementById('adjustResultTitle').textContent = '✅ Balance Adjusted';
+        document.getElementById('adjustResultText').textContent = 
+          `New balance: £${result.newBalance.toFixed(2)} (${amount >= 0 ? '+' : ''}£${amount.toFixed(2)})`;
+        
+        loadAnalytics();
+        loadBalances();
+      } else {
+        alert(result.error || 'Failed to adjust balance');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to adjust balance');
+    }
+    
+    btn.disabled = false;
+    btn.textContent = 'Adjust Balance';
+  });
+  
+  // Copy code
+  window.copyCode = function(code) {
+    navigator.clipboard.writeText(code);
+    alert('Code copied!');
+  };
+  
+  document.getElementById('copyNewCode').addEventListener('click', () => {
+    const code = document.getElementById('newCardCode').textContent;
+    navigator.clipboard.writeText(code);
+    alert('Code copied!');
+  });
+  
+  // Cancel card (was deactivate)
+  window.cancelCard = async function(cardId) {
+    if (!confirm('Are you sure you want to cancel this gift card? The code will no longer be redeemable.')) return;
+    
+    try {
+      const response = await fetch('/api/admin/giftcards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'deactivateCard',
+          adminKey: ADMIN_KEY,
+          cardId
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('Gift card cancelled successfully');
+        loadCards();
+        loadAnalytics();
+      } else {
+        alert(result.error || 'Failed to cancel card');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to cancel card');
+    }
+  };
+  
+  // Reactivate card (for lost codes)
+  window.reactivateCard = async function(cardId) {
+    if (!confirm('Reactivate this gift card? It will become redeemable again.')) return;
+    
+    try {
+      const response = await fetch('/api/admin/giftcards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reactivateCard',
+          adminKey: ADMIN_KEY,
+          cardId
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('Gift card reactivated successfully');
+        loadCards();
+        loadAnalytics();
+      } else {
+        alert(result.error || 'Failed to reactivate card');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to reactivate card');
+    }
+  };
+  
+  // View card details
+  window.viewCardDetails = async function(cardId) {
+    const modal = document.getElementById('cardModal');
+    const body = document.getElementById('cardModalBody');
+    const actions = document.getElementById('cardModalActions');
+    
+    modal.classList.remove('hidden');
+    body.innerHTML = 'Loading...';
+    actions.innerHTML = '';
+    
+    // Find card in allCards
+    const card = allCards.find(c => c.id === cardId);
+    
+    if (!card) {
+      body.innerHTML = 'Card not found';
+      return;
+    }
+    
+    let status = 'Active';
+    let statusClass = 'active';
+    if (card.redeemedBy) {
+      status = 'Redeemed';
+      statusClass = 'redeemed';
+    } else if (!card.isActive) {
+      status = 'Cancelled';
+      statusClass = 'inactive';
+    }
+    
+    const created = new Date(card.createdAt).toLocaleString('en-GB');
+    const redeemed = card.redeemedAt ? new Date(card.redeemedAt).toLocaleString('en-GB') : '-';
+    
+    body.innerHTML = `
+      <div class="card-code-display">${card.code}</div>
+      
+      <div class="card-detail-grid">
+        <div class="card-detail-item">
+          <label>Status</label>
+          <div class="value"><span class="status-badge ${statusClass}">${status}</span></div>
+        </div>
+        <div class="card-detail-item">
+          <label>Type</label>
+          <div class="value">${card.type || 'Gift'}</div>
+        </div>
+        <div class="card-detail-item">
+          <label>Original Value</label>
+          <div class="value">£${(card.originalValue || 0).toFixed(2)}</div>
+        </div>
+        <div class="card-detail-item">
+          <label>Current Balance</label>
+          <div class="value">£${(card.currentBalance || 0).toFixed(2)}</div>
+        </div>
+        <div class="card-detail-item">
+          <label>Created</label>
+          <div class="value">${created}</div>
+        </div>
+        <div class="card-detail-item">
+          <label>Redeemed At</label>
+          <div class="value">${redeemed}</div>
+        </div>
+      </div>
+      
+      ${card.description ? `<div class="card-detail-item" style="margin-bottom: 1rem;"><label>Description</label><div class="value">${card.description}</div></div>` : ''}
+      
+      <div class="card-detail-grid">
+        <div class="card-detail-item">
+          <label>Purchased By</label>
+          <div class="value">${card.purchasedByEmail || card.purchasedBy || 'Admin'}</div>
+        </div>
+        <div class="card-detail-item">
+          <label>Recipient Email</label>
+          <div class="value">${card.recipientEmail || '-'}</div>
+        </div>
+        <div class="card-detail-item">
+          <label>Recipient Name</label>
+          <div class="value">${card.recipientName || '-'}</div>
+        </div>
+        <div class="card-detail-item">
+          <label>Redeemed By</label>
+          <div class="value">${card.redeemedBy || '-'}</div>
+        </div>
+      </div>
+      
+      ${card.giftMessage ? `<div class="card-detail-item"><label>Gift Message</label><div class="value" style="font-style: italic;">"${card.giftMessage}"</div></div>` : ''}
+    `;
+    
+    // Action buttons
+    let actionsHtml = `<button class="action-btn" onclick="copyCode('${card.code}')">📋 Copy Code</button>`;
+    
+    if (card.isActive && !card.redeemedBy) {
+      actionsHtml += `<button class="action-btn" onclick="resendCardEmail('${card.id}', '${card.code}', '${card.recipientEmail || ''}')">📧 Resend Email</button>`;
+      actionsHtml += `<button class="action-btn danger" onclick="cancelCard('${card.id}'); document.getElementById('cardModal').classList.add('hidden');">❌ Cancel Card</button>`;
+    }
+    
+    if (!card.isActive && !card.redeemedBy) {
+      actionsHtml += `<button class="action-btn success" onclick="reactivateCard('${card.id}'); document.getElementById('cardModal').classList.add('hidden');">✅ Reactivate</button>`;
+    }
+    
+    actions.innerHTML = actionsHtml;
+  };
+  
+  // Resend gift card email
+  window.resendCardEmail = function(cardId, code, currentEmail) {
+    document.getElementById('resendCardCode').value = code;
+    document.getElementById('resendEmail').value = currentEmail || '';
+    document.getElementById('resendResult').classList.add('hidden');
+    document.getElementById('resendModal').classList.remove('hidden');
+    
+    // Store cardId for form submission
+    document.getElementById('resendEmailForm').dataset.cardId = cardId;
+  };
+  
+  // Resend email form handler
+  document.getElementById('resendEmailForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    
+    const cardId = e.target.dataset.cardId;
+    const email = document.getElementById('resendEmail').value;
+    const name = document.getElementById('resendName').value;
+    const code = document.getElementById('resendCardCode').value;
+    
+    try {
+      const response = await fetch('/api/admin/giftcards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'resendEmail',
+          adminKey: ADMIN_KEY,
+          cardId,
+          code,
+          recipientEmail: email,
+          recipientName: name
+        })
+      });
+      
+      const result = await response.json();
+      const resultEl = document.getElementById('resendResult');
+      
+      if (result.success) {
+        resultEl.classList.remove('hidden');
+        document.getElementById('resendResultText').innerHTML = `✅ Email sent successfully to ${email}`;
+        
+        // Update cards data
+        loadCards();
+      } else {
+        resultEl.classList.remove('hidden');
+        document.getElementById('resendResultText').innerHTML = `❌ ${result.error || 'Failed to send email'}`;
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      document.getElementById('resendResultText').innerHTML = '❌ Failed to send email';
+      document.getElementById('resendResult').classList.remove('hidden');
+    }
+    
+    btn.disabled = false;
+    btn.textContent = '📧 Send Email';
+  });
+  
+  // Quick adjust
+  window.quickAdjust = function(userId) {
+    document.getElementById('adjustUserId').value = userId;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelector('[data-tab="adjust"]').classList.add('active');
+    document.getElementById('tab-adjust').classList.add('active');
+    document.getElementById('adjustAmount').focus();
+  };
+  
+  // View user history
+  window.viewUserHistory = async function(userId) {
+    const modal = document.getElementById('userModal');
+    const body = document.getElementById('userModalBody');
+    
+    modal.classList.remove('hidden');
+    body.innerHTML = 'Loading...';
+    
+    try {
+      const response = await fetch(`/api/giftcards/balance?userId=${userId}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        const { balance, transactions } = result;
+        
+        body.innerHTML = `
+          <div style="margin-bottom: 1rem;">
+            <strong>Current Balance:</strong> <span class="balance-amount">£${balance.toFixed(2)}</span>
+          </div>
+          <h4>Transaction History</h4>
+          ${transactions && transactions.length > 0 ? transactions.map(txn => `
+            <div class="transaction-item">
+              <div>
+                <div>${txn.description || txn.type}</div>
+                <small style="color: #888;">${new Date(txn.createdAt).toLocaleString('en-GB')}</small>
+              </div>
+              <div class="${txn.amount >= 0 ? 'txn-positive' : 'txn-negative'}">
+                ${txn.amount >= 0 ? '+' : ''}£${txn.amount.toFixed(2)}
+              </div>
+            </div>
+          `).reverse().join('') : '<p>No transactions</p>'}
+        `;
+      } else {
+        body.innerHTML = 'No data found for this user';
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      body.innerHTML = 'Error loading data';
+    }
+  };
+  
+  // Close modal
+  document.querySelector('.close-modal').addEventListener('click', () => {
+    document.getElementById('userModal').classList.add('hidden');
+  });
+  
+  document.getElementById('userModal').addEventListener('click', (e) => {
+    if (e.target.id === 'userModal') {
+      document.getElementById('userModal').classList.add('hidden');
+    }
+  });
+  
+  // Close card modal
+  document.querySelector('.close-card-modal')?.addEventListener('click', () => {
+    document.getElementById('cardModal').classList.add('hidden');
+  });
+  
+  document.getElementById('cardModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'cardModal') {
+      document.getElementById('cardModal').classList.add('hidden');
+    }
+  });
+  
+  // Close resend modal
+  document.querySelector('.close-resend-modal')?.addEventListener('click', () => {
+    document.getElementById('resendModal').classList.add('hidden');
+  });
+  
+  document.getElementById('resendModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'resendModal') {
+      document.getElementById('resendModal').classList.add('hidden');
+    }
+  });
+  
+  // Initial load
+  loadAnalytics();
+  loadBalances();
+</script>

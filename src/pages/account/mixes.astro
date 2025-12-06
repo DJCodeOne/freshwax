@@ -1,0 +1,722 @@
+---
+// src/pages/account/mixes.astro
+// My DJ Mixes - Customer version - View, edit, delete mixes
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+// Check for customerId cookie (customer login) or partnerId (artist login)
+const customerId = Astro.cookies.get('customerId')?.value || Astro.cookies.get('userId')?.value || '';
+const partnerId = Astro.cookies.get('partnerId')?.value || '';
+const userId = customerId || partnerId;
+
+let user = null;
+let mixes: any[] = [];
+let totalPlays = 0;
+let totalLikes = 0;
+let totalDownloads = 0;
+
+if (userId) {
+  try {
+    // Try to get user info from customers or users collection
+    let userDoc = await db.collection('customers').doc(userId).get();
+    if (!userDoc.exists) {
+      userDoc = await db.collection('users').doc(userId).get();
+    }
+    if (!userDoc.exists && partnerId) {
+      userDoc = await db.collection('artists').doc(partnerId).get();
+    }
+    
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      user = {
+        id: userDoc.id,
+        name: userData?.fullName || userData?.name || userData?.artistName || 'User',
+        email: userData?.email || ''
+      };
+      
+      // Get all mixes and filter by userId
+      const allMixesSnap = await db.collection('dj-mixes').get();
+      
+      // Filter mixes belonging to this user
+      const userMixDocs = allMixesSnap.docs.filter(doc => {
+        const data = doc.data();
+        return data.userId === userId;
+      });
+      
+      // Sort by createdAt descending
+      userMixDocs.sort((a, b) => {
+        const dateA = a.data().createdAt || a.data().uploadedAt || '';
+        const dateB = b.data().createdAt || b.data().uploadedAt || '';
+        return dateB.localeCompare(dateA);
+      });
+      
+      // Get mixes with stats
+      for (const mixDoc of userMixDocs) {
+        const mixData = { id: mixDoc.id, ...mixDoc.data() };
+        mixes.push(mixData);
+        totalPlays += mixData.plays || 0;
+        totalLikes += mixData.likes || 0;
+        totalDownloads += mixData.downloads || 0;
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching mixes:', error);
+  }
+}
+
+const isLoggedIn = !!user;
+const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num || 0);
+
+export const prerender = false;
+---
+
+<Layout title="My DJ Mixes - Fresh Wax">
+  <Header />
+  
+  <main class="mixes-main">
+    {!isLoggedIn ? (
+      <div class="login-prompt">
+        <div class="login-card">
+          <img src="/logo.webp" alt="Fresh Wax" class="login-logo" />
+          <h1>My DJ Mixes</h1>
+          <p>Sign in to manage your DJ mixes.</p>
+          <a href="/login?redirect=/account/mixes" class="btn-primary">Sign In</a>
+        </div>
+      </div>
+    ) : (
+      <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+          <div class="header-left">
+            <a href="/account/dashboard" class="back-link">← Back to Dashboard</a>
+            <h1>My DJ Mixes</h1>
+          </div>
+          <a href="/upload-mix" class="btn-primary">+ Upload New Mix</a>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-bar">
+          <div class="stat">
+            <span class="stat-value">{mixes.length}</span>
+            <span class="stat-label">Mixes</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">{formatNumber(totalPlays)}</span>
+            <span class="stat-label">Total Plays</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">{formatNumber(totalLikes)}</span>
+            <span class="stat-label">Total Likes</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value">{formatNumber(totalDownloads)}</span>
+            <span class="stat-label">Downloads</span>
+          </div>
+        </div>
+
+        <!-- Mixes List -->
+        {mixes.length === 0 ? (
+          <div class="empty-state">
+            <div class="empty-icon">🎧</div>
+            <h2>No mixes yet</h2>
+            <p>Upload your first DJ mix to share with the community.</p>
+            <a href="/upload-mix" class="btn-primary">Upload Mix</a>
+          </div>
+        ) : (
+          <div class="mixes-grid">
+            {mixes.map((mix) => (
+              <div class="mix-card" data-mix-id={mix.id}>
+                <div class="mix-image">
+                  {mix.imageUrl ? (
+                    <img src={mix.imageUrl} alt={mix.title} />
+                  ) : (
+                    <div class="mix-placeholder">🎧</div>
+                  )}
+                  <div class="mix-overlay">
+                    <a href={`/dj-mix/${mix.id}`} class="overlay-btn" target="_blank">View</a>
+                  </div>
+                </div>
+                <div class="mix-info">
+                  <h3 class="mix-title">{mix.title || 'Untitled Mix'}</h3>
+                  <p class="mix-dj">{mix.djName || mix.dj_name || 'Unknown DJ'}</p>
+                  <p class="mix-genre">{mix.genre || 'Drum & Bass'}</p>
+                  
+                  <div class="mix-stats">
+                    <span>▶ {formatNumber(mix.plays || 0)}</span>
+                    <span>♥ {formatNumber(mix.likes || 0)}</span>
+                    <span>↓ {formatNumber(mix.downloads || 0)}</span>
+                  </div>
+                  
+                  <div class="mix-actions">
+                    <button class="btn-edit" data-mix-id={mix.id} data-title={mix.title} data-description={mix.description || ''}>
+                      ✏️ Edit
+                    </button>
+                    <button class="btn-delete" data-mix-id={mix.id} data-title={mix.title}>
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Edit Mix</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <form id="editForm">
+          <input type="hidden" id="editMixId" name="mixId">
+          <div class="form-group">
+            <label for="editTitle">Title</label>
+            <input type="text" id="editTitle" name="title" maxlength="30" required>
+          </div>
+          <div class="form-group">
+            <label for="editDescription">Description</label>
+            <textarea id="editDescription" name="description" rows="4" maxlength="500"></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-cancel">Cancel</button>
+            <button type="submit" class="btn-save">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Delete Mix</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <p class="delete-warning">Are you sure you want to delete "<span id="deleteMixTitle"></span>"? This cannot be undone.</p>
+        <input type="hidden" id="deleteMixId">
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel">Cancel</button>
+          <button type="button" class="btn-delete-confirm">Delete Mix</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<script>
+  // Edit modal
+  const editModal = document.getElementById('editModal');
+  const editForm = document.getElementById('editForm');
+  
+  document.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mixId = btn.getAttribute('data-mix-id');
+      const title = btn.getAttribute('data-title');
+      const description = btn.getAttribute('data-description');
+      
+      document.getElementById('editMixId').value = mixId;
+      document.getElementById('editTitle').value = title;
+      document.getElementById('editDescription').value = description;
+      editModal.classList.remove('hidden');
+    });
+  });
+
+  editForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const mixId = document.getElementById('editMixId').value;
+    const title = document.getElementById('editTitle').value;
+    const description = document.getElementById('editDescription').value;
+    
+    try {
+      const response = await fetch('/api/update-mix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mixId, title, description })
+      });
+      
+      if (response.ok) {
+        location.reload();
+      } else {
+        alert('Failed to update mix');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to update mix');
+    }
+  });
+
+  // Delete modal
+  const deleteModal = document.getElementById('deleteModal');
+  
+  document.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mixId = btn.getAttribute('data-mix-id');
+      const title = btn.getAttribute('data-title');
+      
+      document.getElementById('deleteMixId').value = mixId;
+      document.getElementById('deleteMixTitle').textContent = title;
+      deleteModal.classList.remove('hidden');
+    });
+  });
+
+  document.querySelector('.btn-delete-confirm')?.addEventListener('click', async () => {
+    const mixId = document.getElementById('deleteMixId').value;
+    
+    try {
+      const response = await fetch('/api/delete-mix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mixId })
+      });
+      
+      if (response.ok) {
+        location.reload();
+      } else {
+        alert('Failed to delete mix');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to delete mix');
+    }
+  });
+
+  // Modal close handlers
+  document.querySelectorAll('.modal-close, .modal-backdrop, .btn-cancel').forEach(el => {
+    el.addEventListener('click', () => {
+      editModal?.classList.add('hidden');
+      deleteModal?.classList.add('hidden');
+    });
+  });
+</script>
+
+<style>
+  .mixes-main {
+    min-height: 100vh;
+    background: #f5f5f5;
+    padding: 2rem 0;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  .login-prompt {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+  }
+
+  .login-card {
+    background: #fff;
+    border: 2px solid #000;
+    padding: 3rem;
+    text-align: center;
+    max-width: 400px;
+  }
+
+  .login-logo {
+    height: 60px;
+    margin-bottom: 1.5rem;
+  }
+
+  .login-card h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .login-card p {
+    color: #666;
+    margin-bottom: 1.5rem;
+  }
+
+  .btn-primary {
+    display: inline-block;
+    background: #000;
+    color: #fff;
+    padding: 0.875rem 1.5rem;
+    font-weight: 700;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-primary:hover {
+    background: #dc2626;
+  }
+
+  /* Header */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .back-link {
+    color: #666;
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .back-link:hover {
+    color: #000;
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 1px;
+    background: #e5e5e5;
+    border: 2px solid #000;
+    margin-bottom: 2rem;
+  }
+
+  .stat {
+    flex: 1;
+    background: #fff;
+    padding: 1.25rem;
+    text-align: center;
+  }
+
+  .stat-value {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 800;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    color: #666;
+    text-transform: uppercase;
+  }
+
+  /* Empty state */
+  .empty-state {
+    background: #fff;
+    border: 2px solid #e5e5e5;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state p {
+    color: #666;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Mixes grid */
+  .mixes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .mix-card {
+    background: #fff;
+    border: 2px solid #e5e5e5;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .mix-card:hover {
+    border-color: #000;
+  }
+
+  .mix-image {
+    position: relative;
+    aspect-ratio: 1;
+    background: #f0f0f0;
+  }
+
+  .mix-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .mix-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    background: linear-gradient(135deg, #1a1a1a, #333);
+    color: #fff;
+  }
+
+  .mix-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .mix-card:hover .mix-overlay {
+    opacity: 1;
+  }
+
+  .overlay-btn {
+    background: #fff;
+    color: #000;
+    padding: 0.5rem 1.5rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .overlay-btn:hover {
+    background: #dc2626;
+    color: #fff;
+  }
+
+  .mix-info {
+    padding: 1rem;
+  }
+
+  .mix-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mix-dj {
+    font-size: 0.85rem;
+    color: #dc2626;
+    margin-bottom: 0.25rem;
+  }
+
+  .mix-genre {
+    font-size: 0.8rem;
+    color: #888;
+    margin-bottom: 0.75rem;
+  }
+
+  .mix-stats {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 0.75rem;
+  }
+
+  .mix-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-edit, .btn-delete {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #e5e5e5;
+    background: #fff;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-edit:hover {
+    background: #f5f5f5;
+    border-color: #000;
+  }
+
+  .btn-delete:hover {
+    background: #fee2e2;
+    border-color: #dc2626;
+    color: #dc2626;
+  }
+
+  /* Modal */
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal.hidden {
+    display: none;
+  }
+
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+  }
+
+  .modal-content {
+    position: relative;
+    background: #fff;
+    border: 2px solid #000;
+    width: 100%;
+    max-width: 500px;
+    margin: 1rem;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: #000;
+    color: #fff;
+  }
+
+  .modal-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+
+  .form-group {
+    padding: 0 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e5e5e5;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+
+  .form-group input:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: #000;
+  }
+
+  .delete-warning {
+    padding: 1.5rem;
+    color: #666;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border-top: 1px solid #e5e5e5;
+  }
+
+  .btn-cancel {
+    flex: 1;
+    padding: 0.75rem;
+    background: #fff;
+    border: 2px solid #e5e5e5;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-cancel:hover {
+    border-color: #000;
+  }
+
+  .btn-save {
+    flex: 1;
+    padding: 0.75rem;
+    background: #000;
+    color: #fff;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-save:hover {
+    background: #dc2626;
+  }
+
+  .btn-delete-confirm {
+    flex: 1;
+    padding: 0.75rem;
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-delete-confirm:hover {
+    background: #b91c1c;
+  }
+
+  @media (max-width: 600px) {
+    .stats-bar {
+      flex-wrap: wrap;
+    }
+    
+    .stat {
+      flex: 1 1 50%;
+    }
+    
+    .page-header {
+      flex-direction: column;
+    }
+  }
+</style>

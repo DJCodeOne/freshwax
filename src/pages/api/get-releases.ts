@@ -1,7 +1,13 @@
 // src/pages/api/get-releases.ts
-// Uses Firebase REST API - works on Cloudflare Pages (no Admin SDK)
+// Uses Firebase REST API - works on Cloudflare Pages
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../lib/firebase-rest';
+
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
 
 export const prerender = false;
 
@@ -10,15 +16,13 @@ export const GET: APIRoute = async ({ request }) => {
   const limitParam = url.searchParams.get('limit');
   const limit = limitParam ? parseInt(limitParam) : 100;
   
-  console.log(`[GET-RELEASES] Fetching up to ${limit} releases via REST API...`);
+  log.info('[get-releases] Fetching up to', limit, 'releases');
   
   try {
-    // Query releases with status='live' using REST API
     const allReleases = await queryCollection('releases', {
       filters: [{ field: 'status', op: 'EQUAL', value: 'live' }]
     });
     
-    // Normalize and enrich the data
     const normalizedReleases = allReleases.map(release => ({
       id: release.id,
       ...release,
@@ -32,17 +36,15 @@ export const GET: APIRoute = async ({ request }) => {
       }
     }));
     
-    // Sort by releaseDate in-memory (newest first)
     normalizedReleases.sort((a, b) => {
       const dateA = new Date(a.releaseDate || 0).getTime();
       const dateB = new Date(b.releaseDate || 0).getTime();
       return dateB - dateA;
     });
     
-    // Apply limit after sorting
     const limitedReleases = limit > 0 ? normalizedReleases.slice(0, limit) : normalizedReleases;
     
-    console.log(`[GET-RELEASES] ✓ Loaded ${allReleases.length} releases, returning ${limitedReleases.length} (limit: ${limit})`);
+    log.info('[get-releases] Returning', limitedReleases.length, 'of', allReleases.length);
     
     return new Response(JSON.stringify({ 
       success: true,
@@ -59,7 +61,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
     
   } catch (error) {
-    console.error('[GET-RELEASES] Error:', error);
+    log.error('[get-releases] Error:', error);
     return new Response(JSON.stringify({ 
       success: false,
       error: 'Failed to fetch releases',

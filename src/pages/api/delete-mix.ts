@@ -6,7 +6,12 @@ import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/cl
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
-// R2 Configuration
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 const R2_CONFIG = {
   accountId: import.meta.env.R2_ACCOUNT_ID,
   accessKeyId: import.meta.env.R2_ACCESS_KEY_ID,
@@ -14,7 +19,6 @@ const R2_CONFIG = {
   bucketName: import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
 };
 
-// Initialize Firebase
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -27,10 +31,9 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-// Initialize R2 Client
 const s3Client = new S3Client({
   region: 'auto',
-  endpoint: `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`,
+  endpoint: 'https://' + R2_CONFIG.accountId + '.r2.cloudflarestorage.com',
   credentials: {
     accessKeyId: R2_CONFIG.accessKeyId,
     secretAccessKey: R2_CONFIG.secretAccessKey,
@@ -51,17 +54,12 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    console.log('=== Deleting DJ Mix ===');
-    console.log('Mix ID:', mixId);
-    console.log('Folder Path:', folderPath);
+    log.info('[delete-mix] Deleting mix:', mixId);
 
-    // ============================================
-    // 1. GET MIX DATA FROM FIREBASE
-    // ============================================
     const mixDoc = await db.collection('dj-mixes').doc(mixId).get();
     
     if (!mixDoc.exists) {
-      console.log('Mix not found in Firebase, may already be deleted');
+      log.info('[delete-mix] Mix not found, may already be deleted');
       return new Response(JSON.stringify({ 
         success: true, 
         message: 'Mix not found (may already be deleted)' 
@@ -72,16 +70,12 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const mixData = mixDoc.data();
-    const r2FolderPath = folderPath || mixData?.folder_path || `dj-mixes/${mixId}`;
+    const r2FolderPath = folderPath || mixData?.folder_path || 'dj-mixes/' + mixId;
 
-    console.log('Mix data retrieved:', mixData?.title);
-    console.log('R2 folder to delete:', r2FolderPath);
+    log.info('[delete-mix] R2 folder:', r2FolderPath);
 
-    // ============================================
-    // 2. DELETE FILES FROM R2 STORAGE
-    // ============================================
+    // Delete files from R2
     try {
-      // List all objects in the mix folder
       const listCommand = new ListObjectsV2Command({
         Bucket: R2_CONFIG.bucketName,
         Prefix: r2FolderPath,
@@ -90,12 +84,10 @@ export const POST: APIRoute = async ({ request }) => {
       const listedObjects = await s3Client.send(listCommand);
 
       if (listedObjects.Contents && listedObjects.Contents.length > 0) {
-        console.log(`Found ${listedObjects.Contents.length} files to delete from R2`);
+        log.info('[delete-mix] Found', listedObjects.Contents.length, 'files to delete');
 
-        // Delete each object
         for (const object of listedObjects.Contents) {
           if (object.Key) {
-            console.log('Deleting R2 object:', object.Key);
             await s3Client.send(
               new DeleteObjectCommand({
                 Bucket: R2_CONFIG.bucketName,
@@ -104,42 +96,31 @@ export const POST: APIRoute = async ({ request }) => {
             );
           }
         }
-
-        console.log('✓ All R2 files deleted');
-      } else {
-        console.log('No R2 files found to delete (folder may be empty or already deleted)');
+        log.info('[delete-mix] R2 files deleted');
       }
     } catch (r2Error) {
-      console.error('R2 deletion error (continuing anyway):', r2Error);
-      // Continue with Firebase deletion even if R2 fails
+      log.error('[delete-mix] R2 deletion error:', r2Error);
     }
 
-    // ============================================
-    // 3. DELETE COMMENTS SUBCOLLECTION (if exists)
-    // ============================================
+    // Delete comments subcollection
     try {
       const commentsSnapshot = await db.collection('dj-mixes').doc(mixId).collection('comments').get();
       
       if (!commentsSnapshot.empty) {
-        console.log(`Deleting ${commentsSnapshot.size} comments`);
+        log.info('[delete-mix] Deleting', commentsSnapshot.size, 'comments');
         const batch = db.batch();
         commentsSnapshot.docs.forEach(doc => {
           batch.delete(doc.ref);
         });
         await batch.commit();
-        console.log('✓ Comments deleted');
       }
     } catch (commentsError) {
-      console.error('Error deleting comments (continuing):', commentsError);
+      log.error('[delete-mix] Error deleting comments:', commentsError);
     }
 
-    // ============================================
-    // 4. DELETE MIX DOCUMENT FROM FIREBASE
-    // ============================================
+    // Delete mix document
     await db.collection('dj-mixes').doc(mixId).delete();
-    console.log('✓ Mix document deleted from Firebase');
-
-    console.log('=== Mix Deletion Complete ===');
+    log.info('[delete-mix] Mix deleted');
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -152,8 +133,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error('=== Delete Error ===');
-    console.error(error);
+    log.error('[delete-mix] Error:', error);
 
     return new Response(JSON.stringify({ 
       success: false, 

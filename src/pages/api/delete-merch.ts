@@ -6,9 +6,14 @@ import { S3Client, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/c
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 export const prerender = false;
 
-// R2 Configuration
 const R2_CONFIG = {
   accountId: import.meta.env.R2_ACCOUNT_ID,
   accessKeyId: import.meta.env.R2_ACCESS_KEY_ID,
@@ -16,7 +21,6 @@ const R2_CONFIG = {
   bucketName: import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
 };
 
-// Initialize Firebase
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -29,10 +33,9 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-// Initialize R2 Client
 const s3Client = new S3Client({
   region: 'auto',
-  endpoint: `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`,
+  endpoint: 'https://' + R2_CONFIG.accountId + '.r2.cloudflarestorage.com',
   credentials: {
     accessKeyId: R2_CONFIG.accessKeyId,
     secretAccessKey: R2_CONFIG.secretAccessKey,
@@ -50,9 +53,8 @@ export const POST: APIRoute = async ({ request }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     
-    console.log(`[DELETE-MERCH] Deleting product: ${productId}`);
+    log.info('[delete-merch] Deleting product:', productId);
     
-    // Get product from Firebase
     const productRef = db.collection('merch').doc(productId);
     const productDoc = await productRef.get();
     
@@ -67,10 +69,9 @@ export const POST: APIRoute = async ({ request }) => {
     
     // Delete images from R2
     if (product.r2FolderPath) {
-      console.log(`[DELETE-MERCH] Deleting R2 folder: ${product.r2FolderPath}`);
+      log.info('[delete-merch] Deleting R2 folder:', product.r2FolderPath);
       
       try {
-        // List all objects in the folder
         const listResult = await s3Client.send(
           new ListObjectsV2Command({
             Bucket: R2_CONFIG.bucketName,
@@ -79,7 +80,6 @@ export const POST: APIRoute = async ({ request }) => {
         );
         
         if (listResult.Contents && listResult.Contents.length > 0) {
-          // Delete all objects
           await s3Client.send(
             new DeleteObjectsCommand({
               Bucket: R2_CONFIG.bucketName,
@@ -88,12 +88,10 @@ export const POST: APIRoute = async ({ request }) => {
               }
             })
           );
-          
-          console.log(`[DELETE-MERCH] ✓ Deleted ${listResult.Contents.length} files from R2`);
+          log.info('[delete-merch] Deleted', listResult.Contents.length, 'files from R2');
         }
       } catch (r2Error) {
-        console.error('[DELETE-MERCH] R2 deletion error:', r2Error);
-        // Continue with Firebase deletion even if R2 fails
+        log.error('[delete-merch] R2 deletion error:', r2Error);
       }
     }
     
@@ -105,9 +103,9 @@ export const POST: APIRoute = async ({ request }) => {
           totalStock: FieldValue.increment(-(product.totalStock || 0)),
           updatedAt: new Date().toISOString()
         });
-        console.log('[DELETE-MERCH] ✓ Updated supplier stats');
+        log.info('[delete-merch] Updated supplier stats');
       } catch (e) {
-        console.log('[DELETE-MERCH] Could not update supplier stats');
+        log.info('[delete-merch] Could not update supplier stats');
       }
     }
     
@@ -127,10 +125,9 @@ export const POST: APIRoute = async ({ request }) => {
       createdBy: 'admin'
     });
     
-    // Delete from Firebase
     await productRef.delete();
     
-    console.log(`[DELETE-MERCH] ✓ Product deleted: ${productId}`);
+    log.info('[delete-merch] Product deleted:', productId);
     
     return new Response(JSON.stringify({
       success: true,
@@ -143,7 +140,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
     
   } catch (error) {
-    console.error('[DELETE-MERCH] Error:', error);
+    log.error('[delete-merch] Error:', error);
     
     return new Response(JSON.stringify({
       success: false,

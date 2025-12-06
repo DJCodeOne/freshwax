@@ -1,6 +1,12 @@
 // src/pages/api/download-mix.ts
 import type { APIRoute } from 'astro';
 
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
@@ -13,33 +19,30 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   try {
-    console.log('[DOWNLOAD-MIX] Proxying download for:', audioUrl);
+    log.info('[download-mix] Proxying download for:', audioUrl);
     
-    // Fetch the file from the CDN
     const response = await fetch(audioUrl);
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch: ${response.status}`);
+      throw new Error('Failed to fetch: ' + response.status);
     }
 
-    // Get the audio data
     const audioData = await response.arrayBuffer();
     
-    console.log('[DOWNLOAD-MIX] ✓ Successfully fetched', audioData.byteLength, 'bytes');
+    log.info('[download-mix] Fetched', audioData.byteLength, 'bytes');
 
-    // Return the file with proper headers to force download
     return new Response(audioData, {
       status: 200,
       headers: {
         'Content-Type': 'audio/mpeg',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': 'attachment; filename="' + filename + '"',
         'Content-Length': audioData.byteLength.toString(),
         'Cache-Control': 'no-cache'
       }
     });
 
   } catch (error) {
-    console.error('[DOWNLOAD-MIX] Error:', error);
+    log.error('[download-mix] Error:', error);
     return new Response('Failed to download file', { status: 500 });
   }
 };

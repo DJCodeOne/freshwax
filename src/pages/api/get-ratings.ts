@@ -1,7 +1,13 @@
 // src/pages/api/get-ratings.ts
-// Uses Firebase REST API - works on Cloudflare Pages (no Admin SDK)
+// Uses Firebase REST API - works on Cloudflare Pages
 import type { APIRoute } from 'astro';
 import { getDocument } from '../../lib/firebase-rest';
+
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
 
 export const prerender = false;
 
@@ -20,9 +26,8 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
 
-    console.log(`[get-ratings] Fetching ratings for: ${releaseId}`);
+    log.info('[get-ratings] Fetching ratings for:', releaseId);
 
-    // Fetch release document using REST API
     const release = await getDocument('releases', releaseId);
     
     if (!release) {
@@ -37,7 +42,7 @@ export const GET: APIRoute = async ({ request }) => {
 
     const ratings = release.ratings || { average: 0, count: 0, fiveStarCount: 0 };
 
-    console.log(`[get-ratings] ✓ Release: ${releaseId}`, ratings);
+    log.info('[get-ratings] Found:', ratings);
 
     return new Response(JSON.stringify({
       success: true,
@@ -49,12 +54,12 @@ export const GET: APIRoute = async ({ request }) => {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60, s-maxage=60' // Shorter cache for ratings
+        'Cache-Control': 'public, max-age=60, s-maxage=60'
       }
     });
 
   } catch (error) {
-    console.error('[get-ratings] Error:', error);
+    log.error('[get-ratings] Error:', error);
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to fetch ratings'

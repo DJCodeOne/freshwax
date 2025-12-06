@@ -1,0 +1,496 @@
+---
+// /src/pages/dj-mix-chart.astro
+// All-Time DJ Mix Chart - Ranked by engagement score
+// Rating = (Downloads x 3) + (Likes x 2) + (Comments x 1) + (Plays x 0.1)
+
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+// Rating calculation function
+function calculateRating(mix: any): number {
+  const downloads = mix.downloads || 0;
+  const likes = mix.likes || 0;
+  const comments = mix.commentCount || mix.comments?.length || 0;
+  const plays = mix.plays || 0;
+  
+  // Weighted score: downloads most valuable, then likes, comments, plays
+  const score = (downloads * 3) + (likes * 2) + (comments * 1) + (plays * 0.1);
+  return score;
+}
+
+// Convert score to 5-star rating based on engagement thresholds
+function scoreToStars(score: number): number {
+  if (score >= 100) return 5.0;
+  if (score >= 50) return 4.0 + ((score - 50) / 50);
+  if (score >= 25) return 3.0 + ((score - 25) / 25);
+  if (score >= 10) return 2.0 + ((score - 10) / 15);
+  if (score >= 1) return 1.0 + ((score - 1) / 9);
+  return 0;
+}
+
+let mixes: any[] = [];
+
+try {
+  // Get all mixes (no index required)
+  const mixesSnap = await db.collection('dj-mixes').get();
+  
+  // Filter to published/live mixes and calculate ratings
+  mixes = mixesSnap.docs
+    .map(doc => {
+      const data = { id: doc.id, ...doc.data() };
+      data.engagementScore = calculateRating(data);
+      return data;
+    })
+    .filter(mix => {
+      return mix.published === true || mix.status === 'live';
+    });
+  
+  // Add star rating based on engagement score
+  mixes = mixes.map(mix => ({
+    ...mix,
+    starRating: scoreToStars(mix.engagementScore)
+  }));
+  
+  // Sort by engagement score descending
+  mixes.sort((a, b) => b.engagementScore - a.engagementScore);
+  
+} catch (e) {
+  console.error('Error fetching mixes:', e);
+}
+
+const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num || 0);
+
+// Render stars
+const renderStars = (rating: number) => {
+  const fullStars = Math.floor(rating);
+  const hasHalf = rating % 1 >= 0.5;
+  const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
+  return '★'.repeat(fullStars) + (hasHalf ? '½' : '') + '☆'.repeat(emptyStars);
+};
+
+export const prerender = false;
+---
+
+<Layout title="DJ Mix Chart | Fresh Wax">
+  <Header />
+  
+  <main class="chart-main">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-content">
+        <span class="hero-badge">🏆 All-Time Chart</span>
+        <h1>DJ MIX CHART</h1>
+        <p class="subtitle-red">Top mixes ranked by engagement</p>
+      </div>
+    </section>
+
+    <div class="container">
+      {mixes.length === 0 ? (
+        <div class="empty-state">
+          <div class="empty-icon">🎧</div>
+          <h2>No mixes yet</h2>
+          <p>Be the first to upload a mix!</p>
+          <a href="/upload-mix" class="upload-btn">Upload Mix</a>
+        </div>
+      ) : (
+        <div class="chart-list">
+          {mixes.slice(0, 50).map((mix, index) => (
+            <a href={`/dj-mix/${mix.id}`} class={`chart-item ${index < 3 ? 'top-three' : ''}`}>
+              <div class="rank">
+                {index === 0 && <span class="medal gold">🥇</span>}
+                {index === 1 && <span class="medal silver">🥈</span>}
+                {index === 2 && <span class="medal bronze">🥉</span>}
+                {index > 2 && <span class="rank-number">{index + 1}</span>}
+              </div>
+              
+              <img 
+                src={mix.artworkUrl || mix.artwork_url || '/logo.webp'} 
+                alt={mix.title || mix.mixTitle}
+                class="artwork"
+              />
+              
+              <div class="mix-info">
+                <h2>{mix.title || mix.mixTitle}</h2>
+                <p class="dj-name">{mix.djName || mix.dj_name}</p>
+                <div class="mix-meta">
+                  <span>{mix.genre || 'Jungle'}</span>
+                  <span>•</span>
+                  <span>{mix.duration || mix.durationFormatted || '0:00'}</span>
+                </div>
+              </div>
+              
+              <div class="rating-section">
+                <div class="star-rating" title={`${mix.starRating.toFixed(1)} / 5`}>
+                  <span class="stars">{renderStars(mix.starRating)}</span>
+                  <span class="rating-value">{mix.starRating.toFixed(1)}</span>
+                </div>
+                <div class="score">
+                  {Math.round(mix.engagementScore)} pts
+                </div>
+              </div>
+              
+              <div class="stats">
+                <div class="stat">
+                  <span class="stat-value">{formatNumber(mix.plays || 0)}</span>
+                  <span class="stat-label">plays</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-value red">{formatNumber(mix.likes || 0)}</span>
+                  <span class="stat-label">likes</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-value">{formatNumber(mix.downloads || 0)}</span>
+                  <span class="stat-label">downloads</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-value">{mix.commentCount || mix.comments?.length || 0}</span>
+                  <span class="stat-label">comments</span>
+                </div>
+              </div>
+              
+              <div class="arrow">→</div>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .chart-main {
+    min-height: calc(100vh - 200px);
+    background: #f5f5f5;
+  }
+  
+  /* Hero Section */
+  .hero {
+    background: linear-gradient(135deg, #000 0%, #1a1a1a 100%);
+    color: #fff;
+    padding: 4rem 1.5rem;
+    text-align: center;
+  }
+  
+  .hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .hero-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #000;
+    padding: 0.5rem 1.25rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+  }
+  
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4rem;
+    margin: 0 0 0.5rem;
+    letter-spacing: 0.05em;
+  }
+  
+  .hero .subtitle-red {
+    font-size: 1.25rem;
+    color: #dc2626;
+    font-weight: 600;
+    margin: 0;
+  }
+  
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  
+  /* Empty State */
+  .empty-state {
+    background: #fff;
+    border: 2px solid #e5e5e5;
+    border-radius: 16px;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+  
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+  
+  .empty-state h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .empty-state p {
+    color: #666;
+    margin-bottom: 1.5rem;
+  }
+  
+  .upload-btn {
+    display: inline-block;
+    background: #000;
+    color: #fff;
+    padding: 0.875rem 2rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  
+  /* Chart List */
+  .chart-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .chart-item {
+    display: grid;
+    grid-template-columns: 60px 80px 1fr auto auto auto;
+    gap: 1.25rem;
+    align-items: center;
+    background: #fff;
+    border: 2px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+  }
+  
+  .chart-item:hover {
+    border-color: #000;
+    transform: translateX(4px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  
+  .chart-item.top-three {
+    border-width: 3px;
+  }
+  
+  .chart-item.top-three:nth-child(1) {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border-color: #fbbf24;
+  }
+  
+  .chart-item.top-three:nth-child(2) {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-color: #94a3b8;
+  }
+  
+  .chart-item.top-three:nth-child(3) {
+    background: linear-gradient(135deg, #fef3e7 0%, #fed7aa 100%);
+    border-color: #f97316;
+  }
+  
+  /* Rank */
+  .rank {
+    text-align: center;
+  }
+  
+  .medal {
+    font-size: 2rem;
+  }
+  
+  .rank-number {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    color: #ccc;
+  }
+  
+  /* Artwork */
+  .artwork {
+    width: 80px;
+    height: 80px;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 2px solid #e5e5e5;
+  }
+  
+  /* Mix Info */
+  .mix-info {
+    min-width: 0;
+  }
+  
+  .mix-info h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .dj-name {
+    font-size: 1rem;
+    color: #666;
+    margin: 0 0 0.375rem;
+  }
+  
+  .mix-meta {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: #888;
+  }
+  
+  /* Rating Section */
+  .rating-section {
+    text-align: center;
+    min-width: 100px;
+  }
+  
+  .star-rating {
+    margin-bottom: 0.25rem;
+  }
+  
+  .stars {
+    color: #fbbf24;
+    font-size: 1rem;
+    letter-spacing: 1px;
+  }
+  
+  .rating-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+    color: #000;
+    margin-left: 0.5rem;
+  }
+  
+  .score {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  
+  /* Stats */
+  .stats {
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .stat {
+    text-align: center;
+    min-width: 55px;
+  }
+  
+  .stat-value {
+    display: block;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+    color: #000;
+    line-height: 1;
+  }
+  
+  .stat-value.red {
+    color: #dc2626;
+  }
+  
+  .stat-label {
+    display: block;
+    font-size: 0.625rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-top: 0.125rem;
+  }
+  
+  /* Arrow */
+  .arrow {
+    font-size: 1.5rem;
+    color: #ccc;
+    transition: all 0.2s;
+  }
+  
+  .chart-item:hover .arrow {
+    color: #000;
+    transform: translateX(4px);
+  }
+  
+  /* Responsive */
+  @media (max-width: 900px) {
+    .chart-item {
+      grid-template-columns: 50px 70px 1fr auto;
+      gap: 1rem;
+    }
+    
+    .stats {
+      display: none;
+    }
+    
+    .arrow {
+      display: none;
+    }
+  }
+  
+  @media (max-width: 600px) {
+    .hero h1 {
+      font-size: 2.5rem;
+    }
+    
+    .rating-info {
+      gap: 0.75rem;
+    }
+    
+    .info-item {
+      font-size: 0.75rem;
+      padding: 0.375rem 0.75rem;
+    }
+    
+    .chart-item {
+      grid-template-columns: 40px 60px 1fr;
+      padding: 1rem;
+    }
+    
+    .rating-section {
+      display: none;
+    }
+    
+    .artwork {
+      width: 60px;
+      height: 60px;
+    }
+    
+    .mix-info h2 {
+      font-size: 1rem;
+    }
+    
+    .dj-name {
+      font-size: 0.875rem;
+    }
+    
+    .rank-number {
+      font-size: 1.25rem;
+    }
+    
+    .medal {
+      font-size: 1.5rem;
+    }
+  }
+</style>

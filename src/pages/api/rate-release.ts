@@ -1,9 +1,15 @@
 // src/pages/api/rate-release.ts
-// UPDATED: Uses Firebase as source of truth
+// Uses Firebase as source of truth
 
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
 
 // Initialize Firebase Admin
 if (!getApps().length) {
@@ -23,12 +29,11 @@ export const POST: APIRoute = async ({ request }) => {
     const body = await request.json();
     const { releaseId, rating, userId } = body;
 
-    console.log('[rate-release] Full request body:', body);
-    console.log('[rate-release] Received:', { releaseId, rating, userId });
+    log.info('[rate-release] Received:', releaseId, 'rating:', rating, 'user:', userId);
 
     // Validate rating first
     if (!releaseId || !rating || rating < 1 || rating > 5) {
-      console.log('[rate-release] Invalid rating:', { releaseId, rating });
+      log.info('[rate-release] Invalid rating:', releaseId, rating);
       return new Response(JSON.stringify({ 
         success: false,
         error: 'Invalid rating (must be 1-5)' 
@@ -40,7 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Check userId after other validations
     if (!userId) {
-      console.log('[rate-release] No userId provided');
+      log.info('[rate-release] No userId provided');
       return new Response(JSON.stringify({ 
         success: false,
         error: 'You must be logged in to rate releases' 
@@ -55,7 +60,7 @@ export const POST: APIRoute = async ({ request }) => {
     const releaseDoc = await releaseRef.get();
     
     if (!releaseDoc.exists) {
-      console.log('[rate-release] Release not found:', releaseId);
+      log.info('[rate-release] Release not found:', releaseId);
       return new Response(JSON.stringify({ 
         success: false,
         error: 'Release not found' 
@@ -65,7 +70,7 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const releaseData = releaseDoc.data();
+    const releaseData: any = releaseDoc.data();
 
     // Initialize ratings structure if needed
     if (!releaseData.ratings) {
@@ -81,7 +86,7 @@ export const POST: APIRoute = async ({ request }) => {
     
     if (existingRating) {
       // Update existing rating
-      console.log('[rate-release] Updating existing rating for user:', userId);
+      log.info('[rate-release] Updating existing rating for user:', userId);
       
       const currentAverage = releaseData.ratings.average || 0;
       const ratingsCount = releaseData.ratings.count || 0;
@@ -100,7 +105,7 @@ export const POST: APIRoute = async ({ request }) => {
       
     } else {
       // New rating
-      console.log('[rate-release] Adding new rating for user:', userId);
+      log.info('[rate-release] Adding new rating for user:', userId);
       
       const currentAverage = releaseData.ratings.average || 0;
       const ratingsCount = releaseData.ratings.count || 0;
@@ -124,11 +129,7 @@ export const POST: APIRoute = async ({ request }) => {
     releaseData.ratings.lastRatedAt = new Date().toISOString();
     releaseData.updatedAt = new Date().toISOString();
 
-    console.log('[rate-release] Updated rating:', {
-      average: releaseData.ratings.average,
-      count: releaseData.ratings.count,
-      fiveStarCount: releaseData.ratings.fiveStarCount
-    });
+    log.info('[rate-release] Updated:', releaseData.ratings.average, 'avg,', releaseData.ratings.count, 'count');
 
     // Save to Firebase
     await releaseRef.update({
@@ -136,7 +137,7 @@ export const POST: APIRoute = async ({ request }) => {
       updatedAt: releaseData.updatedAt
     });
 
-    console.log('[rate-release] ✓ Saved to Firebase');
+    log.info('[rate-release] Saved to Firebase');
 
     return new Response(JSON.stringify({
       success: true,
@@ -149,7 +150,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error('[rate-release] Error:', error);
+    log.error('[rate-release] Error:', error);
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to save rating',

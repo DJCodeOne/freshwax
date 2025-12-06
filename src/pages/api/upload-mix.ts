@@ -1,11 +1,16 @@
 // src/pages/api/upload-mix.ts
-// UPDATED: Handles genre, tracklist, duration, character limits
-// Uploads DJ mixes to R2 and Firebase
+// Uploads DJ mixes to R2 and Firebase with production-ready logging
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
 
 // R2 Configuration
 const R2_CONFIG = {
@@ -52,65 +57,41 @@ function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-// Parse tracklist into array
+// Parse tracklist into array - strips leading track numbers for consistent display
 function parseTracklist(tracklist: string): string[] {
   if (!tracklist || !tracklist.trim()) return [];
-  
-  return tracklist
-    .split('\n')
+  return tracklist.split('\n')
     .map(line => line.trim())
-    .filter(line => line.length > 0);
+    .filter(line => line.length > 0)
+    .map(line => {
+      // Remove leading track numbers in formats like: "1.", "01.", "1)", "1:", "1 -", "1-", etc.
+      return line.replace(/^\d+[\.\)\:\-]?\s*[-–—]?\s*/, '').trim();
+    })
+    .filter(line => line.length > 0); // Filter again in case stripping left empty lines
 }
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    console.log('=== DJ Mix Upload Started ===');
-    
     const formData = await request.formData();
     
-    // Get all form fields
+    // Get all form fields with character limits
     const audioFile = formData.get('audioFile') as File;
     const artworkFile = formData.get('artworkFile') as File | null;
-    const djName = (formData.get('djName') as string || '').trim().slice(0, 15); // Max 15 chars
-    const mixTitle = (formData.get('mixTitle') as string || '').trim().slice(0, 20); // Max 20 chars
-    const mixDescription = (formData.get('mixDescription') as string || '').trim().slice(0, 150); // Max 150 chars (shout outs)
-    const genre = (formData.get('genre') as string || 'Jungle').trim().slice(0, 30); // Max 30 chars
-    const tracklistRaw = (formData.get('tracklist') as string || '').trim().slice(0, 1500); // Max 1500 chars
-    const durationSecondsStr = formData.get('durationSeconds') as string || '0';
-    const durationSeconds = parseInt(durationSecondsStr, 10) || 0;
+    const djName = (formData.get('djName') as string || '').trim().slice(0, 15);
+    const mixTitle = (formData.get('mixTitle') as string || '').trim().slice(0, 20);
+    const mixDescription = (formData.get('mixDescription') as string || '').trim().slice(0, 150);
+    const genre = (formData.get('genre') as string || 'Jungle').trim().slice(0, 30);
+    const tracklistRaw = (formData.get('tracklist') as string || '').trim().slice(0, 1500);
+    const durationSeconds = parseInt(formData.get('durationSeconds') as string || '0', 10) || 0;
+    const userId = (formData.get('userId') as string || '').trim();
 
-    // Parse tracklist
     const tracklistArray = parseTracklist(tracklistRaw);
 
-    console.log('Form data:', { 
-      djName, 
-      mixTitle,
-      genre,
-      durationSeconds,
-      durationFormatted: formatDuration(durationSeconds),
-      tracklistTracks: tracklistArray.length,
-      descriptionLength: mixDescription.length,
-      audioSize: audioFile?.size ? `${(audioFile.size / 1024 / 1024).toFixed(2)} MB` : 'N/A',
-      hasArtwork: !!artworkFile
-    });
-
     // Validate required fields
-    if (!audioFile || !djName || !mixTitle) {
-      console.error('✗ Missing required fields');
+    if (!audioFile || !djName || !mixTitle || !genre) {
       return new Response(JSON.stringify({ 
         success: false,
-        error: 'Missing required fields (djName, mixTitle, or audioFile)' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    if (!genre) {
-      console.error('✗ Missing genre');
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'Genre is required' 
+        error: 'Missing required fields (djName, mixTitle, genre, or audioFile)' 
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -124,14 +105,9 @@ export const POST: APIRoute = async ({ request }) => {
     const mixId = `${sanitizedDjName}_${sanitizedMixTitle}_${timestamp}`;
     const folderPath = `dj-mixes/${mixId}`;
 
-    console.log('Generated mix ID:', mixId);
-    console.log('R2 folder path:', folderPath);
+    log.info(`[upload-mix] Uploading: ${djName} - ${mixTitle} (${(audioFile.size / 1024 / 1024).toFixed(2)} MB)`);
 
-    // ============================================
-    // UPLOAD AUDIO TO R2
-    // ============================================
-    console.log('📤 Uploading audio to R2...');
-    
+    // Upload audio to R2
     const audioBuffer = await audioFile.arrayBuffer();
     const audioKey = `${folderPath}/audio.mp3`;
     
@@ -146,16 +122,11 @@ export const POST: APIRoute = async ({ request }) => {
     );
 
     const audioUrl = `${R2_CONFIG.publicDomain}/${audioKey}`;
-    console.log('✓ Audio uploaded:', audioUrl);
 
-    // ============================================
-    // UPLOAD ARTWORK TO R2 (or use default)
-    // ============================================
+    // Upload artwork to R2 (or use default)
     let artworkUrl: string;
     
     if (artworkFile && artworkFile.size > 0) {
-      console.log('📤 Uploading artwork to R2...');
-      
       const artworkBuffer = await artworkFile.arrayBuffer();
       const artworkExt = artworkFile.name.split('.').pop() || 'jpg';
       const artworkKey = `${folderPath}/artwork.${artworkExt}`;
@@ -171,85 +142,51 @@ export const POST: APIRoute = async ({ request }) => {
       );
 
       artworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
-      console.log('✓ Artwork uploaded:', artworkUrl);
     } else {
-      console.log('Using default logo for artwork');
       artworkUrl = '/logo.webp';
     }
 
-    // ============================================
-    // SAVE TO FIREBASE (dj-mixes collection)
-    // ============================================
-    console.log('💾 Saving to Firebase dj-mixes collection...');
-
+    // Save to Firebase
     const mixData = {
-      // Core identifiers
       id: mixId,
-      
-      // DJ & Mix info
+      userId: userId,
       dj_name: djName,
-      djName: djName, // Alias for compatibility
+      djName: djName,
       title: mixTitle,
-      mixTitle: mixTitle, // Alias
-      
-      // Genre
+      mixTitle: mixTitle,
       genre: genre,
-      
-      // Description (Shout Outs)
       description: mixDescription,
-      shoutOuts: mixDescription, // Alias
-      
-      // Tracklist
-      tracklist: tracklistRaw, // Raw string version
-      tracklistArray: tracklistArray, // Parsed array version
+      shoutOuts: mixDescription,
+      tracklist: tracklistRaw,
+      tracklistArray: tracklistArray,
       trackCount: tracklistArray.length,
-      
-      // Duration
       durationSeconds: durationSeconds,
       durationFormatted: formatDuration(durationSeconds),
-      duration: formatDuration(durationSeconds), // Alias
-      
-      // Media URLs
+      duration: formatDuration(durationSeconds),
       audio_url: audioUrl,
-      audioUrl: audioUrl, // Alias
+      audioUrl: audioUrl,
       artwork_url: artworkUrl,
-      artworkUrl: artworkUrl, // Alias
-      
-      // Upload info
+      artworkUrl: artworkUrl,
       upload_date: new Date().toISOString(),
-      uploadedAt: new Date().toISOString(), // Alias
+      uploadedAt: new Date().toISOString(),
       folder_path: folderPath,
       r2FolderName: mixId,
-      
-      // Stats
       plays: 0,
       downloads: 0,
       likes: 0,
       commentCount: 0,
-      
-      // Status (LIVE immediately - no approval needed)
+      ratings: { count: 0, total: 0, average: 0 },
       published: true,
       status: 'live',
       approved: true,
-      
-      // Storage
       storage: 'r2',
-      
-      // Timestamps
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    // Save to dj-mixes collection in Firebase
     await db.collection('dj-mixes').doc(mixId).set(mixData);
     
-    console.log('✓ Saved to Firebase collection: dj-mixes');
-    console.log('✓ Document ID:', mixId);
-    console.log('✓ Genre:', genre);
-    console.log('✓ Duration:', formatDuration(durationSeconds), `(${durationSeconds}s)`);
-    console.log('✓ Tracklist tracks:', tracklistArray.length);
-    console.log('✓ Status: LIVE (published immediately)');
-    console.log('=== DJ Mix Upload Complete ===');
+    log.info(`[upload-mix] Success: ${mixId} (${genre}, ${formatDuration(durationSeconds)}, ${tracklistArray.length} tracks)`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -269,8 +206,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error('=== Upload Error ===');
-    console.error(error);
+    log.error('[upload-mix] Error:', error);
     
     return new Response(JSON.stringify({
       success: false,

@@ -1,7 +1,13 @@
 // src/pages/api/get-dj-mix.ts
-// Uses Firebase REST API - works on Cloudflare Pages (no Admin SDK)
+// Uses Firebase REST API - works on Cloudflare Pages
 import type { APIRoute } from 'astro';
 import { getDocument } from '../../lib/firebase-rest';
+
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
 
 export const prerender = false;
 
@@ -19,14 +25,13 @@ export const GET: APIRoute = async ({ request }) => {
     });
   }
   
-  console.log(`[GET-DJ-MIX] Fetching mix: ${mixId}`);
+  log.info('[get-dj-mix] Fetching mix:', mixId);
   
   try {
-    // Fetch single document using REST API
     const mix = await getDocument('dj-mixes', mixId);
     
     if (!mix) {
-      console.log(`[GET-DJ-MIX] ✗ Not found: ${mixId}`);
+      log.info('[get-dj-mix] Not found:', mixId);
       return new Response(JSON.stringify({ 
         success: false,
         error: 'Mix not found' 
@@ -36,7 +41,6 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
     
-    // Normalize the mix data
     const normalized = {
       id: mix.id,
       title: mix.title || mix.name || 'Untitled Mix',
@@ -55,11 +59,7 @@ export const GET: APIRoute = async ({ request }) => {
       ...mix
     };
     
-    console.log(`[GET-DJ-MIX] ✓ Returning:`, {
-      id: normalized.id,
-      title: normalized.title,
-      artist: normalized.artist
-    });
+    log.info('[get-dj-mix] Returning:', normalized.title);
     
     return new Response(JSON.stringify({ 
       success: true,
@@ -74,7 +74,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
     
   } catch (error) {
-    console.error('[GET-DJ-MIX] Error:', error);
+    log.error('[get-dj-mix] Error:', error);
     return new Response(JSON.stringify({ 
       success: false,
       error: 'Failed to fetch mix',

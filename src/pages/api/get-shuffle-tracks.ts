@@ -1,53 +1,113 @@
 // src/pages/api/get-shuffle-tracks.ts
-// Uses Firebase REST API - works on Cloudflare Pages
 import type { APIRoute } from 'astro';
-import { 
-  getLiveReleases, 
-  extractTracksFromReleases, 
-  shuffleArray 
-} from '../../lib/firebase-rest';
+import { getLiveReleases, extractTracksFromReleases, shuffleArray } from '../../lib/firebase-rest';
+
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
 
 export const prerender = false;
+
+let pendingRequest: Promise<any> | null = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000;
+let cachedResult: any = null;
 
 export const GET: APIRoute = async ({ request }) => {
   const startTime = Date.now();
   
   try {
-    console.log('[get-shuffle-tracks] Fetching via REST API...');
+    if (cachedResult && (Date.now() - lastFetchTime) < CACHE_DURATION) {
+      log.info('[get-shuffle-tracks] Returning cached result');
+      
+      const reshuffled = shuffleArray([...cachedResult.tracks]).slice(0, 30);
+      
+      return new Response(JSON.stringify({
+        success: true,
+        tracks: reshuffled,
+        meta: {
+          ...cachedResult.meta,
+          cached: true,
+          reshuffled: true
+        }
+      }), {
+        status: 200,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=60, s-maxage=300'
+        }
+      });
+    }
     
-    // Fetch releases using REST API (no Admin SDK)
-    const releases = await getLiveReleases(30);
-    console.log(`[get-shuffle-tracks] Found ${releases.length} releases`);
+    if (pendingRequest) {
+      log.info('[get-shuffle-tracks] Waiting for pending request');
+      const result = await pendingRequest;
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
     
-    // Extract tracks with audio URLs
-    const allTracks = extractTracksFromReleases(releases);
-    console.log(`[get-shuffle-tracks] Extracted ${allTracks.length} tracks with audio`);
+    pendingRequest = (async () => {
+      log.info('[get-shuffle-tracks] Fetching fresh data');
+      
+      const releases = await getLiveReleases(50);
+      const allTracks = extractTracksFromReleases(releases);
+      
+      cachedResult = {
+        tracks: allTracks,
+        meta: {
+          total: allTracks.length,
+          fetchTime: Date.now() - startTime
+        }
+      };
+      lastFetchTime = Date.now();
+      
+      const shuffled = shuffleArray([...allTracks]).slice(0, 30);
+      
+      return {
+        success: true,
+        tracks: shuffled,
+        meta: {
+          total: allTracks.length,
+          returned: shuffled.length,
+          fetchTime: Date.now() - startTime,
+          cached: false
+        }
+      };
+    })();
     
-    // Shuffle and limit
-    const shuffled = shuffleArray(allTracks);
-    const result = shuffled.slice(0, 30);
+    const result = await pendingRequest;
+    pendingRequest = null;
     
-    const duration = Date.now() - startTime;
-    console.log(`[get-shuffle-tracks] ✓ Returning ${result.length} tracks (${duration}ms)`);
+    log.info('[get-shuffle-tracks] Returning', result.tracks.length, 'tracks');
     
-    return new Response(JSON.stringify({
-      success: true,
-      tracks: result,
-      meta: {
-        total: allTracks.length,
-        returned: result.length,
-        fetchTime: duration
-      }
-    }), {
+    return new Response(JSON.stringify(result), {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300, s-maxage=300' // 5 min cache
+        'Cache-Control': 'public, max-age=60, s-maxage=300'
       }
     });
     
   } catch (error: any) {
-    console.error('[get-shuffle-tracks] Error:', error);
+    pendingRequest = null;
+    log.error('[get-shuffle-tracks] Error:', error);
+    
+    if (cachedResult) {
+      log.info('[get-shuffle-tracks] Returning stale cache');
+      const reshuffled = shuffleArray([...cachedResult.tracks]).slice(0, 30);
+      return new Response(JSON.stringify({
+        success: true,
+        tracks: reshuffled,
+        meta: { ...cachedResult.meta, stale: true }
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
     
     return new Response(JSON.stringify({
       success: false,

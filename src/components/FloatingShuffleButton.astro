@@ -1,0 +1,153 @@
+---
+// src/components/FloatingShuffleButton.astro
+// Floating shuffle button for main pages only
+---
+
+<button 
+  id="floating-shuffle-btn" 
+  class="floating-shuffle-btn"
+  title="Shuffle Play"
+>
+  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+  </svg>
+</button>
+
+<style>
+  .floating-shuffle-btn {
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    border: 3px solid white;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 999;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s ease;
+  }
+  
+  .floating-shuffle-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 30px rgba(220, 38, 38, 0.5);
+  }
+  
+  .floating-shuffle-btn:active {
+    transform: scale(0.95);
+  }
+  
+  .floating-shuffle-btn.active {
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    animation: pulse-glow 2s infinite;
+  }
+  
+  .floating-shuffle-btn.loading {
+    opacity: 0.7;
+    cursor: wait;
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 4px 20px rgba(22, 163, 74, 0.4); }
+    50% { box-shadow: 0 4px 30px rgba(22, 163, 74, 0.7); }
+  }
+  
+  /* Move up when mini player is visible */
+  body:has(#mini-player.visible) .floating-shuffle-btn {
+    bottom: 170px;
+  }
+  
+  @media (max-width: 640px) {
+    .floating-shuffle-btn {
+      width: 48px;
+      height: 48px;
+      bottom: 90px;
+      right: 16px;
+    }
+    
+    body:has(#mini-player.visible) .floating-shuffle-btn {
+      bottom: 160px;
+    }
+  }
+</style>
+
+<script>
+  // Wait for GlobalAudioPlayer to initialize
+  function initFloatingShuffleButton() {
+    var floatingShuffleBtn = document.getElementById('floating-shuffle-btn');
+    
+    if (!floatingShuffleBtn) return;
+    
+    floatingShuffleBtn.onclick = function() {
+      // Stop any preview clips first
+      if (window.AudioManager) {
+        window.AudioManager.stopAllTracklistPreviews();
+        window.AudioManager.shouldResumeAfterPreview = false;
+      }
+      
+      // Check if functions are available
+      if (window.FreshWaxPlayer && window.FreshWaxPlayer.isShuffleMode) {
+        // Already in shuffle mode - play next random track
+        if (typeof window.playNextShuffleTrack === 'function') {
+          window.playNextShuffleTrack();
+        } else {
+          // Fallback: click mini player shuffle button
+          var miniBtn = document.getElementById('mini-shuffle-btn');
+          if (miniBtn) miniBtn.click();
+        }
+      } else {
+        // Start shuffle
+        if (typeof window.startShuffle === 'function') {
+          window.startShuffle();
+        } else {
+          // Fallback: click mini player shuffle button
+          var miniBtn = document.getElementById('mini-shuffle-btn');
+          if (miniBtn) miniBtn.click();
+        }
+      }
+    };
+    
+    // Sync button state with shuffle mode
+    function syncButtonState() {
+      var isShuffleMode = window.FreshWaxPlayer && window.FreshWaxPlayer.isShuffleMode === true;
+      var miniPlayer = document.getElementById('mini-player');
+      var isPlaying = miniPlayer && miniPlayer.classList.contains('playing');
+      
+      // Button is green only if shuffle mode is active AND currently playing
+      if (isShuffleMode && isPlaying) {
+        floatingShuffleBtn.classList.add('active');
+      } else {
+        floatingShuffleBtn.classList.remove('active');
+      }
+      
+      // Sync loading state
+      var miniShuffleBtn = document.getElementById('mini-shuffle-btn');
+      if (miniShuffleBtn && miniShuffleBtn.classList.contains('loading')) {
+        floatingShuffleBtn.classList.add('loading');
+      } else {
+        floatingShuffleBtn.classList.remove('loading');
+      }
+    }
+    
+    // Check state regularly
+    setInterval(syncButtonState, 300);
+    
+    // Also sync immediately
+    syncButtonState();
+  }
+  
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFloatingShuffleButton);
+  } else {
+    initFloatingShuffleButton();
+  }
+  
+  // Also reinitialize after page transitions
+  document.addEventListener('astro:page-load', initFloatingShuffleButton);
+</script>

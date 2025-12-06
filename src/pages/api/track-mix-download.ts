@@ -1,11 +1,16 @@
 // src/pages/api/track-mix-download.ts
-// OPTIMIZED: Tracks DJ mix downloads in Firebase using atomic increments
+// Tracks DJ mix downloads using atomic increments
 
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -31,13 +36,11 @@ export const POST: APIRoute = async ({ request }) => {
 
     const mixRef = db.collection('dj-mixes').doc(mixId);
 
-    // Use atomic increment
     await mixRef.update({
       downloads: FieldValue.increment(1),
       last_downloaded_date: new Date().toISOString()
     });
 
-    // Get updated document
     const mixDoc = await mixRef.get();
     
     if (!mixDoc.exists) {
@@ -49,7 +52,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const mixData = mixDoc.data();
 
-    console.log(`[TRACK-DOWNLOAD] ✓ Mix ${mixId} download count: ${mixData?.downloads || 0}`);
+    log.info('[track-mix-download] Mix', mixId, 'downloads:', mixData?.downloads || 0);
 
     return new Response(JSON.stringify({
       success: true,
@@ -60,7 +63,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error('[TRACK-DOWNLOAD] Error tracking download:', error);
+    log.error('[track-mix-download] Error:', error);
     return new Response(JSON.stringify({
       error: 'Failed to track download',
       details: error instanceof Error ? error.message : 'Unknown error'

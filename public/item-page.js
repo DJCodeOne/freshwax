@@ -2,6 +2,156 @@
 // FIXED: Uses lazy audio creation like ReleasePlate.astro
 // Audio elements are created on first play click, not pre-rendered
 
+// ========== CART HELPER FUNCTIONS ==========
+function getCustomerId() {
+  var cookies = document.cookie.split(';');
+  for (var i = 0; i < cookies.length; i++) {
+    var cookie = cookies[i].trim();
+    var parts = cookie.split('=');
+    if (parts[0] === 'customerId' && parts[1]) {
+      return parts[1];
+    }
+  }
+  return null;
+}
+
+function getCartKey() {
+  var customerId = getCustomerId();
+  if (!customerId) return null;
+  return 'freshwax_cart_' + customerId;
+}
+
+function getCart() {
+  var key = getCartKey();
+  if (!key) return { items: [] };
+  
+  try {
+    var stored = localStorage.getItem(key);
+    if (stored) {
+      var data = JSON.parse(stored);
+      return data.items ? data : { items: data };
+    }
+  } catch (e) {
+    console.error('[Cart] Error parsing cart:', e);
+  }
+  
+  return { items: [] };
+}
+
+function saveCartData(items) {
+  var key = getCartKey();
+  if (!key) return;
+  
+  var cartData = {
+    items: items,
+    updatedAt: new Date().toISOString()
+  };
+  localStorage.setItem(key, JSON.stringify(cartData));
+  window.dispatchEvent(new CustomEvent('cart-updated', { detail: cartData }));
+  window.dispatchEvent(new CustomEvent('cartUpdated', { detail: cartData }));
+  updateCartBadgeNow();
+}
+
+function addItemToCart(item) {
+  var customerId = getCustomerId();
+  
+  if (!customerId) {
+    window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+    return false;
+  }
+  
+  var cart = getCart();
+  var items = cart.items || [];
+  
+  var existingIndex = -1;
+  for (var i = 0; i < items.length; i++) {
+    var existing = items[i];
+    if (existing.id === item.id && 
+        existing.type === item.type &&
+        existing.trackId === item.trackId) {
+      existingIndex = i;
+      break;
+    }
+  }
+  
+  if (existingIndex >= 0) {
+    items[existingIndex].quantity = (items[existingIndex].quantity || 1) + 1;
+  } else {
+    items.push({
+      id: item.id,
+      releaseId: item.id, // For vinyl stock updates
+      trackId: item.trackId || null,
+      type: item.type,
+      format: item.type,
+      name: item.name,
+      title: item.title,
+      artist: item.artist,
+      price: item.price,
+      image: item.image,
+      artwork: item.image,
+      quantity: 1
+    });
+  }
+  
+  saveCartData(items);
+  console.log('[Cart] Item added:', item.name, 'Total items:', items.length);
+  return true;
+}
+
+function updateCartBadgeNow() {
+  var cart = getCart();
+  var items = cart.items || [];
+  var count = 0;
+  for (var i = 0; i < items.length; i++) {
+    count += items[i].quantity || 1;
+  }
+  
+  var desktopCount = document.getElementById('cart-count');
+  var mobileCount = document.getElementById('cart-count-mobile');
+  
+  [desktopCount, mobileCount].forEach(function(el) {
+    if (el) {
+      if (count > 0) {
+        el.textContent = count.toString();
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    }
+  });
+  
+  // Also update data-cart-count elements
+  document.querySelectorAll('[data-cart-count]').forEach(function(el) {
+    el.textContent = count;
+    el.style.display = count > 0 ? '' : 'none';
+  });
+  
+  console.log('[Cart] Badge updated, count:', count);
+}
+
+function hasFullReleaseInCart(releaseId) {
+  var cart = getCart();
+  var items = cart.items || [];
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].id === releaseId && (items[i].type === 'digital' || items[i].type === 'vinyl')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function hasTrackInCart(releaseId, trackId) {
+  var cart = getCart();
+  var items = cart.items || [];
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].id === releaseId && items[i].trackId === trackId) {
+      return true;
+    }
+  }
+  return false;
+}
+// ========== END CART HELPER FUNCTIONS ==========
+
 // Utility functions
 function sanitizeComment(text) {
   text = text.replace(/https?:\/\/[^\s]+/gi, '[link removed]');
@@ -83,6 +233,10 @@ function initPlayer() {
   
   // Initialize all waveforms
   waveformCanvases.forEach(canvas => {
+    // Skip if already initialized
+    if (canvas.hasAttribute('data-waveform-init')) return;
+    canvas.setAttribute('data-waveform-init', 'true');
+    
     setTimeout(() => {
       drawWaveform(canvas, 0, false);
     }, 100);
@@ -101,6 +255,13 @@ function initPlayer() {
   
   // Play buttons with LAZY AUDIO CREATION
   playButtons.forEach(button => {
+    // FIXED: Prevent duplicate event listeners
+    if (button.hasAttribute('data-player-init')) {
+      console.log('[Player] Button already initialized, skipping');
+      return;
+    }
+    button.setAttribute('data-player-init', 'true');
+    
     const trackId = button.getAttribute('data-track-id');
     const releaseId = button.getAttribute('data-release-id');
     const previewUrl = button.getAttribute('data-preview-url');
@@ -234,6 +395,9 @@ function initPlayer() {
 async function initRatings() {
   const releaseId = document.querySelector('[data-release-id]')?.getAttribute('data-release-id');
   if (!releaseId) return;
+  
+  // Prevent duplicate initialization
+  if (document.querySelector('.rating-star[data-rating-init]')) return;
 
   try {
     const res = await fetch(`/api/get-ratings?releaseId=${releaseId}`);
@@ -261,6 +425,10 @@ async function initRatings() {
   }
 
   document.querySelectorAll('.rating-star').forEach(star => {
+    // Prevent duplicate listeners
+    if (star.hasAttribute('data-rating-init')) return;
+    star.setAttribute('data-rating-init', 'true');
+    
     star.addEventListener('click', async () => {
       const releaseId = star.getAttribute('data-release-id');
       const rating = parseInt(star.getAttribute('data-star') || '0');
@@ -269,7 +437,7 @@ async function initRatings() {
       
       if (!auth || !auth.currentUser) {
         alert('Please log in to rate releases. You can log in as either a customer or artist.');
-        window.location.href = `/customer/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
         return;
       }
       
@@ -318,11 +486,15 @@ async function initComments() {
     return;
   }
 
+  // Prevent duplicate initialization
+  const submitBtn = document.getElementById('submit-comment-btn');
+  if (submitBtn?.hasAttribute('data-comments-init')) return;
+  if (submitBtn) submitBtn.setAttribute('data-comments-init', 'true');
+
   console.log('[Comments] Initializing for release:', releaseId);
 
   const commentText = document.getElementById('comment-text');
   const commentUsername = document.getElementById('comment-username');
-  const submitBtn = document.getElementById('submit-comment-btn');
   const charCount = document.getElementById('char-count');
   const commentsList = document.getElementById('comments-list');
 
@@ -452,6 +624,10 @@ async function initComments() {
   }
 
   document.querySelectorAll('.emoji-btn').forEach(btn => {
+    // Prevent duplicate listeners
+    if (btn.hasAttribute('data-emoji-init')) return;
+    btn.setAttribute('data-emoji-init', 'true');
+    
     btn.addEventListener('click', () => {
       const emoji = btn.getAttribute('data-emoji');
       if (commentText && emoji) {
@@ -485,7 +661,7 @@ async function initComments() {
       
       if (!auth || !auth.currentUser) {
         alert('Please log in to comment. You can log in as either a customer or artist.');
-        window.location.href = `/customer/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
         return;
       }
       
@@ -552,6 +728,9 @@ async function initComments() {
 
 function initShare() {
   const shareModal = document.getElementById('share-modal');
+  if (!shareModal || shareModal.hasAttribute('data-share-init')) return;
+  shareModal.setAttribute('data-share-init', 'true');
+  
   const shareModalClose = document.getElementById('share-modal-close');
   const shareModalBackdrop = document.getElementById('share-modal-backdrop');
   const shareUrlInput = document.getElementById('share-url-input');
@@ -561,6 +740,9 @@ function initShare() {
   const shareModalArtist = document.getElementById('share-modal-artist');
   
   document.querySelectorAll('.share-button').forEach(button => {
+    if (button.hasAttribute('data-share-btn-init')) return;
+    button.setAttribute('data-share-btn-init', 'true');
+    
     button.addEventListener('click', () => {
       const releaseId = button.getAttribute('data-release-id');
       const title = button.getAttribute('data-title');
@@ -609,39 +791,170 @@ function initShare() {
   });
 }
 
+function initBio() {
+  const bioModal = document.getElementById('bio-modal');
+  if (!bioModal || bioModal.hasAttribute('data-bio-init')) return;
+  bioModal.setAttribute('data-bio-init', 'true');
+  
+  const bioModalClose = document.getElementById('bio-modal-close');
+  const bioModalBackdrop = document.getElementById('bio-modal-backdrop');
+  const bioModalArtist = document.getElementById('bio-modal-artist');
+  const bioModalContent = document.getElementById('bio-modal-content');
+  
+  document.querySelectorAll('.bio-button').forEach(button => {
+    if (button.hasAttribute('data-bio-btn-init')) return;
+    button.setAttribute('data-bio-btn-init', 'true');
+    
+    button.addEventListener('click', () => {
+      if (button.disabled) return;
+      
+      const artist = button.getAttribute('data-artist');
+      const bio = button.getAttribute('data-bio');
+      
+      if (!bio) return;
+      
+      if (bioModalArtist) bioModalArtist.textContent = artist || '';
+      if (bioModalContent) bioModalContent.textContent = bio || '';
+      
+      bioModal?.classList.remove('hidden');
+    });
+  });
+  
+  const closeModal = () => {
+    bioModal?.classList.add('hidden');
+  };
+  
+  bioModalClose?.addEventListener('click', closeModal);
+  bioModalBackdrop?.addEventListener('click', closeModal);
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && bioModal && !bioModal.classList.contains('hidden')) {
+      closeModal();
+    }
+  });
+}
+
 async function loadSuggestions() {
-  const releaseId = document.querySelector('[data-release-id]')?.getAttribute('data-release-id');
+  const metaDiv = document.getElementById('release-meta');
   const carousel = document.getElementById('suggestions-carousel');
   
-  if (!carousel || !releaseId) return;
+  if (!carousel || !metaDiv) return;
+  if (carousel.hasAttribute('data-suggestions-init')) return;
+  carousel.setAttribute('data-suggestions-init', 'true');
+
+  // Get current release info from meta div
+  const releaseId = metaDiv.getAttribute('data-release-id') || '';
+  const currentArtist = metaDiv.getAttribute('data-artist-name') || '';
+  const currentLabel = metaDiv.getAttribute('data-label-name') || '';
+  const currentGenre = metaDiv.getAttribute('data-genre') || '';
 
   try {
     const response = await fetch('/api/get-releases');
     const data = await response.json();
     
     if (data.success && data.releases) {
-      const suggestions = data.releases
-        .filter((r) => r.id !== releaseId && (r.status === 'live' || r.published))
-        .slice(0, 8);
+      // Filter out current release and non-live releases
+      const availableReleases = data.releases.filter(
+        (r) => r.id !== releaseId && (r.status === 'live' || r.published)
+      );
       
-      carousel.innerHTML = suggestions.map((release) => `
-        <a href="/item/${release.id}" class="suggestion-card block bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-700 transition-all border-2 border-gray-700 hover:border-red-600">
-          <img 
-            src="${release.coverArtUrl || '/logo.webp'}" 
-            alt="${release.releaseName}"
-            class="w-full aspect-square object-cover"
-            onerror="this.src='/logo.webp'"
-          />
-          <div class="p-3">
-            <p class="font-bold text-white text-sm truncate">${release.releaseName || 'Untitled'}</p>
-            <p class="text-gray-400 text-xs truncate">${release.artistName || 'Unknown Artist'}</p>
-            <p class="text-red-500 font-bold text-sm mt-1">£${(release.trackPrice * (release.tracks?.length || 1)).toFixed(2)}</p>
-          </div>
-        </a>
-      `).join('');
+      // Score releases by relevance
+      const scoredReleases = availableReleases.map((release) => {
+        let score = 0;
+        
+        // Same artist = highest priority (+100)
+        if (currentArtist && release.artistName && 
+            release.artistName.toLowerCase() === currentArtist.toLowerCase()) {
+          score += 100;
+        }
+        
+        // Same label = high priority (+50)
+        const releaseLabel = release.labelName || release.recordLabel || release.copyrightHolder || '';
+        if (currentLabel && releaseLabel && 
+            releaseLabel.toLowerCase() === currentLabel.toLowerCase()) {
+          score += 50;
+        }
+        
+        // Same genre = medium priority (+25)
+        if (currentGenre && release.genre && 
+            release.genre.toLowerCase() === currentGenre.toLowerCase()) {
+          score += 25;
+        }
+        
+        // Recency bonus (newer releases get slight boost)
+        const releaseDate = new Date(release.releaseDate || release.publishedAt || release.createdAt || 0);
+        const daysSinceRelease = (Date.now() - releaseDate.getTime()) / (1000 * 60 * 60 * 24);
+        if (daysSinceRelease < 30) score += 10;
+        else if (daysSinceRelease < 90) score += 5;
+        
+        return { ...release, relevanceScore: score };
+      });
+      
+      // Sort by score (highest first), then by date
+      scoredReleases.sort((a, b) => {
+        if (b.relevanceScore !== a.relevanceScore) {
+          return b.relevanceScore - a.relevanceScore;
+        }
+        // If same score, sort by date (newest first)
+        const dateA = new Date(a.releaseDate || a.publishedAt || 0).getTime();
+        const dateB = new Date(b.releaseDate || b.publishedAt || 0).getTime();
+        return dateB - dateA;
+      });
+      
+      // Take top 8 suggestions
+      const suggestions = scoredReleases.slice(0, 8);
+      
+      // Group by category for display labels
+      const getMatchLabel = (release) => {
+        if (currentArtist && release.artistName && 
+            release.artistName.toLowerCase() === currentArtist.toLowerCase()) {
+          return 'More from Artist';
+        }
+        const releaseLabel = release.labelName || release.recordLabel || release.copyrightHolder || '';
+        if (currentLabel && releaseLabel && 
+            releaseLabel.toLowerCase() === currentLabel.toLowerCase()) {
+          return 'Same Label';
+        }
+        if (currentGenre && release.genre && 
+            release.genre.toLowerCase() === currentGenre.toLowerCase()) {
+          return 'Similar Style';
+        }
+        return '';
+      };
+      
+      carousel.innerHTML = suggestions.map((release) => {
+        const matchLabel = getMatchLabel(release);
+        const price = release.pricePerSale || (release.trackPrice * (release.tracks?.length || 1)) || 0;
+        
+        return `
+          <a href="/item/${release.id}" class="suggestion-card flex-shrink-0 w-36 md:w-44 block bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-700 transition-all border-2 border-gray-700 hover:border-red-600 snap-start">
+            <div class="relative">
+              <img 
+                src="${release.coverArtUrl || '/logo.webp'}" 
+                alt="${release.releaseName}"
+                class="w-full aspect-square object-cover"
+                loading="lazy"
+                onerror="this.src='/logo.webp'"
+              />
+              ${matchLabel ? `<span class="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">${matchLabel}</span>` : ''}
+            </div>
+            <div class="p-3">
+              <p class="font-bold text-white text-sm truncate" title="${release.releaseName || 'Untitled'}">${release.releaseName || 'Untitled'}</p>
+              <p class="text-gray-400 text-xs truncate" title="${release.artistName || 'Unknown Artist'}">${release.artistName || 'Unknown Artist'}</p>
+              <p class="text-red-500 font-bold text-sm mt-1">£${price.toFixed(2)}</p>
+            </div>
+          </a>
+        `;
+      }).join('');
+      
+      // If no suggestions, show message
+      if (suggestions.length === 0) {
+        carousel.innerHTML = '<p class="text-gray-400 text-center py-8 w-full">No recommendations available yet</p>';
+      }
     }
   } catch (error) {
     console.error('[Suggestions] Error loading:', error);
+    carousel.innerHTML = '<p class="text-gray-400 text-center py-8 w-full">Could not load recommendations</p>';
   }
 }
 
@@ -651,6 +964,8 @@ function initCarousel() {
   const nextBtn = document.getElementById('carousel-next');
   
   if (!carousel || !prevBtn || !nextBtn) return;
+  if (prevBtn.hasAttribute('data-carousel-init')) return;
+  prevBtn.setAttribute('data-carousel-init', 'true');
 
   prevBtn.addEventListener('click', () => {
     carousel.scrollBy({ left: -220, behavior: 'smooth' });
@@ -666,17 +981,70 @@ function initScrollToComments() {
   const commentsSection = document.getElementById('comments-section');
   
   if (!scrollBtn || !commentsSection) return;
+  if (scrollBtn.hasAttribute('data-scroll-init')) return;
+  scrollBtn.setAttribute('data-scroll-init', 'true');
   
   scrollBtn.addEventListener('click', () => {
     commentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 }
 
+// Cart handlers - use event delegation (already safe from duplicates)
+// Track if current user is allowed to make purchases
+let userCanPurchase = true;
+let userTypeChecked = false;
+
+// Check user type on page load
+async function checkUserPurchasePermission() {
+  try {
+    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+    const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      authDomain: "freshwax-store.firebaseapp.com",
+      projectId: "freshwax-store",
+      storageBucket: "freshwax-store.firebasestorage.app",
+      messagingSenderId: "675435782973",
+      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const response = await fetch('/api/get-user-type?uid=' + user.uid);
+        const data = await response.json();
+        
+        // Artists who are NOT also customers cannot buy
+        if (data.isArtist && !data.isCustomer) {
+          userCanPurchase = false;
+        }
+      }
+      userTypeChecked = true;
+    });
+  } catch (e) {
+    console.error('Error checking user type:', e);
+    userTypeChecked = true;
+  }
+}
+
+// Initialize user type check
+checkUserPurchasePermission();
+
 document.addEventListener('click', (e) => {
   const button = e.target.closest('.add-to-cart');
   if (!button || button.hasAttribute('disabled')) return;
   
   e.preventDefault();
+  console.log('[Cart] Add to cart clicked');
+  
+  // Check if user is allowed to make purchases
+  if (!userCanPurchase) {
+    alert('Artist accounts cannot make purchases. Please create a separate customer account to buy items from the store.');
+    return;
+  }
   
   const releaseId = button.getAttribute('data-release-id');
   const productType = button.getAttribute('data-product-type');
@@ -685,33 +1053,23 @@ document.addEventListener('click', (e) => {
   const artist = button.getAttribute('data-artist');
   const artwork = button.getAttribute('data-artwork');
   
-  let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  console.log('[Cart] Item data:', { releaseId, productType, price, title, artist, artwork });
   
-  if (productType === 'vinyl') {
-    cart = cart.filter((item) => !(item.productId === releaseId && item.type === 'digital'));
+  // Use local cart functions
+  const added = addItemToCart({
+    id: releaseId,
+    type: productType,
+    name: artist + ' - ' + title,
+    title: title,
+    artist: artist,
+    price: price,
+    image: artwork
+  });
+  
+  if (!added) {
+    // User not logged in - addItemToCart redirects to login
+    return;
   }
-  
-  const existingIndex = cart.findIndex((item) => 
-    item.productId === releaseId && item.type === productType
-  );
-  
-  if (existingIndex !== -1) {
-    cart[existingIndex].quantity += 1;
-  } else {
-    cart.push({
-      productId: releaseId,
-      type: productType,
-      name: `${artist} - ${title}`,
-      price: price,
-      image: artwork,
-      quantity: 1,
-      artist: artist,
-      title: title
-    });
-  }
-  
-  localStorage.setItem('cart', JSON.stringify(cart));
-  window.dispatchEvent(new Event('cart-updated'));
   
   const originalHTML = button.innerHTML;
   button.innerHTML = '<span>✓ Added!</span>';
@@ -729,6 +1087,12 @@ document.addEventListener('click', (e) => {
   
   e.preventDefault();
   
+  // Check if user is allowed to make purchases
+  if (!userCanPurchase) {
+    alert('Artist accounts cannot make purchases. Please create a separate customer account to buy items from the store.');
+    return;
+  }
+  
   const trackId = button.getAttribute('data-track-id');
   const trackTitle = button.getAttribute('data-track-title');
   const trackPrice = parseFloat(button.getAttribute('data-track-price') || '0');
@@ -736,36 +1100,32 @@ document.addEventListener('click', (e) => {
   const artist = button.getAttribute('data-artist');
   const artwork = button.getAttribute('data-artwork');
   
-  let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-  
-  if (cart.some((item) => item.productId === releaseId && (item.type === 'digital' || item.type === 'vinyl'))) {
+  // Check if full release already in cart
+  if (hasFullReleaseInCart(releaseId)) {
     alert('You already have the full release in your cart!');
     return;
   }
   
-  const existingIndex = cart.findIndex((item) => 
-    item.productId === releaseId && item.trackId === trackId
-  );
-  
-  if (existingIndex !== -1) {
+  // Check if track already in cart
+  if (hasTrackInCart(releaseId, trackId)) {
     alert('This track is already in your cart!');
     return;
   }
   
-  cart.push({
-    productId: releaseId,
+  const added = addItemToCart({
+    id: releaseId,
     trackId: trackId,
     type: 'track',
-    name: `${artist} - ${trackTitle}`,
-    price: trackPrice,
-    image: artwork,
-    quantity: 1,
+    name: artist + ' - ' + trackTitle,
+    title: trackTitle,
     artist: artist,
-    title: trackTitle
+    price: trackPrice,
+    image: artwork
   });
   
-  localStorage.setItem('cart', JSON.stringify(cart));
-  window.dispatchEvent(new Event('cart-updated'));
+  if (!added) {
+    return;
+  }
   
   const originalHTML = button.innerHTML;
   button.innerHTML = '✓';
@@ -782,8 +1142,9 @@ function initializeApp() {
   console.log('[App] Initializing item page...');
   initPlayer();
   initRatings();
-  initComments();
+  // initComments(); // Handled by inline script in item/[id].astro
   initShare();
+  initBio();
   loadSuggestions();
   initCarousel();
   initScrollToComments();

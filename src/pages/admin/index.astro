@@ -1,9 +1,11 @@
 ---
-// /src/pages/admin/index.astro
-// Fresh Wax Admin Dashboard - Optimised with Partner System
+// src/pages/admin/index.astro
+// Fresh Wax Admin Dashboard - Unified Design
+// Central hub for all admin operations
 
+import AdminLayout from '../../layouts/AdminLayout.astro';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore, FieldPath } from 'firebase-admin/firestore';
+import { getFirestore } from 'firebase-admin/firestore';
 
 // Initialize Firebase Admin
 if (!getApps().length) {
@@ -18,518 +20,832 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-// Fetch stats using count() aggregation where possible (much more efficient)
-// Note: Firestore count() requires specific setup, using optimised queries as fallback
-async function getCollectionCount(collection: string, conditions?: { field: string; op: any; value: any }[]) {
-  let query: any = db.collection(collection);
-  if (conditions) {
-    conditions.forEach(c => {
-      query = query.where(c.field, c.op, c.value);
-    });
-  }
-  const snapshot = await query.select().get(); // select() returns only document refs, not data
-  return snapshot.size;
-}
-
-// Fetch all stats in parallel for efficiency
+// Batch fetch all data we need
 const [
-  // Partners
-  totalPartners,
-  pendingArtists,
-  pendingDJs,
-  pendingMerchSuppliers,
-  approvedPartners,
-  
-  // Releases
-  totalReleases,
-  liveReleases,
-  pendingReleases,
-  draftReleases,
-  
-  // Other content
-  totalMerch,
-  totalDJMixes,
-  totalCustomers,
-  totalOrders,
-  
-  // Sales data
-  ordersSnapshot
+  ordersSnapshot,
+  releasesSnapshot,
+  artistsSnapshot,
+  customersSnapshot,
+  merchSnapshot,
+  mixesSnapshot
 ] = await Promise.all([
-  // Partners counts
-  getCollectionCount('artists'),
-  getCollectionCount('artists', [
-    { field: 'approved', op: '==', value: false },
-    { field: 'isArtist', op: '==', value: true }
-  ]),
-  getCollectionCount('artists', [
-    { field: 'approved', op: '==', value: false },
-    { field: 'isDJ', op: '==', value: true }
-  ]),
-  getCollectionCount('artists', [
-    { field: 'approved', op: '==', value: false },
-    { field: 'isMerchSupplier', op: '==', value: true }
-  ]),
-  getCollectionCount('artists', [{ field: 'approved', op: '==', value: true }]),
-  
-  // Releases counts
-  getCollectionCount('releases'),
-  getCollectionCount('releases', [{ field: 'status', op: '==', value: 'live' }]),
-  getCollectionCount('releases', [{ field: 'status', op: '==', value: 'pending' }]),
-  getCollectionCount('releases', [{ field: 'status', op: '==', value: 'draft' }]),
-  
-  // Other content
-  getCollectionCount('merch'),
-  getCollectionCount('dj-mixes'),
-  getCollectionCount('customers'),
-  getCollectionCount('orders'),
-  
-  // Get orders for sales calculation (need actual data here)
-  db.collection('orders').where('status', '!=', 'cancelled').select('total', 'platformFee').get()
+  db.collection('orders').orderBy('createdAt', 'desc').limit(50).get(),
+  db.collection('releases').get(),
+  db.collection('artists').get(),
+  db.collection('customers').limit(1).get(), // Just need count
+  db.collection('merch').get(),
+  db.collection('dj-mixes').get()
 ]);
 
-// Calculate sales totals
-let totalSales = 0;
-let platformFees = 0;
-ordersSnapshot.forEach(doc => {
+// Process orders
+const orders = ordersSnapshot.docs.map(doc => {
   const data = doc.data();
-  totalSales += data.total || 0;
-  platformFees += data.platformFee || 0;
+  return {
+    id: doc.id,
+    ...data,
+    createdAt: data.createdAt?.toDate?.() || new Date()
+  };
 });
 
-// Calculate total pending partners
-const totalPending = pendingArtists + pendingDJs + pendingMerchSuppliers;
+// Calculate stats
+const now = new Date();
+const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-// Format currency
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount);
+const todayOrders = orders.filter(o => o.createdAt >= startOfToday);
+const monthOrders = orders.filter(o => o.createdAt >= startOfMonth);
+const pendingOrders = orders.filter(o => o.status === 'pending');
+
+const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+const monthRevenue = monthOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+
+// Partner stats
+const artists = artistsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+const pendingPartners = artists.filter(a => a.approved === false);
+const approvedPartners = artists.filter(a => a.approved === true);
+
+// Release stats
+const releases = releasesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+const liveReleases = releases.filter(r => r.status === 'live');
+const pendingReleases = releases.filter(r => r.status === 'pending');
+
+// Merch stats
+const merch = merchSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+const lowStockMerch = merch.filter(m => {
+  if (m.variants) {
+    return m.variants.some(v => (v.stock || 0) <= 5 && (v.stock || 0) > 0);
+  }
+  return (m.stock || 0) <= 5 && (m.stock || 0) > 0;
+});
+const outOfStockMerch = merch.filter(m => {
+  if (m.variants) {
+    return m.variants.every(v => (v.stock || 0) === 0);
+  }
+  return (m.stock || 0) === 0;
+});
+
+// DJ Mixes stats
+const mixes = mixesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+const publishedMixes = mixes.filter(m => m.published);
+const totalPlays = mixes.reduce((sum, m) => sum + (m.plays || 0), 0);
+
+// Recent orders (last 5)
+const recentOrders = orders.slice(0, 5);
+
+// Format helpers
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
 };
+
+const formatDate = (date) => {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('en-GB', { 
+    day: 'numeric', 
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const formatNumber = (num) => {
+  return new Intl.NumberFormat('en-GB').format(num);
+};
+
+// Alerts
+const alerts = [];
+if (pendingPartners.length > 0) {
+  alerts.push({ type: 'warning', icon: '👥', text: `${pendingPartners.length} partner${pendingPartners.length !== 1 ? 's' : ''} awaiting approval`, link: '/admin/artists/pending' });
+}
+if (pendingOrders.length > 0) {
+  alerts.push({ type: 'info', icon: '📦', text: `${pendingOrders.length} order${pendingOrders.length !== 1 ? 's' : ''} need processing`, link: '/admin/orders' });
+}
+if (lowStockMerch.length > 0) {
+  alerts.push({ type: 'warning', icon: '⚠️', text: `${lowStockMerch.length} product${lowStockMerch.length !== 1 ? 's' : ''} running low on stock`, link: '/admin/merch/manage' });
+}
+if (outOfStockMerch.length > 0) {
+  alerts.push({ type: 'danger', icon: '🚫', text: `${outOfStockMerch.length} product${outOfStockMerch.length !== 1 ? 's' : ''} out of stock`, link: '/admin/merch/manage' });
+}
+
+export const prerender = false;
 ---
 
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard | Fresh Wax</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
-      min-height: 100vh;
-      color: #e0e0e0;
-    }
-    
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-    
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    .header-links {
-      display: flex;
-      gap: 1rem;
-    }
-    
-    .header-links a {
-      color: #a0a0a0;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: color 0.2s;
-    }
-    
-    .header-links a:hover {
-      color: #667eea;
-    }
-    
-    /* Stats Grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    
-    .stat-card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
-      padding: 1.25rem;
-      transition: all 0.2s;
-    }
-    
-    .stat-card:hover {
-      background: rgba(255,255,255,0.08);
-      border-color: rgba(102, 126, 234, 0.3);
-    }
-    
-    .stat-label {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #888;
-      margin-bottom: 0.5rem;
-    }
-    
-    .stat-value {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: #fff;
-    }
-    
-    .stat-value.currency {
-      color: #4ade80;
-    }
-    
-    .stat-value.pending {
-      color: #fbbf24;
-    }
-    
-    .stat-badge {
-      display: inline-block;
-      font-size: 0.625rem;
-      padding: 0.2rem 0.5rem;
-      border-radius: 9999px;
-      margin-left: 0.5rem;
-      vertical-align: middle;
-    }
-    
-    .badge-live { background: #22c55e; color: #000; }
-    .badge-pending { background: #f59e0b; color: #000; }
-    .badge-draft { background: #6b7280; color: #fff; }
-    
-    /* Pending Breakdown */
-    .pending-breakdown {
-      display: flex;
-      gap: 1rem;
-      margin-top: 0.75rem;
-      font-size: 0.75rem;
-    }
-    
-    .pending-item {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-    
-    .pending-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-    
-    .dot-artist { background: #3b82f6; }
-    .dot-dj { background: #ec4899; }
-    .dot-merch { background: #8b5cf6; }
-    
-    /* Section Headers */
-    .section-header {
-      font-size: 0.875rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #667eea;
-      margin: 2rem 0 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid rgba(102, 126, 234, 0.3);
-    }
-    
-    /* Action Cards Grid */
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 1rem;
-    }
-    
-    .action-card {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
-      padding: 1.5rem 1rem;
-      text-decoration: none;
-      color: #e0e0e0;
-      transition: all 0.2s;
-      position: relative;
-      min-height: 120px;
-    }
-    
-    .action-card:hover {
-      background: rgba(102, 126, 234, 0.15);
-      border-color: rgba(102, 126, 234, 0.5);
-      transform: translateY(-2px);
-    }
-    
-    .action-card.highlight {
-      border-color: rgba(251, 191, 36, 0.5);
-      background: rgba(251, 191, 36, 0.1);
-    }
-    
-    .action-card.highlight:hover {
-      background: rgba(251, 191, 36, 0.2);
-    }
-    
-    .card-icon {
-      font-size: 2rem;
-      margin-bottom: 0.75rem;
-    }
-    
-    .card-title {
-      font-size: 0.875rem;
-      font-weight: 500;
-      text-align: center;
-    }
-    
-    .card-badge {
-      position: absolute;
-      top: 0.75rem;
-      right: 0.75rem;
-      background: #ef4444;
-      color: #fff;
-      font-size: 0.625rem;
-      font-weight: 700;
-      padding: 0.2rem 0.5rem;
-      border-radius: 9999px;
-      min-width: 1.5rem;
-      text-align: center;
-    }
-    
-    .card-external {
-      position: absolute;
-      top: 0.75rem;
-      right: 0.75rem;
-      font-size: 0.625rem;
-      color: #666;
-    }
-    
-    /* Responsive */
-    @media (max-width: 768px) {
-      .container { padding: 1rem; }
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      .cards-grid { grid-template-columns: repeat(2, 1fr); }
-      h1 { font-size: 1.5rem; }
-      .pending-breakdown { flex-wrap: wrap; }
-    }
-    
-    @media (max-width: 480px) {
-      .stats-grid { grid-template-columns: 1fr; }
-      .cards-grid { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>🎛️ Admin Dashboard</h1>
-      <div class="header-links">
-        <a href="/">← Store</a>
-        <a href="/dj-mixes">DJ Mixes</a>
-        <a href="/admin/logout">Logout</a>
-      </div>
-    </header>
-
-    <!-- Stats Overview -->
-    <div class="stats-grid">
-      <!-- Sales & Financial -->
-      <div class="stat-card">
-        <div class="stat-label">Total Sales</div>
-        <div class="stat-value currency">{formatCurrency(totalSales)}</div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-label">Platform Fees</div>
-        <div class="stat-value currency">{formatCurrency(platformFees)}</div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-label">Total Orders</div>
-        <div class="stat-value">{totalOrders}</div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-label">Customers</div>
-        <div class="stat-value">{totalCustomers}</div>
-      </div>
-
-      <!-- Partners -->
-      <div class="stat-card">
-        <div class="stat-label">Pending Partners</div>
-        <div class="stat-value pending">{totalPending}</div>
-        {totalPending > 0 && (
-          <div class="pending-breakdown">
-            {pendingArtists > 0 && (
-              <div class="pending-item">
-                <span class="pending-dot dot-artist"></span>
-                <span>{pendingArtists} Artist{pendingArtists !== 1 ? 's' : ''}</span>
-              </div>
-            )}
-            {pendingDJs > 0 && (
-              <div class="pending-item">
-                <span class="pending-dot dot-dj"></span>
-                <span>{pendingDJs} DJ{pendingDJs !== 1 ? 's' : ''}</span>
-              </div>
-            )}
-            {pendingMerchSuppliers > 0 && (
-              <div class="pending-item">
-                <span class="pending-dot dot-merch"></span>
-                <span>{pendingMerchSuppliers} Merch</span>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-label">Total Partners</div>
-        <div class="stat-value">{totalPartners}</div>
-      </div>
-
-      <!-- Content -->
-      <div class="stat-card">
-        <div class="stat-label">Store Releases</div>
-        <div class="stat-value">
-          {liveReleases}
-          <span class="stat-badge badge-live">LIVE</span>
-        </div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-label">Draft Releases</div>
-        <div class="stat-value">{draftReleases + pendingReleases}</div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-label">Total Releases</div>
-        <div class="stat-value">{totalReleases}</div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-label">Merch Products</div>
-        <div class="stat-value">{totalMerch}</div>
-      </div>
-      
-      <div class="stat-card">
-        <div class="stat-label">DJ Mixes</div>
-        <div class="stat-value">{totalDJMixes}</div>
-      </div>
+<AdminLayout title="Dashboard" activeNav="dashboard">
+  <Fragment slot="breadcrumb">
+    <div class="header-breadcrumb">
+      <span>Admin Dashboard</span>
     </div>
+  </Fragment>
 
-    <!-- Primary Workflow -->
-    <div class="section-header">Primary Workflow</div>
-    <div class="cards-grid">
-      <a href="/admin/artists/pending" class="action-card {totalPending > 0 ? 'highlight' : ''}">
-        {totalPending > 0 && <span class="card-badge">{totalPending}</span>}
-        <span class="card-icon">✅</span>
-        <span class="card-title">Partner Approvals</span>
-      </a>
-      
-      <a href="/admin/sync-release" class="action-card">
-        <span class="card-icon">📦</span>
-        <span class="card-title">Upload Release</span>
-      </a>
-      
-      <a href="/admin/releases/manage" class="action-card">
-        <span class="card-icon">💿</span>
-        <span class="card-title">Manage Releases</span>
-      </a>
-      
-      <a href="/admin/orders" class="action-card">
-        <span class="card-icon">📋</span>
-        <span class="card-title">Orders</span>
-      </a>
-      
-      <a href="/admin/analytics" class="action-card">
-        <span class="card-icon">📊</span>
-        <span class="card-title">Analytics</span>
-      </a>
+  <Fragment slot="actions">
+    <button class="btn btn-ghost" onclick="window.location.reload()">
+      ↻ Refresh
+    </button>
+  </Fragment>
+
+  <!-- Alerts Section -->
+  {alerts.length > 0 && (
+    <div class="alerts-section mb-4">
+      {alerts.map(alert => (
+        <a href={alert.link} class={`alert-item alert-${alert.type}`}>
+          <span class="alert-icon">{alert.icon}</span>
+          <span class="alert-text">{alert.text}</span>
+          <span class="alert-arrow">→</span>
+        </a>
+      ))}
     </div>
+  )}
 
-    <!-- Store Management -->
-    <div class="section-header">Store Management</div>
-    <div class="cards-grid">
-      <a href="/admin/merch/upload" class="action-card">
-        <span class="card-icon">👕</span>
-        <span class="card-title">Upload Merch</span>
-      </a>
-      
-      <a href="/admin/merch/manage" class="action-card">
-        <span class="card-icon">📦</span>
-        <span class="card-title">Manage Merch</span>
-      </a>
-      
-      <a href="/admin/merch/suppliers" class="action-card">
-        <span class="card-icon">🤝</span>
-        <span class="card-title">Suppliers</span>
-      </a>
-      
-      <a href="/admin/account/manage" class="action-card">
-        <span class="card-icon">👥</span>
-        <span class="card-title">Customers</span>
-      </a>
-      
-      <a href="/admin/artists/manage" class="action-card">
-        <span class="card-icon">🎤</span>
-        <span class="card-title">Partners</span>
-      </a>
+  <!-- Main Stats Grid -->
+  <div class="stats-grid mb-4">
+    <div class="stat-card highlight">
+      <div class="stat-label">Today's Revenue</div>
+      <div class="stat-value">{formatCurrency(todayRevenue)}</div>
+      <div class="stat-detail">{todayOrders.length} order{todayOrders.length !== 1 ? 's' : ''}</div>
     </div>
-
-    <!-- DJ Mixes -->
-    <div class="section-header">DJ Mixes</div>
-    <div class="cards-grid">
-      <a href="/admin/dj-mixes/manage" class="action-card">
-        <span class="card-icon">🎧</span>
-        <span class="card-title">Manage Mixes</span>
-      </a>
-      
-      <a href="/dj-mixes" class="action-card">
-        <span class="card-icon">🌐</span>
-        <span class="card-title">Public Page</span>
-      </a>
-      
-      <a href="/upload-mix" class="action-card">
-        <span class="card-icon">⬆️</span>
-        <span class="card-title">Upload Mix</span>
-      </a>
+    
+    <div class="stat-card success">
+      <div class="stat-label">This Month</div>
+      <div class="stat-value">{formatCurrency(monthRevenue)}</div>
+      <div class="stat-detail">{monthOrders.length} orders</div>
     </div>
-
-    <!-- Storage & System -->
-    <div class="section-header">Storage & System</div>
-    <div class="cards-grid">
-      <a href="https://dash.cloudflare.com" target="_blank" class="action-card">
-        <span class="card-external">↗</span>
-        <span class="card-icon">☁️</span>
-        <span class="card-title">R2 Storage</span>
-      </a>
-      
-      <a href="https://console.firebase.google.com" target="_blank" class="action-card">
-        <span class="card-external">↗</span>
-        <span class="card-icon">🔥</span>
-        <span class="card-title">Firebase Console</span>
-      </a>
+    
+    <div class="stat-card">
+      <div class="stat-label">Pending Orders</div>
+      <div class="stat-value">{pendingOrders.length}</div>
+      <div class="stat-detail">Need attention</div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-label">Live Releases</div>
+      <div class="stat-value">{liveReleases.length}</div>
+      <div class="stat-detail">{pendingReleases.length} pending</div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-label">Partners</div>
+      <div class="stat-value">{approvedPartners.length}</div>
+      <div class="stat-detail">{pendingPartners.length} pending</div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-label">Mix Plays</div>
+      <div class="stat-value">{formatNumber(totalPlays)}</div>
+      <div class="stat-detail">{publishedMixes.length} mixes</div>
     </div>
   </div>
-</body>
-</html>
+
+  <!-- Quick Actions -->
+  <div class="actions-grid mb-4">
+    <a href="/admin/sync-release" class="action-card primary">
+      <span class="card-icon">📦</span>
+      <span class="card-title">Upload Release</span>
+    </a>
+    <a href="/admin/merch/upload" class="action-card">
+      <span class="card-icon">👕</span>
+      <span class="card-title">Add Merch</span>
+    </a>
+    <a href="/admin/orders" class="action-card" style="position: relative;">
+      <span class="card-icon">📋</span>
+      <span class="card-title">Orders</span>
+      {pendingOrders.length > 0 && (
+        <span class="card-badge">{pendingOrders.length}</span>
+      )}
+    </a>
+    <a href="/admin/artists/pending" class="action-card" style="position: relative;">
+      <span class="card-icon">✅</span>
+      <span class="card-title">Approvals</span>
+      {pendingPartners.length > 0 && (
+        <span class="card-badge">{pendingPartners.length}</span>
+      )}
+    </a>
+    <a href="/admin/analytics" class="action-card">
+      <span class="card-icon">📈</span>
+      <span class="card-title">Analytics</span>
+    </a>
+  </div>
+
+  <!-- Two Column Layout -->
+  <div class="grid grid-2 gap-2">
+    <!-- Recent Orders -->
+    <div class="card">
+      <div class="card-header">
+        <h2>📋 Recent Orders</h2>
+        <a href="/admin/orders" class="btn btn-ghost btn-sm">View All →</a>
+      </div>
+      {recentOrders.length === 0 ? (
+        <div class="card-body">
+          <div class="empty-state" style="padding: 2rem;">
+            <div class="empty-state-icon">📭</div>
+            <div class="empty-state-title">No orders yet</div>
+            <p class="empty-state-text">Orders will appear here as they come in.</p>
+          </div>
+        </div>
+      ) : (
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentOrders.map(order => (
+                <tr>
+                  <td class="cell-mono">#{order.id?.slice(-6).toUpperCase()}</td>
+                  <td class="font-bold">{formatCurrency(order.total)}</td>
+                  <td><span class={`badge badge-${order.status}`}>{order.status}</span></td>
+                  <td class="cell-secondary">{formatDate(order.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+
+    <!-- Quick Links & Status -->
+    <div class="card">
+      <div class="card-header">
+        <h2>⚡ Quick Access</h2>
+      </div>
+      <div class="card-body">
+        <div class="quick-links">
+          <a href="/admin/releases/manage" class="quick-link">
+            <span class="quick-icon">💿</span>
+            <span class="quick-text">Manage Releases</span>
+            <span class="quick-count">{releases.length}</span>
+          </a>
+          <a href="/admin/artists/manage" class="quick-link">
+            <span class="quick-icon">🎤</span>
+            <span class="quick-text">Manage Partners</span>
+            <span class="quick-count">{approvedPartners.length}</span>
+          </a>
+          <a href="/admin/merch/manage" class="quick-link">
+            <span class="quick-icon">👕</span>
+            <span class="quick-text">Manage Merch</span>
+            <span class="quick-count">{merch.length}</span>
+          </a>
+          <a href="/admin/dj-mixes/manage" class="quick-link">
+            <span class="quick-icon">🎧</span>
+            <span class="quick-text">Manage DJ Mixes</span>
+            <span class="quick-count">{mixes.length}</span>
+          </a>
+          <a href="/admin/account/manage" class="quick-link">
+            <span class="quick-icon">👥</span>
+            <span class="quick-text">Customer Accounts</span>
+            <span class="quick-count">-</span>
+          </a>
+          <a href="/admin/merch/suppliers" class="quick-link">
+            <span class="quick-icon">🏭</span>
+            <span class="quick-text">Merch Suppliers</span>
+            <span class="quick-count">-</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- System Status -->
+  <div class="card mt-4">
+    <div class="card-header">
+      <h2>🔧 System Status</h2>
+    </div>
+    <div class="card-body">
+      <div class="grid grid-4 gap-2">
+        <div class="status-item">
+          <span class="status-dot status-ok"></span>
+          <span>Firebase</span>
+        </div>
+        <div class="status-item">
+          <span class="status-dot status-ok"></span>
+          <span>R2 Storage</span>
+        </div>
+        <div class="status-item">
+          <span class="status-dot status-ok"></span>
+          <span>Stripe</span>
+        </div>
+        <div class="status-item">
+          <span class="status-dot status-ok"></span>
+          <span>Email (Resend)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature Toggles -->
+  <div class="card mt-4">
+    <div class="card-header">
+      <h2>⚙️ Feature Settings</h2>
+    </div>
+    <div class="card-body">
+      <div class="toggle-list">
+        <div class="toggle-item">
+          <div class="toggle-info">
+            <span class="toggle-label">DJ Mix Charts</span>
+            <span class="toggle-desc">Show floating all-time chart on DJ Mixes page</span>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleMixCharts" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Danger Zone -->
+  <div class="card mt-4 danger-zone">
+    <div class="card-header danger-header">
+      <h2>⚠️ Danger Zone</h2>
+    </div>
+    <div class="card-body">
+      <div class="danger-item">
+        <div class="danger-info">
+          <h3>Reset Store</h3>
+          <p>This will permanently delete all data from Firebase and R2 storage, except your admin account. This action cannot be undone.</p>
+        </div>
+        <button id="resetStoreBtn" class="btn-danger">Reset Store</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset Confirmation Modal -->
+  <div id="resetModal" class="modal-overlay hidden">
+    <div class="modal-content danger-modal">
+      <h2>⚠️ Confirm Store Reset</h2>
+      <p>This will permanently delete:</p>
+      <ul>
+        <li>All customers (except admin account)</li>
+        <li>All orders and order history</li>
+        <li>All releases and tracks</li>
+        <li>All DJ mixes</li>
+        <li>All merchandise</li>
+        <li>All partners/artists</li>
+        <li>All files in R2 storage</li>
+      </ul>
+      <p class="danger-warning">Type <strong>RESET</strong> to confirm:</p>
+      <input type="text" id="resetConfirmInput" class="reset-confirm-input" placeholder="Type RESET" />
+      <div class="modal-actions">
+        <button id="cancelResetBtn" class="btn-secondary">Cancel</button>
+        <button id="confirmResetBtn" class="btn-danger" disabled>Reset Everything</button>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // Feature toggle handling
+  document.addEventListener('DOMContentLoaded', async function() {
+    const toggleMixCharts = document.getElementById('toggleMixCharts');
+    const resetStoreBtn = document.getElementById('resetStoreBtn');
+    const resetModal = document.getElementById('resetModal');
+    const resetConfirmInput = document.getElementById('resetConfirmInput');
+    const confirmResetBtn = document.getElementById('confirmResetBtn');
+    const cancelResetBtn = document.getElementById('cancelResetBtn');
+
+    // Load current settings
+    try {
+      const response = await fetch('/api/admin/get-settings');
+      const data = await response.json();
+      if (data.success && data.settings) {
+        toggleMixCharts.checked = data.settings.showMixCharts || false;
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
+
+    // Save toggle changes
+    toggleMixCharts?.addEventListener('change', async function() {
+      try {
+        await fetch('/api/admin/update-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ showMixCharts: this.checked })
+        });
+      } catch (error) {
+        console.error('Failed to save setting:', error);
+      }
+    });
+
+    // Reset store modal
+    resetStoreBtn?.addEventListener('click', function() {
+      resetModal.classList.remove('hidden');
+      resetConfirmInput.value = '';
+      confirmResetBtn.disabled = true;
+    });
+
+    cancelResetBtn?.addEventListener('click', function() {
+      resetModal.classList.add('hidden');
+    });
+
+    resetConfirmInput?.addEventListener('input', function() {
+      confirmResetBtn.disabled = this.value !== 'RESET';
+    });
+
+    confirmResetBtn?.addEventListener('click', async function() {
+      if (resetConfirmInput.value !== 'RESET') return;
+      
+      this.disabled = true;
+      this.textContent = 'Resetting...';
+      
+      try {
+        const response = await fetch('/api/admin/reset-store', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('Store has been reset successfully. The page will now reload.');
+          window.location.reload();
+        } else {
+          alert('Reset failed: ' + (data.error || 'Unknown error'));
+          this.disabled = false;
+          this.textContent = 'Reset Everything';
+        }
+      } catch (error) {
+        alert('Reset failed: ' + error.message);
+        this.disabled = false;
+        this.textContent = 'Reset Everything';
+      }
+    });
+
+    // Close modal on overlay click
+    resetModal?.addEventListener('click', function(e) {
+      if (e.target === resetModal) {
+        resetModal.classList.add('hidden');
+      }
+    });
+  });
+</script>
+
+<style>
+  /* Alerts Section */
+  .alerts-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .alert-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-light);
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: all 0.15s ease;
+  }
+  
+  .alert-item:hover {
+    border-color: var(--border-dark);
+    transform: translateX(4px);
+  }
+  
+  .alert-warning {
+    border-left: 4px solid var(--accent-amber);
+  }
+  
+  .alert-info {
+    border-left: 4px solid var(--accent-blue);
+  }
+  
+  .alert-danger {
+    border-left: 4px solid var(--accent-red);
+  }
+  
+  .alert-icon {
+    font-size: 1.25rem;
+  }
+  
+  .alert-text {
+    flex: 1;
+    font-weight: 500;
+  }
+  
+  .alert-arrow {
+    color: var(--text-muted);
+  }
+  
+  /* Quick Links */
+  .quick-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .quick-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: all 0.15s ease;
+  }
+  
+  .quick-link:hover {
+    background: var(--bg-secondary);
+    border-color: var(--border-dark);
+    transform: translateX(4px);
+  }
+  
+  .quick-icon {
+    font-size: 1.25rem;
+  }
+  
+  .quick-text {
+    flex: 1;
+    font-weight: 500;
+  }
+  
+  .quick-count {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+  }
+  
+  /* Status Items */
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  
+  .status-ok {
+    background: var(--accent-green);
+    box-shadow: 0 0 6px rgba(22, 163, 74, 0.5);
+  }
+  
+  .status-warn {
+    background: var(--accent-amber);
+  }
+  
+  .status-error {
+    background: var(--accent-red);
+  }
+  
+  /* Action Card Badge */
+  .action-card .card-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--accent-red);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 9999px;
+    min-width: 20px;
+    text-align: center;
+  }
+  
+  @media (max-width: 768px) {
+    .quick-links {
+      gap: 0.25rem;
+    }
+  }
+
+  /* Feature Toggles */
+  .toggle-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .toggle-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+  }
+
+  .toggle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .toggle-label {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .toggle-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 48px;
+    height: 24px;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 24px;
+  }
+
+  .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+  }
+
+  .toggle-switch input:checked + .toggle-slider {
+    background-color: var(--accent-green);
+  }
+
+  .toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+  }
+
+  /* Danger Zone */
+  .danger-zone {
+    border-color: var(--accent-red);
+  }
+
+  .danger-header {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-bottom-color: var(--accent-red);
+  }
+
+  .danger-header h2 {
+    color: #991b1b;
+  }
+
+  .danger-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 1.5rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+  }
+
+  .danger-info h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #991b1b;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .danger-info p {
+    font-size: 0.85rem;
+    color: #7f1d1d;
+    margin: 0;
+  }
+
+  .btn-danger {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+
+  .btn-danger:hover {
+    background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+    transform: translateY(-1px);
+  }
+
+  .btn-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal-overlay.hidden {
+    display: none;
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+  }
+
+  .danger-modal {
+    border: 2px solid #dc2626;
+  }
+
+  .danger-modal h2 {
+    color: #991b1b;
+    margin: 0 0 1rem 0;
+  }
+
+  .danger-modal ul {
+    margin: 1rem 0;
+    padding-left: 1.5rem;
+    color: #7f1d1d;
+  }
+
+  .danger-modal li {
+    margin-bottom: 0.5rem;
+  }
+
+  .danger-warning {
+    font-weight: 600;
+    color: #dc2626;
+    margin-top: 1.5rem;
+  }
+
+  .reset-confirm-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #dc2626;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    margin: 0.5rem 0 1rem;
+  }
+
+  .reset-confirm-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+  }
+
+  .btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-dark);
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-primary);
+  }
+</style>

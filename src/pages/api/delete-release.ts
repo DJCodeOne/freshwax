@@ -4,6 +4,13 @@ import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+  warn: (...args: any[]) => isDev && console.warn(...args),
+};
+
 // Initialize Firebase Admin
 if (!getApps().length) {
   initializeApp({
@@ -18,18 +25,11 @@ if (!getApps().length) {
 const db = getFirestore();
 
 export const POST: APIRoute = async ({ request }) => {
-  console.log('\n========================================');
-  console.log('[DELETE-RELEASE] POST REQUEST RECEIVED');
-  console.log('========================================\n');
-  
   try {
     const body = await request.json();
-    console.log('[DELETE-RELEASE] Request body:', JSON.stringify(body, null, 2));
-    
     const { releaseId } = body;
     
     if (!releaseId) {
-      console.error('[DELETE-RELEASE] ERROR: No releaseId provided');
       return new Response(JSON.stringify({ 
         success: false,
         error: 'releaseId is required' 
@@ -39,14 +39,13 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    console.log(`[DELETE-RELEASE] Deleting release: ${releaseId}`);
+    log.info(`[delete-release] Deleting: ${releaseId}`);
 
-    // Get release from Firestore to verify it exists
+    // Verify release exists
     const releaseRef = db.collection('releases').doc(releaseId);
     const releaseDoc = await releaseRef.get();
     
     if (!releaseDoc.exists) {
-      console.error('[DELETE-RELEASE] ERROR: Release not found');
       return new Response(JSON.stringify({ 
         success: false,
         error: 'Release not found',
@@ -58,13 +57,11 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const releaseData = releaseDoc.data();
-    console.log(`[DELETE-RELEASE] Found release: "${releaseData?.releaseName}" by ${releaseData?.artistName}`);
 
     // Delete the release document
     await releaseRef.delete();
-    console.log('[DELETE-RELEASE] ✓ Deleted from releases collection');
 
-    // Also delete associated track documents if they exist
+    // Delete associated tracks
     try {
       const tracksQuery = await db.collection('tracks')
         .where('releaseId', '==', releaseId)
@@ -76,11 +73,10 @@ export const POST: APIRoute = async ({ request }) => {
           batch.delete(doc.ref);
         });
         await batch.commit();
-        console.log(`[DELETE-RELEASE] ✓ Deleted ${tracksQuery.size} associated tracks`);
+        log.info(`[delete-release] Deleted ${tracksQuery.size} associated tracks`);
       }
     } catch (error) {
-      console.warn('[DELETE-RELEASE] Warning: Could not delete tracks:', error);
-      // Don't fail the whole operation if track deletion fails
+      log.warn('[delete-release] Could not delete tracks:', error);
     }
 
     // Remove from master list
@@ -91,8 +87,6 @@ export const POST: APIRoute = async ({ request }) => {
       if (masterListDoc.exists) {
         const masterData = masterListDoc.data();
         const releasesList = masterData?.releases || [];
-        
-        // Filter out the deleted release
         const updatedReleases = releasesList.filter((r: any) => r.id !== releaseId);
         
         await masterListRef.update({
@@ -100,16 +94,12 @@ export const POST: APIRoute = async ({ request }) => {
           totalReleases: updatedReleases.length,
           lastUpdated: new Date().toISOString()
         });
-        
-        console.log('[DELETE-RELEASE] ✓ Removed from master list');
       }
     } catch (error) {
-      console.error('[DELETE-RELEASE] Warning: Could not update master list:', error);
-      // Don't fail the whole operation if master list update fails
+      log.warn('[delete-release] Could not update master list:', error);
     }
 
-    console.log('[DELETE-RELEASE] ✓ SUCCESS - Delete complete!');
-    console.log('========================================\n');
+    log.info(`[delete-release] Deleted: ${releaseData?.artistName} - ${releaseData?.releaseName}`);
 
     return new Response(JSON.stringify({ 
       success: true,
@@ -123,18 +113,12 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   } catch (error) {
-    console.error('\n========================================');
-    console.error('[DELETE-RELEASE] CRITICAL ERROR');
-    console.error('========================================');
-    console.error('[DELETE-RELEASE] Error message:', error instanceof Error ? error.message : 'Unknown error');
-    console.error('[DELETE-RELEASE] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    console.error('========================================\n');
+    log.error('[delete-release] Error:', error instanceof Error ? error.message : 'Unknown error');
     
     return new Response(JSON.stringify({ 
       success: false,
       error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+      message: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

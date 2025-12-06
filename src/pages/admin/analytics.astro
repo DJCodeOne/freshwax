@@ -1,7 +1,8 @@
 ---
 // /src/pages/admin/analytics.astro
-// Fresh Wax Analytics Dashboard
+// Fresh Wax Analytics Dashboard - Unified Admin Design
 
+import AdminLayout from '../../layouts/AdminLayout.astro';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
@@ -25,21 +26,25 @@ const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 const startOfYear = new Date(now.getFullYear(), 0, 1);
 
-// Fetch all orders for analytics
-const ordersSnapshot = await db.collection('orders')
-  .where('status', '!=', 'cancelled')
-  .orderBy('status')
-  .orderBy('createdAt', 'desc')
-  .get();
+// Fetch all orders for analytics - simple query to avoid index requirements
+let orders = [];
+try {
+  const ordersSnapshot = await db.collection('orders')
+    .orderBy('createdAt', 'desc')
+    .limit(500)
+    .get();
 
-const orders = ordersSnapshot.docs.map(doc => {
-  const data = doc.data();
-  return {
-    id: doc.id,
-    ...data,
-    createdAt: data.createdAt?.toDate?.() || new Date()
-  };
-});
+  orders = ordersSnapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.() || new Date()
+    };
+  }).filter(o => o.status !== 'cancelled');
+} catch (e) {
+  console.error('Error fetching orders:', e);
+}
 
 // Calculate metrics
 function calculateMetrics(ordersSubset) {
@@ -101,9 +106,8 @@ orders.forEach(order => {
       const key = item.productId || item.title || 'Unknown';
       if (!merchSales[key]) {
         merchSales[key] = {
-          title: item.title || item.name || 'Unknown',
-          variant: item.variant || item.size || '',
-          image: item.image || item.artwork || '',
+          title: item.title || 'Unknown',
+          image: item.image || '',
           sales: 0,
           revenue: 0
         };
@@ -118,30 +122,25 @@ const topMerch = Object.values(merchSales)
   .sort((a, b) => b.revenue - a.revenue)
   .slice(0, 5);
 
-// Monthly revenue data (last 6 months)
-const monthlyData = [];
-for (let i = 5; i >= 0; i--) {
-  const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
-  const monthOrders = orders.filter(o => o.createdAt >= monthStart && o.createdAt <= monthEnd);
-  const metrics = calculateMetrics(monthOrders);
-  monthlyData.push({
-    month: monthStart.toLocaleDateString('en-GB', { month: 'short' }),
-    revenue: metrics.revenue,
-    orders: metrics.orders,
-    fees: metrics.fees
-  });
-}
-
 // DJ Mixes stats
-const mixesSnapshot = await db.collection('dj-mixes').select('plays', 'downloads', 'likes').get();
-let totalPlays = 0, totalDownloads = 0, totalLikes = 0;
-mixesSnapshot.forEach(doc => {
-  const data = doc.data();
-  totalPlays += data.plays || 0;
-  totalDownloads += data.downloads || 0;
-  totalLikes += data.likes || 0;
-});
+let totalPlays = 0;
+let totalDownloads = 0;
+let totalLikes = 0;
+let totalMixes = 0;
+
+try {
+  const mixesSnapshot = await db.collection('dj-mixes').get();
+  totalMixes = mixesSnapshot.size;
+  
+  mixesSnapshot.forEach(doc => {
+    const data = doc.data();
+    totalPlays += data.plays || 0;
+    totalDownloads += data.downloads || 0;
+    totalLikes += data.likes || 0;
+  });
+} catch (e) {
+  console.error('Error fetching mixes:', e);
+}
 
 // Format currency
 const formatCurrency = (amount) => {
@@ -152,487 +151,240 @@ const formatCurrency = (amount) => {
 const formatNumber = (num) => {
   return new Intl.NumberFormat('en-GB').format(num);
 };
+
+export const prerender = false;
 ---
 
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analytics | Fresh Wax Admin</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
-      min-height: 100vh;
-      color: #e0e0e0;
-    }
-    
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-    
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-    
-    h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    .back-link {
-      color: #a0a0a0;
-      text-decoration: none;
-      font-size: 0.875rem;
-      transition: color 0.2s;
-    }
-    
-    .back-link:hover { color: #667eea; }
-    
-    /* Period Tabs */
-    .period-tabs {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
-    }
-    
-    .period-tab {
-      padding: 0.5rem 1rem;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px;
-      color: #a0a0a0;
-      font-size: 0.875rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .period-tab:hover { background: rgba(255,255,255,0.1); color: #fff; }
-    .period-tab.active { background: rgba(102, 126, 234, 0.2); border-color: rgba(102, 126, 234, 0.5); color: #fff; }
-    
-    /* Metrics Grid */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    
-    .metric-card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
-      padding: 1.5rem;
-    }
-    
-    .metric-label {
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #888;
-      margin-bottom: 0.5rem;
-    }
-    
-    .metric-value {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 0.25rem;
-    }
-    
-    .metric-value.positive { color: #4ade80; }
-    .metric-value.highlight { color: #667eea; }
-    
-    .metric-change {
-      font-size: 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-    }
-    
-    .metric-change.up { color: #4ade80; }
-    .metric-change.down { color: #f87171; }
-    .metric-change.neutral { color: #888; }
-    
-    /* Section Title */
-    .section-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #fff;
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    
-    /* Chart Container */
-    .chart-container {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-    }
-    
-    .chart-wrapper {
-      height: 250px;
-      display: flex;
-      align-items: flex-end;
-      gap: 1rem;
-      padding-top: 1rem;
-    }
-    
-    .chart-bar-group {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    
-    .chart-bar {
-      width: 100%;
-      max-width: 60px;
-      background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-      border-radius: 4px 4px 0 0;
-      min-height: 4px;
-      transition: all 0.3s;
-      position: relative;
-    }
-    
-    .chart-bar:hover {
-      background: linear-gradient(180deg, #7c8ff5 0%, #8a5ab8 100%);
-    }
-    
-    .chart-bar::before {
-      content: attr(data-value);
-      position: absolute;
-      top: -24px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 0.7rem;
-      color: #4ade80;
-      font-weight: 600;
-      white-space: nowrap;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-    
-    .chart-bar:hover::before {
-      opacity: 1;
-    }
-    
-    .chart-label {
-      font-size: 0.7rem;
-      color: #888;
-    }
-    
-    /* Two Column Layout */
-    .two-col {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2rem;
-    }
-    
-    /* Top Items List */
-    .top-list {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
-      padding: 1.5rem;
-    }
-    
-    .top-item {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 0.75rem 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    
-    .top-item:last-child { border-bottom: none; }
-    
-    .top-rank {
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(102, 126, 234, 0.2);
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #667eea;
-    }
-    
-    .top-rank.gold { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
-    .top-rank.silver { background: rgba(156, 163, 175, 0.2); color: #9ca3af; }
-    .top-rank.bronze { background: rgba(180, 83, 9, 0.2); color: #d97706; }
-    
-    .top-image {
-      width: 48px;
-      height: 48px;
-      border-radius: 8px;
-      object-fit: cover;
-      background: #333;
-    }
-    
-    .top-info {
-      flex: 1;
-      min-width: 0;
-    }
-    
-    .top-title {
-      font-weight: 500;
-      color: #fff;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    
-    .top-meta {
-      font-size: 0.75rem;
-      color: #888;
-    }
-    
-    .top-stats {
-      text-align: right;
-    }
-    
-    .top-revenue {
-      font-weight: 600;
-      color: #4ade80;
-    }
-    
-    .top-sales {
-      font-size: 0.75rem;
-      color: #888;
-    }
-    
-    /* DJ Mixes Stats */
-    .mixes-stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-    }
-    
-    .mixes-stat {
-      text-align: center;
-      padding: 1rem;
-      background: rgba(255,255,255,0.03);
-      border-radius: 8px;
-    }
-    
-    .mixes-stat-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #fff;
-    }
-    
-    .mixes-stat-label {
-      font-size: 0.75rem;
-      color: #888;
-      margin-top: 0.25rem;
-    }
-    
-    /* Empty State */
-    .empty-state {
-      text-align: center;
-      padding: 2rem;
-      color: #666;
-    }
-    
-    /* Responsive */
-    @media (max-width: 768px) {
-      .container { padding: 1rem; }
-      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
-      .two-col { grid-template-columns: 1fr; }
-      .metric-value { font-size: 1.5rem; }
-    }
-    
-    @media (max-width: 480px) {
-      .metrics-grid { grid-template-columns: 1fr; }
-      .mixes-stats { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>📊 Analytics</h1>
-      <a href="/admin" class="back-link">← Back to Dashboard</a>
-    </header>
+<AdminLayout title="Analytics" activeNav="analytics">
+  <Fragment slot="actions">
+    <button class="btn btn-outline" onclick="window.print()">
+      🖨️ Print Report
+    </button>
+  </Fragment>
 
-    <!-- Period Tabs -->
-    <div class="period-tabs">
-      <button class="period-tab active" data-period="month">This Month</button>
-      <button class="period-tab" data-period="year">This Year</button>
-      <button class="period-tab" data-period="all">All Time</button>
-    </div>
-
-    <!-- Key Metrics -->
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <div class="metric-label">Revenue</div>
-        <div class="metric-value positive" data-month={formatCurrency(thisMonth.revenue)} data-year={formatCurrency(thisYear.revenue)} data-all={formatCurrency(allTime.revenue)}>
-          {formatCurrency(thisMonth.revenue)}
-        </div>
-        <div class={`metric-change ${parseFloat(revenueGrowth) >= 0 ? 'up' : 'down'}`}>
-          {parseFloat(revenueGrowth) >= 0 ? '↑' : '↓'} {Math.abs(parseFloat(revenueGrowth))}% vs last month
-        </div>
-      </div>
-      
-      <div class="metric-card">
-        <div class="metric-label">Orders</div>
-        <div class="metric-value highlight" data-month={thisMonth.orders} data-year={thisYear.orders} data-all={allTime.orders}>
-          {thisMonth.orders}
-        </div>
-        <div class={`metric-change ${parseFloat(ordersGrowth) >= 0 ? 'up' : 'down'}`}>
-          {parseFloat(ordersGrowth) >= 0 ? '↑' : '↓'} {Math.abs(parseFloat(ordersGrowth))}% vs last month
-        </div>
-      </div>
-      
-      <div class="metric-card">
-        <div class="metric-label">Avg. Order Value</div>
-        <div class="metric-value" data-month={formatCurrency(thisMonth.avgOrder)} data-year={formatCurrency(thisYear.avgOrder)} data-all={formatCurrency(allTime.avgOrder)}>
-          {formatCurrency(thisMonth.avgOrder)}
-        </div>
-        <div class="metric-change neutral">Per transaction</div>
-      </div>
-      
-      <div class="metric-card">
-        <div class="metric-label">Platform Fees</div>
-        <div class="metric-value positive" data-month={formatCurrency(thisMonth.fees)} data-year={formatCurrency(thisYear.fees)} data-all={formatCurrency(allTime.fees)}>
-          {formatCurrency(thisMonth.fees)}
-        </div>
-        <div class="metric-change neutral">Your earnings</div>
+  <!-- Revenue Stats -->
+  <div class="stats-grid mb-4">
+    <div class="stat-card">
+      <div class="stat-label">This Month Revenue</div>
+      <div class="stat-value">{formatCurrency(thisMonth.revenue)}</div>
+      <div class="stat-detail" style="color: {parseFloat(revenueGrowth) >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">
+        {parseFloat(revenueGrowth) >= 0 ? '↑' : '↓'} {Math.abs(parseFloat(revenueGrowth))}% vs last month
       </div>
     </div>
-
-    <!-- Revenue Chart -->
-    <div class="chart-container">
-      <div class="section-title">📈 Revenue (Last 6 Months)</div>
-      <div class="chart-wrapper">
-        {monthlyData.map(month => {
-          const maxRevenue = Math.max(...monthlyData.map(m => m.revenue));
-          const height = maxRevenue > 0 ? (month.revenue / maxRevenue) * 200 : 4;
-          return (
-            <div class="chart-bar-group">
-              <div 
-                class="chart-bar" 
-                style={`height: ${height}px;`}
-                data-value={formatCurrency(month.revenue)}
-              ></div>
-              <span class="chart-label">{month.month}</span>
-            </div>
-          );
-        })}
+    
+    <div class="stat-card">
+      <div class="stat-label">This Month Orders</div>
+      <div class="stat-value">{thisMonth.orders}</div>
+      <div class="stat-detail" style="color: {parseFloat(ordersGrowth) >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">
+        {parseFloat(ordersGrowth) >= 0 ? '↑' : '↓'} {Math.abs(parseFloat(ordersGrowth))}% vs last month
       </div>
     </div>
-
-    <!-- Top Sellers -->
-    <div class="two-col">
-      <div class="top-list">
-        <div class="section-title">🎵 Top Releases</div>
-        {topReleases.length === 0 ? (
-          <div class="empty-state">No release sales yet</div>
-        ) : (
-          topReleases.map((release, i) => (
-            <div class="top-item">
-              <div class={`top-rank ${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : ''}`}>
-                {i + 1}
-              </div>
-              <img class="top-image" src={release.artwork || '/placeholder.jpg'} alt="">
-              <div class="top-info">
-                <div class="top-title">{release.title}</div>
-                <div class="top-meta">{release.artist}</div>
-              </div>
-              <div class="top-stats">
-                <div class="top-revenue">{formatCurrency(release.revenue)}</div>
-                <div class="top-sales">{release.sales} sold</div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-      
-      <div class="top-list">
-        <div class="section-title">👕 Top Merch</div>
-        {topMerch.length === 0 ? (
-          <div class="empty-state">No merch sales yet</div>
-        ) : (
-          topMerch.map((item, i) => (
-            <div class="top-item">
-              <div class={`top-rank ${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : ''}`}>
-                {i + 1}
-              </div>
-              <img class="top-image" src={item.image || '/placeholder.jpg'} alt="">
-              <div class="top-info">
-                <div class="top-title">{item.title}</div>
-                <div class="top-meta">{item.variant}</div>
-              </div>
-              <div class="top-stats">
-                <div class="top-revenue">{formatCurrency(item.revenue)}</div>
-                <div class="top-sales">{item.sales} sold</div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+    
+    <div class="stat-card">
+      <div class="stat-label">Avg Order Value</div>
+      <div class="stat-value">{formatCurrency(thisMonth.avgOrder)}</div>
+      <div class="stat-detail">This month</div>
     </div>
+    
+    <div class="stat-card">
+      <div class="stat-label">Platform Fees</div>
+      <div class="stat-value">{formatCurrency(thisMonth.fees)}</div>
+      <div class="stat-detail">This month</div>
+    </div>
+    
+    <div class="stat-card success">
+      <div class="stat-label">Year to Date</div>
+      <div class="stat-value">{formatCurrency(thisYear.revenue)}</div>
+      <div class="stat-detail">{thisYear.orders} orders</div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-label">All Time</div>
+      <div class="stat-value">{formatCurrency(allTime.revenue)}</div>
+      <div class="stat-detail">{allTime.orders} orders</div>
+    </div>
+  </div>
 
-    <!-- DJ Mixes Engagement -->
-    <div class="chart-container">
-      <div class="section-title">🎧 DJ Mixes Engagement (All Time)</div>
-      <div class="mixes-stats">
-        <div class="mixes-stat">
-          <div class="mixes-stat-value">{formatNumber(totalPlays)}</div>
-          <div class="mixes-stat-label">Total Plays</div>
+  <!-- DJ Mixes Stats -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h2>🎧 DJ Mixes Performance</h2>
+    </div>
+    <div class="card-body">
+      <div class="grid grid-4 gap-2">
+        <div class="stat-card" style="border-color: var(--border-light);">
+          <div class="stat-label">Total Plays</div>
+          <div class="stat-value">{formatNumber(totalPlays)}</div>
         </div>
-        <div class="mixes-stat">
-          <div class="mixes-stat-value">{formatNumber(totalDownloads)}</div>
-          <div class="mixes-stat-label">Downloads</div>
+        <div class="stat-card" style="border-color: var(--border-light);">
+          <div class="stat-label">Total Downloads</div>
+          <div class="stat-value">{formatNumber(totalDownloads)}</div>
         </div>
-        <div class="mixes-stat">
-          <div class="mixes-stat-value">{formatNumber(totalLikes)}</div>
-          <div class="mixes-stat-label">Likes</div>
+        <div class="stat-card" style="border-color: var(--border-light);">
+          <div class="stat-label">Total Likes</div>
+          <div class="stat-value">{formatNumber(totalLikes)}</div>
+        </div>
+        <div class="stat-card" style="border-color: var(--border-light);">
+          <div class="stat-label">Total Mixes</div>
+          <div class="stat-value">{totalMixes}</div>
         </div>
       </div>
     </div>
   </div>
 
-  <script>
-    // Period switching
-    const periodTabs = document.querySelectorAll('.period-tab');
-    const metricValues = document.querySelectorAll('.metric-value[data-month]');
-    
-    periodTabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        periodTabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        
-        const period = tab.dataset.period;
-        metricValues.forEach(el => {
-          el.textContent = el.dataset[period];
-        });
-      });
-    });
-  </script>
-</body>
-</html>
+  <!-- Top Sellers Grid -->
+  <div class="grid grid-2 gap-2">
+    <!-- Top Releases -->
+    <div class="card">
+      <div class="card-header">
+        <h2>💿 Top Selling Releases</h2>
+      </div>
+      <div class="card-body">
+        {topReleases.length === 0 ? (
+          <div class="empty-state" style="padding: 2rem;">
+            <div class="empty-state-icon">📊</div>
+            <div class="empty-state-title">No data yet</div>
+            <p class="empty-state-text">Sales data will appear here once orders come in.</p>
+          </div>
+        ) : (
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Release</th>
+                  <th class="text-right">Sales</th>
+                  <th class="text-right">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topReleases.map((release, i) => (
+                  <tr>
+                    <td>
+                      <div class="item-cell">
+                        {release.artwork && (
+                          <img src={release.artwork} alt="" style="width: 40px; height: 40px;">
+                        )}
+                        <div class="item-info">
+                          <h4 style="font-size: 0.85rem;">{release.title}</h4>
+                          <p style="font-size: 0.7rem;">{release.artist}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-right font-bold">{release.sales}</td>
+                    <td class="text-right font-bold">{formatCurrency(release.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+
+    <!-- Top Merch -->
+    <div class="card">
+      <div class="card-header">
+        <h2>👕 Top Selling Merch</h2>
+      </div>
+      <div class="card-body">
+        {topMerch.length === 0 ? (
+          <div class="empty-state" style="padding: 2rem;">
+            <div class="empty-state-icon">📊</div>
+            <div class="empty-state-title">No data yet</div>
+            <p class="empty-state-text">Merch sales data will appear here.</p>
+          </div>
+        ) : (
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th class="text-right">Sales</th>
+                  <th class="text-right">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topMerch.map((item, i) => (
+                  <tr>
+                    <td>
+                      <div class="item-cell">
+                        {item.image && (
+                          <img src={item.image} alt="" style="width: 40px; height: 40px;">
+                        )}
+                        <div class="item-info">
+                          <h4 style="font-size: 0.85rem;">{item.title}</h4>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-right font-bold">{item.sales}</td>
+                    <td class="text-right font-bold">{formatCurrency(item.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+
+  <!-- Period Comparison -->
+  <div class="card mt-4">
+    <div class="card-header">
+      <h2>📈 Period Comparison</h2>
+    </div>
+    <div class="card-body">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th class="text-right">Orders</th>
+              <th class="text-right">Revenue</th>
+              <th class="text-right">Platform Fees</th>
+              <th class="text-right">Avg Order</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-bold">This Month</td>
+              <td class="text-right">{thisMonth.orders}</td>
+              <td class="text-right font-bold">{formatCurrency(thisMonth.revenue)}</td>
+              <td class="text-right">{formatCurrency(thisMonth.fees)}</td>
+              <td class="text-right">{formatCurrency(thisMonth.avgOrder)}</td>
+            </tr>
+            <tr>
+              <td class="font-bold">Last Month</td>
+              <td class="text-right">{lastMonth.orders}</td>
+              <td class="text-right font-bold">{formatCurrency(lastMonth.revenue)}</td>
+              <td class="text-right">{formatCurrency(lastMonth.fees)}</td>
+              <td class="text-right">{formatCurrency(lastMonth.avgOrder)}</td>
+            </tr>
+            <tr>
+              <td class="font-bold">Year to Date</td>
+              <td class="text-right">{thisYear.orders}</td>
+              <td class="text-right font-bold">{formatCurrency(thisYear.revenue)}</td>
+              <td class="text-right">{formatCurrency(thisYear.fees)}</td>
+              <td class="text-right">{formatCurrency(thisYear.avgOrder)}</td>
+            </tr>
+            <tr style="background: var(--bg-hover);">
+              <td class="font-bold">All Time</td>
+              <td class="text-right">{allTime.orders}</td>
+              <td class="text-right font-bold">{formatCurrency(allTime.revenue)}</td>
+              <td class="text-right">{formatCurrency(allTime.fees)}</td>
+              <td class="text-right">{formatCurrency(allTime.avgOrder)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  @media print {
+    .stat-card {
+      break-inside: avoid;
+    }
+  }
+</style>

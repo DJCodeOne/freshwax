@@ -1,0 +1,1160 @@
+---
+// /src/pages/artist/account.astro
+// My Account - Profile, orders, payouts, settings & monitoring
+
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+const partnerId = Astro.cookies.get('partnerId')?.value || '';
+let partner: any = null;
+let orders: any[] = [];
+let orderStats = {
+  total: 0,
+  pending: 0,
+  processed: 0,
+  shipped: 0,
+  delivered: 0,
+  cancelled: 0
+};
+let salesStats = {
+  totalSales: 0,
+  totalRevenue: 0,
+  releaseSales: 0,
+  releaseRevenue: 0,
+  merchSales: 0,
+  merchRevenue: 0,
+  totalPaidOut: 0,
+  totalFeesPaid: 0
+};
+let activity: any[] = [];
+
+if (partnerId) {
+  try {
+    const partnerDoc = await db.collection('artists').doc(partnerId).get();
+    if (partnerDoc.exists) {
+      partner = { id: partnerDoc.id, ...partnerDoc.data() };
+      
+      // Fetch orders for this partner
+      const ordersSnap = await db.collection('orders')
+        .where('artistId', '==', partnerId)
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .get();
+      
+      orders = ordersSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Calculate order stats
+      orders.forEach(order => {
+        orderStats.total++;
+        const status = (order.status || 'pending').toLowerCase();
+        if (status === 'pending') orderStats.pending++;
+        else if (status === 'processed' || status === 'processing') orderStats.processed++;
+        else if (status === 'shipped') orderStats.shipped++;
+        else if (status === 'delivered') orderStats.delivered++;
+        else if (status === 'cancelled') orderStats.cancelled++;
+        
+        // Calculate sales
+        const orderTotal = order.total || order.amount || 0;
+        salesStats.totalRevenue += orderTotal;
+        salesStats.totalSales++;
+        
+        if (order.type === 'release' || order.type === 'music') {
+          salesStats.releaseSales++;
+          salesStats.releaseRevenue += orderTotal;
+        } else if (order.type === 'merch' || order.type === 'merchandise') {
+          salesStats.merchSales++;
+          salesStats.merchRevenue += orderTotal;
+        }
+      });
+      
+      // Calculate payouts - artists get paid at checkout
+      // 70% goes to artist, 30% is fees (payment processing + Fresh Wax)
+      salesStats.totalPaidOut = salesStats.totalRevenue * 0.7;
+      salesStats.totalFeesPaid = salesStats.totalRevenue * 0.3;
+      
+      // Recent activity (combine from various sources)
+      activity = orders.slice(0, 10).map(order => ({
+        type: 'order',
+        title: `New ${order.type || 'order'} sale`,
+        description: order.itemTitle || order.title || 'Order placed',
+        date: order.createdAt,
+        amount: order.total || order.amount
+      }));
+    }
+  } catch (e) {
+    console.error('Error fetching account data:', e);
+  }
+}
+
+const isLoggedIn = !!partner;
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return 'Unknown';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const formatDateTime = (dateStr: string) => {
+  if (!dateStr) return 'Unknown';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-GB', { 
+    day: 'numeric', 
+    month: 'short', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(price || 0);
+};
+
+const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num || 0);
+
+const getStatusClass = (status: string) => {
+  const s = (status || 'pending').toLowerCase();
+  if (s === 'delivered') return 'delivered';
+  if (s === 'shipped') return 'shipped';
+  if (s === 'processed' || s === 'processing') return 'processed';
+  if (s === 'cancelled') return 'cancelled';
+  return 'pending';
+};
+
+export const prerender = false;
+---
+
+<Layout title="My Account | Fresh Wax">
+  <Header />
+  
+  <main class="account-main">
+    <div class="container">
+      {!isLoggedIn ? (
+        <div class="login-prompt">
+          <p>Please log in to view your account.</p>
+          <a href="/login" class="login-btn">Sign In</a>
+        </div>
+      ) : (
+        <>
+          <!-- Page Header -->
+          <div class="page-header">
+            <div class="header-left">
+              <a href="/artist/dashboard" class="back-link">← Dashboard</a>
+              <h1>My Account</h1>
+              <p>Manage your profile, orders and settings</p>
+            </div>
+            <div class="header-actions">
+              <button class="print-btn" onclick="window.print()">
+                🖨️ Print Report
+              </button>
+            </div>
+          </div>
+
+          <!-- Profile Section -->
+          <section class="account-section">
+            <div class="section-header">
+              <h2>👤 Profile</h2>
+              <button class="edit-profile-btn" id="edit-profile-btn">✏️ Edit</button>
+            </div>
+            
+            <div class="profile-card">
+              <div class="profile-view" id="profile-view">
+                <div class="profile-avatar">
+                  {partner.avatarUrl ? (
+                    <img src={partner.avatarUrl} alt={partner.artistName} />
+                  ) : (
+                    <span>{(partner.artistName || 'A')[0].toUpperCase()}</span>
+                  )}
+                </div>
+                <div class="profile-info">
+                  <h3>{partner.artistName || partner.name || 'Artist'}</h3>
+                  <p class="profile-email">{partner.email}</p>
+                  <div class="profile-meta">
+                    <span class="meta-badge">{partner.role || 'Artist'}</span>
+                    <span class={`status-badge ${partner.approved ? 'approved' : 'pending'}`}>
+                      {partner.approved ? '✓ Approved' : '⏳ Pending'}
+                    </span>
+                    <span class="meta-item">Joined {formatDate(partner.createdAt)}</span>
+                  </div>
+                  {partner.bio && <p class="profile-bio">{partner.bio}</p>}
+                </div>
+              </div>
+              
+              <div class="profile-edit hidden" id="profile-edit">
+                <div class="edit-form">
+                  <div class="form-row">
+                    <div class="form-field">
+                      <label>Artist Name</label>
+                      <input type="text" id="edit-artistName" value={partner.artistName || ''} maxlength="30" />
+                    </div>
+                    <div class="form-field">
+                      <label>Email</label>
+                      <input type="email" id="edit-email" value={partner.email || ''} disabled />
+                    </div>
+                  </div>
+                  <div class="form-field">
+                    <label>Bio</label>
+                    <textarea id="edit-bio" rows="3" maxlength="200">{partner.bio || ''}</textarea>
+                    <span class="char-count"><span id="bio-count">{(partner.bio || '').length}</span>/200</span>
+                  </div>
+                  <div class="form-actions">
+                    <button class="cancel-btn" id="cancel-profile">Cancel</button>
+                    <button class="save-btn" id="save-profile">Save Changes</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Sales Overview -->
+          <section class="account-section">
+            <div class="section-header">
+              <h2>💰 Sales Overview</h2>
+            </div>
+            
+            <div class="stats-grid">
+              <div class="stat-card highlight">
+                <div class="stat-icon">🛒</div>
+                <div class="stat-value">{formatNumber(salesStats.totalSales)}</div>
+                <div class="stat-label">Total Sales</div>
+              </div>
+              <div class="stat-card green">
+                <div class="stat-icon">💷</div>
+                <div class="stat-value">{formatPrice(salesStats.totalRevenue)}</div>
+                <div class="stat-label">Total Revenue</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon">💿</div>
+                <div class="stat-value">{formatNumber(salesStats.releaseSales)}</div>
+                <div class="stat-label">Release Sales</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon">👕</div>
+                <div class="stat-value">{formatNumber(salesStats.merchSales)}</div>
+                <div class="stat-label">Merch Sales</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Orders Section -->
+          <section class="account-section">
+            <div class="section-header">
+              <h2>📦 Orders</h2>
+              <div class="order-badges">
+                <span class="order-badge pending">{orderStats.pending} Pending</span>
+                <span class="order-badge processed">{orderStats.processed} Processed</span>
+                <span class="order-badge shipped">{orderStats.shipped} Shipped</span>
+                <span class="order-badge delivered">{orderStats.delivered} Delivered</span>
+              </div>
+            </div>
+            
+            {orders.length === 0 ? (
+              <div class="empty-box">
+                <p>No orders yet</p>
+              </div>
+            ) : (
+              <div class="orders-table-wrap">
+                <table class="orders-table">
+                  <thead>
+                    <tr>
+                      <th>Order ID</th>
+                      <th>Date</th>
+                      <th>Customer</th>
+                      <th>Item</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.slice(0, 20).map(order => (
+                      <tr>
+                        <td class="order-id">#{order.id.slice(-8).toUpperCase()}</td>
+                        <td>{formatDate(order.createdAt)}</td>
+                        <td>{order.customerName || order.customer?.name || 'Customer'}</td>
+                        <td class="item-cell">{order.itemTitle || order.title || order.items?.[0]?.title || '-'}</td>
+                        <td class="amount">{formatPrice(order.total || order.amount || 0)}</td>
+                        <td>
+                          <span class={`status-pill ${getStatusClass(order.status)}`}>
+                            {order.status || 'Pending'}
+                          </span>
+                        </td>
+                        <td>
+                          <button class="table-btn" data-order-id={order.id}>View</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <!-- Payouts Section -->
+          <section class="account-section">
+            <div class="section-header">
+              <h2>💳 Payouts</h2>
+            </div>
+            
+            <div class="payout-cards">
+              <div class="payout-card paid">
+                <div class="payout-label">Total Paid Out</div>
+                <div class="payout-value">{formatPrice(salesStats.totalPaidOut)}</div>
+                <div class="payout-note">Your earnings after fees</div>
+              </div>
+              <div class="payout-card fees">
+                <div class="payout-label">Total Fees Paid</div>
+                <div class="payout-value">{formatPrice(salesStats.totalFeesPaid)}</div>
+                <div class="payout-note">Payment processing + Website maintenance</div>
+              </div>
+            </div>
+            
+            <div class="payout-info">
+              <p>💡 You get paid instantly at checkout.</p>
+              <p>📧 Fees cover payment processing and website maintenance.</p>
+            </div>
+          </section>
+
+          <!-- Activity Monitor -->
+          <section class="account-section">
+            <div class="section-header">
+              <h2>📊 Recent Activity</h2>
+            </div>
+            
+            {activity.length === 0 ? (
+              <div class="empty-box">
+                <p>No recent activity</p>
+              </div>
+            ) : (
+              <div class="activity-list">
+                {activity.map(item => (
+                  <div class="activity-item">
+                    <div class="activity-icon">
+                      {item.type === 'order' ? '🛒' : '📌'}
+                    </div>
+                    <div class="activity-content">
+                      <div class="activity-title">{item.title}</div>
+                      <div class="activity-desc">{item.description}</div>
+                    </div>
+                    <div class="activity-meta">
+                      {item.amount && <span class="activity-amount">{formatPrice(item.amount)}</span>}
+                      <span class="activity-date">{formatDateTime(item.date)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <!-- Account Settings -->
+          <section class="account-section">
+            <div class="section-header">
+              <h2>🔧 Settings</h2>
+            </div>
+            
+            <div class="settings-grid">
+              <div class="setting-item">
+                <div class="setting-info">
+                  <h4>Download Data</h4>
+                  <p>Export all your account data</p>
+                </div>
+                <button class="download-data-btn" id="download-data">Download</button>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .account-main {
+    min-height: calc(100vh - 200px);
+    background: #f5f5f5;
+    padding: 2rem 0;
+  }
+  
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+  
+  /* Page Header */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .header-left h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: #000;
+    margin: 0.5rem 0 0.25rem;
+  }
+  
+  .header-left p {
+    color: #666;
+    font-size: 1.0625rem;
+  }
+  
+  .back-link {
+    color: #666;
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 500;
+  }
+  
+  .back-link:hover { color: #000; }
+  
+  .print-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #fff;
+    color: #333;
+    padding: 0.875rem 1.5rem;
+    border-radius: 10px;
+    border: 2px solid #e5e5e5;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .print-btn:hover {
+    background: #f5f5f5;
+    border-color: #ccc;
+  }
+  
+  /* Login Prompt */
+  .login-prompt {
+    background: #fff;
+    border: 2px solid #e5e5e5;
+    border-radius: 16px;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+  
+  .login-btn {
+    display: inline-block;
+    background: #000;
+    color: #fff;
+    padding: 0.875rem 2rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  
+  /* Account Sections */
+  .account-section {
+    background: #fff;
+    border: 2px solid #e5e5e5;
+    border-radius: 16px;
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  
+  .section-header h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: #000;
+    margin: 0;
+  }
+  
+  .edit-profile-btn {
+    background: #f0f0f0;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .edit-profile-btn:hover { background: #e5e5e5; }
+  
+  /* Profile Card */
+  .profile-card {
+    position: relative;
+  }
+  
+  .profile-view {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+  }
+  
+  .profile-view.hidden { display: none; }
+  
+  .profile-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #000, #333);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  
+  .profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .profile-avatar span {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: #fff;
+  }
+  
+  .profile-info h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+  }
+  
+  .profile-email {
+    color: #666;
+    font-size: 1rem;
+    margin: 0 0 0.75rem;
+  }
+  
+  .profile-meta {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    align-items: center;
+  }
+  
+  .meta-badge {
+    background: #f0f0f0;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  
+  .status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  
+  .status-badge.approved { background: #dcfce7; color: #16a34a; }
+  .status-badge.pending { background: #fef3c7; color: #d97706; }
+  
+  .meta-item {
+    font-size: 0.875rem;
+    color: #888;
+  }
+  
+  .profile-bio {
+    color: #333;
+    font-size: 1rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+  
+  /* Profile Edit */
+  .profile-edit.hidden { display: none; }
+  
+  .edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .form-field label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .form-field input,
+  .form-field textarea {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e5e5;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  
+  .form-field input:focus,
+  .form-field textarea:focus {
+    outline: none;
+    border-color: #000;
+  }
+  
+  .form-field input:disabled {
+    background: #f5f5f5;
+    color: #888;
+  }
+  
+  .char-count {
+    font-size: 0.8125rem;
+    color: #888;
+    text-align: right;
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+  
+  .cancel-btn {
+    padding: 0.75rem 1.5rem;
+    background: #f0f0f0;
+    border: 2px solid #e5e5e5;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+  }
+  
+  .cancel-btn:hover { background: #e5e5e5; }
+  
+  .save-btn {
+    padding: 0.75rem 1.5rem;
+    background: #000;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+  }
+  
+  .save-btn:hover { background: #222; }
+  
+  /* Stats Grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+  }
+  
+  .stat-card {
+    background: #f8f8f8;
+    border: 2px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+  }
+  
+  .stat-card.highlight {
+    background: #000;
+    border-color: #000;
+  }
+  
+  .stat-card.highlight .stat-value,
+  .stat-card.highlight .stat-label { color: #fff; }
+  
+  .stat-card.green {
+    background: #f0fdf4;
+    border-color: #86efac;
+  }
+  
+  .stat-card.green .stat-value { color: #16a34a; }
+  
+  .stat-icon { font-size: 1.25rem; margin-bottom: 0.5rem; }
+  
+  .stat-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    line-height: 1;
+    color: #000;
+  }
+  
+  .stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+  }
+  
+  /* Order Badges */
+  .order-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .order-badge {
+    padding: 0.375rem 0.875rem;
+    border-radius: 20px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+  }
+  
+  .order-badge.pending { background: #fef3c7; color: #d97706; }
+  .order-badge.processed { background: #dbeafe; color: #2563eb; }
+  .order-badge.shipped { background: #e0e7ff; color: #4f46e5; }
+  .order-badge.delivered { background: #dcfce7; color: #16a34a; }
+  
+  /* Orders Table */
+  .orders-table-wrap {
+    overflow-x: auto;
+  }
+  
+  .orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+  }
+  
+  .orders-table th {
+    text-align: left;
+    padding: 0.875rem 1rem;
+    background: #f5f5f5;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #666;
+    border-bottom: 2px solid #e5e5e5;
+  }
+  
+  .orders-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .order-id {
+    font-family: monospace;
+    font-weight: 600;
+    color: #666;
+  }
+  
+  .item-cell {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .amount {
+    font-weight: 700;
+    color: #16a34a;
+  }
+  
+  .status-pill {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+  
+  .status-pill.pending { background: #fef3c7; color: #d97706; }
+  .status-pill.processed { background: #dbeafe; color: #2563eb; }
+  .status-pill.shipped { background: #e0e7ff; color: #4f46e5; }
+  .status-pill.delivered { background: #dcfce7; color: #16a34a; }
+  .status-pill.cancelled { background: #fee2e2; color: #dc2626; }
+  
+  .table-btn {
+    padding: 0.375rem 0.875rem;
+    background: #f0f0f0;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .table-btn:hover {
+    background: #000;
+    color: #fff;
+  }
+  
+  .empty-box {
+    text-align: center;
+    padding: 2rem;
+    color: #888;
+    background: #f8f8f8;
+    border-radius: 10px;
+  }
+  
+  /* Payout Cards */
+  .payout-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .payout-card {
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+  }
+  
+  .payout-card.paid {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+  }
+  
+  .payout-card.fees {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #fff;
+  }
+  
+  .payout-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+  
+  .payout-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    line-height: 1;
+    margin: 0.5rem 0;
+  }
+  
+  .payout-note {
+    font-size: 0.8125rem;
+    opacity: 0.7;
+  }
+  
+  .payout-info {
+    background: #f8f8f8;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+  }
+  
+  .payout-info p {
+    margin: 0.5rem 0;
+    font-size: 0.9375rem;
+    color: #666;
+  }
+  
+  /* Activity List */
+  .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .activity-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f8f8f8;
+    border-radius: 10px;
+    align-items: center;
+  }
+  
+  .activity-icon {
+    font-size: 1.5rem;
+    width: 40px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  
+  .activity-content {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .activity-title {
+    font-weight: 600;
+    color: #000;
+  }
+  
+  .activity-desc {
+    font-size: 0.875rem;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .activity-meta {
+    text-align: right;
+    flex-shrink: 0;
+  }
+  
+  .activity-amount {
+    display: block;
+    font-weight: 700;
+    color: #16a34a;
+  }
+  
+  .activity-date {
+    display: block;
+    font-size: 0.8125rem;
+    color: #888;
+  }
+  
+  /* Settings */
+  .settings-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f8f8f8;
+    border-radius: 10px;
+  }
+  
+  .setting-info h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+  
+  .setting-info p {
+    font-size: 0.875rem;
+    color: #666;
+    margin: 0;
+  }
+  
+  .download-data-btn {
+    padding: 0.75rem 1.5rem;
+    background: #000;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .download-data-btn:hover { background: #222; }
+  
+  .download-data-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  
+  /* Print Styles */
+  @media print {
+    .header-actions,
+    .edit-profile-btn,
+    .form-actions,
+    .table-btn,
+    .download-data-btn,
+    .back-link {
+      display: none !important;
+    }
+    
+    .account-section {
+      break-inside: avoid;
+      box-shadow: none;
+      border: 1px solid #ccc;
+    }
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .page-header {
+      flex-direction: column;
+    }
+    
+    .profile-view {
+      flex-direction: column;
+      text-align: center;
+      align-items: center;
+    }
+    
+    .profile-meta {
+      justify-content: center;
+    }
+    
+    .profile-links {
+      justify-content: center;
+    }
+    
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+    
+    .payout-cards {
+      grid-template-columns: 1fr;
+    }
+    
+    .order-badges {
+      width: 100%;
+      justify-content: flex-start;
+    }
+    
+    .orders-table {
+      font-size: 0.8125rem;
+    }
+    
+    .orders-table th,
+    .orders-table td {
+      padding: 0.75rem 0.5rem;
+    }
+  }
+</style>
+
+<script type="module">
+  const partnerId = document.cookie.split('; ')
+    .find(row => row.startsWith('partnerId='))
+    ?.split('=')[1] || '';
+  
+  // Edit Profile Toggle
+  const editBtn = document.getElementById('edit-profile-btn');
+  const profileView = document.getElementById('profile-view');
+  const profileEdit = document.getElementById('profile-edit');
+  const cancelBtn = document.getElementById('cancel-profile');
+  const saveBtn = document.getElementById('save-profile');
+  
+  editBtn?.addEventListener('click', () => {
+    profileView?.classList.add('hidden');
+    profileEdit?.classList.remove('hidden');
+  });
+  
+  cancelBtn?.addEventListener('click', () => {
+    profileEdit?.classList.add('hidden');
+    profileView?.classList.remove('hidden');
+  });
+  
+  // Bio character count
+  const bioTextarea = document.getElementById('edit-bio');
+  const bioCount = document.getElementById('bio-count');
+  
+  bioTextarea?.addEventListener('input', () => {
+    if (bioCount) bioCount.textContent = bioTextarea.value.length;
+  });
+  
+  // Save Profile
+  saveBtn?.addEventListener('click', async () => {
+    const data = {
+      artistName: document.getElementById('edit-artistName')?.value,
+      bio: document.getElementById('edit-bio')?.value
+    };
+    
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
+    
+    try {
+      const response = await fetch('/api/update-partner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: partnerId, ...data })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        window.location.reload();
+      } else {
+        alert(result.error || 'Failed to save');
+      }
+    } catch (e) {
+      console.error('Error:', e);
+      alert('Failed to save. Please try again.');
+    }
+    
+    saveBtn.textContent = 'Save Changes';
+    saveBtn.disabled = false;
+  });
+  
+  // Download Data
+  const downloadBtn = document.getElementById('download-data');
+  
+  downloadBtn?.addEventListener('click', async () => {
+    downloadBtn.textContent = 'Preparing...';
+    downloadBtn.disabled = true;
+    
+    try {
+      // Gather all visible data from the page
+      const accountData = {
+        exportDate: new Date().toISOString(),
+        profile: {
+          artistName: document.querySelector('.profile-info h3')?.textContent || '',
+          email: document.querySelector('.profile-email')?.textContent || '',
+          bio: document.querySelector('.profile-bio')?.textContent || ''
+        },
+        message: 'For a complete data export, please contact support.'
+      };
+      
+      const blob = new Blob([JSON.stringify(accountData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `freshwax-account-data-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Error:', e);
+      alert('Failed to download data. Please try again.');
+    }
+    
+    downloadBtn.textContent = 'Download';
+    downloadBtn.disabled = false;
+  });
+</script>

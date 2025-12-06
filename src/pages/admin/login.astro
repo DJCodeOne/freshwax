@@ -204,12 +204,8 @@ response.headers.set('Cache-Control', 'no-store');
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
                 
-                console.log('Signed in user:', user.uid);
-                
                 // Check if user is admin
                 const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-                
-                console.log('Admin check:', adminDoc.exists());
                 
                 if (!adminDoc.exists()) {
                     // Not an admin - sign out

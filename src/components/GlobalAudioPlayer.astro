@@ -36,8 +36,8 @@
           <div class="spectrum-bar" style="--bar-index: 7;"></div>
         </div>
         
-        <!-- Artwork + Track Info -->
-        <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink-0">
+        <!-- Artwork + Track Info - FIXED WIDTH -->
+        <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 w-[180px] sm:w-[280px]">
           <!-- Artwork -->
           <a id="mini-artwork-link" href="#" class="flex-shrink-0 relative group">
             <div class="absolute inset-0 bg-red-600 blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
@@ -49,31 +49,24 @@
             />
           </a>
           
-          <!-- Track Info -->
-          <a id="mini-info-link" href="#" class="group min-w-0">
-            <p id="mini-title" class="text-white font-black text-xs sm:text-sm uppercase truncate max-w-[80px] sm:max-w-[160px] group-hover:text-red-500 transition-colors">No track loaded</p>
-            <p id="mini-dj" class="text-gray-400 font-bold text-[10px] sm:text-xs uppercase truncate max-w-[80px] sm:max-w-[160px]">--</p>
+          <!-- Track Info - Fixed width container -->
+          <a id="mini-info-link" href="#" class="group flex-1 min-w-0 overflow-hidden">
+            <p id="mini-title" class="text-white font-black text-xs sm:text-sm uppercase truncate group-hover:text-red-500 transition-colors">No track loaded</p>
+            <p id="mini-dj" class="text-gray-400 font-bold text-[10px] sm:text-xs uppercase truncate">--</p>
           </a>
         </div>
         
-        <!-- CENTER: Controls (flex-grow to take remaining space) -->
-        <div class="flex items-center justify-center gap-2 sm:gap-3 flex-grow">
-          <!-- Duration -->
-          <div class="hidden md:flex items-center gap-1 text-[10px] sm:text-xs text-gray-400 font-mono flex-shrink-0 bg-black/30 px-2 py-1 rounded">
-            <span id="mini-current-time" class="text-red-500 font-bold">0:00</span>
-            <span class="text-gray-600">/</span>
-            <span id="mini-duration">0:00</span>
-          </div>
-          
+        <!-- CENTER: Controls - Fixed positioning -->
+        <div class="flex items-center justify-center gap-2 sm:gap-3 flex-1">
           <!-- Shuffle Button -->
-          <button id="mini-shuffle-btn" class="mini-shuffle-btn p-2 sm:p-2.5 text-gray-400 hover:text-white transition-all hover:scale-110 active:scale-95 rounded-full" title="Shuffle Play">
+          <button id="mini-shuffle-btn" class="mini-shuffle-btn p-2 sm:p-2.5 text-gray-400 hover:text-white transition-all hover:scale-110 active:scale-95 rounded-full flex-shrink-0" title="Shuffle Play">
             <svg class="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
             </svg>
           </button>
           
           <!-- Skip Back -->
-          <button id="mini-skip-back" class="p-1.5 sm:p-2 text-gray-400 hover:text-white transition-all hover:scale-110 active:scale-95" title="Back 10s / Previous">
+          <button id="mini-skip-back" class="p-1.5 sm:p-2 text-gray-400 hover:text-white transition-all hover:scale-110 active:scale-95 flex-shrink-0" title="Back 10s / Previous">
             <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z"/>
             </svg>
@@ -91,14 +84,14 @@
           </button>
           
           <!-- Skip Forward -->
-          <button id="mini-skip-forward" class="p-1.5 sm:p-2 text-gray-400 hover:text-white transition-all hover:scale-110 active:scale-95" title="Forward 10s / Next">
+          <button id="mini-skip-forward" class="p-1.5 sm:p-2 text-gray-400 hover:text-white transition-all hover:scale-110 active:scale-95 flex-shrink-0" title="Forward 10s / Next">
             <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z"/>
             </svg>
           </button>
           
           <!-- Volume -->
-          <div class="hidden md:flex items-center gap-2">
+          <div class="hidden md:flex items-center gap-2 flex-shrink-0">
             <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0 3 3 0 010 4.242 1 1 0 11-1.414-1.414 1 1 0 000-1.414 1 1 0 010-1.414z" clip-rule="evenodd"/>
             </svg>
@@ -106,10 +99,17 @@
           </div>
         </div>
         
-        <!-- RIGHT: Mode + Spectrum + Close -->
+        <!-- RIGHT: Mode + Duration + Spectrum + Close -->
         <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           <!-- Mode indicator -->
           <span id="mini-mode-indicator" class="hidden sm:inline-block text-[10px] uppercase tracking-wider text-gray-500 bg-black/30 px-2 py-1 rounded"></span>
+          
+          <!-- Duration -->
+          <div class="hidden sm:flex items-center gap-1 text-[10px] sm:text-xs text-gray-400 font-mono flex-shrink-0 bg-black/30 px-2 py-1 rounded">
+            <span id="mini-current-time" class="text-red-500 font-bold">0:00</span>
+            <span class="text-gray-600">/</span>
+            <span id="mini-duration">0:00</span>
+          </div>
           
           <!-- RIGHT: Spectrum Analyser -->
           <div id="spectrum-right" class="hidden sm:flex items-end gap-[2px] h-8 flex-shrink-0">
@@ -229,6 +229,13 @@
   #mini-player.visible {
     transform: translateY(0);
   }
+  
+  /* Ensure mini-player sits at absolute bottom with no gap */
+  #mini-player {
+    bottom: 0 !important;
+    margin-bottom: 0 !important;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
 </style>
 
 <script is:inline>
@@ -239,7 +246,6 @@
   (function() {
     // Prevent duplicate initialization
     if (window.FreshWaxPlayer && window.FreshWaxPlayer._initialized) {
-      console.log('[MINI-PLAYER] Already initialized');
       return;
     }
 
@@ -325,7 +331,6 @@
     }
 
     function initMiniPlayer() {
-      console.log('[MINI-PLAYER] Initializing');
       
       var globalAudio = document.getElementById('global-audio');
       var miniPlayer = document.getElementById('mini-player');
@@ -338,7 +343,6 @@
       var miniShuffleBtn = document.getElementById('mini-shuffle-btn');
 
       if (!globalAudio || !miniPlayer) {
-        console.log('[MINI-PLAYER] Missing elements');
         return;
       }
 
@@ -393,32 +397,50 @@
         globalAudio.addEventListener('error', function(e) {
           console.error('[MINI-PLAYER] Audio error:', e);
           if (window.FreshWaxPlayer.isShuffleMode) {
-            console.log('[MINI-PLAYER] Skipping to next track due to error');
             playNextShuffleTrack();
           }
         });
       }
 
       // === PLAY/PAUSE BUTTON ===
-      if (miniPlayBtn) {
-        miniPlayBtn.onclick = function() {
-          if (!globalAudio.src) return;
-          
-          if (globalAudio.paused) {
-            // STOP any playing preview clips first
-            if (window.AudioManager) {
-              window.AudioManager.stopAllTracklistPreviews();
-              window.AudioManager.shouldResumeAfterPreview = false;
-            }
-            
-            globalAudio.play().catch(function(err) {
-              console.error('[MINI-PLAYER] Play failed:', err);
-            });
-          } else {
-            globalAudio.pause();
-          }
-        };
+if (miniPlayBtn) {
+  miniPlayBtn.onclick = function() {
+    if (!globalAudio.src) return;
+    
+    if (globalAudio.paused) {
+      // CRITICAL: Stop any playing preview clips FIRST and cancel resume
+      if (window.AudioManager) {
+        window.AudioManager.stopAllTracklistPreviews();
+        window.AudioManager._lockState(150); // Prevent resume from firing
       }
+      
+      globalAudio.play().catch(function(err) {
+        console.error('[MINI-PLAYER] Play failed:', err);
+      });
+    } else {
+      globalAudio.pause();
+    }
+  };
+}// === PLAY/PAUSE BUTTON ===
+if (miniPlayBtn) {
+  miniPlayBtn.onclick = function() {
+    if (!globalAudio.src) return;
+    
+    if (globalAudio.paused) {
+      // CRITICAL: Stop any playing preview clips FIRST and cancel resume
+      if (window.AudioManager) {
+        window.AudioManager.stopAllTracklistPreviews();
+        window.AudioManager._lockState(150); // Prevent resume from firing
+      }
+      
+      globalAudio.play().catch(function(err) {
+        console.error('[MINI-PLAYER] Play failed:', err);
+      });
+    } else {
+      globalAudio.pause();
+    }
+  };
+}
 
       // === SKIP BUTTONS ===
       if (miniSkipBack) {
@@ -488,6 +510,13 @@
           window.FreshWaxPlayer.currentMix = null;
           window.FreshWaxPlayer.isShuffleMode = false;
           stopSpectrum();
+          
+          // Remove active state from both shuffle buttons
+          var shuffleBtn = document.getElementById('mini-shuffle-btn');
+          var floatingBtn = document.getElementById('floating-shuffle-btn');
+          if (shuffleBtn) shuffleBtn.classList.remove('active');
+          if (floatingBtn) floatingBtn.classList.remove('active');
+          
           if (window.AudioManager) {
             window.AudioManager.mode = 'idle';
             window.AudioManager.updateShuffleButtonUI(false);
@@ -512,7 +541,8 @@
           }
           
           if (window.FreshWaxPlayer.isShuffleMode) {
-            stopShuffle();
+            // Already in shuffle mode - play next random track
+            playNextShuffleTrack();
           } else {
             startShuffle();
           }
@@ -527,29 +557,29 @@
       // === SHUFFLE FUNCTIONS ===
       
       function startShuffle() {
-        console.log('[MINI-PLAYER] Starting shuffle');
         var shuffleBtn = document.getElementById('mini-shuffle-btn');
+        var floatingBtn = document.getElementById('floating-shuffle-btn');
         if (shuffleBtn) shuffleBtn.classList.add('loading');
+        if (floatingBtn) floatingBtn.classList.add('loading');
         
         // Priority 1: Pre-loaded tracks from page
         if (window.SHUFFLE_TRACKS_CACHE && window.SHUFFLE_TRACKS_CACHE.length > 0) {
           window.FreshWaxPlayer.shuffleTracks = window.SHUFFLE_TRACKS_CACHE;
-          console.log('[MINI-PLAYER] Using pre-cached tracks:', window.SHUFFLE_TRACKS_CACHE.length);
           if (shuffleBtn) shuffleBtn.classList.remove('loading');
+          if (floatingBtn) floatingBtn.classList.remove('loading');
           initShufflePlayback();
           return;
         }
         
         // Priority 2: Previously fetched tracks
         if (window.FreshWaxPlayer.shuffleTracks && window.FreshWaxPlayer.shuffleTracks.length > 0) {
-          console.log('[MINI-PLAYER] Using previously fetched tracks');
           if (shuffleBtn) shuffleBtn.classList.remove('loading');
+          if (floatingBtn) floatingBtn.classList.remove('loading');
           initShufflePlayback();
           return;
         }
         
         // Priority 3: Fetch from API
-        console.log('[MINI-PLAYER] Fetching tracks from API...');
         fetch('/api/get-shuffle-tracks')
           .then(function(res) { 
             if (!res.ok) throw new Error('API returned status ' + res.status);
@@ -557,10 +587,10 @@
           })
           .then(function(data) {
             if (shuffleBtn) shuffleBtn.classList.remove('loading');
+            if (floatingBtn) floatingBtn.classList.remove('loading');
             
             if (data.success && data.tracks && data.tracks.length > 0) {
               window.FreshWaxPlayer.shuffleTracks = data.tracks;
-              console.log('[MINI-PLAYER] Loaded', data.tracks.length, 'shuffle tracks from API');
               initShufflePlayback();
             } else {
               console.warn('[MINI-PLAYER] No tracks returned:', data);
@@ -569,10 +599,14 @@
           })
           .catch(function(err) {
             if (shuffleBtn) shuffleBtn.classList.remove('loading');
+            if (floatingBtn) floatingBtn.classList.remove('loading');
             console.error('[MINI-PLAYER] Failed to fetch shuffle tracks:', err);
             alert('Failed to load shuffle tracks.');
           });
       }
+      
+      // Expose startShuffle globally
+      window.startShuffle = startShuffle;
       
       function initShufflePlayback() {
         var tracks = window.FreshWaxPlayer.shuffleTracks;
@@ -604,7 +638,9 @@
         }
         
         var shuffleBtn = document.getElementById('mini-shuffle-btn');
+        var floatingBtn = document.getElementById('floating-shuffle-btn');
         if (shuffleBtn) shuffleBtn.classList.add('active');
+        if (floatingBtn) floatingBtn.classList.add('active');
         
         var player = document.getElementById('mini-player');
         if (player) player.classList.add('visible');
@@ -632,7 +668,6 @@
             queue[i] = queue[j];
             queue[j] = temp;
           }
-          console.log('[MINI-PLAYER] Queue wrapped, re-shuffled');
         }
         
         var track = queue[index];
@@ -647,19 +682,19 @@
         var trackAudioUrl = track.previewUrl || track.audioUrl || track.mp3Url;
         var trackReleaseId = track.releaseId || '';
         
-        console.log('[MINI-PLAYER] Playing shuffle track ' + (index + 1) + '/' + queue.length + ':', trackTitle, 'by', trackArtist);
-        
         var titleEl = document.getElementById('mini-title');
         var djEl = document.getElementById('mini-dj');
         var artworkEl = document.getElementById('mini-artwork');
         var artworkLink = document.getElementById('mini-artwork-link');
         var infoLink = document.getElementById('mini-info-link');
         
-        if (titleEl) titleEl.textContent = trackTitle;
+        // Truncate title to 30 characters
+        var displayTitle = trackTitle.length > 30 ? trackTitle.substring(0, 27) + '...' : trackTitle;
+        if (titleEl) titleEl.textContent = displayTitle;
         if (djEl) djEl.textContent = trackArtist;
         if (artworkEl) artworkEl.src = trackArtwork;
         
-        var releaseUrl = trackReleaseId ? '/releases/' + trackReleaseId : '#';
+        var releaseUrl = trackReleaseId ? '/item/' + trackReleaseId : '#';
         if (artworkLink) artworkLink.href = releaseUrl;
         if (infoLink) infoLink.href = releaseUrl;
         
@@ -687,6 +722,9 @@
         playCurrentShuffleTrack();
       }
       
+      // Expose globally for floating shuffle button
+      window.playNextShuffleTrack = playNextShuffleTrack;
+      
       function playPreviousShuffleTrack() {
         var audio = document.getElementById('global-audio');
         if (audio && audio.currentTime > 3) {
@@ -698,7 +736,6 @@
       }
       
       function stopShuffle() {
-        console.log('[MINI-PLAYER] Stopping shuffle');
         window.FreshWaxPlayer.isShuffleMode = false;
         
         var audio = document.getElementById('global-audio');
@@ -709,7 +746,9 @@
         }
         
         var shuffleBtn = document.getElementById('mini-shuffle-btn');
+        var floatingBtn = document.getElementById('floating-shuffle-btn');
         if (shuffleBtn) shuffleBtn.classList.remove('active');
+        if (floatingBtn) floatingBtn.classList.remove('active');
         
         updateModeIndicator('');
         var titleEl = document.getElementById('mini-title');
@@ -737,7 +776,6 @@
 
       // === PLAY MIX FUNCTION (for DJ mixes) ===
       window.playMix = function(mixData) {
-        console.log('[MINI-PLAYER] playMix called:', mixData ? mixData.id : 'null');
         if (!mixData || !mixData.audio_url) {
           console.error('[MINI-PLAYER] Invalid mixData');
           return Promise.reject('Invalid mix data');
@@ -752,7 +790,9 @@
         if (window.FreshWaxPlayer.isShuffleMode) {
           window.FreshWaxPlayer.isShuffleMode = false;
           var shuffleBtn = document.getElementById('mini-shuffle-btn');
+          var floatingBtn = document.getElementById('floating-shuffle-btn');
           if (shuffleBtn) shuffleBtn.classList.remove('active');
+          if (floatingBtn) floatingBtn.classList.remove('active');
           if (window.AudioManager) {
             window.AudioManager.updateShuffleButtonUI(false);
           }
@@ -779,7 +819,10 @@
           var artworkLink = document.getElementById('mini-artwork-link');
           var infoLink = document.getElementById('mini-info-link');
           
-          if (titleEl) titleEl.textContent = mixData.title || 'Unknown Mix';
+          if (titleEl) {
+            var mixTitle = mixData.title || 'Unknown Mix';
+            titleEl.textContent = mixTitle.length > 30 ? mixTitle.substring(0, 27) + '...' : mixTitle;
+          }
           if (djEl) djEl.textContent = mixData.dj_name || 'Unknown DJ';
           if (artworkEl) artworkEl.src = mixData.artwork_url || '/logo.webp';
           if (artworkLink) artworkLink.href = '/dj-mix/' + mixData.id;
@@ -791,14 +834,12 @@
         if (player) player.classList.add('visible');
 
         return audio.play().then(function() {
-          console.log('[MINI-PLAYER] DJ mix playing');
         }).catch(function(err) {
           console.error('[MINI-PLAYER] Play error:', err);
           throw err;
         });
       };
 
-      console.log('[MINI-PLAYER] Initialization complete');
     }
 
     // Initialize

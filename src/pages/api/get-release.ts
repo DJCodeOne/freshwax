@@ -1,11 +1,16 @@
 // src/pages/api/get-release.ts
-// Uses Firebase REST API - works on Cloudflare Pages (no Admin SDK)
+// Uses Firebase REST API - works on Cloudflare Pages
 import type { APIRoute } from 'astro';
 import { getDocument } from '../../lib/firebase-rest';
 
+const isDev = import.meta.env.DEV;
+const log = {
+  info: (...args: any[]) => isDev && console.log(...args),
+  error: (...args: any[]) => console.error(...args),
+};
+
 export const prerender = false;
 
-// Helper function to get label from release data
 function getLabelFromRelease(release: any): string {
   return release.labelName || 
          release.label || 
@@ -14,7 +19,6 @@ function getLabelFromRelease(release: any): string {
          'Unknown Label';
 }
 
-// Helper function to normalize ratings data
 function normalizeRatings(data: any): { average: number; count: number; total: number; fiveStarCount: number } {
   const ratings = data.ratings || data.overallRating || {};
   
@@ -26,7 +30,6 @@ function normalizeRatings(data: any): { average: number; count: number; total: n
   };
 }
 
-// Normalize a release document
 function normalizeRelease(data: any, id: string): any {
   if (!data) return null;
   
@@ -64,14 +67,13 @@ export const GET: APIRoute = async ({ request }) => {
     });
   }
   
-  console.log(`[GET-RELEASE] Fetching release: ${releaseId}`);
+  log.info('[get-release] Fetching:', releaseId);
   
   try {
-    // Fetch single document using REST API
     const release = await getDocument('releases', releaseId);
     
     if (!release) {
-      console.log(`[GET-RELEASE] ✗ Not found: ${releaseId}`);
+      log.info('[get-release] Not found:', releaseId);
       return new Response(JSON.stringify({ 
         success: false,
         error: 'Release not found' 
@@ -81,9 +83,8 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
     
-    // Check status
     if (release.status !== 'live') {
-      console.log(`[GET-RELEASE] ✗ Status not live: ${releaseId} (status: ${release.status})`);
+      log.info('[get-release] Not live:', releaseId, release.status);
       return new Response(JSON.stringify({ 
         success: false,
         error: 'Release not available' 
@@ -93,15 +94,9 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
     
-    // Normalize the release data
     const normalized = normalizeRelease(release, releaseId);
     
-    console.log(`[GET-RELEASE] ✓ Returning:`, {
-      id: normalized.id,
-      artistName: normalized.artistName,
-      releaseName: normalized.releaseName,
-      trackCount: normalized.tracks?.length || 0
-    });
+    log.info('[get-release] Returning:', normalized.artistName, '-', normalized.releaseName);
     
     return new Response(JSON.stringify({ 
       success: true,
@@ -116,7 +111,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
     
   } catch (error) {
-    console.error('[GET-RELEASE] Error:', error);
+    log.error('[get-release] Error:', error);
     return new Response(JSON.stringify({ 
       success: false,
       error: 'Failed to fetch release',
