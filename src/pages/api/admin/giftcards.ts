@@ -4,7 +4,6 @@
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { Resend } from 'resend';
 
 if (!getApps().length) {
   initializeApp({
@@ -17,8 +16,43 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
-const resend = new Resend(import.meta.env.RESEND_API_KEY);
 const FROM_EMAIL = 'Fresh Wax <noreply@freshwax.co.uk>';
+
+// Send email via Resend API (using fetch for Cloudflare compatibility)
+async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+  const RESEND_API_KEY = import.meta.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) {
+    console.error('[admin/giftcards] No Resend API key configured');
+    return false;
+  }
+  
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to,
+        subject,
+        html
+      }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('[admin/giftcards] Resend error:', response.status, error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('[admin/giftcards] Email send error:', error);
+    return false;
+  }
+}
 
 // GET: Fetch gift cards, user balances, and analytics
 export const GET: APIRoute = async ({ request }) => {
@@ -495,12 +529,11 @@ export const POST: APIRoute = async ({ request }) => {
 </html>
         `;
         
-        await resend.emails.send({
-          from: FROM_EMAIL,
-          to: recipientEmail,
-          subject: `🎁 Your £${amount} Fresh Wax Gift Card Code`,
+        await sendEmail(
+          recipientEmail,
+          `🎁 Your £${amount} Fresh Wax Gift Card Code`,
           html
-        });
+        );
         
         // Update card with email record
         await db.collection('giftCards').doc(cardId).update({
