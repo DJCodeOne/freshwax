@@ -1,11 +1,43 @@
 ---
 // src/pages/shipping.astro
 import InfoPageLayout from '../layouts/InfoPageLayout.astro';
+
+const faqs = [
+  {
+    question: "How much does UK shipping cost?",
+    answer: "UK shipping starts from £3.50 for Royal Mail 2nd Class (2-3 working days). We offer free UK shipping on orders over £50. Faster options include Royal Mail 1st Class (£4.95), Tracked 24 (£6.95), and DPD Next Day (£8.95)."
+  },
+  {
+    question: "Do you ship vinyl records internationally?",
+    answer: "Yes, we ship worldwide. European shipping starts from £8.95 (5-7 working days). USA, Canada, Australia, and Japan shipping starts from £12.95-£14.95. All vinyl records are carefully packed in custom mailers with cardboard stiffeners."
+  },
+  {
+    question: "How long does international shipping take?",
+    answer: "Delivery times vary by destination: Western Europe 5-7 working days, Eastern Europe 7-10 days, USA & Canada 7-14 days, Australia & NZ 10-21 days, Rest of World 14-28 days."
+  },
+  {
+    question: "Will I have to pay import duties on EU orders?",
+    answer: "Since Brexit, orders to EU countries may be subject to customs duties and import VAT. These charges are determined by your country's customs authority and are the responsibility of the customer."
+  },
+  {
+    question: "How quickly are orders dispatched?",
+    answer: "Orders placed before 2pm UK time on working days are dispatched the same day. Orders placed after 2pm are dispatched the next working day. Pre-orders ship on or shortly after the release date."
+  },
+  {
+    question: "What if my order arrives damaged?",
+    answer: "If your order arrives damaged, please take photos of the packaging and item and contact us within 48 hours. We'll arrange a replacement or refund. All vinyl records are shipped in protective custom mailers to minimise damage risk."
+  },
+  {
+    question: "How are digital downloads delivered?",
+    answer: "Digital downloads are available immediately after purchase. You'll receive an email with download links, and files are also available in your account dashboard. Downloads include WAV, FLAC, and MP3 formats."
+  }
+];
 ---
 
 <InfoPageLayout 
   title="Shipping Information" 
   description="Fresh Wax shipping rates, delivery times, and international shipping information. Free UK shipping on orders over £50."
+  faqs={faqs}
 >
   <p class="text-xl text-gray-600 mb-8">
     We ship worldwide from the United Kingdom. Find all the information you need about delivery times, costs, and tracking below.

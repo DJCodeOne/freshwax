@@ -1,0 +1,116 @@
+---
+// src/pages/unsubscribe.astro
+// Public unsubscribe page for newsletter recipients
+import Layout from '../layouts/Layout.astro';
+
+export const prerender = false;
+
+const email = Astro.url.searchParams.get('email') || '';
+---
+
+<Layout title="Unsubscribe - Fresh Wax">
+  <div class="min-h-screen bg-black flex items-center justify-center px-4 py-20">
+    <div class="max-w-md w-full">
+      <div class="text-center mb-8">
+        <a href="/" class="inline-block bg-white rounded-lg p-3 mb-6">
+          <img src="/logo.webp" alt="Fresh Wax" class="h-12" />
+        </a>
+        <h1 class="text-2xl font-bold text-white mb-2">Unsubscribe from Newsletter</h1>
+        <p class="text-gray-400">We're sorry to see you go!</p>
+      </div>
+      
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div id="unsubscribeForm">
+          <p class="text-gray-300 mb-4">
+            Enter your email address to unsubscribe from our newsletter.
+          </p>
+          
+          <div class="mb-4">
+            <label for="email" class="block text-sm font-medium text-gray-400 mb-2">Email Address</label>
+            <input 
+              type="email" 
+              id="email" 
+              value={email}
+              required
+              class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors"
+              placeholder="your@email.com"
+            />
+          </div>
+          
+          <button 
+            id="unsubscribeBtn"
+            type="button"
+            class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors"
+          >
+            Unsubscribe
+          </button>
+          
+          <div id="message" class="mt-4 text-center hidden"></div>
+        </div>
+        
+        <div id="successState" class="hidden text-center">
+          <div class="text-green-500 text-5xl mb-4">✓</div>
+          <h2 class="text-xl font-bold text-white mb-2">You've been unsubscribed</h2>
+          <p class="text-gray-400 mb-6">You will no longer receive our newsletter emails.</p>
+          <a href="/" class="inline-block px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors">
+            Return to Fresh Wax
+          </a>
+        </div>
+      </div>
+      
+      <p class="text-center text-gray-500 text-sm mt-6">
+        Changed your mind? You can always <a href="/" class="text-red-500 hover:underline">subscribe again</a> from our website.
+      </p>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  document.getElementById('unsubscribeBtn')?.addEventListener('click', async () => {
+    const emailInput = document.getElementById('email') as HTMLInputElement;
+    const btn = document.getElementById('unsubscribeBtn') as HTMLButtonElement;
+    const message = document.getElementById('message') as HTMLDivElement;
+    const form = document.getElementById('unsubscribeForm') as HTMLDivElement;
+    const successState = document.getElementById('successState') as HTMLDivElement;
+    
+    const email = emailInput.value.trim();
+    
+    if (!email) {
+      message.textContent = 'Please enter your email address';
+      message.className = 'mt-4 text-center text-red-500';
+      message.classList.remove('hidden');
+      return;
+    }
+    
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+    message.classList.add('hidden');
+    
+    try {
+      const response = await fetch('/api/newsletter/unsubscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        form.classList.add('hidden');
+        successState.classList.remove('hidden');
+      } else {
+        message.textContent = data.error || 'Failed to unsubscribe';
+        message.className = 'mt-4 text-center text-red-500';
+        message.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Unsubscribe';
+      }
+    } catch (err) {
+      message.textContent = 'An error occurred. Please try again.';
+      message.className = 'mt-4 text-center text-red-500';
+      message.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Unsubscribe';
+    }
+  });
+</script>

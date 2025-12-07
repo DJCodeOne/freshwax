@@ -12,6 +12,8 @@ const staticPages = [
   { url: '/releases', priority: '0.9', changefreq: 'daily' },
   { url: '/dj-mixes', priority: '0.8', changefreq: 'weekly' },
   { url: '/merch', priority: '0.8', changefreq: 'weekly' },
+  { url: '/giftcards', priority: '0.7', changefreq: 'monthly' },
+  { url: '/live', priority: '0.7', changefreq: 'daily' },
   { url: '/about', priority: '0.5', changefreq: 'monthly' },
   { url: '/contact', priority: '0.5', changefreq: 'monthly' },
   { url: '/shipping', priority: '0.4', changefreq: 'monthly' },

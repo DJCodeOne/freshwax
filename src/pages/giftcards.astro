@@ -5,16 +5,57 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 
 export const prerender = false;
+
+const faqs = [
+  {
+    question: "How do Fresh Wax gift cards work?",
+    answer: "Fresh Wax gift cards are digital vouchers that can be redeemed for store credit. Once redeemed, the value is added to your account balance and can be used towards any purchase including digital downloads, vinyl records, DJ mixes, and merchandise."
+  },
+  {
+    question: "What denominations are available?",
+    answer: "We offer gift cards in £10, £25, £50, and £100 denominations. You can also purchase multiple gift cards for larger amounts."
+  },
+  {
+    question: "Do gift cards expire?",
+    answer: "No, Fresh Wax gift cards never expire. Once purchased, the credit is valid indefinitely and can be redeemed at any time."
+  },
+  {
+    question: "How do I redeem a gift card?",
+    answer: "Sign in to your Fresh Wax account and enter your gift card code in your dashboard or at checkout. The credit will be instantly added to your account balance."
+  },
+  {
+    question: "Can I use a gift card with other payment methods?",
+    answer: "Yes, you can combine gift card credit with other payment methods at checkout. If your order total exceeds your gift card balance, you can pay the remaining amount with a card."
+  },
+  {
+    question: "Can I send a gift card to someone else?",
+    answer: "Absolutely! When purchasing a gift card, you'll receive a unique code that you can share with the recipient via email, message, or printed card. They can then redeem it on their own account."
+  }
+];
 ---
 
-<Layout title="Gift Cards - Fresh Wax">
+<Layout 
+  title="Gift Cards - Fresh Wax" 
+  description="Buy Fresh Wax gift cards for jungle and drum & bass fans. Digital gift cards from £10 to £100, never expire. Perfect for music lovers."
+  faqs={faqs}
+>
   <Header />
   
   <main class="giftcards-main">
     <!-- Hero Section -->
     <section class="hero">
       <div class="hero-content">
-        <div class="hero-icon">🎁</div>
+        <div class="hero-icon">
+          <svg viewBox="0 0 64 64" width="80" height="80">
+            <rect x="8" y="28" width="48" height="32" rx="4" fill="#dc2626"/>
+            <rect x="28" y="28" width="8" height="32" fill="#b91c1c"/>
+            <rect x="8" y="28" width="48" height="8" fill="#ef4444"/>
+            <rect x="4" y="16" width="56" height="16" rx="4" fill="#fbbf24"/>
+            <rect x="28" y="16" width="8" height="16" fill="#f59e0b"/>
+            <path d="M32 16 C32 8, 20 4, 16 12 C14 16, 20 16, 28 16" fill="#dc2626"/>
+            <path d="M32 16 C32 8, 44 4, 48 12 C50 16, 44 16, 36 16" fill="#dc2626"/>
+          </svg>
+        </div>
         <h1>GIFT <span class="red">CARDS</span></h1>
         <p class="hero-subtitle">Give the gift of underground music</p>
       </div>
@@ -144,13 +185,6 @@ export const prerender = false;
               <textarea id="giftMessage" placeholder="Write a message to include in the email..." maxlength="500" rows="3"></textarea>
               <span class="char-count"><span id="messageCount">0</span>/500</span>
             </div>
-            
-            <div class="form-group checkbox-group">
-              <label>
-                <input type="checkbox" id="sendCopyToMe" checked />
-                <span>Send a copy to my email too</span>
-              </label>
-            </div>
           </div>
           
           <div id="selfFields" class="self-fields hidden">
@@ -190,12 +224,29 @@ export const prerender = false;
           <div class="success-icon">✅</div>
           <h3>Gift Card Sent!</h3>
           <p id="successMessage">Your gift card has been sent successfully.</p>
-          <div class="success-code">
-            <span>Gift Card Code:</span>
-            <code id="purchasedCode">FWGC-XXXX-XXXX-XXXX</code>
-            <button id="copyCodeBtn" class="copy-btn">Copy</button>
+          <div class="success-details">
+            <div class="success-row">
+              <span class="success-label">Amount:</span>
+              <span class="success-value" id="purchasedAmount">£0</span>
+            </div>
+            <div class="success-row">
+              <span class="success-label">Date:</span>
+              <span class="success-value" id="purchasedDate">-</span>
+            </div>
+            <div class="success-row">
+              <span class="success-label">Expires:</span>
+              <span class="success-value" id="purchasedExpiry">-</span>
+            </div>
           </div>
         </div>
+      </div>
+    </section>
+    
+    <!-- My Purchased Gift Cards -->
+    <section id="myPurchasedCards" class="purchased-section hidden">
+      <h2>My Purchased Gift Cards</h2>
+      <div id="purchasedCardsList" class="purchased-list">
+        <p class="empty-state">Loading...</p>
       </div>
     </section>
     
@@ -241,9 +292,13 @@ export const prerender = false;
   }
   
   .hero-icon {
-    font-size: 4rem;
     margin-bottom: 1rem;
     animation: bounce 2s ease-in-out infinite;
+  }
+  
+  .hero-icon svg {
+    display: block;
+    margin: 0 auto;
   }
   
   @keyframes bounce {
@@ -566,6 +621,11 @@ export const prerender = false;
     text-align: center;
   }
   
+  .custom-amount-wrapper input::placeholder {
+    font-size: 1.125rem;
+    font-weight: 400;
+  }
+  
   .custom-amount-wrapper input:focus {
     outline: none;
     border-color: #dc2626;
@@ -838,49 +898,115 @@ export const prerender = false;
     margin: 0 0 1.5rem 0;
   }
   
-  .success-code {
+  .success-details {
     background: #022c22;
     border: 2px solid #10b981;
     border-radius: 10px;
     padding: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    flex-wrap: wrap;
   }
   
-  .success-code span {
+  .success-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+  }
+  
+  .success-row:last-child {
+    border-bottom: none;
+  }
+  
+  .success-label {
     color: #6ee7b7;
     font-size: 0.875rem;
   }
   
-  .success-code code {
-    font-family: 'Monaco', 'Consolas', monospace;
-    font-size: 1.25rem;
+  .success-value {
     color: #fff;
-    background: #064e3b;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    letter-spacing: 0.05em;
-  }
-  
-  .copy-btn {
-    padding: 0.5rem 1rem;
-    background: #10b981;
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    font-size: 0.875rem;
     font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
   }
   
-  .copy-btn:hover {
-    background: #059669;
+  /* Purchased Gift Cards Section */
+  .purchased-section {
+    padding: 2rem 1.5rem;
+    max-width: 600px;
+    margin: 0 auto;
   }
   
+  .purchased-section h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    color: #fff;
+    margin: 0 0 1rem 0;
+    text-align: center;
+  }
+  
+  .purchased-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .purchased-card {
+    background: #1f1f1f;
+    border: 2px solid #333;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .purchased-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .purchased-card-amount {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #dc2626;
+  }
+  
+  .purchased-card-meta {
+    font-size: 0.8rem;
+    color: #888;
+  }
+  
+  .purchased-card-recipient {
+    font-size: 0.85rem;
+    color: #aaa;
+  }
+  
+  .purchased-card-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .purchased-card-status.sent {
+    background: #dcfce7;
+    color: #166534;
+  }
+  
+  .purchased-card-status.redeemed {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  
+  .purchased-card-status.pending {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  
+  .purchased-list .empty-state {
+    color: #666;
+    text-align: center;
+    padding: 2rem;
+  }
+
   @media (max-width: 600px) {
     .form-row {
       grid-template-columns: 1fr;
@@ -905,8 +1031,14 @@ export const prerender = false;
       min-width: auto;
     }
     
-    .success-code {
+    .success-details {
+      padding: 0.75rem;
+    }
+    
+    .purchased-card {
       flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
     }
   }
   
@@ -1090,19 +1222,19 @@ export const prerender = false;
 </style>
 
 <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
-    authDomain: "fresh-wax.firebaseapp.com",
-    projectId: "fresh-wax",
-    storageBucket: "fresh-wax.firebasestorage.app",
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store",
+    storageBucket: "freshwax-store.firebasestorage.app",
     messagingSenderId: "307622215498",
     appId: "1:307622215498:web:e66cee39e098fe973c7081"
   };
 
-  const app = initializeApp(firebaseConfig);
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const auth = getAuth(app);
   
   let currentUser = null;
@@ -1227,10 +1359,54 @@ export const prerender = false;
     }
   }
   
-  // Auth state
-  onAuthStateChanged(auth, async (user) => {
-    currentUser = user;
+  // Load user's purchased gift cards
+  async function loadPurchasedCards() {
+    if (!currentUser) return;
     
+    const section = document.getElementById('myPurchasedCards');
+    const list = document.getElementById('purchasedCardsList');
+    
+    if (!section || !list) return;
+    
+    try {
+      const response = await fetch(`/api/giftcards/purchased?userId=${currentUser.uid}`);
+      const result = await response.json();
+      
+      if (result.success && result.purchasedCards.length > 0) {
+        section.classList.remove('hidden');
+        
+        list.innerHTML = result.purchasedCards.map(card => {
+          const purchasedDate = new Date(card.purchasedAt).toLocaleDateString('en-GB');
+          const expiryDate = card.displayExpiresAt 
+            ? new Date(card.displayExpiresAt).toLocaleDateString('en-GB')
+            : '1 year from redemption';
+          
+          const recipient = card.recipientType === 'gift' 
+            ? `To: ${card.recipientName || card.recipientEmail}`
+            : 'For myself';
+          
+          return `
+            <div class="purchased-card">
+              <div class="purchased-card-info">
+                <span class="purchased-card-amount">£${card.amount}</span>
+                <span class="purchased-card-meta">Purchased: ${purchasedDate} • Expires: ${expiryDate}</span>
+                <span class="purchased-card-recipient">${recipient}</span>
+              </div>
+              <span class="purchased-card-status sent">Sent</span>
+            </div>
+          `;
+        }).join('');
+      } else {
+        section.classList.add('hidden');
+      }
+    } catch (error) {
+      console.error('Error loading purchased cards:', error);
+      section.classList.add('hidden');
+    }
+  }
+  
+  // Update UI based on auth state
+  async function updateAuthUI(user) {
     const loginPrompt = document.getElementById('loginPrompt');
     const redeemFormEl = document.getElementById('redeemForm');
     const purchaseLoginPrompt = document.getElementById('purchaseLoginPrompt');
@@ -1249,6 +1425,9 @@ export const prerender = false;
       // Fetch user name
       await fetchUserName(user.uid);
       
+      // Load purchased gift cards
+      loadPurchasedCards();
+      
       // Update self displays
       if (selfEmailDisplay) {
         selfEmailDisplay.textContent = user.email || '-';
@@ -1263,6 +1442,7 @@ export const prerender = false;
       purchaseLoginPrompt?.classList.remove('hidden');
       purchaseActions?.classList.add('hidden');
       document.getElementById('balanceDisplay')?.classList.add('hidden');
+      document.getElementById('myPurchasedCards')?.classList.add('hidden');
       
       // Clear self displays
       if (selfEmailDisplay) {
@@ -1272,6 +1452,22 @@ export const prerender = false;
         selfNameDisplay.textContent = '-';
       }
       currentUserName = '';
+    }
+  }
+  
+  // Auth state listener
+  onAuthStateChanged(auth, async (user) => {
+    currentUser = user;
+    await updateAuthUI(user);
+  });
+  
+  // Handle back/forward navigation (bfcache)
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      // Page was restored from bfcache, re-check auth
+      const user = auth.currentUser;
+      currentUser = user;
+      updateAuthUI(user);
     }
   });
   
@@ -1417,7 +1613,6 @@ export const prerender = false;
     const recipientName = document.getElementById('recipientName')?.value.trim() || '';
     const recipientEmail = document.getElementById('recipientEmail')?.value.trim() || '';
     const message = document.getElementById('giftMessage')?.value.trim() || '';
-    const sendCopyToMe = document.getElementById('sendCopyToMe')?.checked || false;
     
     // Validate recipient email for gifts
     if (recipientType === 'gift' && !recipientEmail) {
@@ -1461,8 +1656,7 @@ export const prerender = false;
           recipientType,
           recipientName: finalRecipientName,
           recipientEmail: recipientType === 'gift' ? recipientEmail : currentUser.email,
-          message,
-          sendCopyToMe
+          message
         })
       });
       
@@ -1474,15 +1668,24 @@ export const prerender = false;
         document.querySelector('.purchase-actions')?.classList.add('hidden');
         
         successEl.classList.remove('hidden');
-        document.getElementById('purchasedCode').textContent = result.giftCard.code;
+        
+        // Update success display
+        document.getElementById('purchasedAmount').textContent = `£${selectedAmount}`;
+        document.getElementById('purchasedDate').textContent = new Date().toLocaleDateString('en-GB');
+        document.getElementById('purchasedExpiry').textContent = result.giftCard.expiresAt 
+          ? new Date(result.giftCard.expiresAt).toLocaleDateString('en-GB')
+          : '1 year from redemption';
         
         if (recipientType === 'gift') {
           document.getElementById('successMessage').textContent = 
-            `Gift card sent to ${recipientEmail}${sendCopyToMe ? ' and a copy to your email' : ''}.`;
+            `Gift card sent to ${recipientEmail}.`;
         } else {
           document.getElementById('successMessage').textContent = 
             `Gift card code sent to ${currentUser.email}.`;
         }
+        
+        // Reload purchased cards list
+        loadPurchasedCards();
       } else {
         errorEl.textContent = result.error || 'Failed to purchase gift card';
         errorEl.style.display = 'block';
@@ -1497,18 +1700,6 @@ export const prerender = false;
       purchaseBtn.disabled = false;
       btnText.classList.remove('hidden');
       btnLoading.classList.add('hidden');
-    }
-  });
-  
-  // Copy code button
-  document.getElementById('copyCodeBtn')?.addEventListener('click', () => {
-    const code = document.getElementById('purchasedCode')?.textContent;
-    if (code) {
-      navigator.clipboard.writeText(code);
-      document.getElementById('copyCodeBtn').textContent = 'Copied!';
-      setTimeout(() => {
-        document.getElementById('copyCodeBtn').textContent = 'Copy';
-      }, 2000);
     }
   });
 </script>

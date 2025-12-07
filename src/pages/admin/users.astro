@@ -307,7 +307,7 @@ export const prerender = false;
     <script type="module">
       import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
       import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-      import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+      import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy, setDoc, getDoc, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
       
       const firebaseConfig = {
         apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
@@ -338,9 +338,13 @@ export const prerender = false;
       async function loadUsers() {
         try {
           const usersMap = new Map();
+          const INITIAL_LIMIT = 50; // Load 50 per collection initially
+          let hasMoreData = false;
           
-          // Load from customers collection
-          const customersSnapshot = await getDocs(query(collection(db, 'customers'), orderBy('createdAt', 'desc')));
+          // Load from customers collection (limited)
+          const customersSnapshot = await getDocs(query(collection(db, 'customers'), orderBy('createdAt', 'desc'), limit(INITIAL_LIMIT)));
+          if (customersSnapshot.size >= INITIAL_LIMIT) hasMoreData = true;
+          
           customersSnapshot.forEach(doc => {
             const data = doc.data();
             usersMap.set(doc.id, {
@@ -365,9 +369,11 @@ export const prerender = false;
             });
           });
           
-          // Load from users collection (merge with existing)
+          // Load from users collection (merge with existing, limited)
           try {
-            const usersSnapshot = await getDocs(query(collection(db, 'users')));
+            const usersSnapshot = await getDocs(query(collection(db, 'users'), limit(INITIAL_LIMIT)));
+            if (usersSnapshot.size >= INITIAL_LIMIT) hasMoreData = true;
+            
             usersSnapshot.forEach(doc => {
               const data = doc.data();
               if (usersMap.has(doc.id)) {
@@ -403,9 +409,11 @@ export const prerender = false;
             });
           } catch (e) { /* Collection may not exist */ }
           
-          // Load from artists collection (for pro accounts)
+          // Load from artists collection (for pro accounts, limited)
           try {
-            const artistsSnapshot = await getDocs(query(collection(db, 'artists')));
+            const artistsSnapshot = await getDocs(query(collection(db, 'artists'), limit(INITIAL_LIMIT)));
+            if (artistsSnapshot.size >= INITIAL_LIMIT) hasMoreData = true;
+            
             artistsSnapshot.forEach(doc => {
               const data = doc.data();
               if (usersMap.has(doc.id)) {
@@ -444,6 +452,7 @@ export const prerender = false;
           } catch (e) { /* Collection may not exist */ }
           
           allUsers = Array.from(usersMap.values());
+          window.allUsersLoaded = !hasMoreData; // Track if all data loaded
           
           // Sort by registration date (newest first)
           allUsers.sort((a, b) => {
@@ -458,6 +467,11 @@ export const prerender = false;
           document.getElementById('loadingState').style.display = 'none';
           document.getElementById('usersTable').style.display = 'block';
           
+          // Show "Load All" button if there's more data
+          if (hasMoreData) {
+            showLoadAllButton();
+          }
+          
         } catch (error) {
           console.error('Error loading users:', error);
           document.getElementById('loadingState').innerHTML = `
@@ -468,6 +482,155 @@ export const prerender = false;
               <button class="btn btn-primary mt-2" onclick="location.reload()">Try Again</button>
             </div>
           `;
+        }
+      }
+      
+      function showLoadAllButton() {
+        const toolbar = document.querySelector('.toolbar');
+        if (toolbar && !document.getElementById('loadAllBtn')) {
+          const loadAllBtn = document.createElement('button');
+          loadAllBtn.id = 'loadAllBtn';
+          loadAllBtn.className = 'btn btn-outline';
+          loadAllBtn.innerHTML = '<span>📥</span> Load All Users';
+          loadAllBtn.onclick = loadAllUsers;
+          loadAllBtn.style.marginLeft = 'auto';
+          toolbar.appendChild(loadAllBtn);
+        }
+      }
+      
+      async function loadAllUsers() {
+        const btn = document.getElementById('loadAllBtn');
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = '<span>⏳</span> Loading...';
+        }
+        
+        try {
+          const usersMap = new Map();
+          
+          // Load ALL from customers collection (no limit)
+          const customersSnapshot = await getDocs(query(collection(db, 'customers'), orderBy('createdAt', 'desc')));
+          customersSnapshot.forEach(doc => {
+            const data = doc.data();
+            usersMap.set(doc.id, {
+              id: doc.id,
+              collection: 'customers',
+              displayName: data.displayName || data.name || data.fullName || 'Unknown',
+              fullName: data.fullName || data.name || '',
+              email: data.email || '',
+              phone: data.phone || '',
+              address: data.address || data.shippingAddress || null,
+              roles: {
+                customer: true,
+                dj: data.isDJ === true || data.roles?.dj === true,
+                artist: data.isArtist === true || data.roles?.artist === true,
+                merch: data.isMerchSupplier === true || data.roles?.merchSupplier === true
+              },
+              approved: data.approved === true,
+              suspended: data.suspended === true,
+              notes: data.adminNotes || '',
+              registeredAt: data.createdAt?.toDate?.() || data.registeredAt?.toDate?.() || null,
+              source: 'customers'
+            });
+          });
+          
+          // Load ALL from users collection
+          try {
+            const usersSnapshot = await getDocs(query(collection(db, 'users')));
+            usersSnapshot.forEach(doc => {
+              const data = doc.data();
+              if (usersMap.has(doc.id)) {
+                const existing = usersMap.get(doc.id);
+                existing.roles.dj = existing.roles.dj || data.isDJ === true || data.roles?.dj === true;
+                existing.roles.artist = existing.roles.artist || data.isArtist === true || data.roles?.artist === true;
+                existing.roles.merch = existing.roles.merch || data.isMerchSupplier === true || data.roles?.merchSupplier === true;
+                existing.approved = existing.approved || data.approved === true;
+                if (data.address) existing.address = data.address;
+              } else {
+                usersMap.set(doc.id, {
+                  id: doc.id,
+                  collection: 'users',
+                  displayName: data.displayName || data.name || 'Unknown',
+                  fullName: data.fullName || data.name || '',
+                  email: data.email || '',
+                  phone: data.phone || '',
+                  address: data.address || null,
+                  roles: {
+                    customer: true,
+                    dj: data.isDJ === true || data.roles?.dj === true,
+                    artist: data.isArtist === true || data.roles?.artist === true,
+                    merch: data.isMerchSupplier === true || data.roles?.merchSupplier === true
+                  },
+                  approved: data.approved === true,
+                  suspended: data.suspended === true,
+                  notes: data.adminNotes || '',
+                  registeredAt: data.createdAt?.toDate?.() || null,
+                  source: 'users'
+                });
+              }
+            });
+          } catch (e) { }
+          
+          // Load ALL from artists collection
+          try {
+            const artistsSnapshot = await getDocs(query(collection(db, 'artists')));
+            artistsSnapshot.forEach(doc => {
+              const data = doc.data();
+              if (usersMap.has(doc.id)) {
+                const existing = usersMap.get(doc.id);
+                existing.roles.artist = existing.roles.artist || data.isArtist === true;
+                existing.roles.merch = existing.roles.merch || data.isMerchSupplier === true;
+                existing.approved = existing.approved || data.approved === true;
+                existing.suspended = existing.suspended || data.suspended === true;
+                existing.notes = existing.notes || data.adminNotes || '';
+                existing.hasArtistRecord = true;
+              } else {
+                usersMap.set(doc.id, {
+                  id: doc.id,
+                  collection: 'artists',
+                  displayName: data.artistName || data.name || 'Unknown',
+                  fullName: data.name || data.fullName || '',
+                  email: data.email || '',
+                  phone: data.phone || data.whatsapp || '',
+                  address: null,
+                  roles: {
+                    customer: false,
+                    dj: false,
+                    artist: data.isArtist === true,
+                    merch: data.isMerchSupplier === true
+                  },
+                  approved: data.approved === true,
+                  suspended: data.suspended === true,
+                  notes: data.adminNotes || '',
+                  registeredAt: data.registeredAt?.toDate?.() || data.createdAt?.toDate?.() || null,
+                  source: 'artists',
+                  hasArtistRecord: true
+                });
+              }
+            });
+          } catch (e) { }
+          
+          allUsers = Array.from(usersMap.values());
+          window.allUsersLoaded = true;
+          
+          allUsers.sort((a, b) => {
+            const dateA = a.registeredAt || new Date(0);
+            const dateB = b.registeredAt || new Date(0);
+            return dateB - dateA;
+          });
+          
+          updateStats();
+          renderUsers();
+          
+          // Remove the Load All button
+          if (btn) btn.remove();
+          
+        } catch (error) {
+          console.error('Error loading all users:', error);
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>📥</span> Load All Users';
+          }
         }
       }
       

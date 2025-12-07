@@ -458,8 +458,8 @@ export const POST: APIRoute = async ({ request }) => {
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #1a1a1a 0%, #000 100%); padding: 30px; text-align: center;">
-              <h1 style="margin: 0; font-size: 32px; color: #fff; font-weight: 400;">
+            <td style="background: #ffffff; padding: 30px; text-align: center; border-bottom: 3px solid #dc2626;">
+              <h1 style="margin: 0; font-size: 32px; color: #000; font-weight: 700;">
                 Fresh <span style="color: #dc2626;">Wax</span>
               </h1>
               <p style="margin: 10px 0 0 0; color: #888; font-size: 14px;">Underground Music Store</p>
@@ -470,7 +470,51 @@ export const POST: APIRoute = async ({ request }) => {
           <tr>
             <td style="padding: 40px 30px;">
               <div style="text-align: center; margin-bottom: 30px;">
-                <span style="font-size: 60px;">🎁</span>
+                <!-- Gift Box Icon -->
+                <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto;">
+                  <!-- Bow loops -->
+                  <tr>
+                    <td align="center" style="padding-bottom: 0;">
+                      <table cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td style="width: 18px; height: 14px; background: #dc2626; border-radius: 50%;"></td>
+                          <td style="width: 8px;"></td>
+                          <td style="width: 18px; height: 14px; background: #dc2626; border-radius: 50%;"></td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <!-- Bow center -->
+                  <tr>
+                    <td align="center" style="padding-bottom: 2px;">
+                      <div style="width: 12px; height: 12px; background: #b91c1c; border-radius: 50%; margin: 0 auto;"></div>
+                    </td>
+                  </tr>
+                  <!-- Lid with ribbon -->
+                  <tr>
+                    <td align="center">
+                      <table cellpadding="0" cellspacing="0" border="0" style="background: #ef4444; border-radius: 4px;">
+                        <tr>
+                          <td style="width: 25px; height: 14px;"></td>
+                          <td style="width: 14px; height: 14px; background: #fbbf24;"></td>
+                          <td style="width: 25px; height: 14px;"></td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <!-- Box body with ribbon -->
+                  <tr>
+                    <td align="center">
+                      <table cellpadding="0" cellspacing="0" border="0" style="background: #dc2626; border-radius: 0 0 4px 4px;">
+                        <tr>
+                          <td style="width: 23px; height: 40px;"></td>
+                          <td style="width: 14px; height: 40px; background: #fbbf24;"></td>
+                          <td style="width: 23px; height: 40px;"></td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
               </div>
               
               <h2 style="font-size: 28px; color: #111; text-align: center; margin: 0 0 20px 0;">
@@ -478,7 +522,7 @@ export const POST: APIRoute = async ({ request }) => {
               </h2>
               
               <p style="color: #666; text-align: center; margin-bottom: 30px;">
-                ${recipientName ? `Hi ${recipientName},` : ''} Here's your Fresh Wax gift card code.
+                ${recipientName ? `Hi ${recipientName},` : ''} Here's your <span style="color: #000;">Fresh</span> <span style="color: #dc2626;">Wax</span> gift card code.
               </p>
               
               <!-- Gift Card Box -->
@@ -516,7 +560,7 @@ export const POST: APIRoute = async ({ request }) => {
           <tr>
             <td style="background: #f5f5f5; padding: 25px 30px; text-align: center; border-top: 1px solid #eee;">
               <p style="color: #888; font-size: 13px; margin: 0;">
-                Fresh Wax - Underground Jungle & Drum and Bass<br>
+                <span style="color: #000;">Fresh</span> <span style="color: #dc2626;">Wax</span> - Underground Jungle & Drum and Bass<br>
                 <a href="https://freshwax.co.uk" style="color: #dc2626;">freshwax.co.uk</a>
               </p>
             </td>

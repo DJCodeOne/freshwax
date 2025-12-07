@@ -2,8 +2,9 @@
 // Check if a DJ meets the requirements to go live:
 // - Must have at least 1 DJ mix uploaded
 // - At least one mix must have 10+ likes
+// - OR have an admin-granted bypass
 import type { APIRoute } from 'astro';
-import { queryCollection } from '../../lib/firebase-rest';
+import { queryCollection, getDocument } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -32,6 +33,56 @@ export const GET: APIRoute = async ({ request }) => {
   log.info('[check-dj-eligibility] Checking eligibility for:', userId);
   
   try {
+    // First check if user is banned or on hold
+    const moderation = await getDocument('djModeration', userId);
+    
+    if (moderation) {
+      if (moderation.status === 'banned') {
+        log.info('[check-dj-eligibility] User is banned');
+        return new Response(JSON.stringify({ 
+          success: true,
+          eligible: false,
+          reason: 'banned',
+          message: 'Your account has been suspended from streaming.',
+          bannedReason: moderation.reason || null
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      if (moderation.status === 'hold') {
+        log.info('[check-dj-eligibility] User is on hold');
+        return new Response(JSON.stringify({ 
+          success: true,
+          eligible: false,
+          reason: 'on_hold',
+          message: 'Your streaming access is temporarily on hold.',
+          holdReason: moderation.reason || null
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+    
+    // Check if user has an admin-granted bypass
+    const bypass = await getDocument('djLobbyBypass', userId);
+    
+    if (bypass) {
+      log.info('[check-dj-eligibility] User has admin bypass');
+      return new Response(JSON.stringify({ 
+        success: true,
+        eligible: true,
+        bypassGranted: true,
+        reason: bypass.reason || null,
+        message: 'Access granted by admin'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     // Get all mixes for this user
     const mixes = await queryCollection('dj-mixes', {
       filters: [{ field: 'userId', op: 'EQUAL', value: userId }]

@@ -1057,19 +1057,34 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       window.firebaseAuth = auth;
       window.firebaseDb = db;
       
-      // Helper to fetch user name
+      // Helper to fetch user name using cached API (reduces 3 reads to 1)
       async function fetchUserName(user) {
         try {
-          let userDoc = await getDoc(doc(db, 'customers', user.uid));
-          if (!userDoc.exists()) {
-            userDoc = await getDoc(doc(db, 'users', user.uid));
-          }
-          if (!userDoc.exists()) {
-            userDoc = await getDoc(doc(db, 'artists', user.uid));
+          // Check sessionStorage cache first
+          const cacheKey = `fw_user_profile_${user.uid}`;
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            try {
+              const profile = JSON.parse(cached);
+              // Cache valid for 5 minutes
+              if (profile.cachedAt && Date.now() - profile.cachedAt < 300000) {
+                return profile.name || profile.partnerDisplayName || user.displayName || user.email?.split('@')[0] || 'User';
+              }
+            } catch (e) { /* ignore parse errors */ }
           }
           
-          const userData = userDoc.exists() ? userDoc.data() : {};
-          return userData.displayName || userData.name || userData.username || userData.artistName || user.displayName || user.email?.split('@')[0] || 'User';
+          // Fetch from consolidated API endpoint
+          const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`);
+          if (response.ok) {
+            const profile = await response.json();
+            if (profile.success) {
+              // Cache the result
+              profile.cachedAt = Date.now();
+              try { sessionStorage.setItem(cacheKey, JSON.stringify(profile)); } catch (e) {}
+              return profile.name || profile.partnerDisplayName || user.displayName || user.email?.split('@')[0] || 'User';
+            }
+          }
+          return user.displayName || user.email?.split('@')[0] || 'User';
         } catch (err) {
           return user.displayName || user.email?.split('@')[0] || 'User';
         }
@@ -1465,7 +1480,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       
       const userId = getCurrentUserId();
       if (!userId) {
-        window.location.href = '/account/login?redirect=' + encodeURIComponent(window.location.pathname);
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
       
@@ -1621,7 +1636,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       
       const userId = getCurrentUserId();
       if (!userId) {
-        window.location.href = '/account/login?redirect=' + encodeURIComponent(window.location.pathname);
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
       

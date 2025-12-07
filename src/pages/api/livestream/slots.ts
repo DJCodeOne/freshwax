@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { generateStreamKey, buildRtmpUrl, buildHlsUrl, RED5_CONFIG } from '../../../lib/red5';
 
 if (!getApps().length) {
   initializeApp({
@@ -257,8 +258,15 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
       
-      // Generate unique stream key for this slot
-      const streamKey = `fw-${djId.substring(0, 8)}-${Date.now().toString(36)}`;
+      // Generate a temporary slot ID for stream key generation
+      const tempSlotId = db.collection('livestreamSlots').doc().id;
+      
+      // Generate time-based secure stream key using Red5 library
+      const streamKey = generateStreamKey(djId, tempSlotId, slotStart, slotEnd);
+      
+      // Build streaming URLs
+      const rtmpUrl = buildRtmpUrl(streamKey);
+      const hlsUrl = buildHlsUrl(streamKey);
       
       // Create the slot
       const newSlot = {
@@ -275,23 +283,33 @@ export const POST: APIRoute = async ({ request }) => {
         duration,
         status: 'scheduled', // scheduled -> in_lobby -> live -> completed
         streamKey,
+        rtmpUrl,
+        hlsUrl,
+        streamSource: 'red5',
         createdAt: nowISO,
         updatedAt: nowISO,
         lobbyJoinedAt: null,
         wentLiveAt: null,
         endedAt: null,
         viewerPeak: 0,
-        totalViews: 0
+        totalViews: 0,
+        currentViewers: 0,
       };
       
-      const docRef = await db.collection('livestreamSlots').add(newSlot);
+      // Use the pre-generated ID
+      const docRef = db.collection('livestreamSlots').doc(tempSlotId);
+      await docRef.set(newSlot);
       
       // Invalidate server cache so all users see new booking
       invalidateScheduleCache();
       
       return new Response(JSON.stringify({
         success: true,
-        slot: { id: docRef.id, ...newSlot },
+        slot: { id: tempSlotId, ...newSlot },
+        streamKey,
+        rtmpUrl,
+        hlsUrl,
+        serverUrl: RED5_CONFIG.server.rtmpUrl,
         message: 'Slot booked successfully'
       }), { 
         status: 200, 
@@ -355,8 +373,15 @@ export const POST: APIRoute = async ({ request }) => {
         endTime.setHours(endTime.getHours() + 1);
       }
       
-      // Generate stream key
-      const streamKey = 'fw_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+      // Generate a slot ID first for stream key generation
+      const tempSlotId = db.collection('livestreamSlots').doc().id;
+      
+      // Generate time-based secure stream key using Red5 library
+      const streamKey = generateStreamKey(djId, tempSlotId, now, endTime);
+      
+      // Build streaming URLs
+      const rtmpUrl = buildRtmpUrl(streamKey);
+      const hlsUrl = buildHlsUrl(streamKey);
       
       // Format end time for display (e.g., "16:00")
       const endTimeFormatted = endTime.toLocaleTimeString('en-GB', { 
@@ -378,24 +403,32 @@ export const POST: APIRoute = async ({ request }) => {
         genre: 'Jungle / D&B',
         description: description || null,
         streamKey,
+        rtmpUrl,
+        hlsUrl,
+        streamSource: 'red5',
         status: 'live', // Immediately live
         createdAt: nowISO,
         isLive: true,
         startedAt: nowISO,
         endedAt: null,
         viewerPeak: 0,
-        totalViews: 0
+        totalViews: 0,
+        currentViewers: 0,
       };
       
-      const docRef = await db.collection('livestreamSlots').add(newSlot);
+      const docRef = db.collection('livestreamSlots').doc(tempSlotId);
+      await docRef.set(newSlot);
       
       // Invalidate server cache so all users see live status
       invalidateScheduleCache();
       
       return new Response(JSON.stringify({
         success: true,
-        slot: { id: docRef.id, ...newSlot },
+        slot: { id: tempSlotId, ...newSlot },
         streamKey,
+        rtmpUrl,
+        hlsUrl,
+        serverUrl: RED5_CONFIG.server.rtmpUrl,
         endTime: endTime.toISOString(),
         endTimeFormatted,
         message: `You are now live! Stream ends at ${endTimeFormatted}`
@@ -1172,19 +1205,31 @@ export const POST: APIRoute = async ({ request }) => {
       // Determine software type based on slot
       const software = slot.streamType === 'audio' ? 'butt' : 'obs';
       
+      // Build URLs using Red5 config
+      const rtmpUrl = slot.rtmpUrl || buildRtmpUrl(slot.streamKey);
+      const hlsUrl = slot.hlsUrl || buildHlsUrl(slot.streamKey);
+      
       return new Response(JSON.stringify({
         success: true,
         streamKey: slot.streamKey,
         software,
-        serverUrl: 'rtmp://stream.freshwax.co.uk:1935/live',
+        // Red5 RTMP settings
+        serverUrl: RED5_CONFIG.server.rtmpUrl,
+        rtmpUrl,
+        hlsUrl,
+        // Legacy Icecast settings (if needed)
         icecastAddress: 'stream.freshwax.co.uk',
         icecastPort: 8000,
         mount: `/${djId.substring(0, 8)}`,
+        // Slot info
         slotInfo: {
+          id: slotId,
           title: slot.title,
+          djName: slot.djName,
           startTime: slot.startTime,
           endTime: slot.endTime,
-          status: slot.status
+          status: slot.status,
+          genre: slot.genre,
         }
       }), { 
         status: 200, 

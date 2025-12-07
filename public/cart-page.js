@@ -135,15 +135,15 @@ function renderCart() {
   // Check if logged in
   if (!customerId) {
     container.innerHTML = 
-      '<div style="background: #000; border: 3px solid #fff; border-radius: 12px; overflow: hidden;">' +
-        '<div style="padding: 1rem 1.25rem; background: #111; border-bottom: 2px solid #333;">' +
+      '<div style="background: linear-gradient(to bottom, #1f2937 0%, #111827 100%); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 12px; overflow: hidden;">' +
+        '<div style="padding: 1rem 1.25rem; background: linear-gradient(to right, #374151 0%, #1f2937 100%); border-bottom: 2px solid #dc2626;">' +
           '<h2 style="font-family: Bebas Neue, sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">YOUR BAG</h2>' +
         '</div>' +
         '<div style="text-align: center; padding: 4rem 2rem;">' +
-          '<div style="font-size: 5rem; margin-bottom: 1.5rem;">🔐</div>' +
-          '<h3 style="margin: 0 0 1rem 0; font-family: Bebas Neue, sans-serif; font-size: 2rem; font-weight: 400; color: #fff; letter-spacing: 0.02em;">LOGIN REQUIRED</h3>' +
-          '<p style="margin: 0 0 2rem 0; color: #888; font-size: 1.125rem;">Please log in to view your bag</p>' +
-          '<a href="/login?redirect=/cart" style="display: inline-block; padding: 1rem 2.5rem; background: #dc2626; color: #fff; text-decoration: none; font-weight: 700; font-size: 1.125rem; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.04em;">Login</a>' +
+          '<div style="font-size: 4rem; margin-bottom: 1.5rem;">🔐</div>' +
+          '<h3 style="margin: 0 0 0.75rem 0; font-family: Bebas Neue, sans-serif; font-size: 2rem; font-weight: 400; color: #fff; letter-spacing: 0.02em;">LOGIN REQUIRED</h3>' +
+          '<p style="margin: 0 0 2rem 0; color: #9ca3af; font-size: 1rem;">Please log in to view your bag</p>' +
+          '<a href="/login?redirect=/cart" style="display: inline-block; padding: 0.875rem 2rem; background: #dc2626; color: #fff; text-decoration: none; font-family: Bebas Neue, sans-serif; font-weight: 400; font-size: 1.125rem; border-radius: 8px; letter-spacing: 0.04em;">LOGIN</a>' +
         '</div>' +
       '</div>';
     return;
@@ -155,15 +155,15 @@ function renderCart() {
   
   if (items.length === 0) {
     container.innerHTML = 
-      '<div style="background: #000; border: 3px solid #fff; border-radius: 12px; overflow: hidden;">' +
-        '<div style="padding: 1rem 1.25rem; background: #111; border-bottom: 2px solid #333;">' +
+      '<div style="background: linear-gradient(to bottom, #1f2937 0%, #111827 100%); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 12px; overflow: hidden;">' +
+        '<div style="padding: 1rem 1.25rem; background: linear-gradient(to right, #374151 0%, #1f2937 100%); border-bottom: 2px solid #dc2626;">' +
           '<h2 style="font-family: Bebas Neue, sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">YOUR BAG</h2>' +
         '</div>' +
         '<div style="text-align: center; padding: 4rem 2rem;">' +
-          '<div style="font-size: 5rem; margin-bottom: 1.5rem; filter: grayscale(1);">🎵</div>' +
-          '<h3 style="margin: 0 0 1rem 0; font-family: Bebas Neue, sans-serif; font-size: 2.5rem; font-weight: 400; color: #dc2626; letter-spacing: 0.02em;">YOUR BAG IS EMPTY</h3>' +
-          '<p style="margin: 0 0 2rem 0; color: #888; font-size: 1.125rem;">Time to dig for some fresh wax</p>' +
-          '<a href="/" style="display: inline-block; padding: 1rem 2.5rem; background: #fff; color: #000; text-decoration: none; font-weight: 700; font-size: 1.125rem; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.04em;">Browse Releases</a>' +
+          '<div style="font-size: 4rem; margin-bottom: 1.5rem; filter: grayscale(1); opacity: 0.5;">🎵</div>' +
+          '<h3 style="margin: 0 0 0.75rem 0; font-family: Bebas Neue, sans-serif; font-size: 2rem; font-weight: 400; color: #dc2626; letter-spacing: 0.02em;">YOUR BAG IS EMPTY</h3>' +
+          '<p style="margin: 0 0 2rem 0; color: #9ca3af; font-size: 1rem;">Time to dig for some fresh wax</p>' +
+          '<a href="/" style="display: inline-block; padding: 0.875rem 2rem; background: #dc2626; color: #fff; text-decoration: none; font-family: Bebas Neue, sans-serif; font-weight: 400; font-size: 1.125rem; border-radius: 8px; letter-spacing: 0.04em;">BROWSE RELEASES</a>' +
         '</div>' +
       '</div>';
     return;
@@ -186,34 +186,39 @@ function renderCart() {
     var priceEach = price.toFixed(2);
     var itemName = item.name || item.title || 'Unknown Item';
     var itemImage = item.image || item.artwork || '/logo.webp';
+    var artistName = item.artist || '';
+    
+    // Check if quantity adjustable (vinyl/merch yes, digital no)
+    var canAdjustQty = itemType === 'vinyl' || itemType === 'merch';
     
     itemsHTML += 
-      '<article style="display: grid; grid-template-columns: 100px 1fr; gap: 1.25rem; padding: 1.25rem; background: #000; border: 3px solid #fff; border-radius: 12px;">' +
-        '<div style="width: 100px; height: 100px; border-radius: 8px; overflow: hidden; background: #111; border: 2px solid #fff; flex-shrink: 0;">' +
-          '<img src="' + itemImage + '" alt="' + itemName + '" style="width: 100px; height: 100px; object-fit: cover; display: block;" onerror="this.src=\'/logo.webp\'">' +
+      '<article style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: linear-gradient(to bottom, #1f2937 0%, #111827 100%); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 10px; transition: all 0.2s;">' +
+        '<div style="width: 72px; height: 72px; border-radius: 8px; overflow: hidden; background: #111; border: 2px solid rgba(255, 255, 255, 0.15); flex-shrink: 0;">' +
+          '<img src="' + itemImage + '" alt="' + itemName + '" style="width: 72px; height: 72px; object-fit: cover; display: block;" onerror="this.src=\'/logo.webp\'">' +
         '</div>' +
-        '<div style="display: flex; flex-direction: column; min-width: 0;">' +
-          '<div style="margin-bottom: 0.625rem;">' +
-            '<h3 style="margin: 0 0 0.375rem 0; font-size: 1.25rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + itemName + '</h3>' +
-            '<div style="display: flex; gap: 0.625rem; flex-wrap: wrap; align-items: center;">' +
-              '<span style="display: inline-block; padding: 0.2rem 0.625rem; font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border-radius: 5px; border: 2px solid; ' + getBadgeStyle(itemType) + '">' + itemType + '</span>' +
-              (item.color ? '<span style="font-size: 0.95rem; color: #a0a0a0;">' + (typeof item.color === 'object' ? item.color.name : item.color) + '</span>' : '') +
-              (item.size ? '<span style="font-size: 0.95rem; color: #a0a0a0;">Size: ' + item.size + '</span>' : '') +
-            '</div>' +
-          '</div>' +
-          '<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; flex-wrap: wrap; gap: 1rem;">' +
-            '<div style="display: flex; align-items: center; gap: 0.5rem;">' +
-              '<button onclick="updateQuantity(' + i + ', ' + (quantity - 1) + ')" style="width: 36px; height: 36px; background: #000; border: 2px solid #fff; border-radius: 8px; color: #fff; font-size: 1.25rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;"' + (quantity <= 1 ? ' disabled' : '') + '>−</button>' +
-              '<span style="min-width: 40px; text-align: center; font-size: 1.125rem; font-weight: 700; color: #fff;">' + quantity + '</span>' +
-              '<button onclick="updateQuantity(' + i + ', ' + (quantity + 1) + ')" style="width: 36px; height: 36px; background: #000; border: 2px solid #fff; border-radius: 8px; color: #fff; font-size: 1.25rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;"' + (quantity >= 10 ? ' disabled' : '') + '>+</button>' +
-              '<button onclick="removeItem(' + i + ')" style="margin-left: 0.5rem; padding: 0.5rem 1rem; background: transparent; border: 2px solid #dc2626; border-radius: 8px; color: #dc2626; font-size: 0.875rem; font-weight: 600; cursor: pointer;">Remove</button>' +
-            '</div>' +
-            '<div style="text-align: right;">' +
-              '<div style="font-size: 1.375rem; font-weight: 700; color: #fff;">£' + priceTotal + '</div>' +
-              (quantity > 1 ? '<div style="font-size: 0.875rem; color: #888;">£' + priceEach + ' each</div>' : '') +
-            '</div>' +
+        '<div style="flex: 1; min-width: 0;">' +
+          '<h3 style="margin: 0 0 0.25rem 0; font-family: Bebas Neue, sans-serif; font-size: 1.25rem; color: #dc2626; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">' + itemName + '</h3>' +
+          (artistName ? '<p style="margin: 0 0 0.375rem 0; font-size: 0.875rem; color: #9ca3af;">' + artistName + '</p>' : '') +
+          '<div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">' +
+            '<span style="display: inline-block; padding: 0.125rem 0.5rem; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 4px; border: 1.5px solid; ' + getBadgeStyle(itemType) + '">' + itemType + '</span>' +
+            (item.color ? '<span style="font-size: 0.8125rem; color: #6b7280;">' + (typeof item.color === 'object' ? item.color.name : item.color) + '</span>' : '') +
+            (item.size ? '<span style="font-size: 0.8125rem; color: #6b7280;">Size: ' + item.size + '</span>' : '') +
           '</div>' +
         '</div>' +
+        (canAdjustQty ? 
+          '<div style="display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0;">' +
+            '<button onclick="updateQuantity(' + i + ', ' + (quantity - 1) + ')" class="qty-btn" style="width: 24px; height: 24px; background: transparent; border: 1.5px solid rgba(255,255,255,0.3); border-radius: 4px; color: #9ca3af; font-size: 0.875rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"' + (quantity <= 1 ? ' disabled style="width: 24px; height: 24px; background: transparent; border: 1.5px solid rgba(255,255,255,0.15); border-radius: 4px; color: #4b5563; font-size: 0.875rem; cursor: not-allowed; display: flex; align-items: center; justify-content: center;"' : '') + '>−</button>' +
+            '<span style="min-width: 24px; text-align: center; font-size: 0.875rem; font-weight: 600; color: #fff;">' + quantity + '</span>' +
+            '<button onclick="updateQuantity(' + i + ', ' + (quantity + 1) + ')" class="qty-btn" style="width: 24px; height: 24px; background: transparent; border: 1.5px solid rgba(255,255,255,0.3); border-radius: 4px; color: #9ca3af; font-size: 0.875rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"' + (quantity >= 10 ? ' disabled style="width: 24px; height: 24px; background: transparent; border: 1.5px solid rgba(255,255,255,0.15); border-radius: 4px; color: #4b5563; font-size: 0.875rem; cursor: not-allowed; display: flex; align-items: center; justify-content: center;"' : '') + '>+</button>' +
+          '</div>' 
+        : '') +
+        '<div style="text-align: right; flex-shrink: 0; min-width: 70px;">' +
+          '<div style="font-size: 1.125rem; font-weight: 700; color: #22c55e;">£' + priceTotal + '</div>' +
+          (quantity > 1 ? '<div style="font-size: 0.75rem; color: #6b7280;">£' + priceEach + ' each</div>' : '') +
+        '</div>' +
+        '<button onclick="removeItem(' + i + ')" style="width: 28px; height: 28px; background: transparent; border: none; color: #6b7280; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.2s;" title="Remove item">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
+        '</button>' +
       '</article>';
   }
   
@@ -223,51 +228,51 @@ function renderCart() {
   var freeShippingHint = '';
   if (hasPhysicalItems && shipping > 0 && subtotal < 50) {
     freeShippingHint = 
-      '<div style="padding: 0.875rem 1rem; background: #111; border: 2px solid #333; border-radius: 8px; text-align: center;">' +
-        '<span style="font-size: 0.9375rem; color: #888;">🚚 Add <strong style="color: #fff;">£' + (50 - subtotal).toFixed(2) + '</strong> more for free shipping</span>' +
+      '<div style="padding: 0.75rem 1rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; text-align: center;">' +
+        '<span style="font-size: 0.875rem; color: #9ca3af;">🚚 Add <strong style="color: #fff;">£' + (50 - subtotal).toFixed(2) + '</strong> more for free shipping</span>' +
       '</div>';
   } else if (hasPhysicalItems && shipping === 0 && subtotal >= 50) {
     freeShippingHint = 
-      '<div style="padding: 0.875rem 1rem; background: #052e16; border: 2px solid #22c55e; border-radius: 8px; text-align: center;">' +
-        '<span style="font-size: 0.9375rem; color: #22c55e;">✓ Free shipping on orders over £50!</span>' +
+      '<div style="padding: 0.75rem 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px; text-align: center;">' +
+        '<span style="font-size: 0.875rem; color: #22c55e;">✓ Free shipping on orders over £50!</span>' +
       '</div>';
   }
   
   container.innerHTML = 
-    '<div style="background: #000; border: 3px solid #fff; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden;">' +
-      '<div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: #111; border-bottom: 2px solid #333;">' +
+    '<div style="background: linear-gradient(to bottom, #1f2937 0%, #111827 100%); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden;">' +
+      '<div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: linear-gradient(to right, #374151 0%, #1f2937 100%); border-bottom: 2px solid #dc2626;">' +
         '<h2 style="font-family: Bebas Neue, sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">YOUR BAG</h2>' +
-        '<span style="font-size: 0.9375rem; color: #888; font-weight: 500;">' + itemCount + ' ' + (itemCount === 1 ? 'item' : 'items') + '</span>' +
+        '<span style="font-size: 0.875rem; color: #9ca3af; font-weight: 500;">' + itemCount + ' ' + (itemCount === 1 ? 'item' : 'items') + '</span>' +
       '</div>' +
-      '<div style="padding: 1.25rem;">' +
-        '<div style="display: flex; flex-direction: column; gap: 1rem;">' + itemsHTML + '</div>' +
+      '<div style="padding: 1rem;">' +
+        '<div style="display: flex; flex-direction: column; gap: 0.75rem;">' + itemsHTML + '</div>' +
       '</div>' +
     '</div>' +
-    '<div style="background: #000; border: 3px solid #fff; border-radius: 12px; overflow: hidden;">' +
-      '<div style="padding: 1rem 1.25rem; background: #111; border-bottom: 2px solid #333;">' +
+    '<div style="background: linear-gradient(to bottom, #1f2937 0%, #111827 100%); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 12px; overflow: hidden;">' +
+      '<div style="padding: 1rem 1.25rem; background: linear-gradient(to right, #374151 0%, #1f2937 100%); border-bottom: 2px solid #dc2626;">' +
         '<h2 style="font-family: Bebas Neue, sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">ORDER SUMMARY</h2>' +
       '</div>' +
       '<div style="padding: 1.25rem;">' +
-        '<div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">' +
+        '<div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">' +
           '<div style="display: flex; justify-content: space-between; align-items: center;">' +
-            '<span style="font-size: 1rem; color: #888;">Subtotal</span>' +
-            '<span style="font-size: 1.125rem; font-weight: 700; color: #fff;">£' + subtotal.toFixed(2) + '</span>' +
+            '<span style="font-size: 0.9375rem; color: #9ca3af;">Subtotal</span>' +
+            '<span style="font-size: 1rem; font-weight: 600; color: #fff;">£' + subtotal.toFixed(2) + '</span>' +
           '</div>' +
           '<div style="display: flex; justify-content: space-between; align-items: center;">' +
-            '<span style="font-size: 1rem; color: #888;">Shipping</span>' +
-            '<span style="font-size: 1.125rem; font-weight: 700; color: ' + shippingColor + ';">' + shippingText + '</span>' +
+            '<span style="font-size: 0.9375rem; color: #9ca3af;">Shipping</span>' +
+            '<span style="font-size: 1rem; font-weight: 600; color: ' + shippingColor + ';">' + shippingText + '</span>' +
           '</div>' +
           freeShippingHint +
         '</div>' +
-        '<div style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem; background: #111; border: 2px solid #fff; border-radius: 10px; margin-bottom: 1.5rem;">' +
-          '<span style="font-family: Bebas Neue, sans-serif; font-size: 1.5rem; letter-spacing: 0.04em; color: #fff;">TOTAL</span>' +
-          '<span style="font-size: 2rem; font-weight: 700; color: #fff;">£' + total.toFixed(2) + '</span>' +
+        '<div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; background: rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.15); border-radius: 10px; margin-bottom: 1.25rem;">' +
+          '<span style="font-family: Bebas Neue, sans-serif; font-size: 1.375rem; letter-spacing: 0.04em; color: #fff;">TOTAL</span>' +
+          '<span style="font-size: 1.75rem; font-weight: 700; color: #22c55e;">£' + total.toFixed(2) + '</span>' +
         '</div>' +
-        '<button onclick="goToCheckout()" style="width: 100%; padding: 1.25rem; background: #dc2626; color: #fff; border: none; border-radius: 12px; font-family: Bebas Neue, sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.08em; cursor: pointer;">' +
+        '<button onclick="goToCheckout()" style="width: 100%; padding: 1rem; background: #dc2626; color: #fff; border: none; border-radius: 10px; font-family: Bebas Neue, sans-serif; font-size: 1.375rem; font-weight: 400; letter-spacing: 0.06em; cursor: pointer; transition: all 0.2s;">' +
           'PROCEED TO CHECKOUT' +
         '</button>' +
-        '<div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 1rem; font-size: 0.9375rem; color: #666;">' +
-          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+        '<div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.875rem; font-size: 0.8125rem; color: #6b7280;">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
             '<path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>' +
           '</svg>' +
           'Secure Checkout' +

@@ -41,6 +41,18 @@ interface Props {
     author?: string;
     tags?: string[];
   };
+  
+  // FAQ Schema
+  faqs?: {
+    question: string;
+    answer: string;
+  }[];
+  
+  // Breadcrumb override (for custom labels)
+  breadcrumbs?: {
+    name: string;
+    url: string;
+  }[];
 }
 
 const {
@@ -53,7 +65,9 @@ const {
   noindex = false,
   product,
   music,
-  article
+  article,
+  faqs,
+  breadcrumbs
 } = Astro.props;
 
 const SITE = {
@@ -64,14 +78,14 @@ const SITE = {
   logo: 'https://freshwax.co.uk/logo.webp'
 };
 
-const fullTitle = title === 'Home' ? `${SITE.name} | Jungle & Drum and Bass Record Label` : `${title} | ${SITE.name}`;
+const fullTitle = title === 'Home' ? `${SITE.name} | Jungle & Drum and Bass Music Store` : `${title} | ${SITE.name}`;
 const canonicalUrl = canonical || new URL(Astro.url.pathname, SITE.url).href;
 const imageUrl = image.startsWith('http') ? image : new URL(image, SITE.url).href;
 
 // Organization Schema - appears in Google Knowledge Panel
 const organizationSchema = {
   "@context": "https://schema.org",
-  "@type": "RecordLabel",
+  "@type": "Store",
   "@id": `${SITE.url}/#organization`,
   "name": SITE.name,
   "url": SITE.url,
@@ -82,7 +96,7 @@ const organizationSchema = {
     "height": 512
   },
   "image": SITE.logo,
-  "description": "Independent UK record label specialising in jungle and drum & bass music. Digital downloads and limited edition vinyl.",
+  "description": "Independent UK online music store specialising in jungle and drum & bass. Digital downloads, vinyl records, DJ mixes, and merchandise.",
   "foundingDate": "2024",
   "address": {
     "@type": "PostalAddress",
@@ -92,7 +106,7 @@ const organizationSchema = {
   "contactPoint": {
     "@type": "ContactPoint",
     "contactType": "customer service",
-    "email": "info@freshwax.co.uk"
+    "email": "support@freshwax.co.uk"
   },
   "sameAs": [
     "https://facebook.com/freshwaxuk",
@@ -136,9 +150,21 @@ const webpageSchema = {
   "inLanguage": "en-GB"
 };
 
-// Breadcrumb Schema
+// Breadcrumb Schema - use custom breadcrumbs if provided, otherwise auto-generate
 const pathParts = Astro.url.pathname.split('/').filter(Boolean);
-const breadcrumbSchema = pathParts.length > 0 ? {
+const breadcrumbSchema = breadcrumbs ? {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE.url },
+    ...breadcrumbs.map((crumb, i) => ({
+      "@type": "ListItem",
+      "position": i + 2,
+      "name": crumb.name,
+      "item": crumb.url.startsWith('http') ? crumb.url : `${SITE.url}${crumb.url}`
+    }))
+  ]
+} : pathParts.length > 0 ? {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   "itemListElement": [
@@ -150,6 +176,20 @@ const breadcrumbSchema = pathParts.length > 0 ? {
       "item": `${SITE.url}/${pathParts.slice(0, i + 1).join('/')}`
     }))
   ]
+} : null;
+
+// FAQ Schema - for pages with FAQs
+const faqSchema = faqs && faqs.length > 0 ? {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqs.map(faq => ({
+    "@type": "Question",
+    "name": faq.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": faq.answer
+    }
+  }))
 } : null;
 
 // Product Schema (for vinyl, merch)
@@ -342,3 +382,4 @@ const articleSchema = article ? {
 {productSchema && <script type="application/ld+json" set:html={JSON.stringify(productSchema)} />}
 {musicAlbumSchema && <script type="application/ld+json" set:html={JSON.stringify(musicAlbumSchema)} />}
 {articleSchema && <script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />}
+{faqSchema && <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />}

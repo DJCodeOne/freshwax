@@ -1,61 +1,95 @@
 ---
 // src/pages/about.astro
 import InfoPageLayout from '../layouts/InfoPageLayout.astro';
+
+const faqs = [
+  {
+    question: "What genres does Fresh Wax specialise in?",
+    answer: "Fresh Wax specialises in jungle and drum & bass music, including sub-genres like liquid drum & bass, neurofunk, jump-up, and classic jungle. We stock digital downloads, vinyl records, DJ mixes, and branded merchandise."
+  },
+  {
+    question: "Do you ship vinyl records internationally?",
+    answer: "Yes, we ship vinyl records worldwide. All records are carefully packed to ensure they arrive in perfect condition. Shipping costs and delivery times vary by destination."
+  },
+  {
+    question: "What audio formats are available for digital downloads?",
+    answer: "We offer high-quality digital downloads in multiple formats including WAV (lossless), FLAC (lossless compressed), and MP3 (320kbps). You get instant download access after purchase."
+  },
+  {
+    question: "How can I listen to your live stream?",
+    answer: "Our live stream is available on the Fresh Wax website. Visit the Live Stream page to tune in to sets from guest DJs and exclusive broadcasts from the jungle and drum & bass scene."
+  },
+  {
+    question: "Do you accept submissions from artists and labels?",
+    answer: "Yes, we're always looking for quality jungle and drum & bass releases. Contact us at info@freshwax.co.uk with details about your release, including audio samples and artwork."
+  }
+];
 ---
 
 <InfoPageLayout 
   title="About Us" 
-  description="Fresh Wax is an independent UK record label specialising in jungle and drum & bass music. Digital downloads and limited edition vinyl pressings."
+  description="Fresh Wax is an independent UK online music store specialising in jungle and drum & bass. Digital downloads, vinyl records, DJ mixes, and merchandise."
+  faqs={faqs}
 >
   <p class="text-xl text-gray-600 mb-8">
-    Fresh <span class="text-red-600">Wax</span> is an independent UK record label dedicated to preserving and pushing forward the sounds of jungle and drum & bass.
+    <span class="text-black font-semibold">Fresh</span> <span class="text-red-600 font-semibold">Wax</span> is an independent UK online music store dedicated to the sounds of jungle and drum & bass.
   </p>
 
   <h2>Our Story</h2>
   <p>
-    Born from a deep love of breakbeat culture, Fresh <span class="text-red-600">Wax</span> was founded to give a platform to both established artists and emerging talent in the jungle and drum & bass scene. We believe in quality over quantity, carefully curating each release to ensure it meets our standards of excellence.
+    Born from a deep love of breakbeat culture, <span class="text-black font-semibold">Fresh</span> <span class="text-red-600 font-semibold">Wax</span> was founded to bring the best jungle and drum & bass music to fans worldwide. We carefully curate our catalogue to ensure every release meets our standards of quality and authenticity.
   </p>
   <p>
-    From the rolling basslines of liquid drum & bass to the chopped breaks of classic jungle, we cover the full spectrum of the sound we love. Every release is treated with care, from mastering to artwork, ensuring our artists' music is presented in the best possible way.
-  </p>
-
-  <h2>What We Do</h2>
-  <h3>Digital Releases</h3>
-  <p>
-    High-quality digital downloads in multiple formats including WAV, FLAC, and MP3. Our digital releases are available immediately upon release, giving you instant access to the freshest tracks.
+    From the rolling basslines of liquid drum & bass to the chopped breaks of classic jungle, we stock the full spectrum of the sound we love. Whether you're looking for the latest digital releases, limited edition vinyl, exclusive DJ mixes, or branded merchandise, you'll find it here.
   </p>
 
-  <h3>Vinyl Pressings</h3>
+  <h2>What We Offer</h2>
+  <h3>Digital Downloads</h3>
   <p>
-    Limited edition vinyl pressings for the collectors and DJs who appreciate the warmth and authenticity of wax. Each vinyl release is pressed in limited quantities, making them true collector's items.
+    High-quality digital downloads in multiple formats including WAV, FLAC, and MP3. Purchase individual tracks or complete releases, with instant download access after purchase.
   </p>
 
-  <h3>Artist Development</h3>
+  <h3>Vinyl Records</h3>
   <p>
-    We work closely with our artists to develop their sound and reach. From providing feedback on productions to helping with promotion and distribution, we're invested in our artists' success.
+    Limited edition vinyl pressings for collectors and DJs who appreciate the warmth and authenticity of wax. We stock releases from top labels in the scene, with each record carefully packed and shipped to ensure it arrives in perfect condition.
+  </p>
+
+  <h3>DJ Mixes</h3>
+  <p>
+    Exclusive DJ mixes from talented artists in the scene. Download high-quality mixes to enjoy the best of jungle and drum & bass, expertly mixed and ready for your listening pleasure.
+  </p>
+
+  <h3>Merchandise</h3>
+  <p>
+    Quality branded merchandise including t-shirts, hoodies, and accessories. Show your love for the scene with gear designed by and for the jungle and drum & bass community.
+  </p>
+
+  <h3>Live Stream</h3>
+  <p>
+    Tune in to our live stream featuring sets from guest DJs and exclusive broadcasts. Experience the energy of the scene from wherever you are.
   </p>
 
   <h2>Our Values</h2>
   <ul>
-    <li><strong>Quality First</strong> – We never compromise on audio quality or presentation</li>
-    <li><strong>Artist Focused</strong> – Fair deals and transparent communication with all our artists</li>
-    <li><strong>Community Driven</strong> – Supporting the wider jungle and drum & bass community</li>
-    <li><strong>Independent Spirit</strong> – Staying true to the underground while growing sustainably</li>
+    <li><strong>Quality First</strong> – We never compromise on audio quality or product standards</li>
+    <li><strong>Community Driven</strong> – Supporting artists and the wider jungle and drum & bass community</li>
+    <li><strong>Independent Spirit</strong> – Staying true to the underground while delivering professional service</li>
+    <li><strong>Customer Focus</strong> – Fast shipping, secure payments, and responsive customer support</li>
   </ul>
 
-  <h2>Get Involved</h2>
+  <h2>Contact Us</h2>
   <p>
-    Whether you're an artist looking for a home for your music, a DJ seeking fresh tracks, or a fan of the sound, we'd love to hear from you.
+    We love hearing from our customers. Whether you have a question about an order, want to suggest a release, or just want to chat about music, get in touch.
   </p>
   <p>
-    <strong>For demo submissions:</strong> <a href="mailto:demos@freshwax.co.uk">demos@freshwax.co.uk</a><br>
+    <strong>Customer support:</strong> <a href="mailto:support@freshwax.co.uk">support@freshwax.co.uk</a><br>
     <strong>General enquiries:</strong> <a href="mailto:info@freshwax.co.uk">info@freshwax.co.uk</a>
   </p>
 
-  <div class="mt-12 p-6 bg-gray-100 border-l-4 border-black">
+  <div class="mt-12 p-6 bg-gray-100 border-l-4 border-red-600">
     <p class="text-lg font-semibold mb-2">Support the Underground</p>
     <p class="text-gray-600 mb-0">
-      Every purchase directly supports independent artists and helps keep the jungle and drum & bass scene alive. Thank you for being part of the Fresh <span class="text-red-600">Wax</span> family.
+      Every purchase helps support independent artists and keeps the jungle and drum & bass scene thriving. Thank you for shopping with <span class="text-black font-semibold">Fresh</span> <span class="text-red-600 font-semibold">Wax</span>.
     </p>
   </div>
 </InfoPageLayout>

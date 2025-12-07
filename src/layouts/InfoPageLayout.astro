@@ -10,12 +10,14 @@ interface Props {
   title: string;
   description: string;
   lastUpdated?: string;
+  faqs?: { question: string; answer: string }[];
+  breadcrumbs?: { name: string; url: string }[];
 }
 
-const { title, description, lastUpdated } = Astro.props;
+const { title, description, lastUpdated, faqs, breadcrumbs } = Astro.props;
 ---
 
-<Layout title={title} description={description}>
+<Layout title={title} description={description} faqs={faqs} breadcrumbs={breadcrumbs}>
   <Header />
   
   <main class="bg-gray-50 min-h-screen">

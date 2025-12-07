@@ -96,7 +96,13 @@ export const POST: APIRoute = async ({ request }) => {
     }
     
     const amountToCredit = giftCard.currentBalance;
-    const now = new Date().toISOString();
+    const now = new Date();
+    const nowISO = now.toISOString();
+    
+    // Credit expires 1 year from redemption
+    const expiryDate = new Date(now);
+    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    const creditExpiresAt = expiryDate.toISOString();
     
     // Start transaction to update both gift card and user credit
     const batch = db.batch();
@@ -104,7 +110,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Update gift card as redeemed
     batch.update(giftCardDoc.ref, {
       redeemedBy: userId,
-      redeemedAt: now,
+      redeemedAt: nowISO,
       currentBalance: 0,
       isActive: false
     });
@@ -124,7 +130,7 @@ export const POST: APIRoute = async ({ request }) => {
       newBalance = amountToCredit;
     }
     
-    // Create transaction record
+    // Create transaction record with expiry
     const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const transaction = {
       id: transactionId,
@@ -132,7 +138,8 @@ export const POST: APIRoute = async ({ request }) => {
       amount: amountToCredit,
       description: `Redeemed gift card ${normalizedCode} - ${giftCard.description || ''}`,
       giftCardCode: normalizedCode,
-      createdAt: now,
+      createdAt: nowISO,
+      expiresAt: creditExpiresAt,
       balanceAfter: newBalance
     };
     
@@ -140,14 +147,14 @@ export const POST: APIRoute = async ({ request }) => {
     if (creditDoc.exists) {
       batch.update(creditRef, {
         balance: newBalance,
-        lastUpdated: now,
+        lastUpdated: nowISO,
         transactions: FieldValue.arrayUnion(transaction)
       });
     } else {
       batch.set(creditRef, {
         userId,
         balance: newBalance,
-        lastUpdated: now,
+        lastUpdated: nowISO,
         transactions: [transaction]
       });
     }
@@ -156,12 +163,13 @@ export const POST: APIRoute = async ({ request }) => {
     const customerRef = db.collection('customers').doc(userId);
     batch.update(customerRef, {
       creditBalance: newBalance,
-      creditUpdatedAt: now
+      creditUpdatedAt: nowISO,
+      creditExpiresAt: creditExpiresAt
     });
     
     await batch.commit();
     
-    console.log('[giftcards/redeem] Redeemed:', normalizedCode, 'for user:', userId, 'amount:', amountToCredit);
+    console.log('[giftcards/redeem] Redeemed:', normalizedCode, 'for user:', userId, 'amount:', amountToCredit, 'expires:', creditExpiresAt);
     
     return new Response(JSON.stringify({
       success: true,

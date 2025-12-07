@@ -106,8 +106,8 @@ async function sendGiftCardEmail(
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #1a1a1a 0%, #000 100%); padding: 30px; text-align: center;">
-              <h1 style="margin: 0; font-size: 32px; color: #fff; font-weight: 400;">
+            <td style="background: #ffffff; padding: 30px; text-align: center; border-bottom: 3px solid #dc2626;">
+              <h1 style="margin: 0; font-size: 32px; color: #000; font-weight: 700;">
                 Fresh <span style="color: #dc2626;">Wax</span>
               </h1>
               <p style="margin: 10px 0 0 0; color: #888; font-size: 14px;">Underground Music Store</p>
@@ -118,7 +118,51 @@ async function sendGiftCardEmail(
           <tr>
             <td style="padding: 40px 30px;">
               <div style="text-align: center; margin-bottom: 30px;">
-                <span style="font-size: 60px;">🎁</span>
+                <!-- Gift Box Icon -->
+                <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto;">
+                  <!-- Bow loops -->
+                  <tr>
+                    <td align="center" style="padding-bottom: 0;">
+                      <table cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td style="width: 18px; height: 14px; background: #dc2626; border-radius: 50%;"></td>
+                          <td style="width: 8px;"></td>
+                          <td style="width: 18px; height: 14px; background: #dc2626; border-radius: 50%;"></td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <!-- Bow center -->
+                  <tr>
+                    <td align="center" style="padding-bottom: 2px;">
+                      <div style="width: 12px; height: 12px; background: #b91c1c; border-radius: 50%; margin: 0 auto;"></div>
+                    </td>
+                  </tr>
+                  <!-- Lid with ribbon -->
+                  <tr>
+                    <td align="center">
+                      <table cellpadding="0" cellspacing="0" border="0" style="background: #ef4444; border-radius: 4px;">
+                        <tr>
+                          <td style="width: 25px; height: 14px;"></td>
+                          <td style="width: 14px; height: 14px; background: #fbbf24;"></td>
+                          <td style="width: 25px; height: 14px;"></td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <!-- Box body with ribbon -->
+                  <tr>
+                    <td align="center">
+                      <table cellpadding="0" cellspacing="0" border="0" style="background: #dc2626; border-radius: 0 0 4px 4px;">
+                        <tr>
+                          <td style="width: 23px; height: 40px;"></td>
+                          <td style="width: 14px; height: 40px; background: #fbbf24;"></td>
+                          <td style="width: 23px; height: 40px;"></td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
               </div>
               
               <h2 style="font-size: 28px; color: #111; text-align: center; margin: 0 0 20px 0;">
@@ -157,7 +201,7 @@ async function sendGiftCardEmail(
               </div>
               
               <p style="color: #888; font-size: 13px; text-align: center; margin: 30px 0 0 0;">
-                Your gift card credit never expires. Use it to buy digital releases, vinyl records, merchandise, and DJ mixes.
+                Your gift card credit expires 1 year from redemption. Use it to buy digital releases, vinyl records, and merchandise.
               </p>
             </td>
           </tr>
@@ -166,7 +210,7 @@ async function sendGiftCardEmail(
           <tr>
             <td style="background: #f5f5f5; padding: 25px 30px; text-align: center; border-top: 1px solid #eee;">
               <p style="color: #888; font-size: 13px; margin: 0;">
-                Fresh Wax - Underground Jungle & Drum and Bass<br>
+                <span style="color: #000;">Fresh</span> <span style="color: #dc2626;">Wax</span> - Underground Jungle & Drum and Bass<br>
                 <a href="https://freshwax.co.uk" style="color: #dc2626;">freshwax.co.uk</a>
               </p>
             </td>
@@ -201,8 +245,7 @@ export const POST: APIRoute = async ({ request }) => {
       recipientType,
       recipientName,
       recipientEmail,
-      message,
-      sendCopyToMe
+      message
     } = data;
     
     // Validate amount
@@ -258,6 +301,14 @@ export const POST: APIRoute = async ({ request }) => {
       // Ignore
     }
     
+    const now = new Date();
+    const purchasedAt = now.toISOString();
+    
+    // Calculate expiry (1 year from purchase for display, but actually expires 1 year from redemption)
+    const displayExpiryDate = new Date(now);
+    displayExpiryDate.setFullYear(displayExpiryDate.getFullYear() + 1);
+    const displayExpiresAt = displayExpiryDate.toISOString();
+    
     // Create gift card document
     const giftCard = {
       code,
@@ -267,8 +318,8 @@ export const POST: APIRoute = async ({ request }) => {
       description: recipientType === 'gift' 
         ? `Gift card from ${buyerName || buyerEmail}` 
         : 'Purchased gift card',
-      createdAt: new Date().toISOString(),
-      expiresAt: null, // Gift cards don't expire
+      createdAt: purchasedAt,
+      expiresAt: null, // Actual expiry set on redemption
       isActive: true,
       redeemedBy: null,
       redeemedAt: null,
@@ -285,8 +336,23 @@ export const POST: APIRoute = async ({ request }) => {
       emailsSent: []
     };
     
-    await db.collection('giftCards').add(giftCard);
+    const giftCardRef = await db.collection('giftCards').add(giftCard);
     console.log(`[giftcards/purchase] Created gift card ${code} for £${numAmount}`);
+    
+    // Store purchase record in customer's account
+    const purchaseRecord = {
+      giftCardId: giftCardRef.id,
+      amount: numAmount,
+      recipientEmail: targetEmail,
+      recipientName: recipientName || '',
+      recipientType,
+      purchasedAt,
+      displayExpiresAt,
+      status: 'sent'
+    };
+    
+    await db.collection('customers').doc(buyerUserId).collection('purchasedGiftCards').add(purchaseRecord);
+    console.log(`[giftcards/purchase] Added purchase record to customer ${buyerUserId}`);
     
     // Send email to recipient
     const isGift = recipientType === 'gift';
@@ -302,31 +368,11 @@ export const POST: APIRoute = async ({ request }) => {
     
     // Update email tracking
     if (recipientEmailSent) {
-      await db.collection('giftCards')
-        .where('code', '==', code)
-        .get()
-        .then(snapshot => {
-          snapshot.forEach(doc => {
-            doc.ref.update({
-              emailsSent: [
-                { email: targetEmail, sentAt: new Date().toISOString(), type: 'recipient' }
-              ]
-            });
-          });
-        });
-    }
-    
-    // Send copy to buyer if requested (and it's a gift)
-    if (isGift && sendCopyToMe && buyerEmail !== targetEmail) {
-      await sendGiftCardEmail(
-        buyerEmail,
-        buyerName,
-        code,
-        numAmount,
-        false, // Not a gift when sending to self
-        '',
-        ''
-      );
+      await giftCardRef.update({
+        emailsSent: [
+          { email: targetEmail, sentAt: new Date().toISOString(), type: 'recipient' }
+        ]
+      });
     }
     
     return new Response(JSON.stringify({
@@ -334,7 +380,9 @@ export const POST: APIRoute = async ({ request }) => {
       giftCard: {
         code,
         amount: numAmount,
-        recipientEmail: targetEmail
+        recipientEmail: targetEmail,
+        purchasedAt,
+        expiresAt: displayExpiresAt
       },
       emailSent: recipientEmailSent
     }), { 

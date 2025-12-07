@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { generateStreamKey, buildRtmpUrl, buildHlsUrl, RED5_CONFIG } from '../../../lib/red5';
 
 if (!getApps().length) {
   initializeApp({
@@ -17,16 +18,6 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-// Generate stream key for DJ
-function generateStreamKey(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  let key = 'fw_live_';
-  for (let i = 0; i < 24; i++) {
-    key += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return key;
-}
-
 export const POST: APIRoute = async ({ request }) => {
   try {
     const data = await request.json();
@@ -39,7 +30,8 @@ export const POST: APIRoute = async ({ request }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     
-    const now = new Date().toISOString();
+    const now = new Date();
+    const nowISO = now.toISOString();
     
     switch (action) {
       case 'start': {
@@ -75,15 +67,21 @@ export const POST: APIRoute = async ({ request }) => {
           }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
         
-        // Create new stream
-        const streamKey = streamData.streamKey || generateStreamKey();
+        // Generate stream ID and key
+        const streamRef = db.collection('livestreams').doc();
+        const defaultEndTime = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours default
         
-        // Build HLS URL for Red5 streams
-        let hlsUrl = streamData.hlsUrl || null;
-        if (streamData.streamSource === 'red5' && streamKey) {
-          // Default Red5 HLS path
-          hlsUrl = hlsUrl || `https://stream.freshwax.co.uk/hls/${streamKey}/index.m3u8`;
-        }
+        // Use provided stream key or generate new one
+        const streamKey = streamData.streamKey || generateStreamKey(
+          djId, 
+          streamRef.id, 
+          now, 
+          defaultEndTime
+        );
+        
+        // Build URLs
+        const rtmpUrl = buildRtmpUrl(streamKey);
+        const hlsUrl = streamData.hlsUrl || buildHlsUrl(streamKey);
         
         const newStream = {
           djId,
@@ -93,18 +91,21 @@ export const POST: APIRoute = async ({ request }) => {
           description: streamData.description || '',
           genre: streamData.genre || 'Jungle / D&B',
           
-          streamType: streamData.streamType || 'red5',
-          streamSource: streamData.streamSource || 'red5',
+          // Streaming config
+          streamType: streamData.streamType || 'video',
+          streamSource: 'red5',
+          streamKey,
+          rtmpUrl,
+          hlsUrl,
+          
+          // Legacy fields (for compatibility)
           audioStreamUrl: streamData.audioStreamUrl || null,
           videoStreamUrl: streamData.videoStreamUrl || null,
-          hlsUrl: hlsUrl,
           twitchChannel: streamData.twitchChannel || null,
-          
-          streamKey, // Private key for DJ
           
           status: 'live',
           isLive: true,
-          startedAt: now,
+          startedAt: nowISO,
           endedAt: null,
           
           peakViewers: 0,
@@ -116,18 +117,21 @@ export const POST: APIRoute = async ({ request }) => {
           
           coverImage: streamData.coverImage || artistData.avatarUrl || null,
           
-          createdAt: now,
-          updatedAt: now
+          createdAt: nowISO,
+          updatedAt: nowISO
         };
         
-        const streamRef = await db.collection('livestreams').add(newStream);
+        await streamRef.set(newStream);
         
-        console.log('[livestream/manage] Stream started:', streamRef.id, 'by DJ:', djId, 'source:', streamData.streamSource);
+        console.log('[livestream/manage] Stream started:', streamRef.id, 'by DJ:', djId);
         
         return new Response(JSON.stringify({
           success: true,
           streamId: streamRef.id,
           streamKey,
+          rtmpUrl,
+          hlsUrl,
+          serverUrl: RED5_CONFIG.server.rtmpUrl,
           stream: { id: streamRef.id, ...newStream }
         }), { 
           status: 200, 
@@ -167,8 +171,8 @@ export const POST: APIRoute = async ({ request }) => {
         await streamRef.update({
           status: 'offline',
           isLive: false,
-          endedAt: now,
-          updatedAt: now
+          endedAt: nowISO,
+          updatedAt: nowISO
         });
         
         // Mark all viewer sessions as ended
@@ -179,7 +183,7 @@ export const POST: APIRoute = async ({ request }) => {
         
         const batch = db.batch();
         sessions.docs.forEach(doc => {
-          batch.update(doc.ref, { isActive: false, leftAt: now });
+          batch.update(doc.ref, { isActive: false, leftAt: nowISO });
         });
         await batch.commit();
         
@@ -213,7 +217,7 @@ export const POST: APIRoute = async ({ request }) => {
         }
         
         // Update allowed fields
-        const updates: any = { updatedAt: now };
+        const updates: any = { updatedAt: nowISO };
         
         if (streamData.title) updates.title = streamData.title;
         if (streamData.description !== undefined) updates.description = streamData.description;
@@ -242,8 +246,8 @@ export const POST: APIRoute = async ({ request }) => {
           title: streamData.title,
           description: streamData.description || '',
           genre: streamData.genre || 'Jungle / D&B',
-          streamType: streamData.streamType || 'audio',
-          streamSource: streamData.streamSource || 'icecast',
+          streamType: streamData.streamType || 'video',
+          streamSource: 'red5',
           
           status: 'scheduled',
           isLive: false,
@@ -258,8 +262,8 @@ export const POST: APIRoute = async ({ request }) => {
           
           coverImage: streamData.coverImage || null,
           
-          createdAt: now,
-          updatedAt: now
+          createdAt: nowISO,
+          updatedAt: nowISO
         };
         
         const streamRef = await db.collection('livestreams').add(newStream);

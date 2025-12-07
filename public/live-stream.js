@@ -26,6 +26,13 @@ let viewerSessionId = null;
 let isPlaying = false;
 let chatUnsubscribe = null;
 
+// Recording state
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordingStartTime = null;
+let recordingInterval = null;
+let isRecording = false;
+
 // GIPHY API Key from page
 const GIPHY_API_KEY = window.GIPHY_API_KEY || '';
 
@@ -96,6 +103,10 @@ function showOfflineState(scheduled) {
 function showLiveStream(stream) {
   currentStream = stream;
   
+  // Expose stream ID globally for reaction buttons
+  window.currentStreamId = stream.id;
+  window.firebaseAuth = auth;
+  
   document.getElementById('offlineState')?.classList.add('hidden');
   document.getElementById('liveState')?.classList.remove('hidden');
   
@@ -110,6 +121,11 @@ function showLiveStream(stream) {
   const djAvatar = document.getElementById('djAvatar');
   const streamCover = document.getElementById('streamCover');
   
+  // Audio-only placeholder elements
+  const audioDjName = document.getElementById('audioDjName');
+  const audioShowTitle = document.getElementById('audioShowTitle');
+  const vinylDjAvatar = document.getElementById('vinylDjAvatar');
+  
   if (streamTitle) streamTitle.textContent = stream.title;
   if (djName) djName.textContent = stream.djName;
   if (streamGenre) streamGenre.textContent = stream.genre || 'Jungle / D&B';
@@ -119,6 +135,11 @@ function showLiveStream(stream) {
   if (streamDescription) streamDescription.textContent = stream.description || 'No description';
   if (stream.djAvatar && djAvatar) djAvatar.src = stream.djAvatar;
   if (stream.coverImage && streamCover) streamCover.src = stream.coverImage;
+  
+  // Update audio-only placeholder
+  if (audioDjName) audioDjName.textContent = stream.djName || 'DJ';
+  if (audioShowTitle) audioShowTitle.textContent = stream.title || 'Live on Fresh Wax';
+  if (vinylDjAvatar && stream.djAvatar) vinylDjAvatar.src = stream.djAvatar;
   
   // Setup player based on stream type/source
   if (stream.streamSource === 'twitch' && stream.twitchChannel) {
@@ -170,7 +191,64 @@ function setupHlsPlayer(stream) {
   
   console.log('Setting up HLS player with URL:', hlsUrl);
   
+  // Initialize audio analyzer for LED meters when video plays
+  function onVideoPlay() {
+    initGlobalAudioAnalyzer(videoElement);
+    if (globalAudioContext?.state === 'suspended') {
+      globalAudioContext.resume();
+    }
+    startGlobalMeters();
+  }
+  
+  function onVideoPause() {
+    stopGlobalMeters();
+  }
+  
+  // Setup Media Session API for lock screen controls
+  function setupMediaSession(stream) {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: stream?.title || 'Live Stream',
+        artist: stream?.djName || 'Fresh Wax',
+        album: 'Fresh Wax Live',
+        artwork: [
+          { src: stream?.djAvatar || '/logo.webp', sizes: '96x96', type: 'image/png' },
+          { src: stream?.djAvatar || '/logo.webp', sizes: '128x128', type: 'image/png' },
+          { src: stream?.djAvatar || '/logo.webp', sizes: '192x192', type: 'image/png' },
+          { src: stream?.djAvatar || '/logo.webp', sizes: '256x256', type: 'image/png' },
+          { src: stream?.djAvatar || '/logo.webp', sizes: '384x384', type: 'image/png' },
+          { src: stream?.djAvatar || '/logo.webp', sizes: '512x512', type: 'image/png' },
+        ]
+      });
+      
+      navigator.mediaSession.setActionHandler('play', () => {
+        const playBtn = document.getElementById('playBtn');
+        if (playBtn && !playBtn.classList.contains('playing')) {
+          playBtn.click();
+        }
+      });
+      
+      navigator.mediaSession.setActionHandler('pause', () => {
+        const playBtn = document.getElementById('playBtn');
+        if (playBtn && playBtn.classList.contains('playing')) {
+          playBtn.click();
+        }
+      });
+      
+      navigator.mediaSession.setActionHandler('stop', () => {
+        const playBtn = document.getElementById('playBtn');
+        if (playBtn && playBtn.classList.contains('playing')) {
+          playBtn.click();
+        }
+      });
+    }
+  }
+  
   if (videoElement) {
+    videoElement.addEventListener('play', onVideoPlay);
+    videoElement.addEventListener('pause', onVideoPause);
+    videoElement.addEventListener('ended', onVideoPause);
+    
     // Check if HLS is supported natively (Safari)
     if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
       videoElement.src = hlsUrl;
@@ -205,6 +283,14 @@ function setupHlsPlayer(stream) {
             case Hls.ErrorTypes.NETWORK_ERROR:
               console.log('Network error, attempting to recover...');
               hlsPlayer.startLoad();
+              // Auto-reconnect after 3 seconds if still failing
+              setTimeout(() => {
+                if (!isPlaying) {
+                  console.log('Auto-reconnecting...');
+                  showReconnecting();
+                  hlsPlayer.loadSource(hlsUrl);
+                }
+              }, 3000);
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
               console.log('Media error, attempting to recover...');
@@ -215,6 +301,12 @@ function setupHlsPlayer(stream) {
               hlsPlayer.destroy();
               // Show error message to user
               showStreamError('Stream unavailable. The DJ may still be connecting.');
+              // Auto-retry after 5 seconds
+              setTimeout(() => {
+                console.log('Auto-retrying connection...');
+                showReconnecting();
+                setupHlsPlayer(currentStream);
+              }, 5000);
               break;
           }
         }
@@ -223,6 +315,34 @@ function setupHlsPlayer(stream) {
       console.error('HLS not supported in this browser');
       showStreamError('Your browser does not support HLS playback. Please use Chrome, Firefox, or Safari.');
     }
+    
+    // Setup Media Session for lock screen controls
+    setupMediaSession(stream);
+    
+    // Setup recording capability
+    setupRecording(videoElement);
+  }
+}
+
+// Show reconnecting message
+function showReconnecting() {
+  const videoPlayer = document.getElementById('videoPlayer');
+  if (videoPlayer) {
+    const existingOverlay = videoPlayer.querySelector('.reconnect-overlay');
+    if (existingOverlay) return;
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'reconnect-overlay';
+    overlay.innerHTML = `
+      <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;">
+        <div style="width: 40px; height: 40px; border: 3px solid #333; border-top-color: #dc2626; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <span style="color: #fff; font-size: 0.9rem;">Reconnecting...</span>
+      </div>
+    `;
+    videoPlayer.appendChild(overlay);
+    
+    // Remove after 5 seconds
+    setTimeout(() => overlay.remove(), 5000);
   }
 }
 
@@ -242,6 +362,290 @@ function showStreamError(message) {
     `;
   }
 }
+
+// Global stereo audio analyzer for LED meters
+let globalAudioContext = null;
+let globalAnalyserLeft = null;
+let globalAnalyserRight = null;
+let globalAnimationId = null;
+let globalMediaSource = null;
+
+function initGlobalAudioAnalyzer(mediaElement) {
+  if (globalAudioContext && globalMediaSource) {
+    // Already initialized for this element
+    return;
+  }
+  
+  try {
+    globalAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    globalMediaSource = globalAudioContext.createMediaElementSource(mediaElement);
+    
+    // Create stereo splitter
+    const splitter = globalAudioContext.createChannelSplitter(2);
+    
+    // Create analyzers for each channel
+    globalAnalyserLeft = globalAudioContext.createAnalyser();
+    globalAnalyserRight = globalAudioContext.createAnalyser();
+    globalAnalyserLeft.fftSize = 256;
+    globalAnalyserRight.fftSize = 256;
+    globalAnalyserLeft.smoothingTimeConstant = 0.5;
+    globalAnalyserRight.smoothingTimeConstant = 0.5;
+    
+    // Connect source -> splitter -> analyzers
+    globalMediaSource.connect(splitter);
+    splitter.connect(globalAnalyserLeft, 0);
+    splitter.connect(globalAnalyserRight, 1);
+    
+    // Also connect to destination for playback
+    globalMediaSource.connect(globalAudioContext.destination);
+    
+    console.log('[Live] Global audio analyzer initialized');
+  } catch (err) {
+    console.error('[Live] Global audio analyzer error:', err);
+  }
+}
+
+function updateGlobalMeters() {
+  if (!globalAnalyserLeft || !globalAnalyserRight) {
+    globalAnimationId = requestAnimationFrame(updateGlobalMeters);
+    return;
+  }
+  
+  const leftLeds = document.querySelectorAll('#leftMeter .led');
+  const rightLeds = document.querySelectorAll('#rightMeter .led');
+  
+  if (leftLeds.length === 0 || rightLeds.length === 0) {
+    globalAnimationId = requestAnimationFrame(updateGlobalMeters);
+    return;
+  }
+  
+  // Get frequency data
+  const leftData = new Uint8Array(globalAnalyserLeft.frequencyBinCount);
+  const rightData = new Uint8Array(globalAnalyserRight.frequencyBinCount);
+  globalAnalyserLeft.getByteFrequencyData(leftData);
+  globalAnalyserRight.getByteFrequencyData(rightData);
+  
+  // Calculate RMS levels (more accurate than just averaging)
+  let leftSum = 0, rightSum = 0;
+  for (let i = 0; i < leftData.length; i++) {
+    leftSum += leftData[i] * leftData[i];
+    rightSum += rightData[i] * rightData[i];
+  }
+  const leftRms = Math.sqrt(leftSum / leftData.length);
+  const rightRms = Math.sqrt(rightSum / rightData.length);
+  
+  // Normalize to 0-14 range (14 LEDs)
+  const leftLevel = Math.min(14, Math.floor((leftRms / 255) * 18));
+  const rightLevel = Math.min(14, Math.floor((rightRms / 255) * 18));
+  
+  // Update LEDs
+  leftLeds.forEach((led, i) => {
+    led.classList.toggle('active', i < leftLevel);
+  });
+  rightLeds.forEach((led, i) => {
+    led.classList.toggle('active', i < rightLevel);
+  });
+  
+  globalAnimationId = requestAnimationFrame(updateGlobalMeters);
+}
+
+function stopGlobalMeters() {
+  if (globalAnimationId) {
+    cancelAnimationFrame(globalAnimationId);
+    globalAnimationId = null;
+  }
+  // Turn off all LEDs
+  document.querySelectorAll('.led-strip .led').forEach(led => {
+    led.classList.remove('active');
+  });
+}
+
+function startGlobalMeters() {
+  if (!globalAnimationId) {
+    updateGlobalMeters();
+  }
+}
+
+// ==========================================
+// STREAM RECORDING FUNCTIONALITY
+// ==========================================
+
+function setupRecording(mediaElement) {
+  const recordBtn = document.getElementById('recordBtn');
+  const recordDuration = document.getElementById('recordDuration');
+  
+  if (!recordBtn) return;
+  
+  // Enable record button when stream is playing
+  recordBtn.disabled = false;
+  
+  recordBtn.onclick = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording(mediaElement);
+    }
+  };
+}
+
+function startRecording(mediaElement) {
+  const recordBtn = document.getElementById('recordBtn');
+  const recordDuration = document.getElementById('recordDuration');
+  
+  if (!mediaElement) {
+    console.error('[Recording] No media element available');
+    return;
+  }
+  
+  try {
+    // Get the media stream from the element
+    let stream;
+    if (mediaElement.captureStream) {
+      stream = mediaElement.captureStream();
+    } else if (mediaElement.mozCaptureStream) {
+      stream = mediaElement.mozCaptureStream();
+    } else {
+      alert('Recording is not supported in your browser. Please use Chrome, Firefox, or Edge.');
+      return;
+    }
+    
+    // Check for audio tracks
+    const audioTracks = stream.getAudioTracks();
+    if (audioTracks.length === 0) {
+      alert('No audio track available to record.');
+      return;
+    }
+    
+    // Create audio-only stream for smaller file size
+    const audioStream = new MediaStream(audioTracks);
+    
+    // Determine best audio format
+    let mimeType = 'audio/webm;codecs=opus';
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = 'audio/webm';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/ogg;codecs=opus';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = '';  // Let browser choose
+        }
+      }
+    }
+    
+    const options = mimeType ? { mimeType, audioBitsPerSecond: 192000 } : { audioBitsPerSecond: 192000 };
+    
+    mediaRecorder = new MediaRecorder(audioStream, options);
+    recordedChunks = [];
+    
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        recordedChunks.push(event.data);
+      }
+    };
+    
+    mediaRecorder.onstop = () => {
+      downloadRecording();
+    };
+    
+    mediaRecorder.onerror = (event) => {
+      console.error('[Recording] Error:', event.error);
+      stopRecording();
+      alert('Recording error occurred. Please try again.');
+    };
+    
+    // Start recording
+    mediaRecorder.start(1000); // Collect data every second
+    isRecording = true;
+    recordingStartTime = Date.now();
+    
+    // Update UI
+    recordBtn?.classList.add('recording');
+    recordBtn.querySelector('.record-text').textContent = 'STOP';
+    recordDuration?.classList.remove('hidden');
+    
+    // Update duration display
+    recordingInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+      const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+      const secs = (elapsed % 60).toString().padStart(2, '0');
+      if (recordDuration) recordDuration.textContent = `${mins}:${secs}`;
+    }, 1000);
+    
+    console.log('[Recording] Started');
+    
+  } catch (err) {
+    console.error('[Recording] Failed to start:', err);
+    alert('Failed to start recording. Please ensure the stream is playing.');
+  }
+}
+
+function stopRecording() {
+  const recordBtn = document.getElementById('recordBtn');
+  const recordDuration = document.getElementById('recordDuration');
+  
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+  
+  isRecording = false;
+  
+  if (recordingInterval) {
+    clearInterval(recordingInterval);
+    recordingInterval = null;
+  }
+  
+  // Update UI
+  recordBtn?.classList.remove('recording');
+  if (recordBtn) recordBtn.querySelector('.record-text').textContent = 'REC';
+  recordDuration?.classList.add('hidden');
+  if (recordDuration) recordDuration.textContent = '00:00';
+  
+  console.log('[Recording] Stopped');
+}
+
+function downloadRecording() {
+  if (recordedChunks.length === 0) {
+    console.log('[Recording] No data to download');
+    return;
+  }
+  
+  // Create blob from recorded chunks
+  const blob = new Blob(recordedChunks, { type: recordedChunks[0].type || 'audio/webm' });
+  
+  // Generate filename with DJ name and title
+  const djName = document.getElementById('djName')?.textContent || 'Unknown DJ';
+  const streamTitle = document.getElementById('streamTitle')?.textContent || 'Live Stream';
+  const date = new Date().toISOString().split('T')[0];
+  const duration = recordDuration?.textContent || '';
+  
+  // Sanitize filename
+  const sanitize = (str) => str.replace(/[^a-zA-Z0-9\s\-\_]/g, '').trim().replace(/\s+/g, '_');
+  const filename = `FreshWax_${sanitize(djName)}_${sanitize(streamTitle)}_${date}.webm`;
+  
+  // Create download link
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  
+  // Cleanup
+  setTimeout(() => {
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 100);
+  
+  recordedChunks = [];
+  
+  console.log(`[Recording] Downloaded: ${filename} (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
+}
+
+// Cleanup recording on page unload
+window.addEventListener('beforeunload', () => {
+  if (isRecording) {
+    stopRecording();
+  }
+});
 
 // Setup Twitch player
 function setupTwitchPlayer(stream) {
@@ -291,10 +695,17 @@ function setupAudioPlayer(stream) {
         audio?.pause();
         document.getElementById('playIcon')?.classList.remove('hidden');
         document.getElementById('pauseIcon')?.classList.add('hidden');
+        stopGlobalMeters();
       } else {
+        // Initialize analyzer on first play (must be after user interaction)
+        initGlobalAudioAnalyzer(audio);
+        if (globalAudioContext?.state === 'suspended') {
+          globalAudioContext.resume();
+        }
         audio?.play().catch(console.error);
         document.getElementById('playIcon')?.classList.add('hidden');
         document.getElementById('pauseIcon')?.classList.remove('hidden');
+        startGlobalMeters();
       }
       isPlaying = !isPlaying;
     };
@@ -305,6 +716,9 @@ function setupAudioPlayer(stream) {
       audio.volume = e.target.value / 100;
     };
   }
+  
+  // Setup recording capability
+  setupRecording(audio);
 }
 
 // Join stream as viewer
@@ -373,12 +787,31 @@ function setupChat(streamId) {
   
   chatUnsubscribe = onSnapshot(chatQuery, (snapshot) => {
     const messages = [];
+    let hasNewMessage = false;
+    
+    snapshot.docChanges().forEach(change => {
+      if (change.type === 'added') {
+        hasNewMessage = true;
+      }
+    });
+    
     snapshot.forEach(doc => {
       messages.push({ id: doc.id, ...doc.data() });
     });
     
     messages.reverse();
     renderChatMessages(messages);
+    
+    // Notify mobile tabs of new message
+    if (hasNewMessage && typeof window.notifyNewChatMessage === 'function') {
+      window.notifyNewChatMessage();
+    }
+  }, (error) => {
+    // Handle permission errors gracefully
+    console.warn('[Chat] Firestore listener error:', error.code);
+    if (error.code === 'permission-denied') {
+      console.info('[Chat] Update Firestore rules to allow reading livestream-chat collection');
+    }
   });
   
   // Setup emoji picker
@@ -643,34 +1076,9 @@ function setupReactions(streamId) {
   const starBtns = document.querySelectorAll('.star');
   const shareBtn = document.getElementById('shareBtn');
   
-  // Like
-  if (likeBtn) {
-    likeBtn.onclick = async () => {
-      if (!currentUser) {
-        alert('Please sign in to like');
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/livestream/react', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'like',
-            streamId,
-            userId: currentUser.uid
-          })
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-          likeBtn.classList.toggle('liked', result.liked);
-        }
-      } catch (error) {
-        console.error('Like error:', error);
-      }
-    };
-  }
+  // Like - handled by reaction buttons in live.astro
+  // All three reaction buttons (hearts, fire, explosions) trigger likes
+  // See triggerReaction() function in live.astro
   
   // Rating
   starBtns.forEach(btn => {

@@ -13,7 +13,37 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
 <Layout title="Live Stream - Fresh Wax">
   <Header />
   
-  <div id="heartsContainer" class="hearts-container"></div>
+  <!-- Sticky Mini Player for Mobile -->
+  <div id="miniPlayer" class="mini-player hidden">
+    <div class="mini-player-info">
+      <img id="miniDjAvatar" src="/logo.webp" alt="" class="mini-avatar" />
+      <div class="mini-text">
+        <span id="miniDjName" class="mini-dj">-</span>
+        <span id="miniStatus" class="mini-status">Live</span>
+      </div>
+    </div>
+    <div class="mini-controls">
+      <button id="miniPlayBtn" class="mini-play-btn">
+        <svg id="miniPlayIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="miniPauseIcon" class="hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+      </button>
+      <button id="miniExpandBtn" class="mini-expand-btn" title="Back to player">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+      </button>
+    </div>
+    <div class="mini-progress">
+      <div id="miniLedStrip" class="mini-led-strip">
+        <span class="mini-led"></span>
+        <span class="mini-led"></span>
+        <span class="mini-led"></span>
+        <span class="mini-led"></span>
+        <span class="mini-led"></span>
+        <span class="mini-led"></span>
+        <span class="mini-led"></span>
+        <span class="mini-led"></span>
+      </div>
+    </div>
+  </div>
   
   <div id="fullscreenMode" class="fullscreen-mode hidden">
     <div class="fullscreen-header">
@@ -56,11 +86,27 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     </div>
   </div>
   
+  <!-- Mobile Tab Navigation -->
+  <nav class="mobile-tabs" id="mobileTabs">
+    <button class="mobile-tab active" data-tab="player">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M8 5v14l11-7z"/></svg>
+      <span>Player</span>
+    </button>
+    <button class="mobile-tab" data-tab="chat">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/></svg>
+      <span>Chat</span>
+    </button>
+    <button class="mobile-tab" data-tab="schedule">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
+      <span>Schedule</span>
+    </button>
+  </nav>
+  
   <main class="live-main">
     <div class="live-layout">
       <aside class="schedule-column">
         <div class="schedule-header">
-          <h1>LIVE <span class="red">SCHEDULE</span></h1>
+          <h1>LIVE <span class="red">STREAM</span></h1>
           <p>Watch live DJ sets</p>
           <div id="djButtons" class="schedule-buttons hidden">
             <button id="goLiveNowBtn" class="go-live-now-btn">Go Live Now</button>
@@ -83,14 +129,14 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         </div>
         
         <div class="sidebar-card">
-          <h3>📅 Up Next</h3>
+          <h3>📅 UP NEXT</h3>
           <div id="queueListCard" class="queue-list-card">
             <span class="empty-message">No upcoming DJs</span>
           </div>
         </div>
         
         <div class="sidebar-card">
-          <h3>🎧 Today's Lineup</h3>
+          <h3>🎧 TODAY'S LINEUP</h3>
           <div id="scheduleList" class="schedule-list">
             <p class="empty-message">No shows today</p>
           </div>
@@ -159,12 +205,43 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
           </div>
           
           <div id="audioPlayer" class="audio-player hidden">
-            <div class="audio-visualizer" id="audioVisualizer">
-              <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
-              <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
-            </div>
-            <div class="audio-cover">
-              <img id="streamCover" src="/logo.webp" alt="Stream Cover" />
+            <div class="audio-only-placeholder">
+              <!-- Spinning Vinyl -->
+              <div class="vinyl-container">
+                <div class="vinyl-record">
+                  <div class="vinyl-label">
+                    <img id="vinylDjAvatar" src="/logo.webp" alt="DJ" class="vinyl-avatar" />
+                  </div>
+                  <div class="vinyl-grooves"></div>
+                </div>
+                <div class="tonearm"></div>
+              </div>
+              
+              <!-- DJ Info -->
+              <div class="audio-dj-info">
+                <div class="audio-dj-name" id="audioDjName">DJ Name</div>
+                <div class="audio-show-title" id="audioShowTitle">Live on Fresh Wax</div>
+                <div class="audio-live-badge">
+                  <span class="live-pulse"></span>
+                  AUDIO ONLY
+                </div>
+              </div>
+              
+              <!-- Audio Bars -->
+              <div class="audio-bars">
+                <div class="audio-bar"></div>
+                <div class="audio-bar"></div>
+                <div class="audio-bar"></div>
+                <div class="audio-bar"></div>
+                <div class="audio-bar"></div>
+                <div class="audio-bar"></div>
+                <div class="audio-bar"></div>
+                <div class="audio-bar"></div>
+                <div class="audio-bar"></div>
+                <div class="audio-bar"></div>
+                <div class="audio-bar"></div>
+                <div class="audio-bar"></div>
+              </div>
             </div>
             <audio id="audioElement" crossorigin="anonymous"></audio>
           </div>
@@ -179,30 +256,88 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
             <svg id="playIcon" class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
             <svg id="pauseIcon" class="pause-icon hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
           </button>
+          
+          <!-- Stereo LED Meters -->
+          <div class="stereo-meters">
+            <div class="meter-row">
+              <span class="meter-label">L</span>
+              <div class="led-strip" id="leftMeter">
+                <div class="led green"></div>
+                <div class="led green"></div>
+                <div class="led green"></div>
+                <div class="led green"></div>
+                <div class="led green"></div>
+                <div class="led green"></div>
+                <div class="led yellow"></div>
+                <div class="led yellow"></div>
+                <div class="led yellow"></div>
+                <div class="led orange"></div>
+                <div class="led orange"></div>
+                <div class="led red"></div>
+                <div class="led red"></div>
+                <div class="led red clip"></div>
+              </div>
+            </div>
+            <div class="meter-row">
+              <span class="meter-label">R</span>
+              <div class="led-strip" id="rightMeter">
+                <div class="led green"></div>
+                <div class="led green"></div>
+                <div class="led green"></div>
+                <div class="led green"></div>
+                <div class="led green"></div>
+                <div class="led green"></div>
+                <div class="led yellow"></div>
+                <div class="led yellow"></div>
+                <div class="led yellow"></div>
+                <div class="led orange"></div>
+                <div class="led orange"></div>
+                <div class="led red"></div>
+                <div class="led red"></div>
+                <div class="led red clip"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Inline Reactions -->
+          <div class="inline-reactions">
+            <button id="likeBtn" class="inline-btn reaction-btn like-btn" title="Love" data-emoji="❤️,💖,💗,💓,💕">
+              <span class="reaction-emoji">❤️</span>
+            </button>
+            <button id="fireBtn" class="inline-btn reaction-btn fire-btn" title="Fire" data-emoji="🔥,🔥,🔥,🔥,🔥">
+              <span class="reaction-emoji">🔥</span>
+            </button>
+            <button id="explosionBtn" class="inline-btn reaction-btn explosion-btn" title="Explosion" data-emoji="💥,💥,💥,💥,💥">
+              <span class="reaction-emoji">💥</span>
+            </button>
+            <div class="inline-rating">
+              <div class="star-rating" id="starRating">
+                <button class="star" data-rating="1">★</button>
+                <button class="star" data-rating="2">★</button>
+                <button class="star" data-rating="3">★</button>
+                <button class="star" data-rating="4">★</button>
+                <button class="star" data-rating="5">★</button>
+              </div>
+              <span class="avg-rating" id="avgRating">0.0</span>
+            </div>
+            <button id="shareBtn" class="inline-btn share-btn" title="Share">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+            </button>
+          </div>
+          
+          <!-- Record Button -->
+          <div class="record-control">
+            <button id="recordBtn" class="record-btn" disabled title="Record live stream">
+              <span class="record-dot"></span>
+              <span class="record-text">REC</span>
+            </button>
+            <span id="recordDuration" class="record-duration hidden">00:00</span>
+          </div>
+          
           <div class="volume-control">
             <svg class="volume-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
             <input type="range" id="volumeSlider" min="0" max="100" value="80" />
           </div>
-        </div>
-        
-        <div class="reactions-bar">
-          <button id="likeBtn" class="reaction-btn like-btn">
-            <span class="reaction-icon">Like</span>
-          </button>
-          <div class="rating-section">
-            <span class="rating-label">Rate:</span>
-            <div class="star-rating" id="starRating">
-              <button class="star" data-rating="1">*</button>
-              <button class="star" data-rating="2">*</button>
-              <button class="star" data-rating="3">*</button>
-              <button class="star" data-rating="4">*</button>
-              <button class="star" data-rating="5">*</button>
-            </div>
-            <span class="avg-rating" id="avgRating">0.0</span>
-          </div>
-          <button id="shareBtn" class="reaction-btn">
-            <span class="reaction-icon">Share</span>
-          </button>
         </div>
       </div>
       
@@ -662,29 +797,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
 <style>
-  .hearts-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 9999;
-    overflow: hidden;
-  }
-  
-  .floating-heart {
-    position: absolute;
-    font-size: 2rem;
-    animation: floatUp 2s ease-out forwards;
-    opacity: 0;
-  }
-  
-  @keyframes floatUp {
-    0% { opacity: 1; transform: translateY(0) scale(0.5); }
-    50% { opacity: 1; transform: translateY(-150px) scale(1.2); }
-    100% { opacity: 0; transform: translateY(-300px) scale(0.8); }
-  }
+  /* Hearts are appended directly to body - no container needed */
   
   .fullscreen-mode {
     position: fixed;
@@ -943,9 +1056,10 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   
   .schedule-header h1 {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 2.25rem;
+    font-size: 3rem;
     color: #111;
     margin: 0;
+    letter-spacing: 0.5px;
   }
   
   .schedule-header h1 .red { color: #dc2626; }
@@ -1083,13 +1197,17 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   
   .sidebar-card h3 {
     margin: 0 0 0.75rem 0;
-    font-size: 1.125rem;
-    font-weight: 700;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 400;
     color: #111;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    letter-spacing: 0.5px;
   }
+  
+  .sidebar-card h3 .red { color: #dc2626; }
   
   .listener-badge {
     background: #dc2626;
@@ -1853,52 +1971,197 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     justify-content: center;
   }
   
-  .audio-visualizer {
+  .audio-only-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+  }
+  
+  /* Spinning Vinyl */
+  .vinyl-container {
+    position: relative;
+    width: 200px;
+    height: 200px;
+  }
+  
+  .vinyl-record {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: 
+      radial-gradient(circle at center, transparent 28%, #111 29%, #111 31%, transparent 32%),
+      radial-gradient(circle at center, transparent 38%, #222 39%, #222 41%, transparent 42%),
+      radial-gradient(circle at center, transparent 58%, #1a1a1a 59%, #1a1a1a 61%, transparent 62%),
+      radial-gradient(circle at center, transparent 78%, #222 79%, #222 81%, transparent 82%),
+      radial-gradient(circle at center, transparent 88%, #333 89%, #333 91%, transparent 92%),
+      linear-gradient(135deg, #111 0%, #000 100%);
+    box-shadow: 
+      0 0 0 3px #333,
+      0 0 30px rgba(0,0,0,0.8),
+      inset 0 0 60px rgba(0,0,0,0.5);
+    animation: spin 3s linear infinite;
+  }
+  
+  .vinyl-label {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 80px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  
+  .vinyl-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255,255,255,0.2);
+  }
+  
+  .vinyl-label::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: #111;
+    border-radius: 50%;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+  }
+  
+  .tonearm {
+    position: absolute;
+    top: -10px;
+    right: -20px;
+    width: 80px;
+    height: 8px;
+    background: linear-gradient(90deg, #666 0%, #444 50%, #333 100%);
+    border-radius: 4px;
+    transform-origin: right center;
+    transform: rotate(-25deg);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+  
+  .tonearm::before {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: -4px;
+    width: 16px;
+    height: 16px;
+    background: #555;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+  
+  .tonearm::after {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 1px;
+    width: 12px;
+    height: 6px;
+    background: #888;
+    border-radius: 2px;
+  }
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  /* DJ Info */
+  .audio-dj-info {
+    text-align: center;
+  }
+  
+  .audio-dj-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: #fff;
+    letter-spacing: 1px;
+    margin-bottom: 0.25rem;
+  }
+  
+  .audio-show-title {
+    font-size: 1rem;
+    color: #888;
+    margin-bottom: 0.75rem;
+  }
+  
+  .audio-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(220, 38, 38, 0.2);
+    border: 1px solid #dc2626;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #dc2626;
+    letter-spacing: 1px;
+  }
+  
+  .live-pulse {
+    width: 8px;
+    height: 8px;
+    background: #dc2626;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+  
+  /* Audio Bars */
+  .audio-bars {
     display: flex;
     align-items: flex-end;
     justify-content: center;
     gap: 4px;
-    padding: 0 1rem;
+    height: 50px;
+    margin-top: 0.5rem;
   }
   
-  .viz-bar {
-    width: 8px;
-    background: linear-gradient(to top, #dc2626, #ef4444);
-    border-radius: 4px 4px 0 0;
-    animation: vizPulse 0.5s ease infinite;
+  .audio-bar {
+    width: 6px;
+    background: linear-gradient(to top, #dc2626, #f87171);
+    border-radius: 3px;
+    animation: barPulse 0.8s ease-in-out infinite;
   }
   
-  .viz-bar:nth-child(1) { animation-delay: 0s; height: 30%; }
-  .viz-bar:nth-child(2) { animation-delay: 0.1s; height: 50%; }
-  .viz-bar:nth-child(3) { animation-delay: 0.2s; height: 70%; }
-  .viz-bar:nth-child(4) { animation-delay: 0.3s; height: 90%; }
-  .viz-bar:nth-child(5) { animation-delay: 0.4s; height: 60%; }
-  .viz-bar:nth-child(6) { animation-delay: 0.5s; height: 40%; }
-  .viz-bar:nth-child(7) { animation-delay: 0.6s; height: 80%; }
-  .viz-bar:nth-child(8) { animation-delay: 0.7s; height: 55%; }
+  .audio-bar:nth-child(1) { height: 20%; animation-delay: 0s; }
+  .audio-bar:nth-child(2) { height: 40%; animation-delay: 0.1s; }
+  .audio-bar:nth-child(3) { height: 60%; animation-delay: 0.15s; }
+  .audio-bar:nth-child(4) { height: 80%; animation-delay: 0.2s; }
+  .audio-bar:nth-child(5) { height: 100%; animation-delay: 0.25s; }
+  .audio-bar:nth-child(6) { height: 70%; animation-delay: 0.3s; }
+  .audio-bar:nth-child(7) { height: 90%; animation-delay: 0.35s; }
+  .audio-bar:nth-child(8) { height: 50%; animation-delay: 0.4s; }
+  .audio-bar:nth-child(9) { height: 80%; animation-delay: 0.45s; }
+  .audio-bar:nth-child(10) { height: 60%; animation-delay: 0.5s; }
+  .audio-bar:nth-child(11) { height: 40%; animation-delay: 0.55s; }
+  .audio-bar:nth-child(12) { height: 25%; animation-delay: 0.6s; }
   
-  @keyframes vizPulse {
+  @keyframes barPulse {
     0%, 100% { transform: scaleY(1); }
-    50% { transform: scaleY(0.6); }
-  }
-  
-  .audio-cover {
-    width: 180px;
-    height: 180px;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-  }
-  
-  .audio-cover img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    50% { transform: scaleY(0.4); }
   }
   
   .hls-video {
@@ -1918,6 +2181,76 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     border-radius: 10px;
   }
   
+  /* Stereo LED Meters */
+  .stereo-meters {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .meter-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .meter-label {
+    font-size: 10px;
+    font-weight: bold;
+    color: #666;
+    width: 12px;
+    text-align: center;
+  }
+  
+  .led-strip {
+    display: flex;
+    gap: 3px;
+    flex: 1;
+  }
+  
+  .led {
+    width: 12px;
+    height: 8px;
+    border-radius: 2px;
+    background: #222;
+    transition: background 0.05s ease, box-shadow 0.05s ease;
+  }
+  
+  .led.green { background: #1a3d1a; }
+  .led.yellow { background: #3d3d1a; }
+  .led.orange { background: #3d2a1a; }
+  .led.red { background: #3d1a1a; }
+  .led.clip { background: #3d1a1a; }
+  
+  .led.green.active { 
+    background: #22c55e; 
+    box-shadow: 0 0 6px #22c55e;
+  }
+  .led.yellow.active { 
+    background: #eab308; 
+    box-shadow: 0 0 6px #eab308;
+  }
+  .led.orange.active { 
+    background: #f97316; 
+    box-shadow: 0 0 6px #f97316;
+  }
+  .led.red.active { 
+    background: #ef4444; 
+    box-shadow: 0 0 6px #ef4444;
+  }
+  .led.clip.active { 
+    background: #ff0000; 
+    box-shadow: 0 0 10px #ff0000;
+    animation: clip-flash 0.1s ease;
+  }
+  
+  @keyframes clip-flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  
   .play-btn {
     width: 50px;
     height: 50px;
@@ -1929,6 +2262,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
   }
   
   .play-btn:disabled {
@@ -1946,11 +2280,193 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     height: 24px;
   }
   
+  /* Inline Reactions Styles */
+  .inline-reactions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-left: auto;
+    padding: 0 0.75rem;
+    border-left: 1px solid #333;
+    border-right: 1px solid #333;
+  }
+  
+  .inline-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: #222;
+    border: 2px solid #444;
+    border-radius: 8px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .inline-btn:hover {
+    border-color: #666;
+    transform: scale(1.1);
+  }
+  
+  .inline-btn.reaction-btn {
+    font-size: 20px;
+  }
+  
+  .inline-btn.reaction-btn:hover {
+    border-color: #888;
+  }
+  
+  .inline-btn.reaction-btn:active {
+    transform: scale(0.95);
+  }
+  
+  .inline-btn.like-btn:hover {
+    border-color: #dc2626;
+    background: rgba(220, 38, 38, 0.1);
+  }
+  
+  .inline-btn.fire-btn:hover {
+    border-color: #f97316;
+    background: rgba(249, 115, 22, 0.1);
+  }
+  
+  .inline-btn.explosion-btn:hover {
+    border-color: #eab308;
+    background: rgba(234, 179, 8, 0.1);
+  }
+  
+  .inline-btn.like-btn.liked {
+    background: rgba(220, 38, 38, 0.2);
+    border-color: #dc2626;
+    color: #dc2626;
+  }
+  
+  .reaction-emoji {
+    line-height: 1;
+  }
+  
+  .inline-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .inline-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  .inline-rating .star-rating {
+    display: flex;
+    gap: 2px;
+  }
+  
+  .inline-rating .star {
+    background: none;
+    border: none;
+    color: #444;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.15s ease;
+    line-height: 1;
+  }
+  
+  .inline-rating .star:hover,
+  .inline-rating .star.active {
+    color: #fbbf24;
+    transform: scale(1.2);
+  }
+  
+  .inline-rating .avg-rating {
+    font-size: 12px;
+    font-weight: bold;
+    color: #fbbf24;
+    min-width: 24px;
+    text-align: center;
+  }
+  
+  /* Record Button Styles */
+  .record-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-right: 0.5rem;
+  }
+  
+  .record-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #222;
+    border: 2px solid #444;
+    border-radius: 8px;
+    color: #888;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .record-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .record-btn:not(:disabled):hover {
+    border-color: #dc2626;
+    color: #dc2626;
+  }
+  
+  .record-btn .record-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #666;
+    transition: all 0.2s ease;
+  }
+  
+  .record-btn:not(:disabled):hover .record-dot {
+    background: #dc2626;
+  }
+  
+  .record-btn.recording {
+    border-color: #dc2626;
+    background: rgba(220, 38, 38, 0.15);
+    color: #dc2626;
+  }
+  
+  .record-btn.recording .record-dot {
+    background: #dc2626;
+    animation: record-pulse 1s ease-in-out infinite;
+  }
+  
+  .record-btn.recording .record-text {
+    color: #dc2626;
+  }
+  
+  @keyframes record-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.9); }
+  }
+  
+  .record-duration {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    color: #dc2626;
+    min-width: 50px;
+  }
+  
   .volume-control {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    flex: 1;
+    flex-shrink: 0;
+    margin-left: 1.5rem;
   }
   
   .volume-icon {
@@ -1960,8 +2476,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   }
   
   #volumeSlider {
-    flex: 1;
-    max-width: 150px;
+    width: 100px;
     height: 6px;
     -webkit-appearance: none;
     background: #333;
@@ -3683,6 +4198,46 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     .reactions-bar {
       gap: 0.5rem;
     }
+    
+    /* Audio placeholder mobile */
+    .vinyl-container {
+      width: 150px;
+      height: 150px;
+    }
+    .vinyl-record {
+      width: 150px;
+      height: 150px;
+    }
+    .vinyl-label {
+      width: 50px;
+      height: 50px;
+    }
+    .vinyl-avatar {
+      width: 35px;
+      height: 35px;
+    }
+    .vinyl-label::after {
+      width: 6px;
+      height: 6px;
+    }
+    .tonearm {
+      width: 60px;
+      height: 6px;
+      top: -8px;
+      right: -15px;
+    }
+    .audio-dj-name {
+      font-size: 1.5rem;
+    }
+    .audio-show-title {
+      font-size: 0.875rem;
+    }
+    .audio-bars {
+      height: 35px;
+    }
+    .audio-bar {
+      width: 4px;
+    }
   }
   
   /* ============================================
@@ -3755,6 +4310,83 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       -webkit-appearance: none;
       border-radius: 50%;
       cursor: pointer;
+    }
+    
+    /* LED meters mobile optimization */
+    .stereo-meters {
+      min-width: 120px;
+    }
+    
+    .led {
+      width: 8px;
+      height: 6px;
+    }
+    
+    .led-strip {
+      gap: 2px;
+    }
+    
+    .meter-label {
+      font-size: 8px;
+      width: 10px;
+    }
+    
+    .volume-control {
+      margin-left: 0.75rem;
+    }
+    
+    #volumeSlider {
+      width: 70px;
+    }
+    
+    /* Inline reactions mobile optimization */
+    .inline-reactions {
+      gap: 0.4rem;
+      padding: 0 0.5rem;
+    }
+    
+    .inline-btn {
+      width: 30px;
+      height: 30px;
+    }
+    
+    .inline-btn.reaction-btn {
+      font-size: 16px;
+    }
+    
+    .inline-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    
+    .inline-rating .star {
+      font-size: 14px;
+    }
+    
+    .inline-rating .avg-rating {
+      font-size: 10px;
+      min-width: 20px;
+    }
+    
+    /* Record button mobile optimization */
+    .record-control {
+      margin-left: 0.5rem;
+      margin-right: 0.25rem;
+    }
+    
+    .record-btn {
+      padding: 6px 8px;
+      font-size: 9px;
+    }
+    
+    .record-btn .record-dot {
+      width: 8px;
+      height: 8px;
+    }
+    
+    .record-duration {
+      font-size: 11px;
+      min-width: 40px;
     }
     
     /* Stream info prominent display */
@@ -4009,6 +4641,355 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     }
   }
   
+  /* ============================================
+     MOBILE TAB NAVIGATION
+     ============================================ */
+  .mobile-tabs {
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #111;
+    border-bottom: 2px solid #222;
+    padding: 0;
+    /* Safe area for notch */
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  
+  .mobile-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.75rem 0.5rem;
+    background: transparent;
+    border: none;
+    color: #666;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+    position: relative;
+  }
+  
+  .mobile-tab svg {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .mobile-tab.active {
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.1);
+  }
+  
+  .mobile-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 20%;
+    right: 20%;
+    height: 3px;
+    background: #dc2626;
+    border-radius: 3px 3px 0 0;
+  }
+  
+  .mobile-tab:active {
+    background: rgba(255,255,255,0.05);
+  }
+  
+  /* Chat notification badge */
+  .mobile-tab .tab-badge {
+    position: absolute;
+    top: 6px;
+    right: 50%;
+    transform: translateX(12px);
+    background: #dc2626;
+    color: #fff;
+    font-size: 0.6rem;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+  
+  /* Show tabs only on mobile */
+  @media (max-width: 900px) {
+    .mobile-tabs {
+      display: flex;
+    }
+  }
+  
+  /* ============================================
+     MOBILE LAYOUT OVERRIDES
+     ============================================ */
+  @media (max-width: 900px) {
+    /* Hide sections based on active tab */
+    .schedule-column,
+    .chat-column {
+      display: none;
+    }
+    
+    .schedule-column.mobile-active,
+    .chat-column.mobile-active,
+    .player-column.mobile-active {
+      display: flex !important;
+    }
+    
+    .player-column {
+      display: flex;
+    }
+    
+    .live-layout {
+      grid-template-columns: 1fr;
+      gap: 0;
+      padding: 0;
+      min-height: auto;
+    }
+    
+    .live-main {
+      padding-bottom: 80px; /* Space for mini player */
+    }
+    
+    /* Player takes full width */
+    .player-column {
+      padding: 0.75rem;
+    }
+    
+    .player-container {
+      border-radius: 8px;
+      min-height: 220px;
+      aspect-ratio: 16/9;
+    }
+    
+    /* Stream info bar mobile */
+    .stream-info-bar {
+      flex-wrap: wrap;
+      padding: 0.5rem;
+      gap: 0.5rem;
+    }
+    
+    .stream-info-left {
+      flex: 1 1 100%;
+      margin-bottom: 0.25rem;
+    }
+    
+    .stream-info-right {
+      flex: 1 1 100%;
+      justify-content: space-between;
+    }
+    
+    .stat {
+      font-size: 0.75rem;
+    }
+    
+    .dj-lobby-btn span,
+    .fullpage-btn span {
+      display: none;
+    }
+    
+    /* Chat section mobile */
+    .chat-column.mobile-active {
+      flex-direction: column;
+      height: calc(100vh - 140px);
+      padding: 0.75rem;
+    }
+    
+    .chat-section {
+      flex: 1;
+      height: auto;
+      max-height: none;
+      border-radius: 12px;
+    }
+    
+    .chat-messages {
+      flex: 1;
+      min-height: 200px;
+    }
+    
+    /* Schedule section mobile */
+    .schedule-column.mobile-active {
+      padding: 0.75rem;
+      max-height: calc(100vh - 140px);
+      overflow-y: auto;
+    }
+    
+    .schedule-header {
+      padding: 1rem;
+    }
+    
+    .schedule-header h1 {
+      font-size: 2rem;
+    }
+  }
+  
+  /* ============================================
+     MOBILE PLAYER CONTROLS - THUMB-FRIENDLY
+     ============================================ */
+  @media (max-width: 900px) {
+    .player-controls {
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: #0a0a0a;
+      border-radius: 12px;
+      margin-top: 0.75rem;
+    }
+    
+    /* Big play button */
+    .play-btn {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #dc2626;
+      border: none;
+      flex-shrink: 0;
+    }
+    
+    .play-btn svg {
+      width: 32px;
+      height: 32px;
+      fill: #fff;
+    }
+    
+    .play-btn:disabled {
+      background: #333;
+      opacity: 0.5;
+    }
+    
+    /* Reactions in a row */
+    .inline-reactions {
+      display: flex;
+      gap: 0.5rem;
+      order: 1;
+    }
+    
+    .inline-btn.reaction-btn {
+      width: 52px;
+      height: 52px;
+      font-size: 26px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      border: 2px solid #333;
+    }
+    
+    .inline-btn.reaction-btn:active {
+      transform: scale(0.9);
+      background: #222;
+    }
+    
+    /* Hide rating on mobile */
+    .inline-rating {
+      display: none;
+    }
+    
+    /* LED meters simplified */
+    .stereo-meters {
+      display: none;
+    }
+    
+    /* Volume full width at bottom */
+    .volume-control {
+      width: 100%;
+      order: 10;
+      margin-top: 0.5rem;
+      padding: 0 0.5rem;
+    }
+    
+    #volumeSlider {
+      width: 100%;
+      height: 8px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: #333;
+      border-radius: 4px;
+    }
+    
+    #volumeSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px;
+      height: 24px;
+      background: #dc2626;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    
+    /* Share and record buttons */
+    .share-btn,
+    .record-control button {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+    }
+    
+    .record-control {
+      order: 2;
+    }
+  }
+  
+  /* ============================================
+     SMALL PHONE OPTIMIZATIONS (< 400px)
+     ============================================ */
+  @media (max-width: 400px) {
+    .mobile-tab {
+      padding: 0.6rem 0.25rem;
+    }
+    
+    .mobile-tab span {
+      font-size: 0.6rem;
+    }
+    
+    .player-controls {
+      padding: 0.75rem;
+      gap: 0.5rem;
+    }
+    
+    .play-btn {
+      width: 56px;
+      height: 56px;
+    }
+    
+    .play-btn svg {
+      width: 28px;
+      height: 28px;
+    }
+    
+    .inline-btn.reaction-btn {
+      width: 44px;
+      height: 44px;
+      font-size: 22px;
+    }
+    
+    .schedule-header h1 {
+      font-size: 1.75rem;
+    }
+    
+    .sidebar-card h3 {
+      font-size: 1.25rem;
+    }
+    
+    .mini-player {
+      padding: 0.4rem 0.5rem;
+    }
+    
+    .mini-avatar {
+      width: 36px;
+      height: 36px;
+    }
+    
+    .mini-play-btn {
+      width: 42px;
+      height: 42px;
+    }
+  }
+  
   /* Print styles - for sharing schedules */
   @media print {
     .player-container,
@@ -4017,6 +4998,272 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     button {
       display: none;
     }
+  }
+  
+  /* ============================================
+     STICKY MINI PLAYER FOR MOBILE
+     ============================================ */
+  .mini-player {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
+    border-top: 2px solid #dc2626;
+    padding: 0.5rem 0.75rem;
+    z-index: 9998;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    /* Safe area for iPhone notch/home indicator */
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  
+  .mini-player.visible {
+    transform: translateY(0);
+  }
+  
+  .mini-player.hidden {
+    display: flex !important;
+    transform: translateY(100%);
+  }
+  
+  .mini-player-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+  }
+  
+  .mini-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #333;
+  }
+  
+  .mini-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .mini-dj {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .mini-status {
+    font-size: 0.7rem;
+    color: #dc2626;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  .mini-status::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: #dc2626;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+  
+  .mini-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .mini-play-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #dc2626;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s;
+  }
+  
+  .mini-play-btn:active {
+    transform: scale(0.95);
+    background: #b91c1c;
+  }
+  
+  .mini-play-btn svg {
+    width: 24px;
+    height: 24px;
+    fill: #fff;
+  }
+  
+  .mini-expand-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #333;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  
+  .mini-expand-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: #888;
+  }
+  
+  .mini-progress {
+    width: 100%;
+  }
+  
+  .mini-led-strip {
+    display: flex;
+    gap: 3px;
+    justify-content: center;
+  }
+  
+  .mini-led {
+    width: 100%;
+    height: 3px;
+    background: #333;
+    border-radius: 2px;
+    transition: background 0.1s;
+  }
+  
+  .mini-led.active {
+    background: linear-gradient(90deg, #22c55e 0%, #22c55e 60%, #eab308 70%, #dc2626 100%);
+  }
+  
+  /* Only show mini player on mobile */
+  @media (min-width: 769px) {
+    .mini-player {
+      display: none !important;
+    }
+  }
+  
+  /* ============================================
+     ENHANCED MOBILE PLAYER CONTROLS
+     ============================================ */
+  @media (max-width: 768px) {
+    /* Reorganize player controls for mobile */
+    .player-controls {
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+    }
+    
+    /* Big central play button */
+    .play-btn {
+      width: 56px;
+      height: 56px;
+      order: 0;
+    }
+    
+    .play-btn svg {
+      width: 28px;
+      height: 28px;
+    }
+    
+    /* Reactions row */
+    .inline-reactions {
+      order: 1;
+      flex: 1;
+      justify-content: center;
+    }
+    
+    /* Hide LED meters on very small screens, show simplified in mini player */
+    .stereo-meters {
+      display: none;
+    }
+    
+    /* Volume at bottom full width */
+    .volume-control {
+      order: 3;
+      width: 100%;
+      margin: 0.5rem 0 0 0;
+    }
+    
+    #volumeSlider {
+      width: 100%;
+    }
+    
+    /* Record button */
+    .record-control {
+      order: 2;
+    }
+    
+    /* Hide star rating on mobile, keep reactions */
+    .inline-rating {
+      display: none;
+    }
+    
+    /* Make reaction buttons bigger on mobile */
+    .inline-btn.reaction-btn {
+      width: 48px;
+      height: 48px;
+      font-size: 24px;
+    }
+  }
+  
+  /* Extra small phones */
+  @media (max-width: 380px) {
+    .mini-dj {
+      font-size: 0.95rem;
+    }
+    
+    .mini-avatar {
+      width: 36px;
+      height: 36px;
+    }
+    
+    .mini-play-btn {
+      width: 44px;
+      height: 44px;
+    }
+    
+    .inline-btn.reaction-btn {
+      width: 44px;
+      height: 44px;
+      font-size: 20px;
+    }
+  }
+  
+  /* Swipe gesture hint */
+  .swipe-hint {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 9999;
+  }
+  
+  .swipe-hint.visible {
+    opacity: 1;
   }
   
   .hidden { display: none !important; }
@@ -4123,30 +5370,192 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   
   document.getElementById('speedTestBtn')?.addEventListener('click', runSpeedTest);
   
-  // Floating Hearts
-  function createHeart(x, y) {
-    const container = document.getElementById('heartsContainer');
-    if (!container) return;
-    
+  // Floating Reactions - Rise from button with JS animation
+  function createFloatingEmoji(startX, startY, emojiList) {
     const heart = document.createElement('div');
-    heart.className = 'floating-heart';
-    heart.textContent = String.fromCodePoint(0x2764);
-    heart.style.left = (x + (Math.random() - 0.5) * 100) + 'px';
-    heart.style.top = y + 'px';
-    container.appendChild(heart);
-    setTimeout(() => heart.remove(), 2000);
-  }
-  
-  function triggerHearts(e) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    for (let i = 0; i < 5; i++) {
-      setTimeout(() => createHeart(rect.left + rect.width/2, rect.top), i * 100);
+    
+    // Pick random emoji from the list
+    const emojis = emojiList || ['❤️', '💖', '💗', '💓', '💕'];
+    heart.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    
+    // Random spread and wiggle parameters
+    const spreadX = (Math.random() - 0.5) * 60;
+    const wiggleAmount = 20 + Math.random() * 30;
+    const duration = 2000 + Math.random() * 1000;
+    const fontSize = 28 + Math.floor(Math.random() * 20);
+    
+    // Calculate position
+    const posX = startX + spreadX;
+    const posY = startY;
+    
+    // Apply all styles inline
+    Object.assign(heart.style, {
+      position: 'fixed',
+      left: posX + 'px',
+      top: posY + 'px',
+      fontSize: fontSize + 'px',
+      lineHeight: '1',
+      pointerEvents: 'none',
+      zIndex: '99999',
+      opacity: '1',
+      transform: 'scale(0)',
+      margin: '0',
+      padding: '0'
+    });
+    
+    document.body.appendChild(heart);
+    
+    // Animate using requestAnimationFrame
+    const startTime = performance.now();
+    
+    function animate(time) {
+      const elapsed = time - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      
+      // Calculate animation values
+      const moveY = easeOut * 350;
+      const wiggle = Math.sin(progress * Math.PI * 4) * wiggleAmount * (1 - progress);
+      
+      // Scale animation
+      let scale = 1;
+      if (progress < 0.1) {
+        scale = progress * 12;
+      } else if (progress < 0.2) {
+        scale = 1.2 - (progress - 0.1) * 2;
+      } else {
+        scale = 1 - (progress - 0.2) * 0.3;
+      }
+      
+      // Opacity
+      const opacity = progress > 0.6 ? 1 - (progress - 0.6) / 0.4 : 1;
+      
+      // Update position
+      heart.style.left = (posX + wiggle) + 'px';
+      heart.style.top = (posY - moveY) + 'px';
+      heart.style.opacity = String(opacity);
+      heart.style.transform = 'scale(' + scale + ')';
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        heart.remove();
+      }
     }
-    e.currentTarget.classList.add('liked');
-    setTimeout(() => e.currentTarget.classList.remove('liked'), 300);
+    
+    requestAnimationFrame(animate);
   }
   
-  document.getElementById('likeBtn')?.addEventListener('click', triggerHearts);
+  function triggerReactionBurst(element, emojiList) {
+    // Get position from element
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+    
+    if (element && element.getBoundingClientRect) {
+      const rect = element.getBoundingClientRect();
+      x = rect.left + rect.width / 2;
+      y = rect.top + rect.height / 2;
+    }
+    
+    // Create burst of emojis
+    const numHearts = 6 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < numHearts; i++) {
+      setTimeout(() => {
+        createFloatingEmoji(x, y, emojiList);
+      }, i * 70);
+    }
+  }
+  
+  // Legacy function - alias for hearts
+  function triggerHeartBurst(element) {
+    const emojiList = element?.dataset?.emoji?.split(',') || ['❤️', '💖', '💗', '💓', '💕'];
+    triggerReactionBurst(element, emojiList);
+  }
+  
+  // Expose globally
+  window.triggerHeartBurst = triggerHeartBurst;
+  window.triggerReactionBurst = triggerReactionBurst;
+  
+  // Legacy function for compatibility
+  function createHeart(x, y) {
+    createFloatingEmoji(x || 100, y || 100, ['❤️', '💖', '💗']);
+  }
+
+  // Track reaction state to prevent spam
+  let lastReactionTime = 0;
+  const REACTION_COOLDOWN = 500; // 500ms between reactions
+
+  async function triggerReaction(e) {
+    e.preventDefault();
+    
+    // Cooldown to prevent spam
+    const now = Date.now();
+    if (now - lastReactionTime < REACTION_COOLDOWN) return;
+    lastReactionTime = now;
+    
+    const btn = e.currentTarget || e.target;
+    const emojiList = btn?.dataset?.emoji?.split(',') || ['❤️'];
+    
+    // Trigger visual animation
+    triggerReactionBurst(btn, emojiList);
+    btn?.classList.add('liked');
+    setTimeout(() => btn?.classList.remove('liked'), 300);
+    
+    // Increment like count via API
+    try {
+      // Get current stream ID from the page
+      const streamId = window.currentStreamId || document.body.dataset.streamId;
+      
+      if (!streamId) {
+        console.log('[Reaction] No active stream to react to');
+        return;
+      }
+      
+      // Get current user from Firebase auth
+      const auth = window.firebaseAuth;
+      const user = auth?.currentUser;
+      
+      if (!user) {
+        // Still show animation but don't record the like
+        console.log('[Reaction] User not logged in, animation only');
+        return;
+      }
+      
+      const response = await fetch('/api/livestream/react', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'like',
+          streamId,
+          userId: user.uid
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        // Update like count in UI
+        const likeCount = document.getElementById('likeCount');
+        if (likeCount && result.totalLikes !== undefined) {
+          likeCount.textContent = result.totalLikes;
+        }
+      }
+    } catch (error) {
+      console.error('[Reaction] API error:', error);
+      // Animation still shows even if API fails
+    }
+  }
+  
+  // Setup reaction button click handlers
+  setTimeout(() => {
+    ['likeBtn', 'fireBtn', 'explosionBtn'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        btn.addEventListener('click', triggerReaction);
+      }
+    });
+  }, 100);
   
   // Fullscreen Mode
   function openFullscreen() {
@@ -4804,6 +6213,12 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         }
       } else {
         notification.classList.add('hidden');
+      }
+    }, (error) => {
+      // Handle permission errors gracefully
+      console.warn('[Takeover] Firestore listener error:', error.code);
+      if (error.code === 'permission-denied') {
+        console.info('[Takeover] Update Firestore rules to allow reading djTakeoverRequests collection');
       }
     });
   }
@@ -5955,8 +7370,267 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     }
   });
   
+  // ============================================
+  // MOBILE TAB NAVIGATION
+  // ============================================
+  const mobileTabs = document.querySelectorAll('.mobile-tab');
+  const scheduleColumn = document.querySelector('.schedule-column');
+  const playerColumn = document.querySelector('.player-column');
+  const chatColumn = document.querySelector('.chat-column');
+  
+  function switchMobileTab(tabName) {
+    // Update tab buttons
+    mobileTabs.forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+    
+    // Update sections
+    scheduleColumn?.classList.toggle('mobile-active', tabName === 'schedule');
+    playerColumn?.classList.toggle('mobile-active', tabName === 'player');
+    chatColumn?.classList.toggle('mobile-active', tabName === 'chat');
+    
+    // Clear chat badge when viewing chat
+    if (tabName === 'chat') {
+      const chatBadge = document.querySelector('.mobile-tab[data-tab="chat"] .tab-badge');
+      if (chatBadge) chatBadge.remove();
+    }
+    
+    // Scroll to top of content
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  
+  // Tab click handlers
+  mobileTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      switchMobileTab(tab.dataset.tab);
+    });
+  });
+  
+  // Set initial state
+  if (window.innerWidth <= 900) {
+    playerColumn?.classList.add('mobile-active');
+  }
+  
+  // Add chat notification badge when new message arrives
+  let lastChatCount = 0;
+  function addChatBadge() {
+    const chatTab = document.querySelector('.mobile-tab[data-tab="chat"]');
+    if (!chatTab || chatTab.classList.contains('active')) return;
+    
+    let badge = chatTab.querySelector('.tab-badge');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'tab-badge';
+      badge.textContent = '1';
+      chatTab.appendChild(badge);
+    } else {
+      const count = parseInt(badge.textContent) + 1;
+      badge.textContent = count > 9 ? '9+' : count;
+    }
+  }
+  
+  // Expose for chat system to call
+  window.notifyNewChatMessage = addChatBadge;
+  
   // Start initial polling
   startRefreshInterval();
+  
+  // ============================================
+  // MOBILE MINI PLAYER
+  // ============================================
+  const miniPlayer = document.getElementById('miniPlayer');
+  const miniPlayBtn = document.getElementById('miniPlayBtn');
+  const miniExpandBtn = document.getElementById('miniExpandBtn');
+  const miniPlayIcon = document.getElementById('miniPlayIcon');
+  const miniPauseIcon = document.getElementById('miniPauseIcon');
+  const miniDjName = document.getElementById('miniDjName');
+  const miniDjAvatar = document.getElementById('miniDjAvatar');
+  const miniLedStrip = document.getElementById('miniLedStrip');
+  const playerContainer = document.getElementById('playerContainer');
+  
+  let miniPlayerVisible = false;
+  let lastScrollY = 0;
+  
+  // Show/hide mini player based on scroll position
+  function updateMiniPlayer() {
+    if (!playerContainer || !miniPlayer) return;
+    
+    const rect = playerContainer.getBoundingClientRect();
+    const shouldShow = rect.bottom < 0 && window.innerWidth <= 768;
+    
+    if (shouldShow && !miniPlayerVisible) {
+      miniPlayer.classList.remove('hidden');
+      setTimeout(() => miniPlayer.classList.add('visible'), 10);
+      miniPlayerVisible = true;
+    } else if (!shouldShow && miniPlayerVisible) {
+      miniPlayer.classList.remove('visible');
+      setTimeout(() => miniPlayer.classList.add('hidden'), 300);
+      miniPlayerVisible = false;
+    }
+  }
+  
+  // Sync mini player state with main player
+  function syncMiniPlayer() {
+    const playBtn = document.getElementById('playBtn');
+    const djName = document.getElementById('djName');
+    const djAvatar = document.getElementById('djAvatar');
+    
+    if (playBtn && miniPlayBtn) {
+      const isPlaying = playBtn.classList.contains('playing');
+      if (isPlaying) {
+        miniPlayIcon?.classList.add('hidden');
+        miniPauseIcon?.classList.remove('hidden');
+      } else {
+        miniPlayIcon?.classList.remove('hidden');
+        miniPauseIcon?.classList.add('hidden');
+      }
+    }
+    
+    if (djName && miniDjName) {
+      miniDjName.textContent = djName.textContent;
+    }
+    
+    if (djAvatar && miniDjAvatar) {
+      miniDjAvatar.src = djAvatar.src;
+    }
+  }
+  
+  // Mini player play/pause
+  miniPlayBtn?.addEventListener('click', () => {
+    const playBtn = document.getElementById('playBtn');
+    playBtn?.click();
+    syncMiniPlayer();
+  });
+  
+  // Expand back to full player
+  miniExpandBtn?.addEventListener('click', () => {
+    playerContainer?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  
+  // Update mini LED strip (simplified visualization)
+  function updateMiniLeds(level) {
+    if (!miniLedStrip) return;
+    const leds = miniLedStrip.querySelectorAll('.mini-led');
+    const activeLeds = Math.floor(level * leds.length);
+    leds.forEach((led, i) => {
+      led.classList.toggle('active', i < activeLeds);
+    });
+  }
+  
+  // Throttled scroll handler
+  let scrollTimeout;
+  window.addEventListener('scroll', () => {
+    if (scrollTimeout) return;
+    scrollTimeout = setTimeout(() => {
+      updateMiniPlayer();
+      scrollTimeout = null;
+    }, 100);
+  }, { passive: true });
+  
+  // Observe play state changes
+  const playBtn = document.getElementById('playBtn');
+  if (playBtn) {
+    const observer = new MutationObserver(syncMiniPlayer);
+    observer.observe(playBtn, { attributes: true, attributeFilter: ['class'] });
+  }
+  
+  // ============================================
+  // KEYBOARD SHORTCUTS
+  // ============================================
+  document.addEventListener('keydown', (e) => {
+    // Don't trigger if typing in an input
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    
+    switch(e.code) {
+      case 'Space':
+        e.preventDefault();
+        document.getElementById('playBtn')?.click();
+        break;
+      case 'KeyM':
+        // Toggle mute
+        const slider = document.getElementById('volumeSlider');
+        if (slider) {
+          slider.value = slider.value > 0 ? 0 : 80;
+          slider.dispatchEvent(new Event('input'));
+        }
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        adjustVolume(10);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        adjustVolume(-10);
+        break;
+      case 'KeyF':
+        // Fullscreen
+        document.getElementById('fullscreenBtn')?.click();
+        break;
+    }
+  });
+  
+  function adjustVolume(delta) {
+    const slider = document.getElementById('volumeSlider');
+    if (slider) {
+      let newVal = parseInt(slider.value) + delta;
+      newVal = Math.max(0, Math.min(100, newVal));
+      slider.value = newVal;
+      slider.dispatchEvent(new Event('input'));
+      showVolumeHint(newVal);
+    }
+  }
+  
+  function showVolumeHint(vol) {
+    let hint = document.getElementById('volumeHint');
+    if (!hint) {
+      hint = document.createElement('div');
+      hint.id = 'volumeHint';
+      hint.className = 'swipe-hint';
+      document.body.appendChild(hint);
+    }
+    hint.textContent = `Volume: ${vol}%`;
+    hint.classList.add('visible');
+    setTimeout(() => hint.classList.remove('visible'), 1000);
+  }
+  
+  // ============================================
+  // TOUCH GESTURES FOR MOBILE
+  // ============================================
+  let touchStartY = 0;
+  let touchStartX = 0;
+  
+  playerContainer?.addEventListener('touchstart', (e) => {
+    touchStartY = e.touches[0].clientY;
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+  
+  playerContainer?.addEventListener('touchend', (e) => {
+    const touchEndY = e.changedTouches[0].clientY;
+    const touchEndX = e.changedTouches[0].clientX;
+    const deltaY = touchStartY - touchEndY;
+    const deltaX = touchEndX - touchStartX;
+    
+    // Vertical swipe for volume (if more vertical than horizontal)
+    if (Math.abs(deltaY) > 50 && Math.abs(deltaY) > Math.abs(deltaX)) {
+      const volumeChange = deltaY > 0 ? 10 : -10;
+      adjustVolume(volumeChange);
+    }
+    
+    // Double tap to like
+    // (handled by native dblclick)
+  }, { passive: true });
+  
+  // Double tap to trigger reaction
+  let lastTap = 0;
+  playerContainer?.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      // Double tap!
+      const likeBtn = document.getElementById('likeBtn');
+      likeBtn?.click();
+    }
+    lastTap = now;
+  }, { passive: true });
 </script>
 
 <script type="module" src="/live-stream.js"></script>

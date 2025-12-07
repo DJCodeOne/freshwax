@@ -37,6 +37,8 @@ interface Props {
     format?: string[];
     tracks?: { name: string; duration?: string }[];
   };
+  faqs?: { question: string; answer: string }[];
+  breadcrumbs?: { name: string; url: string }[];
 }
 
 const { 
@@ -48,7 +50,9 @@ const {
   noindex,
   product,
   article,
-  music
+  music,
+  faqs,
+  breadcrumbs
 } = Astro.props;
 ---
 
@@ -93,6 +97,8 @@ const {
       product={product}
       article={article}
       music={music}
+      faqs={faqs}
+      breadcrumbs={breadcrumbs}
     />
     
     <ViewTransitions />

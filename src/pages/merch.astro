@@ -166,7 +166,7 @@ const productsJson = JSON.stringify(products.map(p => ({
       <section class="merch-hero">
         <div class="hero-pattern"></div>
         <div class="hero-inner">
-          <h1 class="merch-title">OFFICIAL MERCH</h1>
+          <h1 class="merch-title">OFFICIAL <span class="text-red">MERCH</span></h1>
           <p class="hero-subtitle">Support the underground. Wear the sound.</p>
         </div>
       </section>
@@ -969,6 +969,11 @@ const productsJson = JSON.stringify(products.map(p => ({
     text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 80px rgba(220, 38, 38, 0.2);
     line-height: 0.95;
     text-transform: uppercase;
+  }
+
+  .merch-title .text-red {
+    color: #dc2626;
+    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 60px rgba(220, 38, 38, 0.5);
   }
 
   @media (min-width: 768px) {

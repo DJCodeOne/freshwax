@@ -13,13 +13,19 @@ export const prerender = false;
   <main class="cart-main">
     
     <!-- Page Header -->
-    <header class="cart-header">
-      <h1>RECORD BAG</h1>
-      <a href="/" class="back-btn">← Continue Shopping</a>
-    </header>
+    <div class="page-header-container">
+      <div class="page-header-pattern"></div>
+      <header class="cart-header">
+        <h1>RECORD <span class="red">BAG</span></h1>
+        <a href="/" class="back-btn">← Continue Shopping</a>
+      </header>
+    </div>
     
     <div id="cart-content">
-      <div class="loading-state">Loading your bag...</div>
+      <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <span>Loading your bag...</span>
+      </div>
     </div>
     
   </main>
@@ -34,30 +40,55 @@ export const prerender = false;
   
   .cart-main {
     min-height: 100vh;
-    padding: 1.5rem;
-    max-width: 900px;
+    padding: 2rem 1.5rem;
+    max-width: 1000px;
     margin: 0 auto;
     background: #000;
+  }
+  
+  .page-header-container {
+    background: linear-gradient(to bottom, #1f2937 0%, #374151 100%);
+    border-radius: 1rem;
+    padding: 2rem 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .page-header-pattern {
+    position: absolute;
+    inset: 0;
+    opacity: 0.1;
+    pointer-events: none;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px), 
+                      linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px);
+    background-size: 40px 40px;
   }
   
   .cart-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 2rem;
-    padding-bottom: 1.25rem;
-    border-bottom: 3px solid #ef4444;
     flex-wrap: wrap;
     gap: 1rem;
+    position: relative;
+    z-index: 1;
   }
   
   .cart-header h1 {
     margin: 0;
     font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(2.2rem, 6vw, 3rem);
+    font-size: clamp(2.5rem, 6vw, 3.5rem);
     font-weight: 400;
     letter-spacing: 0.02em;
     color: #fff;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+  }
+  
+  .cart-header h1 .red {
+    color: #dc2626;
   }
   
   .back-btn {
@@ -68,26 +99,56 @@ export const prerender = false;
     text-decoration: none;
     font-size: 1rem;
     font-weight: 600;
-    padding: 0.625rem 1.25rem;
-    background: #000;
-    border: 2px solid #fff;
+    padding: 0.75rem 1.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 8px;
     transition: all 0.2s;
+    backdrop-filter: blur(10px);
   }
   
   .back-btn:hover {
-    background: #fff;
-    color: #000;
+    background: #dc2626;
+    border-color: #dc2626;
+    transform: translateY(-2px);
   }
   
   .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
     text-align: center;
     padding: 4rem 2rem;
-    background: #000;
-    border: 3px solid #fff;
+    background: linear-gradient(to bottom, #1f2937 0%, #111827 100%);
+    border: 2px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
-    color: #888;
+    color: #9ca3af;
     font-size: 1.125rem;
+  }
+  
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(220, 38, 38, 0.2);
+    border-top-color: #dc2626;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  @media (max-width: 768px) {
+    .cart-main {
+      padding: 1.5rem 1rem;
+    }
+    
+    .page-header-container {
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+    }
   }
   
   @media (max-width: 600px) {
@@ -95,10 +156,14 @@ export const prerender = false;
       padding: 1rem 0.75rem;
     }
     
+    .page-header-container {
+      padding: 1.25rem;
+    }
+    
     .cart-header {
       flex-direction: column;
       align-items: flex-start;
-      gap: 0.875rem;
+      gap: 1rem;
     }
     
     .back-btn {
@@ -109,52 +174,68 @@ export const prerender = false;
 </style>
 
 <style is:global>
-  /* Mobile-optimized cart items */
+  /* Cart Items Styling */
+  #cart-content .empty-cart {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: #000;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+  }
+  
+  #cart-content .empty-cart h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: #dc2626;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  #cart-content .empty-cart p {
+    color: #9ca3af;
+    margin: 0 0 1.5rem 0;
+  }
+  
+  /* Mobile cart item adjustments */
   @media (max-width: 600px) {
     #cart-content article {
-      grid-template-columns: 80px 1fr !important;
       gap: 0.75rem !important;
-      padding: 1rem !important;
+      padding: 0.75rem !important;
     }
     
     #cart-content article > div:first-child {
-      width: 80px !important;
-      height: 80px !important;
+      width: 56px !important;
+      height: 56px !important;
     }
     
-    #cart-content article > div:first-child img {
-      width: 80px !important;
-      height: 80px !important;
+    #cart-content article img {
+      width: 56px !important;
+      height: 56px !important;
     }
     
     #cart-content h3 {
       font-size: 1rem !important;
     }
     
-    /* Stack quantity controls and price */
-    #cart-content article > div:last-child > div:last-child {
-      flex-direction: column !important;
-      align-items: flex-start !important;
-      gap: 0.75rem !important;
-    }
-    
-    /* Make quantity buttons touch-friendly */
-    #cart-content button {
-      min-height: 44px !important;
-      min-width: 44px !important;
-    }
-    
-    /* Checkout button full width */
-    #cart-content a[href="/checkout"] {
-      width: 100% !important;
-      text-align: center !important;
+    /* Stack price and remove on very small screens */
+    #cart-content article {
+      flex-wrap: wrap !important;
     }
   }
   
-  /* Tablet cart adjustments */
-  @media (min-width: 601px) and (max-width: 768px) {
+  @media (max-width: 400px) {
     #cart-content article {
-      gap: 1rem !important;
+      gap: 0.5rem !important;
+      padding: 0.625rem !important;
+    }
+    
+    #cart-content article > div:first-child {
+      width: 48px !important;
+      height: 48px !important;
+    }
+    
+    #cart-content article img {
+      width: 48px !important;
+      height: 48px !important;
     }
   }
   
@@ -162,6 +243,7 @@ export const prerender = false;
   @media (hover: none) and (pointer: coarse) {
     #cart-content button {
       min-height: 44px !important;
+      min-width: 44px !important;
     }
     
     #cart-content a {

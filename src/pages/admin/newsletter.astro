@@ -1,0 +1,635 @@
+---
+// src/pages/admin/newsletter.astro
+// Admin newsletter management - compose and send newsletters
+import AdminLayout from '../../layouts/AdminLayout.astro';
+export const prerender = false;
+---
+
+<AdminLayout title="Newsletter" activeNav="newsletter">
+  <Fragment slot="actions">
+    <button class="btn btn-primary" onclick="openComposeModal()">
+      <span>✉️</span> Compose Newsletter
+    </button>
+  </Fragment>
+
+  <!-- Stats Bar -->
+  <div class="stats-grid mb-3">
+    <div class="stat-card">
+      <div class="stat-value" id="totalCount">0</div>
+      <div class="stat-label">Total Subscribers</div>
+    </div>
+    <div class="stat-card success">
+      <div class="stat-value" id="activeCount">0</div>
+      <div class="stat-label">Active</div>
+    </div>
+    <div class="stat-card warning">
+      <div class="stat-value" id="unsubscribedCount">0</div>
+      <div class="stat-label">Unsubscribed</div>
+    </div>
+    <div class="stat-card info">
+      <div class="stat-value" id="selectedCount">0</div>
+      <div class="stat-label">Selected</div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search subscribers..." class="search-input">
+    </div>
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-filter="all">All</button>
+      <button class="filter-tab" data-filter="active">Active</button>
+      <button class="filter-tab" data-filter="unsubscribed">Unsubscribed</button>
+    </div>
+    <div class="toolbar-actions">
+      <button class="btn btn-outline btn-sm" onclick="selectAll()">Select All Active</button>
+      <button class="btn btn-outline btn-sm" onclick="deselectAll()">Deselect All</button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loadingState" class="card">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p>Loading subscribers...</p>
+    </div>
+  </div>
+
+  <!-- Subscribers Table -->
+  <div id="subscribersTable" class="card" style="display: none;">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 40px;">
+              <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
+            </th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Source</th>
+            <th>Subscribed</th>
+            <th>Emails Sent</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="subscribersTableBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div id="emptyState" class="card" style="display: none;">
+    <div class="empty-state">
+      <div class="empty-icon">📬</div>
+      <h3>No subscribers yet</h3>
+      <p>Subscribers will appear here when people sign up via the website footer.</p>
+    </div>
+  </div>
+
+  <!-- Compose Modal -->
+  <Fragment slot="modals">
+    <div id="composeModal" class="modal-overlay">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <h2>✉️ Compose Newsletter</h2>
+          <button class="modal-close" onclick="closeModal('composeModal')">×</button>
+        </div>
+        <div class="modal-body">
+          <form id="composeForm">
+            <!-- Recipients -->
+            <div class="form-section">
+              <h3 class="form-section-title">Recipients</h3>
+              <div class="recipients-info">
+                <span id="recipientCount">0</span> subscribers selected
+                <button type="button" class="btn btn-link" onclick="closeModal('composeModal')">Change selection</button>
+              </div>
+            </div>
+            
+            <!-- Subject -->
+            <div class="form-group">
+              <label class="form-label">Subject Line <span class="required">*</span></label>
+              <input type="text" id="emailSubject" class="form-input" required placeholder="e.g. New Releases This Week 🔥">
+            </div>
+            
+            <!-- Content -->
+            <div class="form-group">
+              <label class="form-label">Newsletter Content <span class="required">*</span></label>
+              <p class="form-help">Use markdown for formatting: **bold**, *italic*, [link text](url), ## headers</p>
+              <textarea id="emailContent" class="form-textarea" rows="15" required placeholder="Write your newsletter content here...
+
+## What's New
+
+Check out our latest releases...
+
+**Featured Release:**
+[View Release](https://freshwax.co.uk/item/xxx)
+
+Stay fresh! 🎵"></textarea>
+            </div>
+            
+            <!-- Preview -->
+            <div class="form-group">
+              <label class="form-label">Send Preview To (Optional)</label>
+              <div class="input-group">
+                <input type="email" id="previewEmail" class="form-input" placeholder="your@email.com">
+                <button type="button" class="btn btn-outline" onclick="sendPreview()">Send Preview</button>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" onclick="closeModal('composeModal')">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="sendNewsletter()">
+            <span class="btn-text">Send Newsletter</span>
+            <span class="btn-loading hidden">Sending...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </Fragment>
+</AdminLayout>
+
+<style>
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+  }
+  
+  .toolbar-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+  
+  .recipients-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    color: var(--text-secondary);
+  }
+  
+  .recipients-info span {
+    font-weight: bold;
+    color: var(--accent-color);
+    font-size: 1.25rem;
+  }
+  
+  .form-textarea {
+    width: 100%;
+    padding: 1rem;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    resize: vertical;
+  }
+  
+  .form-textarea:focus {
+    outline: none;
+    border-color: var(--accent-color);
+  }
+  
+  .form-help {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+  
+  .input-group {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .input-group .form-input {
+    flex: 1;
+  }
+  
+  .subscriber-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+  
+  .status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  
+  .status-badge.active {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+  }
+  
+  .status-badge.unsubscribed {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+  }
+  
+  .btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .btn-link {
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+  }
+</style>
+
+<script type="module">
+  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+  
+  const firebaseConfig = {
+    apiKey: "AIzaSyD0Rj82T2AmMPU1JNhLsOLVB8WwL5Aql_w",
+    authDomain: "freshwax-ab02c.firebaseapp.com",
+    projectId: "freshwax-ab02c",
+    storageBucket: "freshwax-ab02c.firebasestorage.app",
+    messagingSenderId: "554366498481",
+    appId: "1:554366498481:web:1e04c820cc498d2d0a50ee"
+  };
+  
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  
+  let allSubscribers = [];
+  let selectedIds = new Set();
+  let currentFilter = 'all';
+  
+  // Make functions globally available
+  window.openComposeModal = openComposeModal;
+  window.closeModal = closeModal;
+  window.selectAll = selectAll;
+  window.deselectAll = deselectAll;
+  window.toggleSelectAll = toggleSelectAll;
+  window.toggleSubscriber = toggleSubscriber;
+  window.sendPreview = sendPreview;
+  window.sendNewsletter = sendNewsletter;
+  window.updateStatus = updateStatus;
+  window.deleteSubscriber = deleteSubscriber;
+  
+  // Auth check
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      window.location.href = '/admin/login';
+      return;
+    }
+    loadSubscribers();
+  });
+  
+  // Filter tabs
+  document.querySelectorAll('.filter-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFilter = tab.dataset.filter;
+      renderSubscribers();
+    });
+  });
+  
+  // Search
+  document.getElementById('searchInput')?.addEventListener('input', renderSubscribers);
+  
+  async function loadSubscribers() {
+    try {
+      const response = await fetch('/api/newsletter/subscribers');
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+      
+      allSubscribers = data.subscribers;
+      
+      // Update stats
+      document.getElementById('totalCount').textContent = data.stats.total;
+      document.getElementById('activeCount').textContent = data.stats.active;
+      document.getElementById('unsubscribedCount').textContent = data.stats.unsubscribed;
+      
+      renderSubscribers();
+      
+      document.getElementById('loadingState').style.display = 'none';
+      
+      if (allSubscribers.length === 0) {
+        document.getElementById('emptyState').style.display = 'block';
+      } else {
+        document.getElementById('subscribersTable').style.display = 'block';
+      }
+      
+    } catch (error) {
+      console.error('Error loading subscribers:', error);
+      document.getElementById('loadingState').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">❌</div>
+          <h3>Error loading subscribers</h3>
+          <p>${error.message}</p>
+        </div>
+      `;
+    }
+  }
+  
+  function renderSubscribers() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    
+    let filtered = allSubscribers.filter(s => {
+      // Search filter
+      const matchesSearch = !searchTerm || s.email.toLowerCase().includes(searchTerm);
+      if (!matchesSearch) return false;
+      
+      // Status filter
+      if (currentFilter === 'active') return s.status === 'active';
+      if (currentFilter === 'unsubscribed') return s.status === 'unsubscribed';
+      return true;
+    });
+    
+    const tbody = document.getElementById('subscribersTableBody');
+    
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">No subscribers match your criteria</td>
+        </tr>
+      `;
+      return;
+    }
+    
+    tbody.innerHTML = filtered.map(s => `
+      <tr>
+        <td>
+          <input 
+            type="checkbox" 
+            class="subscriber-checkbox" 
+            ${s.status !== 'active' ? 'disabled' : ''}
+            ${selectedIds.has(s.id) ? 'checked' : ''}
+            onchange="toggleSubscriber('${s.id}')"
+          >
+        </td>
+        <td>
+          <strong>${s.email}</strong>
+        </td>
+        <td>
+          <span class="status-badge ${s.status}">${s.status}</span>
+        </td>
+        <td>${s.source || 'footer'}</td>
+        <td>${s.subscribedAt ? new Date(s.subscribedAt).toLocaleDateString() : 'N/A'}</td>
+        <td>${s.emailsSent || 0}</td>
+        <td class="text-right">
+          ${s.status === 'active' 
+            ? `<button class="btn btn-ghost btn-sm" onclick="updateStatus('${s.id}', 'unsubscribed')">Unsubscribe</button>`
+            : `<button class="btn btn-ghost btn-sm" onclick="updateStatus('${s.id}', 'active')">Reactivate</button>`
+          }
+          <button class="btn btn-ghost btn-sm text-danger" onclick="deleteSubscriber('${s.id}')">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+    
+    updateSelectedCount();
+  }
+  
+  function toggleSubscriber(id) {
+    if (selectedIds.has(id)) {
+      selectedIds.delete(id);
+    } else {
+      selectedIds.add(id);
+    }
+    updateSelectedCount();
+  }
+  
+  function selectAll() {
+    allSubscribers.filter(s => s.status === 'active').forEach(s => selectedIds.add(s.id));
+    renderSubscribers();
+  }
+  
+  function deselectAll() {
+    selectedIds.clear();
+    renderSubscribers();
+  }
+  
+  function toggleSelectAll(checkbox) {
+    if (checkbox.checked) {
+      selectAll();
+    } else {
+      deselectAll();
+    }
+  }
+  
+  function updateSelectedCount() {
+    document.getElementById('selectedCount').textContent = selectedIds.size;
+    document.getElementById('recipientCount').textContent = selectedIds.size;
+  }
+  
+  function openComposeModal() {
+    if (selectedIds.size === 0) {
+      // Auto-select all active if none selected
+      const activeCount = allSubscribers.filter(s => s.status === 'active').length;
+      if (activeCount > 0 && confirm(`No subscribers selected. Send to all ${activeCount} active subscribers?`)) {
+        selectAll();
+      } else if (activeCount === 0) {
+        alert('No active subscribers to send to.');
+        return;
+      } else {
+        return;
+      }
+    }
+    
+    updateSelectedCount();
+    document.getElementById('composeModal').classList.add('active');
+  }
+  
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+  }
+  
+  async function sendPreview() {
+    const previewEmail = document.getElementById('previewEmail').value.trim();
+    const subject = document.getElementById('emailSubject').value.trim();
+    const content = document.getElementById('emailContent').value.trim();
+    
+    if (!previewEmail) {
+      alert('Please enter a preview email address');
+      return;
+    }
+    
+    if (!subject || !content) {
+      alert('Please fill in subject and content first');
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/newsletter/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject,
+          content,
+          subscriberIds: Array.from(selectedIds),
+          previewEmail
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`Preview sent to ${previewEmail}`);
+      } else {
+        alert(data.error || 'Failed to send preview');
+      }
+    } catch (err) {
+      alert('Error sending preview');
+    }
+  }
+  
+  async function sendNewsletter() {
+    const subject = document.getElementById('emailSubject').value.trim();
+    const content = document.getElementById('emailContent').value.trim();
+    
+    if (!subject || !content) {
+      alert('Please fill in subject and content');
+      return;
+    }
+    
+    if (selectedIds.size === 0) {
+      alert('No subscribers selected');
+      return;
+    }
+    
+    if (!confirm(`Send newsletter to ${selectedIds.size} subscribers?`)) {
+      return;
+    }
+    
+    const btn = document.querySelector('#composeModal .btn-primary');
+    btn.disabled = true;
+    btn.querySelector('.btn-text').classList.add('hidden');
+    btn.querySelector('.btn-loading').classList.remove('hidden');
+    
+    try {
+      const response = await fetch('/api/newsletter/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject,
+          content,
+          subscriberIds: Array.from(selectedIds)
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`Newsletter sent successfully!\n\nSent: ${data.results.sent}\nFailed: ${data.results.failed}`);
+        closeModal('composeModal');
+        
+        // Reset form
+        document.getElementById('emailSubject').value = '';
+        document.getElementById('emailContent').value = '';
+        document.getElementById('previewEmail').value = '';
+        selectedIds.clear();
+        
+        // Reload subscribers to update stats
+        loadSubscribers();
+      } else {
+        alert(data.error || 'Failed to send newsletter');
+      }
+    } catch (err) {
+      alert('Error sending newsletter');
+    } finally {
+      btn.disabled = false;
+      btn.querySelector('.btn-text').classList.remove('hidden');
+      btn.querySelector('.btn-loading').classList.add('hidden');
+    }
+  }
+  
+  async function updateStatus(id, status) {
+    if (!confirm(`${status === 'active' ? 'Reactivate' : 'Unsubscribe'} this subscriber?`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/newsletter/subscribers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscriberId: id, status })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update local data
+        const subscriber = allSubscribers.find(s => s.id === id);
+        if (subscriber) {
+          subscriber.status = status;
+          if (status === 'unsubscribed') {
+            selectedIds.delete(id);
+          }
+        }
+        
+        // Update stats
+        const activeCount = allSubscribers.filter(s => s.status === 'active').length;
+        const unsubCount = allSubscribers.filter(s => s.status === 'unsubscribed').length;
+        document.getElementById('activeCount').textContent = activeCount;
+        document.getElementById('unsubscribedCount').textContent = unsubCount;
+        
+        renderSubscribers();
+      } else {
+        alert(data.error || 'Failed to update subscriber');
+      }
+    } catch (err) {
+      alert('Error updating subscriber');
+    }
+  }
+  
+  async function deleteSubscriber(id) {
+    if (!confirm('Permanently delete this subscriber?')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/newsletter/subscribers', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscriberId: id })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        allSubscribers = allSubscribers.filter(s => s.id !== id);
+        selectedIds.delete(id);
+        
+        // Update stats
+        document.getElementById('totalCount').textContent = allSubscribers.length;
+        document.getElementById('activeCount').textContent = allSubscribers.filter(s => s.status === 'active').length;
+        document.getElementById('unsubscribedCount').textContent = allSubscribers.filter(s => s.status === 'unsubscribed').length;
+        
+        renderSubscribers();
+      } else {
+        alert(data.error || 'Failed to delete subscriber');
+      }
+    } catch (err) {
+      alert('Error deleting subscriber');
+    }
+  }
+</script>

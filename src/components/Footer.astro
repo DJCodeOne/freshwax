@@ -9,11 +9,11 @@ const currentYear = new Date().getFullYear();
       
       <!-- About Section -->
       <div class="lg:col-span-2">
-        <a href="/" class="inline-block mb-5">
-          <img src="/logo.webp" alt="Fresh Wax" class="h-14" />
+        <a href="/" class="inline-block mb-5 bg-white rounded-lg p-3">
+          <img src="/logo.webp" alt="Fresh Wax" class="h-12" />
         </a>
         <p class="text-base text-gray-400 mb-5 max-w-md leading-relaxed">
-          Independent UK record label specialising in jungle and drum & bass. Digital downloads, limited edition vinyl pressings, and live radio since 2024.
+          Independent UK online music store specialising in jungle and drum & bass. Digital downloads, vinyl records, DJ mixes, and exclusive merchandise.
         </p>
         <div class="flex gap-5">
           <a href="https://facebook.com/freshwaxuk" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition-colors" aria-label="Facebook">
@@ -28,7 +28,7 @@ const currentYear = new Date().getFullYear();
           </a>
           <a href="https://soundcloud.com/freshwaxuk" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition-colors" aria-label="SoundCloud">
             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M1.175 12.225c-.051 0-.094.046-.101.1l-.233 2.154.233 2.105c.007.058.05.098.101.098.05 0 .09-.04.099-.098l.255-2.105-.27-2.154c-.009-.06-.052-.1-.084-.1zm-.899 1.075c-.05 0-.09.04-.099.1l-.187 1.177.187 1.154c.009.054.049.094.099.094.05 0 .09-.04.099-.094l.211-1.154-.211-1.177c-.009-.06-.049-.1-.099-.1zm1.799-.9c-.06 0-.104.05-.111.109l-.211 1.98.211 1.914c.007.061.051.111.111.111.061 0 .105-.05.113-.111l.24-1.914-.24-1.98c-.008-.059-.052-.109-.113-.109zm.899-.449c-.066 0-.115.056-.121.119l-.189 2.429.189 2.322c.006.067.055.117.121.117.066 0 .115-.05.121-.117l.221-2.322-.221-2.429c-.006-.063-.055-.119-.121-.119zm.9-.255c-.073 0-.127.061-.133.13l-.166 2.684.166 2.585c.006.073.06.129.133.129.073 0 .127-.056.133-.129l.194-2.585-.194-2.684c-.006-.069-.06-.13-.133-.13z"/>
+              <path d="M11.56 8.87V17h8.76c1.85 0 3.36-1.51 3.36-3.36 0-1.86-1.51-3.37-3.36-3.37-.07 0-.13 0-.2.01-.3-2.07-2.09-3.66-4.27-3.66-1.03 0-1.99.38-2.73 1.01V8.87h-1.56zm-1.12-.64v8.77h.56V7.89c-.2.1-.38.21-.56.34zM9.33 9.1v7.9h.56V8.76c-.2.1-.38.21-.56.34zm-1.12.86v7.04h.56V9.63c-.2.1-.38.21-.56.33zm-1.11.98v6.06h.56v-6.33c-.2.08-.38.17-.56.27zm-1.12.86v5.2h.56v-5.39c-.19.05-.38.11-.56.19zm-1.11.57v4.63h.56v-4.68c-.19.01-.38.02-.56.05zm-1.12.29v4.34h.56v-4.34c-.19-.01-.38 0-.56 0zm-1.12.17v4h.56v-4c-.19.01-.38.03-.56.05zM1.5 13.4v3.1h.56v-3.16c-.19.02-.38.04-.56.06zM.5 13.77v2.73h.56V13.7c-.19.02-.38.04-.56.07z"/>
             </svg>
           </a>
           <a href="https://www.youtube.com/@freshwaxuk" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-white transition-colors" aria-label="YouTube">
@@ -41,13 +41,13 @@ const currentYear = new Date().getFullYear();
 
       <!-- Quick Links - SEO Important -->
       <div>
-        <h3 class="text-white font-bold text-xl mb-5">Explore</h3>
+        <h3 class="text-white font-bold text-xl mb-5">Shop</h3>
         <ul class="space-y-3 text-base">
           <li><a href="/releases" class="hover:text-white transition-colors">All Releases</a></li>
           <li><a href="/dj-mixes" class="hover:text-white transition-colors">DJ Mixes</a></li>
           <li><a href="/merch" class="hover:text-white transition-colors">Merchandise</a></li>
           <li><a href="/giftcards" class="hover:text-white transition-colors">Gift Cards</a></li>
-          <li><a href="/live" class="hover:text-white transition-colors">Live Radio</a></li>
+          <li><a href="/live" class="hover:text-white transition-colors">Live Stream</a></li>
         </ul>
       </div>
 
@@ -68,21 +68,24 @@ const currentYear = new Date().getFullYear();
     <div class="border-t border-gray-800 mt-10 pt-10">
       <div class="max-w-xl mx-auto text-center">
         <h3 class="text-white font-bold text-xl mb-3">Stay Fresh</h3>
-        <p class="text-gray-400 text-base mb-5">Subscribe for new releases, exclusive offers, and label news.</p>
+        <p class="text-gray-400 text-base mb-5">Subscribe for new releases, exclusive offers, and store updates.</p>
         <form id="newsletter-form" class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
           <input 
             type="email" 
+            id="newsletter-email"
             placeholder="Enter your email" 
             required
             class="flex-1 px-5 py-3 bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors text-base rounded-lg"
           />
           <button 
             type="submit" 
+            id="newsletter-btn"
             class="px-8 py-3 bg-white text-black font-bold hover:bg-red-600 hover:text-white transition-colors rounded-lg text-base"
           >
             Subscribe
           </button>
         </form>
+        <p id="newsletter-message" class="mt-3 text-sm hidden"></p>
       </div>
     </div>
 
@@ -107,11 +110,48 @@ const currentYear = new Date().getFullYear();
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('newsletter-form');
+    const emailInput = document.getElementById('newsletter-email') as HTMLInputElement;
+    const btn = document.getElementById('newsletter-btn') as HTMLButtonElement;
+    const message = document.getElementById('newsletter-message') as HTMLParagraphElement;
+    
     form?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = (form.querySelector('input[type="email"]') as HTMLInputElement)?.value;
-      alert('Thanks for subscribing! You\'ll hear from us soon.');
-      form.reset();
+      
+      const email = emailInput?.value?.trim();
+      if (!email) return;
+      
+      // Update button state
+      btn.disabled = true;
+      btn.textContent = 'Subscribing...';
+      message.classList.add('hidden');
+      
+      try {
+        const response = await fetch('/api/newsletter/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, source: 'footer' })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          message.textContent = data.message || 'Successfully subscribed!';
+          message.className = 'mt-3 text-sm text-green-500';
+          message.classList.remove('hidden');
+          form.reset();
+        } else {
+          message.textContent = data.error || 'Failed to subscribe. Please try again.';
+          message.className = 'mt-3 text-sm text-red-500';
+          message.classList.remove('hidden');
+        }
+      } catch (err) {
+        message.textContent = 'An error occurred. Please try again.';
+        message.className = 'mt-3 text-sm text-red-500';
+        message.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Subscribe';
+      }
     });
   });
 </script>

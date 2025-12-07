@@ -41,29 +41,7 @@ export const POST: APIRoute = async ({ request }) => {
           }), { status: 401, headers: { 'Content-Type': 'application/json' } });
         }
         
-        // Check if already liked
-        const existingLike = await db.collection('livestream-reactions')
-          .where('streamId', '==', streamId)
-          .where('userId', '==', userId)
-          .where('type', '==', 'like')
-          .limit(1)
-          .get();
-        
-        if (!existingLike.empty) {
-          // Unlike
-          await existingLike.docs[0].ref.delete();
-          await streamRef.update({
-            totalLikes: FieldValue.increment(-1)
-          });
-          
-          return new Response(JSON.stringify({
-            success: true,
-            liked: false,
-            message: 'Like removed'
-          }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-        }
-        
-        // Add like
+        // Always add a like (no toggle - reactions accumulate)
         await db.collection('livestream-reactions').add({
           streamId,
           userId,
@@ -71,13 +49,19 @@ export const POST: APIRoute = async ({ request }) => {
           createdAt: now
         });
         
+        // Increment total likes
         await streamRef.update({
           totalLikes: FieldValue.increment(1)
         });
         
+        // Get updated total
+        const streamDoc = await streamRef.get();
+        const totalLikes = streamDoc.data()?.totalLikes || 1;
+        
         return new Response(JSON.stringify({
           success: true,
           liked: true,
+          totalLikes,
           message: 'Stream liked!'
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }

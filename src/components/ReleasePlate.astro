@@ -344,18 +344,6 @@ const digitalPrice = finalDigitalPrice;
             </svg>
             Share
           </button>
-
-          <button 
-            class="wishlist-button flex items-center justify-center w-10 h-10 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all border border-gray-600"
-            data-release-id={id}
-            data-title={releaseName}
-            data-artist={artistName}
-            title="Add to Wishlist"
-          >
-            <svg class="w-5 h-5 wishlist-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
-            </svg>
-          </button>
         </div>
 
         <!-- Release Details Box -->
@@ -807,16 +795,10 @@ const digitalPrice = finalDigitalPrice;
     
     /* Smaller buttons on mobile */
     .comments-button,
-    .share-button,
-    .wishlist-button {
+    .share-button {
       padding: 0.5rem 0.75rem !important;
       font-size: 0.8125rem !important;
       min-height: 44px !important;
-    }
-    
-    .wishlist-button {
-      width: 44px !important;
-      padding: 0 !important;
     }
     
     /* Track list section */
@@ -864,7 +846,6 @@ const digitalPrice = finalDigitalPrice;
     .play-button,
     .comments-button,
     .share-button,
-    .wishlist-button,
     .rating-star {
       min-height: 44px !important;
     }
@@ -872,28 +853,6 @@ const digitalPrice = finalDigitalPrice;
     .track-row {
       min-height: 52px !important;
     }
-  }
-  
-  /* Wishlist button states */
-  .wishlist-button {
-    transition: all 0.2s ease;
-  }
-  
-  .wishlist-button:hover {
-    transform: scale(1.05);
-  }
-  
-  .wishlist-button.active {
-    background: #dc2626 !important;
-    border-color: #dc2626 !important;
-  }
-  
-  .wishlist-button.active .wishlist-icon {
-    fill: white;
-  }
-  
-  .wishlist-button:not(.active):hover .wishlist-icon {
-    color: #f87171;
   }
 </style>
 
@@ -1234,144 +1193,6 @@ const digitalPrice = finalDigitalPrice;
     });
   }
 
-  // ============================================
-  // WISHLIST FUNCTIONALITY
-  // Toggle wishlist with optimistic UI
-  // ============================================
-  function initWishlistButtons() {
-    // Cache for wishlist state
-    var wishlistCache = FWCache.get('wishlist_items') || {};
-    
-    // Check if user is logged in
-    function getCurrentUserId() {
-      if (window.firebaseAuth && window.firebaseAuth.currentUser) {
-        return window.firebaseAuth.currentUser.uid;
-      }
-      return null;
-    }
-    
-    // Update button visual state
-    function updateButtonState(button, isInWishlist) {
-      if (isInWishlist) {
-        button.classList.add('active');
-        button.title = 'Remove from Wishlist';
-      } else {
-        button.classList.remove('active');
-        button.title = 'Add to Wishlist';
-      }
-    }
-    
-    // Load initial wishlist state
-    async function loadWishlistState() {
-      var userId = getCurrentUserId();
-      if (!userId) return;
-      
-      try {
-        var response = await fetch('/api/wishlist?userId=' + userId);
-        var data = await response.json();
-        
-        if (data.success && data.wishlist) {
-          // Build cache of wishlisted items
-          wishlistCache = {};
-          data.wishlist.forEach(function(item) {
-            wishlistCache[item.id] = true;
-          });
-          FWCache.set('wishlist_items', wishlistCache, FWCache.TTL.OWNERSHIP);
-          
-          // Update all visible buttons
-          document.querySelectorAll('.wishlist-button').forEach(function(btn) {
-            var releaseId = btn.getAttribute('data-release-id');
-            if (wishlistCache[releaseId]) {
-              updateButtonState(btn, true);
-            }
-          });
-        }
-      } catch (err) {
-        // Silent fail
-      }
-    }
-    
-    // Handle wishlist button click
-    document.querySelectorAll('.wishlist-button').forEach(function(button) {
-      var releaseId = button.getAttribute('data-release-id');
-      
-      // Set initial state from cache
-      if (wishlistCache[releaseId]) {
-        updateButtonState(button, true);
-      }
-      
-      button.onclick = async function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        var userId = getCurrentUserId();
-        if (!userId) {
-          // Redirect to login
-          window.location.href = '/account/login?redirect=' + encodeURIComponent(window.location.pathname);
-          return;
-        }
-        
-        var isCurrentlyInWishlist = button.classList.contains('active');
-        
-        // Optimistic UI update
-        updateButtonState(button, !isCurrentlyInWishlist);
-        
-        try {
-          var response = await fetch('/api/wishlist', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: userId,
-              releaseId: releaseId,
-              action: 'toggle'
-            })
-          });
-          
-          var data = await response.json();
-          
-          if (data.success) {
-            // Update cache
-            if (data.inWishlist) {
-              wishlistCache[releaseId] = true;
-            } else {
-              delete wishlistCache[releaseId];
-            }
-            FWCache.set('wishlist_items', wishlistCache, FWCache.TTL.OWNERSHIP);
-            
-            // Ensure button state matches server
-            updateButtonState(button, data.inWishlist);
-            
-            // Show brief feedback
-            var title = button.getAttribute('data-title') || 'Release';
-            var message = data.inWishlist ? 'Added to wishlist' : 'Removed from wishlist';
-            showToast(message);
-          } else {
-            // Revert on failure
-            updateButtonState(button, isCurrentlyInWishlist);
-          }
-        } catch (err) {
-          // Revert on error
-          updateButtonState(button, isCurrentlyInWishlist);
-        }
-      };
-    });
-    
-    // Load initial state when auth is ready
-    if (window.firebaseAuth) {
-      loadWishlistState();
-    } else {
-      // Wait for auth to be ready
-      var authCheckInterval = setInterval(function() {
-        if (window.firebaseAuth) {
-          clearInterval(authCheckInterval);
-          loadWishlistState();
-        }
-      }, 500);
-      // Stop checking after 10 seconds
-      setTimeout(function() { clearInterval(authCheckInterval); }, 10000);
-    }
-  }
-  
   // Simple toast notification
   function showToast(message) {
     var existing = document.getElementById('fw-toast');
@@ -1848,7 +1669,6 @@ const digitalPrice = finalDigitalPrice;
     initReleasePlayer();
     initRatingSystem();
     initShareSystem();
-    initWishlistButtons();
   }
 
   if (document.readyState === 'loading') {

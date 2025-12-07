@@ -63,7 +63,7 @@ export const prerender = false;
         </div>
         
         <div class="eligibility-actions">
-          <a href="/account/upload-mix" class="cta-btn primary">Upload a DJ Mix →</a>
+          <a href="/upload-mix" class="cta-btn primary">Upload a DJ Mix →</a>
           <a href="/dj-mixes" class="cta-btn secondary">View DJ Mixes</a>
         </div>
         
@@ -357,6 +357,13 @@ export const prerender = false;
   .eligibility-why h4 { color: #f87171; font-size: 0.9rem; margin: 0 0 0.5rem 0; }
   .eligibility-why p { color: #ccc; font-size: 0.875rem; margin: 0; line-height: 1.5; }
   
+  .banned-notice, .hold-notice { background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 8px; padding: 1.5rem; text-align: center; }
+  .hold-notice { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); }
+  .banned-notice p, .hold-notice p { color: #ccc; margin: 0.5rem 0; }
+  .ban-reason, .hold-reason { color: #f87171 !important; font-style: italic; }
+  .hold-reason { color: #fbbf24 !important; }
+  .contact-info { margin-top: 1rem !important; font-size: 0.875rem; }
+  
   .red { color: #dc2626; }
   .cta-btn { display: inline-block; padding: 1rem 2rem; background: #dc2626; color: #fff; text-decoration: none; font-weight: 600; border-radius: 10px; }
   .admin-bypass { margin-top: 1.5rem; }
@@ -632,19 +639,70 @@ export const prerender = false;
     document.getElementById('authCheck').classList.add('hidden');
     document.getElementById('notEligible').classList.remove('hidden');
     
-    // Update message
+    const icon = document.querySelector('.not-eligible-icon');
+    const title = document.querySelector('.not-eligible-content h1');
+    const requirements = document.querySelector('.eligibility-requirements');
+    const actions = document.querySelector('.eligibility-actions');
+    const whySection = document.querySelector('.eligibility-why');
+    const adminBypass = document.getElementById('adminBypassEligibility');
+    
+    // Handle banned status
+    if (eligibility.reason === 'banned') {
+      icon.textContent = '🚫';
+      title.innerHTML = 'ACCESS <span class="red">SUSPENDED</span>';
+      document.getElementById('eligibilityMessage').textContent = eligibility.message || 'Your account has been suspended from streaming.';
+      requirements.innerHTML = `
+        <div class="banned-notice">
+          <p>Your streaming privileges have been suspended.</p>
+          ${eligibility.bannedReason ? `<p class="ban-reason">Reason: ${eligibility.bannedReason}</p>` : ''}
+          <p class="contact-info">If you believe this is a mistake, please contact us.</p>
+        </div>
+      `;
+      actions.innerHTML = `
+        <a href="/contact" class="action-btn primary">Contact Support</a>
+        <a href="/live" class="action-btn secondary">Back to Live</a>
+      `;
+      if (whySection) whySection.classList.add('hidden');
+      if (adminBypass) adminBypass.classList.add('hidden');
+      return;
+    }
+    
+    // Handle on-hold status
+    if (eligibility.reason === 'on_hold') {
+      icon.textContent = '⏸️';
+      title.innerHTML = 'ON <span class="red">HOLD</span>';
+      document.getElementById('eligibilityMessage').textContent = eligibility.message || 'Your streaming access is temporarily on hold.';
+      requirements.innerHTML = `
+        <div class="hold-notice">
+          <p>Your streaming access is temporarily restricted.</p>
+          ${eligibility.holdReason ? `<p class="hold-reason">Reason: ${eligibility.holdReason}</p>` : ''}
+          <p class="contact-info">Please contact us if you have questions.</p>
+        </div>
+      `;
+      actions.innerHTML = `
+        <a href="/contact" class="action-btn primary">Contact Support</a>
+        <a href="/live" class="action-btn secondary">Back to Live</a>
+      `;
+      if (whySection) whySection.classList.add('hidden');
+      if (adminBypass) adminBypass.classList.add('hidden');
+      return;
+    }
+    
+    // Default eligibility check (mixes/likes)
+    icon.textContent = '🎧';
+    title.innerHTML = 'ALMOST <span class="red">THERE</span>';
     document.getElementById('eligibilityMessage').textContent = eligibility.message || 'You need to build your reputation before going live.';
     
     // Update requirements
     const reqMixes = document.getElementById('reqMixes');
     const reqLikes = document.getElementById('reqLikes');
     
-    if (eligibility.mixCount > 0) {
+    if (reqMixes && eligibility.mixCount > 0) {
       reqMixes.classList.add('met');
       reqMixes.querySelector('.req-icon').textContent = '✅';
     }
     
-    if (eligibility.qualifyingMixes > 0) {
+    if (reqLikes && eligibility.qualifyingMixes > 0) {
       reqLikes.classList.add('met');
       reqLikes.querySelector('.req-icon').textContent = '✅';
     }
@@ -652,15 +710,19 @@ export const prerender = false;
     // Show progress if they have mixes but need likes
     if (eligibility.reason === 'insufficient_likes' && eligibility.bestMixLikes !== undefined) {
       const progressInfo = document.getElementById('progressInfo');
-      progressInfo.classList.remove('hidden');
-      document.getElementById('bestMixLikes').textContent = eligibility.bestMixLikes;
-      const progress = Math.min(100, (eligibility.bestMixLikes / eligibility.requiredLikes) * 100);
-      document.getElementById('likesProgress').style.width = progress + '%';
+      if (progressInfo) {
+        progressInfo.classList.remove('hidden');
+        document.getElementById('bestMixLikes').textContent = eligibility.bestMixLikes;
+        const progress = Math.min(100, (eligibility.bestMixLikes / eligibility.requiredLikes) * 100);
+        document.getElementById('likesProgress').style.width = progress + '%';
+      }
     }
     
+    if (whySection) whySection.classList.remove('hidden');
+    
     // Admin bypass
-    if (isAdmin) {
-      document.getElementById('adminBypassEligibility').classList.remove('hidden');
+    if (isAdmin && adminBypass) {
+      adminBypass.classList.remove('hidden');
     }
   }
   
