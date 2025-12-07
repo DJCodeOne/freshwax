@@ -1,10 +1,22 @@
 // src/pages/api/livestream/relay-sources.ts
 // API for managing external radio relay sources
 import type { APIRoute } from 'astro';
-import { adminDb } from '../../../firebase/server';
-import { FieldValue } from 'firebase-admin/firestore';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 export const prerender = false;
+
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
 
 // GET - List all relay sources or check specific one
 export const GET: APIRoute = async ({ request }) => {
@@ -14,7 +26,7 @@ export const GET: APIRoute = async ({ request }) => {
     
     if (sourceId) {
       // Get single source
-      const doc = await adminDb.collection('relaySources').doc(sourceId).get();
+      const doc = await db.collection('relaySources').doc(sourceId).get();
       if (!doc.exists) {
         return new Response(JSON.stringify({ success: false, error: 'Source not found' }), {
           status: 404,
@@ -27,7 +39,7 @@ export const GET: APIRoute = async ({ request }) => {
     }
     
     // List all sources
-    const snapshot = await adminDb.collection('relaySources')
+    const snapshot = await db.collection('relaySources')
       .orderBy('name')
       .get();
     
@@ -79,7 +91,7 @@ export const POST: APIRoute = async ({ request }) => {
       updatedAt: FieldValue.serverTimestamp()
     };
     
-    const docRef = await adminDb.collection('relaySources').add(sourceData);
+    const docRef = await db.collection('relaySources').add(sourceData);
     
     return new Response(JSON.stringify({ 
       success: true, 
@@ -114,7 +126,7 @@ export const PUT: APIRoute = async ({ request }) => {
     delete updates.createdAt;
     updates.updatedAt = FieldValue.serverTimestamp();
     
-    await adminDb.collection('relaySources').doc(id).update(updates);
+    await db.collection('relaySources').doc(id).update(updates);
     
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }
@@ -141,7 +153,7 @@ export const DELETE: APIRoute = async ({ request }) => {
       });
     }
     
-    await adminDb.collection('relaySources').doc(id).delete();
+    await db.collection('relaySources').doc(id).delete();
     
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }

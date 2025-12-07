@@ -1,10 +1,22 @@
 // src/pages/api/livestream/chat-cleanup.ts
 // API to schedule and execute chat cleanup after DJ session ends
 import type { APIRoute } from 'astro';
-import { adminDb } from '../../../firebase/server';
-import { FieldValue } from 'firebase-admin/firestore';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 export const prerender = false;
+
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
 
 // POST - Schedule chat cleanup for a stream
 export const POST: APIRoute = async ({ request }) => {
@@ -23,7 +35,7 @@ export const POST: APIRoute = async ({ request }) => {
       // Schedule cleanup for 30 minutes from now
       const cleanupTime = new Date(Date.now() + 30 * 60 * 1000);
       
-      await adminDb.collection('chatCleanupSchedule').doc(streamId).set({
+      await db.collection('chatCleanupSchedule').doc(streamId).set({
         streamId,
         scheduledAt: FieldValue.serverTimestamp(),
         cleanupAt: cleanupTime,
@@ -41,7 +53,7 @@ export const POST: APIRoute = async ({ request }) => {
     
     if (action === 'cancel') {
       // Cancel scheduled cleanup (if DJ comes back)
-      await adminDb.collection('chatCleanupSchedule').doc(streamId).delete();
+      await db.collection('chatCleanupSchedule').doc(streamId).delete();
       
       return new Response(JSON.stringify({ 
         success: true, 
@@ -56,7 +68,7 @@ export const POST: APIRoute = async ({ request }) => {
       const deleted = await deleteStreamChat(streamId);
       
       // Mark cleanup as complete
-      await adminDb.collection('chatCleanupSchedule').doc(streamId).update({
+      await db.collection('chatCleanupSchedule').doc(streamId).update({
         status: 'completed',
         completedAt: FieldValue.serverTimestamp(),
         messagesDeleted: deleted
@@ -92,7 +104,7 @@ export const GET: APIRoute = async ({ request }) => {
     
     // Find pending cleanups that are past their scheduled time
     const now = new Date();
-    const snapshot = await adminDb.collection('chatCleanupSchedule')
+    const snapshot = await db.collection('chatCleanupSchedule')
       .where('status', '==', 'pending')
       .get();
     
@@ -122,7 +134,7 @@ export const GET: APIRoute = async ({ request }) => {
         try {
           const deleted = await deleteStreamChat(job.streamId);
           
-          await adminDb.collection('chatCleanupSchedule').doc(job.id).update({
+          await db.collection('chatCleanupSchedule').doc(job.id).update({
             status: 'completed',
             completedAt: FieldValue.serverTimestamp(),
             messagesDeleted: deleted
@@ -130,7 +142,7 @@ export const GET: APIRoute = async ({ request }) => {
           
           return { streamId: job.streamId, success: true, deleted };
         } catch (error: any) {
-          await adminDb.collection('chatCleanupSchedule').doc(job.id).update({
+          await db.collection('chatCleanupSchedule').doc(job.id).update({
             status: 'failed',
             error: error.message
           });
@@ -159,12 +171,12 @@ export const GET: APIRoute = async ({ request }) => {
 // Delete all chat messages for a stream
 async function deleteStreamChat(streamId: string): Promise<number> {
   let deleted = 0;
-  let batch = adminDb.batch();
+  let batch = db.batch();
   let batchCount = 0;
   const BATCH_SIZE = 500;
   
   // Get all chat messages for this stream
-  const chatSnapshot = await adminDb.collection('livestream-chat')
+  const chatSnapshot = await db.collection('livestream-chat')
     .where('streamId', '==', streamId)
     .get();
   
@@ -176,7 +188,7 @@ async function deleteStreamChat(streamId: string): Promise<number> {
     // Firestore batches max 500 operations
     if (batchCount >= BATCH_SIZE) {
       await batch.commit();
-      batch = adminDb.batch();
+      batch = db.batch();
       batchCount = 0;
     }
   }

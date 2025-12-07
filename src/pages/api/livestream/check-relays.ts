@@ -1,10 +1,22 @@
 // src/pages/api/livestream/check-relays.ts
 // API to check if external radio streams are live
 import type { APIRoute } from 'astro';
-import { adminDb } from '../../../firebase/server';
-import { FieldValue } from 'firebase-admin/firestore';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
 export const prerender = false;
+
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
 
 interface RelayStatus {
   id: string;
@@ -136,7 +148,7 @@ export const GET: APIRoute = async ({ request }) => {
     const sourceId = url.searchParams.get('id');
     const activeOnly = url.searchParams.get('activeOnly') !== 'false';
     
-    let query: any = adminDb.collection('relaySources');
+    let query: any = db.collection('relaySources');
     
     if (activeOnly) {
       query = query.where('active', '==', true);
@@ -180,7 +192,7 @@ export const GET: APIRoute = async ({ request }) => {
           }
           
           // Update the source in Firestore with latest status
-          await adminDb.collection('relaySources').doc(source.id).update({
+          await db.collection('relaySources').doc(source.id).update({
             isCurrentlyLive: status.isLive,
             nowPlaying: status.nowPlaying,
             lastChecked: FieldValue.serverTimestamp()
