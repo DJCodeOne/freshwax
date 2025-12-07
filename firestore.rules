@@ -2,223 +2,194 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check if user is admin
-    function isAdmin() {
-      return request.auth != null && 
-             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
     }
     
-    // Admins collection - read own profile only
-    match /admins/{adminId} {
-      allow read: if request.auth != null && request.auth.uid == adminId;
-      allow write: if false;
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
     }
     
-    // Artists collection
-    match /artists/{artistId} {
-      allow read, write: if isAdmin();
-      allow read, create, update: if request.auth != null && request.auth.uid == artistId;
-    }
-    
-    // Customers collection
-    match /customers/{customerId} {
-      allow read, write: if isAdmin();
-      allow read, create, update: if request.auth != null && request.auth.uid == customerId;
-    }
-    
-    // Orders collection
-    match /orders/{orderId} {
-      allow read, write: if isAdmin();
-      allow read: if request.auth != null && resource.data.customerId == request.auth.uid;
-      allow read: if request.auth != null && resource.data.artistId == request.auth.uid;
-    }
-    
-    // Products collection - public read
-    match /products/{productId} {
+    // Users collection
+    match /users/{userId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isOwner(userId);
     }
     
-    // Merch products collection - public read
-    match /merch_products/{productId} {
+    // Partners collection
+    match /partners/{partnerId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAuthenticated();
     }
     
-    // Merch collection - public read
-    match /merch/{productId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    // Releases collection - public read
+    // Releases
     match /releases/{releaseId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAuthenticated();
     }
     
-    // DJ Mixes collection (hyphenated) - public read
+    // DJ Mixes
     match /dj-mixes/{mixId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow write: if isAdmin();
+      allow write: if isAuthenticated();
     }
     
-    // DJ Mixes collection (underscore) - public read
-    match /dj_mixes/{mixId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow write: if isAdmin();
-    }
-    
-    // DJ Mixes Pending
-    match /dj_mixes_pending/{mixId} {
-      allow read: if true;
+    // Orders
+    match /orders/{orderId} {
+      allow read: if isAuthenticated();
       allow create: if true;
-      allow update, delete: if isAdmin();
+      allow update: if isAuthenticated();
     }
     
-    // Sales collection
-    match /sales/{saleId} {
-      allow read, write: if isAdmin();
-      allow read: if request.auth != null && resource.data.artistId == request.auth.uid;
-    }
-    
-    // Carts collection
-    match /carts/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if isAdmin();
-    }
-    
-    // Analytics collection
-    match /analytics/{docId} {
-      allow read, write: if isAdmin();
-    }
-    
-    // Reviews collection - public read
-    match /reviews/{reviewId} {
+    // Ratings
+    match /ratings/{ratingId} {
       allow read: if true;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow write: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update: if isOwner(resource.data.userId);
     }
     
-    // Notifications collection
-    match /notifications/{notificationId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && 
-                       resource.data.userId == request.auth.uid &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt']);
-      allow read, write: if isAdmin();
-    }
-    
-    // Activity collection
-    match /activity/{activityId} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
-      allow create: if request.auth != null;
-    }
-    
-    // Settings collection - public read
-    match /settings/{settingId} {
+    // Comments
+    match /comments/{commentId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if isOwner(resource.data.userId);
     }
     
-    // Reports collection
-    match /reports/{reportId} {
-      allow read, write: if isAdmin();
-      allow create: if request.auth != null;
-      allow read: if request.auth != null && resource.data.reportedBy == request.auth.uid;
-    }
-    
-    // Playlists collection - public read
-    match /playlists/{playlistId} {
+    // Mix Comments
+    match /mix-comments/{commentId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow write: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if isOwner(resource.data.userId);
     }
     
-    // Newsletter subscriptions
-    match /newsletter/{emailId} {
+    // Merch
+    match /merch/{itemId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Suppliers
+    match /suppliers/{supplierId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // Newsletter
+    match /newsletter-subscribers/{subId} {
+      allow read: if isAuthenticated();
       allow create: if true;
-      allow read, update, delete: if isAdmin();
+      allow update, delete: if isAuthenticated();
     }
     
-    // Contact forms
-    match /contact_submissions/{submissionId} {
-      allow create: if true;
-      allow read, update, delete: if isAdmin();
+    match /newsletter-campaigns/{campaignId} {
+      allow read, write: if isAuthenticated();
     }
     
-    // ============================================
-    // LIVESTREAM RULES
-    // ============================================
-    
-    // Livestream chat - public read, authenticated write
-    match /livestream-chat/{messageId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow write: if isAdmin();
+    // Gift Cards
+    match /giftcards/{cardId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
     
-    // Livestream slots (schedule) - public read, authenticated write
-    match /livestreamSlots/{slotId} {
-      allow read: if true;
-      allow write: if request.auth != null;
+    // Wishlists
+    match /wishlists/{wishlistId} {
+      allow read: if isOwner(resource.data.userId) || isOwner(wishlistId);
+      allow write: if isAuthenticated();
     }
     
-    // Active streams - public read, authenticated write
-    match /activeStreams/{streamId} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
+    // ===== LIVESTREAM COLLECTIONS =====
     
-    // Livestreams collection (stream data) - public read
+    // Livestreams - main stream data
     match /livestreams/{streamId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
     }
     
-    // Livestream reactions (likes, ratings) - authenticated create
+    // Livestream Slots - schedule booking
+    match /livestreamSlots/{slotId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+    
+    // Active Streams - real-time stream tracking
+    match /activeStreams/{streamId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Livestream Chat - public read, authenticated write
+    match /livestream-chat/{messageId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isOwner(resource.data.userId);
+    }
+    
+    // Livestream Reactions - likes and ratings
     match /livestream-reactions/{reactionId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow write: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if isOwner(resource.data.userId);
     }
     
-    // Livestream viewers - authenticated write
+    // Livestream Viewers - presence tracking
     match /livestream-viewers/{viewerId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAuthenticated();
     }
     
-    // DJ Takeover Requests - authenticated only
-    match /djTakeoverRequests/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    // DJ Takeover Requests - handoff between DJs
+    match /djTakeoverRequests/{requestId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
     
-    // DJ Lobby presence - authenticated only
-    match /djLobby/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    // DJ Lobby - waiting room for DJs
+    match /djLobby/{entryId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
     
-    // DJ Lobby chat - authenticated only
+    // DJ Lobby Chat - chat in the DJ lobby
     match /djLobbyChat/{messageId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow write: if isAdmin();
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isOwner(resource.data.userId);
     }
     
-    // Default deny
+    // ===== RELAY SYSTEM COLLECTIONS =====
+    
+    // Relay Sources - external radio stations
+    match /relaySources/{sourceId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Chat Cleanup Schedule - scheduled chat deletions
+    match /chatCleanupSchedule/{scheduleId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // ===== ADMIN COLLECTIONS =====
+    
+    // Admin settings
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Stock movements
+    match /stock-movements/{movementId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // Fallback - deny all other access
     match /{document=**} {
       allow read, write: if false;
     }

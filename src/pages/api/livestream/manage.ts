@@ -187,11 +187,21 @@ export const POST: APIRoute = async ({ request }) => {
         });
         await batch.commit();
         
-        console.log('[livestream/manage] Stream stopped:', streamId);
+        // Schedule chat cleanup for 30 minutes from now
+        const cleanupTime = new Date(now.getTime() + 30 * 60 * 1000);
+        await db.collection('chatCleanupSchedule').doc(streamId).set({
+          streamId,
+          scheduledAt: FieldValue.serverTimestamp(),
+          cleanupAt: cleanupTime,
+          status: 'pending'
+        });
+        
+        console.log('[livestream/manage] Stream stopped:', streamId, '- Chat cleanup scheduled for', cleanupTime.toISOString());
         
         return new Response(JSON.stringify({
           success: true,
-          message: 'Stream ended successfully'
+          message: 'Stream ended successfully',
+          chatCleanupAt: cleanupTime.toISOString()
         }), { 
           status: 200, 
           headers: { 'Content-Type': 'application/json' } 

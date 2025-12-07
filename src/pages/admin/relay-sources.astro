@@ -1,0 +1,652 @@
+---
+// src/pages/admin/relay-sources.astro
+// Admin page to manage external radio relay sources
+import AdminLayout from '../../layouts/AdminLayout.astro';
+
+export const prerender = false;
+---
+
+<AdminLayout title="Relay Sources - Admin">
+  <div class="relay-admin">
+    <header class="page-header">
+      <div>
+        <h1>📻 Relay Sources</h1>
+        <p>Manage external radio stations for relay fallback</p>
+      </div>
+      <button id="addSourceBtn" class="btn-primary">+ Add Source</button>
+    </header>
+    
+    <div class="info-box">
+      <strong>How Relay Works:</strong>
+      <p>When no Fresh Wax DJ is live, visitors can listen to these external stations. You can also schedule relay slots in the stream calendar, just like booking a DJ.</p>
+    </div>
+    
+    <div class="sources-grid" id="sourcesGrid">
+      <div class="loading">Loading relay sources...</div>
+    </div>
+  </div>
+  
+  <!-- Add/Edit Modal -->
+  <div id="sourceModal" class="modal hidden">
+    <div class="modal-content">
+      <h2 id="modalTitle">Add Relay Source</h2>
+      <form id="sourceForm">
+        <input type="hidden" id="sourceId" />
+        
+        <div class="form-group">
+          <label for="sourceName">Station Name *</label>
+          <input type="text" id="sourceName" required placeholder="e.g. Underground Lair" />
+        </div>
+        
+        <div class="form-group">
+          <label for="streamUrl">Stream URL *</label>
+          <input type="url" id="streamUrl" required placeholder="https://stream.example.com:8000/live" />
+          <span class="hint">Icecast/Shoutcast stream URL (MP3 or AAC)</span>
+        </div>
+        
+        <div class="form-group">
+          <label for="websiteUrl">Website URL</label>
+          <input type="url" id="websiteUrl" placeholder="https://theundergroundlair.fr" />
+        </div>
+        
+        <div class="form-group">
+          <label for="logoUrl">Logo URL</label>
+          <input type="url" id="logoUrl" placeholder="https://example.com/logo.png" />
+        </div>
+        
+        <div class="form-group">
+          <label for="genre">Genre</label>
+          <input type="text" id="genre" placeholder="Jungle / D&B" value="Jungle / D&B" />
+        </div>
+        
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea id="description" rows="2" placeholder="Brief description of the station"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="checkMethod">Status Check Method</label>
+          <select id="checkMethod">
+            <option value="none">None (always show as available)</option>
+            <option value="stream">Check stream directly (HEAD request)</option>
+            <option value="icecast">Icecast status page (JSON/XML)</option>
+            <option value="http">HTTP status check</option>
+          </select>
+        </div>
+        
+        <div class="form-group" id="statusUrlGroup" style="display: none;">
+          <label for="statusUrl">Status URL</label>
+          <input type="url" id="statusUrl" placeholder="https://stream.example.com/status-json.xsl" />
+          <span class="hint">Icecast status page URL for checking now-playing info</span>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="active" checked />
+            <span>Active (show in relay options)</span>
+          </label>
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" id="cancelBtn" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Save Source</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .relay-admin {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .page-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+  }
+  
+  .page-header p {
+    margin: 0.25rem 0 0 0;
+    color: #888;
+  }
+  
+  .info-box {
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .info-box strong {
+    color: #dc2626;
+  }
+  
+  .info-box p {
+    margin: 0.5rem 0 0 0;
+    color: #aaa;
+    font-size: 0.9rem;
+  }
+  
+  .sources-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .source-card {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  
+  .source-card:hover {
+    border-color: #dc2626;
+    transform: translateY(-2px);
+  }
+  
+  .source-card.inactive {
+    opacity: 0.6;
+  }
+  
+  .source-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #0f0f0f;
+  }
+  
+  .source-logo {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #333;
+  }
+  
+  .source-logo.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+  
+  .source-info h3 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+  
+  .source-genre {
+    color: #888;
+    font-size: 0.85rem;
+  }
+  
+  .source-status {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+  }
+  
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  
+  .status-badge.live {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+  }
+  
+  .status-badge.offline {
+    background: rgba(107, 114, 128, 0.2);
+    color: #6b7280;
+  }
+  
+  .status-badge.inactive {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+  }
+  
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  
+  .source-body {
+    padding: 1rem;
+  }
+  
+  .now-playing {
+    color: #22c55e;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .stream-url {
+    color: #666;
+    font-size: 0.75rem;
+    word-break: break-all;
+    margin-bottom: 0.75rem;
+  }
+  
+  .source-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #333;
+  }
+  
+  .source-actions button {
+    flex: 1;
+    padding: 0.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+  }
+  
+  .btn-test {
+    background: #1e40af;
+    color: #fff;
+  }
+  
+  .btn-test:hover {
+    background: #1e3a8a;
+  }
+  
+  .btn-edit {
+    background: #333;
+    color: #fff;
+  }
+  
+  .btn-edit:hover {
+    background: #444;
+  }
+  
+  .btn-delete {
+    background: #7f1d1d;
+    color: #fff;
+  }
+  
+  .btn-delete:hover {
+    background: #991b1b;
+  }
+  
+  /* Modal */
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+  
+  .modal.hidden {
+    display: none;
+  }
+  
+  .modal-content {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .modal-content h2 {
+    margin: 0 0 1.5rem 0;
+  }
+  
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+  
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    background: #0f0f0f;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.9rem;
+  }
+  
+  .form-group input:focus,
+  .form-group textarea:focus,
+  .form-group select:focus {
+    border-color: #dc2626;
+    outline: none;
+  }
+  
+  .hint {
+    display: block;
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 0.25rem;
+  }
+  
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+  
+  .checkbox-label input {
+    width: auto;
+  }
+  
+  .modal-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #333;
+  }
+  
+  .modal-actions button {
+    flex: 1;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  
+  .btn-primary {
+    background: #dc2626;
+    color: #fff;
+  }
+  
+  .btn-primary:hover {
+    background: #b91c1c;
+  }
+  
+  .btn-secondary {
+    background: #333;
+    color: #fff;
+  }
+  
+  .btn-secondary:hover {
+    background: #444;
+  }
+  
+  .loading {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem;
+    color: #888;
+  }
+  
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem;
+    color: #888;
+  }
+  
+  .empty-state h3 {
+    margin: 0 0 0.5rem 0;
+  }
+</style>
+
+<script>
+  const sourcesGrid = document.getElementById('sourcesGrid');
+  const modal = document.getElementById('sourceModal');
+  const modalTitle = document.getElementById('modalTitle');
+  const form = document.getElementById('sourceForm');
+  const addBtn = document.getElementById('addSourceBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const checkMethodSelect = document.getElementById('checkMethod');
+  const statusUrlGroup = document.getElementById('statusUrlGroup');
+  
+  let sources = [];
+  
+  // Load sources
+  async function loadSources() {
+    try {
+      const response = await fetch('/api/livestream/relay-sources');
+      const result = await response.json();
+      
+      if (result.success) {
+        sources = result.sources;
+        renderSources();
+      } else {
+        sourcesGrid.innerHTML = '<div class="empty-state"><h3>Error loading sources</h3><p>' + result.error + '</p></div>';
+      }
+    } catch (error) {
+      sourcesGrid.innerHTML = '<div class="empty-state"><h3>Error loading sources</h3><p>' + error.message + '</p></div>';
+    }
+  }
+  
+  // Render sources
+  function renderSources() {
+    if (sources.length === 0) {
+      sourcesGrid.innerHTML = `
+        <div class="empty-state">
+          <h3>No relay sources yet</h3>
+          <p>Add external radio stations to use as fallback when no DJ is live</p>
+        </div>
+      `;
+      return;
+    }
+    
+    sourcesGrid.innerHTML = sources.map(source => `
+      <div class="source-card ${source.active ? '' : 'inactive'}">
+        <div class="source-header">
+          ${source.logoUrl 
+            ? `<img src="${source.logoUrl}" alt="${source.name}" class="source-logo" />`
+            : `<div class="source-logo placeholder">📻</div>`
+          }
+          <div class="source-info">
+            <h3>${source.name}</h3>
+            <span class="source-genre">${source.genre || 'Jungle / D&B'}</span>
+          </div>
+          <div class="source-status">
+            ${!source.active 
+              ? '<span class="status-badge inactive"><span class="status-dot"></span> Disabled</span>'
+              : source.isCurrentlyLive
+                ? '<span class="status-badge live"><span class="status-dot"></span> Live</span>'
+                : '<span class="status-badge offline"><span class="status-dot"></span> Unknown</span>'
+            }
+          </div>
+        </div>
+        <div class="source-body">
+          ${source.nowPlaying ? `<div class="now-playing">🎵 ${source.nowPlaying}</div>` : ''}
+          <div class="stream-url">${source.streamUrl}</div>
+          <div class="source-actions">
+            <button class="btn-test" onclick="testSource('${source.id}')">Test Stream</button>
+            <button class="btn-edit" onclick="editSource('${source.id}')">Edit</button>
+            <button class="btn-delete" onclick="deleteSource('${source.id}')">Delete</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  // Show modal for add
+  addBtn?.addEventListener('click', () => {
+    modalTitle.textContent = 'Add Relay Source';
+    form.reset();
+    document.getElementById('sourceId').value = '';
+    document.getElementById('active').checked = true;
+    statusUrlGroup.style.display = 'none';
+    modal.classList.remove('hidden');
+  });
+  
+  // Cancel
+  cancelBtn?.addEventListener('click', () => {
+    modal.classList.add('hidden');
+  });
+  
+  // Close modal on backdrop click
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.add('hidden');
+    }
+  });
+  
+  // Check method change
+  checkMethodSelect?.addEventListener('change', () => {
+    const method = checkMethodSelect.value;
+    statusUrlGroup.style.display = (method === 'icecast' || method === 'http') ? 'block' : 'none';
+  });
+  
+  // Form submit
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const sourceId = document.getElementById('sourceId').value;
+    const data = {
+      name: document.getElementById('sourceName').value,
+      streamUrl: document.getElementById('streamUrl').value,
+      websiteUrl: document.getElementById('websiteUrl').value,
+      logoUrl: document.getElementById('logoUrl').value,
+      genre: document.getElementById('genre').value,
+      description: document.getElementById('description').value,
+      checkMethod: document.getElementById('checkMethod').value,
+      statusUrl: document.getElementById('statusUrl').value,
+      active: document.getElementById('active').checked
+    };
+    
+    try {
+      let response;
+      if (sourceId) {
+        response = await fetch('/api/livestream/relay-sources', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: sourceId, ...data })
+        });
+      } else {
+        response = await fetch('/api/livestream/relay-sources', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        modal.classList.add('hidden');
+        loadSources();
+      } else {
+        alert('Error: ' + result.error);
+      }
+    } catch (error) {
+      alert('Error saving source: ' + error.message);
+    }
+  });
+  
+  // Edit source
+  window.editSource = (id) => {
+    const source = sources.find(s => s.id === id);
+    if (!source) return;
+    
+    modalTitle.textContent = 'Edit Relay Source';
+    document.getElementById('sourceId').value = source.id;
+    document.getElementById('sourceName').value = source.name || '';
+    document.getElementById('streamUrl').value = source.streamUrl || '';
+    document.getElementById('websiteUrl').value = source.websiteUrl || '';
+    document.getElementById('logoUrl').value = source.logoUrl || '';
+    document.getElementById('genre').value = source.genre || '';
+    document.getElementById('description').value = source.description || '';
+    document.getElementById('checkMethod').value = source.checkMethod || 'none';
+    document.getElementById('statusUrl').value = source.statusUrl || '';
+    document.getElementById('active').checked = source.active !== false;
+    
+    statusUrlGroup.style.display = (source.checkMethod === 'icecast' || source.checkMethod === 'http') ? 'block' : 'none';
+    
+    modal.classList.remove('hidden');
+  };
+  
+  // Delete source
+  window.deleteSource = async (id) => {
+    const source = sources.find(s => s.id === id);
+    if (!source) return;
+    
+    if (!confirm(`Delete "${source.name}"? This cannot be undone.`)) return;
+    
+    try {
+      const response = await fetch(`/api/livestream/relay-sources?id=${id}`, {
+        method: 'DELETE'
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        loadSources();
+      } else {
+        alert('Error: ' + result.error);
+      }
+    } catch (error) {
+      alert('Error deleting source: ' + error.message);
+    }
+  };
+  
+  // Test stream
+  window.testSource = async (id) => {
+    const source = sources.find(s => s.id === id);
+    if (!source) return;
+    
+    // Open stream URL in new tab for testing
+    window.open(source.streamUrl, '_blank');
+    
+    // Also check status
+    try {
+      const response = await fetch(`/api/livestream/check-relays?id=${id}`);
+      const result = await response.json();
+      
+      if (result.success && result.relays.length > 0) {
+        const relay = result.relays[0];
+        alert(`Status: ${relay.isLive ? 'Live' : 'Offline'}\n${relay.nowPlaying ? 'Now Playing: ' + relay.nowPlaying : ''}`);
+        loadSources(); // Refresh to show updated status
+      }
+    } catch (error) {
+      console.error('Error checking status:', error);
+    }
+  };
+  
+  // Initial load
+  loadSources();
+</script>
