@@ -1,0 +1,235 @@
+---
+// src/components/FAQ.astro
+// Reusable FAQ component with built-in Schema.org structured data
+// Use this on key pages to improve SEO and provide helpful content
+
+interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+interface Props {
+  title?: string;
+  faqs: FAQItem[];
+  // Include schema markup in the component (set false if using SEO component)
+  includeSchema?: boolean;
+  // Styling options
+  variant?: 'default' | 'compact' | 'accordion';
+  // Custom CSS class
+  className?: string;
+}
+
+const {
+  title = 'Frequently Asked Questions',
+  faqs,
+  includeSchema = true,
+  variant = 'default',
+  className = ''
+} = Astro.props;
+
+// Generate FAQ Schema
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqs.map(faq => ({
+    "@type": "Question",
+    "name": faq.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": faq.answer
+    }
+  }))
+};
+---
+
+<section class:list={['faq-section', `faq-${variant}`, className]}>
+  {title && (
+    <h2 class="faq-title">{title}</h2>
+  )}
+  
+  <div class="faq-list">
+    {faqs.map((faq, index) => (
+      <details class="faq-item" data-index={index}>
+        <summary class="faq-question">
+          <span class="question-text">{faq.question}</span>
+          <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </summary>
+        <div class="faq-answer">
+          <p set:html={faq.answer} />
+        </div>
+      </details>
+    ))}
+  </div>
+</section>
+
+{includeSchema && (
+  <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+)}
+
+<style>
+  .faq-section {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+  }
+
+  .faq-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  .faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .faq-item {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .faq-item:hover {
+    border-color: rgba(220, 38, 38, 0.3);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+  }
+
+  .faq-item[open] {
+    border-color: rgba(220, 38, 38, 0.5);
+    box-shadow: 0 4px 20px rgba(220, 38, 38, 0.1);
+  }
+
+  .faq-question {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    cursor: pointer;
+    list-style: none;
+    font-weight: 600;
+    color: #ffffff;
+    transition: all 0.2s ease;
+  }
+
+  .faq-question::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-question:hover {
+    color: #dc2626;
+  }
+
+  .question-text {
+    flex: 1;
+    padding-right: 1rem;
+    line-height: 1.4;
+  }
+
+  .faq-icon {
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .faq-item[open] .faq-icon {
+    transform: rotate(180deg);
+    color: #dc2626;
+  }
+
+  .faq-answer {
+    padding: 0 1.5rem 1.25rem;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.7;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .faq-answer p {
+    margin: 0;
+  }
+
+  .faq-answer a {
+    color: #dc2626;
+    text-decoration: underline;
+    text-decoration-color: rgba(220, 38, 38, 0.3);
+    transition: text-decoration-color 0.2s ease;
+  }
+
+  .faq-answer a:hover {
+    text-decoration-color: #dc2626;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Compact variant */
+  .faq-compact .faq-question {
+    padding: 1rem 1.25rem;
+    font-size: 0.9375rem;
+  }
+
+  .faq-compact .faq-answer {
+    padding: 0 1.25rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* Mobile optimization */
+  @media (max-width: 640px) {
+    .faq-title {
+      font-size: 1.5rem;
+    }
+
+    .faq-question {
+      padding: 1rem 1.25rem;
+      font-size: 0.9375rem;
+    }
+
+    .faq-answer {
+      padding: 0 1.25rem 1rem;
+      font-size: 0.875rem;
+    }
+  }
+</style>
+
+<script>
+  // Optional: Close other FAQs when opening one (accordion behavior)
+  document.querySelectorAll('.faq-accordion .faq-item').forEach(item => {
+    item.addEventListener('toggle', (e) => {
+      if (e.target.open) {
+        document.querySelectorAll('.faq-accordion .faq-item').forEach(other => {
+          if (other !== e.target && other.open) {
+            other.open = false;
+          }
+        });
+      }
+    });
+  });
+
+  // Track FAQ interactions for analytics
+  document.querySelectorAll('.faq-item').forEach(item => {
+    item.addEventListener('toggle', (e) => {
+      if (e.target.open && typeof window.trackEvent === 'function') {
+        const question = e.target.querySelector('.question-text')?.textContent;
+        window.trackEvent('faq_expand', {
+          'event_category': 'FAQ',
+          'event_label': question?.substring(0, 100)
+        });
+      }
+    });
+  });
+</script>

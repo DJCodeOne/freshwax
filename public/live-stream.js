@@ -1,10 +1,14 @@
 // public/live-stream.js
-// Live stream page functionality
+// Fresh Wax Live Stream - Mobile-First Optimized
+// Version: 2.0 - December 2025
 
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 import { getFirestore, collection, query, where, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
+// ==========================================
+// FIREBASE CONFIGURATION
+// ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
   authDomain: "fresh-wax.firebaseapp.com",
@@ -19,7 +23,9 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// State
+// ==========================================
+// STATE MANAGEMENT
+// ==========================================
 let currentUser = null;
 let currentStream = null;
 let viewerSessionId = null;
@@ -33,10 +39,24 @@ let recordingStartTime = null;
 let recordingInterval = null;
 let isRecording = false;
 
+// HLS player instance
+let hlsPlayer = null;
+
+// Audio analyzer state
+let globalAudioContext = null;
+let globalAnalyserLeft = null;
+let globalAnalyserRight = null;
+let globalAnimationId = null;
+let globalMediaSource = null;
+
+// Mobile touch state
+let touchStartY = 0;
+let touchStartVolume = 0;
+
 // GIPHY API Key from page
 const GIPHY_API_KEY = window.GIPHY_API_KEY || '';
 
-// Emoji categories
+// Emoji categories for chat
 const EMOJI_CATEGORIES = {
   music: ['🎵', '🎶', '🎧', '🎤', '🎹', '🥁', '🎸', '🎺', '🎷', '🔊', '📻', '💿'],
   reactions: ['🔥', '❤️', '💯', '🙌', '👏', '🤘', '✨', '💥', '⚡', '🌟', '💪', '👊'],
@@ -44,13 +64,175 @@ const EMOJI_CATEGORIES = {
   vibes: ['🌴', '🌙', '🌊', '🍾', '🥂', '💨', '🌈', '☀️', '🌺', '🦋', '🐍', '🦁']
 };
 
-// Initialize
+// ==========================================
+// INITIALIZATION
+// ==========================================
 async function init() {
+  // Check device type for optimizations
+  detectMobileDevice();
+  
+  // Check live status
   await checkLiveStatus();
+  
+  // Setup auth listener
   setupAuthListener();
+  
+  // Setup mobile-specific features
+  setupMobileFeatures();
 }
 
-// Check if any stream is live
+// Detect mobile device
+function detectMobileDevice() {
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
+  document.body.classList.toggle('is-mobile', isMobile);
+  document.body.classList.toggle('is-touch', isTouch);
+  
+  // Store for later use
+  window.isMobileDevice = isMobile;
+  window.isTouchDevice = isTouch;
+}
+
+// Setup mobile-specific features
+function setupMobileFeatures() {
+  // Prevent pull-to-refresh on player area
+  const playerArea = document.querySelector('.player-column');
+  if (playerArea) {
+    playerArea.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1) {
+        e.stopPropagation();
+      }
+    }, { passive: true });
+  }
+  
+  // Setup swipe gestures for volume on mobile
+  setupTouchVolumeControl();
+  
+  // Handle orientation changes
+  window.addEventListener('orientationchange', handleOrientationChange);
+  
+  // Handle visibility changes (tab switching, screen lock)
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+}
+
+// Touch volume control for mobile
+function setupTouchVolumeControl() {
+  const playerWrapper = document.querySelector('.player-wrapper');
+  if (!playerWrapper || !window.isTouchDevice) return;
+  
+  playerWrapper.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      touchStartY = e.touches[0].clientY;
+      const volumeSlider = document.getElementById('volumeSlider');
+      touchStartVolume = volumeSlider ? parseInt(volumeSlider.value) : 80;
+    }
+  }, { passive: true });
+  
+  playerWrapper.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1 && touchStartY) {
+      const deltaY = touchStartY - e.touches[0].clientY;
+      const volumeChange = Math.round(deltaY / 3); // Sensitivity
+      const newVolume = Math.max(0, Math.min(100, touchStartVolume + volumeChange));
+      
+      const volumeSlider = document.getElementById('volumeSlider');
+      if (volumeSlider) {
+        volumeSlider.value = newVolume;
+        volumeSlider.dispatchEvent(new Event('input'));
+        
+        // Show volume indicator
+        showVolumeIndicator(newVolume);
+      }
+    }
+  }, { passive: true });
+  
+  playerWrapper.addEventListener('touchend', () => {
+    touchStartY = 0;
+    hideVolumeIndicator();
+  }, { passive: true });
+}
+
+// Show volume indicator overlay
+function showVolumeIndicator(volume) {
+  let indicator = document.getElementById('volumeIndicator');
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.id = 'volumeIndicator';
+    indicator.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      z-index: 9999;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    `;
+    document.body.appendChild(indicator);
+  }
+  indicator.textContent = `🔊 ${volume}%`;
+  indicator.style.opacity = '1';
+}
+
+// Hide volume indicator
+function hideVolumeIndicator() {
+  const indicator = document.getElementById('volumeIndicator');
+  if (indicator) {
+    indicator.style.opacity = '0';
+    setTimeout(() => indicator.remove(), 200);
+  }
+}
+
+// Handle orientation changes
+function handleOrientationChange() {
+  // Give the browser time to update dimensions
+  setTimeout(() => {
+    const isLandscape = window.innerWidth > window.innerHeight;
+    document.body.classList.toggle('landscape', isLandscape);
+    
+    // Resize video player if needed
+    const videoElement = document.getElementById('hlsVideoElement');
+    if (videoElement && isPlaying) {
+      videoElement.style.maxHeight = isLandscape ? '100vh' : '56.25vw';
+    }
+  }, 100);
+}
+
+// Handle visibility changes
+function handleVisibilityChange() {
+  if (document.hidden) {
+    // Page hidden - audio continues in background on mobile
+    console.log('[Live] Page hidden, audio continues');
+  } else {
+    // Page visible - refresh viewer count
+    if (currentStream) {
+      refreshViewerCount(currentStream.id);
+    }
+  }
+}
+
+// Refresh viewer count
+async function refreshViewerCount(streamId) {
+  try {
+    const response = await fetch('/api/livestream/status');
+    const result = await response.json();
+    if (result.success && result.primaryStream) {
+      const viewerCount = document.getElementById('viewerCount');
+      if (viewerCount) viewerCount.textContent = result.primaryStream.currentViewers || 0;
+    }
+  } catch (e) {
+    console.warn('[Live] Failed to refresh viewer count');
+  }
+}
+
+// ==========================================
+// STREAM STATUS CHECK
+// ==========================================
 async function checkLiveStatus() {
   try {
     const response = await fetch('/api/livestream/status');
@@ -86,10 +268,10 @@ function showOfflineState(scheduled) {
           minute: '2-digit'
         });
         return `
-          <div class="scheduled-item" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: #1a1a1a; border-radius: 8px;">
-            <span style="color: #dc2626; font-weight: 600; min-width: 80px;">${timeStr}</span>
-            <div>
-              <div style="color: #fff; font-weight: 500;">${s.title}</div>
+          <div class="scheduled-item" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: #1a1a1a; border-radius: 8px; margin-bottom: 0.5rem;">
+            <span style="color: #dc2626; font-weight: 600; min-width: 80px; font-size: 0.875rem;">${timeStr}</span>
+            <div style="min-width: 0; flex: 1;">
+              <div style="color: #fff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.title}</div>
               <div style="color: #888; font-size: 0.875rem;">${s.djName}</div>
             </div>
           </div>
@@ -99,7 +281,9 @@ function showOfflineState(scheduled) {
   }
 }
 
-// Show live stream
+// ==========================================
+// SHOW LIVE STREAM
+// ==========================================
 function showLiveStream(stream) {
   currentStream = stream;
   
@@ -111,35 +295,31 @@ function showLiveStream(stream) {
   document.getElementById('liveState')?.classList.remove('hidden');
   
   // Update stream info
-  const streamTitle = document.getElementById('streamTitle');
-  const djName = document.getElementById('djName');
-  const streamGenre = document.getElementById('streamGenre');
-  const viewerCount = document.getElementById('viewerCount');
-  const likeCount = document.getElementById('likeCount');
-  const avgRating = document.getElementById('avgRating');
-  const streamDescription = document.getElementById('streamDescription');
+  const elements = {
+    streamTitle: stream.title,
+    djName: stream.djName,
+    streamGenre: stream.genre || 'Jungle / D&B',
+    viewerCount: stream.currentViewers || 0,
+    likeCount: stream.totalLikes || 0,
+    avgRating: (stream.averageRating || 0).toFixed(1),
+    streamDescription: stream.description || 'No description',
+    audioDjName: stream.djName || 'DJ',
+    audioShowTitle: stream.title || 'Live on Fresh Wax'
+  };
+  
+  Object.entries(elements).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  });
+  
+  // Update images
   const djAvatar = document.getElementById('djAvatar');
   const streamCover = document.getElementById('streamCover');
-  
-  // Audio-only placeholder elements
-  const audioDjName = document.getElementById('audioDjName');
-  const audioShowTitle = document.getElementById('audioShowTitle');
   const vinylDjAvatar = document.getElementById('vinylDjAvatar');
   
-  if (streamTitle) streamTitle.textContent = stream.title;
-  if (djName) djName.textContent = stream.djName;
-  if (streamGenre) streamGenre.textContent = stream.genre || 'Jungle / D&B';
-  if (viewerCount) viewerCount.textContent = stream.currentViewers || 0;
-  if (likeCount) likeCount.textContent = stream.totalLikes || 0;
-  if (avgRating) avgRating.textContent = (stream.averageRating || 0).toFixed(1);
-  if (streamDescription) streamDescription.textContent = stream.description || 'No description';
   if (stream.djAvatar && djAvatar) djAvatar.src = stream.djAvatar;
   if (stream.coverImage && streamCover) streamCover.src = stream.coverImage;
-  
-  // Update audio-only placeholder
-  if (audioDjName) audioDjName.textContent = stream.djName || 'DJ';
-  if (audioShowTitle) audioShowTitle.textContent = stream.title || 'Live on Fresh Wax';
-  if (vinylDjAvatar && stream.djAvatar) vinylDjAvatar.src = stream.djAvatar;
+  if (stream.djAvatar && vinylDjAvatar) vinylDjAvatar.src = stream.djAvatar;
   
   // Setup player based on stream type/source
   if (stream.streamSource === 'twitch' && stream.twitchChannel) {
@@ -149,7 +329,6 @@ function showLiveStream(stream) {
   } else if (stream.streamSource === 'icecast' || stream.audioStreamUrl) {
     setupAudioPlayer(stream);
   } else {
-    // Fallback to audio player
     setupAudioPlayer(stream);
   }
   
@@ -166,10 +345,9 @@ function showLiveStream(stream) {
   setupReactions(stream.id);
 }
 
-// HLS.js instance
-let hlsPlayer = null;
-
-// Setup HLS player for Red5 streams
+// ==========================================
+// HLS VIDEO PLAYER (Red5 Streams)
+// ==========================================
 function setupHlsPlayer(stream) {
   document.getElementById('audioPlayer')?.classList.add('hidden');
   document.getElementById('videoPlayer')?.classList.remove('hidden');
@@ -184,14 +362,13 @@ function setupHlsPlayer(stream) {
   
   if (!hlsUrl) {
     console.error('No HLS URL available');
-    // Fallback to audio if no HLS URL
     setupAudioPlayer(stream);
     return;
   }
   
-  console.log('Setting up HLS player with URL:', hlsUrl);
+  console.log('[HLS] Setting up player with URL:', hlsUrl);
   
-  // Initialize audio analyzer for LED meters when video plays
+  // Video event handlers for LED meters
   function onVideoPlay() {
     initGlobalAudioAnalyzer(videoElement);
     if (globalAudioContext?.state === 'suspended') {
@@ -204,56 +381,23 @@ function setupHlsPlayer(stream) {
     stopGlobalMeters();
   }
   
-  // Setup Media Session API for lock screen controls
-  function setupMediaSession(stream) {
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: stream?.title || 'Live Stream',
-        artist: stream?.djName || 'Fresh Wax',
-        album: 'Fresh Wax Live',
-        artwork: [
-          { src: stream?.djAvatar || '/logo.webp', sizes: '96x96', type: 'image/png' },
-          { src: stream?.djAvatar || '/logo.webp', sizes: '128x128', type: 'image/png' },
-          { src: stream?.djAvatar || '/logo.webp', sizes: '192x192', type: 'image/png' },
-          { src: stream?.djAvatar || '/logo.webp', sizes: '256x256', type: 'image/png' },
-          { src: stream?.djAvatar || '/logo.webp', sizes: '384x384', type: 'image/png' },
-          { src: stream?.djAvatar || '/logo.webp', sizes: '512x512', type: 'image/png' },
-        ]
-      });
-      
-      navigator.mediaSession.setActionHandler('play', () => {
-        const playBtn = document.getElementById('playBtn');
-        if (playBtn && !playBtn.classList.contains('playing')) {
-          playBtn.click();
-        }
-      });
-      
-      navigator.mediaSession.setActionHandler('pause', () => {
-        const playBtn = document.getElementById('playBtn');
-        if (playBtn && playBtn.classList.contains('playing')) {
-          playBtn.click();
-        }
-      });
-      
-      navigator.mediaSession.setActionHandler('stop', () => {
-        const playBtn = document.getElementById('playBtn');
-        if (playBtn && playBtn.classList.contains('playing')) {
-          playBtn.click();
-        }
-      });
-    }
-  }
-  
   if (videoElement) {
     videoElement.addEventListener('play', onVideoPlay);
     videoElement.addEventListener('pause', onVideoPause);
     videoElement.addEventListener('ended', onVideoPause);
     
-    // Check if HLS is supported natively (Safari)
+    // Mobile-specific: Enable inline playback
+    videoElement.setAttribute('playsinline', '');
+    videoElement.setAttribute('webkit-playsinline', '');
+    
+    // Check if HLS is supported natively (Safari/iOS)
     if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
       videoElement.src = hlsUrl;
       videoElement.addEventListener('loadedmetadata', () => {
-        videoElement.play().catch(console.error);
+        // On mobile, wait for user interaction
+        if (!window.isMobileDevice) {
+          videoElement.play().catch(console.error);
+        }
       });
     }
     // Use HLS.js for other browsers
@@ -265,45 +409,45 @@ function setupHlsPlayer(stream) {
       hlsPlayer = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
-        backBufferLength: 90
+        backBufferLength: 90,
+        // Mobile optimizations
+        maxBufferLength: window.isMobileDevice ? 30 : 60,
+        maxMaxBufferLength: window.isMobileDevice ? 60 : 120
       });
       
       hlsPlayer.loadSource(hlsUrl);
       hlsPlayer.attachMedia(videoElement);
       
       hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log('HLS manifest parsed, starting playback');
-        videoElement.play().catch(console.error);
+        console.log('[HLS] Manifest parsed, starting playback');
+        if (!window.isMobileDevice) {
+          videoElement.play().catch(console.error);
+        }
       });
       
       hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
-        console.error('HLS error:', data);
+        console.error('[HLS] Error:', data);
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              console.log('Network error, attempting to recover...');
+              console.log('[HLS] Network error, recovering...');
               hlsPlayer.startLoad();
-              // Auto-reconnect after 3 seconds if still failing
               setTimeout(() => {
                 if (!isPlaying) {
-                  console.log('Auto-reconnecting...');
                   showReconnecting();
                   hlsPlayer.loadSource(hlsUrl);
                 }
               }, 3000);
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              console.log('Media error, attempting to recover...');
+              console.log('[HLS] Media error, recovering...');
               hlsPlayer.recoverMediaError();
               break;
             default:
-              console.error('Fatal HLS error, cannot recover');
+              console.error('[HLS] Fatal error');
               hlsPlayer.destroy();
-              // Show error message to user
               showStreamError('Stream unavailable. The DJ may still be connecting.');
-              // Auto-retry after 5 seconds
               setTimeout(() => {
-                console.log('Auto-retrying connection...');
                 showReconnecting();
                 setupHlsPlayer(currentStream);
               }, 5000);
@@ -312,8 +456,8 @@ function setupHlsPlayer(stream) {
         }
       });
     } else {
-      console.error('HLS not supported in this browser');
-      showStreamError('Your browser does not support HLS playback. Please use Chrome, Firefox, or Safari.');
+      console.error('[HLS] Not supported in this browser');
+      showStreamError('Your browser does not support HLS playback.');
     }
     
     // Setup Media Session for lock screen controls
@@ -321,69 +465,214 @@ function setupHlsPlayer(stream) {
     
     // Setup recording capability
     setupRecording(videoElement);
+    
+    // ==========================================
+    // CRITICAL: Play button and volume handlers
+    // ==========================================
+    const playBtn = document.getElementById('playBtn');
+    const volumeSlider = document.getElementById('volumeSlider');
+    
+    if (playBtn) {
+      playBtn.disabled = false;
+      playBtn.onclick = () => {
+        if (isPlaying) {
+          videoElement.pause();
+          document.getElementById('playIcon')?.classList.remove('hidden');
+          document.getElementById('pauseIcon')?.classList.add('hidden');
+          playBtn.classList.remove('playing');
+          stopGlobalMeters();
+        } else {
+          initGlobalAudioAnalyzer(videoElement);
+          if (globalAudioContext?.state === 'suspended') {
+            globalAudioContext.resume();
+          }
+          videoElement.play().catch(err => {
+            console.error('[HLS] Play error:', err);
+            // On mobile, show tap to play message
+            if (window.isMobileDevice) {
+              showTapToPlay();
+            }
+          });
+          document.getElementById('playIcon')?.classList.add('hidden');
+          document.getElementById('pauseIcon')?.classList.remove('hidden');
+          playBtn.classList.add('playing');
+          startGlobalMeters();
+        }
+        isPlaying = !isPlaying;
+      };
+    }
+    
+    // Volume slider handler
+    if (volumeSlider && videoElement) {
+      videoElement.volume = volumeSlider.value / 100;
+      volumeSlider.oninput = (e) => {
+        videoElement.volume = e.target.value / 100;
+      };
+    }
+    
+    // Sync play button state with video events
+    videoElement.addEventListener('play', () => {
+      isPlaying = true;
+      document.getElementById('playIcon')?.classList.add('hidden');
+      document.getElementById('pauseIcon')?.classList.remove('hidden');
+      playBtn?.classList.add('playing');
+      updateMiniPlayer(true);
+    });
+    
+    videoElement.addEventListener('pause', () => {
+      isPlaying = false;
+      document.getElementById('playIcon')?.classList.remove('hidden');
+      document.getElementById('pauseIcon')?.classList.add('hidden');
+      playBtn?.classList.remove('playing');
+      updateMiniPlayer(false);
+    });
   }
 }
 
-// Show reconnecting message
+// Show tap to play message for mobile
+function showTapToPlay() {
+  const videoPlayer = document.getElementById('videoPlayer');
+  if (!videoPlayer) return;
+  
+  const overlay = document.createElement('div');
+  overlay.id = 'tapToPlayOverlay';
+  overlay.style.cssText = `
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    z-index: 10;
+    cursor: pointer;
+  `;
+  overlay.innerHTML = `
+    <div style="width: 80px; height: 80px; border-radius: 50%; background: #dc2626; display: flex; align-items: center; justify-content: center;">
+      <svg viewBox="0 0 24 24" fill="#fff" width="40" height="40"><path d="M8 5v14l11-7z"/></svg>
+    </div>
+    <span style="color: #fff; font-size: 1.125rem;">Tap to Play</span>
+  `;
+  
+  overlay.onclick = () => {
+    const videoElement = document.getElementById('hlsVideoElement');
+    if (videoElement) {
+      videoElement.play().then(() => {
+        overlay.remove();
+      }).catch(console.error);
+    }
+  };
+  
+  videoPlayer.appendChild(overlay);
+}
+
+// Update mini player state
+function updateMiniPlayer(playing) {
+  const miniPlayIcon = document.getElementById('miniPlayIcon');
+  const miniPauseIcon = document.getElementById('miniPauseIcon');
+  const miniPlayBtn = document.getElementById('miniPlayBtn');
+  
+  if (playing) {
+    miniPlayIcon?.classList.add('hidden');
+    miniPauseIcon?.classList.remove('hidden');
+    miniPlayBtn?.classList.add('playing');
+  } else {
+    miniPlayIcon?.classList.remove('hidden');
+    miniPauseIcon?.classList.add('hidden');
+    miniPlayBtn?.classList.remove('playing');
+  }
+}
+
+// Setup Media Session API for lock screen controls
+function setupMediaSession(stream) {
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: stream?.title || 'Live Stream',
+      artist: stream?.djName || 'Fresh Wax',
+      album: 'Fresh Wax Live',
+      artwork: [
+        { src: stream?.djAvatar || '/logo.webp', sizes: '96x96', type: 'image/png' },
+        { src: stream?.djAvatar || '/logo.webp', sizes: '128x128', type: 'image/png' },
+        { src: stream?.djAvatar || '/logo.webp', sizes: '192x192', type: 'image/png' },
+        { src: stream?.djAvatar || '/logo.webp', sizes: '256x256', type: 'image/png' },
+        { src: stream?.djAvatar || '/logo.webp', sizes: '384x384', type: 'image/png' },
+        { src: stream?.djAvatar || '/logo.webp', sizes: '512x512', type: 'image/png' },
+      ]
+    });
+    
+    navigator.mediaSession.setActionHandler('play', () => {
+      const playBtn = document.getElementById('playBtn');
+      if (playBtn && !playBtn.classList.contains('playing')) {
+        playBtn.click();
+      }
+    });
+    
+    navigator.mediaSession.setActionHandler('pause', () => {
+      const playBtn = document.getElementById('playBtn');
+      if (playBtn && playBtn.classList.contains('playing')) {
+        playBtn.click();
+      }
+    });
+    
+    navigator.mediaSession.setActionHandler('stop', () => {
+      const playBtn = document.getElementById('playBtn');
+      if (playBtn && playBtn.classList.contains('playing')) {
+        playBtn.click();
+      }
+    });
+  }
+}
+
+// Show reconnecting overlay
 function showReconnecting() {
   const videoPlayer = document.getElementById('videoPlayer');
-  if (videoPlayer) {
-    const existingOverlay = videoPlayer.querySelector('.reconnect-overlay');
-    if (existingOverlay) return;
-    
-    const overlay = document.createElement('div');
-    overlay.className = 'reconnect-overlay';
-    overlay.innerHTML = `
-      <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;">
-        <div style="width: 40px; height: 40px; border: 3px solid #333; border-top-color: #dc2626; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-        <span style="color: #fff; font-size: 0.9rem;">Reconnecting...</span>
-      </div>
-    `;
-    videoPlayer.appendChild(overlay);
-    
-    // Remove after 5 seconds
-    setTimeout(() => overlay.remove(), 5000);
-  }
+  if (!videoPlayer) return;
+  
+  const existingOverlay = videoPlayer.querySelector('.reconnect-overlay');
+  if (existingOverlay) return;
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'reconnect-overlay';
+  overlay.innerHTML = `
+    <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;">
+      <div style="width: 40px; height: 40px; border: 3px solid #333; border-top-color: #dc2626; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+      <span style="color: #fff; font-size: 0.9rem;">Reconnecting...</span>
+    </div>
+  `;
+  videoPlayer.appendChild(overlay);
+  setTimeout(() => overlay.remove(), 5000);
 }
 
-// Show stream error message
+// Show stream error
 function showStreamError(message) {
   const videoPlayer = document.getElementById('videoPlayer');
-  if (videoPlayer) {
-    videoPlayer.innerHTML = `
-      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: #1a1a1a; color: #fff; padding: 2rem; text-align: center;">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">📡</div>
-        <h3 style="margin: 0 0 0.5rem 0;">Connecting to Stream...</h3>
-        <p style="color: #888; margin: 0;">${message}</p>
-        <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: #dc2626; border: none; border-radius: 8px; color: #fff; cursor: pointer;">
-          Retry
-        </button>
-      </div>
-    `;
-  }
+  if (!videoPlayer) return;
+  
+  videoPlayer.innerHTML = `
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: #1a1a1a; color: #fff; padding: 2rem; text-align: center;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">📡</div>
+      <h3 style="margin: 0 0 0.5rem 0; font-size: 1.125rem;">Connecting to Stream...</h3>
+      <p style="color: #888; margin: 0; font-size: 0.875rem;">${message}</p>
+      <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: #dc2626; border: none; border-radius: 8px; color: #fff; cursor: pointer; font-size: 1rem; -webkit-tap-highlight-color: transparent;">
+        Retry
+      </button>
+    </div>
+  `;
 }
 
-// Global stereo audio analyzer for LED meters
-let globalAudioContext = null;
-let globalAnalyserLeft = null;
-let globalAnalyserRight = null;
-let globalAnimationId = null;
-let globalMediaSource = null;
-
+// ==========================================
+// AUDIO ANALYZER FOR LED METERS
+// ==========================================
 function initGlobalAudioAnalyzer(mediaElement) {
-  if (globalAudioContext && globalMediaSource) {
-    // Already initialized for this element
-    return;
-  }
+  if (globalAudioContext && globalMediaSource) return;
   
   try {
     globalAudioContext = new (window.AudioContext || window.webkitAudioContext)();
     globalMediaSource = globalAudioContext.createMediaElementSource(mediaElement);
     
-    // Create stereo splitter
     const splitter = globalAudioContext.createChannelSplitter(2);
     
-    // Create analyzers for each channel
     globalAnalyserLeft = globalAudioContext.createAnalyser();
     globalAnalyserRight = globalAudioContext.createAnalyser();
     globalAnalyserLeft.fftSize = 256;
@@ -391,17 +680,14 @@ function initGlobalAudioAnalyzer(mediaElement) {
     globalAnalyserLeft.smoothingTimeConstant = 0.5;
     globalAnalyserRight.smoothingTimeConstant = 0.5;
     
-    // Connect source -> splitter -> analyzers
     globalMediaSource.connect(splitter);
     splitter.connect(globalAnalyserLeft, 0);
     splitter.connect(globalAnalyserRight, 1);
-    
-    // Also connect to destination for playback
     globalMediaSource.connect(globalAudioContext.destination);
     
-    console.log('[Live] Global audio analyzer initialized');
+    console.log('[Audio] Analyzer initialized');
   } catch (err) {
-    console.error('[Live] Global audio analyzer error:', err);
+    console.error('[Audio] Analyzer error:', err);
   }
 }
 
@@ -419,13 +705,11 @@ function updateGlobalMeters() {
     return;
   }
   
-  // Get frequency data
   const leftData = new Uint8Array(globalAnalyserLeft.frequencyBinCount);
   const rightData = new Uint8Array(globalAnalyserRight.frequencyBinCount);
   globalAnalyserLeft.getByteFrequencyData(leftData);
   globalAnalyserRight.getByteFrequencyData(rightData);
   
-  // Calculate RMS levels (more accurate than just averaging)
   let leftSum = 0, rightSum = 0;
   for (let i = 0; i < leftData.length; i++) {
     leftSum += leftData[i] * leftData[i];
@@ -434,17 +718,11 @@ function updateGlobalMeters() {
   const leftRms = Math.sqrt(leftSum / leftData.length);
   const rightRms = Math.sqrt(rightSum / rightData.length);
   
-  // Normalize to 0-14 range (14 LEDs)
   const leftLevel = Math.min(14, Math.floor((leftRms / 255) * 18));
   const rightLevel = Math.min(14, Math.floor((rightRms / 255) * 18));
   
-  // Update LEDs
-  leftLeds.forEach((led, i) => {
-    led.classList.toggle('active', i < leftLevel);
-  });
-  rightLeds.forEach((led, i) => {
-    led.classList.toggle('active', i < rightLevel);
-  });
+  leftLeds.forEach((led, i) => led.classList.toggle('active', i < leftLevel));
+  rightLeds.forEach((led, i) => led.classList.toggle('active', i < rightLevel));
   
   globalAnimationId = requestAnimationFrame(updateGlobalMeters);
 }
@@ -454,31 +732,21 @@ function stopGlobalMeters() {
     cancelAnimationFrame(globalAnimationId);
     globalAnimationId = null;
   }
-  // Turn off all LEDs
-  document.querySelectorAll('.led-strip .led').forEach(led => {
-    led.classList.remove('active');
-  });
+  document.querySelectorAll('.led-strip .led').forEach(led => led.classList.remove('active'));
 }
 
 function startGlobalMeters() {
-  if (!globalAnimationId) {
-    updateGlobalMeters();
-  }
+  if (!globalAnimationId) updateGlobalMeters();
 }
 
 // ==========================================
-// STREAM RECORDING FUNCTIONALITY
+// STREAM RECORDING
 // ==========================================
-
 function setupRecording(mediaElement) {
   const recordBtn = document.getElementById('recordBtn');
-  const recordDuration = document.getElementById('recordDuration');
-  
   if (!recordBtn) return;
   
-  // Enable record button when stream is playing
   recordBtn.disabled = false;
-  
   recordBtn.onclick = () => {
     if (isRecording) {
       stopRecording();
@@ -493,76 +761,61 @@ function startRecording(mediaElement) {
   const recordDuration = document.getElementById('recordDuration');
   
   if (!mediaElement) {
-    console.error('[Recording] No media element available');
+    console.error('[Recording] No media element');
     return;
   }
   
   try {
-    // Get the media stream from the element
     let stream;
     if (mediaElement.captureStream) {
       stream = mediaElement.captureStream();
     } else if (mediaElement.mozCaptureStream) {
       stream = mediaElement.mozCaptureStream();
     } else {
-      alert('Recording is not supported in your browser. Please use Chrome, Firefox, or Edge.');
+      alert('Recording not supported in your browser.');
       return;
     }
     
-    // Check for audio tracks
     const audioTracks = stream.getAudioTracks();
     if (audioTracks.length === 0) {
-      alert('No audio track available to record.');
+      alert('No audio track available.');
       return;
     }
     
-    // Create audio-only stream for smaller file size
     const audioStream = new MediaStream(audioTracks);
     
-    // Determine best audio format
     let mimeType = 'audio/webm;codecs=opus';
     if (!MediaRecorder.isTypeSupported(mimeType)) {
       mimeType = 'audio/webm';
       if (!MediaRecorder.isTypeSupported(mimeType)) {
         mimeType = 'audio/ogg;codecs=opus';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = '';  // Let browser choose
-        }
+        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
       }
     }
     
     const options = mimeType ? { mimeType, audioBitsPerSecond: 192000 } : { audioBitsPerSecond: 192000 };
-    
     mediaRecorder = new MediaRecorder(audioStream, options);
     recordedChunks = [];
     
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        recordedChunks.push(event.data);
-      }
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
     };
     
-    mediaRecorder.onstop = () => {
-      downloadRecording();
-    };
-    
-    mediaRecorder.onerror = (event) => {
-      console.error('[Recording] Error:', event.error);
+    mediaRecorder.onstop = () => downloadRecording();
+    mediaRecorder.onerror = () => {
       stopRecording();
-      alert('Recording error occurred. Please try again.');
+      alert('Recording error occurred.');
     };
     
-    // Start recording
-    mediaRecorder.start(1000); // Collect data every second
+    mediaRecorder.start(1000);
     isRecording = true;
     recordingStartTime = Date.now();
     
-    // Update UI
     recordBtn?.classList.add('recording');
-    recordBtn.querySelector('.record-text').textContent = 'STOP';
+    const recordText = recordBtn.querySelector('.record-text');
+    if (recordText) recordText.textContent = 'STOP';
     recordDuration?.classList.remove('hidden');
     
-    // Update duration display
     recordingInterval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
       const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
@@ -571,10 +824,9 @@ function startRecording(mediaElement) {
     }, 1000);
     
     console.log('[Recording] Started');
-    
   } catch (err) {
-    console.error('[Recording] Failed to start:', err);
-    alert('Failed to start recording. Please ensure the stream is playing.');
+    console.error('[Recording] Failed:', err);
+    alert('Failed to start recording.');
   }
 }
 
@@ -593,9 +845,9 @@ function stopRecording() {
     recordingInterval = null;
   }
   
-  // Update UI
   recordBtn?.classList.remove('recording');
-  if (recordBtn) recordBtn.querySelector('.record-text').textContent = 'REC';
+  const recordText = recordBtn?.querySelector('.record-text');
+  if (recordText) recordText.textContent = 'REC';
   recordDuration?.classList.add('hidden');
   if (recordDuration) recordDuration.textContent = '00:00';
   
@@ -603,25 +855,16 @@ function stopRecording() {
 }
 
 function downloadRecording() {
-  if (recordedChunks.length === 0) {
-    console.log('[Recording] No data to download');
-    return;
-  }
+  if (recordedChunks.length === 0) return;
   
-  // Create blob from recorded chunks
   const blob = new Blob(recordedChunks, { type: recordedChunks[0].type || 'audio/webm' });
-  
-  // Generate filename with DJ name and title
-  const djName = document.getElementById('djName')?.textContent || 'Unknown DJ';
-  const streamTitle = document.getElementById('streamTitle')?.textContent || 'Live Stream';
+  const djName = document.getElementById('djName')?.textContent || 'DJ';
+  const streamTitle = document.getElementById('streamTitle')?.textContent || 'Live';
   const date = new Date().toISOString().split('T')[0];
-  const duration = recordDuration?.textContent || '';
   
-  // Sanitize filename
   const sanitize = (str) => str.replace(/[^a-zA-Z0-9\s\-\_]/g, '').trim().replace(/\s+/g, '_');
   const filename = `FreshWax_${sanitize(djName)}_${sanitize(streamTitle)}_${date}.webm`;
   
-  // Create download link
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -629,25 +872,18 @@ function downloadRecording() {
   document.body.appendChild(a);
   a.click();
   
-  // Cleanup
   setTimeout(() => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }, 100);
   
   recordedChunks = [];
-  
-  console.log(`[Recording] Downloaded: ${filename} (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
+  console.log(`[Recording] Downloaded: ${filename}`);
 }
 
-// Cleanup recording on page unload
-window.addEventListener('beforeunload', () => {
-  if (isRecording) {
-    stopRecording();
-  }
-});
-
-// Setup Twitch player
+// ==========================================
+// TWITCH PLAYER
+// ==========================================
 function setupTwitchPlayer(stream) {
   document.getElementById('audioPlayer')?.classList.add('hidden');
   document.getElementById('videoPlayer')?.classList.remove('hidden');
@@ -672,7 +908,9 @@ function setupTwitchPlayer(stream) {
   }
 }
 
-// Setup audio player
+// ==========================================
+// AUDIO PLAYER (Icecast)
+// ==========================================
 function setupAudioPlayer(stream) {
   document.getElementById('audioPlayer')?.classList.remove('hidden');
   document.getElementById('videoPlayer')?.classList.add('hidden');
@@ -690,14 +928,15 @@ function setupAudioPlayer(stream) {
   }
   
   if (playBtn) {
+    playBtn.disabled = false;
     playBtn.onclick = () => {
       if (isPlaying) {
         audio?.pause();
         document.getElementById('playIcon')?.classList.remove('hidden');
         document.getElementById('pauseIcon')?.classList.add('hidden');
+        playBtn.classList.remove('playing');
         stopGlobalMeters();
       } else {
-        // Initialize analyzer on first play (must be after user interaction)
         initGlobalAudioAnalyzer(audio);
         if (globalAudioContext?.state === 'suspended') {
           globalAudioContext.resume();
@@ -705,6 +944,7 @@ function setupAudioPlayer(stream) {
         audio?.play().catch(console.error);
         document.getElementById('playIcon')?.classList.add('hidden');
         document.getElementById('pauseIcon')?.classList.remove('hidden');
+        playBtn.classList.add('playing');
         startGlobalMeters();
       }
       isPlaying = !isPlaying;
@@ -717,11 +957,16 @@ function setupAudioPlayer(stream) {
     };
   }
   
-  // Setup recording capability
+  // Setup Media Session
+  setupMediaSession(stream);
+  
+  // Setup recording
   setupRecording(audio);
 }
 
-// Join stream as viewer
+// ==========================================
+// VIEWER SESSION
+// ==========================================
 async function joinStream(streamId) {
   viewerSessionId = `viewer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
@@ -737,7 +982,7 @@ async function joinStream(streamId) {
       })
     });
     
-    // Start heartbeat
+    // Heartbeat every 30 seconds
     setInterval(() => {
       if (currentStream) {
         fetch('/api/livestream/react', {
@@ -759,7 +1004,7 @@ async function joinStream(streamId) {
       }
     }, 30000);
   } catch (error) {
-    console.error('Error joining stream:', error);
+    console.error('[Viewer] Join error:', error);
   }
   
   // Leave on page unload
@@ -774,9 +1019,10 @@ async function joinStream(streamId) {
   });
 }
 
-// Setup chat
+// ==========================================
+// CHAT SYSTEM
+// ==========================================
 function setupChat(streamId) {
-  // Real-time chat listener
   const chatQuery = query(
     collection(db, 'livestream-chat'),
     where('streamId', '==', streamId),
@@ -790,9 +1036,7 @@ function setupChat(streamId) {
     let hasNewMessage = false;
     
     snapshot.docChanges().forEach(change => {
-      if (change.type === 'added') {
-        hasNewMessage = true;
-      }
+      if (change.type === 'added') hasNewMessage = true;
     });
     
     snapshot.forEach(doc => {
@@ -802,29 +1046,18 @@ function setupChat(streamId) {
     messages.reverse();
     renderChatMessages(messages);
     
-    // Notify mobile tabs of new message
     if (hasNewMessage && typeof window.notifyNewChatMessage === 'function') {
       window.notifyNewChatMessage();
     }
   }, (error) => {
-    // Handle permission errors gracefully
-    console.warn('[Chat] Firestore listener error:', error.code);
-    if (error.code === 'permission-denied') {
-      console.info('[Chat] Update Firestore rules to allow reading livestream-chat collection');
-    }
+    console.warn('[Chat] Error:', error.code);
   });
   
-  // Setup emoji picker
   setupEmojiPicker();
-  
-  // Setup Giphy picker
   setupGiphyPicker();
-  
-  // Setup send message
   setupChatInput(streamId);
 }
 
-// Render chat messages
 function renderChatMessages(messages) {
   const container = document.getElementById('chatMessages');
   if (!container) return;
@@ -832,50 +1065,47 @@ function renderChatMessages(messages) {
   const wasAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
   
   container.innerHTML = `
-    <div class="chat-welcome" style="text-align: center; padding: 1rem; background: #1a1a2e; border-radius: 8px;">
-      <p style="color: #a5b4fc; margin: 0; font-size: 0.875rem;">Welcome to the chat! Be respectful and enjoy the music 🎵</p>
+    <div class="chat-welcome" style="text-align: center; padding: 0.75rem; background: #1a1a2e; border-radius: 8px; margin-bottom: 0.5rem;">
+      <p style="color: #a5b4fc; margin: 0; font-size: 0.8125rem;">Welcome! Be respectful 🎵</p>
     </div>
     ${messages.map(msg => {
       const initial = (msg.userName || 'A')[0].toUpperCase();
       
       if (msg.type === 'giphy' && msg.giphyUrl) {
         return `
-          <div style="display: flex; gap: 0.75rem; animation: slideIn 0.2s ease-out;">
-            <div style="width: 32px; height: 32px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #fff; flex-shrink: 0;">${initial}</div>
+          <div class="chat-message" style="display: flex; gap: 0.5rem; padding: 0.5rem 0; animation: slideIn 0.2s ease-out;">
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.6875rem; color: #fff; flex-shrink: 0;">${initial}</div>
             <div style="flex: 1; min-width: 0;">
-              <div style="font-weight: 600; color: #6366f1; font-size: 0.8125rem; margin-bottom: 0.25rem;">${msg.userName}</div>
-              <img src="${msg.giphyUrl}" alt="GIF" style="max-width: 200px; border-radius: 8px; margin-top: 0.5rem;" />
+              <div style="font-weight: 600; color: #6366f1; font-size: 0.75rem; margin-bottom: 0.25rem;">${msg.userName}</div>
+              <img src="${msg.giphyUrl}" alt="GIF" style="max-width: 150px; border-radius: 6px;" loading="lazy" />
             </div>
           </div>
         `;
       }
       
       return `
-        <div style="display: flex; gap: 0.75rem; animation: slideIn 0.2s ease-out;">
-          <div style="width: 32px; height: 32px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #fff; flex-shrink: 0;">${initial}</div>
+        <div class="chat-message" style="display: flex; gap: 0.5rem; padding: 0.5rem 0; animation: slideIn 0.2s ease-out;">
+          <div style="width: 28px; height: 28px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.6875rem; color: #fff; flex-shrink: 0;">${initial}</div>
           <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 600; color: #6366f1; font-size: 0.8125rem; margin-bottom: 0.25rem;">${msg.userName}</div>
-            <div style="color: #fff; font-size: 0.9375rem; word-break: break-word;">${escapeHtml(msg.message)}</div>
+            <div style="font-weight: 600; color: #6366f1; font-size: 0.75rem; margin-bottom: 0.125rem;">${msg.userName}</div>
+            <div style="color: #fff; font-size: 0.875rem; word-break: break-word; line-height: 1.4;">${escapeHtml(msg.message)}</div>
           </div>
         </div>
       `;
     }).join('')}
   `;
   
-  // Scroll to bottom if was at bottom
   if (wasAtBottom) {
     container.scrollTop = container.scrollHeight;
   }
 }
 
-// Escape HTML
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
 }
 
-// Setup emoji picker
 function setupEmojiPicker() {
   const emojiBtn = document.getElementById('emojiBtn');
   const emojiPicker = document.getElementById('emojiPicker');
@@ -888,10 +1118,9 @@ function setupEmojiPicker() {
     const emojis = EMOJI_CATEGORIES[category] || [];
     if (emojiGrid) {
       emojiGrid.innerHTML = emojis.map(emoji => 
-        `<button style="padding: 0.5rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; border-radius: 6px; transition: all 0.1s;" data-emoji="${emoji}" onmouseover="this.style.background='#333';this.style.transform='scale(1.2)'" onmouseout="this.style.background='none';this.style.transform='scale(1)'">${emoji}</button>`
+        `<button style="padding: 0.5rem; background: none; border: none; font-size: 1.25rem; cursor: pointer; border-radius: 6px; -webkit-tap-highlight-color: transparent;" data-emoji="${emoji}">${emoji}</button>`
       ).join('');
       
-      // Add click handlers
       emojiGrid.querySelectorAll('button').forEach(btn => {
         btn.onclick = () => {
           const input = document.getElementById('chatInput');
@@ -902,7 +1131,6 @@ function setupEmojiPicker() {
     }
   }
   
-  // Category buttons
   document.querySelectorAll('.emoji-cat').forEach(btn => {
     btn.onclick = () => {
       document.querySelectorAll('.emoji-cat').forEach(b => b.classList.remove('active'));
@@ -912,7 +1140,6 @@ function setupEmojiPicker() {
     };
   });
   
-  // Toggle picker
   if (emojiBtn) {
     emojiBtn.onclick = () => {
       emojiPicker?.classList.toggle('hidden');
@@ -927,7 +1154,6 @@ function setupEmojiPicker() {
   }
 }
 
-// Setup Giphy picker
 function setupGiphyPicker() {
   const giphyBtn = document.getElementById('giphyBtn');
   const giphyPicker = document.getElementById('giphyPicker');
@@ -939,7 +1165,7 @@ function setupGiphyPicker() {
   
   async function searchGiphy(query) {
     if (!GIPHY_API_KEY) {
-      if (giphyGrid) giphyGrid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #666; padding: 2rem;">Giphy API key not configured</p>';
+      if (giphyGrid) giphyGrid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #666; padding: 1rem;">Giphy not configured</p>';
       return;
     }
     
@@ -951,14 +1177,13 @@ function setupGiphyPicker() {
       const response = await fetch(endpoint);
       const data = await response.json();
       
-      if (data.data && data.data.length > 0 && giphyGrid) {
+      if (data.data?.length > 0 && giphyGrid) {
         giphyGrid.innerHTML = data.data.map(gif => `
-          <div style="aspect-ratio: 1; border-radius: 8px; overflow: hidden; cursor: pointer; transition: all 0.2s; border: 2px solid transparent;" data-url="${gif.images.fixed_height.url}" data-id="${gif.id}" onmouseover="this.style.borderColor='#6366f1';this.style.transform='scale(1.05)'" onmouseout="this.style.borderColor='transparent';this.style.transform='scale(1)'">
-            <img src="${gif.images.fixed_height_small.url}" alt="${gif.title}" style="width: 100%; height: 100%; object-fit: cover;" />
+          <div style="aspect-ratio: 1; border-radius: 6px; overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent;" data-url="${gif.images.fixed_height.url}" data-id="${gif.id}">
+            <img src="${gif.images.fixed_height_small.url}" alt="${gif.title}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy" />
           </div>
         `).join('');
         
-        // Add click handlers
         giphyGrid.querySelectorAll('div[data-url]').forEach(item => {
           item.onclick = () => {
             sendGiphyMessage(item.dataset.url, item.dataset.id);
@@ -967,25 +1192,20 @@ function setupGiphyPicker() {
           };
         });
       } else if (giphyGrid) {
-        giphyGrid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #666; padding: 2rem;">No GIFs found</p>';
+        giphyGrid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #666; padding: 1rem;">No GIFs found</p>';
       }
     } catch (error) {
-      console.error('Giphy error:', error);
-      if (giphyGrid) giphyGrid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #666; padding: 2rem;">Failed to load GIFs</p>';
+      console.error('[Giphy] Error:', error);
     }
   }
   
-  // Search input
   if (giphySearch) {
     giphySearch.oninput = (e) => {
       clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => {
-        searchGiphy(e.target.value);
-      }, 500);
+      searchTimeout = setTimeout(() => searchGiphy(e.target.value), 500);
     };
   }
   
-  // Toggle picker
   if (giphyBtn) {
     giphyBtn.onclick = () => {
       giphyPicker?.classList.toggle('hidden');
@@ -994,13 +1214,12 @@ function setupGiphyPicker() {
       document.getElementById('emojiBtn')?.classList.remove('active');
       
       if (!giphyPicker?.classList.contains('hidden')) {
-        searchGiphy(''); // Load trending
+        searchGiphy('');
       }
     };
   }
 }
 
-// Send Giphy message
 async function sendGiphyMessage(giphyUrl, giphyId) {
   if (!currentUser || !currentStream) return;
   
@@ -1019,11 +1238,10 @@ async function sendGiphyMessage(giphyUrl, giphyId) {
       })
     });
   } catch (error) {
-    console.error('Error sending GIF:', error);
+    console.error('[Chat] GIF error:', error);
   }
 }
 
-// Setup chat input
 function setupChatInput(streamId) {
   const input = document.getElementById('chatInput');
   const sendBtn = document.getElementById('sendBtn');
@@ -1049,10 +1267,10 @@ function setupChatInput(streamId) {
       
       const result = await response.json();
       if (!result.success) {
-        alert(result.error || 'Failed to send message');
+        alert(result.error || 'Failed to send');
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('[Chat] Send error:', error);
     }
   }
   
@@ -1070,23 +1288,18 @@ function setupChatInput(streamId) {
   }
 }
 
-// Setup reactions
+// ==========================================
+// REACTIONS
+// ==========================================
 function setupReactions(streamId) {
-  const likeBtn = document.getElementById('likeBtn');
   const starBtns = document.querySelectorAll('.star');
   const shareBtn = document.getElementById('shareBtn');
   
-  // Like - handled by reaction buttons in live.astro
-  // All three reaction buttons (hearts, fire, explosions) trigger likes
-  // See triggerReaction() function in live.astro
-  
-  // Rating
+  // Star rating
   starBtns.forEach(btn => {
     btn.onmouseenter = () => {
       const rating = parseInt(btn.dataset.rating);
-      starBtns.forEach((s, i) => {
-        s.classList.toggle('active', i < rating);
-      });
+      starBtns.forEach((s, i) => s.classList.toggle('active', i < rating));
     };
     
     btn.onclick = async () => {
@@ -1115,35 +1328,33 @@ function setupReactions(streamId) {
           if (avgRating) avgRating.textContent = result.averageRating.toFixed(1);
         }
       } catch (error) {
-        console.error('Rating error:', error);
+        console.error('[Reaction] Rating error:', error);
       }
     };
   });
   
-  // Share
+  // Share button - uses native share on mobile
   if (shareBtn) {
     shareBtn.onclick = () => {
       const url = window.location.href;
       if (navigator.share) {
         navigator.share({
           title: currentStream?.title || 'Live Stream',
-          text: `Check out this live stream on Fresh Wax!`,
+          text: 'Check out this live stream on Fresh Wax!',
           url
         });
       } else {
         navigator.clipboard.writeText(url);
-        alert('Link copied to clipboard!');
+        alert('Link copied!');
       }
     };
   }
   
-  // Load user's reactions
   if (currentUser) {
     loadUserReactions(streamId);
   }
 }
 
-// Load user's reactions
 async function loadUserReactions(streamId) {
   if (!currentUser) return;
   
@@ -1161,11 +1372,13 @@ async function loadUserReactions(streamId) {
       }
     }
   } catch (error) {
-    console.error('Error loading reactions:', error);
+    console.error('[Reaction] Load error:', error);
   }
 }
 
-// Duration timer
+// ==========================================
+// DURATION TIMER
+// ==========================================
 function startDurationTimer(startedAt) {
   if (!startedAt) return;
   
@@ -1193,7 +1406,9 @@ function startDurationTimer(startedAt) {
   setInterval(updateDuration, 1000);
 }
 
-// Auth listener
+// ==========================================
+// AUTH LISTENER
+// ==========================================
 function setupAuthListener() {
   onAuthStateChanged(auth, (user) => {
     currentUser = user;
@@ -1215,7 +1430,14 @@ function setupAuthListener() {
   });
 }
 
-// Click outside to close pickers
+// ==========================================
+// CLEANUP HANDLERS
+// ==========================================
+window.addEventListener('beforeunload', () => {
+  if (isRecording) stopRecording();
+});
+
+// Close pickers on outside click
 document.addEventListener('click', (e) => {
   const emojiPicker = document.getElementById('emojiPicker');
   const giphyPicker = document.getElementById('giphyPicker');
@@ -1233,5 +1455,7 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Initialize
+// ==========================================
+// INITIALIZE
+// ==========================================
 init();

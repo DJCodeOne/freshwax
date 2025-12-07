@@ -1,55 +1,126 @@
 ---
 // src/layouts/Layout.astro
+// Enhanced Layout with comprehensive SEO and analytics
 import '../styles/global.css';
 import { ViewTransitions } from 'astro:transitions';
 import GlobalAudioPlayer from '../components/GlobalAudioPlayer.astro';
 import AudioCoordinator from '../components/AudioCoordinator.astro';
 import SEO from '../components/SEO.astro';
+import Analytics from '../components/Analytics.astro';
 
 interface Props {
   title: string;
   description?: string;
   image?: string;
   imageAlt?: string;
-  type?: 'website' | 'article' | 'product' | 'music.album';
+  type?: 'website' | 'article' | 'product' | 'music.album' | 'video.other';
   noindex?: boolean;
+  canonical?: string;
+  keywords?: string[];
+  
+  // Product data (for releases, merch)
   product?: {
     price: number;
     currency?: string;
     availability?: 'InStock' | 'OutOfStock' | 'PreOrder' | 'LimitedAvailability';
     sku?: string;
+    gtin?: string;
     brand?: string;
     condition?: 'NewCondition' | 'UsedCondition';
     category?: string;
     reviews?: { rating: number; count: number };
+    priceValidUntil?: string;
   };
-  article?: {
-    publishedTime: string;
-    modifiedTime?: string;
-    author?: string;
-    tags?: string[];
-  };
+  
+  // Music release data
   music?: {
     artist: string;
     releaseDate?: string;
     genre?: string[];
     label?: string;
     format?: string[];
-    tracks?: { name: string; duration?: string }[];
+    tracks?: { name: string; duration?: string; isrc?: string }[];
+    catalogNumber?: string;
+    bpm?: number;
   };
+  
+  // Audio content (DJ mixes)
+  audio?: {
+    duration: string;
+    artist: string;
+    uploadDate: string;
+    thumbnailUrl?: string;
+    contentUrl?: string;
+    embedUrl?: string;
+    genre?: string[];
+  };
+  
+  // Video content
+  video?: {
+    duration: string;
+    uploadDate: string;
+    thumbnailUrl: string;
+    contentUrl?: string;
+    embedUrl?: string;
+    description?: string;
+  };
+  
+  // Event (live streams)
+  event?: {
+    startDate: string;
+    endDate?: string;
+    performer?: string;
+    eventStatus?: 'EventScheduled' | 'EventRescheduled' | 'EventCancelled' | 'EventPostponed';
+    eventAttendanceMode?: 'OnlineEventAttendanceMode' | 'OfflineEventAttendanceMode';
+  };
+  
+  // Article/blog data
+  article?: {
+    publishedTime: string;
+    modifiedTime?: string;
+    author?: string;
+    tags?: string[];
+    section?: string;
+  };
+  
+  // FAQ data
+  faqs?: { question: string; answer: string }[];
+  
+  // ItemList for category pages
+  itemList?: {
+    name: string;
+    items: { name: string; url: string; image?: string; position: number }[];
+  };
+  
+  // Breadcrumbs
+  breadcrumbs?: { name: string; url: string }[];
 }
 
 const { 
   title, 
-  description = 'Independent jungle and drum & bass record label. Digital downloads and limited edition vinyl pressings from the UK underground.',
+  description = 'Independent UK jungle and drum & bass record label and music store. Digital downloads, limited edition vinyl pressings, DJ mixes, and official merchandise.',
   image,
   imageAlt,
   type,
   noindex,
+  canonical,
+  keywords,
   product,
+  music,
+  audio,
+  video,
+  event,
   article,
-  music
+  faqs,
+  itemList,
+  breadcrumbs
 } = Astro.props;
+
+// =============================================
+// GOOGLE ANALYTICS CONFIGURATION
+// =============================================
+const GA4_ID = 'G-MHKVCNPYBQ';
+const GTM_ID = ''; // Optional: Google Tag Manager ID
 ---
 
 <!doctype html>
@@ -58,7 +129,7 @@ const {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     
-    <!-- Mobile optimization meta tags -->
+    <!-- Mobile optimization -->
     <meta name="theme-color" content="#000000" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -78,11 +149,12 @@ const {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://firestore.googleapis.com" />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://www.google-analytics.com" />
     
-    <!-- Critical fonts with display swap -->
+    <!-- Critical fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet" />
     
-    <!-- SEO Component - all meta tags -->
+    <!-- SEO Component - comprehensive meta tags and structured data -->
     <SEO 
       title={title}
       description={description}
@@ -90,9 +162,24 @@ const {
       imageAlt={imageAlt}
       type={type}
       noindex={noindex}
+      canonical={canonical}
+      keywords={keywords}
       product={product}
-      article={article}
       music={music}
+      audio={audio}
+      video={video}
+      event={event}
+      article={article}
+      faqs={faqs}
+      itemList={itemList}
+      breadcrumbs={breadcrumbs}
+    />
+    
+    <!-- Analytics - Google Analytics 4 + enhanced tracking -->
+    <Analytics 
+      ga4Id={GA4_ID}
+      gtmId={GTM_ID}
+      ecommerce={true}
     />
     
     <ViewTransitions />
@@ -103,6 +190,8 @@ const {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        background: #000000;
+        color: #ffffff;
       }
       
       h1, h2, h3, h4, h5, h6 {
@@ -126,24 +215,70 @@ const {
         max-width: 100%;
         height: auto;
       }
+      
+      /* Skip to content link for accessibility */
+      .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: #dc2626;
+        color: white;
+        padding: 8px 16px;
+        z-index: 100;
+        transition: top 0.3s;
+      }
+      
+      .skip-link:focus {
+        top: 0;
+      }
     </style>
   </head>
   <body>
-    <!-- Cart functionality - must load early -->
+    <!-- Accessibility: Skip to main content -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <!-- Cart functionality -->
     <script is:inline src="/freshwax-cart.js"></script>
     
-    <!-- Audio Coordinator MUST come first -->
+    <!-- Audio Coordinator -->
     <AudioCoordinator />
     
-    <slot />
+    <!-- Main content -->
+    <main id="main-content">
+      <slot />
+    </main>
     
-    <!-- Global Audio Player for DJ Mixes & Shuffle -->
+    <!-- Global Audio Player -->
     <GlobalAudioPlayer />
     
     <!-- Spacer for mini player -->
     <div id="mini-player-spacer" class="h-0 transition-all duration-300"></div>
     
-    <!-- Universal Report System -->
-    <script is:inline src="/report-system.js"></script>
+    <!-- Cookie consent banner (optional - uncomment if needed) -->
+    <!--
+    <div id="cookie-consent" class="fixed bottom-0 left-0 right-0 bg-gray-900 p-4 z-50 hidden">
+      <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p class="text-sm text-gray-300">
+          We use cookies to improve your experience. By using our site, you agree to our 
+          <a href="/cookies" class="text-red-500 underline">cookie policy</a>.
+        </p>
+        <button 
+          onclick="acceptCookies()" 
+          class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+        >
+          Accept
+        </button>
+      </div>
+    </div>
+    <script is:inline>
+      if (!localStorage.getItem('cookies-accepted')) {
+        document.getElementById('cookie-consent')?.classList.remove('hidden');
+      }
+      function acceptCookies() {
+        localStorage.setItem('cookies-accepted', 'true');
+        document.getElementById('cookie-consent')?.classList.add('hidden');
+      }
+    </script>
+    -->
   </body>
 </html>

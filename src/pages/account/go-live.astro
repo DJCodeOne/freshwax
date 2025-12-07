@@ -37,43 +37,101 @@ export const prerender = false;
       
       <!-- Eligibility Check - DJ needs mixes with likes -->
       <div id="notEligible" class="not-eligible hidden">
-        <div class="not-eligible-icon">🎧</div>
-        <h1>ALMOST <span class="red">THERE</span></h1>
-        <p id="eligibilityMessage">You need to build your reputation before going live.</p>
+        <div class="not-eligible-header">
+          <div class="not-eligible-icon">🎧</div>
+          <h1>ALMOST <span class="red">THERE</span></h1>
+          <p id="eligibilityMessage">Build your reputation before going live</p>
+        </div>
         
-        <div class="eligibility-requirements">
-          <h3>To Go Live, You Need:</h3>
-          <div class="requirement-list">
-            <div id="reqMixes" class="requirement">
-              <span class="req-icon">❌</span>
-              <span class="req-text">At least 1 DJ mix uploaded</span>
+        <div class="eligibility-columns">
+          <!-- Left Column: Requirements -->
+          <div class="eligibility-left">
+            <div class="eligibility-requirements">
+              <h3>To Go Live, You Need:</h3>
+              <div class="requirement-list">
+                <div id="reqMixes" class="requirement">
+                  <span class="req-icon">❌</span>
+                  <span class="req-text">At least 1 DJ mix uploaded</span>
+                </div>
+                <div id="reqLikes" class="requirement">
+                  <span class="req-icon">❌</span>
+                  <span class="req-text">At least 10 likes on one of your mixes</span>
+                </div>
+              </div>
+              
+              <div id="progressInfo" class="progress-info hidden">
+                <p>Your best mix: <span id="bestMixLikes">0</span>/10 likes</p>
+                <div class="progress-bar">
+                  <div id="likesProgress" class="progress-fill" style="width: 0%"></div>
+                </div>
+              </div>
             </div>
-            <div id="reqLikes" class="requirement">
-              <span class="req-icon">❌</span>
-              <span class="req-text">At least 10 likes on one of your mixes</span>
+            
+            <div class="eligibility-actions">
+              <a href="/upload-mix" class="cta-btn primary">Upload a DJ Mix →</a>
+              <a href="/dj-mixes" class="cta-btn secondary">View DJ Mixes</a>
+              <a href="/live" class="cta-btn secondary">Back to Live</a>
             </div>
           </div>
           
-          <div id="progressInfo" class="progress-info hidden">
-            <p>Your best mix: <span id="bestMixLikes">0</span>/10 likes</p>
-            <div class="progress-bar">
-              <div id="likesProgress" class="progress-fill" style="width: 0%"></div>
+          <!-- Right Column: Bypass Request -->
+          <div class="eligibility-right">
+            <div id="bypassRequestSection" class="bypass-request-section">
+              <!-- Request Form State -->
+              <div id="bypassRequestForm" class="bypass-form-card">
+                <div class="bypass-header">
+                  <span class="bypass-icon">⚡</span>
+                  <h4>Need to go live now?</h4>
+                </div>
+                <p class="bypass-desc">Request bypass access - an admin will review and approve.</p>
+                <div class="bypass-form-inner">
+                  <textarea id="bypassReason" placeholder="Why do you need immediate access? (optional)" rows="2" maxlength="200"></textarea>
+                  <button id="submitBypassRequest" class="bypass-request-btn">🎫 Request Bypass Access</button>
+                </div>
+              </div>
+              
+              <!-- Pending State -->
+              <div id="bypassPending" class="bypass-status-card pending hidden">
+                <div class="status-header">
+                  <span class="status-icon">⏳</span>
+                  <h4>Request Pending</h4>
+                </div>
+                <p class="status-desc">Your bypass request has been submitted. You'll be able to go live once an admin approves it.</p>
+                <button id="cancelBypassRequest" class="cancel-bypass-btn">Cancel Request</button>
+              </div>
+              
+              <!-- Approved State -->
+              <div id="bypassApproved" class="bypass-status-card approved hidden">
+                <div class="status-header">
+                  <span class="status-icon">✅</span>
+                  <h4>Bypass Approved!</h4>
+                </div>
+                <p class="status-desc">Your request has been approved. Click below to continue.</p>
+                <button id="continueWithBypass" class="continue-bypass-btn">Continue to Go Live →</button>
+              </div>
+              
+              <!-- Denied State -->
+              <div id="bypassDenied" class="bypass-status-card denied hidden">
+                <div class="status-header">
+                  <span class="status-icon">❌</span>
+                  <h4>Request Denied</h4>
+                </div>
+                <p id="bypassDenialReason" class="status-desc">Your request was not approved at this time.</p>
+                <button id="resubmitBypassRequest" class="resubmit-bypass-btn">Submit New Request</button>
+              </div>
             </div>
           </div>
         </div>
         
-        <div class="eligibility-actions">
-          <a href="/upload-mix" class="cta-btn primary">Upload a DJ Mix →</a>
-          <a href="/dj-mixes" class="cta-btn secondary">View DJ Mixes</a>
-        </div>
-        
-        <div class="eligibility-why">
-          <h4>Why this requirement?</h4>
-          <p>This helps ensure our livestreams feature genuine DJs who play jungle and drum & bass music. Upload a quality mix, get your fans to show some love, and you'll be live in no time! 🔊</p>
+        <div class="eligibility-footer">
+          <div class="eligibility-why">
+            <h4>Why this requirement?</h4>
+            <p>This helps ensure our livestreams feature genuine DJs who play jungle and drum & bass music. Upload a quality mix, get your fans to show some love, and you'll be live in no time! 🔊</p>
+          </div>
         </div>
         
         <div id="adminBypassEligibility" class="admin-bypass hidden">
-          <p style="color: #22c55e; margin-top: 2rem;">Admin detected!</p>
+          <p style="color: #22c55e; margin-top: 1rem;">Admin detected!</p>
           <button id="bypassBtnEligibility" class="bypass-btn">Continue as Admin →</button>
         </div>
       </div>
@@ -321,80 +379,128 @@ export const prerender = false;
 </Layout>
 
 <style>
-  .go-live-main { min-height: 100vh; background: linear-gradient(135deg, #1a1a2e, #2d1f3d); padding: 2rem 1rem; }
-  .container { max-width: 800px; margin: 0 auto; }
-  .auth-check { text-align: center; padding: 4rem 2rem; background: rgba(255,255,255,0.05); border-radius: 16px; }
-  .loading-spinner { width: 48px; height: 48px; border: 4px solid #444; border-top-color: #dc2626; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+  .go-live-main { min-height: 100vh; background: linear-gradient(135deg, #1a1a2e, #2d1f3d); padding: 2rem 1.5rem; display: flex; align-items: center; }
+  .container { max-width: 1200px; margin: 0 auto; width: 100%; }
+  .auth-check { text-align: center; padding: 5rem 2.5rem; background: rgba(255,255,255,0.05); border-radius: 20px; }
+  .loading-spinner { width: 60px; height: 60px; border: 5px solid #444; border-top-color: #dc2626; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1.25rem; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .auth-check p { color: #aaa; }
-  .not-approved { text-align: center; padding: 4rem 2rem; background: rgba(255,255,255,0.05); border-radius: 16px; }
-  .not-approved-icon { font-size: 4rem; margin-bottom: 1.5rem; }
-  .not-approved h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: #fff; margin: 0 0 1rem 0; }
-  .not-approved p { color: #aaa; font-size: 1.125rem; margin-bottom: 2rem; }
+  .auth-check p { color: #aaa; font-size: 1.5rem; }
+  .not-approved { text-align: center; padding: 5rem 2.5rem; background: rgba(255,255,255,0.05); border-radius: 20px; }
+  .not-approved-icon { font-size: 5rem; margin-bottom: 2rem; }
+  .not-approved h1 { font-family: 'Bebas Neue', sans-serif; font-size: 3.5rem; color: #fff; margin: 0 0 1.25rem 0; }
+  .not-approved p { color: #aaa; font-size: 1.5rem; margin-bottom: 2.5rem; }
   
-  /* Eligibility Check Styles */
-  .not-eligible { text-align: center; padding: 3rem 2rem; background: rgba(255,255,255,0.05); border-radius: 16px; max-width: 600px; margin: 0 auto; }
-  .not-eligible-icon { font-size: 4rem; margin-bottom: 1rem; }
-  .not-eligible h1 { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: #fff; margin: 0 0 0.75rem 0; }
-  .not-eligible > p { color: #aaa; font-size: 1.125rem; margin-bottom: 1.5rem; }
-  .eligibility-requirements { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: left; }
-  .eligibility-requirements h3 { color: #fff; font-size: 1rem; margin: 0 0 1rem 0; text-align: center; }
+  /* Eligibility Check - Side by Side - 25% Larger */
+  .not-eligible { background: rgba(255,255,255,0.05); border-radius: 20px; max-width: 1200px; margin: 0 auto; padding: 2rem 2.5rem; }
+  
+  .not-eligible-header { text-align: center; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 1rem; }
+  .not-eligible-icon { font-size: 3.5rem; margin: 0; }
+  .not-eligible-header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: #fff; margin: 0; }
+  .not-eligible-header > p { display: none; }
+  
+  .eligibility-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; text-align: left; }
+  
+  .eligibility-left, .eligibility-right { display: flex; flex-direction: column; }
+  
+  .eligibility-requirements { background: rgba(0,0,0,0.3); border-radius: 16px; padding: 1.5rem 1.75rem; flex: 1; }
+  .eligibility-requirements h3 { color: #fff; font-size: 1.25rem; margin: 0 0 1rem 0; text-align: center; text-transform: uppercase; letter-spacing: 0.04em; }
   .requirement-list { display: flex; flex-direction: column; gap: 0.75rem; }
-  .requirement { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; }
+  .requirement { display: flex; align-items: center; gap: 0.875rem; padding: 1rem 1.25rem; background: rgba(255,255,255,0.05); border-radius: 12px; }
   .requirement.met { background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); }
-  .req-icon { font-size: 1.25rem; }
-  .req-text { color: #ccc; font-size: 0.95rem; }
+  .req-icon { font-size: 1.5rem; flex-shrink: 0; }
+  .req-text { color: #ddd; font-size: 1.25rem; }
   .requirement.met .req-text { color: #4ade80; }
-  .progress-info { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid #444; }
-  .progress-info p { color: #fff; font-size: 0.95rem; margin-bottom: 0.75rem; text-align: center; }
+  .progress-info { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #444; }
+  .progress-info p { color: #fff; font-size: 1.125rem; margin-bottom: 0.5rem; text-align: center; }
   .progress-bar { height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
   .progress-fill { height: 100%; background: linear-gradient(90deg, #dc2626, #f97316); border-radius: 4px; transition: width 0.5s ease; }
-  .eligibility-actions { display: flex; flex-direction: column; gap: 0.75rem; align-items: center; margin-bottom: 1.5rem; }
-  .eligibility-actions .cta-btn { min-width: 250px; text-align: center; }
-  .eligibility-actions .cta-btn.secondary { background: transparent; border: 2px solid #666; color: #ccc; }
-  .eligibility-actions .cta-btn.secondary:hover { border-color: #888; color: #fff; }
-  .eligibility-why { background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 10px; padding: 1.25rem; text-align: left; }
-  .eligibility-why h4 { color: #f87171; font-size: 0.9rem; margin: 0 0 0.5rem 0; }
-  .eligibility-why p { color: #ccc; font-size: 0.875rem; margin: 0; line-height: 1.5; }
   
-  .banned-notice, .hold-notice { background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 8px; padding: 1.5rem; text-align: center; }
+  .eligibility-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.625rem; margin-top: 1rem; }
+  .eligibility-actions .cta-btn { text-align: center; padding: 0.875rem 0.75rem; font-size: 1.0625rem; }
+  .eligibility-actions .cta-btn:first-child { grid-column: span 2; padding: 1rem 1.25rem; font-size: 1.25rem; }
+  .eligibility-actions .cta-btn.secondary { background: transparent; border: 2px solid #555; color: #ccc; }
+  .eligibility-actions .cta-btn.secondary:hover { border-color: #888; color: #fff; }
+  
+  /* Bypass Request Section */
+  .bypass-request-section { height: 100%; }
+  .bypass-form-card, .bypass-status-card { background: rgba(34, 197, 94, 0.1); border: 2px solid rgba(34, 197, 94, 0.4); border-radius: 16px; padding: 1.5rem 1.75rem; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+  .bypass-form-card:hover { border-color: rgba(34, 197, 94, 0.6); }
+  
+  .bypass-header, .status-header { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.625rem; }
+  .bypass-icon, .status-icon { font-size: 2rem; flex-shrink: 0; }
+  .bypass-header h4, .status-header h4 { margin: 0; color: #fff; font-size: 1.5rem; font-weight: 700; }
+  .bypass-desc, .status-desc { color: #bbb; font-size: 1.125rem; margin: 0 0 1rem 0; line-height: 1.5; }
+  
+  .bypass-form-inner { display: flex; flex-direction: column; gap: 0.75rem; flex: 1; }
+  .bypass-form-inner textarea { width: 100%; padding: 0.875rem 1rem; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; color: #fff; font-size: 1.125rem; resize: none; font-family: inherit; box-sizing: border-box; flex: 1; min-height: 70px; }
+  .bypass-form-inner textarea:focus { outline: none; border-color: #22c55e; }
+  .bypass-form-inner textarea::placeholder { color: #777; }
+  
+  .bypass-request-btn { width: 100%; padding: 1rem 1.5rem; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border: none; border-radius: 12px; color: #fff; font-size: 1.25rem; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-top: auto; }
+  .bypass-request-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(34, 197, 94, 0.4); }
+  .bypass-request-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  
+  .bypass-status-card.pending { background: rgba(234, 179, 8, 0.12); border-color: rgba(234, 179, 8, 0.4); }
+  .bypass-status-card.approved { background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.4); }
+  .bypass-status-card.denied { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.4); }
+  
+  .cancel-bypass-btn, .resubmit-bypass-btn { padding: 0.75rem 1rem; background: transparent; border: 2px solid rgba(255,255,255,0.3); border-radius: 10px; color: #fff; font-size: 1.0625rem; cursor: pointer; transition: all 0.2s; width: 100%; margin-top: auto; }
+  .cancel-bypass-btn:hover, .resubmit-bypass-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
+  
+  .continue-bypass-btn { width: 100%; padding: 1rem 1.5rem; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border: none; border-radius: 12px; color: #fff; font-size: 1.25rem; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: auto; }
+  .continue-bypass-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(34, 197, 94, 0.4); }
+  
+  .eligibility-footer { margin-top: 1.5rem; text-align: center; }
+  .eligibility-why { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 1rem 1.5rem; text-align: left; display: inline-block; max-width: 100%; }
+  .eligibility-why h4 { color: #fff; font-family: 'Bebas Neue', sans-serif; font-size: 1.125rem; letter-spacing: 0.04em; margin: 0 0 0.375rem 0; }
+  .eligibility-why p { color: #aaa; font-family: 'Inter', sans-serif; font-size: 1rem; margin: 0; line-height: 1.5; }
+  
+  @media (max-width: 800px) {
+    .eligibility-columns { grid-template-columns: 1fr; gap: 1.25rem; }
+    .not-eligible-header { flex-direction: column; gap: 0.375rem; }
+    .not-eligible-header h1 { font-size: 2.25rem; }
+    .eligibility-actions { grid-template-columns: 1fr; }
+    .eligibility-actions .cta-btn:first-child { grid-column: span 1; }
+  }
+  
+  .banned-notice, .hold-notice { background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 12px; padding: 1.25rem; text-align: center; }
   .hold-notice { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3); }
-  .banned-notice p, .hold-notice p { color: #ccc; margin: 0.5rem 0; }
+  .banned-notice p, .hold-notice p { color: #ccc; margin: 0.5rem 0; font-size: 1.125rem; }
   .ban-reason, .hold-reason { color: #f87171 !important; font-style: italic; }
   .hold-reason { color: #fbbf24 !important; }
-  .contact-info { margin-top: 1rem !important; font-size: 0.875rem; }
+  .contact-info { margin-top: 0.875rem !important; font-size: 1rem; }
   
   .red { color: #dc2626; }
-  .cta-btn { display: inline-block; padding: 1rem 2rem; background: #dc2626; color: #fff; text-decoration: none; font-weight: 600; border-radius: 10px; }
-  .admin-bypass { margin-top: 1.5rem; }
-  .bypass-btn { padding: 1rem 2rem; background: #22c55e; border: none; color: #fff; font-weight: 600; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
-  .bypass-btn:hover { background: #16a34a; transform: scale(1.05); }
-  .dashboard-header { text-align: center; margin-bottom: 2rem; }
-  .dashboard-header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; color: #fff; margin: 0; }
-  .dashboard-header p { color: #bbb; }
-  .stream-status { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; background: rgba(255,255,255,0.08); border: 3px solid #444; border-radius: 12px; margin-bottom: 1.5rem; }
+  .cta-btn { display: inline-block; padding: 1rem 1.5rem; background: #dc2626; color: #fff; text-decoration: none; font-weight: 600; border-radius: 10px; font-size: 1.125rem; }
+  .admin-bypass { margin-top: 1rem; }
+  .bypass-btn { padding: 1.125rem 2rem; background: #22c55e; border: none; color: #fff; font-weight: 600; border-radius: 12px; cursor: pointer; transition: all 0.2s; font-size: 1.25rem; }
+  .bypass-btn:hover { background: #16a34a; transform: scale(1.03); }
+  .dashboard-header { text-align: center; margin-bottom: 2.5rem; }
+  .dashboard-header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 3.75rem; color: #fff; margin: 0; }
+  .dashboard-header p { color: #bbb; font-size: 1.25rem; }
+  .stream-status { display: flex; align-items: center; justify-content: space-between; padding: 1.75rem 2rem; background: rgba(255,255,255,0.08); border: 3px solid #444; border-radius: 16px; margin-bottom: 2rem; }
   .stream-status.live { border-color: #dc2626; background: linear-gradient(90deg, rgba(220,38,38,0.15), rgba(255,255,255,0.05)); }
-  .status-indicator { display: flex; align-items: center; gap: 0.75rem; }
-  .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #888; }
+  .status-indicator { display: flex; align-items: center; gap: 1rem; }
+  .status-dot { width: 16px; height: 16px; border-radius: 50%; background: #888; }
   .stream-status.live .status-dot { background: #dc2626; animation: pulse 1.5s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-  .status-text { font-weight: 700; font-size: 1.125rem; color: #aaa; letter-spacing: 0.1em; }
+  .status-text { font-weight: 700; font-size: 1.5rem; color: #aaa; letter-spacing: 0.1em; }
   .stream-status.live .status-text { color: #dc2626; }
-  .stream-stats { display: flex; gap: 1.5rem; color: #fff; font-weight: 600; }
-  .stream-config { background: rgba(255,255,255,0.06); border: 2px solid #444; border-radius: 16px; padding: 2rem; margin-bottom: 1.5rem; }
-  .config-section { margin-bottom: 2rem; }
-  .config-section h3 { color: #fff; font-size: 1.25rem; margin: 0 0 1rem 0; padding-bottom: 0.75rem; border-bottom: 1px solid #444; }
-  .form-group { margin-bottom: 1.25rem; }
-  .form-group label { display: block; color: #ddd; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; }
-  .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.875rem 1rem; background: rgba(255,255,255,0.08); border: 2px solid #555; border-radius: 8px; color: #fff; font-size: 1rem; }
+  .stream-stats { display: flex; gap: 2rem; color: #fff; font-weight: 600; font-size: 1.25rem; }
+  .stream-config { background: rgba(255,255,255,0.06); border: 2px solid #444; border-radius: 20px; padding: 2.5rem; margin-bottom: 2rem; }
+  .config-section { margin-bottom: 2.5rem; }
+  .config-section h3 { color: #fff; font-size: 1.625rem; margin: 0 0 1.25rem 0; padding-bottom: 1rem; border-bottom: 1px solid #444; }
+  .form-group { margin-bottom: 1.625rem; }
+  .form-group label { display: block; color: #ddd; font-size: 1.125rem; font-weight: 600; margin-bottom: 0.75rem; }
+  .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 1.125rem 1.25rem; background: rgba(255,255,255,0.08); border: 2px solid #555; border-radius: 12px; color: #fff; font-size: 1.25rem; }
   .form-group select { background-color: #1a1a1a; }
-  .form-group select option { background: #1a1a1a; color: #fff; padding: 0.5rem; }
+  .form-group select option { background: #1a1a1a; color: #fff; padding: 0.75rem; }
   .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: #dc2626; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
   @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
-  .stream-instructions { background: linear-gradient(135deg, #252550, #1e1b4b); border: 2px solid #4f46e5; border-radius: 12px; padding: 1.5rem; }
-  .stream-instructions h4 { color: #a5b4fc; margin: 0 0 1rem 0; }
-  .stream-instructions ol { color: #ddd; padding-left: 1.25rem; margin: 0 0 1rem 0; }
+  .stream-instructions { background: linear-gradient(135deg, #252550, #1e1b4b); border: 2px solid #4f46e5; border-radius: 14px; padding: 1.75rem; }
+  .stream-instructions h4 { color: #a5b4fc; margin: 0 0 1.125rem 0; font-size: 1.25rem; }
+  .stream-instructions ol { color: #ddd; padding-left: 1.5rem; margin: 0 0 1.125rem 0; font-size: 1.0625rem; }
   .stream-instructions a { color: #818cf8; }
   .server-details { background: rgba(0,0,0,0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
   .detail-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #444; color: #ccc; }
@@ -518,7 +624,7 @@ export const prerender = false;
   .copy-btn:hover { background: #dc2626; }
 </style>
 
-<script is:inline type="module">
+<script type="module">
   import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
   import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
@@ -541,17 +647,46 @@ export const prerender = false;
   let artistData = null;
   let currentStreamId = null;
   let durationInterval = null;
+  let authInitialized = false;
   
   // Debug helper
   function log(msg, data = null) {
     console.log(`[GoLive] ${msg}`, data || '');
   }
   
+  // Auth timeout - if auth check takes too long, offer refresh
+  let authTimeout = setTimeout(() => {
+    if (!authInitialized) {
+      log('Auth timeout - no response after 5 seconds');
+      const authCheckEl = document.getElementById('authCheck');
+      if (authCheckEl && !authCheckEl.classList.contains('hidden')) {
+        authCheckEl.innerHTML = `
+          <div class="not-approved-icon">⏳</div>
+          <h1>TAKING TOO LONG?</h1>
+          <p>Authentication is taking longer than expected.</p>
+          <button onclick="location.reload()" class="cta-btn" style="margin-top: 1rem;">Refresh Page</button>
+        `;
+      }
+    }
+  }, 5000);
+  
+  // Also handle visibilitychange for tab switching
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && authInitialized) {
+      const user = auth.currentUser;
+      if (user) {
+        log('Page visible again, user:', user.email);
+      }
+    }
+  });
+  
   // Check auth state when page loads
   log('Page loaded, checking auth...');
   
   onAuthStateChanged(auth, async (user) => {
     log('Auth state changed:', user ? user.email : 'no user');
+    authInitialized = true;
+    clearTimeout(authTimeout); // Clear the timeout since auth responded
     
     if (!user) {
       log('No user, redirecting to login...');
@@ -664,6 +799,7 @@ export const prerender = false;
       `;
       if (whySection) whySection.classList.add('hidden');
       if (adminBypass) adminBypass.classList.add('hidden');
+      document.getElementById('bypassRequestSection')?.classList.add('hidden');
       return;
     }
     
@@ -685,6 +821,7 @@ export const prerender = false;
       `;
       if (whySection) whySection.classList.add('hidden');
       if (adminBypass) adminBypass.classList.add('hidden');
+      document.getElementById('bypassRequestSection')?.classList.add('hidden');
       return;
     }
     
@@ -724,7 +861,179 @@ export const prerender = false;
     if (isAdmin && adminBypass) {
       adminBypass.classList.remove('hidden');
     }
+    
+    // Check bypass request status for non-admins
+    if (!isAdmin && (eligibility.reason === 'no_mixes' || eligibility.reason === 'insufficient_likes')) {
+      checkBypassStatus(eligibility);
+      startBypassPolling();
+    }
   }
+  
+  // Bypass Request functionality
+  let currentBypassStatus = null;
+  let bypassPollInterval = null;
+  
+  async function checkBypassStatus(eligibility) {
+    if (!currentUser) return;
+    
+    try {
+      const response = await fetch(`/api/admin/bypass-requests?action=status&userId=${currentUser.uid}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        currentBypassStatus = { ...result, ...eligibility };
+        updateBypassUI(result);
+      }
+    } catch (error) {
+      console.error('[Bypass] Error checking status:', error);
+      // Show the form anyway on error
+      document.getElementById('bypassRequestSection')?.classList.remove('hidden');
+      document.getElementById('bypassRequestForm')?.classList.remove('hidden');
+    }
+  }
+  
+  function updateBypassUI(status) {
+    const section = document.getElementById('bypassRequestSection');
+    const form = document.getElementById('bypassRequestForm');
+    const pending = document.getElementById('bypassPending');
+    const approved = document.getElementById('bypassApproved');
+    const denied = document.getElementById('bypassDenied');
+    
+    if (!section) return;
+    
+    section.classList.remove('hidden');
+    form?.classList.add('hidden');
+    pending?.classList.add('hidden');
+    approved?.classList.add('hidden');
+    denied?.classList.add('hidden');
+    
+    if (!status.hasRequest) {
+      form?.classList.remove('hidden');
+    } else if (status.request?.status === 'pending') {
+      pending?.classList.remove('hidden');
+    } else if (status.request?.status === 'approved') {
+      approved?.classList.remove('hidden');
+    } else if (status.request?.status === 'denied') {
+      denied?.classList.remove('hidden');
+      if (status.request?.denialReason) {
+        const reasonEl = document.getElementById('bypassDenialReason');
+        if (reasonEl) reasonEl.textContent = `Your request was not approved: ${status.request.denialReason}`;
+      }
+    }
+  }
+  
+  function startBypassPolling() {
+    if (bypassPollInterval) return;
+    bypassPollInterval = setInterval(async () => {
+      if (currentBypassStatus?.request?.status === 'pending') {
+        await checkBypassStatus(currentBypassStatus);
+        if (currentBypassStatus?.request?.status === 'approved') {
+          stopBypassPolling();
+        }
+      }
+    }, 30000);
+  }
+  
+  function stopBypassPolling() {
+    if (bypassPollInterval) {
+      clearInterval(bypassPollInterval);
+      bypassPollInterval = null;
+    }
+  }
+  
+  // Submit bypass request
+  document.getElementById('submitBypassRequest')?.addEventListener('click', async () => {
+    const btn = document.getElementById('submitBypassRequest');
+    const reason = document.getElementById('bypassReason')?.value?.trim() || '';
+    
+    if (!currentUser || !artistData) {
+      alert('Please sign in first');
+      return;
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span>Submitting...</span>';
+    
+    try {
+      const response = await fetch('/api/admin/bypass-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'request',
+          userId: currentUser.uid,
+          djName: artistData.artistName || artistData.name || currentUser.email?.split('@')[0],
+          email: currentUser.email,
+          reason: reason || null,
+          mixCount: currentBypassStatus?.mixCount || 0,
+          bestMixLikes: currentBypassStatus?.bestMixLikes || 0
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        await checkBypassStatus(currentBypassStatus || {});
+      } else {
+        alert(result.error || 'Failed to submit request');
+        btn.disabled = false;
+        btn.innerHTML = '<span>🎫 Request Bypass Access</span>';
+      }
+    } catch (error) {
+      console.error('[Bypass] Submit error:', error);
+      alert('Failed to submit request. Please try again.');
+      btn.disabled = false;
+      btn.innerHTML = '<span>🎫 Request Bypass Access</span>';
+    }
+  });
+  
+  // Cancel bypass request
+  document.getElementById('cancelBypassRequest')?.addEventListener('click', async () => {
+    if (!confirm('Cancel your bypass request?')) return;
+    
+    try {
+      const response = await fetch('/api/admin/bypass-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'cancel',
+          userId: currentUser.uid,
+          adminKey: 'fresh-wax-admin-2024'
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        await checkBypassStatus(currentBypassStatus || {});
+      } else {
+        alert(result.error || 'Failed to cancel request');
+      }
+    } catch (error) {
+      console.error('[Bypass] Cancel error:', error);
+    }
+  });
+  
+  // Continue with bypass (after approval)
+  document.getElementById('continueWithBypass')?.addEventListener('click', () => {
+    location.reload();
+  });
+  
+  // Resubmit after denial
+  document.getElementById('resubmitBypassRequest')?.addEventListener('click', async () => {
+    try {
+      await fetch('/api/admin/bypass-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'cancel',
+          userId: currentUser.uid,
+          adminKey: 'fresh-wax-admin-2024'
+        })
+      });
+      await checkBypassStatus(currentBypassStatus || {});
+    } catch (error) {
+      console.error('[Bypass] Resubmit error:', error);
+    }
+  });
   
   function showDashboard() {
     document.getElementById('authCheck').classList.add('hidden');

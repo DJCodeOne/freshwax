@@ -1,6 +1,7 @@
 ---
 // src/components/SEO.astro
-// Production-grade SEO for music e-commerce
+// Enhanced Production-grade SEO for Fresh Wax music e-commerce
+// Based on analysis of high-ranking music and e-commerce sites
 
 interface Props {
   title: string;
@@ -8,7 +9,7 @@ interface Props {
   canonical?: string;
   image?: string;
   imageAlt?: string;
-  type?: 'website' | 'article' | 'product' | 'music.album' | 'profile';
+  type?: 'website' | 'article' | 'product' | 'music.album' | 'profile' | 'video.other';
   noindex?: boolean;
   
   // Product (vinyl, merch)
@@ -17,10 +18,12 @@ interface Props {
     currency?: string;
     availability?: 'InStock' | 'OutOfStock' | 'PreOrder' | 'LimitedAvailability';
     sku?: string;
+    gtin?: string; // Barcode for vinyl
     brand?: string;
     condition?: 'NewCondition' | 'UsedCondition';
     category?: string;
     reviews?: { rating: number; count: number };
+    priceValidUntil?: string;
   };
   
   // Music release
@@ -30,8 +33,41 @@ interface Props {
     genre?: string[];
     label?: string;
     format?: string[];
-    tracks?: { name: string; duration?: string }[];
+    tracks?: { name: string; duration?: string; isrc?: string }[];
     isrc?: string;
+    catalogNumber?: string;
+    bpm?: number;
+  };
+  
+  // DJ Mix / Audio content
+  audio?: {
+    duration: string; // ISO 8601 format e.g., "PT1H30M"
+    artist: string;
+    uploadDate: string;
+    thumbnailUrl?: string;
+    contentUrl?: string;
+    embedUrl?: string;
+    genre?: string[];
+  };
+  
+  // Video content (for video mixes or promo videos)
+  video?: {
+    duration: string;
+    uploadDate: string;
+    thumbnailUrl: string;
+    contentUrl?: string;
+    embedUrl?: string;
+    description?: string;
+  };
+  
+  // Live stream / Event
+  event?: {
+    startDate: string;
+    endDate?: string;
+    performer?: string;
+    eventStatus?: 'EventScheduled' | 'EventRescheduled' | 'EventCancelled' | 'EventPostponed';
+    eventAttendanceMode?: 'OnlineEventAttendanceMode' | 'OfflineEventAttendanceMode' | 'MixedEventAttendanceMode';
+    location?: string;
   };
   
   // Article/blog
@@ -40,6 +76,7 @@ interface Props {
     modifiedTime?: string;
     author?: string;
     tags?: string[];
+    section?: string;
   };
   
   // FAQ Schema
@@ -48,11 +85,25 @@ interface Props {
     answer: string;
   }[];
   
+  // ItemList for category pages
+  itemList?: {
+    name: string;
+    items: {
+      name: string;
+      url: string;
+      image?: string;
+      position: number;
+    }[];
+  };
+  
   // Breadcrumb override (for custom labels)
   breadcrumbs?: {
     name: string;
     url: string;
   }[];
+  
+  // Keywords for meta tag (supplementary)
+  keywords?: string[];
 }
 
 const {
@@ -65,22 +116,47 @@ const {
   noindex = false,
   product,
   music,
+  audio,
+  video,
+  event,
   article,
   faqs,
-  breadcrumbs
+  itemList,
+  breadcrumbs,
+  keywords = []
 } = Astro.props;
 
 const SITE = {
   url: 'https://freshwax.co.uk',
   name: 'Fresh Wax',
+  tagline: 'Jungle & Drum and Bass Music Store',
   locale: 'en_GB',
   twitter: '@freshwaxuk',
-  logo: 'https://freshwax.co.uk/logo.webp'
+  logo: 'https://freshwax.co.uk/logo.webp',
+  email: 'info@freshwax.co.uk',
+  foundingDate: '2024'
 };
 
-const fullTitle = title === 'Home' ? `${SITE.name} | Jungle & Drum and Bass Music Store` : `${title} | ${SITE.name}`;
+// Default keywords for music store
+const defaultKeywords = [
+  'jungle music', 'drum and bass', 'dnb vinyl', 'jungle vinyl',
+  'd&b records', 'breakbeat', 'UK underground music', 'DJ mixes',
+  'electronic music store', 'vinyl records UK', 'digital downloads',
+  'jungle record label', 'drum and bass label'
+];
+
+const allKeywords = [...new Set([...keywords, ...defaultKeywords])];
+
+const fullTitle = title === 'Home' 
+  ? `${SITE.name} | ${SITE.tagline}` 
+  : `${title} | ${SITE.name}`;
+  
 const canonicalUrl = canonical || new URL(Astro.url.pathname, SITE.url).href;
 const imageUrl = image.startsWith('http') ? image : new URL(image, SITE.url).href;
+
+// ===========================================
+// STRUCTURED DATA SCHEMAS
+// ===========================================
 
 // Organization Schema - appears in Google Knowledge Panel
 const organizationSchema = {
@@ -88,6 +164,7 @@ const organizationSchema = {
   "@type": "Store",
   "@id": `${SITE.url}/#organization`,
   "name": SITE.name,
+  "alternateName": ["Fresh Wax Records", "Fresh Wax Music"],
   "url": SITE.url,
   "logo": {
     "@type": "ImageObject",
@@ -96,27 +173,57 @@ const organizationSchema = {
     "height": 512
   },
   "image": SITE.logo,
-  "description": "Independent UK online music store specialising in jungle and drum & bass. Digital downloads, vinyl records, DJ mixes, and merchandise.",
-  "foundingDate": "2024",
+  "description": "Independent UK online music store and record label specialising in jungle and drum & bass. Digital downloads, limited edition vinyl pressings, DJ mixes, and official merchandise.",
+  "foundingDate": SITE.foundingDate,
+  "founder": {
+    "@type": "Person",
+    "name": "Fresh Wax"
+  },
   "address": {
     "@type": "PostalAddress",
     "addressCountry": "GB",
     "addressRegion": "England"
   },
-  "contactPoint": {
+  "contactPoint": [{
     "@type": "ContactPoint",
     "contactType": "customer service",
-    "email": "support@freshwax.co.uk"
-  },
+    "email": SITE.email,
+    "availableLanguage": "English"
+  }, {
+    "@type": "ContactPoint",
+    "contactType": "sales",
+    "email": SITE.email,
+    "availableLanguage": "English"
+  }],
   "sameAs": [
     "https://facebook.com/freshwaxuk",
     "https://instagram.com/freshwaxuk",
     "https://twitter.com/freshwaxuk",
     "https://soundcloud.com/freshwaxuk",
-    "https://www.youtube.com/@freshwaxuk"
+    "https://www.youtube.com/@freshwaxuk",
+    "https://www.mixcloud.com/freshwaxuk",
+    "https://www.discogs.com/label/Fresh+Wax"
   ],
-  "genre": ["Jungle", "Drum and Bass", "Breakbeat"],
-  "knowsAbout": ["Jungle Music", "Drum and Bass", "Vinyl Records", "Electronic Music"]
+  "slogan": "Jungle & Drum and Bass",
+  "knowsAbout": [
+    "Jungle Music", "Drum and Bass", "Breakbeat", "UK Garage",
+    "Vinyl Records", "Electronic Music", "DJ Culture", "Rave Music"
+  ],
+  "hasOfferCatalog": {
+    "@type": "OfferCatalog",
+    "name": "Fresh Wax Music Catalog",
+    "itemListElement": [
+      { "@type": "OfferCatalog", "name": "Vinyl Records" },
+      { "@type": "OfferCatalog", "name": "Digital Downloads" },
+      { "@type": "OfferCatalog", "name": "DJ Mixes" },
+      { "@type": "OfferCatalog", "name": "Merchandise" }
+    ]
+  },
+  "areaServed": {
+    "@type": "Country",
+    "name": "United Kingdom"
+  },
+  "priceRange": "£"
 };
 
 // WebSite Schema - enables sitelinks search box
@@ -126,15 +233,18 @@ const websiteSchema = {
   "@id": `${SITE.url}/#website`,
   "url": SITE.url,
   "name": SITE.name,
+  "alternateName": "Fresh Wax Records",
+  "description": SITE.tagline,
   "publisher": { "@id": `${SITE.url}/#organization` },
-  "potentialAction": {
+  "inLanguage": "en-GB",
+  "potentialAction": [{
     "@type": "SearchAction",
     "target": {
       "@type": "EntryPoint",
       "urlTemplate": `${SITE.url}/releases?search={search_term_string}`
     },
     "query-input": "required name=search_term_string"
-  }
+  }]
 };
 
 // WebPage Schema
@@ -147,10 +257,12 @@ const webpageSchema = {
   "description": description,
   "isPartOf": { "@id": `${SITE.url}/#website` },
   "about": { "@id": `${SITE.url}/#organization` },
-  "inLanguage": "en-GB"
+  "inLanguage": "en-GB",
+  "datePublished": new Date().toISOString(),
+  "dateModified": new Date().toISOString()
 };
 
-// Breadcrumb Schema - use custom breadcrumbs if provided, otherwise auto-generate
+// Breadcrumb Schema
 const pathParts = Astro.url.pathname.split('/').filter(Boolean);
 const breadcrumbSchema = breadcrumbs ? {
   "@context": "https://schema.org",
@@ -178,7 +290,7 @@ const breadcrumbSchema = breadcrumbs ? {
   ]
 } : null;
 
-// FAQ Schema - for pages with FAQs
+// FAQ Schema
 const faqSchema = faqs && faqs.length > 0 ? {
   "@context": "https://schema.org",
   "@type": "FAQPage",
@@ -199,10 +311,18 @@ const productSchema = product ? {
   "name": title,
   "description": description,
   "image": imageUrl,
+  "url": canonicalUrl,
   "brand": {
     "@type": "Brand",
     "name": product.brand || SITE.name
   },
+  "manufacturer": {
+    "@type": "Organization",
+    "name": product.brand || SITE.name
+  },
+  ...(product.sku && { "sku": product.sku }),
+  ...(product.gtin && { "gtin13": product.gtin }),
+  ...(product.category && { "category": product.category }),
   "offers": {
     "@type": "Offer",
     "url": canonicalUrl,
@@ -211,28 +331,43 @@ const productSchema = product ? {
     "availability": `https://schema.org/${product.availability || 'InStock'}`,
     "itemCondition": `https://schema.org/${product.condition || 'NewCondition'}`,
     "seller": { "@id": `${SITE.url}/#organization` },
+    ...(product.priceValidUntil && { "priceValidUntil": product.priceValidUntil }),
     "shippingDetails": {
       "@type": "OfferShippingDetails",
+      "shippingRate": {
+        "@type": "MonetaryAmount",
+        "value": "0",
+        "currency": "GBP"
+      },
       "shippingDestination": {
         "@type": "DefinedRegion",
         "addressCountry": "GB"
       },
       "deliveryTime": {
         "@type": "ShippingDeliveryTime",
-        "handlingTime": { "@type": "QuantitativeValue", "minValue": 0, "maxValue": 1, "unitCode": "d" },
-        "transitTime": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 3, "unitCode": "d" }
+        "handlingTime": { 
+          "@type": "QuantitativeValue", 
+          "minValue": 0, 
+          "maxValue": 2, 
+          "unitCode": "d" 
+        },
+        "transitTime": { 
+          "@type": "QuantitativeValue", 
+          "minValue": 1, 
+          "maxValue": 5, 
+          "unitCode": "d" 
+        }
       }
     },
     "hasMerchantReturnPolicy": {
       "@type": "MerchantReturnPolicy",
+      "applicableCountry": "GB",
       "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
       "merchantReturnDays": 14,
       "returnMethod": "https://schema.org/ReturnByMail",
       "returnFees": "https://schema.org/ReturnShippingFees"
     }
   },
-  ...(product.sku && { "sku": product.sku }),
-  ...(product.category && { "category": product.category }),
   ...(product.reviews && {
     "aggregateRating": {
       "@type": "AggregateRating",
@@ -248,6 +383,7 @@ const productSchema = product ? {
 const musicAlbumSchema = music ? {
   "@context": "https://schema.org",
   "@type": "MusicAlbum",
+  "@id": `${canonicalUrl}#musicalbum`,
   "name": title,
   "description": description,
   "image": imageUrl,
@@ -258,23 +394,37 @@ const musicAlbumSchema = music ? {
   },
   "recordLabel": {
     "@type": "RecordLabel",
-    "name": music.label || SITE.name
+    "name": music.label || SITE.name,
+    "url": SITE.url
   },
   ...(music.releaseDate && { "datePublished": music.releaseDate }),
   ...(music.genre && { "genre": music.genre }),
-  ...(music.format && { "musicReleaseFormat": music.format.map(f => 
-    f.toLowerCase().includes('vinyl') ? 'http://schema.org/VinylFormat' :
-    f.toLowerCase().includes('digital') ? 'http://schema.org/DigitalFormat' :
-    'http://schema.org/CDFormat'
-  )}),
+  ...(music.catalogNumber && { "catalogNumber": music.catalogNumber }),
+  ...(music.format && { 
+    "musicReleaseFormat": music.format.map(f => 
+      f.toLowerCase().includes('vinyl') ? 'http://schema.org/VinylFormat' :
+      f.toLowerCase().includes('digital') ? 'http://schema.org/DigitalFormat' :
+      'http://schema.org/CDFormat'
+    )
+  }),
   ...(music.tracks && {
     "numTracks": music.tracks.length,
-    "track": music.tracks.map((t, i) => ({
-      "@type": "MusicRecording",
-      "name": t.name,
-      "position": i + 1,
-      ...(t.duration && { "duration": t.duration })
-    }))
+    "track": {
+      "@type": "ItemList",
+      "numberOfItems": music.tracks.length,
+      "itemListElement": music.tracks.map((t, i) => ({
+        "@type": "ListItem",
+        "position": i + 1,
+        "item": {
+          "@type": "MusicRecording",
+          "name": t.name,
+          "position": i + 1,
+          ...(t.duration && { "duration": t.duration }),
+          ...(t.isrc && { "isrcCode": t.isrc }),
+          "byArtist": { "@type": "MusicGroup", "name": music.artist }
+        }
+      }))
+    }
   }),
   ...(product && {
     "offers": {
@@ -285,6 +435,98 @@ const musicAlbumSchema = music ? {
       "availability": `https://schema.org/${product.availability || 'InStock'}`
     }
   })
+} : null;
+
+// Audio/Podcast Schema (for DJ Mixes)
+const audioSchema = audio ? {
+  "@context": "https://schema.org",
+  "@type": "AudioObject",
+  "@id": `${canonicalUrl}#audio`,
+  "name": title,
+  "description": description,
+  "duration": audio.duration,
+  "uploadDate": audio.uploadDate,
+  "thumbnailUrl": audio.thumbnailUrl || imageUrl,
+  ...(audio.contentUrl && { "contentUrl": audio.contentUrl }),
+  ...(audio.embedUrl && { "embedUrl": audio.embedUrl }),
+  "author": {
+    "@type": "Person",
+    "name": audio.artist
+  },
+  "creator": {
+    "@type": "Organization",
+    "name": SITE.name
+  },
+  ...(audio.genre && { "genre": audio.genre }),
+  "inLanguage": "en",
+  "isAccessibleForFree": true
+} : null;
+
+// Video Schema
+const videoSchema = video ? {
+  "@context": "https://schema.org",
+  "@type": "VideoObject",
+  "@id": `${canonicalUrl}#video`,
+  "name": title,
+  "description": video.description || description,
+  "thumbnailUrl": video.thumbnailUrl,
+  "uploadDate": video.uploadDate,
+  "duration": video.duration,
+  ...(video.contentUrl && { "contentUrl": video.contentUrl }),
+  ...(video.embedUrl && { "embedUrl": video.embedUrl }),
+  "publisher": { "@id": `${SITE.url}/#organization` }
+} : null;
+
+// Event Schema (for live streams)
+const eventSchema = event ? {
+  "@context": "https://schema.org",
+  "@type": "MusicEvent",
+  "name": title,
+  "description": description,
+  "image": imageUrl,
+  "startDate": event.startDate,
+  ...(event.endDate && { "endDate": event.endDate }),
+  "eventStatus": `https://schema.org/${event.eventStatus || 'EventScheduled'}`,
+  "eventAttendanceMode": `https://schema.org/${event.eventAttendanceMode || 'OnlineEventAttendanceMode'}`,
+  "location": event.eventAttendanceMode === 'OnlineEventAttendanceMode' ? {
+    "@type": "VirtualLocation",
+    "url": `${SITE.url}/live`
+  } : {
+    "@type": "Place",
+    "name": event.location || "Online",
+    "address": { "@type": "PostalAddress", "addressCountry": "GB" }
+  },
+  ...(event.performer && {
+    "performer": {
+      "@type": "MusicGroup",
+      "name": event.performer
+    }
+  }),
+  "organizer": { "@id": `${SITE.url}/#organization` },
+  "isAccessibleForFree": true,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "GBP",
+    "availability": "https://schema.org/InStock",
+    "url": `${SITE.url}/live`,
+    "validFrom": new Date().toISOString()
+  }
+} : null;
+
+// ItemList Schema (for category pages)
+const itemListSchema = itemList ? {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": itemList.name,
+  "numberOfItems": itemList.items.length,
+  "itemListElement": itemList.items.map(item => ({
+    "@type": "ListItem",
+    "position": item.position,
+    "name": item.name,
+    "url": item.url.startsWith('http') ? item.url : `${SITE.url}${item.url}`,
+    ...(item.image && { "image": item.image })
+  }))
 } : null;
 
 // Article Schema
@@ -303,23 +545,46 @@ const articleSchema = article ? {
   },
   "publisher": { "@id": `${SITE.url}/#organization` },
   "mainEntityOfPage": { "@id": `${canonicalUrl}#webpage` },
-  ...(article.tags && { "keywords": article.tags.join(', ') })
+  ...(article.tags && { "keywords": article.tags.join(', ') }),
+  ...(article.section && { "articleSection": article.section })
 } : null;
 ---
 
 <!-- Essential Meta -->
 <title>{fullTitle}</title>
+<meta name="title" content={fullTitle} />
 <meta name="description" content={description} />
 <link rel="canonical" href={canonicalUrl} />
-{noindex && <meta name="robots" content="noindex, nofollow" />}
-{!noindex && <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />}
+
+<!-- Keywords (still useful for some search engines) -->
+{allKeywords.length > 0 && (
+  <meta name="keywords" content={allKeywords.join(', ')} />
+)}
+
+<!-- Robots -->
+{noindex ? (
+  <meta name="robots" content="noindex, nofollow" />
+) : (
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+)}
+<meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+<meta name="bingbot" content="index, follow" />
 
 <!-- Open Graph -->
-<meta property="og:type" content={music ? 'music.album' : product ? 'product' : article ? 'article' : type} />
+<meta property="og:type" content={
+  music ? 'music.album' : 
+  video ? 'video.other' : 
+  product ? 'product' : 
+  article ? 'article' : 
+  event ? 'event' : 
+  type
+} />
 <meta property="og:url" content={canonicalUrl} />
 <meta property="og:title" content={fullTitle} />
 <meta property="og:description" content={description} />
 <meta property="og:image" content={imageUrl} />
+<meta property="og:image:secure_url" content={imageUrl} />
+<meta property="og:image:type" content="image/jpeg" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content={imageAlt} />
@@ -350,6 +615,8 @@ const articleSchema = article ? {
     <meta property="product:price:amount" content={String(product.price)} />
     <meta property="product:price:currency" content={product.currency || 'GBP'} />
     <meta property="product:availability" content={product.availability === 'OutOfStock' ? 'out of stock' : 'in stock'} />
+    {product.brand && <meta property="product:brand" content={product.brand} />}
+    {product.category && <meta property="product:category" content={product.category} />}
   </>
 )}
 
@@ -358,21 +625,55 @@ const articleSchema = article ? {
   <>
     <meta property="article:published_time" content={article.publishedTime} />
     {article.modifiedTime && <meta property="article:modified_time" content={article.modifiedTime} />}
+    <meta property="article:author" content={article.author || SITE.name} />
+    {article.section && <meta property="article:section" content={article.section} />}
     {article.tags?.map(tag => <meta property="article:tag" content={tag} />)}
+  </>
+)}
+
+<!-- Video-specific OG -->
+{video && (
+  <>
+    <meta property="og:video" content={video.embedUrl || video.contentUrl} />
+    <meta property="og:video:type" content="text/html" />
+    <meta property="og:video:width" content="1280" />
+    <meta property="og:video:height" content="720" />
   </>
 )}
 
 <!-- Technical SEO -->
 <meta name="author" content={SITE.name} />
 <meta name="publisher" content={SITE.name} />
+<meta name="copyright" content={`© ${new Date().getFullYear()} ${SITE.name}`} />
 <meta name="theme-color" content="#000000" />
-<meta name="color-scheme" content="light" />
+<meta name="color-scheme" content="dark light" />
 <meta name="format-detection" content="telephone=no" />
 <meta http-equiv="x-ua-compatible" content="IE=edge" />
 
-<!-- Geo -->
+<!-- Geographic SEO -->
 <meta name="geo.region" content="GB" />
 <meta name="geo.placename" content="United Kingdom" />
+<meta name="ICBM" content="51.5074, -0.1278" />
+
+<!-- Language/Content -->
+<meta http-equiv="content-language" content="en-GB" />
+<link rel="alternate" hreflang="en-GB" href={canonicalUrl} />
+<link rel="alternate" hreflang="x-default" href={canonicalUrl} />
+
+<!-- Security Headers -->
+<meta http-equiv="X-Content-Type-Options" content="nosniff" />
+<meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(self), geolocation=(), interest-cohort=()" />
+
+<!-- Mobile / PWA -->
+<meta name="application-name" content={SITE.name} />
+<meta name="apple-mobile-web-app-title" content={SITE.name} />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="msapplication-TileColor" content="#000000" />
+<meta name="msapplication-config" content="/browserconfig.xml" />
 
 <!-- Structured Data -->
 <script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
@@ -381,5 +682,15 @@ const articleSchema = article ? {
 {breadcrumbSchema && <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />}
 {productSchema && <script type="application/ld+json" set:html={JSON.stringify(productSchema)} />}
 {musicAlbumSchema && <script type="application/ld+json" set:html={JSON.stringify(musicAlbumSchema)} />}
+{audioSchema && <script type="application/ld+json" set:html={JSON.stringify(audioSchema)} />}
+{videoSchema && <script type="application/ld+json" set:html={JSON.stringify(videoSchema)} />}
+{eventSchema && <script type="application/ld+json" set:html={JSON.stringify(eventSchema)} />}
+{itemListSchema && <script type="application/ld+json" set:html={JSON.stringify(itemListSchema)} />}
 {articleSchema && <script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />}
 {faqSchema && <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />}
+
+<!-- Google Search Console Verification (add your verification code) -->
+<!-- <meta name="google-site-verification" content="YOUR_VERIFICATION_CODE" /> -->
+
+<!-- Bing Webmaster Verification (add your verification code) -->
+<!-- <meta name="msvalidate.01" content="YOUR_BING_VERIFICATION_CODE" /> -->

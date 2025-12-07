@@ -25,7 +25,7 @@ const navItems = [
   { href: '/admin/users', label: 'Users', icon: '👥', id: 'users' },
   { href: '/admin/merch/manage', label: 'Merch', icon: '👕', id: 'merch' },
   { href: '/admin/dj-mixes/manage', label: 'DJ Mixes', icon: '🎧', id: 'mixes' },
-  { href: '/admin/reports', label: 'Reports', icon: '🚩', id: 'reports', hasAlert: true },
+  { href: '/admin/newsletter', label: 'Newsletter', icon: '📧', id: 'newsletter' },
   { href: '/admin/analytics', label: 'Analytics', icon: '📈', id: 'analytics' },
 ];
 ---
@@ -212,27 +212,6 @@ const navItems = [
     
     .nav-icon {
       font-size: 0.9rem;
-    }
-    
-    .nav-alert-badge {
-      background: var(--accent-red);
-      color: #fff;
-      font-size: 0.65rem;
-      font-weight: 700;
-      min-width: 18px;
-      height: 18px;
-      border-radius: 9px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 5px;
-      margin-left: 4px;
-      animation: pulse-badge 2s infinite;
-    }
-    
-    @keyframes pulse-badge {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.1); }
     }
     
     .topbar-right {
@@ -1228,7 +1207,6 @@ const navItems = [
           >
             <span class="nav-icon">{item.icon}</span>
             <span>{item.label}</span>
-            {item.hasAlert && <span class="nav-alert-badge" id={`alert-${item.id}`} style="display: none;">0</span>}
           </a>
         ))}
       </div>
@@ -1327,28 +1305,6 @@ const navItems = [
         });
       }
     });
-    
-    // Fetch pending reports count for alert badge
-    async function updateReportsAlert() {
-      try {
-        const res = await fetch('/api/reports?alertsOnly=true');
-        const data = await res.json();
-        if (data.success && data.pendingCount > 0) {
-          const badge = document.getElementById('alert-reports');
-          if (badge) {
-            badge.textContent = data.pendingCount > 99 ? '99+' : data.pendingCount;
-            badge.style.display = 'inline-flex';
-          }
-        }
-      } catch (e) {
-        // Silently fail - not critical
-      }
-    }
-    
-    // Check for alerts on page load
-    updateReportsAlert();
-    // Refresh every 60 seconds
-    setInterval(updateReportsAlert, 60000);
   </script>
   
   <slot name="scripts" />

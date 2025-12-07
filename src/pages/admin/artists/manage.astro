@@ -244,10 +244,10 @@ export const prerender = false;
   </Fragment>
 
   <Fragment slot="scripts">
-    <script is:inline type="module">
+    <script type="module">
       import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
       import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-      import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+      import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
       
       const firebaseConfig = {
         apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
@@ -276,7 +276,9 @@ export const prerender = false;
       
       async function loadPartners() {
         try {
-          const snapshot = await getDocs(query(collection(db, 'artists'), orderBy('registeredAt', 'desc')));
+          const INITIAL_LIMIT = 50;
+          const snapshot = await getDocs(query(collection(db, 'artists'), orderBy('registeredAt', 'desc'), limit(INITIAL_LIMIT)));
+          const hasMore = snapshot.size >= INITIAL_LIMIT;
           allPartners = [];
           
           snapshot.forEach(doc => {
@@ -302,6 +304,11 @@ export const prerender = false;
           document.getElementById('loadingState').style.display = 'none';
           document.getElementById('partnersTable').style.display = 'block';
           
+          // Show Load All button if there's more data
+          if (hasMore) {
+            showLoadAllPartnersButton();
+          }
+          
         } catch (error) {
           console.error('Error loading partners:', error);
           document.getElementById('loadingState').innerHTML = `
@@ -311,6 +318,59 @@ export const prerender = false;
               <p>${error.message}</p>
             </div>
           `;
+        }
+      }
+      
+      function showLoadAllPartnersButton() {
+        const toolbar = document.querySelector('.toolbar');
+        if (toolbar && !document.getElementById('loadAllBtn')) {
+          const loadAllBtn = document.createElement('button');
+          loadAllBtn.id = 'loadAllBtn';
+          loadAllBtn.className = 'btn btn-outline';
+          loadAllBtn.innerHTML = '<span>📥</span> Load All';
+          loadAllBtn.onclick = loadAllPartners;
+          loadAllBtn.style.marginLeft = 'auto';
+          toolbar.appendChild(loadAllBtn);
+        }
+      }
+      
+      async function loadAllPartners() {
+        const btn = document.getElementById('loadAllBtn');
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = '<span>⏳</span> Loading...';
+        }
+        
+        try {
+          const snapshot = await getDocs(query(collection(db, 'artists'), orderBy('registeredAt', 'desc')));
+          allPartners = [];
+          
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            allPartners.push({
+              id: doc.id,
+              name: data.artistName || data.name || 'Unknown',
+              fullName: data.name || data.fullName || '',
+              email: data.email || '',
+              phone: data.phone || data.whatsapp || '',
+              isArtist: data.isArtist === true,
+              isMerchSupplier: data.isMerchSupplier === true,
+              approved: data.approved === true,
+              suspended: data.suspended === true,
+              notes: data.adminNotes || '',
+              registeredAt: data.registeredAt?.toDate?.() || new Date(data.registeredAt) || null
+            });
+          });
+          
+          updateStats();
+          renderPartners();
+          if (btn) btn.remove();
+        } catch (error) {
+          console.error('Error loading all partners:', error);
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>📥</span> Load All';
+          }
         }
       }
       

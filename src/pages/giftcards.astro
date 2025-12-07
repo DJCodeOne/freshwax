@@ -5,9 +5,40 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 
 export const prerender = false;
+
+const faqs = [
+  {
+    question: "How do Fresh Wax gift cards work?",
+    answer: "Fresh Wax gift cards are digital vouchers that can be redeemed for store credit. Once redeemed, the value is added to your account balance and can be used towards any purchase including digital downloads, vinyl records, DJ mixes, and merchandise."
+  },
+  {
+    question: "What denominations are available?",
+    answer: "We offer gift cards in £10, £25, £50, and £100 denominations. You can also purchase multiple gift cards for larger amounts."
+  },
+  {
+    question: "Do gift cards expire?",
+    answer: "No, Fresh Wax gift cards never expire. Once purchased, the credit is valid indefinitely and can be redeemed at any time."
+  },
+  {
+    question: "How do I redeem a gift card?",
+    answer: "Sign in to your Fresh Wax account and enter your gift card code in your dashboard or at checkout. The credit will be instantly added to your account balance."
+  },
+  {
+    question: "Can I use a gift card with other payment methods?",
+    answer: "Yes, you can combine gift card credit with other payment methods at checkout. If your order total exceeds your gift card balance, you can pay the remaining amount with a card."
+  },
+  {
+    question: "Can I send a gift card to someone else?",
+    answer: "Absolutely! When purchasing a gift card, you'll receive a unique code that you can share with the recipient via email, message, or printed card. They can then redeem it on their own account."
+  }
+];
 ---
 
-<Layout title="Gift Cards - Fresh Wax">
+<Layout 
+  title="Gift Cards - Fresh Wax" 
+  description="Buy Fresh Wax gift cards for jungle and drum & bass fans. Digital gift cards from £10 to £100, never expire. Perfect for music lovers."
+  faqs={faqs}
+>
   <Header />
   
   <main class="giftcards-main">
@@ -1190,7 +1221,7 @@ export const prerender = false;
   }
 </style>
 
-<script is:inline type="module">
+<script type="module">
   import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 

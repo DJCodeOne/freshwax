@@ -179,107 +179,8 @@ export const POST: APIRoute = async ({ request }) => {
     
     // BOOK A SLOT
     if (action === 'book') {
-      const { djId, djName, djAvatar, crew, representing, startTime, duration, title, genre, description, slotType, relaySourceId } = data;
+      const { djId, djName, djAvatar, crew, representing, startTime, duration, title, genre, description } = data;
       
-      // Handle relay booking differently
-      if (slotType === 'relay') {
-        if (!relaySourceId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Relay source ID required for relay bookings'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-        }
-        
-        // Get relay source info
-        const relayDoc = await db.collection('relaySources').doc(relaySourceId).get();
-        if (!relayDoc.exists) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Relay source not found'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-        }
-        
-        const relayData = relayDoc.data()!;
-        
-        const slotStart = new Date(startTime);
-        const slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000);
-        
-        // Validate booking time
-        if (slotStart.getTime() < now.getTime()) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Cannot book a slot in the past'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-        }
-        
-        // Check for conflicts
-        const conflictQuery = await db.collection('livestreamSlots')
-          .where('status', 'in', ['scheduled', 'in_lobby', 'live', 'queued'])
-          .get();
-        
-        const conflicts = conflictQuery.docs.filter(doc => {
-          const slot = doc.data();
-          const existingStart = new Date(slot.startTime);
-          const existingEnd = new Date(slot.endTime);
-          return (slotStart < existingEnd && slotEnd > existingStart);
-        });
-        
-        if (conflicts.length > 0) {
-          const conflictSlot = conflicts[0].data();
-          const conflictName = conflictSlot.slotType === 'relay' ? conflictSlot.relaySourceName : conflictSlot.djName;
-          return new Response(JSON.stringify({
-            success: false,
-            error: `Time slot conflicts with ${conflictName}'s booking`
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-        }
-        
-        // Create relay slot
-        const newSlot = {
-          slotType: 'relay',
-          relaySourceId,
-          relaySourceName: relayData.name,
-          relayStreamUrl: relayData.streamUrl,
-          relayLogoUrl: relayData.logoUrl || null,
-          djId: djId || 'system', // Who scheduled the relay
-          djName: relayData.name,
-          djAvatar: relayData.logoUrl || null,
-          title: title || `${relayData.name} Relay`,
-          genre: relayData.genre || 'Jungle / D&B',
-          description: description || `Relaying ${relayData.name}`,
-          startTime: slotStart.toISOString(),
-          endTime: slotEnd.toISOString(),
-          duration,
-          status: 'scheduled',
-          streamKey: null, // No stream key for relays
-          rtmpUrl: null,
-          hlsUrl: null,
-          streamSource: 'relay',
-          createdAt: nowISO,
-          updatedAt: nowISO,
-          lobbyJoinedAt: null,
-          wentLiveAt: null,
-          endedAt: null,
-          viewerPeak: 0,
-          totalViews: 0,
-          currentViewers: 0,
-        };
-        
-        const docRef = db.collection('livestreamSlots').doc();
-        await docRef.set(newSlot);
-        
-        invalidateScheduleCache();
-        
-        return new Response(JSON.stringify({
-          success: true,
-          slot: { id: docRef.id, ...newSlot },
-          message: 'Relay slot scheduled successfully'
-        }), { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json' } 
-        });
-      }
-      
-      // Regular DJ booking (existing logic)
       if (!djId || !startTime || !duration) {
         return new Response(JSON.stringify({
           success: false,
@@ -369,7 +270,6 @@ export const POST: APIRoute = async ({ request }) => {
       
       // Create the slot
       const newSlot = {
-        slotType: 'dj', // dj or relay
         djId,
         djName: djName.trim(),
         djAvatar: djAvatar || null,

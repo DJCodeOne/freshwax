@@ -3,6 +3,7 @@
 // - Must have at least 1 DJ mix uploaded
 // - At least one mix must have 10+ likes
 // - OR have an admin-granted bypass
+// - Also returns bypass request status
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument } from '../../lib/firebase-rest';
 
@@ -83,6 +84,9 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
     
+    // Check for pending bypass request
+    const bypassRequest = await getDocument('djBypassRequests', userId);
+    
     // Get all mixes for this user
     const mixes = await queryCollection('dj-mixes', {
       filters: [{ field: 'userId', op: 'EQUAL', value: userId }]
@@ -99,7 +103,13 @@ export const GET: APIRoute = async ({ request }) => {
         message: 'You need to upload at least one DJ mix to Fresh Wax before you can go live.',
         mixCount: 0,
         qualifyingMixes: 0,
-        requiredLikes: REQUIRED_LIKES
+        requiredLikes: REQUIRED_LIKES,
+        // Include bypass request status
+        bypassRequest: bypassRequest ? {
+          status: bypassRequest.status,
+          requestedAt: bypassRequest.requestedAt,
+          denialReason: bypassRequest.denialReason || null
+        } : null
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
@@ -133,7 +143,13 @@ export const GET: APIRoute = async ({ request }) => {
         qualifyingMixes: 0,
         bestMixLikes: bestLikes,
         requiredLikes: REQUIRED_LIKES,
-        likesNeeded: REQUIRED_LIKES - bestLikes
+        likesNeeded: REQUIRED_LIKES - bestLikes,
+        // Include bypass request status
+        bypassRequest: bypassRequest ? {
+          status: bypassRequest.status,
+          requestedAt: bypassRequest.requestedAt,
+          denialReason: bypassRequest.denialReason || null
+        } : null
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }

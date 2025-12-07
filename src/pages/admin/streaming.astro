@@ -42,6 +42,18 @@ export const prerender = false;
       </div>
     </div>
 
+    <!-- Bypass Requests -->
+    <div class="section">
+      <div class="section-header">
+        <h2>🎫 Bypass Requests</h2>
+        <button id="refreshBypassRequests" class="refresh-btn">↻ Refresh</button>
+      </div>
+      <p class="section-desc">DJs requesting immediate access to go live without meeting the 10-likes requirement.</p>
+      <div id="bypassRequests" class="bypass-requests-list">
+        <p class="loading">Loading...</p>
+      </div>
+    </div>
+
     <!-- Recent Streams -->
     <div class="section">
       <h2>📼 Recent Streams</h2>
@@ -190,6 +202,29 @@ export const prerender = false;
           <div class="form-actions">
             <button type="button" class="cancel-btn close-modal">Cancel</button>
             <button type="submit" class="submit-btn">Add DJ</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Deny Bypass Request Modal -->
+    <div id="denyBypassModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Deny Bypass Request</h3>
+          <button class="close-deny-bypass-modal">&times;</button>
+        </div>
+        <form id="denyBypassForm">
+          <input type="hidden" id="denyBypassUserId" />
+          <input type="hidden" id="denyBypassEmail" />
+          <div class="form-group">
+            <label for="denyBypassReason">Reason (optional)</label>
+            <textarea id="denyBypassReason" placeholder="e.g. Please upload more mixes first, need more community engagement" rows="3"></textarea>
+          </div>
+          <p class="info-text">ℹ️ The DJ will see this reason and can submit a new request later.</p>
+          <div class="form-actions">
+            <button type="button" class="cancel-btn close-deny-bypass-modal">Cancel</button>
+            <button type="submit" class="submit-btn deny-submit">Deny Request</button>
           </div>
         </form>
       </div>
@@ -816,6 +851,33 @@ export const prerender = false;
     cursor: pointer;
     color: #666;
   }
+  
+  /* Bypass Request Cards */
+  .bypass-requests-list { display: flex; flex-direction: column; gap: 1rem; }
+  .bypass-request-card { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: 1.25rem; background: #f9fafb; border: 2px solid #e5e5e5; border-radius: 12px; transition: all 0.2s; }
+  .bypass-request-card:hover { border-color: #6366f1; }
+  .bypass-request-card.urgent { border-color: #f59e0b; background: #fffbeb; }
+  .bypass-request-info { flex: 1; min-width: 0; }
+  .bypass-request-info h4 { margin: 0 0 0.5rem 0; font-size: 1.125rem; color: #111; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .bypass-request-info h4 .pending-badge { display: inline-flex; padding: 0.25rem 0.5rem; background: #fef3c7; color: #d97706; font-size: 0.6875rem; font-weight: 700; border-radius: 4px; text-transform: uppercase; }
+  .bypass-request-meta { font-size: 0.875rem; color: #666; margin-bottom: 0.5rem; }
+  .bypass-request-meta span { display: inline-block; margin-right: 1rem; }
+  .bypass-request-reason { font-size: 0.875rem; color: #444; background: #fff; padding: 0.75rem; border-radius: 6px; border: 1px solid #e5e5e5; margin-top: 0.5rem; }
+  .bypass-request-reason strong { color: #666; }
+  .bypass-request-stats { display: flex; gap: 1rem; margin-top: 0.75rem; font-size: 0.8125rem; }
+  .bypass-stat { display: flex; align-items: center; gap: 0.25rem; color: #666; }
+  .bypass-stat .stat-value { font-weight: 600; color: #111; }
+  .bypass-request-actions { display: flex; flex-direction: column; gap: 0.5rem; flex-shrink: 0; }
+  .approve-bypass-btn { padding: 0.625rem 1.25rem; background: #22c55e; border: none; border-radius: 6px; color: #fff; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .approve-bypass-btn:hover { background: #16a34a; }
+  .deny-bypass-btn { padding: 0.625rem 1.25rem; background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; color: #666; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .deny-bypass-btn:hover { background: #fee2e2; border-color: #ef4444; color: #ef4444; }
+  .empty-bypass { text-align: center; padding: 2rem; color: #888; }
+  .empty-bypass .empty-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .close-deny-bypass-modal { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; }
+  .deny-submit { background: #ef4444 !important; }
+  .deny-submit:hover { background: #dc2626 !important; }
+  @media (max-width: 640px) { .bypass-request-card { flex-direction: column; } .bypass-request-actions { flex-direction: row; width: 100%; } .bypass-request-actions button { flex: 1; } }
 </style>
 
 <script>
@@ -827,7 +889,8 @@ export const prerender = false;
       loadApprovedDJs(),
       loadRecentStreams(),
       loadBypassList(),
-      loadModerationList()
+      loadModerationList(),
+      loadBypassRequests()
     ]);
     
     setupEventListeners();
@@ -1397,6 +1460,171 @@ export const prerender = false;
       console.error('Error kicking DJ:', error);
     }
   };
+  
+  // ==========================================
+  // BYPASS REQUEST FUNCTIONS
+  // ==========================================
+  
+  let currentAdminEmail = null;
+  
+  async function loadBypassRequests() {
+    const container = document.getElementById('bypassRequests');
+    
+    try {
+      const response = await fetch('/api/admin/bypass-requests?action=list');
+      const result = await response.json();
+      
+      if (result.success && result.requests?.length > 0) {
+        container.innerHTML = result.requests.map(req => {
+          const requestDate = req.requestedAt ? new Date(req.requestedAt) : null;
+          const timeAgo = requestDate ? getTimeAgo(requestDate) : 'Unknown';
+          const isUrgent = requestDate && (Date.now() - requestDate.getTime()) > 3600000;
+          
+          return `
+            <div class="bypass-request-card ${isUrgent ? 'urgent' : ''}" data-user-id="${req.userId}">
+              <div class="bypass-request-info">
+                <h4>
+                  ${req.djName || 'Unknown DJ'}
+                  <span class="pending-badge">⏳ Pending</span>
+                </h4>
+                <div class="bypass-request-meta">
+                  <span>📧 ${req.email || 'No email'}</span>
+                  <span>🕐 ${timeAgo}</span>
+                </div>
+                ${req.reason ? `
+                  <div class="bypass-request-reason">
+                    <strong>Reason:</strong> ${req.reason}
+                  </div>
+                ` : ''}
+                <div class="bypass-request-stats">
+                  <div class="bypass-stat">
+                    <span>🎵 Mixes:</span>
+                    <span class="stat-value">${req.mixCount || 0}</span>
+                  </div>
+                  <div class="bypass-stat">
+                    <span>❤️ Best mix likes:</span>
+                    <span class="stat-value">${req.bestMixLikes || 0}/10</span>
+                  </div>
+                </div>
+              </div>
+              <div class="bypass-request-actions">
+                <button class="approve-bypass-btn" onclick="approveBypassRequest('${req.userId}', '${req.email || ''}', '${(req.djName || '').replace(/'/g, "\\'")}')">✓ Approve</button>
+                <button class="deny-bypass-btn" onclick="showDenyBypassModal('${req.userId}', '${req.email || ''}')">✗ Deny</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        container.innerHTML = `
+          <div class="empty-bypass">
+            <div class="empty-icon">🎫</div>
+            <p>No pending bypass requests</p>
+          </div>
+        `;
+      }
+    } catch (error) {
+      console.error('Error loading bypass requests:', error);
+      container.innerHTML = '<p class="empty-state">Failed to load bypass requests</p>';
+    }
+  }
+  
+  function getTimeAgo(date) {
+    const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
+  }
+  
+  window.approveBypassRequest = async function(userId, email, djName) {
+    if (!confirm(`Approve bypass request for ${djName || email || userId}? They will be able to go live immediately.`)) return;
+    
+    try {
+      const response = await fetch('/api/admin/bypass-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'approve',
+          userId,
+          adminKey: ADMIN_KEY,
+          adminEmail: currentAdminEmail || 'admin'
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        const card = document.querySelector(`.bypass-request-card[data-user-id="${userId}"]`);
+        if (card) {
+          card.innerHTML = `
+            <div style="padding: 1rem; text-align: center; color: #22c55e; width: 100%;">
+              <span style="font-size: 2rem;">✅</span>
+              <p style="margin: 0.5rem 0 0 0;">Approved! ${djName || 'DJ'} can now go live.</p>
+            </div>
+          `;
+          setTimeout(() => {
+            loadBypassRequests();
+            loadBypassList();
+          }, 2000);
+        }
+      } else {
+        alert('Error: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error approving bypass:', error);
+      alert('Failed to approve request');
+    }
+  };
+  
+  window.showDenyBypassModal = function(userId, email) {
+    document.getElementById('denyBypassUserId').value = userId;
+    document.getElementById('denyBypassEmail').value = email;
+    document.getElementById('denyBypassReason').value = '';
+    document.getElementById('denyBypassModal').classList.remove('hidden');
+  };
+  
+  document.querySelectorAll('.close-deny-bypass-modal').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('denyBypassModal').classList.add('hidden');
+    });
+  });
+  
+  document.getElementById('denyBypassForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const userId = document.getElementById('denyBypassUserId').value;
+    const reason = document.getElementById('denyBypassReason').value.trim();
+    
+    try {
+      const response = await fetch('/api/admin/bypass-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'deny',
+          userId,
+          reason: reason || null,
+          adminKey: ADMIN_KEY,
+          adminEmail: currentAdminEmail || 'admin'
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        document.getElementById('denyBypassModal').classList.add('hidden');
+        loadBypassRequests();
+      } else {
+        alert('Error: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error denying bypass:', error);
+      alert('Failed to deny request');
+    }
+  });
+  
+  document.getElementById('refreshBypassRequests')?.addEventListener('click', () => {
+    loadBypassRequests();
+  });
   
   init();
 </script>

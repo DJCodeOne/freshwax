@@ -4,7 +4,9 @@
 export const prerender = false;
 
 const response = Astro.response;
-response.headers.set('Cache-Control', 'no-store');
+response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+response.headers.set('Pragma', 'no-cache');
+response.headers.set('Expires', '0');
 
 // Get redirect URL from query params - always default to customer dashboard
 const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard';
@@ -14,6 +16,9 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Login - Fresh Wax</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
@@ -130,14 +135,55 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
     </div>
   </div>
 
+  <!-- Clear Cache Script - Runs immediately -->
+  <script>
+    // Clear all Fresh Wax cached data on login page load
+    (function() {
+      try {
+        // Check if remember me was set
+        const rememberMe = localStorage.getItem('fw_remember_me') === 'true';
+        
+        // Clear sessionStorage items (always clear these)
+        const sessionKeys = Object.keys(sessionStorage);
+        sessionKeys.forEach(key => {
+          if (key.startsWith('fw_') || key.includes('fresh') || key.includes('user')) {
+            sessionStorage.removeItem(key);
+          }
+        });
+        
+        // Clear localStorage items (except remember me preferences)
+        const localKeys = Object.keys(localStorage);
+        localKeys.forEach(key => {
+          // Preserve remember me settings
+          if (key === 'fw_remember_me' || key === 'fw_saved_email') {
+            return;
+          }
+          if (key.startsWith('fw_') || key.includes('fresh')) {
+            localStorage.removeItem(key);
+          }
+          // Clear firebase auth if remember me was NOT set
+          if (key.includes('firebase') && !rememberMe) {
+            localStorage.removeItem(key);
+          }
+        });
+        
+        // Clear stale cookies (will be reset on login)
+        document.cookie = 'userId=; path=/; max-age=0';
+        document.cookie = 'customerId=; path=/; max-age=0';
+        document.cookie = 'partnerId=; path=/; max-age=0';
+        
+        console.log('[Login] Cleared cached data, rememberMe:', rememberMe);
+      } catch (e) {
+        console.warn('[Login] Cache clear error:', e);
+      }
+    })();
+  </script>
+
   <!-- Firebase SDK -->
-  <div id="login-config" data-redirect={redirectTo} style="display:none;"></div>
-  <script is:inline type="module">
+  <script type="module" define:vars={{ redirectTo }}>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-    import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+    import { getAuth, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
     import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-    
-    const redirectTo = document.getElementById('login-config').dataset.redirect;
     
     const firebaseConfig = {
       apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
@@ -152,6 +198,17 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
     const auth = getAuth(app);
     const db = getFirestore(app);
     
+    // Restore remember me preference
+    const rememberMeCheckbox = document.getElementById('rememberMe');
+    if (localStorage.getItem('fw_remember_me') === 'true') {
+      rememberMeCheckbox.checked = true;
+    }
+    
+    // Restore saved email if remember me was checked
+    const savedEmail = localStorage.getItem('fw_saved_email');
+    if (savedEmail && rememberMeCheckbox.checked) {
+      document.getElementById('email').value = savedEmail;
+    }
 
     // Toggle password visibility
     document.querySelector('.toggle-password').addEventListener('click', function() {
@@ -199,54 +256,59 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
       submitBtn.querySelector('.btn-loading').classList.remove('hidden');
       
       try {
+        // Sign out any existing user first to ensure clean state
+        if (auth.currentUser) {
+          await auth.signOut();
+        }
+        
         // Set persistence based on remember me
         const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
         await setPersistence(auth, persistence);
         
+        // Save remember me preference
+        if (rememberMe) {
+          localStorage.setItem('fw_remember_me', 'true');
+          localStorage.setItem('fw_saved_email', email);
+        } else {
+          localStorage.removeItem('fw_remember_me');
+          localStorage.removeItem('fw_saved_email');
+        }
         
         // Sign in
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
+        // Cookie expiry: 30 days if remember me, 1 day otherwise
+        const cookieMaxAge = rememberMe ? 2592000 : 86400;
         
         // Everyone goes to customer dashboard
         let finalRedirect = redirectTo;
         
         try {
-          // Check if user has partner status (approved artist/merch)
-          let isApprovedPartner = false;
+          // Use consolidated API endpoint (single call instead of multiple Firebase reads)
+          const profileResponse = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`);
+          const profile = await profileResponse.json();
           
-          // Check unified users collection
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            // Check if they have partner roles AND are approved
-            if (userData.approved && (userData.roles?.artist || userData.roles?.merchSupplier)) {
-              isApprovedPartner = true;
-            }
-          }
-          
-          // Also check legacy artists collection
-          const artistDoc = await getDoc(doc(db, 'artists', user.uid));
-          if (artistDoc.exists()) {
-            const artistData = artistDoc.data();
-            if (artistData.approved) {
-              isApprovedPartner = true;
-            }
+          // Cache the profile in sessionStorage for future use
+          if (profile.success) {
+            try {
+              profile.cachedAt = Date.now();
+              sessionStorage.setItem(`fw_user_profile_${user.uid}`, JSON.stringify(profile));
+            } catch (e) { /* Ignore cache errors */ }
           }
           
           // Set partnerId cookie if they're an approved partner (needed for pro dashboard)
-          if (isApprovedPartner) {
-            document.cookie = `partnerId=${user.uid}; path=/; max-age=86400; SameSite=Lax`;
+          if (profile.success && profile.isPro) {
+            document.cookie = `partnerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
           }
           
           // Always set userId and customerId cookies
-          document.cookie = `userId=${user.uid}; path=/; max-age=86400; SameSite=Lax`;
-          document.cookie = `customerId=${user.uid}; path=/; max-age=86400; SameSite=Lax`;
+          document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
+          document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
           
         } catch (err) {
-          document.cookie = `userId=${user.uid}; path=/; max-age=86400; SameSite=Lax`;
-          document.cookie = `customerId=${user.uid}; path=/; max-age=86400; SameSite=Lax`;
+          document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
+          document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
         }
         
         // Show success
@@ -421,13 +483,19 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
     }
     
     .form-group input[type="email"],
-    .form-group input[type="password"] {
+    .form-group input[type="password"],
+    .form-group input[type="text"] {
       width: 100%;
       padding: 1.125rem 1.25rem;
       font-size: 1.2rem;
       border: 2px solid #e5e5e5;
       background: #fff;
       transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+    
+    .password-wrapper input {
+      padding-right: 3.5rem;
     }
     
     .form-group input:focus {
@@ -437,6 +505,7 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
     
     .password-wrapper {
       position: relative;
+      display: block;
     }
     
     .toggle-password {
@@ -448,11 +517,20 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
       border: none;
       cursor: pointer;
       color: #888;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .toggle-password:hover {
+      color: #333;
     }
     
     .eye-icon {
       width: 24px;
       height: 24px;
+      display: block;
     }
     
     .field-error {
