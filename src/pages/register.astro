@@ -218,7 +218,7 @@ response.headers.set('Cache-Control', 'no-store');
   </div>
 
   <!-- Firebase SDK -->
-  <script type="module">
+  <script is:inline type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
     import { getFirestore, doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';

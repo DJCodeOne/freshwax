@@ -177,6 +177,13 @@ service cloud.firestore {
     
     // ===== ADMIN COLLECTIONS =====
     
+    // Reports - user-submitted reports
+    match /reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow create: if true; // Anyone can submit a report
+      allow update, delete: if isAuthenticated(); // Only admins can modify
+    }
+    
     // Admin settings
     match /settings/{settingId} {
       allow read: if true;

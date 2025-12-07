@@ -37,8 +37,6 @@ interface Props {
     format?: string[];
     tracks?: { name: string; duration?: string }[];
   };
-  faqs?: { question: string; answer: string }[];
-  breadcrumbs?: { name: string; url: string }[];
 }
 
 const { 
@@ -50,9 +48,7 @@ const {
   noindex,
   product,
   article,
-  music,
-  faqs,
-  breadcrumbs
+  music
 } = Astro.props;
 ---
 
@@ -97,8 +93,6 @@ const {
       product={product}
       article={article}
       music={music}
-      faqs={faqs}
-      breadcrumbs={breadcrumbs}
     />
     
     <ViewTransitions />
@@ -148,5 +142,8 @@ const {
     
     <!-- Spacer for mini player -->
     <div id="mini-player-spacer" class="h-0 transition-all duration-300"></div>
+    
+    <!-- Universal Report System -->
+    <script is:inline src="/report-system.js"></script>
   </body>
 </html>
