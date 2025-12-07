@@ -1,79 +1,98 @@
 // src/pages/api/admin/bypass-requests.ts
 // Handle DJ bypass requests - DJs can request immediate access to go live
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
+import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
-const ADMIN_KEY = import.meta.env.ADMIN_API_KEY || 'fresh-wax-admin-2024';
+// Helper to generate a unique ID
+function generateId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
+}
 
-// GET - List bypass requests or check user's request status
-export const GET: APIRoute = async ({ request }) => {
-  const url = new URL(request.url);
-  const action = url.searchParams.get('action');
-  const userId = url.searchParams.get('userId');
+// Helper to make Firestore REST API calls for writes
+async function firestoreWrite(method: 'POST' | 'PATCH' | 'DELETE', path: string, data?: Record<string, any>) {
+  const projectId = import.meta.env.FIREBASE_PROJECT_ID;
+  const apiKey = import.meta.env.FIREBASE_API_KEY;
   
+  if (!projectId || !apiKey) {
+    throw new Error('Firebase configuration missing');
+  }
+
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${path}?key=${apiKey}`;
+
+  const options: RequestInit = {
+    method,
+    headers: { 'Content-Type': 'application/json' }
+  };
+
+  if (data && method !== 'DELETE') {
+    const fields: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data)) {
+      fields[key] = convertToFirestoreValue(value);
+    }
+    options.body = JSON.stringify({ fields });
+  }
+
+  const response = await fetch(url, options);
+  
+  if (!response.ok && response.status !== 404) {
+    const error = await response.text();
+    throw new Error(`Firestore error: ${response.status} - ${error}`);
+  }
+
+  if (method === 'DELETE') {
+    return { success: true };
+  }
+
+  return response.json();
+}
+
+function convertToFirestoreValue(value: any): any {
+  if (value === null || value === undefined) return { nullValue: null };
+  if (typeof value === 'string') return { stringValue: value };
+  if (typeof value === 'number') {
+    return Number.isInteger(value) ? { integerValue: String(value) } : { doubleValue: value };
+  }
+  if (typeof value === 'boolean') return { booleanValue: value };
+  if (value instanceof Date) return { timestampValue: value.toISOString() };
+  if (Array.isArray(value)) {
+    return { arrayValue: { values: value.map(v => convertToFirestoreValue(v)) } };
+  }
+  if (typeof value === 'object') {
+    const mapFields: Record<string, any> = {};
+    for (const [k, v] of Object.entries(value)) {
+      mapFields[k] = convertToFirestoreValue(v);
+    }
+    return { mapValue: { fields: mapFields } };
+  }
+  return { stringValue: String(value) };
+}
+
+// GET - List all pending bypass requests (admin only)
+export const GET: APIRoute = async ({ request }) => {
   try {
-    // Check specific user's request status
-    if (action === 'status' && userId) {
-      const request = await getDocument('djBypassRequests', userId);
-      
-      return new Response(JSON.stringify({
-        success: true,
-        hasRequest: !!request,
-        request: request || null,
-        status: request?.status || null
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // List all pending requests (admin only)
-    if (action === 'list') {
-      const requests = await queryCollection('djBypassRequests', {
-        filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }],
-        orderBy: { field: 'requestedAt', direction: 'DESCENDING' }
-      });
-      
-      return new Response(JSON.stringify({
-        success: true,
-        requests: requests || []
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // List all requests including approved/denied
-    if (action === 'list-all') {
-      const requests = await queryCollection('djBypassRequests', {
-        orderBy: { field: 'requestedAt', direction: 'DESCENDING' },
-        limit: 50
-      });
-      
-      return new Response(JSON.stringify({
-        success: true,
-        requests: requests || []
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid action'
+    // Query pending requests
+    const requests = await queryCollection('bypassRequests', {
+      filters: [
+        { field: 'status', op: 'EQUAL', value: 'pending' }
+      ],
+      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+      limit: 50
+    });
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      requests 
     }), {
-      status: 400,
+      status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-    
-  } catch (error: any) {
-    console.error('[bypass-requests] GET error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: error.message || 'Failed to get bypass requests'
+  } catch (error) {
+    console.error('Error fetching bypass requests:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: 'Failed to fetch requests' 
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -81,210 +100,180 @@ export const GET: APIRoute = async ({ request }) => {
   }
 };
 
-// POST - Submit, approve, deny, or cancel bypass requests
+// POST - Create a new bypass request OR approve/deny a request
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { action, userId, reason, djName, email, adminKey, adminEmail, mixCount, bestMixLikes } = body;
-    
-    // DJ submitting a request
-    if (action === 'request') {
-      if (!userId || !djName) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Missing required fields'
+    const { action, requestId, userId, userEmail, userName, requestType, reason } = body;
+
+    // Admin action: approve or deny
+    if (action === 'approve' || action === 'deny') {
+      if (!requestId) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Request ID required' 
         }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
-      // Check if already has a pending request
-      const existing = await getDocument('djBypassRequests', userId);
-      if (existing && existing.status === 'pending') {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'You already have a pending request'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-      
-      // Check if already has bypass
-      const bypass = await getDocument('djLobbyBypass', userId);
-      if (bypass) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'You already have bypass access'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-      
-      // Create the request
-      await setDocument('djBypassRequests', userId, {
-        userId,
-        djName,
-        email: email || null,
-        reason: reason || null,
-        mixCount: mixCount || 0,
-        bestMixLikes: bestMixLikes || 0,
-        status: 'pending',
-        requestedAt: new Date().toISOString()
-      });
-      
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Bypass request submitted successfully'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // Admin actions require admin key
-    if (!adminKey || adminKey !== ADMIN_KEY) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // Admin approving a request
-    if (action === 'approve') {
-      if (!userId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Missing userId'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-      
+
       // Get the request
-      const request = await getDocument('djBypassRequests', userId);
-      if (!request) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Request not found'
+      const existingRequest = await getDocument('bypassRequests', requestId);
+      if (!existingRequest) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Request not found' 
         }), {
           status: 404,
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
-      // Grant the bypass
-      await setDocument('djLobbyBypass', userId, {
-        userId,
-        email: request.email || null,
-        name: request.djName || null,
-        reason: `Bypass request approved${reason ? ': ' + reason : ''}`,
-        grantedAt: new Date().toISOString(),
-        grantedBy: adminEmail || 'admin'
-      });
-      
-      // Update the request status
-      await setDocument('djBypassRequests', userId, {
-        ...request,
-        status: 'approved',
-        approvedAt: new Date().toISOString(),
-        approvedBy: adminEmail || 'admin',
-        approvalNote: reason || null
-      });
-      
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Bypass request approved'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // Admin denying a request
-    if (action === 'deny') {
-      if (!userId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Missing userId'
+
+      if (action === 'approve') {
+        // Update user's bypassed status
+        const targetUserId = existingRequest.userId;
+        const targetRequestType = existingRequest.requestType || 'go-live';
+        
+        // Get current user data
+        const userData = await getDocument('users', targetUserId);
+        
+        // Update user with bypass permission
+        await firestoreWrite('PATCH', `users/${targetUserId}`, {
+          ...userData,
+          [`${targetRequestType}Bypassed`]: true,
+          bypassedAt: new Date().toISOString(),
+          bypassedBy: 'admin'
+        });
+
+        // Update request status
+        await firestoreWrite('PATCH', `bypassRequests/${requestId}`, {
+          ...existingRequest,
+          status: 'approved',
+          processedAt: new Date().toISOString()
+        });
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: 'Request approved' 
         }), {
-          status: 400,
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } else {
+        // Deny - just update status
+        await firestoreWrite('PATCH', `bypassRequests/${requestId}`, {
+          ...existingRequest,
+          status: 'denied',
+          processedAt: new Date().toISOString()
+        });
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: 'Request denied' 
+        }), {
+          status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
-      // Get the request
-      const request = await getDocument('djBypassRequests', userId);
-      if (!request) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Request not found'
-        }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-      
-      // Update the request status
-      await setDocument('djBypassRequests', userId, {
-        ...request,
-        status: 'denied',
-        deniedAt: new Date().toISOString(),
-        deniedBy: adminEmail || 'admin',
-        denialReason: reason || null
-      });
-      
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Bypass request denied'
+    }
+
+    // User action: create new request
+    if (!userId) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'User ID required' 
       }), {
-        status: 200,
+        status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
-    // DJ canceling their own request
-    if (action === 'cancel') {
-      if (!userId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Missing userId'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-      
-      await deleteDocument('djBypassRequests', userId);
-      
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Bypass request cancelled'
+
+    // Check if user already has a pending request
+    const existingRequests = await queryCollection('bypassRequests', {
+      filters: [
+        { field: 'userId', op: 'EQUAL', value: userId },
+        { field: 'status', op: 'EQUAL', value: 'pending' }
+      ],
+      limit: 1
+    });
+
+    if (existingRequests.length > 0) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'You already have a pending request' 
       }), {
-        status: 200,
+        status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid action'
+
+    // Create new request
+    const newRequestId = generateId();
+    const newRequest = {
+      userId,
+      userEmail: userEmail || '',
+      userName: userName || 'Unknown',
+      requestType: requestType || 'go-live',
+      reason: reason || '',
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+
+    await firestoreWrite('PATCH', `bypassRequests/${newRequestId}`, newRequest);
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'Request submitted successfully',
+      requestId: newRequestId
     }), {
-      status: 400,
+      status: 201,
       headers: { 'Content-Type': 'application/json' }
     });
-    
-  } catch (error: any) {
-    console.error('[bypass-requests] POST error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: error.message || 'Failed to process bypass request'
+
+  } catch (error) {
+    console.error('Error processing bypass request:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: 'Failed to process request' 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};
+
+// DELETE - Remove a bypass request
+export const DELETE: APIRoute = async ({ request }) => {
+  try {
+    const url = new URL(request.url);
+    const requestId = url.searchParams.get('id');
+
+    if (!requestId) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Request ID required' 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    await firestoreWrite('DELETE', `bypassRequests/${requestId}`);
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'Request deleted' 
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('Error deleting bypass request:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: 'Failed to delete request' 
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
