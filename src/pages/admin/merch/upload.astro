@@ -579,13 +579,6 @@ export const prerender = false;
       renderImagePreviews(); // Refresh image color dropdowns
     }
 
-    function getSelectedColors() {
-      return Array.from(document.querySelectorAll('#colorGrid input:checked')).map(cb => ({
-        name: cb.value,
-        hex: cb.dataset.hex
-      }));
-    }
-
     function getSelectedSizes() {
       return Array.from(document.querySelectorAll('#sizesSection input:checked')).map(cb => cb.value);
     }
