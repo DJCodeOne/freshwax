@@ -1,0 +1,273 @@
+---
+// Merch Seller Products - Pro Dashboard
+// View-only - contact admin for changes
+import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+---
+<ProDashboardLayout title="My Products" activeSection="/pro/merch">
+  <div class="merch-page">
+    <div class="page-header">
+      <div class="header-content">
+        <p class="subtitle">View your merchandise on Fresh Wax</p>
+      </div>
+      <div class="header-actions">
+        <a href="/contact" class="btn btn-secondary">Contact to Add Products</a>
+      </div>
+    </div>
+
+    <!-- Info Banner -->
+    <div class="info-banner">
+      <div class="info-icon">ℹ️</div>
+      <div class="info-text">
+        <strong>View Only</strong>
+        <p>To add, edit, or remove products, please contact the Fresh Wax team.</p>
+      </div>
+    </div>
+
+    <!-- Products List -->
+    <div id="productsList" class="products-list">
+      <div class="loading">Loading products...</div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <div class="empty-icon">📦</div>
+      <h3>No products yet</h3>
+      <p>Contact us to get your merchandise listed on Fresh Wax</p>
+      <a href="/contact" class="btn btn-primary">Get Started</a>
+    </div>
+  </div>
+
+  <style>
+    .merch-page {
+      max-width: 1200px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .header-content .subtitle {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--accent, #22c55e);
+      color: #000;
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary, #141414);
+      color: var(--text-primary, #fff);
+      border: 1px solid var(--border-color, #262626);
+    }
+
+    .info-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .info-icon {
+      font-size: 1.25rem;
+    }
+
+    .info-text strong {
+      color: var(--text-primary, #fff);
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .info-text p {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0;
+      font-size: 0.9rem;
+    }
+
+    .products-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .loading {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .product-card {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .product-image {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: var(--bg-tertiary, #1a1a1a);
+    }
+
+    .product-info {
+      padding: 1rem;
+    }
+
+    .product-title {
+      font-weight: 600;
+      color: var(--text-primary, #fff);
+      margin-bottom: 0.25rem;
+    }
+
+    .product-category {
+      font-size: 0.8rem;
+      color: var(--text-secondary, #a3a3a3);
+      margin-bottom: 0.75rem;
+    }
+
+    .product-details {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border-color, #262626);
+    }
+
+    .product-price {
+      font-weight: 600;
+      color: var(--accent, #22c55e);
+    }
+
+    .product-stock {
+      font-size: 0.85rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .stock-ok {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    .stock-low {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+    }
+
+    .stock-out {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: var(--bg-secondary, #141414);
+      border: 1px dashed var(--border-color, #262626);
+      border-radius: 8px;
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .empty-state h3 {
+      color: var(--text-primary, #fff);
+      margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+      color: var(--text-secondary, #a3a3a3);
+      margin-bottom: 1.5rem;
+    }
+  </style>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+    const firebaseConfig = window.FIREBASE_CONFIG || {};
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const productsList = document.getElementById('productsList');
+    const emptyState = document.getElementById('emptyState');
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      await loadProducts(user.uid);
+    });
+
+    async function loadProducts(uid) {
+      try {
+        const productsQuery = query(
+          collection(db, 'merch'),
+          where('sellerId', '==', uid)
+        );
+        const snapshot = await getDocs(productsQuery);
+        
+        if (snapshot.empty) {
+          productsList.style.display = 'none';
+          emptyState.style.display = 'block';
+          return;
+        }
+
+        emptyState.style.display = 'none';
+        productsList.style.display = 'grid';
+
+        productsList.innerHTML = snapshot.docs.map(doc => {
+          const product = doc.data();
+          const stock = product.stock || 0;
+          const stockClass = stock === 0 ? 'stock-out' : stock < 5 ? 'stock-low' : 'stock-ok';
+          const stockText = stock === 0 ? 'Out of stock' : `${stock} in stock`;
+
+          return `
+            <div class="product-card">
+              <img src="${product.image || '/images/placeholder-product.jpg'}" alt="${product.name}" class="product-image">
+              <div class="product-info">
+                <div class="product-title">${product.name || 'Unnamed Product'}</div>
+                <div class="product-category">${product.category || 'Merchandise'}</div>
+                <div class="product-details">
+                  <span class="product-price">£${(product.price || 0).toFixed(2)}</span>
+                  <span class="product-stock ${stockClass}">${stockText}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (error) {
+        console.error('Error loading products:', error);
+        productsList.innerHTML = '<div class="loading">Error loading products</div>';
+      }
+    }
+  </script>
+</ProDashboardLayout>

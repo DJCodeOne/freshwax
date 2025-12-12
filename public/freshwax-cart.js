@@ -140,11 +140,15 @@ function updateCartBadge() {
   
   [desktopCount, mobileCount].forEach(function(el) {
     if (el) {
+      el.textContent = count.toString();
       if (count > 0) {
-        el.textContent = count.toString();
         el.classList.remove('hidden');
+        el.classList.remove('fwx-hidden');
+        el.style.display = '';
       } else {
         el.classList.add('hidden');
+        el.classList.add('fwx-hidden');
+        el.style.display = 'none';
       }
     }
   });

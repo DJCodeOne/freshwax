@@ -4,84 +4,6 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
-
-// Check for customerId cookie (customer login) or partnerId (artist login)
-const customerId = Astro.cookies.get('customerId')?.value || Astro.cookies.get('userId')?.value || '';
-const partnerId = Astro.cookies.get('partnerId')?.value || '';
-const userId = customerId || partnerId;
-
-let user = null;
-let mixes: any[] = [];
-let totalPlays = 0;
-let totalLikes = 0;
-let totalDownloads = 0;
-
-if (userId) {
-  try {
-    // Try to get user info from customers or users collection
-    let userDoc = await db.collection('customers').doc(userId).get();
-    if (!userDoc.exists) {
-      userDoc = await db.collection('users').doc(userId).get();
-    }
-    if (!userDoc.exists && partnerId) {
-      userDoc = await db.collection('artists').doc(partnerId).get();
-    }
-    
-    if (userDoc.exists) {
-      const userData = userDoc.data();
-      user = {
-        id: userDoc.id,
-        name: userData?.fullName || userData?.name || userData?.artistName || 'User',
-        email: userData?.email || ''
-      };
-      
-      // Get all mixes and filter by userId
-      const allMixesSnap = await db.collection('dj-mixes').get();
-      
-      // Filter mixes belonging to this user
-      const userMixDocs = allMixesSnap.docs.filter(doc => {
-        const data = doc.data();
-        return data.userId === userId;
-      });
-      
-      // Sort by createdAt descending
-      userMixDocs.sort((a, b) => {
-        const dateA = a.data().createdAt || a.data().uploadedAt || '';
-        const dateB = b.data().createdAt || b.data().uploadedAt || '';
-        return dateB.localeCompare(dateA);
-      });
-      
-      // Get mixes with stats
-      for (const mixDoc of userMixDocs) {
-        const mixData = { id: mixDoc.id, ...mixDoc.data() };
-        mixes.push(mixData);
-        totalPlays += mixData.plays || 0;
-        totalLikes += mixData.likes || 0;
-        totalDownloads += mixData.downloads || 0;
-      }
-    }
-  } catch (error) {
-    console.error('Error fetching mixes:', error);
-  }
-}
-
-const isLoggedIn = !!user;
-const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num || 0);
 
 export const prerender = false;
 ---
@@ -90,94 +12,62 @@ export const prerender = false;
   <Header />
   
   <main class="mixes-main">
-    {!isLoggedIn ? (
-      <div class="login-prompt">
-        <div class="login-card">
-          <img src="/logo.webp" alt="Fresh Wax" class="login-logo" />
+    <!-- Loading State -->
+    <div id="loadingState" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading your mixes...</p>
+    </div>
+    
+    <!-- Login Prompt (hidden by default) -->
+    <div id="loginPrompt" class="login-prompt hidden">
+      <div class="login-card">
+        <img src="/logo.webp" alt="Fresh Wax" class="login-logo" />
+        <h1>My DJ Mixes</h1>
+        <p>Sign in to manage your DJ mixes.</p>
+        <a href="/login?redirect=/account/mixes" class="btn-primary">Sign In</a>
+      </div>
+    </div>
+    
+    <!-- Main Content (hidden until loaded) -->
+    <div id="mainContent" class="container hidden">
+      <!-- Header -->
+      <div class="page-header">
+        <div class="header-left">
+          <a href="/account/dashboard" class="back-link">← Back to Dashboard</a>
           <h1>My DJ Mixes</h1>
-          <p>Sign in to manage your DJ mixes.</p>
-          <a href="/login?redirect=/account/mixes" class="btn-primary">Sign In</a>
+        </div>
+        <a href="/upload-mix" class="btn-primary">+ Upload New Mix</a>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-bar">
+        <div class="stat">
+          <span class="stat-value" id="statMixCount">0</span>
+          <span class="stat-label">Mixes</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="statPlays">0</span>
+          <span class="stat-label">Total Plays</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="statLikes">0</span>
+          <span class="stat-label">Total Likes</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="statDownloads">0</span>
+          <span class="stat-label">Downloads</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="statComments">0</span>
+          <span class="stat-label">Comments</span>
         </div>
       </div>
-    ) : (
-      <div class="container">
-        <!-- Header -->
-        <div class="page-header">
-          <div class="header-left">
-            <a href="/account/dashboard" class="back-link">← Back to Dashboard</a>
-            <h1>My DJ Mixes</h1>
-          </div>
-          <a href="/upload-mix" class="btn-primary">+ Upload New Mix</a>
-        </div>
 
-        <!-- Stats -->
-        <div class="stats-bar">
-          <div class="stat">
-            <span class="stat-value">{mixes.length}</span>
-            <span class="stat-label">Mixes</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value">{formatNumber(totalPlays)}</span>
-            <span class="stat-label">Total Plays</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value">{formatNumber(totalLikes)}</span>
-            <span class="stat-label">Total Likes</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value">{formatNumber(totalDownloads)}</span>
-            <span class="stat-label">Downloads</span>
-          </div>
-        </div>
-
-        <!-- Mixes List -->
-        {mixes.length === 0 ? (
-          <div class="empty-state">
-            <div class="empty-icon">🎧</div>
-            <h2>No mixes yet</h2>
-            <p>Upload your first DJ mix to share with the community.</p>
-            <a href="/upload-mix" class="btn-primary">Upload Mix</a>
-          </div>
-        ) : (
-          <div class="mixes-grid">
-            {mixes.map((mix) => (
-              <div class="mix-card" data-mix-id={mix.id}>
-                <div class="mix-image">
-                  {mix.imageUrl ? (
-                    <img src={mix.imageUrl} alt={mix.title} />
-                  ) : (
-                    <div class="mix-placeholder">🎧</div>
-                  )}
-                  <div class="mix-overlay">
-                    <a href={`/dj-mix/${mix.id}`} class="overlay-btn" target="_blank">View</a>
-                  </div>
-                </div>
-                <div class="mix-info">
-                  <h3 class="mix-title">{mix.title || 'Untitled Mix'}</h3>
-                  <p class="mix-dj">{mix.djName || mix.dj_name || 'Unknown DJ'}</p>
-                  <p class="mix-genre">{mix.genre || 'Drum & Bass'}</p>
-                  
-                  <div class="mix-stats">
-                    <span>▶ {formatNumber(mix.plays || 0)}</span>
-                    <span>♥ {formatNumber(mix.likes || 0)}</span>
-                    <span>↓ {formatNumber(mix.downloads || 0)}</span>
-                  </div>
-                  
-                  <div class="mix-actions">
-                    <button class="btn-edit" data-mix-id={mix.id} data-title={mix.title} data-description={mix.description || ''}>
-                      ✏️ Edit
-                    </button>
-                    <button class="btn-delete" data-mix-id={mix.id} data-title={mix.title}>
-                      🗑️ Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      <!-- Mixes Container -->
+      <div id="mixesContainer">
+        <!-- Will be populated by JavaScript -->
       </div>
-    )}
+    </div>
 
     <!-- Edit Modal -->
     <div id="editModal" class="modal hidden">
@@ -189,17 +79,68 @@ export const prerender = false;
         </div>
         <form id="editForm">
           <input type="hidden" id="editMixId" name="mixId">
+          
+          <!-- Title -->
           <div class="form-group">
-            <label for="editTitle">Title</label>
-            <input type="text" id="editTitle" name="title" maxlength="30" required>
+            <label for="editTitle">Mix Title</label>
+            <input type="text" id="editTitle" name="title" maxlength="80" placeholder="Enter mix title">
+            <div class="char-counter"><span id="titleCharCount">0</span> / 80 characters</div>
           </div>
+          
+          <!-- Artwork -->
+          <div class="form-group">
+            <label>Cover Artwork</label>
+            <div class="artwork-upload-area">
+              <div class="current-artwork" id="currentArtwork">
+                <img id="artworkPreview" src="" alt="Current artwork">
+              </div>
+              <div class="artwork-controls">
+                <input type="file" id="artworkInput" accept="image/*" hidden>
+                <button type="button" class="btn-change-artwork" id="changeArtworkBtn">📷 Change Cover</button>
+                <p class="artwork-hint">Will be resized to 1200×1200 WebP</p>
+              </div>
+            </div>
+            <div id="artworkProcessing" class="artwork-processing hidden">
+              <span class="processing-spinner"></span> Processing image...
+            </div>
+          </div>
+          
+          <!-- Description -->
           <div class="form-group">
             <label for="editDescription">Description</label>
-            <textarea id="editDescription" name="description" rows="4" maxlength="500"></textarea>
+            <textarea id="editDescription" name="description" rows="4" maxlength="150" placeholder="Add a description..."></textarea>
+            <div class="char-counter"><span id="charCount">0</span> / 150 characters</div>
+            
+            <!-- Emoji Selector -->
+            <div class="emoji-container">
+              <p class="emoji-label">Quick Emojis:</p>
+              <div class="emoji-grid">
+                <button type="button" class="emoji-btn" data-emoji="🔥">🔥</button>
+                <button type="button" class="emoji-btn" data-emoji="🎧">🎧</button>
+                <button type="button" class="emoji-btn" data-emoji="🎵">🎵</button>
+                <button type="button" class="emoji-btn" data-emoji="💯">💯</button>
+                <button type="button" class="emoji-btn" data-emoji="⚡">⚡</button>
+                <button type="button" class="emoji-btn" data-emoji="🚀">🚀</button>
+                <button type="button" class="emoji-btn" data-emoji="💥">💥</button>
+                <button type="button" class="emoji-btn" data-emoji="🎉">🎉</button>
+                <button type="button" class="emoji-btn" data-emoji="🙌">🙌</button>
+                <button type="button" class="emoji-btn" data-emoji="👊">👊</button>
+                <button type="button" class="emoji-btn" data-emoji="🤙">🤙</button>
+                <button type="button" class="emoji-btn" data-emoji="👏">👏</button>
+                <button type="button" class="emoji-btn" data-emoji="💪">💪</button>
+                <button type="button" class="emoji-btn" data-emoji="❤️">❤️</button>
+                <button type="button" class="emoji-btn" data-emoji="🖤">🖤</button>
+                <button type="button" class="emoji-btn" data-emoji="🔊">🔊</button>
+                <button type="button" class="emoji-btn" data-emoji="🎤">🎤</button>
+                <button type="button" class="emoji-btn" data-emoji="✨">✨</button>
+                <button type="button" class="emoji-btn" data-emoji="🥁">🥁</button>
+                <button type="button" class="emoji-btn" data-emoji="⭐">⭐</button>
+              </div>
+            </div>
           </div>
           <div class="modal-actions">
             <button type="button" class="btn-cancel">Cancel</button>
-            <button type="submit" class="btn-save">Save Changes</button>
+            <button type="submit" class="btn-save" id="saveBtn">Save Changes</button>
           </div>
         </form>
       </div>
@@ -226,46 +167,440 @@ export const prerender = false;
   <Footer />
 </Layout>
 
-<script>
+<script type="module">
+  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+  
+  const firebaseConfig = {
+    apiKey: "AIzaSyAp1iG3MmBBCXiKLU1VfadzPjflpCXcUeo",
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store",
+    storageBucket: "freshwax-store.firebasestorage.app",
+    messagingSenderId: "452558527702",
+    appId: "1:452558527702:web:8b23d621bc49550ab0613c"
+  };
+  
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  
+  // Elements
+  const loadingState = document.getElementById('loadingState');
+  const loginPrompt = document.getElementById('loginPrompt');
+  const mainContent = document.getElementById('mainContent');
+  const mixesContainer = document.getElementById('mixesContainer');
+  
+  // Store current user ID for use in form submissions
+  let currentUserId = null;
+  
+  // Format numbers
+  const formatNumber = (num) => (num || 0).toLocaleString();
+  
+  // Check auth state and load mixes
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      console.log('[mixes.astro] User logged in:', user.uid);
+      currentUserId = user.uid;
+      
+      try {
+        const response = await fetch(`/api/get-dj-mixes?userId=${encodeURIComponent(user.uid)}`);
+        const data = await response.json();
+        
+        // Hide loading, show main content
+        loadingState?.classList.add('hidden');
+        mainContent?.classList.remove('hidden');
+        
+        if (data.success && data.mixes) {
+          console.log('[mixes.astro] Loaded', data.mixes.length, 'mixes');
+          
+          // Update stats
+          const totalPlays = data.mixes.reduce((sum, m) => sum + (m.plays || m.playCount || 0), 0);
+          const totalLikes = data.mixes.reduce((sum, m) => sum + (m.likes || m.likeCount || 0), 0);
+          const totalDownloads = data.mixes.reduce((sum, m) => sum + (m.downloads || m.downloadCount || 0), 0);
+          const totalComments = data.mixes.reduce((sum, m) => sum + (m.commentCount || (Array.isArray(m.comments) ? m.comments.length : 0) || 0), 0);
+          
+          document.getElementById('statMixCount').textContent = data.mixes.length;
+          document.getElementById('statPlays').textContent = formatNumber(totalPlays);
+          document.getElementById('statLikes').textContent = formatNumber(totalLikes);
+          document.getElementById('statDownloads').textContent = formatNumber(totalDownloads);
+          document.getElementById('statComments').textContent = formatNumber(totalComments);
+          
+          if (data.mixes.length === 0) {
+            // Show empty state
+            mixesContainer.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-icon">🎧</div>
+                <h2>No mixes yet</h2>
+                <p>Upload your first DJ mix to share with the community.</p>
+                <a href="/upload-mix" class="btn-primary">Upload Mix</a>
+              </div>
+            `;
+          } else {
+            // Render mixes grid
+            mixesContainer.innerHTML = `<div class="mixes-grid">
+              ${data.mixes.map(mix => {
+                const artworkUrl = mix.artwork_url || mix.artworkUrl || mix.artwork || mix.imageUrl || mix.coverUrl || '';
+                const title = (mix.title || 'Untitled Mix').replace(/"/g, '&quot;');
+                const description = (mix.description || '').replace(/"/g, '&quot;');
+                return `
+                  <div class="mix-card" data-mix-id="${mix.id}">
+                    <div class="mix-image">
+                      ${artworkUrl ? `<img src="${artworkUrl}" alt="${title}" />` : '<div class="mix-placeholder">🎧</div>'}
+                      <div class="mix-overlay">
+                        <a href="/dj-mix/${mix.id}" class="overlay-btn" target="_blank">View</a>
+                      </div>
+                    </div>
+                    <div class="mix-info">
+                      <h3 class="mix-title">${mix.title || 'Untitled Mix'}</h3>
+                      <p class="mix-dj">${mix.displayName || mix.djName || mix.artist || 'Unknown DJ'}</p>
+                      <p class="mix-genre">${mix.genre || 'Drum & Bass'}</p>
+                      <div class="mix-stats">
+                        <span>▶ ${formatNumber(mix.plays || mix.playCount)}</span>
+                        <span>♥ ${formatNumber(mix.likes || mix.likeCount)}</span>
+                        <span>↓ ${formatNumber(mix.downloads || mix.downloadCount)}</span>
+                        <span>💬 ${formatNumber(mix.commentCount || (Array.isArray(mix.comments) ? mix.comments.length : 0))}</span>
+                      </div>
+                      <div class="mix-actions">
+                        <a href="/dj-mix/${mix.id}" class="btn-view" target="_blank">👁️ View</a>
+                        <button class="btn-edit" data-mix-id="${mix.id}" data-title="${title}" data-description="${description}" data-artwork="${artworkUrl}">✏️ Edit</button>
+                        <button class="btn-delete" data-mix-id="${mix.id}" data-title="${title}">🗑️ Delete</button>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>`;
+            
+            // Attach event listeners
+            attachMixEventListeners();
+          }
+        } else {
+          mixesContainer.innerHTML = '<div class="empty-state"><p>Could not load mixes</p></div>';
+        }
+      } catch (error) {
+        console.error('[mixes.astro] Error loading mixes:', error);
+        loadingState?.classList.add('hidden');
+        mainContent?.classList.remove('hidden');
+        mixesContainer.innerHTML = '<div class="empty-state"><p>Error loading mixes</p></div>';
+      }
+    } else {
+      // Not logged in
+      console.log('[mixes.astro] User not logged in');
+      loadingState?.classList.add('hidden');
+      loginPrompt?.classList.remove('hidden');
+    }
+  });
+  
+  function attachMixEventListeners() {
+    // Edit buttons
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentMixId = btn.getAttribute('data-mix-id');
+        const title = btn.getAttribute('data-title') || '';
+        const description = btn.getAttribute('data-description') || '';
+        const artwork = btn.getAttribute('data-artwork') || '';
+        
+        document.getElementById('editTitle').value = title;
+        document.getElementById('editDescription').value = description;
+        if (artworkPreview && artwork) {
+          artworkPreview.src = artwork;
+        }
+        updateCharCount();
+        updateTitleCharCount();
+        editModal?.classList.remove('hidden');
+      });
+    });
+    
+    // Delete buttons
+    document.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const mixId = btn.getAttribute('data-mix-id');
+        const title = btn.getAttribute('data-title') || 'this mix';
+        
+        if (!confirm(`Are you sure you want to delete "${title}"? This cannot be undone.`)) {
+          return;
+        }
+        
+        try {
+          const response = await fetch(`/api/delete-mix?id=${encodeURIComponent(mixId)}`, {
+            method: 'DELETE'
+          });
+          const data = await response.json();
+          
+          if (data.success) {
+            const card = document.querySelector(`.mix-card[data-mix-id="${mixId}"]`);
+            card?.remove();
+            
+            // Check if no more mixes
+            if (document.querySelectorAll('.mix-card').length === 0) {
+              location.reload();
+            }
+          } else {
+            alert('Failed to delete mix: ' + (data.error || 'Unknown error'));
+          }
+        } catch (error) {
+          alert('Error deleting mix');
+        }
+      });
+    });
+  }
+
   // Edit modal
   const editModal = document.getElementById('editModal');
   const editForm = document.getElementById('editForm');
   
+  let currentMixId = '';
+  let processedArtworkBlob = null;
+  
+  // Character counter elements
+  const titleInput = document.getElementById('editTitle');
+  const titleCharCountEl = document.getElementById('titleCharCount');
+  const descriptionTextarea = document.getElementById('editDescription');
+  const charCountEl = document.getElementById('charCount');
+  const charCounterEl = document.querySelector('.char-counter');
+  const maxDescChars = 150;
+  const maxTitleChars = 80;
+  
+  // Artwork elements
+  const artworkInput = document.getElementById('artworkInput');
+  const artworkPreview = document.getElementById('artworkPreview');
+  const changeArtworkBtn = document.getElementById('changeArtworkBtn');
+  const artworkProcessing = document.getElementById('artworkProcessing');
+  
+  function updateCharCount() {
+    if (descriptionTextarea && charCountEl) {
+      const count = descriptionTextarea.value.length;
+      charCountEl.textContent = count;
+      
+      // Update color based on count
+      charCounterEl.classList.remove('warning', 'limit');
+      if (count >= maxDescChars) {
+        charCounterEl.classList.add('limit');
+      } else if (count >= maxDescChars * 0.8) {
+        charCounterEl.classList.add('warning');
+      }
+    }
+  }
+  
+  function updateTitleCharCount() {
+    if (titleInput && titleCharCountEl) {
+      titleCharCountEl.textContent = titleInput.value.length;
+    }
+  }
+  
+  // Update count on input
+  descriptionTextarea?.addEventListener('input', updateCharCount);
+  titleInput?.addEventListener('input', updateTitleCharCount);
+  
+  // Artwork change button
+  changeArtworkBtn?.addEventListener('click', () => {
+    artworkInput?.click();
+  });
+  
+  // Process artwork to 1200x1200 WebP under 200KB
+  async function processArtwork(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      img.onload = async () => {
+        // Set canvas to 1200x1200
+        canvas.width = 1200;
+        canvas.height = 1200;
+        
+        // Calculate crop to center square
+        const size = Math.min(img.width, img.height);
+        const offsetX = (img.width - size) / 2;
+        const offsetY = (img.height - size) / 2;
+        
+        // Draw cropped and resized image
+        ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, 1200, 1200);
+        
+        // Try different quality levels to get under 200KB
+        let quality = 0.85;
+        let blob = null;
+        
+        while (quality > 0.1) {
+          blob = await new Promise(res => canvas.toBlob(res, 'image/webp', quality));
+          if (blob.size <= 200 * 1024) break;
+          quality -= 0.1;
+        }
+        
+        // If still too large, reduce canvas size
+        if (blob.size > 200 * 1024) {
+          canvas.width = 800;
+          canvas.height = 800;
+          ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, 800, 800);
+          blob = await new Promise(res => canvas.toBlob(res, 'image/webp', 0.8));
+        }
+        
+        resolve(blob);
+      };
+      
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  
+  // Handle artwork file selection
+  artworkInput?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Show processing state
+    artworkProcessing.classList.remove('hidden');
+    changeArtworkBtn.disabled = true;
+    
+    try {
+      processedArtworkBlob = await processArtwork(file);
+      
+      // Show preview
+      const previewUrl = URL.createObjectURL(processedArtworkBlob);
+      artworkPreview.src = previewUrl;
+      
+      // Update button text
+      const sizeKB = Math.round(processedArtworkBlob.size / 1024);
+      changeArtworkBtn.textContent = `✓ New cover (${sizeKB}KB)`;
+    } catch (error) {
+      console.error('Error processing artwork:', error);
+      alert('Failed to process image. Please try another.');
+      processedArtworkBlob = null;
+    } finally {
+      artworkProcessing.classList.add('hidden');
+      changeArtworkBtn.disabled = false;
+    }
+  });
+  
   document.querySelectorAll('.btn-edit').forEach(btn => {
     btn.addEventListener('click', () => {
       const mixId = btn.getAttribute('data-mix-id');
-      const title = btn.getAttribute('data-title');
-      const description = btn.getAttribute('data-description');
+      const title = btn.getAttribute('data-title') || '';
+      const description = btn.getAttribute('data-description') || '';
+      const artwork = btn.getAttribute('data-artwork') || '';
+      
+      currentMixId = mixId;
+      processedArtworkBlob = null;
       
       document.getElementById('editMixId').value = mixId;
       document.getElementById('editTitle').value = title;
       document.getElementById('editDescription').value = description;
+      
+      // Set artwork preview
+      if (artwork) {
+        artworkPreview.src = artwork;
+        artworkPreview.parentElement.classList.remove('no-artwork');
+      } else {
+        artworkPreview.src = '/default-mix-cover.webp';
+        artworkPreview.parentElement.classList.add('no-artwork');
+      }
+      
+      // Reset artwork button
+      changeArtworkBtn.textContent = '📷 Change Cover';
+      
+      updateCharCount();
+      updateTitleCharCount();
       editModal.classList.remove('hidden');
     });
   });
 
   editForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+    
     const mixId = document.getElementById('editMixId').value;
-    const title = document.getElementById('editTitle').value;
+    const title = document.getElementById('editTitle').value.trim();
     const description = document.getElementById('editDescription').value;
     
     try {
+      // If there's new artwork, upload it first
+      let artworkUrl = null;
+      if (processedArtworkBlob) {
+        console.log('[mixes.astro] Uploading artwork:', {
+          mixId,
+          blobSize: processedArtworkBlob.size,
+          blobType: processedArtworkBlob.type,
+          currentUserId
+        });
+        
+        const formData = new FormData();
+        formData.append('mixId', mixId);
+        formData.append('artwork', processedArtworkBlob, 'artwork.webp');
+        if (currentUserId) {
+          formData.append('userId', currentUserId);
+        }
+        
+        const artworkResponse = await fetch('/api/update-mix-artwork', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const artworkResponseText = await artworkResponse.text();
+        console.log('[mixes.astro] Artwork response:', artworkResponse.status, artworkResponseText);
+        
+        if (artworkResponse.ok) {
+          const artworkResult = JSON.parse(artworkResponseText);
+          artworkUrl = artworkResult.artworkUrl;
+        } else {
+          throw new Error(`Failed to upload artwork: ${artworkResponseText}`);
+        }
+      }
+      
+      // Update mix details
       const response = await fetch('/api/update-mix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mixId, title, description })
+        body: JSON.stringify({ 
+          mixId, 
+          title,
+          description,
+          ...(artworkUrl && { artworkUrl }),
+          ...(currentUserId && { userId: currentUserId })
+        })
       });
       
       if (response.ok) {
         location.reload();
       } else {
-        alert('Failed to update mix');
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to update mix');
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Failed to update mix');
+      alert('Failed to update mix: ' + error.message);
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Changes';
     }
+  });
+
+  // Emoji buttons for description
+  document.querySelectorAll('.emoji-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const emoji = btn.getAttribute('data-emoji');
+      if (descriptionTextarea) {
+        const start = descriptionTextarea.selectionStart;
+        const end = descriptionTextarea.selectionEnd;
+        const text = descriptionTextarea.value;
+        
+        // Check if adding emoji would exceed limit
+        if (text.length - (end - start) + emoji.length > maxDescChars) {
+          return; // Don't add if it would exceed
+        }
+        
+        descriptionTextarea.value = text.substring(0, start) + emoji + text.substring(end);
+        descriptionTextarea.selectionStart = descriptionTextarea.selectionEnd = start + emoji.length;
+        descriptionTextarea.focus();
+        
+        // Update character count
+        updateCharCount();
+        
+        // Visual feedback
+        btn.style.transform = 'scale(1.3)';
+        setTimeout(() => { btn.style.transform = 'scale(1)'; }, 150);
+      }
+    });
   });
 
   // Delete modal
@@ -312,11 +647,38 @@ export const prerender = false;
   });
 </script>
 
-<style>
+<style is:global>
   .mixes-main {
     min-height: 100vh;
-    background: #f5f5f5;
+    background: linear-gradient(to bottom, #000000, #111827, #1f2937);
     padding: 2rem 0;
+  }
+  
+  .hidden {
+    display: none !important;
+  }
+  
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    color: #9ca3af;
+  }
+  
+  .loading-state .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #374151;
+    border-top-color: #dc2626;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 
   .container {
@@ -333,8 +695,9 @@ export const prerender = false;
   }
 
   .login-card {
-    background: #fff;
-    border: 2px solid #000;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 16px;
     padding: 3rem;
     text-align: center;
     max-width: 400px;
@@ -348,26 +711,28 @@ export const prerender = false;
   .login-card h1 {
     font-size: 1.5rem;
     margin-bottom: 0.5rem;
+    color: #fff;
   }
 
   .login-card p {
-    color: #666;
+    color: #9ca3af;
     margin-bottom: 1.5rem;
   }
 
   .btn-primary {
     display: inline-block;
-    background: #000;
+    background: #dc2626;
     color: #fff;
     padding: 0.875rem 1.5rem;
     font-weight: 700;
     text-decoration: none;
     border: none;
+    border-radius: 8px;
     cursor: pointer;
   }
 
   .btn-primary:hover {
-    background: #dc2626;
+    background: #b91c1c;
   }
 
   /* Header */
@@ -381,101 +746,117 @@ export const prerender = false;
   }
 
   .back-link {
-    color: #666;
+    color: #9ca3af;
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 1rem;
     display: block;
     margin-bottom: 0.5rem;
   }
 
   .back-link:hover {
-    color: #000;
+    color: #fff;
   }
 
   .page-header h1 {
-    font-size: 2rem;
-    font-weight: 800;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.75rem;
+    font-weight: 400;
+    color: #fff;
+    letter-spacing: 0.02em;
   }
 
   /* Stats bar */
   .stats-bar {
     display: flex;
     gap: 1px;
-    background: #e5e5e5;
-    border: 2px solid #000;
+    background: #374151;
+    border: 2px solid #374151;
+    border-radius: 12px;
     margin-bottom: 2rem;
+    overflow: hidden;
   }
 
   .stat {
     flex: 1;
-    background: #fff;
-    padding: 1.25rem;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    padding: 1.5rem;
     text-align: center;
   }
 
   .stat-value {
     display: block;
-    font-size: 1.75rem;
-    font-weight: 800;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 400;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 0.25rem;
   }
 
   .stat-label {
-    font-size: 0.8rem;
-    color: #666;
+    font-size: 0.9375rem;
+    color: #9ca3af;
     text-transform: uppercase;
+    letter-spacing: 0.03em;
   }
 
   /* Empty state */
   .empty-state {
-    background: #fff;
-    border: 2px solid #e5e5e5;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 12px;
     padding: 4rem 2rem;
     text-align: center;
   }
 
   .empty-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
+    font-size: 5rem;
+    margin-bottom: 1.25rem;
   }
 
   .empty-state h2 {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+    color: #fff;
   }
 
   .empty-state p {
-    color: #666;
+    font-size: 1.125rem;
+    color: #9ca3af;
     margin-bottom: 1.5rem;
   }
 
   /* Mixes grid */
   .mixes-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.5rem;
   }
 
   .mix-card {
-    background: #fff;
-    border: 2px solid #e5e5e5;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 12px;
     overflow: hidden;
     transition: border-color 0.2s;
   }
 
   .mix-card:hover {
-    border-color: #000;
+    border-color: #dc2626;
   }
 
   .mix-image {
     position: relative;
     aspect-ratio: 1;
-    background: #f0f0f0;
+    background: #000;
   }
 
   .mix-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
   }
 
   .mix-placeholder {
@@ -484,7 +865,7 @@ export const prerender = false;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 4rem;
+    font-size: 5rem;
     background: linear-gradient(135deg, #1a1a1a, #333);
     color: #fff;
   }
@@ -505,73 +886,93 @@ export const prerender = false;
   }
 
   .overlay-btn {
-    background: #fff;
-    color: #000;
-    padding: 0.5rem 1.5rem;
+    background: #dc2626;
+    color: #fff;
+    padding: 0.75rem 2rem;
+    font-size: 1.125rem;
     font-weight: 700;
     text-decoration: none;
+    border-radius: 8px;
   }
 
   .overlay-btn:hover {
-    background: #dc2626;
-    color: #fff;
+    background: #b91c1c;
   }
 
   .mix-info {
-    padding: 1rem;
+    padding: 1.25rem;
   }
 
   .mix-title {
-    font-size: 1rem;
-    font-weight: 700;
-    margin-bottom: 0.25rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.375rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: #fff;
   }
 
   .mix-dj {
-    font-size: 0.85rem;
+    font-size: 1.125rem;
+    font-weight: 600;
     color: #dc2626;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.375rem;
   }
 
   .mix-genre {
-    font-size: 0.8rem;
-    color: #888;
-    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    color: #9ca3af;
+    margin-bottom: 1rem;
   }
 
   .mix-stats {
     display: flex;
-    gap: 1rem;
-    font-size: 0.8rem;
-    color: #666;
-    margin-bottom: 0.75rem;
+    gap: 1.25rem;
+    font-size: 1rem;
+    color: #9ca3af;
+    margin-bottom: 1rem;
   }
 
   .mix-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
 
-  .btn-edit, .btn-delete {
+  .btn-view, .btn-edit, .btn-delete {
     flex: 1;
-    padding: 0.5rem;
-    border: 1px solid #e5e5e5;
-    background: #fff;
-    font-size: 0.8rem;
+    padding: 0.625rem 0.75rem;
+    border: 2px solid #374151;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    color: #fff;
+    font-size: 0.9375rem;
+    font-weight: 600;
     cursor: pointer;
+    border-radius: 6px;
     transition: all 0.2s;
+    text-decoration: none;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  .btn-view:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: #3b82f6;
+    color: #3b82f6;
   }
 
   .btn-edit:hover {
-    background: #f5f5f5;
-    border-color: #000;
+    background: #374151;
+    border-color: #4b5563;
   }
 
   .btn-delete:hover {
-    background: #fee2e2;
+    background: rgba(220, 38, 38, 0.2);
     border-color: #dc2626;
     color: #dc2626;
   }
@@ -593,15 +994,16 @@ export const prerender = false;
   .modal-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.8);
   }
 
   .modal-content {
     position: relative;
-    background: #fff;
-    border: 2px solid #000;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 12px;
     width: 100%;
-    max-width: 500px;
+    max-width: 580px;
     margin: 1rem;
   }
 
@@ -609,13 +1011,14 @@ export const prerender = false;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.5rem;
-    background: #000;
+    padding: 1.25rem 1.75rem;
+    background: #111;
+    border-radius: 10px 10px 0 0;
     color: #fff;
   }
 
   .modal-header h2 {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
   }
 
   .modal-close {
@@ -627,22 +1030,27 @@ export const prerender = false;
   }
 
   .form-group {
-    padding: 0 1.5rem;
-    margin-top: 1.5rem;
+    padding: 0 1.75rem;
+    margin-top: 1.75rem;
+    margin-bottom: 1.5rem;
   }
 
   .form-group label {
     display: block;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
+    color: #fff;
   }
 
   .form-group input,
   .form-group textarea {
     width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #e5e5e5;
+    padding: 0.875rem;
+    border: 2px solid #374151;
+    border-radius: 8px;
+    background: #111827;
+    color: #fff;
     font-size: 1rem;
     font-family: inherit;
   }
@@ -650,46 +1058,113 @@ export const prerender = false;
   .form-group input:focus,
   .form-group textarea:focus {
     outline: none;
-    border-color: #000;
+    border-color: #dc2626;
+  }
+
+  .char-counter {
+    text-align: right;
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.375rem;
+  }
+
+  .char-counter.warning {
+    color: #f59e0b;
+  }
+
+  .char-counter.limit {
+    color: #dc2626;
+  }
+
+  /* Emoji Container */
+  .emoji-container {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: #1f2937;
+    border-radius: 8px;
+    border: 1px solid #374151;
+  }
+
+  .emoji-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 0.25rem;
+  }
+
+  .emoji-btn {
+    background: #374151;
+    border: none;
+    border-radius: 6px;
+    padding: 0.375rem;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .emoji-btn:hover {
+    background: #4b5563;
+    transform: scale(1.15);
+  }
+
+  .emoji-btn:active {
+    transform: scale(0.95);
   }
 
   .delete-warning {
     padding: 1.5rem;
-    color: #666;
+    color: #9ca3af;
   }
 
   .modal-actions {
     display: flex;
     gap: 0.75rem;
-    padding: 1.5rem;
-    border-top: 1px solid #e5e5e5;
+    padding: 1.75rem;
+    border-top: 1px solid #374151;
   }
 
   .btn-cancel {
     flex: 1;
-    padding: 0.75rem;
-    background: #fff;
-    border: 2px solid #e5e5e5;
+    padding: 0.875rem;
+    background: #1f2937;
+    border: 2px solid #374151;
+    color: #fff;
     font-weight: 600;
     cursor: pointer;
+    border-radius: 8px;
+    font-size: 1rem;
   }
 
   .btn-cancel:hover {
-    border-color: #000;
+    border-color: #4b5563;
+    background: #374151;
   }
 
   .btn-save {
     flex: 1;
-    padding: 0.75rem;
-    background: #000;
+    padding: 0.875rem;
+    background: #dc2626;
     color: #fff;
     border: none;
     font-weight: 600;
     cursor: pointer;
+    border-radius: 8px;
+    font-size: 1rem;
   }
 
   .btn-save:hover {
-    background: #dc2626;
+    background: #b91c1c;
   }
 
   .btn-delete-confirm {
@@ -700,10 +1175,100 @@ export const prerender = false;
     border: none;
     font-weight: 600;
     cursor: pointer;
+    border-radius: 8px;
   }
 
   .btn-delete-confirm:hover {
     background: #b91c1c;
+  }
+
+  /* Artwork Upload */
+  .artwork-upload-area {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  
+  .current-artwork {
+    width: 100px;
+    height: 100px;
+    border: 2px solid #374151;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #111;
+  }
+  
+  .current-artwork img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .current-artwork.no-artwork {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+  }
+  
+  .artwork-controls {
+    flex: 1;
+  }
+  
+  .btn-change-artwork {
+    display: inline-block;
+    padding: 0.625rem 1rem;
+    background: #374151;
+    border: 2px solid #4b5563;
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+  
+  .btn-change-artwork:hover {
+    background: #4b5563;
+    border-color: #6b7280;
+  }
+  
+  .btn-change-artwork:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .artwork-hint {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.5rem;
+  }
+  
+  .artwork-processing {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #9ca3af;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+  }
+  
+  .artwork-processing.hidden {
+    display: none;
+  }
+  
+  .processing-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #374151;
+    border-top-color: #dc2626;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 
   @media (max-width: 600px) {
@@ -717,6 +1282,25 @@ export const prerender = false;
     
     .page-header {
       flex-direction: column;
+    }
+    
+    .emoji-grid {
+      grid-template-columns: repeat(5, 1fr);
+    }
+    
+    .emoji-btn {
+      font-size: 1.125rem;
+      padding: 0.3rem;
+    }
+    
+    .artwork-upload-area {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .current-artwork {
+      width: 80px;
+      height: 80px;
     }
   }
 </style>

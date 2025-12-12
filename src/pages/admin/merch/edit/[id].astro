@@ -1,0 +1,698 @@
+---
+// src/pages/admin/merch/edit/[id].astro
+// Merch item edit page - based on releases edit layout
+
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import '../../../../styles/admin/merch/edit.css';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+const { id } = Astro.params;
+
+// Fetch product from Firebase
+let product = null;
+let errorMessage = '';
+let successMessage = '';
+
+// Handle form submission
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    
+    const updateData = {
+      name: formData.get('name') || '',
+      sku: formData.get('sku') || '',
+      description: formData.get('description') || '',
+      category: formData.get('category') || 'general',
+      productType: formData.get('productType') || 'other',
+      price: parseFloat(formData.get('price') as string) || 0,
+      costPrice: parseFloat(formData.get('costPrice') as string) || null,
+      salePrice: parseFloat(formData.get('salePrice') as string) || null,
+      onSale: formData.get('onSale') === 'on',
+      stock: parseInt(formData.get('stock') as string) || 0,
+      supplier: formData.get('supplier') || 'Fresh Wax',
+      supplierCut: parseFloat(formData.get('supplierCut') as string) || null,
+      featured: formData.get('featured') === 'on',
+      published: formData.get('published') === 'on',
+      updatedAt: new Date().toISOString(),
+    };
+    
+    // Remove null values
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === null) delete updateData[key];
+    });
+    
+    await db.collection('merch').doc(id).update(updateData);
+    successMessage = 'Product updated successfully!';
+    
+  } catch (error) {
+    console.error('[MERCH EDIT] Error updating:', error);
+    errorMessage = error instanceof Error ? error.message : 'Failed to update product';
+  }
+}
+
+// Fetch product data
+try {
+  const productDoc = await db.collection('merch').doc(id).get();
+  
+  if (productDoc.exists) {
+    product = { id: productDoc.id, ...productDoc.data() };
+  } else {
+    errorMessage = 'Product not found';
+  }
+} catch (error) {
+  console.error('[MERCH EDIT] Error loading product:', error);
+  errorMessage = error instanceof Error ? error.message : 'Unknown error';
+}
+
+if (!product && !errorMessage) {
+  return Astro.redirect('/admin/merch/manage');
+}
+
+// Format currency
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+};
+
+// Get stock badge class
+const getStockBadgeClass = (stock) => {
+  if (stock === 0) return 'danger';
+  if (stock <= 5) return 'warning';
+  return 'success';
+};
+
+export const prerender = false;
+---
+
+<AdminLayout title={product ? `Edit: ${product.name}` : 'Edit Product'} activeNav="merch">
+  <Fragment slot="actions">
+    <a href="/admin/merch/manage" class="btn btn-secondary">← Back to Products</a>
+    <a href={`/merch/${id}`} class="btn btn-ghost" target="_blank">View on Store</a>
+  </Fragment>
+
+  {errorMessage && (
+    <div class="alert alert-danger" style="margin-bottom: 1.5rem;">
+      <strong>Error:</strong> {errorMessage}
+    </div>
+  )}
+
+  {successMessage && (
+    <div class="alert alert-success" style="margin-bottom: 1.5rem;">
+      <strong>Success:</strong> {successMessage}
+    </div>
+  )}
+
+  {product && (
+    <form method="POST" class="edit-form">
+      <div class="edit-grid">
+        <!-- Left Column: Main Info -->
+        <div class="edit-main">
+          <!-- Basic Info -->
+          <div class="card">
+            <div class="card-header">
+              <h2>Product Details</h2>
+            </div>
+            <div class="card-body">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Product Name</label>
+                  <input type="text" name="name" class="form-input" value={product.name || ''} required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">SKU</label>
+                  <input type="text" name="sku" class="form-input" value={product.sku || ''} />
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Category</label>
+                  <select name="category" class="form-select">
+                    <option value="clothing" selected={product.category === 'clothing'}>Clothing</option>
+                    <option value="accessories" selected={product.category === 'accessories'}>Accessories</option>
+                    <option value="vinyl" selected={product.category === 'vinyl'}>Vinyl</option>
+                    <option value="prints" selected={product.category === 'prints'}>Prints</option>
+                    <option value="general" selected={product.category === 'general'}>General</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Product Type</label>
+                  <select name="productType" class="form-select">
+                    <option value="tshirt" selected={product.productType === 'tshirt' || product.productType === 't-shirt'}>T-Shirt</option>
+                    <option value="hoodie" selected={product.productType === 'hoodie'}>Hoodie</option>
+                    <option value="cap" selected={product.productType === 'cap'}>Cap</option>
+                    <option value="hat" selected={product.productType === 'hat'}>Hat</option>
+                    <option value="poster" selected={product.productType === 'poster'}>Poster</option>
+                    <option value="sticker" selected={product.productType === 'sticker'}>Sticker</option>
+                    <option value="other" selected={product.productType === 'other'}>Other</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-textarea" rows="4">{product.description || ''}</textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Product Images -->
+          <div class="card">
+            <div class="card-header">
+              <h2>Product Images</h2>
+              <span class="image-count" id="imageCount">
+                {(product.images?.length || (product.imageUrl ? 1 : 0))} / 5
+              </span>
+            </div>
+            <div class="card-body">
+              <div class="images-grid" id="imagesGrid">
+                {/* Existing images */}
+                {product.images?.map((img, idx) => (
+                  <div class="image-item" data-index={idx} data-url={typeof img === 'string' ? img : img.url}>
+                    <img src={typeof img === 'string' ? img : img.url} alt={`Product image ${idx + 1}`} />
+                    <div class="image-overlay">
+                      <button type="button" class="image-btn image-btn-primary" title="Set as primary" data-action="primary">
+                        ⭐
+                      </button>
+                      <button type="button" class="image-btn image-btn-delete" title="Delete image" data-action="delete">
+                        🗑️
+                      </button>
+                    </div>
+                    {idx === 0 && <span class="primary-badge">Primary</span>}
+                  </div>
+                ))}
+                
+                {/* Legacy imageUrl if no images array */}
+                {!product.images?.length && product.imageUrl && (
+                  <div class="image-item" data-index="0" data-url={product.imageUrl}>
+                    <img src={product.imageUrl} alt="Product image" />
+                    <div class="image-overlay">
+                      <button type="button" class="image-btn image-btn-delete" title="Delete image" data-action="delete">
+                        🗑️
+                      </button>
+                    </div>
+                    <span class="primary-badge">Primary</span>
+                  </div>
+                )}
+                
+                {/* Upload placeholder - show if less than 5 images */}
+                <div class="image-upload-slot" id="uploadSlot" style={(product.images?.length || (product.imageUrl ? 1 : 0)) >= 5 ? 'display: none;' : ''}>
+                  <input type="file" id="imageUpload" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden />
+                  <label for="imageUpload" class="upload-label">
+                    <span class="upload-icon">📷</span>
+                    <span class="upload-text">Add Image</span>
+                  </label>
+                </div>
+              </div>
+              
+              <p class="form-hint" style="margin-top: 1rem;">
+                Drag to reorder. First image is primary. Max 5 images, 10MB each. 
+                <strong>Images auto-converted to 800×800 WebP.</strong>
+              </p>
+              
+              <!-- Upload progress -->
+              <div id="uploadProgress" class="upload-progress" style="display: none;">
+                <div class="progress-bar">
+                  <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <span class="progress-text" id="progressText">Uploading...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pricing -->
+          <div class="card">
+            <div class="card-header">
+              <h2>Pricing</h2>
+            </div>
+            <div class="card-body">
+              <div class="form-row-3">
+                <div class="form-group">
+                  <label class="form-label">Cost Price (£)</label>
+                  <input type="number" name="costPrice" class="form-input" step="0.01" min="0" value={product.costPrice || ''} />
+                  <span class="form-hint">Your cost per unit</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Retail Price (£)</label>
+                  <input type="number" name="price" class="form-input" step="0.01" min="0" value={product.price || 0} required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Sale Price (£)</label>
+                  <input type="number" name="salePrice" class="form-input" step="0.01" min="0" value={product.salePrice || ''} />
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" name="onSale" checked={product.onSale} />
+                  <span>On Sale</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stock & Inventory -->
+          <div class="card">
+            <div class="card-header">
+              <h2>Stock & Inventory</h2>
+            </div>
+            <div class="card-body">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Stock Quantity</label>
+                  <input type="number" name="stock" class="form-input" min="0" value={product.stock || 0} />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Supplier</label>
+                  <input type="text" name="supplier" class="form-input" value={product.supplier || 'Fresh Wax'} />
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">Supplier Cut (%)</label>
+                <input type="number" name="supplierCut" class="form-input" step="0.1" min="0" max="100" value={product.supplierCut || ''} style="max-width: 150px;" />
+                <span class="form-hint">Percentage of sale that goes to supplier</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div class="card">
+            <div class="card-header">
+              <h2>Status</h2>
+            </div>
+            <div class="card-body">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" name="published" checked={product.published !== false} />
+                    <span>Published (visible in store)</span>
+                  </label>
+                </div>
+                <div class="form-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" name="featured" checked={product.featured} />
+                    <span>Featured Product</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Preview & Actions -->
+        <div class="edit-sidebar">
+          <!-- Preview Card -->
+          <div class="card preview-card">
+            <div class="preview-image">
+              {(product.images?.[0]?.url || product.images?.[0] || product.imageUrl) ? (
+                <img src={typeof product.images?.[0] === 'string' ? product.images[0] : (product.images?.[0]?.url || product.imageUrl)} alt={product.name} />
+              ) : (
+                <div class="placeholder">👕</div>
+              )}
+            </div>
+            <div class="card-body">
+              <h3 class="preview-title">{product.name}</h3>
+              <p class="preview-sku">{product.sku || product.id}</p>
+              <div class="preview-price">
+                {product.onSale && product.salePrice ? (
+                  <span class="sale-price">{formatCurrency(product.salePrice)}</span>
+                ) : null}
+                <span class={product.onSale ? 'original-price strikethrough' : 'current-price'}>
+                  {formatCurrency(product.price)}
+                </span>
+              </div>
+              <div class="preview-stock">
+                <span class={`badge badge-${getStockBadgeClass(product.stock)}`}>
+                  {product.stock} in stock
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="card">
+            <div class="card-body">
+              <button type="submit" class="btn btn-primary btn-block">
+                💾 Save Changes
+              </button>
+              <a href="/admin/merch/manage" class="btn btn-secondary btn-block" style="margin-top: 0.5rem;">
+                Cancel
+              </a>
+            </div>
+          </div>
+
+          <!-- Danger Zone -->
+          <div class="card" style="border-color: #dc2626;">
+            <div class="card-header" style="background: #dc2626;">
+              <h2>Danger Zone</h2>
+            </div>
+            <div class="card-body">
+              <button type="button" class="btn btn-danger btn-block" onclick="deleteProduct()">
+                🗑️ Delete Product
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  )}
+</AdminLayout>
+
+
+<script define:vars={{ id, product }}>
+  // Get initial images array
+  let images = [];
+  if (product.images && product.images.length > 0) {
+    images = product.images.map((img, idx) => ({
+      url: typeof img === 'string' ? img : img.url,
+      key: typeof img === 'string' ? null : img.key,
+      index: idx
+    }));
+  } else if (product.imageUrl) {
+    images = [{ url: product.imageUrl, key: null, index: 0 }];
+  }
+  
+  const MAX_IMAGES = 5;
+  const imagesGrid = document.getElementById('imagesGrid');
+  const uploadSlot = document.getElementById('uploadSlot');
+  const imageUpload = document.getElementById('imageUpload');
+  const imageCountEl = document.getElementById('imageCount');
+  const uploadProgress = document.getElementById('uploadProgress');
+  const progressFill = document.getElementById('progressFill');
+  const progressText = document.getElementById('progressText');
+  
+  function updateImageCount() {
+    imageCountEl.textContent = `${images.length} / ${MAX_IMAGES}`;
+    uploadSlot.style.display = images.length >= MAX_IMAGES ? 'none' : 'flex';
+  }
+  
+  function renderImages() {
+    // Remove all existing image items (but keep upload slot)
+    const existingItems = imagesGrid.querySelectorAll('.image-item');
+    existingItems.forEach(item => item.remove());
+    
+    // Re-render images
+    images.forEach((img, idx) => {
+      const div = document.createElement('div');
+      div.className = 'image-item';
+      div.draggable = true;
+      div.dataset.index = idx;
+      div.dataset.url = img.url;
+      
+      div.innerHTML = `
+        <img src="${img.url}" alt="Product image ${idx + 1}" />
+        <div class="image-overlay">
+          <button type="button" class="image-btn image-btn-primary" title="Set as primary" data-action="primary">⭐</button>
+          <button type="button" class="image-btn image-btn-delete" title="Delete image" data-action="delete">🗑️</button>
+        </div>
+        ${idx === 0 ? '<span class="primary-badge">Primary</span>' : ''}
+      `;
+      
+      // Insert before upload slot
+      imagesGrid.insertBefore(div, uploadSlot);
+      
+      // Add event listeners
+      setupImageItemEvents(div, idx);
+    });
+    
+    updateImageCount();
+    updatePreviewImage();
+  }
+  
+  function setupImageItemEvents(item, idx) {
+    // Delete button
+    item.querySelector('[data-action="delete"]').addEventListener('click', () => deleteImage(idx));
+    
+    // Primary button
+    const primaryBtn = item.querySelector('[data-action="primary"]');
+    if (primaryBtn) {
+      primaryBtn.addEventListener('click', () => setPrimaryImage(idx));
+    }
+    
+    // Drag events
+    item.addEventListener('dragstart', handleDragStart);
+    item.addEventListener('dragend', handleDragEnd);
+    item.addEventListener('dragover', handleDragOver);
+    item.addEventListener('drop', handleDrop);
+    item.addEventListener('dragleave', handleDragLeave);
+  }
+  
+  // Drag and Drop
+  let draggedIndex = null;
+  
+  function handleDragStart(e) {
+    draggedIndex = parseInt(this.dataset.index);
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  }
+  
+  function handleDragEnd(e) {
+    this.classList.remove('dragging');
+    document.querySelectorAll('.image-item').forEach(item => {
+      item.classList.remove('drag-over');
+    });
+  }
+  
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    this.classList.add('drag-over');
+  }
+  
+  function handleDragLeave(e) {
+    this.classList.remove('drag-over');
+  }
+  
+  function handleDrop(e) {
+    e.preventDefault();
+    this.classList.remove('drag-over');
+    
+    const dropIndex = parseInt(this.dataset.index);
+    if (draggedIndex === null || draggedIndex === dropIndex) return;
+    
+    // Reorder array
+    const [removed] = images.splice(draggedIndex, 1);
+    images.splice(dropIndex, 0, removed);
+    
+    // Re-render and save
+    renderImages();
+    saveImages();
+  }
+  
+  // Delete image
+  async function deleteImage(idx) {
+    if (!confirm('Delete this image?')) return;
+    
+    const img = images[idx];
+    
+    // Remove from array
+    images.splice(idx, 1);
+    renderImages();
+    
+    // Save to Firebase
+    await saveImages();
+  }
+  
+  // Set primary image (move to first position)
+  async function setPrimaryImage(idx) {
+    if (idx === 0) return;
+    
+    const [removed] = images.splice(idx, 1);
+    images.unshift(removed);
+    
+    renderImages();
+    await saveImages();
+  }
+  
+  // Update preview image in sidebar
+  function updatePreviewImage() {
+    const previewContainer = document.querySelector('.preview-image');
+    if (!previewContainer) return;
+    
+    let previewImg = previewContainer.querySelector('img');
+    const previewPlaceholder = previewContainer.querySelector('.placeholder');
+    
+    if (images.length > 0) {
+      const imageUrl = images[0].url;
+      
+      if (previewImg) {
+        previewImg.src = imageUrl;
+      } else {
+        // Create img element if it doesn't exist
+        previewImg = document.createElement('img');
+        previewImg.src = imageUrl;
+        previewImg.alt = 'Product preview';
+        
+        if (previewPlaceholder) {
+          previewPlaceholder.replaceWith(previewImg);
+        } else {
+          previewContainer.innerHTML = '';
+          previewContainer.appendChild(previewImg);
+        }
+      }
+    } else {
+      // No images - show placeholder
+      if (previewImg) {
+        previewImg.remove();
+      }
+      if (!previewPlaceholder) {
+        previewContainer.innerHTML = '<div class="placeholder">👕</div>';
+      }
+    }
+  }
+  
+  // Upload new images
+  imageUpload.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    // Check limit
+    const remaining = MAX_IMAGES - images.length;
+    if (remaining <= 0) {
+      alert('Maximum 5 images allowed');
+      return;
+    }
+    
+    const filesToUpload = files.slice(0, remaining);
+    
+    uploadProgress.style.display = 'block';
+    progressFill.style.width = '0%';
+    progressText.textContent = `Uploading 0 / ${filesToUpload.length}...`;
+    
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const file = filesToUpload[i];
+      
+      // Validate
+      if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+        alert(`Invalid file type: ${file.name}`);
+        continue;
+      }
+      
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`File too large: ${file.name} (max 10MB)`);
+        continue;
+      }
+      
+      progressText.textContent = `Processing ${i + 1} / ${filesToUpload.length}...`;
+      
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', `merch/${id}`);
+        formData.append('filename', `${Date.now()}_${i}.webp`);
+        
+        const response = await fetch('/api/upload-merch-image', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          images.push({
+            url: result.url,
+            key: result.key,
+            index: images.length
+          });
+          
+          progressFill.style.width = `${((i + 1) / filesToUpload.length) * 100}%`;
+          
+          // Show compression stats
+          if (result.savings) {
+            progressText.textContent = `Processed ${i + 1} / ${filesToUpload.length} (${result.savings} smaller)`;
+          }
+        } else {
+          alert(`Failed to upload ${file.name}: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        alert(`Failed to upload ${file.name}`);
+      }
+    }
+    
+    // Reset input
+    imageUpload.value = '';
+    uploadProgress.style.display = 'none';
+    
+    // Re-render and save
+    renderImages();
+    await saveImages();
+  });
+  
+  // Save images to Firebase
+  async function saveImages() {
+    try {
+      const response = await fetch('/api/update-merch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: id,
+          images: images.map((img, idx) => ({
+            url: img.url,
+            key: img.key,
+            index: idx,
+            isPrimary: idx === 0
+          })),
+          primaryImage: images[0]?.url || null
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        console.error('Failed to save images:', result.error);
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+    }
+  }
+  
+  // Delete product
+  function deleteProduct() {
+    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      return;
+    }
+    
+    fetch('/api/delete-merch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        window.location.href = '/admin/merch/manage';
+      } else {
+        alert('Error: ' + (data.error || 'Failed to delete'));
+      }
+    })
+    .catch(err => {
+      alert('Error: ' + err.message);
+    });
+  }
+  
+  window.deleteProduct = deleteProduct;
+  
+  // Initialize drag events for existing items
+  document.querySelectorAll('.image-item').forEach((item, idx) => {
+    setupImageItemEvents(item, idx);
+  });
+  
+  updateImageCount();
+  
+  // Update preview immediately to ensure correct image is shown
+  updatePreviewImage();
+</script>

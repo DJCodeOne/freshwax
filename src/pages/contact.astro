@@ -4,176 +4,282 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 
-export const prerender = true;
+export const prerender = false;
+
+const faqs = [
+  {
+    question: "How quickly will I receive a response?",
+    answer: "We aim to respond to all enquiries within 24-48 hours during business days. For urgent order issues, please include your order number in the subject line."
+  },
+  {
+    question: "I haven't received my download links, what should I do?",
+    answer: "Check your spam/junk folder first. If you still can't find them, email us with your order number and we'll resend the links immediately."
+  },
+  {
+    question: "Can I suggest music for your store?",
+    answer: "Yes! If you know of a jungle or drum & bass release we should stock, send us a message with details and we'll look into it."
+  },
+  {
+    question: "Can I change or cancel my order?",
+    answer: "Contact us as soon as possible. We can modify orders that haven't been dispatched yet. Digital orders are processed instantly and cannot be cancelled."
+  }
+];
 ---
 
-<Layout 
-  title="Contact Us" 
-  description="Get in touch with Fresh Wax. Contact us for order enquiries, demo submissions, licensing requests, or general questions."
->
+<Layout title="Contact Us - Fresh Wax" description="Get in touch with Fresh Wax. Questions about orders, music suggestions, or just want to chat about jungle and drum & bass? We'd love to hear from you.">
   <Header />
   
-  <main class="bg-gray-50 min-h-screen">
+  <main class="min-h-screen" style="background: linear-gradient(to bottom, #111827, #0a0a0a);">
     <!-- Hero -->
     <section class="bg-black text-white py-12">
       <div class="container mx-auto px-4 text-center">
-        <h1 class="text-4xl md:text-6xl font-bold tracking-wide mb-4">CONTACT US</h1>
+        <h1 class="text-4xl md:text-6xl font-bold tracking-wide mb-2" style="font-family: 'Bebas Neue', sans-serif;">
+          CONTACT <span class="text-red-600">US</span>
+        </h1>
         <p class="text-gray-400">We'd love to hear from you</p>
       </div>
     </section>
 
+    <!-- Content -->
     <div class="container mx-auto px-4 py-12 max-w-5xl">
       <div class="grid md:grid-cols-2 gap-8">
         
         <!-- Contact Form -->
-        <div class="bg-white border-2 border-black p-8">
-          <h2 class="text-2xl font-bold mb-6">Send a Message</h2>
+        <div class="rounded-xl p-6 md:p-8" style="background: linear-gradient(to bottom, #1f2937, #111827); border: 2px solid #374151;">
+          <h2 class="text-2xl font-bold mb-6 text-white" style="font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em;">
+            SEND A MESSAGE
+          </h2>
           
-          <form id="contactForm" class="space-y-6">
+          <form id="contact-form" class="space-y-5">
             <div>
-              <label for="name" class="block text-sm font-semibold mb-2">Your Name *</label>
+              <label for="name" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">Your Name *</label>
               <input 
                 type="text" 
                 id="name" 
                 name="name" 
                 required
-                class="w-full px-4 py-3 border-2 border-gray-300 focus:border-black focus:outline-none transition-colors"
-                placeholder="John Smith"
+                class="w-full px-4 py-3 rounded-lg text-white text-base"
+                style="background: rgba(0,0,0,0.4); border: 2px solid #374151;"
+                placeholder="Enter your name"
               />
             </div>
-
+            
             <div>
-              <label for="email" class="block text-sm font-semibold mb-2">Email Address *</label>
+              <label for="email" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">Email Address *</label>
               <input 
                 type="email" 
                 id="email" 
                 name="email" 
                 required
-                class="w-full px-4 py-3 border-2 border-gray-300 focus:border-black focus:outline-none transition-colors"
-                placeholder="john@example.com"
+                class="w-full px-4 py-3 rounded-lg text-white text-base"
+                style="background: rgba(0,0,0,0.4); border: 2px solid #374151;"
+                placeholder="you@example.com"
               />
             </div>
-
+            
             <div>
-              <label for="subject" class="block text-sm font-semibold mb-2">Subject *</label>
+              <label for="subject" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">Subject *</label>
               <select 
                 id="subject" 
                 name="subject" 
                 required
-                class="w-full px-4 py-3 border-2 border-gray-300 focus:border-black focus:outline-none transition-colors bg-white"
+                class="w-full px-4 py-3 rounded-lg text-white text-base"
+                style="background: #111827; border: 2px solid #374151;"
               >
-                <option value="">Select a subject...</option>
+                <option value="">Select a topic...</option>
                 <option value="order">Order Enquiry</option>
-                <option value="demo">Demo Submission</option>
-                <option value="licensing">Licensing Request</option>
-                <option value="press">Press / Media</option>
-                <option value="wholesale">Wholesale / Trade</option>
+                <option value="download">Download Issue</option>
+                <option value="suggestion">Music Suggestion</option>
+                <option value="partnership">Partnership / Collaboration</option>
+                <option value="feedback">Feedback</option>
+                <option value="report">⚠️ Report an Issue</option>
                 <option value="other">Other</option>
               </select>
             </div>
-
+            
+            <!-- Report Type Dropdown (shown when Report is selected) -->
+            <div id="reportTypeSection" class="hidden">
+              <label for="reportType" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">What are you reporting? *</label>
+              <select 
+                id="reportType" 
+                name="reportType"
+                class="w-full px-4 py-3 rounded-lg text-white text-base"
+                style="background: #111827; border: 2px solid #dc2626;"
+              >
+                <option value="">Select issue type...</option>
+                <option value="harassment">Harassment or Bullying</option>
+                <option value="malicious-content">Malicious or Harmful Content</option>
+                <option value="spam">Spam or Scam</option>
+                <option value="impersonation">Impersonation</option>
+                <option value="copyright">Copyright Infringement</option>
+                <option value="inappropriate">Inappropriate Content</option>
+                <option value="website-bug">Website Bug or Error</option>
+                <option value="security">Security Concern</option>
+                <option value="other-report">Other</option>
+              </select>
+            </div>
+            
+            <!-- Reported User/URL (shown when Report is selected) -->
+            <div id="reportedUserSection" class="hidden">
+              <label for="reportedUser" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">Username or URL (if applicable)</label>
+              <input 
+                type="text" 
+                id="reportedUser" 
+                name="reportedUser"
+                class="w-full px-4 py-3 rounded-lg text-white text-base"
+                style="background: rgba(0,0,0,0.4); border: 2px solid #374151;"
+                placeholder="e.g. @username or page URL"
+              />
+            </div>
+            
+            <div id="orderNumberSection">
+              <label for="order-number" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">Order Number (if applicable)</label>
+              <input 
+                type="text" 
+                id="order-number" 
+                name="orderNumber"
+                class="w-full px-4 py-3 rounded-lg text-white text-base"
+                style="background: rgba(0,0,0,0.4); border: 2px solid #374151;"
+                placeholder="FW-XXXXXX"
+              />
+            </div>
+            
             <div>
-              <label for="message" class="block text-sm font-semibold mb-2">Message *</label>
+              <label for="message" id="messageLabel" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">Message *</label>
               <textarea 
                 id="message" 
                 name="message" 
+                rows="5" 
                 required
-                rows="5"
-                class="w-full px-4 py-3 border-2 border-gray-300 focus:border-black focus:outline-none transition-colors resize-none"
-                placeholder="Your message..."
+                class="w-full px-4 py-3 rounded-lg text-white text-base resize-none"
+                style="background: rgba(0,0,0,0.4); border: 2px solid #374151;"
+                placeholder="How can we help?"
               ></textarea>
             </div>
-
+            
             <button 
-              type="submit"
-              class="w-full py-4 bg-black text-white font-bold uppercase tracking-wide hover:bg-red-600 transition-colors"
+              type="submit" 
+              id="submit-btn"
+              class="w-full py-4 bg-red-600 text-white font-bold text-lg uppercase tracking-wide hover:bg-red-700 transition-colors rounded-lg"
+              style="font-family: 'Bebas Neue', sans-serif;"
             >
               Send Message
             </button>
-
-            <div id="formStatus" class="hidden p-4 text-center font-semibold"></div>
+            
+            <p id="form-message" class="text-center text-sm hidden"></p>
           </form>
         </div>
-
+        
         <!-- Contact Info -->
         <div class="space-y-6">
-          <!-- Direct Contacts -->
-          <div class="bg-white border-2 border-black p-8">
-            <h2 class="text-2xl font-bold mb-6">Direct Contact</h2>
-            
-            <div class="space-y-4">
-              <div>
-                <h3 class="font-semibold text-sm uppercase text-gray-500 mb-1">General Enquiries</h3>
-                <a href="mailto:info@freshwax.co.uk" class="text-lg font-semibold hover:text-red-600 transition-colors">
-                  info@freshwax.co.uk
-                </a>
-              </div>
-
-              <div>
-                <h3 class="font-semibold text-sm uppercase text-gray-500 mb-1">Demo Submissions</h3>
-                <a href="mailto:demos@freshwax.co.uk" class="text-lg font-semibold hover:text-red-600 transition-colors">
-                  demos@freshwax.co.uk
-                </a>
-              </div>
-
-              <div>
-                <h3 class="font-semibold text-sm uppercase text-gray-500 mb-1">Order Support</h3>
-                <a href="mailto:orders@freshwax.co.uk" class="text-lg font-semibold hover:text-red-600 transition-colors">
-                  orders@freshwax.co.uk
-                </a>
-              </div>
-
-              <div>
-                <h3 class="font-semibold text-sm uppercase text-gray-500 mb-1">Licensing</h3>
-                <a href="mailto:licensing@freshwax.co.uk" class="text-lg font-semibold hover:text-red-600 transition-colors">
-                  licensing@freshwax.co.uk
-                </a>
-              </div>
-            </div>
+          <!-- Email Card -->
+          <div class="rounded-xl p-6" style="background: linear-gradient(to bottom, #1f2937, #111827); border: 2px solid #374151;">
+            <h2 class="text-2xl font-bold mb-4 text-white" style="font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em;">
+              <span class="bg-red-600 px-2 py-1">EMAIL US DIRECTLY</span>
+            </h2>
+            <a 
+              href="mailto:contact@freshwax.co.uk" 
+              class="flex items-center gap-3 text-xl font-semibold text-white hover:text-red-500 transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              contact@freshwax.co.uk
+            </a>
+            <p class="text-gray-400 mt-3 text-sm">
+              We typically respond within 24-48 hours during business days.
+            </p>
           </div>
-
+          
+          <!-- Response Times -->
+          <div class="rounded-xl p-6" style="background: linear-gradient(to bottom, #1f2937, #111827); border: 2px solid #374151;">
+            <h2 class="text-2xl font-bold mb-4 text-white" style="font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em;">
+              RESPONSE TIMES
+            </h2>
+            <ul class="space-y-3 text-gray-300">
+              <li class="flex items-start gap-2">
+                <span class="text-red-600 font-bold">→</span>
+                <span><strong class="text-white">Order Issues:</strong> Within 24 hours</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-red-600 font-bold">→</span>
+                <span><strong class="text-white">Download Problems:</strong> Within 24 hours</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-red-600 font-bold">→</span>
+                <span><strong class="text-white">Artist Submissions:</strong> 5-7 business days</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-red-600 font-bold">→</span>
+                <span><strong class="text-white">General Enquiries:</strong> 2-3 business days</span>
+              </li>
+            </ul>
+          </div>
+          
           <!-- Social Links -->
-          <div class="bg-white border-2 border-black p-8">
-            <h2 class="text-2xl font-bold mb-6">Follow Us</h2>
-            
+          <div class="rounded-xl p-6" style="background: linear-gradient(to bottom, #1f2937, #111827); border: 2px solid #374151;">
+            <h2 class="text-2xl font-bold mb-4 text-white" style="font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em;">
+              FOLLOW US
+            </h2>
             <div class="flex gap-4">
-              <a href="https://facebook.com/freshwaxuk" target="_blank" rel="noopener noreferrer" 
-                 class="w-12 h-12 bg-black text-white flex items-center justify-center hover:bg-red-600 transition-colors">
+              <a href="https://facebook.com/freshwaxuk" target="_blank" rel="noopener noreferrer" class="w-12 h-12 bg-gray-700 text-gray-300 hover:bg-red-600 hover:text-white flex items-center justify-center transition-colors rounded-lg" aria-label="Facebook">
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                 </svg>
               </a>
-              <a href="https://instagram.com/freshwaxuk" target="_blank" rel="noopener noreferrer"
-                 class="w-12 h-12 bg-black text-white flex items-center justify-center hover:bg-red-600 transition-colors">
+              <a href="https://instagram.com/freshwaxuk" target="_blank" rel="noopener noreferrer" class="w-12 h-12 bg-gray-700 text-gray-300 hover:bg-red-600 hover:text-white flex items-center justify-center transition-colors rounded-lg" aria-label="Instagram">
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
                 </svg>
               </a>
-              <a href="https://twitter.com/freshwaxuk" target="_blank" rel="noopener noreferrer"
-                 class="w-12 h-12 bg-black text-white flex items-center justify-center hover:bg-red-600 transition-colors">
+              <a href="https://soundcloud.com/freshwaxuk" target="_blank" rel="noopener noreferrer" class="w-12 h-12 bg-gray-700 text-gray-300 hover:bg-red-600 hover:text-white flex items-center justify-center transition-colors rounded-lg" aria-label="SoundCloud">
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  <path d="M11.56 8.87V17h8.76c1.85 0 3.36-1.51 3.36-3.36 0-1.86-1.51-3.37-3.36-3.37-.07 0-.13 0-.2.01-.3-2.07-2.09-3.66-4.27-3.66-1.03 0-1.99.38-2.73 1.01V8.87h-1.56zm-1.12-.64v8.77h.56V7.89c-.2.1-.38.21-.56.34zM9.33 9.1v7.9h.56V8.76c-.2.1-.38.21-.56.34zm-1.12.86v7.04h.56V9.63c-.2.1-.38.21-.56.33zm-1.11.98v6.06h.56v-6.33c-.2.08-.38.17-.56.27zm-1.12.86v5.2h.56v-5.39c-.19.05-.38.11-.56.19zm-1.11.57v4.63h.56v-4.68c-.19.01-.38.02-.56.05zm-1.12.29v4.34h.56v-4.34c-.19-.01-.38 0-.56 0zm-1.12.17v4h.56v-4c-.19.01-.38.03-.56.05zM1.5 13.4v3.1h.56v-3.16c-.19.02-.38.04-.56.06zM.5 13.77v2.73h.56V13.7c-.19.02-.38.04-.56.07z"/>
                 </svg>
               </a>
-              <a href="https://soundcloud.com/freshwaxuk" target="_blank" rel="noopener noreferrer"
-                 class="w-12 h-12 bg-black text-white flex items-center justify-center hover:bg-red-600 transition-colors">
+              <a href="https://www.youtube.com/@freshwaxuk" target="_blank" rel="noopener noreferrer" class="w-12 h-12 bg-gray-700 text-gray-300 hover:bg-red-600 hover:text-white flex items-center justify-center transition-colors rounded-lg" aria-label="YouTube">
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M1.175 12.225c-.051 0-.094.046-.101.1l-.233 2.154.233 2.105c.007.058.05.098.101.098.05 0 .09-.04.099-.098l.255-2.105-.27-2.154c-.009-.06-.052-.1-.084-.1zm-.899 1.075c-.05 0-.09.04-.099.1l-.187 1.177.187 1.154c.009.054.049.094.099.094.05 0 .09-.04.099-.094l.211-1.154-.211-1.177c-.009-.06-.049-.1-.099-.1zm1.799-.9c-.06 0-.104.05-.111.109l-.211 1.98.211 1.914c.007.061.051.111.111.111.061 0 .105-.05.113-.111l.24-1.914-.24-1.98c-.008-.059-.052-.109-.113-.109zm.899-.449c-.066 0-.115.056-.121.119l-.189 2.429.189 2.322c.006.067.055.117.121.117.066 0 .115-.05.121-.117l.221-2.322-.221-2.429c-.006-.063-.055-.119-.121-.119zm.9-.255c-.073 0-.127.061-.133.13l-.166 2.684.166 2.585c.006.073.06.129.133.129.073 0 .127-.056.133-.129l.194-2.585-.194-2.684c-.006-.069-.06-.13-.133-.13zm.9-.273c-.08 0-.139.068-.145.142l-.143 2.957.143 2.814c.006.08.065.142.145.142.08 0 .139-.062.145-.142l.168-2.814-.168-2.957c-.006-.074-.065-.142-.145-.142zm.898-.182c-.087 0-.15.073-.156.154l-.12 3.139.12 2.982c.006.087.069.156.156.156.087 0 .15-.069.158-.156l.139-2.982-.139-3.139c-.008-.081-.071-.154-.158-.154zm.9-.111c-.093 0-.163.08-.17.167l-.097 3.25.097 3.1c.007.094.077.167.17.167.093 0 .163-.073.17-.167l.113-3.1-.113-3.25c-.007-.087-.077-.167-.17-.167zm.898-.043c-.1 0-.176.086-.183.182l-.074 3.293.074 3.168c.007.1.083.182.183.182.1 0 .176-.082.183-.182l.089-3.168-.089-3.293c-.007-.096-.083-.182-.183-.182zm5.202-.167c-.224 0-.435.032-.64.09-.134-1.511-1.397-2.695-2.944-2.695-.393 0-.77.079-1.114.221-.137.056-.173.113-.176.222v6.01c.003.117.076.219.19.241 0 0 4.481.003 4.684.003 1.221 0 2.212-.991 2.212-2.213 0-1.221-.991-2.212-2.212-2.212l-.001.333zm-5.905.146c-.107 0-.189.092-.196.201l-.051 3.313.051 3.214c.007.109.089.195.196.195.107 0 .189-.086.196-.195l.063-3.214-.063-3.313c-.007-.109-.089-.201-.196-.201z"/>
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                 </svg>
               </a>
             </div>
-          </div>
-
-          <!-- Response Time -->
-          <div class="bg-black text-white p-8">
-            <h2 class="text-2xl font-bold mb-4">Response Time</h2>
-            <p class="text-gray-300 mb-4">
-              We aim to respond to all enquiries within 24-48 hours during business days.
-            </p>
-            <p class="text-gray-400 text-sm">
-              For urgent order issues, please include your order number in the subject line.
+            <p class="text-gray-400 mt-4 text-sm">
+              DM us on social media for quick questions!
             </p>
           </div>
+          
+          <!-- Quick Help -->
+          <div class="bg-red-600 text-white p-6 rounded-xl">
+            <h2 class="text-2xl font-bold mb-3" style="font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em;">
+              NEED QUICK HELP?
+            </h2>
+            <p class="mb-4 opacity-90">
+              Check out our help pages for instant answers:
+            </p>
+            <div class="space-y-2">
+              <a href="/shipping" class="block hover:underline">→ Shipping & Returns</a>
+              <a href="/terms" class="block hover:underline">→ Terms & Conditions</a>
+              <a href="/privacy" class="block hover:underline">→ Privacy Policy</a>
+              <a href="/about" class="block hover:underline">→ About Us</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- FAQ Section -->
+      <div class="mt-12 rounded-xl p-6 md:p-8" style="background: linear-gradient(to bottom, #1f2937, #111827); border: 2px solid #374151;">
+        <div style="display: flex; justify-content: center; width: 100%; margin-bottom: 1.5rem;">
+          <h2 class="text-3xl font-bold text-white" style="font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em; text-align: center;">
+            FREQUENTLY ASKED <span class="text-red-600">QUESTIONS</span>
+          </h2>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6">
+          {faqs.map((faq) => (
+            <div class="border-l-4 border-red-600 pl-4">
+              <h3 class="font-bold text-lg mb-2 text-white" style="font-family: 'Space Grotesk', sans-serif; text-transform: none; letter-spacing: normal;">{faq.question}</h3>
+              <p class="text-gray-400">{faq.answer}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -182,52 +288,157 @@ export const prerender = true;
   <Footer />
 </Layout>
 
+<style>
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #dc2626 !important;
+  }
+  
+  input::placeholder, textarea::placeholder {
+    color: #6b7280;
+  }
+  
+  select option {
+    background: #111827;
+    color: #fff;
+  }
+  
+  .hidden {
+    display: none !important;
+  }
+</style>
+
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('contactForm') as HTMLFormElement;
-    const status = document.getElementById('formStatus') as HTMLElement;
-
+    const form = document.getElementById('contact-form') as HTMLFormElement;
+    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+    const formMessage = document.getElementById('form-message') as HTMLParagraphElement;
+    const subjectSelect = document.getElementById('subject') as HTMLSelectElement;
+    
+    // Report-related elements
+    const reportTypeSection = document.getElementById('reportTypeSection');
+    const reportedUserSection = document.getElementById('reportedUserSection');
+    const orderNumberSection = document.getElementById('orderNumberSection');
+    const messageLabel = document.getElementById('messageLabel');
+    const messageTextarea = document.getElementById('message') as HTMLTextAreaElement;
+    const reportTypeSelect = document.getElementById('reportType') as HTMLSelectElement;
+    
+    // Toggle report fields based on subject selection
+    function toggleReportFields() {
+      const isReport = subjectSelect?.value === 'report';
+      
+      if (isReport) {
+        reportTypeSection?.classList.remove('hidden');
+        reportedUserSection?.classList.remove('hidden');
+        orderNumberSection?.classList.add('hidden');
+        if (messageLabel) messageLabel.textContent = 'Describe the Issue *';
+        if (messageTextarea) messageTextarea.placeholder = 'Please provide as much detail as possible about the issue...';
+        if (reportTypeSelect) reportTypeSelect.required = true;
+      } else {
+        reportTypeSection?.classList.add('hidden');
+        reportedUserSection?.classList.add('hidden');
+        orderNumberSection?.classList.remove('hidden');
+        if (messageLabel) messageLabel.textContent = 'Message *';
+        if (messageTextarea) messageTextarea.placeholder = 'How can we help?';
+        if (reportTypeSelect) reportTypeSelect.required = false;
+      }
+    }
+    
+    subjectSelect?.addEventListener('change', toggleReportFields);
+    
+    // Main contact form submission
     form?.addEventListener('submit', async (e) => {
       e.preventDefault();
       
       const formData = new FormData(form);
-      const data = Object.fromEntries(formData);
+      const isReport = formData.get('subject') === 'report';
       
-      // Show loading state
-      const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
-      const originalText = submitBtn.textContent;
-      submitBtn.textContent = 'Sending...';
+      const data: any = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        subject: formData.get('subject'),
+        message: formData.get('message')
+      };
+      
+      // Add report-specific data
+      if (isReport) {
+        data.reportType = formData.get('reportType');
+        data.reportedUser = formData.get('reportedUser') || '';
+        
+        // Validate report type
+        if (!data.reportType) {
+          formMessage.textContent = 'Please select what you are reporting.';
+          formMessage.className = 'text-center text-sm text-red-500';
+          formMessage.classList.remove('hidden');
+          return;
+        }
+        
+        // Prepend report info to message
+        data.message = `Report Type: ${data.reportType}\nUser/URL: ${data.reportedUser || 'N/A'}\n\nDescription:\n${data.message}`;
+      } else {
+        data.orderNumber = formData.get('orderNumber') || '';
+      }
+      
+      // Validate required fields
+      if (!data.name || !data.email || !data.subject || !data.message) {
+        formMessage.textContent = 'Please fill in all required fields.';
+        formMessage.className = 'text-center text-sm text-red-500';
+        formMessage.classList.remove('hidden');
+        return;
+      }
+      
+      // Update button state
       submitBtn.disabled = true;
-
+      submitBtn.textContent = isReport ? 'SUBMITTING REPORT...' : 'SENDING...';
+      formMessage.classList.add('hidden');
+      
       try {
-        // You can replace this with your actual form handler
-        // e.g., Web3Forms, EmailJS, or your own API endpoint
-        const response = await fetch('https://api.web3forms.com/submit', {
+        // Send to API endpoint
+        const response = await fetch('/api/contact', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            access_key: 'YOUR_WEB3FORMS_KEY', // Replace with your key
-            ...data,
-            from_name: data.name,
-            subject: `[Fresh Wax] ${data.subject}: ${data.name}`
-          })
+          body: JSON.stringify(data)
         });
-
-        if (response.ok) {
-          status.textContent = 'Message sent successfully! We\'ll be in touch soon.';
-          status.className = 'p-4 text-center font-semibold bg-green-100 text-green-800';
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          formMessage.textContent = isReport 
+            ? 'Report submitted successfully. Thank you for helping keep Fresh Wax safe.'
+            : 'Message sent successfully! We\'ll get back to you soon.';
+          formMessage.className = 'text-center text-sm text-green-500';
+          formMessage.classList.remove('hidden');
           form.reset();
+          toggleReportFields(); // Reset form appearance
         } else {
-          throw new Error('Failed to send');
+          throw new Error(result.error || 'Failed to send message');
         }
-      } catch (error) {
-        status.textContent = 'Failed to send message. Please try emailing us directly.';
-        status.className = 'p-4 text-center font-semibold bg-red-100 text-red-800';
+      } catch (err) {
+        // Fallback: open mailto link
+        const subjectLine = isReport 
+          ? `[REPORT] ${data.reportType}`
+          : `[${data.subject}] Contact Form Submission`;
+        const subject = encodeURIComponent(subjectLine);
+        const body = encodeURIComponent(
+          `Name: ${data.name}\nEmail: ${data.email}\n${data.orderNumber ? `Order: ${data.orderNumber}\n` : ''}\n${data.message}`
+        );
+        window.location.href = `mailto:contact@freshwax.co.uk?subject=${subject}&body=${body}`;
+        
+        formMessage.textContent = 'Opening your email client...';
+        formMessage.className = 'text-center text-sm text-gray-400';
+        formMessage.classList.remove('hidden');
       } finally {
-        status.classList.remove('hidden');
-        submitBtn.textContent = originalText;
         submitBtn.disabled = false;
+        submitBtn.textContent = 'SEND MESSAGE';
       }
     });
+  });
+  
+  // Re-init on View Transitions
+  document.addEventListener('astro:page-load', () => {
+    const form = document.getElementById('contact-form');
+    if (form) {
+      // Script will re-run and attach listeners
+    }
   });
 </script>

@@ -1,0 +1,417 @@
+---
+// src/pages/merch/[id].astro
+// Merch image preview modal - large image with zoom and colour selection
+
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import { getDocument } from '../../lib/firebase-rest';
+
+const { id } = Astro.params;
+
+let product = null;
+let error = null;
+
+try {
+  const item = await getDocument('merch', id);
+  
+  if (item) {
+    // Process images
+    let allImages: string[] = [];
+    if (item.images && Array.isArray(item.images)) {
+      allImages = item.images
+        .map((img: any) => {
+          if (typeof img === 'string') return img;
+          if (img && typeof img === 'object' && img.url) return img.url;
+          return null;
+        })
+        .filter((url: string | null): url is string => url !== null && url !== '');
+    }
+    
+    if (allImages.length === 0 && item.imageUrl) {
+      allImages = [item.imageUrl];
+    }
+    
+    const imageUrl = item.primaryImage || allImages[0] || '';
+    
+    product = {
+      id: item.id,
+      name: item.name || item.title || 'Product',
+      imageUrl: imageUrl,
+      images: allImages,
+      colors: item.colors || [],
+      colorList: item.colorList || [],
+    };
+  } else {
+    error = 'Product not found';
+  }
+} catch (err) {
+  console.error('[MERCH PAGE] Error:', err);
+  error = 'Failed to load product';
+}
+
+export const prerender = false;
+---
+
+<Layout title={product ? `${product.name} - Fresh Wax` : 'Product Not Found'}>
+  <Header />
+  
+  <main class="preview-page">
+    {error ? (
+      <div class="error-state">
+        <p>{error}</p>
+        <button onclick="history.back()" class="back-btn">← Back to Item</button>
+      </div>
+    ) : product && (
+      <div class="preview-container">
+        <button onclick="history.back()" class="back-link">← Back to Item</button>
+        
+        <div class="preview-box">
+          <!-- Large Zoomable Image -->
+          <div class="image-area" id="imageArea">
+            {product.imageUrl ? (
+              <img 
+                src={product.imageUrl} 
+                alt={product.name} 
+                id="mainImage"
+                class="zoomable"
+              />
+            ) : (
+              <div class="placeholder">👕</div>
+            )}
+            <div class="zoom-hint">Hover to zoom</div>
+          </div>
+          
+          <!-- Thumbnails -->
+          {product.images.length > 1 && (
+            <div class="thumbs">
+              {product.images.map((img, i) => (
+                <button 
+                  class={`thumb ${i === 0 ? 'active' : ''}`}
+                  data-image={img}
+                >
+                  <img src={img} alt={`View ${i + 1}`} />
+                </button>
+              ))}
+            </div>
+          )}
+          
+          <!-- Colour Selection -->
+          {(product.colors?.length > 0 || product.colorList?.length > 0) && (
+            <div class="color-row">
+              <span class="color-label">Colour:</span>
+              <div class="color-options">
+                {(product.colors?.length > 0 ? product.colors : product.colorList).map((color, i) => {
+                  const colorValue = typeof color === 'string' ? color : color.hex || color.name;
+                  const colorName = typeof color === 'string' ? color : color.name || color;
+                  return (
+                    <button 
+                      class={`color-btn ${i === 0 ? 'selected' : ''}`}
+                      data-color={colorName}
+                      style={`background-color: ${colorValue}`}
+                      title={colorName}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+  </main>
+  
+  <footer class="mini-footer">
+    © 2025 Fresh<span class="red">Wax</span>
+  </footer>
+</Layout>
+
+<style>
+  .preview-page {
+    min-height: calc(100vh - 90px);
+    padding: 1rem;
+    background: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .error-state {
+    text-align: center;
+    padding: 3rem;
+    background: #fff;
+    border: 2px solid #000;
+    max-width: 400px;
+    margin: 2rem auto;
+  }
+  
+  .error-state p {
+    margin-bottom: 1.5rem;
+    color: #666;
+  }
+  
+  .back-btn, .back-link {
+    display: inline-block;
+    color: #000;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    background: #fff;
+    border: 2px solid #000;
+    transition: all 0.2s;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+  }
+  
+  .back-btn:hover, .back-link:hover {
+    background: #000;
+    color: #fff;
+  }
+  
+  .preview-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-width: 700px;
+    width: 100%;
+    margin: 0 auto;
+    padding-bottom: 2rem;
+  }
+  
+  .back-link {
+    margin-bottom: 0.75rem;
+    align-self: flex-start;
+  }
+  
+  .preview-box {
+    flex: 1;
+    background: #fff;
+    border: 3px solid #000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  /* Large Image Area */
+  .image-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    cursor: zoom-in;
+    background: #fafafa;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .image-area img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    transition: transform 0.2s ease;
+  }
+  
+  .image-area:hover img.zoomable {
+    transform: scale(1.85);
+  }
+  
+  .image-area.zooming img.zoomable {
+    transition: none;
+  }
+  
+  .zoom-hint {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    background: rgba(0,0,0,0.75);
+    color: #fff;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  
+  .image-area:hover .zoom-hint {
+    opacity: 0;
+  }
+  
+  .placeholder {
+    font-size: 5.2rem;
+    color: #ccc;
+  }
+  
+  /* Thumbnails */
+  .thumbs {
+    display: flex;
+    gap: 0.35rem;
+    padding: 0.5rem;
+    background: #f5f5f5;
+    border-top: 2px solid #000;
+    justify-content: center;
+  }
+  
+  .thumb {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border: 2px solid #ddd;
+    background: #fff;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  
+  .thumb:hover {
+    border-color: #888;
+  }
+  
+  .thumb.active {
+    border-color: #000;
+  }
+  
+  .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  /* Colour Selection */
+  .color-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    padding: 0.5rem;
+    background: #fff;
+    border-top: 2px solid #eee;
+  }
+  
+  .color-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #666;
+  }
+  
+  .color-options {
+    display: flex;
+    gap: 0.35rem;
+  }
+  
+  .color-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #ccc;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  
+  .color-btn:hover {
+    transform: scale(1.15);
+  }
+  
+  .color-btn.selected {
+    box-shadow: 0 0 0 2px #000;
+  }
+  
+  /* Mini Footer */
+  .mini-footer {
+    text-align: center;
+    padding: 0.6rem;
+    background: #111;
+    color: #777;
+    font-size: 0.75rem;
+  }
+  
+  .mini-footer .red {
+    color: #dc2626;
+  }
+  
+  /* Responsive */
+  @media (min-height: 700px) {
+    .image-area {
+      min-height: 350px;
+    }
+  }
+  
+  @media (min-height: 900px) {
+    .image-area {
+      min-height: 425px;
+    }
+  }
+  
+  @media (max-width: 600px) {
+    .preview-page {
+      padding: 0.5rem;
+    }
+    
+    .image-area {
+      min-height: 210px;
+    }
+    
+    .image-area:hover img.zoomable {
+      transform: none;
+    }
+    
+    .zoom-hint {
+      display: none;
+    }
+    
+    .thumb {
+      width: 34px;
+      height: 34px;
+    }
+  }
+</style>
+
+<script>
+  function initPreview() {
+    // Thumbnail switching
+    document.querySelectorAll('.thumb').forEach(thumb => {
+      thumb.addEventListener('click', () => {
+        const mainImg = document.getElementById('mainImage') as HTMLImageElement;
+        const imgSrc = (thumb as HTMLElement).dataset.image;
+        if (mainImg && imgSrc) {
+          mainImg.src = imgSrc;
+        }
+        document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+        thumb.classList.add('active');
+      });
+    });
+    
+    // Image zoom on hover (follow mouse)
+    const imageArea = document.getElementById('imageArea');
+    const mainImage = document.getElementById('mainImage') as HTMLImageElement;
+    
+    if (imageArea && mainImage) {
+      imageArea.addEventListener('mousemove', (e) => {
+        const rect = imageArea.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        mainImage.style.transformOrigin = `${x}% ${y}%`;
+        imageArea.classList.add('zooming');
+      });
+      
+      imageArea.addEventListener('mouseleave', () => {
+        mainImage.style.transformOrigin = 'center center';
+        imageArea.classList.remove('zooming');
+      });
+    }
+    
+    // Colour selection
+    document.querySelectorAll('.color-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+      });
+    });
+  }
+  
+  initPreview();
+  document.addEventListener('astro:page-load', initPreview);
+</script>

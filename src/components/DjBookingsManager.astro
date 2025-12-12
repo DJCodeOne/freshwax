@@ -1,0 +1,423 @@
+---
+// src/components/DjBookingsManager.astro
+// Component for DJs to view and manage their live stream bookings
+// Shows upcoming bookings with cancel functionality
+---
+
+<div class="dj-bookings-manager" id="djBookingsManager">
+  <div class="section-header">
+    <h2>🎧 My Stream Bookings</h2>
+    <button type="button" class="refresh-btn" id="refreshBookingsBtn">↻ Refresh</button>
+  </div>
+  
+  <p class="section-desc">Manage your upcoming live stream slots. Cancel at least 1 hour before start time.</p>
+  
+  <div id="bookingsList" class="bookings-list">
+    <p class="loading">Loading your bookings...</p>
+  </div>
+  
+  <div class="bookings-empty hidden" id="noBookings">
+    <div class="empty-icon">📅</div>
+    <p>You don't have any upcoming bookings.</p>
+    <a href="/live" class="book-now-link">Book a slot on Fresh Wax Live →</a>
+  </div>
+</div>
+
+<style>
+  .dj-bookings-manager {
+    background: var(--bg-secondary, #fff);
+    border: 2px solid var(--border-light, #e5e5e5);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-header h2 {
+    margin: 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.02em;
+  }
+
+  .refresh-btn {
+    padding: 0.5rem 0.875rem;
+    background: var(--bg-secondary, #fff);
+    border: 2px solid var(--border-light, #e5e5e5);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary, #666);
+    transition: all 0.2s;
+  }
+
+  .refresh-btn:hover {
+    border-color: var(--text-primary, #000);
+    color: var(--text-primary, #000);
+  }
+
+  .section-desc {
+    color: var(--text-secondary, #666);
+    font-size: 0.875rem;
+    margin: 0 0 1.25rem;
+  }
+
+  .bookings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .loading {
+    color: var(--text-muted, #888);
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .booking-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: var(--bg-primary, #f5f5f5);
+    border: 2px solid var(--border-light, #e5e5e5);
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .booking-card:hover {
+    border-color: var(--accent-red, #dc2626);
+  }
+
+  .booking-card.upcoming-soon {
+    border-color: #22c55e;
+    background: #f0fdf4;
+  }
+
+  .booking-card.live-now {
+    border-color: var(--accent-red, #dc2626);
+    background: #fef2f2;
+  }
+
+  .booking-info {
+    flex: 1;
+  }
+
+  .booking-info h4 {
+    margin: 0 0 0.375rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .booking-badge {
+    display: inline-flex;
+    padding: 0.2rem 0.5rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.625rem;
+    font-weight: 700;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .booking-badge.scheduled {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .booking-badge.soon {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .booking-badge.live {
+    background: var(--accent-red, #dc2626);
+    color: #fff;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .booking-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    color: var(--text-secondary, #666);
+    font-size: 0.875rem;
+  }
+
+  .booking-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .booking-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .cancel-booking-btn {
+    padding: 0.625rem 1.25rem;
+    background: var(--bg-secondary, #fff);
+    border: 2px solid var(--border-light, #e5e5e5);
+    border-radius: 8px;
+    color: var(--text-secondary, #666);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .cancel-booking-btn:hover {
+    background: #fee2e2;
+    border-color: var(--accent-red, #dc2626);
+    color: var(--accent-red, #dc2626);
+  }
+
+  .cancel-booking-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .bookings-empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted, #888);
+  }
+
+  .bookings-empty.hidden {
+    display: none;
+  }
+
+  .bookings-empty .empty-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.6;
+  }
+
+  .book-now-link {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--bg-dark, #000);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+  }
+
+  .book-now-link:hover {
+    background: var(--accent-red, #dc2626);
+  }
+
+  @media (max-width: 640px) {
+    .booking-card {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .booking-actions {
+      width: 100%;
+    }
+
+    .cancel-booking-btn {
+      flex: 1;
+    }
+  }
+</style>
+
+<script>
+  // DJ Bookings Manager Logic
+  (function() {
+    const container = document.getElementById('djBookingsManager');
+    const bookingsList = document.getElementById('bookingsList');
+    const noBookings = document.getElementById('noBookings');
+    const refreshBtn = document.getElementById('refreshBookingsBtn');
+    
+    let currentUserId: string | null = null;
+    
+    // Initialize - called from parent page with user ID
+    (window as any).initDjBookingsManager = function(userId: string) {
+      currentUserId = userId;
+      loadBookings();
+    };
+    
+    refreshBtn?.addEventListener('click', loadBookings);
+    
+    async function loadBookings() {
+      if (!currentUserId || !bookingsList) return;
+      
+      bookingsList.innerHTML = '<p class="loading">Loading your bookings...</p>';
+      noBookings?.classList.add('hidden');
+      
+      try {
+        // Get bookings for next 30 days
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + 30);
+        
+        const response = await fetch(
+          `/api/livestream/slots?djId=${currentUserId}&start=${startDate.toISOString()}&end=${endDate.toISOString()}&_t=${Date.now()}`
+        );
+        
+        const data = await response.json();
+        
+        if (data.success && data.slots && data.slots.length > 0) {
+          // Filter to only show this user's bookings
+          const myBookings = data.slots.filter((slot: any) => 
+            slot.djId === currentUserId && 
+            ['scheduled', 'in_lobby', 'live'].includes(slot.status)
+          );
+          
+          if (myBookings.length > 0) {
+            renderBookings(myBookings);
+          } else {
+            showEmpty();
+          }
+        } else {
+          showEmpty();
+        }
+      } catch (error) {
+        console.error('Failed to load bookings:', error);
+        bookingsList.innerHTML = '<p class="loading">Failed to load bookings</p>';
+      }
+    }
+    
+    function renderBookings(bookings: any[]) {
+      if (!bookingsList) return;
+      
+      // Sort by start time
+      bookings.sort((a, b) => 
+        new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+      );
+      
+      const now = new Date();
+      
+      bookingsList.innerHTML = bookings.map(booking => {
+        const startTime = new Date(booking.startTime);
+        const endTime = new Date(booking.endTime);
+        const timeUntil = startTime.getTime() - now.getTime();
+        const hoursUntil = timeUntil / (1000 * 60 * 60);
+        
+        let cardClass = 'booking-card';
+        let badgeClass = 'scheduled';
+        let badgeText = 'Scheduled';
+        let canCancel = hoursUntil > 1;
+        
+        if (booking.status === 'live') {
+          cardClass += ' live-now';
+          badgeClass = 'live';
+          badgeText = '🔴 LIVE NOW';
+          canCancel = false;
+        } else if (hoursUntil <= 1 && hoursUntil > 0) {
+          cardClass += ' upcoming-soon';
+          badgeClass = 'soon';
+          badgeText = 'Starting Soon';
+          canCancel = false;
+        } else if (hoursUntil <= 0) {
+          canCancel = false;
+        }
+        
+        const dateStr = startTime.toLocaleDateString('en-GB', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short'
+        });
+        
+        const timeStr = `${startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+        
+        const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+        
+        return `
+          <div class="${cardClass}" data-booking-id="${booking.id}">
+            <div class="booking-info">
+              <h4>
+                ${booking.title || 'Live Stream'}
+                <span class="booking-badge ${badgeClass}">${badgeText}</span>
+              </h4>
+              <div class="booking-meta">
+                <span>📅 ${dateStr}</span>
+                <span>🕐 ${timeStr}</span>
+                <span>⏱ ${duration} min</span>
+              </div>
+            </div>
+            <div class="booking-actions">
+              ${canCancel ? `
+                <button type="button" class="cancel-booking-btn" onclick="cancelDjBooking('${booking.id}', '${booking.title || 'this slot'}')">
+                  Cancel Booking
+                </button>
+              ` : `
+                <button type="button" class="cancel-booking-btn" disabled title="Cannot cancel within 1 hour of start time">
+                  Cannot Cancel
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function showEmpty() {
+      if (bookingsList) bookingsList.innerHTML = '';
+      noBookings?.classList.remove('hidden');
+    }
+    
+    // Global cancel function
+    (window as any).cancelDjBooking = async function(bookingId: string, title: string) {
+      if (!confirm(`Cancel your booking "${title}"?\n\nThis will free up the slot for other DJs.`)) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/livestream/slots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'cancel',
+            slotId: bookingId,
+            djId: currentUserId
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Remove the card with animation
+          const card = document.querySelector(`[data-booking-id="${bookingId}"]`);
+          if (card) {
+            card.remove();
+          }
+          
+          // Reload to update state
+          loadBookings();
+          
+          // Notify other components (schedule calendars, lineup)
+          window.dispatchEvent(new CustomEvent('schedule-updated'));
+        } else {
+          alert(data.error || 'Failed to cancel booking');
+        }
+      } catch (error) {
+        console.error('Failed to cancel booking:', error);
+        alert('Failed to cancel booking. Please try again.');
+      }
+    };
+  })();
+</script>

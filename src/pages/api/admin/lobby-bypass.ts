@@ -106,6 +106,13 @@ export const POST: APIRoute = async ({ request }) => {
         grantedBy: 'admin'
       });
       
+      // Also set user's bypass flag
+      await db.collection('users').doc(targetUserId).set({
+        'go-liveBypassed': true,
+        bypassedAt: new Date().toISOString(),
+        bypassedBy: 'admin'
+      }, { merge: true });
+      
       console.log(`[lobby-bypass] Granted bypass to ${email} (${targetUserId})`);
       
       return new Response(JSON.stringify({ 
@@ -125,8 +132,18 @@ export const POST: APIRoute = async ({ request }) => {
         });
       }
       
-      // Revoke bypass
+      // Revoke bypass from collection
       await db.collection('djLobbyBypass').doc(userId).delete();
+      
+      // Also remove bypass flag from user document
+      try {
+        await db.collection('users').doc(userId).update({
+          'go-liveBypassed': false,
+          bypassRevokedAt: new Date().toISOString()
+        });
+      } catch (e) {
+        // User doc might not exist, that's ok
+      }
       
       console.log(`[lobby-bypass] Revoked bypass for ${userId}`);
       

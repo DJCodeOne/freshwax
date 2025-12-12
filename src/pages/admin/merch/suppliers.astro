@@ -9,7 +9,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Manage Suppliers - Fresh Wax Admin</title>
-  <style>
+  <style is:global>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #000; }
     
@@ -191,6 +191,67 @@
     </div>
   </div>
 
+  <!-- Edit Supplier Modal -->
+  <div id="editModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: #fff; border: 3px solid #000; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
+      <div style="background: #000; color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="font-size: 16px; font-weight: 900; text-transform: uppercase;">Edit Supplier</h3>
+        <button id="closeEditModal" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer;">&times;</button>
+      </div>
+      <form id="editForm" style="padding: 20px;">
+        <input type="hidden" id="editSupplierId">
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: 12px; text-transform: uppercase;">Supplier Name</label>
+          <input type="text" id="editName" class="form-input" required>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+          <div>
+            <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: 12px; text-transform: uppercase;">Type</label>
+            <select id="editType" class="form-select">
+              <option value="label">Label</option>
+              <option value="soundsystem">Sound System</option>
+              <option value="dj">DJ</option>
+              <option value="crew">Crew</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: 12px; text-transform: uppercase;">Default Cut (%)</label>
+            <input type="number" id="editCut" class="form-input" min="0" max="100">
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: 12px; text-transform: uppercase;">Contact Name</label>
+          <input type="text" id="editContactName" class="form-input">
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+          <div>
+            <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: 12px; text-transform: uppercase;">Email</label>
+            <input type="email" id="editEmail" class="form-input">
+          </div>
+          <div>
+            <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: 12px; text-transform: uppercase;">Phone</label>
+            <input type="tel" id="editPhone" class="form-input">
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-weight: 700; margin-bottom: 5px; font-size: 12px; text-transform: uppercase;">Notes</label>
+          <textarea id="editNotes" class="form-textarea"></textarea>
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+          <button type="button" id="cancelEdit" style="flex: 1; padding: 12px; border: 2px solid #000; background: #fff; font-weight: 700; cursor: pointer;">Cancel</button>
+          <button type="submit" style="flex: 1; padding: 12px; border: 2px solid #000; background: #000; color: #fff; font-weight: 700; cursor: pointer;">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
@@ -211,7 +272,7 @@
       } catch (error) {
         console.error('Error loading suppliers:', error);
         document.getElementById('suppliersList').innerHTML = 
-          '<div class="empty-state">Error loading suppliers</div>';
+          '<div style="padding: 40px; text-align: center; color: #666;">Error loading suppliers</div>';
       }
     }
 
@@ -220,67 +281,99 @@
       document.getElementById('supplierCount').textContent = `${suppliers.length} supplier${suppliers.length !== 1 ? 's' : ''}`;
       
       if (suppliers.length === 0) {
-        container.innerHTML = '<div class="empty-state">No suppliers yet. Add your first supplier using the form.</div>';
+        container.innerHTML = '<div style="padding: 40px; text-align: center; color: #666;">No suppliers yet. Add your first supplier using the form.</div>';
         return;
       }
+      
+      // Define inline styles
+      const cardStyle = 'padding: 25px; border-bottom: 2px solid #eee;';
+      const topStyle = 'display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;';
+      const nameStyle = 'font-size: 22px; font-weight: 900; margin-bottom: 8px;';
+      const typeStyle = 'font-size: 14px; color: #666; text-transform: uppercase; font-weight: 600; margin-bottom: 8px;';
+      const codeStyle = 'font-family: monospace; font-size: 14px; background: #f0f0f0; padding: 4px 12px; display: inline-block; border: 1px solid #ddd; font-weight: 700;';
+      const statusActiveStyle = 'padding: 8px 16px; font-size: 13px; font-weight: 700; text-transform: uppercase; background: #d4edda; color: #155724;';
+      const statusInactiveStyle = 'padding: 8px 16px; font-size: 13px; font-weight: 700; text-transform: uppercase; background: #f8d7da; color: #721c24;';
+      const statsStyle = 'display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px;';
+      const statStyle = 'text-align: center; padding: 15px 10px; background: #f8f8f8; border: 1px solid #e5e5e5;';
+      const statAlertStyle = 'text-align: center; padding: 15px 10px; background: #fff3cd; border: 1px solid #ffc107;';
+      const statDangerStyle = 'text-align: center; padding: 15px 10px; background: #f8d7da; border: 1px solid #dc3545;';
+      const statValueStyle = 'font-size: 24px; font-weight: 900; margin-bottom: 4px;';
+      const statLabelStyle = 'font-size: 11px; color: #666; text-transform: uppercase; font-weight: 600;';
+      const contactStyle = 'font-size: 14px; color: #555; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-left: 3px solid #000;';
+      const actionsStyle = 'display: flex; gap: 10px; flex-wrap: wrap;';
+      const btnStyle = 'padding: 10px 18px; border: 2px solid #000; background: #fff; cursor: pointer; font-size: 12px; font-weight: 700; text-transform: uppercase; text-decoration: none; color: #000; display: inline-block;';
+      const btnLinkStyle = 'padding: 10px 18px; border: 2px solid #000; background: #000; color: #fff; cursor: pointer; font-size: 12px; font-weight: 700; text-transform: uppercase; text-decoration: none; display: inline-block;';
       
       container.innerHTML = suppliers.map(s => {
         const lowStockAlert = (s.totalStock || 0) <= 10 && (s.totalStock || 0) > 0;
         const outOfStock = (s.totalStock || 0) === 0 && (s.totalProducts || 0) > 0;
+        const stockStatStyle = outOfStock ? statDangerStyle : (lowStockAlert ? statAlertStyle : statStyle);
         
         return `
-          <div class="supplier-card" data-id="${s.id}">
-            <div class="supplier-top">
-              <div class="supplier-info">
-                <h3>${s.name}</h3>
-                <div class="type">${s.type}</div>
-                <div class="code">${s.code}</div>
+          <div style="${cardStyle}" data-id="${s.id}">
+            <div style="${topStyle}">
+              <div>
+                <h3 style="${nameStyle}">${s.name}</h3>
+                <div style="${typeStyle}">${s.type}</div>
+                <div style="${codeStyle}">${s.code}</div>
               </div>
-              <span class="supplier-status ${s.active !== false ? 'active' : 'inactive'}">
+              <span style="${s.active !== false ? statusActiveStyle : statusInactiveStyle}">
                 ${s.active !== false ? 'Active' : 'Inactive'}
               </span>
             </div>
             
-            <div class="supplier-stats">
-              <div class="stat">
-                <div class="value">${s.totalProducts || 0}</div>
-                <div class="label">Products</div>
+            <div style="${statsStyle}">
+              <div style="${statStyle}">
+                <div style="${statValueStyle}">${s.totalProducts || 0}</div>
+                <div style="${statLabelStyle}">Products</div>
               </div>
-              <div class="stat ${lowStockAlert ? 'alert' : ''} ${outOfStock ? 'danger' : ''}">
-                <div class="value">${s.totalStock || 0}</div>
-                <div class="label">In Stock</div>
+              <div style="${stockStatStyle}">
+                <div style="${statValueStyle}">${s.totalStock || 0}</div>
+                <div style="${statLabelStyle}">In Stock</div>
               </div>
-              <div class="stat">
-                <div class="value">${s.totalSold || 0}</div>
-                <div class="label">Sold</div>
+              <div style="${statStyle}">
+                <div style="${statValueStyle}">${s.totalSold || 0}</div>
+                <div style="${statLabelStyle}">Sold</div>
               </div>
-              <div class="stat">
-                <div class="value">£${(s.totalRevenue || 0).toFixed(0)}</div>
-                <div class="label">Their Earnings</div>
+              <div style="${statStyle}">
+                <div style="${statValueStyle}">£${(s.totalRevenue || 0).toFixed(0)}</div>
+                <div style="${statLabelStyle}">Their Earnings</div>
               </div>
             </div>
             
-            <div class="supplier-contact">
-              ${s.contactName ? `<strong>${s.contactName}</strong><br>` : ''}
-              ${s.email ? `<a href="mailto:${s.email}">${s.email}</a>` : ''}
+            <div style="${contactStyle}">
+              ${s.contactName ? `<strong style="font-size: 15px; color: #000; display: block; margin-bottom: 5px;">${s.contactName}</strong>` : ''}
+              ${s.email ? `<a href="mailto:${s.email}" style="color: #000; font-weight: 600;">${s.email}</a>` : ''}
               ${s.email && s.phone ? ' • ' : ''}
               ${s.phone ? s.phone : ''}
+              ${!s.contactName && !s.email && !s.phone ? '<em style="color: #999;">No contact details</em>' : ''}
               ${s.notes ? `<br><em style="color: #999; font-size: 12px;">${s.notes}</em>` : ''}
             </div>
             
-            <div class="supplier-actions">
-              <a href="/admin/merch/manage?supplier=${s.id}" class="action-btn">View Products</a>
-              <a href="/supplier-portal?code=${s.accessCode}" target="_blank" class="action-btn view-link">Portal Link</a>
-              <button class="action-btn" onclick="copyPortalLink('${s.accessCode}')">Copy Link</button>
-              <button class="action-btn" onclick="editSupplier('${s.id}')">Edit</button>
+            <div style="${actionsStyle}">
+              <a href="/admin/inventory?supplier=${encodeURIComponent(s.name)}" style="${btnStyle}">View Products</a>
+              <button style="${btnStyle}" data-action="edit" data-id="${s.id}">Edit</button>
               ${s.active !== false ? 
-                `<button class="action-btn" style="border-color: #ff0000; color: #ff0000;" onclick="deactivateSupplier('${s.id}')">Deactivate</button>` :
-                `<button class="action-btn" onclick="activateSupplier('${s.id}')">Activate</button>`
+                `<button style="${btnStyle} border-color: #f59e0b; color: #f59e0b;" data-action="deactivate" data-id="${s.id}">Deactivate</button>` :
+                `<button style="${btnStyle} border-color: #22c55e; color: #22c55e;" data-action="activate" data-id="${s.id}">Activate</button>`
               }
+              <button style="${btnStyle} border-color: #dc2626; color: #dc2626;" data-action="delete" data-id="${s.id}">Delete</button>
             </div>
           </div>
         `;
       }).join('');
+      
+      // Add event listeners
+      container.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = btn.dataset.action;
+          const id = btn.dataset.id;
+          if (action === 'edit') editSupplier(id);
+          else if (action === 'deactivate') deactivateSupplier(id);
+          else if (action === 'activate') activateSupplier(id);
+          else if (action === 'delete') deleteSupplier(id);
+        });
+      });
     }
 
     document.getElementById('supplierForm').addEventListener('submit', async (e) => {
@@ -338,20 +431,63 @@
       });
     }
 
-    function copyPortalLink(code) {
-      const link = `${window.location.origin}/supplier-portal?code=${code}`;
-      navigator.clipboard.writeText(link).then(() => {
-        showToast('Portal link copied!', 'success');
-      });
-    }
-
     function editSupplier(id) {
-      // TODO: Implement edit modal
-      showToast('Edit functionality coming soon', 'info');
+      const supplier = suppliers.find(s => s.id === id);
+      if (!supplier) return;
+      
+      document.getElementById('editSupplierId').value = id;
+      document.getElementById('editName').value = supplier.name || '';
+      document.getElementById('editType').value = supplier.type || 'label';
+      document.getElementById('editCut').value = supplier.defaultCut || 50;
+      document.getElementById('editContactName').value = supplier.contactName || '';
+      document.getElementById('editEmail').value = supplier.email || '';
+      document.getElementById('editPhone').value = supplier.phone || '';
+      document.getElementById('editNotes').value = supplier.notes || '';
+      
+      document.getElementById('editModal').style.display = 'flex';
     }
+    
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+    
+    document.getElementById('closeEditModal').addEventListener('click', closeEditModal);
+    document.getElementById('cancelEdit').addEventListener('click', closeEditModal);
+    
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const supplierId = document.getElementById('editSupplierId').value;
+      const updates = {
+        supplierId,
+        name: document.getElementById('editName').value.trim(),
+        type: document.getElementById('editType').value,
+        defaultCut: parseInt(document.getElementById('editCut').value) || 50,
+        contactName: document.getElementById('editContactName').value.trim(),
+        email: document.getElementById('editEmail').value.trim(),
+        phone: document.getElementById('editPhone').value.trim(),
+        notes: document.getElementById('editNotes').value.trim()
+      };
+      
+      try {
+        const response = await fetch('/api/suppliers', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates)
+        });
+        
+        if (!response.ok) throw new Error('Failed to update');
+        
+        showToast('Supplier updated', 'success');
+        closeEditModal();
+        loadSuppliers();
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    });
 
     async function deactivateSupplier(id) {
-      if (!confirm('Are you sure you want to deactivate this supplier?')) return;
+      if (!confirm('Are you sure you want to deactivate this supplier? Their products will remain but they won\'t appear in active lists.')) return;
       
       try {
         const response = await fetch('/api/suppliers', {
@@ -385,6 +521,28 @@
         showToast(error.message, 'error');
       }
     }
+    
+    async function deleteSupplier(id) {
+      const supplier = suppliers.find(s => s.id === id);
+      if (!supplier) return;
+      
+      if (!confirm(`⚠️ DANGER ZONE ⚠️\n\nAre you sure you want to permanently delete "${supplier.name}"?\n\nThis will:\n• Remove the supplier record\n• NOT delete their products (they'll become unassigned)\n\nThis action cannot be undone!`)) return;
+      
+      try {
+        const response = await fetch('/api/suppliers?id=' + id, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ supplierId: id, hardDelete: true })
+        });
+        
+        if (!response.ok) throw new Error('Failed to delete');
+        
+        showToast('Supplier permanently deleted', 'success');
+        loadSuppliers();
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
 
     function showToast(message, type = 'success') {
       const toast = document.getElementById('toast');
@@ -397,6 +555,13 @@
     document.getElementById('supplierCode').addEventListener('input', (e) => {
       e.target.value = e.target.value.toUpperCase();
     });
+    
+    // Expose functions to window for onclick handlers in dynamic HTML
+    window.editSupplier = editSupplier;
+    window.deactivateSupplier = deactivateSupplier;
+    window.activateSupplier = activateSupplier;
+    window.deleteSupplier = deleteSupplier;
+    window.copyAccessCode = copyAccessCode;
   </script>
 </body>
 </html>

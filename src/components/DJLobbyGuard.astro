@@ -1,0 +1,300 @@
+---
+// DJ Lobby Guard Component
+// Checks DJ eligibility before allowing access to DJ features
+// Usage: Wrap DJ lobby content with this component
+
+interface Props {
+  redirectTo?: string;
+  showProgress?: boolean;
+}
+
+const { redirectTo = '/account/request-role', showProgress = true } = Astro.props;
+---
+<div class="dj-guard" id="djGuard">
+  <!-- Loading state -->
+  <div id="djGuardLoading" class="guard-loading">
+    <div class="spinner"></div>
+    <p>Checking DJ access...</p>
+  </div>
+
+  <!-- Not eligible state -->
+  <div id="djGuardDenied" class="guard-denied" style="display: none;">
+    <div class="denied-content">
+      <div class="denied-icon">🎧</div>
+      <h2>DJ Lobby Access Required</h2>
+      <p>You need to meet the requirements to access the DJ Lobby.</p>
+      
+      <div id="requirementsInfo" class="requirements-box">
+        <h3>Requirements</h3>
+        <ul>
+          <li>Upload at least <strong id="reqMixes">1</strong> DJ mix</li>
+          <li>Get at least <strong id="reqLikes">10</strong> likes on your mix</li>
+        </ul>
+      </div>
+
+      <div id="progressInfo" class="progress-box" style="display: none;">
+        <h3>Your Progress</h3>
+        <div id="progressContent"></div>
+      </div>
+
+      <div class="denied-actions">
+        <a href="/mixes/upload" class="btn btn-primary">Upload a Mix</a>
+        <a href={redirectTo} class="btn btn-secondary">Request Bypass</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Not logged in state -->
+  <div id="djGuardLogin" class="guard-login" style="display: none;">
+    <div class="login-content">
+      <div class="login-icon">🔒</div>
+      <h2>Sign In Required</h2>
+      <p>Please sign in to access the DJ Lobby</p>
+      <a href="/login?redirect=/dj-lobby" class="btn btn-primary">Sign In</a>
+    </div>
+  </div>
+
+  <!-- Eligible - show content -->
+  <div id="djGuardContent" class="guard-content" style="display: none;">
+    <slot />
+  </div>
+</div>
+
+<style>
+  .dj-guard {
+    min-height: 100vh;
+  }
+
+  .guard-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    color: var(--text-secondary, #a3a3a3);
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color, #262626);
+    border-top-color: var(--accent, #22c55e);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .guard-denied,
+  .guard-login {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 2rem;
+  }
+
+  .denied-content,
+  .login-content {
+    text-align: center;
+    max-width: 500px;
+  }
+
+  .denied-icon,
+  .login-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+
+  .denied-content h2,
+  .login-content h2 {
+    color: var(--text-primary, #fff);
+    margin-bottom: 0.5rem;
+  }
+
+  .denied-content > p,
+  .login-content > p {
+    color: var(--text-secondary, #a3a3a3);
+    margin-bottom: 1.5rem;
+  }
+
+  .requirements-box,
+  .progress-box {
+    background: var(--bg-secondary, #141414);
+    border: 1px solid var(--border-color, #262626);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    text-align: left;
+  }
+
+  .requirements-box h3,
+  .progress-box h3 {
+    color: var(--text-primary, #fff);
+    font-size: 0.9rem;
+    margin: 0 0 0.75rem;
+  }
+
+  .requirements-box ul {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: var(--text-secondary, #a3a3a3);
+  }
+
+  .requirements-box li {
+    margin-bottom: 0.5rem;
+  }
+
+  .progress-box {
+    background: rgba(34, 197, 94, 0.05);
+    border-color: rgba(34, 197, 94, 0.2);
+  }
+
+  .denied-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background: var(--accent, #22c55e);
+    color: #000;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-hover, #16a34a);
+  }
+
+  .btn-secondary {
+    background: var(--bg-secondary, #141414);
+    color: var(--text-primary, #fff);
+    border: 1px solid var(--border-color, #262626);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--text-secondary, #a3a3a3);
+  }
+
+  .guard-content {
+    min-height: 100vh;
+  }
+
+  .mix-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .mix-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color, #262626);
+    font-size: 0.9rem;
+  }
+
+  .mix-item:last-child {
+    border-bottom: none;
+  }
+
+  .mix-title {
+    color: var(--text-primary, #fff);
+  }
+
+  .mix-likes {
+    color: var(--text-secondary, #a3a3a3);
+  }
+
+  .mix-likes.meets {
+    color: var(--accent, #22c55e);
+  }
+</style>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+
+  const firebaseConfig = window.FIREBASE_CONFIG || {};
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  const loadingEl = document.getElementById('djGuardLoading');
+  const deniedEl = document.getElementById('djGuardDenied');
+  const loginEl = document.getElementById('djGuardLogin');
+  const contentEl = document.getElementById('djGuardContent');
+  const progressInfo = document.getElementById('progressInfo');
+  const progressContent = document.getElementById('progressContent');
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      // Not logged in
+      loadingEl.style.display = 'none';
+      loginEl.style.display = 'flex';
+      return;
+    }
+
+    try {
+      // Check eligibility via API
+      const response = await fetch(`/api/dj/eligibility?action=checkEligibility&uid=${user.uid}`);
+      const data = await response.json();
+
+      if (data.success && data.eligible) {
+        // User is eligible, show content
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'block';
+      } else {
+        // Not eligible, show requirements
+        loadingEl.style.display = 'none';
+        deniedEl.style.display = 'flex';
+
+        if (data.requirements) {
+          document.getElementById('reqMixes').textContent = data.requirements.requiredMixes;
+          document.getElementById('reqLikes').textContent = data.requirements.requiredLikes;
+        }
+
+        // Show progress if available
+        if (data.progress && data.progress.mixes && data.progress.mixes.length > 0) {
+          progressInfo.style.display = 'block';
+          
+          const mixesHtml = data.progress.mixes.map(mix => `
+            <div class="mix-item">
+              <span class="mix-title">${mix.title || 'Untitled Mix'}</span>
+              <span class="mix-likes ${mix.meetsThreshold ? 'meets' : ''}">${mix.likes} likes ${mix.meetsThreshold ? '✓' : ''}</span>
+            </div>
+          `).join('');
+
+          progressContent.innerHTML = `
+            <div class="mix-progress">
+              ${mixesHtml}
+            </div>
+            <p style="margin-top: 0.75rem; color: var(--text-secondary); font-size: 0.85rem;">
+              ${data.progress.mixesWithEnoughLikes}/${data.requirements?.requiredMixes || 1} qualifying mixes
+            </p>
+          `;
+        } else {
+          progressContent.innerHTML = '<p style="color: var(--text-secondary);">No mixes uploaded yet. Upload your first mix to start!</p>';
+          progressInfo.style.display = 'block';
+        }
+      }
+    } catch (error) {
+      console.error('Error checking DJ eligibility:', error);
+      loadingEl.style.display = 'none';
+      deniedEl.style.display = 'flex';
+    }
+  });
+</script>

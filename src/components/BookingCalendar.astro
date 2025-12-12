@@ -1,0 +1,299 @@
+---
+// src/components/BookingCalendar.astro
+// Reusable daily booking calendar for DJ slots (9am-8am next day)
+// Used by: live.astro (DJ booking), admin schedule, DJ account
+
+interface Props {
+  mode: 'booking' | 'admin' | 'readonly';
+  showDate?: string; // ISO date string, defaults to today
+}
+
+const { mode = 'booking', showDate } = Astro.props;
+---
+
+<div class="booking-calendar" data-mode={mode}>
+  <div class="calendar-date-nav">
+    <button type="button" class="cal-nav-btn" id="calPrevDay">←</button>
+    <div class="cal-date-display">
+      <span id="calDateLabel">Loading...</span>
+      <button type="button" class="cal-today-btn" id="calTodayBtn">Today</button>
+    </div>
+    <button type="button" class="cal-nav-btn" id="calNextDay">→</button>
+  </div>
+
+  <div class="calendar-legend">
+    <span class="legend-item"><span class="legend-dot available"></span> Available</span>
+    <span class="legend-item"><span class="legend-dot booked"></span> Booked</span>
+    <span class="legend-item"><span class="legend-dot selected"></span> Your Selection</span>
+  </div>
+
+  <div class="calendar-grid-wrapper">
+    <div class="calendar-time-grid" id="calendarTimeGrid">
+      <!-- Time slots will be rendered by JS -->
+    </div>
+  </div>
+
+  <div class="calendar-selection-info" id="selectionInfo">
+    <p class="selection-hint">Click a slot to select. You can book 1×2hr continuous OR 2×1hr slots per day.</p>
+  </div>
+</div>
+
+<style>
+  .booking-calendar {
+    background: var(--bg-secondary, #fff);
+    border-radius: var(--radius-lg, 12px);
+    overflow: hidden;
+  }
+
+  .calendar-date-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: var(--bg-dark, #000);
+    color: var(--text-light, #fff);
+  }
+
+  .cal-nav-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .cal-nav-btn:hover {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .cal-date-display {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  #calDateLabel {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.02em;
+  }
+
+  .cal-today-btn {
+    background: var(--accent-red, #dc2626);
+    border: none;
+    color: #fff;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .cal-today-btn:hover {
+    background: #b91c1c;
+  }
+
+  .calendar-legend {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--bg-primary, #f5f5f5);
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+    font-size: 0.8125rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary, #666);
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  .legend-dot.available {
+    background: #e5e5e5;
+    border: 1px solid #ccc;
+  }
+
+  .legend-dot.booked {
+    background: #4f46e5;
+  }
+
+  .legend-dot.selected {
+    background: var(--accent-green, #16a34a);
+  }
+
+  .calendar-grid-wrapper {
+    max-height: 500px;
+    overflow-y: auto;
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+  }
+
+  .calendar-time-grid {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 0;
+  }
+
+  :global(.cal-time-label) {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary, #666);
+    text-align: right;
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+    background: var(--bg-primary, #f5f5f5);
+  }
+
+  :global(.cal-slot) {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+    min-height: 56px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  :global(.cal-slot:hover:not(.booked):not(.past)) {
+    background: rgba(22, 163, 74, 0.1);
+  }
+
+  :global(.cal-slot.available) {
+    background: var(--bg-secondary, #fff);
+  }
+
+  :global(.cal-slot.booked) {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    cursor: default;
+  }
+
+  :global(.cal-slot.booked .slot-dj-name) {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  :global(.cal-slot.booked .slot-time-range) {
+    color: rgba(255,255,255,0.8);
+    font-size: 0.75rem;
+  }
+
+  :global(.cal-slot.selected) {
+    background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  }
+
+  :global(.cal-slot.selected .slot-text) {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  :global(.cal-slot.past) {
+    background: #f5f5f5;
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  :global(.cal-slot.own-booking) {
+    background: linear-gradient(135deg, #0891b2 0%, #22d3ee 100%);
+  }
+
+  :global(.cal-slot.own-booking .slot-dj-name) {
+    color: #fff;
+  }
+
+  :global(.slot-content) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  :global(.slot-dj-name) {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+  }
+
+  :global(.slot-time-range) {
+    font-size: 0.75rem;
+    color: var(--text-muted, #888);
+  }
+
+  :global(.slot-text) {
+    font-size: 0.875rem;
+    color: var(--text-secondary, #666);
+  }
+
+  .calendar-selection-info {
+    padding: 1rem 1.5rem;
+    background: var(--bg-primary, #f5f5f5);
+  }
+
+  .selection-hint {
+    font-size: 0.8125rem;
+    color: var(--text-secondary, #666);
+    margin: 0;
+  }
+
+  :global(.selection-summary) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  :global(.selected-slot-tag) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    background: var(--accent-green, #16a34a);
+    color: #fff;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  :global(.selected-slot-tag .remove-slot) {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.8);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+  }
+
+  :global(.selected-slot-tag .remove-slot:hover) {
+    color: #fff;
+  }
+
+  @media (max-width: 640px) {
+    .calendar-legend {
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    :global(.cal-time-label) {
+      font-size: 0.75rem;
+      padding: 0.5rem 0.25rem;
+    }
+
+    :global(.cal-slot) {
+      padding: 0.5rem;
+      min-height: 48px;
+    }
+  }
+</style>

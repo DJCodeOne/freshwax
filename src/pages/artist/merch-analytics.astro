@@ -1,0 +1,636 @@
+---
+// /src/pages/artist/merch-analytics.astro
+// Merch Supplier Analytics Dashboard (Read Only)
+// For partners with isMerchSupplier role to view sales trends and insights
+
+export const prerender = false;
+
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+// Get partner from session
+const partnerId = Astro.cookies.get('partnerId')?.value || '';
+let partner: any = null;
+let orders: any[] = [];
+let products: any[] = [];
+
+if (partnerId) {
+  try {
+    const partnerDoc = await db.collection('artists').doc(partnerId).get();
+    if (partnerDoc.exists) {
+      partner = { id: partnerDoc.id, ...partnerDoc.data() };
+      
+      // Try multiple strategies to find products linked to this supplier
+      let merchDocs: any[] = [];
+      
+      // Strategy 1: Query by supplierId
+      const byIdSnap = await db.collection('merch')
+        .where('supplierId', '==', partnerId)
+        .get();
+      if (!byIdSnap.empty) {
+        merchDocs = byIdSnap.docs;
+      }
+      
+      // Strategy 2: If no results, try by supplier name
+      if (merchDocs.length === 0 && partner.artistName) {
+        const byNameSnap = await db.collection('merch')
+          .where('supplierName', '==', partner.artistName)
+          .get();
+        if (!byNameSnap.empty) {
+          merchDocs = byNameSnap.docs;
+        }
+      }
+      
+      // Strategy 3: Check merch-suppliers collection for linked products
+      if (merchDocs.length === 0) {
+        try {
+          const supplierDoc = await db.collection('merch-suppliers').doc(partnerId).get();
+          if (supplierDoc.exists) {
+            const supplierData = supplierDoc.data();
+            if (supplierData?.products && supplierData.products.length > 0) {
+              const productPromises = supplierData.products.slice(0, 50).map((pid: string) => 
+                db.collection('merch').doc(pid).get()
+              );
+              const productDocs = await Promise.all(productPromises);
+              merchDocs = productDocs.filter(d => d.exists);
+            }
+          }
+        } catch (e) {
+          // Ignore errors from merch-suppliers lookup
+        }
+      }
+      
+      const productIds = merchDocs.map(doc => doc.id);
+      products = merchDocs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Fetch orders containing this supplier's products
+      if (productIds.length > 0) {
+        const ordersSnap = await db.collection('orders')
+          .where('status', '!=', 'cancelled')
+          .orderBy('status')
+          .orderBy('createdAt', 'desc')
+          .limit(500)
+          .get();
+        
+        // Filter orders to only include items from this supplier
+        ordersSnap.docs.forEach(doc => {
+          const order = doc.data();
+          const supplierItems = (order.items || []).filter((item: any) => 
+            productIds.includes(item.productId) || item.supplierId === partnerId
+          );
+          
+          if (supplierItems.length > 0) {
+            orders.push({
+              id: doc.id,
+              createdAt: order.createdAt?.toDate?.() || new Date(),
+              status: order.status || 'pending',
+              items: supplierItems,
+              total: supplierItems.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0)
+            });
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.error('Error fetching data:', e);
+  }
+}
+
+const isLoggedIn = !!partner;
+const isMerchSupplier = partner?.isMerchSupplier === true;
+
+// Calculate analytics
+const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+const totalUnits = orders.reduce((sum, o) => o.items.reduce((s: number, i: any) => s + (i.quantity || 1), s), 0);
+const supplierCut = partner?.supplierCut || 70;
+const totalEarnings = totalRevenue * (supplierCut / 100);
+const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
+
+// Product performance
+const productSales: Record<string, { name: string; units: number; revenue: number }> = {};
+orders.forEach(order => {
+  order.items.forEach((item: any) => {
+    const pid = item.productId || item.id;
+    if (!productSales[pid]) {
+      productSales[pid] = { name: item.name || item.productName || 'Unknown', units: 0, revenue: 0 };
+    }
+    productSales[pid].units += item.quantity || 1;
+    productSales[pid].revenue += (item.price || 0) * (item.quantity || 1);
+  });
+});
+
+const topProducts = Object.entries(productSales)
+  .map(([id, data]) => ({ id, ...data }))
+  .sort((a, b) => b.revenue - a.revenue)
+  .slice(0, 5);
+
+// Monthly breakdown (last 6 months)
+const monthlyData: Record<string, { orders: number; revenue: number; units: number }> = {};
+const now = new Date();
+for (let i = 5; i >= 0; i--) {
+  const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  monthlyData[key] = { orders: 0, revenue: 0, units: 0 };
+}
+
+orders.forEach(order => {
+  const d = order.createdAt;
+  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  if (monthlyData[key]) {
+    monthlyData[key].orders++;
+    monthlyData[key].revenue += order.total;
+    monthlyData[key].units += order.items.reduce((s: number, i: any) => s + (i.quantity || 1), 0);
+  }
+});
+
+const monthLabels = Object.keys(monthlyData).map(k => {
+  const [y, m] = k.split('-');
+  return new Date(parseInt(y), parseInt(m) - 1, 1).toLocaleDateString('en-GB', { month: 'short' });
+});
+
+// Format helpers
+const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+
+// Pre-process chart data
+const maxRevenue = Math.max(...Object.values(monthlyData).map(d => d.revenue), 1);
+const chartData = Object.entries(monthlyData).map(([key, data], i) => {
+  const height = (data.revenue / maxRevenue) * 100;
+  return {
+    key,
+    data,
+    label: monthLabels[i],
+    height: Math.max(height, 2),
+    formattedRevenue: formatCurrency(data.revenue)
+  };
+});
+
+// Best month calculation
+const bestMonthEntry = Object.entries(monthlyData).reduce((a, b) => b[1].revenue > a[1].revenue ? b : a);
+const [bestYear, bestMonth] = bestMonthEntry[0].split('-');
+const bestMonthName = new Date(parseInt(bestYear), parseInt(bestMonth) - 1, 1).toLocaleDateString('en-GB', { month: 'long' });
+const bestMonthText = bestMonthEntry[1].revenue > 0 ? bestMonthName + ' (' + formatCurrency(bestMonthEntry[1].revenue) + ')' : 'No sales yet';
+
+// Average units per order
+const avgUnitsPerOrder = orders.length > 0 ? (totalUnits / orders.length).toFixed(1) : '0';
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics | Fresh Wax</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    h1 .page-icon {
+      font-size: 1.5rem;
+    }
+    
+    h1 .page-title {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .back-link {
+      color: #a0a0a0;
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+    
+    .back-link:hover { color: #667eea; }
+    
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    
+    .stat-card.highlight {
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+      border-color: rgba(102, 126, 234, 0.3);
+    }
+    
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    
+    .stat-value.green { color: #4ade80; }
+    .stat-value.purple { color: #a78bfa; }
+    
+    .stat-label {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-top: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .stat-note {
+      font-size: 0.7rem;
+      color: #6b7280;
+      margin-top: 0.5rem;
+    }
+    
+    /* Sections */
+    .section {
+      margin-bottom: 2rem;
+    }
+    
+    .section-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    /* Chart */
+    .chart-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    
+    .chart-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 1rem;
+      height: 200px;
+      padding-top: 1rem;
+    }
+    
+    .chart-bar-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+    }
+    
+    .chart-bar {
+      width: 100%;
+      max-width: 60px;
+      background: linear-gradient(to top, #667eea, #764ba2);
+      border-radius: 4px 4px 0 0;
+      min-height: 4px;
+      transition: all 0.3s;
+    }
+    
+    .chart-bar:hover {
+      filter: brightness(1.2);
+    }
+    
+    .chart-label {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-top: 0.5rem;
+      text-align: center;
+    }
+    
+    .chart-value {
+      font-size: 0.7rem;
+      color: #4ade80;
+      margin-top: 0.25rem;
+      font-weight: 600;
+    }
+    
+    /* Top Products */
+    .products-list {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .product-row {
+      display: flex;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      gap: 1rem;
+    }
+    
+    .product-row:last-child {
+      border-bottom: none;
+    }
+    
+    .product-rank {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #667eea;
+      width: 2rem;
+    }
+    
+    .product-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .product-name {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .product-units {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+    
+    .product-revenue {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #4ade80;
+    }
+    
+    /* Two Column Layout */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      border: 1px dashed rgba(255,255,255,0.1);
+    }
+    
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+    
+    .empty-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+    
+    .empty-text {
+      color: #9ca3af;
+      font-size: 0.875rem;
+    }
+    
+    /* Auth */
+    .auth-message {
+      text-align: center;
+      padding: 4rem 2rem;
+    }
+    
+    .auth-message h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #fff;
+    }
+    
+    .auth-message p {
+      color: #9ca3af;
+      margin-bottom: 1.5rem;
+    }
+    
+    .auth-link {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+    
+    /* Insights */
+    .insights-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    
+    .insight-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+    
+    .insight-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .insight-title {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #fff;
+      margin-bottom: 0.25rem;
+    }
+    
+    .insight-value {
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+    
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .two-col { grid-template-columns: 1fr; }
+      .chart-bars { gap: 0.5rem; }
+      .insights-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    {!isLoggedIn ? (
+      <div class="auth-message">
+        <h2>Sign In Required</h2>
+        <p>Please sign in to view your analytics.</p>
+        <a href="/login" class="auth-link">Partner Login</a>
+      </div>
+    ) : !isMerchSupplier ? (
+      <div class="auth-message">
+        <h2>Access Restricted</h2>
+        <p>This page is only available to merchandise suppliers.</p>
+        <a href="/artist/dashboard" class="auth-link">Back to Dashboard</a>
+      </div>
+    ) : orders.length === 0 && products.length === 0 ? (
+      <div class="content-wrapper">
+        <header>
+          <h1><span class="page-icon">📊</span><span class="page-title">Analytics</span></h1>
+          <a href="/artist/dashboard" class="back-link">← Back to Dashboard</a>
+        </header>
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <div class="empty-title">No Data Yet</div>
+          <div class="empty-text">Analytics will appear here once you have products and sales.</div>
+        </div>
+      </div>
+    ) : (
+      <div class="content-wrapper">
+        <header>
+          <h1><span class="page-icon">📊</span><span class="page-title">Analytics</span></h1>
+          <a href="/artist/dashboard" class="back-link">← Back to Dashboard</a>
+        </header>
+        
+        <div class="stats-grid">
+          <div class="stat-card highlight">
+            <div class="stat-value green">{formatCurrency(totalRevenue)}</div>
+            <div class="stat-label">Total Revenue</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value purple">{formatCurrency(totalEarnings)}</div>
+            <div class="stat-label">Your Earnings</div>
+            <div class="stat-note">{supplierCut}% of revenue</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{totalUnits}</div>
+            <div class="stat-label">Units Sold</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">{formatCurrency(avgOrderValue)}</div>
+            <div class="stat-label">Avg Order Value</div>
+          </div>
+        </div>
+        
+        <div class="section">
+          <div class="section-title">📈 Revenue (Last 6 Months)</div>
+          <div class="chart-card">
+            <div class="chart-bars">
+              {chartData.map(item => (
+                <div class="chart-bar-wrap">
+                  <div class="chart-bar" style={'height: ' + item.height + '%; flex-shrink: 0;'}></div>
+                  <div class="chart-label">{item.label}</div>
+                  <div class="chart-value">{item.formattedRevenue}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        
+        <div class="two-col">
+          <div class="section">
+            <div class="section-title">🏆 Top Products</div>
+            {topProducts.length > 0 ? (
+              <div class="products-list">
+                {topProducts.map((product, i) => (
+                  <div class="product-row">
+                    <span class="product-rank">#{i + 1}</span>
+                    <div class="product-info">
+                      <div class="product-name">{product.name}</div>
+                      <div class="product-units">{product.units} units sold</div>
+                    </div>
+                    <span class="product-revenue">{formatCurrency(product.revenue)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div class="empty-state" style="padding: 2rem;">
+                <div class="empty-text">No product sales yet</div>
+              </div>
+            )}
+          </div>
+          
+          <div class="section">
+            <div class="section-title">💡 Quick Insights</div>
+            <div class="insights-grid">
+              <div class="insight-card">
+                <div class="insight-icon">📦</div>
+                <div class="insight-title">Products Listed</div>
+                <div class="insight-value">{products.length} active products</div>
+              </div>
+              <div class="insight-card">
+                <div class="insight-icon">🛒</div>
+                <div class="insight-title">Total Orders</div>
+                <div class="insight-value">{orders.length} orders received</div>
+              </div>
+              <div class="insight-card">
+                <div class="insight-icon">📊</div>
+                <div class="insight-title">Best Month</div>
+                <div class="insight-value">{bestMonthText}</div>
+              </div>
+              <div class="insight-card">
+                <div class="insight-icon">📈</div>
+                <div class="insight-title">Avg Units/Order</div>
+                <div class="insight-value">{avgUnitsPerOrder} items</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+</body>
+</html>

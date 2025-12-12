@@ -1,0 +1,416 @@
+---
+// Merch Orders - Pro Dashboard
+// View orders for merch seller
+import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+---
+<ProDashboardLayout title="Orders" activeSection="/pro/merch/orders">
+  <div class="orders-page">
+    <div class="page-header">
+      <div class="header-content">
+        <p class="subtitle">View orders for your merchandise</p>
+      </div>
+    </div>
+
+    <!-- Order Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-value" id="pendingCount">-</div>
+        <div class="stat-label">Pending</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="shippedCount">-</div>
+        <div class="stat-label">Shipped</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="completedCount">-</div>
+        <div class="stat-label">Completed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalRevenue">-</div>
+        <div class="stat-label">Total Revenue</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-status="all">All</button>
+        <button class="filter-tab" data-status="pending">Pending</button>
+        <button class="filter-tab" data-status="shipped">Shipped</button>
+        <button class="filter-tab" data-status="completed">Completed</button>
+      </div>
+    </div>
+
+    <!-- Orders List -->
+    <div id="ordersList" class="orders-list">
+      <div class="loading">Loading orders...</div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <div class="empty-icon">📦</div>
+      <h3>No orders yet</h3>
+      <p>Orders for your merchandise will appear here</p>
+    </div>
+
+    <!-- Info -->
+    <div class="info-box">
+      <p><strong>Need help with an order?</strong> Contact the Fresh Wax team for fulfillment support.</p>
+      <a href="/contact" class="btn btn-small">Contact Us</a>
+    </div>
+  </div>
+
+  <style>
+    .orders-page {
+      max-width: 1200px;
+    }
+
+    .page-header {
+      margin-bottom: 1.5rem;
+    }
+
+    .subtitle {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text-primary, #fff);
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .filters-bar {
+      margin-bottom: 1.5rem;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-tab {
+      padding: 0.5rem 1rem;
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 6px;
+      color: var(--text-secondary, #a3a3a3);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-tab:hover {
+      color: var(--text-primary, #fff);
+      border-color: var(--text-secondary, #a3a3a3);
+    }
+
+    .filter-tab.active {
+      background: var(--accent, #22c55e);
+      color: #000;
+      border-color: var(--accent, #22c55e);
+    }
+
+    .orders-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .order-card {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .order-id {
+      font-weight: 600;
+      color: var(--text-primary, #fff);
+    }
+
+    .order-date {
+      font-size: 0.85rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .order-status {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-pending {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+    }
+
+    .status-shipped {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+    }
+
+    .status-completed {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    .order-items {
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: var(--bg-tertiary, #1a1a1a);
+      border-radius: 6px;
+    }
+
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border-color, #262626);
+    }
+
+    .order-item:last-child {
+      border-bottom: none;
+    }
+
+    .item-name {
+      color: var(--text-primary, #fff);
+    }
+
+    .item-qty {
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .order-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border-color, #262626);
+    }
+
+    .order-total {
+      font-weight: 600;
+      color: var(--accent, #22c55e);
+    }
+
+    .customer-name {
+      font-size: 0.85rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: var(--bg-secondary, #141414);
+      border: 1px dashed var(--border-color, #262626);
+      border-radius: 8px;
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .empty-state h3 {
+      color: var(--text-primary, #fff);
+      margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .info-box {
+      padding: 1rem 1.25rem;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .info-box p {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0;
+      font-size: 0.9rem;
+    }
+
+    .info-box strong {
+      color: var(--text-primary, #fff);
+    }
+
+    .btn-small {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      background: var(--bg-tertiary, #1a1a1a);
+      color: var(--text-primary, #fff);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 6px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-small:hover {
+      background: var(--bg-secondary, #141414);
+    }
+  </style>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getFirestore, collection, query, where, getDocs, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+    const firebaseConfig = window.FIREBASE_CONFIG || {};
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const ordersList = document.getElementById('ordersList');
+    const emptyState = document.getElementById('emptyState');
+    const filterTabs = document.querySelectorAll('.filter-tab');
+
+    let allOrders = [];
+    let currentFilter = 'all';
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      await loadOrders(user.uid);
+    });
+
+    async function loadOrders(uid) {
+      try {
+        const ordersQuery = query(
+          collection(db, 'orders'),
+          where('sellerId', '==', uid),
+          orderBy('createdAt', 'desc')
+        );
+        const snapshot = await getDocs(ordersQuery);
+        
+        allOrders = [];
+        let pending = 0, shipped = 0, completed = 0, revenue = 0;
+
+        snapshot.forEach(doc => {
+          const order = { id: doc.id, ...doc.data() };
+          allOrders.push(order);
+
+          if (order.status === 'pending') pending++;
+          else if (order.status === 'shipped') shipped++;
+          else if (order.status === 'completed') completed++;
+
+          revenue += order.total || 0;
+        });
+
+        // Update stats
+        document.getElementById('pendingCount').textContent = pending;
+        document.getElementById('shippedCount').textContent = shipped;
+        document.getElementById('completedCount').textContent = completed;
+        document.getElementById('totalRevenue').textContent = '£' + revenue.toFixed(2);
+
+        renderOrders();
+      } catch (error) {
+        console.error('Error loading orders:', error);
+        ordersList.innerHTML = '<div class="loading">Error loading orders</div>';
+      }
+    }
+
+    function renderOrders() {
+      let filtered = allOrders;
+      
+      if (currentFilter !== 'all') {
+        filtered = allOrders.filter(o => o.status === currentFilter);
+      }
+
+      if (filtered.length === 0) {
+        ordersList.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      ordersList.style.display = 'flex';
+
+      ordersList.innerHTML = filtered.map(order => {
+        const statusClass = `status-${order.status || 'pending'}`;
+        const date = order.createdAt?.toDate?.() || new Date(order.createdAt);
+        
+        return `
+          <div class="order-card">
+            <div class="order-header">
+              <div>
+                <div class="order-id">Order #${order.id.slice(-8).toUpperCase()}</div>
+                <div class="order-date">${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+              </div>
+              <span class="order-status ${statusClass}">${order.status || 'pending'}</span>
+            </div>
+            <div class="order-items">
+              ${(order.items || []).map(item => `
+                <div class="order-item">
+                  <span class="item-name">${item.name || 'Item'}</span>
+                  <span class="item-qty">×${item.quantity || 1}</span>
+                </div>
+              `).join('') || '<div class="order-item"><span>No items</span></div>'}
+            </div>
+            <div class="order-footer">
+              <span class="order-total">£${(order.total || 0).toFixed(2)}</span>
+              <span class="customer-name">${order.customerName || 'Customer'}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Filter tabs
+    filterTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        filterTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.dataset.status;
+        renderOrders();
+      });
+    });
+  </script>
+</ProDashboardLayout>

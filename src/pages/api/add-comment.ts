@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { clearCache } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -24,9 +25,9 @@ const db = getFirestore();
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const { releaseId, comment, userName, userId, gifUrl } = await request.json();
+    const { releaseId, comment, userName, userId, gifUrl, avatarUrl } = await request.json();
 
-    log.info('[add-comment] Received:', releaseId, userName, userId, 'hasGif:', !!gifUrl);
+    log.info('[add-comment] Received:', releaseId, userName, userId, 'hasGif:', !!gifUrl, 'hasAvatar:', !!avatarUrl);
 
     if (!userId) {
       return new Response(JSON.stringify({ success: false, error: 'You must be logged in to comment' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
@@ -53,6 +54,7 @@ export const POST: APIRoute = async ({ request }) => {
       id: 'comment_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       userId,
       userName: userName.trim(),
+      avatarUrl: avatarUrl || null,
       comment: comment?.trim() || '',
       gifUrl: gifUrl || null,
       timestamp: new Date().toISOString(),
@@ -64,9 +66,19 @@ export const POST: APIRoute = async ({ request }) => {
       updatedAt: new Date().toISOString()
     });
 
+    // Invalidate cache for this release so fresh data is served
+    clearCache(`releases:${releaseId}`);
+    clearCache(`doc:releases:${releaseId}`);
+
     log.info('[add-comment] Added comment to:', releaseId);
 
-    return new Response(JSON.stringify({ success: true, comment: newComment }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ success: true, comment: newComment }), { 
+      status: 200, 
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      } 
+    });
 
   } catch (error) {
     log.error('[add-comment] Error:', error);

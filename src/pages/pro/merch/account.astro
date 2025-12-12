@@ -1,0 +1,311 @@
+---
+// Merch Account - Pro Dashboard
+// View-only account information
+import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+---
+<ProDashboardLayout title="Account" activeSection="/pro/merch/account">
+  <div class="account-page">
+    <div class="page-header">
+      <div class="header-content">
+        <p class="subtitle">View your merch seller account information</p>
+      </div>
+    </div>
+
+    <!-- Account Info -->
+    <div class="info-section">
+      <h2>Business Information</h2>
+      <div class="info-grid" id="businessInfo">
+        <div class="info-item">
+          <span class="info-label">Business Name</span>
+          <span class="info-value" id="businessName">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Contact Email</span>
+          <span class="info-value" id="contactEmail">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Account Status</span>
+          <span class="info-value" id="accountStatus">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Member Since</span>
+          <span class="info-value" id="memberSince">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Info -->
+    <div class="info-section">
+      <h2>Payment Information</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Payment Method</span>
+          <span class="info-value" id="paymentMethod">Bank Transfer</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Payout Schedule</span>
+          <span class="info-value">Monthly</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Commission Rate</span>
+          <span class="info-value" id="commissionRate">15%</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Minimum Payout</span>
+          <span class="info-value">£50.00</span>
+        </div>
+      </div>
+      <p class="info-note">Payment details are managed by Fresh Wax. Contact us to update.</p>
+    </div>
+
+    <!-- Balance -->
+    <div class="info-section">
+      <h2>Current Balance</h2>
+      <div class="balance-display">
+        <div class="balance-amount" id="currentBalance">£0.00</div>
+        <div class="balance-label">Available for payout</div>
+      </div>
+      <div class="balance-details">
+        <div class="balance-row">
+          <span>Pending clearance</span>
+          <span id="pendingAmount">£0.00</span>
+        </div>
+        <div class="balance-row">
+          <span>Next payout date</span>
+          <span id="nextPayoutDate">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="info-section contact-section">
+      <h2>Need to Make Changes?</h2>
+      <p>To update your business information, payment details, or commission rate, please contact the Fresh Wax team.</p>
+      <div class="contact-actions">
+        <a href="/contact" class="btn btn-primary">Contact Us</a>
+        <a href="mailto:merch@freshwax.co.uk" class="btn btn-secondary">Email Support</a>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .account-page {
+      max-width: 800px;
+    }
+
+    .page-header {
+      margin-bottom: 2rem;
+    }
+
+    .subtitle {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0;
+    }
+
+    .info-section {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .info-section h2 {
+      color: var(--text-primary, #fff);
+      font-size: 1.1rem;
+      margin: 0 0 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-color, #262626);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .info-label {
+      font-size: 0.8rem;
+      color: var(--text-muted, #666);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .info-value {
+      color: var(--text-primary, #fff);
+      font-weight: 500;
+    }
+
+    .info-value.status-active {
+      color: #22c55e;
+    }
+
+    .info-note {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color, #262626);
+      font-size: 0.85rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .balance-display {
+      text-align: center;
+      padding: 1.5rem;
+      background: var(--bg-tertiary, #1a1a1a);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .balance-amount {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--accent, #22c55e);
+      margin-bottom: 0.25rem;
+    }
+
+    .balance-label {
+      font-size: 0.9rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .balance-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .balance-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border-color, #262626);
+      font-size: 0.9rem;
+    }
+
+    .balance-row:last-child {
+      border-bottom: none;
+    }
+
+    .balance-row span:first-child {
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .balance-row span:last-child {
+      color: var(--text-primary, #fff);
+    }
+
+    .contact-section {
+      background: rgba(59, 130, 246, 0.05);
+      border-color: rgba(59, 130, 246, 0.2);
+    }
+
+    .contact-section p {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0 0 1.25rem;
+    }
+
+    .contact-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--accent, #22c55e);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover, #16a34a);
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary, #1a1a1a);
+      color: var(--text-primary, #fff);
+      border: 1px solid var(--border-color, #262626);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--text-secondary, #a3a3a3);
+    }
+  </style>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+    const firebaseConfig = window.FIREBASE_CONFIG || {};
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      await loadAccountInfo(user);
+    });
+
+    async function loadAccountInfo(user) {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.exists() ? userDoc.data() : {};
+
+        // Business info
+        document.getElementById('businessName').textContent = 
+          userData.pendingRoles?.merchSeller?.businessName || 
+          userData.displayName || 
+          'Not set';
+        document.getElementById('contactEmail').textContent = user.email;
+        
+        const statusEl = document.getElementById('accountStatus');
+        if (userData.roles?.merchSeller) {
+          statusEl.textContent = 'Active';
+          statusEl.classList.add('status-active');
+        } else {
+          statusEl.textContent = 'Pending';
+        }
+
+        const createdAt = userData.createdAt?.toDate?.() || new Date();
+        document.getElementById('memberSince').textContent = 
+          createdAt.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+        // Calculate next payout date (first of next month)
+        const now = new Date();
+        const nextPayout = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        document.getElementById('nextPayoutDate').textContent = 
+          nextPayout.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        // Load balance from merch-sellers collection if exists
+        const sellerDoc = await getDoc(doc(db, 'merch-sellers', user.uid));
+        if (sellerDoc.exists()) {
+          const sellerData = sellerDoc.data();
+          document.getElementById('currentBalance').textContent = 
+            '£' + (sellerData.balance || 0).toFixed(2);
+          document.getElementById('pendingAmount').textContent = 
+            '£' + (sellerData.pendingBalance || 0).toFixed(2);
+          document.getElementById('commissionRate').textContent = 
+            (sellerData.commissionRate || 15) + '%';
+        }
+
+      } catch (error) {
+        console.error('Error loading account info:', error);
+      }
+    }
+  </script>
+</ProDashboardLayout>

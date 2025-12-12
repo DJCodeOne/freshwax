@@ -85,7 +85,8 @@ function calculateTotals(items) {
   return { subtotal: subtotal, shipping: shipping, total: total, hasPhysicalItems: hasPhysicalItems };
 }
 
-function getBadgeStyle(type) {
+function getBadgeStyle(type, isPreOrder) {
+  if (isPreOrder) return 'background: linear-gradient(135deg, #f97316, #dc2626); color: #fff; border-color: #f97316;';
   if (type === 'vinyl') return 'background: #000; color: #fff; border-color: #fff;';
   if (type === 'merch') return 'background: #1e1b4b; color: #a5b4fc; border-color: #a5b4fc;';
   if (type === 'track') return 'background: #1e3a5f; color: #7dd3fc; border-color: #7dd3fc;';
@@ -187,37 +188,57 @@ function renderCart() {
     var itemName = item.name || item.title || 'Unknown Item';
     var itemImage = item.image || item.artwork || '/logo.webp';
     var artistName = item.artist || '';
+    var isPreOrder = item.isPreOrder || false;
+    var releaseDate = item.releaseDate || null;
+    
+    // Format release date if pre-order
+    var releaseDateFormatted = '';
+    if (isPreOrder && releaseDate) {
+      try {
+        var d = new Date(releaseDate);
+        releaseDateFormatted = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      } catch (e) {}
+    }
     
     // Check if quantity adjustable (vinyl/merch yes, digital no)
     var canAdjustQty = itemType === 'vinyl' || itemType === 'merch';
     
+    // Badge text
+    var badgeText = isPreOrder ? 'Pre-order' : itemType;
+    
     itemsHTML += 
-      '<article style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: linear-gradient(to bottom, #1f2937 0%, #111827 100%); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 10px; transition: all 0.2s;">' +
-        '<div style="width: 72px; height: 72px; border-radius: 8px; overflow: hidden; background: #111; border: 2px solid rgba(255, 255, 255, 0.15); flex-shrink: 0;">' +
-          '<img src="' + itemImage + '" alt="' + itemName + '" style="width: 72px; height: 72px; object-fit: cover; display: block;" onerror="this.src=\'/logo.webp\'">' +
+      '<article style="display: flex; align-items: stretch; gap: 1.25rem; padding: 1.25rem; background: linear-gradient(to bottom, #1f2937 0%, #111827 100%); border: 2px solid ' + (isPreOrder ? 'rgba(249, 115, 22, 0.3)' : 'rgba(255, 255, 255, 0.1)') + '; border-radius: 10px; transition: all 0.2s;">' +
+        '<div style="width: 80px; height: 80px; border-radius: 8px; overflow: hidden; background: #111; border: 2px solid rgba(255, 255, 255, 0.15); flex-shrink: 0; position: relative; align-self: flex-start;">' +
+          '<img src="' + itemImage + '" alt="' + itemName + '" style="width: 80px; height: 80px; object-fit: cover; display: block;" onerror="this.src=\'/logo.webp\'">' +
+          (isPreOrder ? '<div style="position: absolute; top: 0; right: 0; background: linear-gradient(135deg, #f97316, #dc2626); padding: 0.125rem 0.375rem; font-size: 0.5rem; font-weight: 700; color: #fff; text-transform: uppercase; border-bottom-left-radius: 4px;">⏰</div>' : '') +
         '</div>' +
-        '<div style="flex: 1; min-width: 0;">' +
-          '<h3 style="margin: 0 0 0.25rem 0; font-family: Bebas Neue, sans-serif; font-size: 1.25rem; color: #dc2626; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">' + itemName + '</h3>' +
-          (artistName ? '<p style="margin: 0 0 0.375rem 0; font-size: 0.875rem; color: #9ca3af;">' + artistName + '</p>' : '') +
-          '<div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">' +
-            '<span style="display: inline-block; padding: 0.125rem 0.5rem; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 4px; border: 1.5px solid; ' + getBadgeStyle(itemType) + '">' + itemType + '</span>' +
-            (item.color ? '<span style="font-size: 0.8125rem; color: #6b7280;">' + (typeof item.color === 'object' ? item.color.name : item.color) + '</span>' : '') +
-            (item.size ? '<span style="font-size: 0.8125rem; color: #6b7280;">Size: ' + item.size + '</span>' : '') +
+        '<div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">' +
+          '<h3 style="margin: 0 0 0.375rem 0; font-family: Bebas Neue, sans-serif; font-size: 1.5rem; color: #dc2626; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">' + itemName + '</h3>' +
+          (artistName ? '<p style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #9ca3af;">' + artistName + '</p>' : '') +
+          '<div style="display: flex; gap: 0.625rem; flex-wrap: wrap; align-items: center; margin-top: auto;">' +
+            (itemType === 'vinyl' ? '<span style="display: inline-block; padding: 0.25rem 0.625rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 4px; border: 1.5px solid; background: #052e16; color: #22c55e; border-color: #22c55e;">Digital</span>' : '') +
+            '<span style="display: inline-block; padding: 0.25rem 0.625rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 4px; border: 1.5px solid; ' + getBadgeStyle(itemType, isPreOrder) + '">' + badgeText + '</span>' +
+            (isPreOrder && releaseDateFormatted ? '<span style="font-size: 0.8rem; color: #f97316;">Available: ' + releaseDateFormatted + '</span>' : '') +
+            (item.color ? '<span style="font-size: 0.95rem; color: #9ca3af;">' + (typeof item.color === 'object' ? item.color.name : item.color) + '</span>' : '') +
+            (item.size ? '<span style="font-size: 0.95rem; color: #9ca3af;">Size: ' + item.size + '</span>' : '') +
           '</div>' +
         '</div>' +
         (canAdjustQty ? 
-          '<div style="display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0;">' +
-            '<button onclick="updateQuantity(' + i + ', ' + (quantity - 1) + ')" class="qty-btn" style="width: 24px; height: 24px; background: transparent; border: 1.5px solid rgba(255,255,255,0.3); border-radius: 4px; color: #9ca3af; font-size: 0.875rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"' + (quantity <= 1 ? ' disabled style="width: 24px; height: 24px; background: transparent; border: 1.5px solid rgba(255,255,255,0.15); border-radius: 4px; color: #4b5563; font-size: 0.875rem; cursor: not-allowed; display: flex; align-items: center; justify-content: center;"' : '') + '>−</button>' +
-            '<span style="min-width: 24px; text-align: center; font-size: 0.875rem; font-weight: 600; color: #fff;">' + quantity + '</span>' +
-            '<button onclick="updateQuantity(' + i + ', ' + (quantity + 1) + ')" class="qty-btn" style="width: 24px; height: 24px; background: transparent; border: 1.5px solid rgba(255,255,255,0.3); border-radius: 4px; color: #9ca3af; font-size: 0.875rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"' + (quantity >= 10 ? ' disabled style="width: 24px; height: 24px; background: transparent; border: 1.5px solid rgba(255,255,255,0.15); border-radius: 4px; color: #4b5563; font-size: 0.875rem; cursor: not-allowed; display: flex; align-items: center; justify-content: center;"' : '') + '>+</button>' +
+          '<div style="display: flex; flex-direction: column; align-items: center; gap: 0.375rem; flex-shrink: 0; margin-right: 1.5rem; justify-content: flex-end;">' +
+            '<span style="font-size: 0.7rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Quantity</span>' +
+            '<div style="display: flex; align-items: center; gap: 0.375rem;">' +
+              '<button onclick="updateQuantity(' + i + ', ' + (quantity - 1) + ')" class="qty-btn" style="width: 32px; height: 32px; background: transparent; border: 2px solid rgba(255,255,255,0.3); border-radius: 6px; color: #fff; font-size: 1.125rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"' + (quantity <= 1 ? ' disabled style="width: 32px; height: 32px; background: transparent; border: 2px solid rgba(255,255,255,0.15); border-radius: 6px; color: #4b5563; font-size: 1.125rem; cursor: not-allowed; display: flex; align-items: center; justify-content: center;"' : '') + '>−</button>' +
+              '<span style="min-width: 32px; text-align: center; font-size: 1.125rem; font-weight: 700; color: #fff;">' + quantity + '</span>' +
+              '<button onclick="updateQuantity(' + i + ', ' + (quantity + 1) + ')" class="qty-btn" style="width: 32px; height: 32px; background: transparent; border: 2px solid rgba(255,255,255,0.3); border-radius: 6px; color: #fff; font-size: 1.125rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"' + (quantity >= 10 ? ' disabled style="width: 32px; height: 32px; background: transparent; border: 2px solid rgba(255,255,255,0.15); border-radius: 6px; color: #4b5563; font-size: 1.125rem; cursor: not-allowed; display: flex; align-items: center; justify-content: center;"' : '') + '>+</button>' +
+            '</div>' +
           '</div>' 
         : '') +
-        '<div style="text-align: right; flex-shrink: 0; min-width: 70px;">' +
-          '<div style="font-size: 1.125rem; font-weight: 700; color: #22c55e;">£' + priceTotal + '</div>' +
-          (quantity > 1 ? '<div style="font-size: 0.75rem; color: #6b7280;">£' + priceEach + ' each</div>' : '') +
+        '<div style="text-align: right; flex-shrink: 0; min-width: 90px; display: flex; flex-direction: column; justify-content: flex-end;">' +
+          '<div style="font-size: 1.375rem; font-weight: 700; color: #fff;">£' + priceTotal + '</div>' +
+          (quantity > 1 ? '<div style="font-size: 0.875rem; color: #6b7280;">£' + priceEach + ' each</div>' : '') +
         '</div>' +
-        '<button onclick="removeItem(' + i + ')" style="width: 28px; height: 28px; background: transparent; border: none; color: #6b7280; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.2s;" title="Remove item">' +
-          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
+        '<button onclick="removeItem(' + i + ')" style="width: 32px; height: 32px; background: transparent; border: none; color: #6b7280; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.2s; align-self: flex-end;" title="Remove item">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
         '</button>' +
       '</article>';
   }
@@ -266,7 +287,7 @@ function renderCart() {
         '</div>' +
         '<div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; background: rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.15); border-radius: 10px; margin-bottom: 1.25rem;">' +
           '<span style="font-family: Bebas Neue, sans-serif; font-size: 1.375rem; letter-spacing: 0.04em; color: #fff;">TOTAL</span>' +
-          '<span style="font-size: 1.75rem; font-weight: 700; color: #22c55e;">£' + total.toFixed(2) + '</span>' +
+          '<span style="font-size: 1.75rem; font-weight: 700; color: #dc2626;">£' + total.toFixed(2) + '</span>' +
         '</div>' +
         '<button onclick="goToCheckout()" style="width: 100%; padding: 1rem; background: #dc2626; color: #fff; border: none; border-radius: 10px; font-family: Bebas Neue, sans-serif; font-size: 1.375rem; font-weight: 400; letter-spacing: 0.06em; cursor: pointer; transition: all 0.2s;">' +
           'PROCEED TO CHECKOUT' +

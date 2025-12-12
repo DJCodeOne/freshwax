@@ -1,0 +1,106 @@
+---
+// StatsGrid.astro - Compact stats display
+
+interface Stat {
+  label: string;
+  value: string | number;
+}
+
+interface Props {
+  title: string;
+  icon?: string;
+  stats: Stat[];
+}
+
+const { title, icon = '📊', stats } = Astro.props;
+---
+
+<div class="stats-section">
+  <div class="stats-header">
+    <span class="stats-icon">{icon}</span>
+    <span class="stats-title">{title}</span>
+  </div>
+  <div class="stats-grid" style={`grid-template-columns: repeat(${stats.length}, 1fr);`}>
+    {stats.map((stat, i) => (
+      <div class="stat-cell" class:list={[{ 'last': i === stats.length - 1 }]}>
+        <div class="stat-label">{stat.label}</div>
+        <div class="stat-value">{stat.value}</div>
+      </div>
+    ))}
+  </div>
+</div>
+
+<style>
+  .stats-section {
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  .stats-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #000;
+  }
+
+  .stats-icon {
+    font-size: 1rem;
+  }
+
+  .stats-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .stats-grid {
+    display: grid;
+  }
+
+  .stat-cell {
+    padding: 1rem 1.25rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .stat-cell.last {
+    border-right: none;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 0.375rem;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+  }
+
+  @media (max-width: 768px) {
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .stat-cell {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .stat-cell:nth-child(2n) {
+      border-right: none;
+    }
+
+    .stat-cell:nth-last-child(-n+2) {
+      border-bottom: none;
+    }
+  }
+</style>

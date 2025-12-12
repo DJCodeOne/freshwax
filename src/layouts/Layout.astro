@@ -2,11 +2,18 @@
 // src/layouts/Layout.astro
 // Enhanced Layout with comprehensive SEO and analytics
 import '../styles/global.css';
+import '../styles/mobile-enhancements.css';
 import { ViewTransitions } from 'astro:transitions';
 import GlobalAudioPlayer from '../components/GlobalAudioPlayer.astro';
 import AudioCoordinator from '../components/AudioCoordinator.astro';
 import SEO from '../components/SEO.astro';
 import Analytics from '../components/Analytics.astro';
+
+// Pusher config for client-side (PUBLIC_ prefixed vars are safe to expose)
+const pusherConfig = {
+  key: import.meta.env.PUBLIC_PUSHER_KEY || '',
+  cluster: import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu'
+};
 
 interface Props {
   title: string;
@@ -137,7 +144,7 @@ const GTM_ID = ''; // Optional: Google Tag Manager ID
     <meta name="mobile-web-app-capable" content="yes" />
     
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -150,6 +157,12 @@ const GTM_ID = ''; // Optional: Google Tag Manager ID
     <link rel="preconnect" href="https://firestore.googleapis.com" />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
     <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+    
+    <!-- GIF API preconnects for faster loading -->
+    <link rel="dns-prefetch" href="https://api.giphy.com" />
+    <link rel="dns-prefetch" href="https://tenor.googleapis.com" />
+    <link rel="dns-prefetch" href="https://api.gfycat.com" />
+    <link rel="dns-prefetch" href="https://www.reddit.com" />
     
     <!-- Critical fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet" />
@@ -239,6 +252,11 @@ const GTM_ID = ''; // Optional: Google Tag Manager ID
     
     <!-- Cart functionality -->
     <script is:inline src="/freshwax-cart.js"></script>
+    
+    <!-- Pusher config for real-time features -->
+    <script define:vars={{ pusherConfig }}>
+      window.PUSHER_CONFIG = pusherConfig;
+    </script>
     
     <!-- Audio Coordinator -->
     <AudioCoordinator />

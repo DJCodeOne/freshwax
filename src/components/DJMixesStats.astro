@@ -1,0 +1,114 @@
+---
+// DJMixesStats.astro - Compact inline stats display
+
+interface Props {
+  totalPlays: number;
+  totalDownloads: number;
+  totalLikes: number;
+  totalMixes: number;
+}
+
+const { totalPlays, totalDownloads, totalLikes, totalMixes } = Astro.props;
+
+const stats = [
+  { label: 'Total Plays', value: totalPlays },
+  { label: 'Total Downloads', value: totalDownloads },
+  { label: 'Total Likes', value: totalLikes },
+  { label: 'Total Mixes', value: totalMixes }
+];
+---
+
+<div class="dj-mixes-section">
+  <div class="section-header">
+    <span>🎧</span> DJ MIXES PERFORMANCE
+  </div>
+  <div class="stats-row">
+    {stats.map((stat, i) => (
+      <div class="stat" class:list={[{ last: i === stats.length - 1 }]}>
+        <div class="stat-label">{stat.label}</div>
+        <div class="stat-value">{stat.value}</div>
+      </div>
+    ))}
+  </div>
+</div>
+
+<style>
+  .dj-mixes-section {
+    background: #1a1a1a;
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  .section-header {
+    background: #000;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .stats-row {
+    display: flex;
+    padding: 1.25rem;
+  }
+
+  .stat {
+    flex: 1;
+    padding: 0 1.5rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .stat:first-child {
+    padding-left: 0;
+  }
+
+  .stat.last {
+    border-right: none;
+    padding-right: 0;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 0.375rem;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+  }
+
+  @media (max-width: 640px) {
+    .stats-row {
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      flex: 0 0 50%;
+      padding: 0.75rem 1rem;
+      border-right: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .stat:nth-child(odd) {
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .stat:nth-child(n+3) {
+      border-bottom: none;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+    }
+  }
+</style>

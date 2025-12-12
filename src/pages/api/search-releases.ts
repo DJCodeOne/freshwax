@@ -114,7 +114,7 @@ export const GET: APIRoute = async ({ request }) => {
       type: 'release',
       title: release.releaseName || release.title || 'Untitled',
       artist_name: release.artistName || release.artist || 'Unknown Artist',
-      artwork_url: release.artwork?.cover || release.coverArtUrl || release.artworkUrl || '/logo.webp'
+      artwork_url: release.artwork?.cover || release.coverArtUrl || release.artworkUrl || '/place-holder.webp'
     }));
     
     const mixSearchFields = ['title', 'name', 'artist', 'djName', 'dj_name', 'genre', 'description'];
@@ -136,7 +136,7 @@ export const GET: APIRoute = async ({ request }) => {
       type: 'mix',
       title: mix.title || mix.name || 'Untitled Mix',
       artist_name: mix.djName || mix.dj_name || mix.artist || 'Unknown DJ',
-      artwork_url: mix.artwork || mix.artworkUrl || mix.artwork_url || mix.coverImage || '/logo.webp'
+      artwork_url: mix.artwork || mix.artworkUrl || mix.artwork_url || mix.coverImage || '/place-holder.webp'
     }));
     
     const allResults = [...matchedReleases, ...matchedMixes];

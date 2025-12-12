@@ -1,12 +1,15 @@
 ---
 // src/pages/admin/newsletter.astro
-// Admin newsletter management - compose and send newsletters
+// Admin newsletter management - compose, upload, and send newsletters
 import AdminLayout from '../../layouts/AdminLayout.astro';
 export const prerender = false;
 ---
 
 <AdminLayout title="Newsletter" activeNav="newsletter">
   <Fragment slot="actions">
+    <button class="btn btn-secondary" onclick="openAddSubscriberModal()">
+      <span>➕</span> Add Subscriber
+    </button>
     <button class="btn btn-primary" onclick="openComposeModal()">
       <span>✉️</span> Compose Newsletter
     </button>
@@ -15,15 +18,15 @@ export const prerender = false;
   <!-- Stats Bar -->
   <div class="stats-grid mb-3">
     <div class="stat-card">
-      <div class="stat-value" id="totalCount">0</div>
+      <div class="stat-value" id="totalCount">-</div>
       <div class="stat-label">Total Subscribers</div>
     </div>
     <div class="stat-card success">
-      <div class="stat-value" id="activeCount">0</div>
+      <div class="stat-value" id="activeCount">-</div>
       <div class="stat-label">Active</div>
     </div>
     <div class="stat-card warning">
-      <div class="stat-value" id="unsubscribedCount">0</div>
+      <div class="stat-value" id="unsubscribedCount">-</div>
       <div class="stat-label">Unsubscribed</div>
     </div>
     <div class="stat-card info">
@@ -44,8 +47,11 @@ export const prerender = false;
       <button class="filter-tab" data-filter="unsubscribed">Unsubscribed</button>
     </div>
     <div class="toolbar-actions">
-      <button class="btn btn-outline btn-sm" onclick="selectAll()">Select All Active</button>
+      <button class="btn btn-outline btn-sm" onclick="selectAllActive()">Select All Active</button>
       <button class="btn btn-outline btn-sm" onclick="deselectAll()">Deselect All</button>
+      <button class="btn btn-primary btn-sm" id="sendSelectedBtn" onclick="openComposeModal()" disabled>
+        📧 Send to Selected (<span id="sendCount">0</span>)
+      </button>
     </div>
   </div>
 
@@ -59,6 +65,10 @@ export const prerender = false;
 
   <!-- Subscribers Table -->
   <div id="subscribersTable" class="card" style="display: none;">
+    <div class="card-header">
+      <h2>📋 Subscribers</h2>
+      <span class="text-muted" id="subscriberCountLabel">0 subscribers</span>
+    </div>
     <div class="table-responsive">
       <table class="data-table">
         <thead>
@@ -67,10 +77,11 @@ export const prerender = false;
               <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
             </th>
             <th>Email</th>
+            <th>Name</th>
             <th>Status</th>
             <th>Source</th>
             <th>Subscribed</th>
-            <th>Emails Sent</th>
+            <th>Emails Received</th>
             <th class="text-right">Actions</th>
           </tr>
         </thead>
@@ -86,190 +97,434 @@ export const prerender = false;
       <div class="empty-icon">📬</div>
       <h3>No subscribers yet</h3>
       <p>Subscribers will appear here when people sign up via the website footer.</p>
+      <button class="btn btn-primary" onclick="openAddSubscriberModal()">Add First Subscriber</button>
     </div>
   </div>
+</AdminLayout>
 
-  <!-- Compose Modal -->
-  <Fragment slot="modals">
-    <div id="composeModal" class="modal-overlay">
-      <div class="modal modal-lg">
-        <div class="modal-header">
-          <h2>✉️ Compose Newsletter</h2>
-          <button class="modal-close" onclick="closeModal('composeModal')">×</button>
+<!-- Compose Modal -->
+<div id="composeModal" class="modal-overlay">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <h2>✉️ Compose Newsletter</h2>
+      <button class="modal-close" onclick="closeModal('composeModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- Step Indicator -->
+      <div class="steps-indicator">
+        <div class="step active" data-step="1">
+          <span class="step-number">1</span>
+          <span class="step-label">Recipients</span>
         </div>
-        <div class="modal-body">
-          <form id="composeForm">
-            <!-- Recipients -->
-            <div class="form-section">
-              <h3 class="form-section-title">Recipients</h3>
-              <div class="recipients-info">
-                <span id="recipientCount">0</span> subscribers selected
-                <button type="button" class="btn btn-link" onclick="closeModal('composeModal')">Change selection</button>
-              </div>
-            </div>
-            
-            <!-- Subject -->
-            <div class="form-group">
-              <label class="form-label">Subject Line <span class="required">*</span></label>
-              <input type="text" id="emailSubject" class="form-input" required placeholder="e.g. New Releases This Week 🔥">
-            </div>
-            
-            <!-- Content -->
-            <div class="form-group">
-              <label class="form-label">Newsletter Content <span class="required">*</span></label>
-              <p class="form-help">Use markdown for formatting: **bold**, *italic*, [link text](url), ## headers</p>
-              <textarea id="emailContent" class="form-textarea" rows="15" required placeholder="Write your newsletter content here...
+        <div class="step" data-step="2">
+          <span class="step-number">2</span>
+          <span class="step-label">Content</span>
+        </div>
+        <div class="step" data-step="3">
+          <span class="step-number">3</span>
+          <span class="step-label">Review & Send</span>
+        </div>
+      </div>
 
-## What's New
+      <!-- Step 1: Recipients -->
+      <div class="step-content active" id="step1">
+        <h3>Select Recipients</h3>
+        <div class="recipient-options">
+          <label class="recipient-option">
+            <input type="radio" name="recipientType" value="selected" checked onchange="updateRecipientType()">
+            <div class="option-card">
+              <span class="option-icon">✓</span>
+              <span class="option-title">Selected Subscribers</span>
+              <span class="option-count" id="selectedRecipientCount">0 selected</span>
+            </div>
+          </label>
+          <label class="recipient-option">
+            <input type="radio" name="recipientType" value="all" onchange="updateRecipientType()">
+            <div class="option-card">
+              <span class="option-icon">👥</span>
+              <span class="option-title">All Active Subscribers</span>
+              <span class="option-count" id="allActiveCount">0 subscribers</span>
+            </div>
+          </label>
+        </div>
+        <div class="recipient-summary" id="recipientSummary">
+          <p>You'll send to <strong id="finalRecipientCount">0</strong> subscribers</p>
+        </div>
+      </div>
 
-Check out our latest releases...
+      <!-- Step 2: Content -->
+      <div class="step-content" id="step2">
+        <h3>Newsletter Content</h3>
+        
+        <!-- Upload Section -->
+        <div class="upload-section">
+          <label class="upload-area" id="uploadArea">
+            <input type="file" id="fileUpload" accept=".txt,.pdf,.docx" onchange="handleFileUpload(event)" hidden>
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">
+              <strong>Upload Newsletter</strong>
+              <span>Drop a file here or click to browse</span>
+              <span class="upload-formats">Supports: .txt, .pdf, .docx</span>
+            </div>
+          </label>
+          <div class="upload-status" id="uploadStatus" style="display: none;">
+            <span class="status-icon">✓</span>
+            <span class="status-text" id="uploadFileName"></span>
+            <button class="btn btn-ghost btn-sm" onclick="clearUpload()">✕ Remove</button>
+          </div>
+        </div>
+
+        <div class="divider">
+          <span>OR write manually</span>
+        </div>
+
+        <!-- Manual Entry -->
+        <div class="form-group">
+          <label class="form-label">Subject Line <span class="required">*</span></label>
+          <input type="text" id="emailSubject" class="form-input" placeholder="e.g. New Releases This Week 🔥">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Newsletter Content <span class="required">*</span></label>
+          <div class="editor-toolbar">
+            <button type="button" class="toolbar-btn" onclick="insertFormat('**', '**')" title="Bold"><b>B</b></button>
+            <button type="button" class="toolbar-btn" onclick="insertFormat('*', '*')" title="Italic"><i>I</i></button>
+            <button type="button" class="toolbar-btn" onclick="insertFormat('\n## ', '')" title="Heading">H</button>
+            <button type="button" class="toolbar-btn" onclick="insertFormat('[', '](url)')" title="Link">🔗</button>
+            <button type="button" class="toolbar-btn" onclick="insertFormat('\n- ', '')" title="List">•</button>
+            <span class="toolbar-divider"></span>
+            <button type="button" class="toolbar-btn" onclick="previewContent()" title="Preview">👁️ Preview</button>
+          </div>
+          <textarea id="emailContent" class="form-textarea" rows="12" placeholder="Write your newsletter content here...
+
+## What's New This Week
+
+Check out our latest releases and exclusive content!
 
 **Featured Release:**
+We're excited to announce...
+
 [View Release](https://freshwax.co.uk/item/xxx)
 
-Stay fresh! 🎵"></textarea>
-            </div>
-            
-            <!-- Preview -->
-            <div class="form-group">
-              <label class="form-label">Send Preview To (Optional)</label>
-              <div class="input-group">
-                <input type="email" id="previewEmail" class="form-input" placeholder="your@email.com">
-                <button type="button" class="btn btn-outline" onclick="sendPreview()">Send Preview</button>
-              </div>
-            </div>
-          </form>
+Stay fresh! 🎵
+- The Fresh Wax Team"></textarea>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-ghost" onclick="closeModal('composeModal')">Cancel</button>
-          <button type="button" class="btn btn-primary" onclick="sendNewsletter()">
-            <span class="btn-text">Send Newsletter</span>
-            <span class="btn-loading hidden">Sending...</span>
-          </button>
+      </div>
+
+      <!-- Step 3: Review & Send -->
+      <div class="step-content" id="step3">
+        <h3>Review & Send</h3>
+        
+        <div class="review-section">
+          <div class="review-item">
+            <span class="review-label">Recipients</span>
+            <span class="review-value" id="reviewRecipients">0 subscribers</span>
+          </div>
+          <div class="review-item">
+            <span class="review-label">Subject</span>
+            <span class="review-value" id="reviewSubject">-</span>
+          </div>
+        </div>
+
+        <div class="preview-section">
+          <h4>Content Preview</h4>
+          <div class="email-preview" id="emailPreview">
+          </div>
+        </div>
+
+        <!-- Test Send -->
+        <div class="test-send-section">
+          <label class="form-label">Send Test Email (Optional)</label>
+          <div class="input-group">
+            <input type="email" id="testEmail" class="form-input" placeholder="your@email.com">
+            <button type="button" class="btn btn-outline" onclick="sendTestEmail()" id="testEmailBtn">
+              <span class="btn-text">Send Test</span>
+              <span class="btn-loading hidden">Sending...</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Confirmation -->
+        <div class="confirm-section">
+          <label class="confirm-checkbox">
+            <input type="checkbox" id="confirmSend" onchange="updateSendButton()">
+            <span>I confirm I want to send this newsletter to <strong id="confirmCount">0</strong> subscribers</span>
+          </label>
         </div>
       </div>
     </div>
-  </Fragment>
-</AdminLayout>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" onclick="closeModal('composeModal')">Cancel</button>
+      <button type="button" class="btn btn-secondary" id="prevStepBtn" onclick="prevStep()" style="display: none;">← Previous</button>
+      <button type="button" class="btn btn-primary" id="nextStepBtn" onclick="nextStep()">Next →</button>
+      <button type="button" class="btn btn-success" id="sendBtn" onclick="sendNewsletter()" style="display: none;" disabled>
+        <span class="btn-text">📧 Send Newsletter</span>
+        <span class="btn-loading hidden">Sending...</span>
+      </button>
+    </div>
+  </div>
+</div>
 
-<style>
-  .toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background: var(--card-bg);
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-  }
+<!-- Add Subscriber Modal -->
+<div id="addSubscriberModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>➕ Add Subscriber</h2>
+      <button class="modal-close" onclick="closeModal('addSubscriberModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Email Address <span class="required">*</span></label>
+        <input type="email" id="newSubscriberEmail" class="form-input" placeholder="subscriber@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Name (Optional)</label>
+        <input type="text" id="newSubscriberName" class="form-input" placeholder="John Doe">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Source</label>
+        <select id="newSubscriberSource" class="form-select">
+          <option value="manual">Manual Entry</option>
+          <option value="import">Import</option>
+          <option value="signup">Website Signup</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" onclick="closeModal('addSubscriberModal')">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="addSubscriber()">Add Subscriber</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Subscriber Modal -->
+<div id="editSubscriberModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>✏️ Edit Subscriber</h2>
+      <button class="modal-close" onclick="closeModal('editSubscriberModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editSubscriberId">
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" id="editSubscriberEmail" class="form-input" readonly style="background:#f5f5f5;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Name</label>
+        <input type="text" id="editSubscriberName" class="form-input" placeholder="John Doe">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select id="editSubscriberStatus" class="form-select">
+          <option value="active">Active</option>
+          <option value="unsubscribed">Unsubscribed</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" onclick="closeModal('editSubscriberModal')">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="saveSubscriber()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal-overlay">
+  <div class="modal modal-sm">
+    <div class="modal-header danger">
+      <h2>🗑️ Delete Subscriber</h2>
+      <button class="modal-close" onclick="closeModal('deleteModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p>Are you sure you want to permanently delete this subscriber?</p>
+      <p class="text-danger" style="font-size:1.1rem;margin:1rem 0;"><strong id="deleteEmail"></strong></p>
+      <p class="text-muted">This action cannot be undone.</p>
+      <input type="hidden" id="deleteSubscriberId">
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" onclick="closeModal('deleteModal')">Cancel</button>
+      <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Preview Modal -->
+<div id="previewModal" class="modal-overlay">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h2>👁️ Email Preview</h2>
+      <button class="modal-close" onclick="closeModal('previewModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="preview-email-container">
+        <div class="preview-header">
+          <strong>Subject:</strong> <span id="previewSubject"></span>
+        </div>
+        <div class="preview-body" id="previewBody">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" onclick="closeModal('previewModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
+  .stat-card { background: #fff; border: 3px solid #000; padding: 1.25rem; text-align: center; }
+  .stat-value { font-size: 2rem; font-weight: 900; }
+  .stat-label { font-size: 0.75rem; text-transform: uppercase; color: #666; margin-top: 0.25rem; }
+  .stat-card.success .stat-value { color: #16a34a; }
+  .stat-card.warning .stat-value { color: #d97706; }
+  .stat-card.info .stat-value { color: #2563eb; }
   
-  .toolbar-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-left: auto;
-  }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-bottom: 1.5rem; padding: 1rem; background: #fff; border: 2px solid #000; }
+  .search-box { display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 200px; }
+  .search-input { flex: 1; padding: 0.5rem 1rem; border: 2px solid #ccc; font-size: 0.9rem; }
+  .filter-tabs { display: flex; gap: 0.25rem; }
+  .filter-tab { padding: 0.5rem 1rem; border: 2px solid #000; background: #fff; font-weight: 600; cursor: pointer; }
+  .filter-tab.active { background: #000; color: #fff; }
+  .toolbar-actions { display: flex; gap: 0.5rem; margin-left: auto; flex-wrap: wrap; }
   
-  .recipients-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: var(--bg-secondary);
-    border-radius: 8px;
-    color: var(--text-secondary);
-  }
+  .table-responsive { overflow-x: auto; }
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th { background: #000; color: #fff; padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; text-transform: uppercase; font-weight: 700; }
+  .data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e5e5; }
+  .data-table tbody tr:hover { background: #f9f9f9; }
   
-  .recipients-info span {
-    font-weight: bold;
-    color: var(--accent-color);
-    font-size: 1.25rem;
-  }
+  .status-badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+  .status-badge.active { background: #dcfce7; color: #16a34a; }
+  .status-badge.unsubscribed { background: #fee2e2; color: #dc2626; }
   
-  .form-textarea {
-    width: 100%;
-    padding: 1rem;
-    background: var(--input-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    color: var(--text-primary);
-    font-family: monospace;
-    font-size: 0.95rem;
-    line-height: 1.6;
-    resize: vertical;
-  }
+  .btn { padding: 0.5rem 1rem; font-weight: 600; cursor: pointer; border: 2px solid #000; transition: all 0.15s; }
+  .btn-primary { background: #000; color: #fff; }
+  .btn-secondary { background: #fff; color: #000; }
+  .btn-success { background: #16a34a; color: #fff; border-color: #16a34a; }
+  .btn-danger { background: #dc2626; color: #fff; border-color: #dc2626; }
+  .btn-ghost { background: transparent; border-color: transparent; }
+  .btn-outline { background: #fff; color: #000; }
+  .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.85rem; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
   
-  .form-textarea:focus {
-    outline: none;
-    border-color: var(--accent-color);
-  }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: 1rem; overflow-y: auto; }
+  .modal-overlay.active { display: flex; align-items: flex-start; justify-content: center; padding-top: 3rem; }
+  .modal { background: #fff; border: 3px solid #000; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal-lg { max-width: 700px; }
+  .modal-xl { max-width: 900px; }
+  .modal-sm { max-width: 400px; }
+  .modal-header { background: #000; color: #fff; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+  .modal-header.danger { background: #dc2626; }
+  .modal-header h2 { margin: 0; font-size: 1.25rem; }
+  .modal-close { background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
+  .modal-body { padding: 1.5rem; }
+  .modal-footer { padding: 1rem 1.5rem; border-top: 2px solid #e5e5e5; display: flex; gap: 0.5rem; justify-content: flex-end; }
   
-  .form-help {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    margin-bottom: 0.5rem;
-  }
+  .form-group { margin-bottom: 1.25rem; }
+  .form-label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+  .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem 1rem; border: 2px solid #ccc; font-size: 0.95rem; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #000; }
+  .form-textarea { font-family: monospace; resize: vertical; }
+  .required { color: #dc2626; }
   
-  .input-group {
-    display: flex;
-    gap: 0.5rem;
-  }
+  .steps-indicator { display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 2px solid #e5e5e5; }
+  .step { display: flex; align-items: center; gap: 0.5rem; opacity: 0.4; }
+  .step.active { opacity: 1; }
+  .step.completed { opacity: 0.7; }
+  .step-number { width: 30px; height: 30px; border-radius: 50%; background: #e5e5e5; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  .step.active .step-number { background: #000; color: #fff; }
+  .step.completed .step-number { background: #16a34a; color: #fff; }
+  .step-label { font-weight: 600; font-size: 0.9rem; }
+  .step-content { display: none; }
+  .step-content.active { display: block; }
   
-  .input-group .form-input {
-    flex: 1;
-  }
+  .recipient-options { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+  .recipient-option input { display: none; }
+  .option-card { padding: 1.5rem; border: 2px solid #e5e5e5; text-align: center; cursor: pointer; transition: all 0.15s; }
+  .recipient-option input:checked + .option-card { border-color: #000; background: #f9f9f9; }
+  .option-icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+  .option-title { font-weight: 700; display: block; }
+  .option-count { font-size: 0.85rem; color: #666; }
+  .recipient-summary { text-align: center; padding: 1rem; background: #f0f9ff; border: 2px solid #2563eb; }
   
-  .subscriber-checkbox {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-  }
+  .upload-section { margin-bottom: 1.5rem; }
+  .upload-area { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; border: 3px dashed #ccc; cursor: pointer; transition: all 0.15s; }
+  .upload-area:hover { border-color: #000; background: #f9f9f9; }
+  .upload-area.dragover { border-color: #2563eb; background: #f0f9ff; }
+  .upload-icon { font-size: 3rem; margin-bottom: 1rem; }
+  .upload-text { text-align: center; }
+  .upload-text strong { display: block; margin-bottom: 0.25rem; }
+  .upload-text span { display: block; color: #666; font-size: 0.9rem; }
+  .upload-formats { font-size: 0.8rem !important; margin-top: 0.5rem; }
+  .upload-status { display: flex; align-items: center; gap: 0.75rem; padding: 1rem; background: #dcfce7; border: 2px solid #16a34a; }
+  .upload-status .status-icon { color: #16a34a; font-size: 1.25rem; }
+  .upload-status .status-text { flex: 1; font-weight: 600; }
+  .divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; color: #666; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 2px; background: #e5e5e5; }
   
-  .status-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 500;
-  }
+  .editor-toolbar { display: flex; gap: 0.25rem; padding: 0.5rem; background: #f5f5f5; border: 2px solid #ccc; border-bottom: none; }
+  .toolbar-btn { padding: 0.5rem 0.75rem; background: #fff; border: 1px solid #ccc; cursor: pointer; }
+  .toolbar-btn:hover { background: #e5e5e5; }
+  .toolbar-divider { width: 1px; background: #ccc; margin: 0 0.5rem; }
   
-  .status-badge.active {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
-  }
+  .review-section { display: grid; gap: 0.75rem; margin-bottom: 1.5rem; padding: 1rem; background: #f5f5f5; }
+  .review-item { display: flex; justify-content: space-between; }
+  .review-label { font-weight: 600; color: #666; }
+  .review-value { font-weight: 700; }
+  .preview-section { margin-bottom: 1.5rem; }
+  .preview-section h4 { margin-bottom: 0.75rem; }
+  .email-preview { padding: 1.5rem; border: 2px solid #e5e5e5; background: #fff; max-height: 300px; overflow-y: auto; line-height: 1.6; }
+  .test-send-section { margin-bottom: 1.5rem; padding: 1rem; background: #f5f5f5; }
+  .input-group { display: flex; gap: 0.5rem; }
+  .input-group .form-input { flex: 1; }
+  .confirm-section { padding: 1rem; background: #fef3c7; border: 2px solid #d97706; }
+  .confirm-checkbox { display: flex; align-items: center; gap: 0.75rem; cursor: pointer; }
+  .confirm-checkbox input { width: 20px; height: 20px; }
   
-  .status-badge.unsubscribed {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
-  }
+  .preview-email-container { border: 2px solid #e5e5e5; }
+  .preview-header { padding: 1rem; background: #f5f5f5; border-bottom: 2px solid #e5e5e5; }
+  .preview-body { padding: 1.5rem; line-height: 1.6; }
   
-  .btn-sm {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.85rem;
-  }
+  .loading-spinner { text-align: center; padding: 3rem; }
+  .spinner { width: 40px; height: 40px; border: 3px solid #e5e5e5; border-top-color: #000; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   
-  .btn-link {
-    background: none;
-    border: none;
-    color: var(--accent-color);
-    text-decoration: underline;
-    cursor: pointer;
-    padding: 0;
+  .empty-state { text-align: center; padding: 3rem; }
+  .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+  
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .text-danger { color: #dc2626; }
+  .text-muted { color: #666; }
+  .mb-3 { margin-bottom: 1.5rem; }
+  .mt-4 { margin-top: 2rem; }
+  .hidden { display: none !important; }
+  
+  .action-btns { display: flex; gap: 0.25rem; justify-content: flex-end; }
+  .action-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1px solid #ccc; background: #fff; cursor: pointer; font-size: 0.9rem; }
+  .action-btn:hover { background: #f5f5f5; border-color: #000; }
+  .action-btn.danger:hover { background: #fee2e2; border-color: #dc2626; }
+  
+  @media (max-width: 768px) {
+    .toolbar { flex-direction: column; align-items: stretch; }
+    .toolbar-actions { margin-left: 0; }
+    .recipient-options { grid-template-columns: 1fr; }
+    .steps-indicator { flex-direction: column; gap: 1rem; align-items: flex-start; }
   }
 </style>
 
 <script type="module">
-  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
   
   const firebaseConfig = {
-    apiKey: "AIzaSyD0Rj82T2AmMPU1JNhLsOLVB8WwL5Aql_w",
-    authDomain: "freshwax-ab02c.firebaseapp.com",
-    projectId: "freshwax-ab02c",
-    storageBucket: "freshwax-ab02c.firebasestorage.app",
-    messagingSenderId: "554366498481",
-    appId: "1:554366498481:web:1e04c820cc498d2d0a50ee"
+    apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store",
+    storageBucket: "freshwax-store.firebasestorage.app",
+    messagingSenderId: "675435782973",
+    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
   };
   
   const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
@@ -278,29 +533,42 @@ Stay fresh! 🎵"></textarea>
   let allSubscribers = [];
   let selectedIds = new Set();
   let currentFilter = 'all';
+  let currentStep = 1;
   
-  // Make functions globally available
-  window.openComposeModal = openComposeModal;
-  window.closeModal = closeModal;
-  window.selectAll = selectAll;
-  window.deselectAll = deselectAll;
-  window.toggleSelectAll = toggleSelectAll;
-  window.toggleSubscriber = toggleSubscriber;
-  window.sendPreview = sendPreview;
+  // Global functions
+  window.openComposeModal = () => { currentStep = 1; updateStepUI(); updateRecipientType(); document.getElementById('composeModal').classList.add('active'); };
+  window.openAddSubscriberModal = () => { document.getElementById('newSubscriberEmail').value = ''; document.getElementById('newSubscriberName').value = ''; document.getElementById('addSubscriberModal').classList.add('active'); };
+  window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+  window.selectAllActive = () => { allSubscribers.filter(s => s.status === 'active').forEach(s => selectedIds.add(s.id)); renderSubscribers(); };
+  window.deselectAll = () => { selectedIds.clear(); renderSubscribers(); };
+  window.toggleSelectAll = (cb) => cb.checked ? window.selectAllActive() : window.deselectAll();
+  window.toggleSubscriber = (id) => { selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id); updateSelectedCount(); };
+  window.updateRecipientType = updateRecipientType;
+  window.nextStep = nextStep;
+  window.prevStep = prevStep;
+  window.handleFileUpload = handleFileUpload;
+  window.clearUpload = clearUpload;
+  window.insertFormat = insertFormat;
+  window.previewContent = previewContent;
+  window.sendTestEmail = sendTestEmail;
+  window.updateSendButton = updateSendButton;
   window.sendNewsletter = sendNewsletter;
-  window.updateStatus = updateStatus;
+  window.addSubscriber = addSubscriber;
+  window.editSubscriber = editSubscriber;
+  window.saveSubscriber = saveSubscriber;
   window.deleteSubscriber = deleteSubscriber;
+  window.confirmDelete = confirmDelete;
   
-  // Auth check
-  onAuthStateChanged(auth, (user) => {
-    if (!user) {
-      window.location.href = '/admin/login';
-      return;
-    }
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = '/login?redirect=/admin/newsletter'; return; }
+    try {
+      const res = await fetch(`/api/get-user-type?uid=${user.uid}`);
+      const data = await res.json();
+      if (!data.isAdmin) { alert('Admin access required'); window.location.href = '/account/dashboard'; return; }
+    } catch (e) { console.error(e); }
     loadSubscribers();
   });
   
-  // Filter tabs
   document.querySelectorAll('.filter-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
@@ -310,326 +578,273 @@ Stay fresh! 🎵"></textarea>
     });
   });
   
-  // Search
   document.getElementById('searchInput')?.addEventListener('input', renderSubscribers);
+  
+  const uploadArea = document.getElementById('uploadArea');
+  if (uploadArea) {
+    uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+    uploadArea.addEventListener('drop', (e) => { e.preventDefault(); uploadArea.classList.remove('dragover'); if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
+  }
   
   async function loadSubscribers() {
     try {
-      const response = await fetch('/api/newsletter/subscribers');
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.error);
+      const res = await fetch('/api/newsletter/subscribers');
+      const data = await res.json();
+      if (data.success) {
+        allSubscribers = data.subscribers || [];
+        const active = allSubscribers.filter(s => s.status === 'active').length;
+        const unsub = allSubscribers.filter(s => s.status === 'unsubscribed').length;
+        document.getElementById('totalCount').textContent = allSubscribers.length;
+        document.getElementById('activeCount').textContent = active;
+        document.getElementById('unsubscribedCount').textContent = unsub;
+        document.getElementById('allActiveCount').textContent = `${active} subscribers`;
+        document.getElementById('loadingState').style.display = 'none';
+        if (allSubscribers.length === 0) {
+          document.getElementById('emptyState').style.display = 'block';
+        } else {
+          document.getElementById('subscribersTable').style.display = 'block';
+          renderSubscribers();
+        }
       }
-      
-      allSubscribers = data.subscribers;
-      
-      // Update stats
-      document.getElementById('totalCount').textContent = data.stats.total;
-      document.getElementById('activeCount').textContent = data.stats.active;
-      document.getElementById('unsubscribedCount').textContent = data.stats.unsubscribed;
-      
-      renderSubscribers();
-      
-      document.getElementById('loadingState').style.display = 'none';
-      
-      if (allSubscribers.length === 0) {
-        document.getElementById('emptyState').style.display = 'block';
-      } else {
-        document.getElementById('subscribersTable').style.display = 'block';
-      }
-      
-    } catch (error) {
-      console.error('Error loading subscribers:', error);
-      document.getElementById('loadingState').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">❌</div>
-          <h3>Error loading subscribers</h3>
-          <p>${error.message}</p>
-        </div>
-      `;
+    } catch (e) {
+      console.error(e);
+      document.getElementById('loadingState').innerHTML = `<div style="color:red;text-align:center;padding:2rem;"><h3>Error loading</h3><button onclick="location.reload()" class="btn btn-primary">Retry</button></div>`;
     }
   }
   
   function renderSubscribers() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    
-    let filtered = allSubscribers.filter(s => {
-      // Search filter
-      const matchesSearch = !searchTerm || s.email.toLowerCase().includes(searchTerm);
-      if (!matchesSearch) return false;
-      
-      // Status filter
-      if (currentFilter === 'active') return s.status === 'active';
-      if (currentFilter === 'unsubscribed') return s.status === 'unsubscribed';
-      return true;
-    });
-    
     const tbody = document.getElementById('subscribersTableBody');
-    
+    const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
+    let filtered = allSubscribers.filter(s => {
+      const match = !search || s.email?.toLowerCase().includes(search) || s.name?.toLowerCase().includes(search);
+      let filt = true;
+      if (currentFilter === 'active') filt = s.status === 'active';
+      else if (currentFilter === 'unsubscribed') filt = s.status === 'unsubscribed';
+      return match && filt;
+    });
+    document.getElementById('subscriberCountLabel').textContent = `${filtered.length} subscribers`;
     if (filtered.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" class="text-center text-muted py-4">No subscribers match your criteria</td>
-        </tr>
-      `;
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted" style="padding:2rem;">No subscribers found</td></tr>`;
       return;
     }
-    
     tbody.innerHTML = filtered.map(s => `
       <tr>
-        <td>
-          <input 
-            type="checkbox" 
-            class="subscriber-checkbox" 
-            ${s.status !== 'active' ? 'disabled' : ''}
-            ${selectedIds.has(s.id) ? 'checked' : ''}
-            onchange="toggleSubscriber('${s.id}')"
-          >
-        </td>
-        <td>
-          <strong>${s.email}</strong>
-        </td>
-        <td>
-          <span class="status-badge ${s.status}">${s.status}</span>
-        </td>
+        <td><input type="checkbox" ${s.status !== 'active' ? 'disabled' : ''} ${selectedIds.has(s.id) ? 'checked' : ''} onchange="toggleSubscriber('${s.id}')"></td>
+        <td><strong>${s.email}</strong></td>
+        <td>${s.name || '-'}</td>
+        <td><span class="status-badge ${s.status}">${s.status}</span></td>
         <td>${s.source || 'footer'}</td>
         <td>${s.subscribedAt ? new Date(s.subscribedAt).toLocaleDateString() : 'N/A'}</td>
-        <td>${s.emailsSent || 0}</td>
-        <td class="text-right">
-          ${s.status === 'active' 
-            ? `<button class="btn btn-ghost btn-sm" onclick="updateStatus('${s.id}', 'unsubscribed')">Unsubscribe</button>`
-            : `<button class="btn btn-ghost btn-sm" onclick="updateStatus('${s.id}', 'active')">Reactivate</button>`
-          }
-          <button class="btn btn-ghost btn-sm text-danger" onclick="deleteSubscriber('${s.id}')">Delete</button>
-        </td>
+        <td>${s.emailsReceived || 0}</td>
+        <td><div class="action-btns"><button class="action-btn" onclick="editSubscriber('${s.id}')" title="Edit">✏️</button><button class="action-btn danger" onclick="deleteSubscriber('${s.id}')" title="Delete">🗑️</button></div></td>
       </tr>
     `).join('');
-    
     updateSelectedCount();
-  }
-  
-  function toggleSubscriber(id) {
-    if (selectedIds.has(id)) {
-      selectedIds.delete(id);
-    } else {
-      selectedIds.add(id);
-    }
-    updateSelectedCount();
-  }
-  
-  function selectAll() {
-    allSubscribers.filter(s => s.status === 'active').forEach(s => selectedIds.add(s.id));
-    renderSubscribers();
-  }
-  
-  function deselectAll() {
-    selectedIds.clear();
-    renderSubscribers();
-  }
-  
-  function toggleSelectAll(checkbox) {
-    if (checkbox.checked) {
-      selectAll();
-    } else {
-      deselectAll();
-    }
   }
   
   function updateSelectedCount() {
-    document.getElementById('selectedCount').textContent = selectedIds.size;
-    document.getElementById('recipientCount').textContent = selectedIds.size;
+    const c = selectedIds.size;
+    document.getElementById('selectedCount').textContent = c;
+    document.getElementById('sendCount').textContent = c;
+    document.getElementById('selectedRecipientCount').textContent = `${c} selected`;
+    document.getElementById('sendSelectedBtn').disabled = c === 0;
   }
   
-  function openComposeModal() {
-    if (selectedIds.size === 0) {
-      // Auto-select all active if none selected
-      const activeCount = allSubscribers.filter(s => s.status === 'active').length;
-      if (activeCount > 0 && confirm(`No subscribers selected. Send to all ${activeCount} active subscribers?`)) {
-        selectAll();
-      } else if (activeCount === 0) {
-        alert('No active subscribers to send to.');
-        return;
-      } else {
-        return;
-      }
-    }
-    
-    updateSelectedCount();
-    document.getElementById('composeModal').classList.add('active');
+  function updateRecipientType() {
+    const type = document.querySelector('input[name="recipientType"]:checked').value;
+    const count = type === 'all' ? allSubscribers.filter(s => s.status === 'active').length : selectedIds.size;
+    document.getElementById('finalRecipientCount').textContent = count;
   }
   
-  function closeModal(id) {
-    document.getElementById(id).classList.remove('active');
+  function nextStep() {
+    if (currentStep === 1) { currentStep = 2; }
+    else if (currentStep === 2) {
+      const subj = document.getElementById('emailSubject').value.trim();
+      const cont = document.getElementById('emailContent').value.trim();
+      if (!subj || !cont) { alert('Please enter subject and content'); return; }
+      const type = document.querySelector('input[name="recipientType"]:checked').value;
+      const count = type === 'all' ? allSubscribers.filter(s => s.status === 'active').length : selectedIds.size;
+      document.getElementById('reviewRecipients').textContent = `${count} subscribers`;
+      document.getElementById('reviewSubject').textContent = subj;
+      document.getElementById('confirmCount').textContent = count;
+      document.getElementById('emailPreview').innerHTML = renderMarkdown(cont);
+      currentStep = 3;
+    }
+    updateStepUI();
   }
   
-  async function sendPreview() {
-    const previewEmail = document.getElementById('previewEmail').value.trim();
-    const subject = document.getElementById('emailSubject').value.trim();
-    const content = document.getElementById('emailContent').value.trim();
-    
-    if (!previewEmail) {
-      alert('Please enter a preview email address');
-      return;
-    }
-    
-    if (!subject || !content) {
-      alert('Please fill in subject and content first');
-      return;
-    }
-    
+  function prevStep() { if (currentStep > 1) { currentStep--; updateStepUI(); } }
+  
+  function updateStepUI() {
+    document.querySelectorAll('.step').forEach((s, i) => {
+      s.classList.remove('active', 'completed');
+      if (i + 1 < currentStep) s.classList.add('completed');
+      if (i + 1 === currentStep) s.classList.add('active');
+    });
+    document.querySelectorAll('.step-content').forEach((c, i) => {
+      c.classList.remove('active');
+      if (i + 1 === currentStep) c.classList.add('active');
+    });
+    document.getElementById('prevStepBtn').style.display = currentStep > 1 ? 'block' : 'none';
+    document.getElementById('nextStepBtn').style.display = currentStep < 3 ? 'block' : 'none';
+    document.getElementById('sendBtn').style.display = currentStep === 3 ? 'block' : 'none';
+    if (currentStep === 3) { document.getElementById('confirmSend').checked = false; updateSendButton(); }
+  }
+  
+  function handleFileUpload(e) { if (e.target.files[0]) processFile(e.target.files[0]); }
+  
+  async function processFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['txt', 'pdf', 'docx'].includes(ext)) { alert('Unsupported file. Use .txt, .pdf, or .docx'); return; }
     try {
-      const response = await fetch('/api/newsletter/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject,
-          content,
-          subscriberIds: Array.from(selectedIds),
-          previewEmail
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        alert(`Preview sent to ${previewEmail}`);
-      } else {
-        alert(data.error || 'Failed to send preview');
+      let content = '';
+      if (ext === 'txt') { content = await file.text(); }
+      else {
+        const fd = new FormData(); fd.append('file', file);
+        const res = await fetch('/api/newsletter/extract-text', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) content = data.text;
+        else throw new Error(data.error || 'Failed');
       }
-    } catch (err) {
-      alert('Error sending preview');
-    }
+      document.getElementById('emailContent').value = content;
+      document.getElementById('uploadArea').style.display = 'none';
+      document.getElementById('uploadStatus').style.display = 'flex';
+      document.getElementById('uploadFileName').textContent = file.name;
+    } catch (e) { alert('Error: ' + e.message); }
+  }
+  
+  function clearUpload() {
+    document.getElementById('uploadArea').style.display = 'flex';
+    document.getElementById('uploadStatus').style.display = 'none';
+    document.getElementById('emailContent').value = '';
+    document.getElementById('fileUpload').value = '';
+  }
+  
+  function insertFormat(before, after) {
+    const ta = document.getElementById('emailContent');
+    const s = ta.selectionStart, e = ta.selectionEnd, t = ta.value, sel = t.substring(s, e);
+    ta.value = t.substring(0, s) + before + sel + after + t.substring(e);
+    ta.focus(); ta.setSelectionRange(s + before.length, e + before.length);
+  }
+  
+  function previewContent() {
+    document.getElementById('previewSubject').textContent = document.getElementById('emailSubject').value || '(No subject)';
+    document.getElementById('previewBody').innerHTML = renderMarkdown(document.getElementById('emailContent').value);
+    document.getElementById('previewModal').classList.add('active');
+  }
+  
+  function renderMarkdown(t) {
+    if (!t) return '<p style="color:#666;">(No content)</p>';
+    return t.replace(/^## (.*$)/gm, '<h2 style="margin:1rem 0 0.5rem;">$1</h2>')
+      .replace(/^# (.*$)/gm, '<h1 style="margin:1rem 0 0.5rem;">$1</h1>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#2563eb;">$1</a>')
+      .replace(/^- (.*$)/gm, '<li>$1</li>')
+      .replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
+  }
+  
+  function updateSendButton() { document.getElementById('sendBtn').disabled = !document.getElementById('confirmSend').checked; }
+  
+  async function sendTestEmail() {
+    const email = document.getElementById('testEmail').value.trim();
+    const subj = document.getElementById('emailSubject').value.trim();
+    const cont = document.getElementById('emailContent').value.trim();
+    if (!email) { alert('Enter test email'); return; }
+    if (!subj || !cont) { alert('Enter subject and content'); return; }
+    const btn = document.getElementById('testEmailBtn');
+    btn.disabled = true; btn.querySelector('.btn-text').classList.add('hidden'); btn.querySelector('.btn-loading').classList.remove('hidden');
+    try {
+      const res = await fetch('/api/newsletter/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: subj, content: cont, testEmail: email }) });
+      const data = await res.json();
+      alert(data.success ? `Test sent to ${email}` : (data.error || 'Failed'));
+    } catch (e) { alert('Error'); }
+    finally { btn.disabled = false; btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-loading').classList.add('hidden'); }
   }
   
   async function sendNewsletter() {
-    const subject = document.getElementById('emailSubject').value.trim();
-    const content = document.getElementById('emailContent').value.trim();
-    
-    if (!subject || !content) {
-      alert('Please fill in subject and content');
-      return;
-    }
-    
-    if (selectedIds.size === 0) {
-      alert('No subscribers selected');
-      return;
-    }
-    
-    if (!confirm(`Send newsletter to ${selectedIds.size} subscribers?`)) {
-      return;
-    }
-    
-    const btn = document.querySelector('#composeModal .btn-primary');
-    btn.disabled = true;
-    btn.querySelector('.btn-text').classList.add('hidden');
-    btn.querySelector('.btn-loading').classList.remove('hidden');
-    
+    const subj = document.getElementById('emailSubject').value.trim();
+    const cont = document.getElementById('emailContent').value.trim();
+    const type = document.querySelector('input[name="recipientType"]:checked').value;
+    const ids = type === 'all' ? allSubscribers.filter(s => s.status === 'active').map(s => s.id) : Array.from(selectedIds);
+    if (!ids.length) { alert('No recipients'); return; }
+    if (!confirm(`Send to ${ids.length} subscribers?\n\nSubject: ${subj}`)) return;
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = true; btn.querySelector('.btn-text').classList.add('hidden'); btn.querySelector('.btn-loading').classList.remove('hidden');
     try {
-      const response = await fetch('/api/newsletter/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject,
-          content,
-          subscriberIds: Array.from(selectedIds)
-        })
-      });
-      
-      const data = await response.json();
-      
+      const res = await fetch('/api/newsletter/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: subj, content: cont, subscriberIds: ids }) });
+      const data = await res.json();
       if (data.success) {
-        alert(`Newsletter sent successfully!\n\nSent: ${data.results.sent}\nFailed: ${data.results.failed}`);
+        alert(`Sent!\n\nSent: ${data.results?.sent || ids.length}\nFailed: ${data.results?.failed || 0}`);
         closeModal('composeModal');
-        
-        // Reset form
-        document.getElementById('emailSubject').value = '';
-        document.getElementById('emailContent').value = '';
-        document.getElementById('previewEmail').value = '';
-        selectedIds.clear();
-        
-        // Reload subscribers to update stats
-        loadSubscribers();
-      } else {
-        alert(data.error || 'Failed to send newsletter');
-      }
-    } catch (err) {
-      alert('Error sending newsletter');
-    } finally {
-      btn.disabled = false;
-      btn.querySelector('.btn-text').classList.remove('hidden');
-      btn.querySelector('.btn-loading').classList.add('hidden');
-    }
+        document.getElementById('emailSubject').value = ''; document.getElementById('emailContent').value = '';
+        clearUpload(); selectedIds.clear(); loadSubscribers();
+      } else alert(data.error || 'Failed');
+    } catch (e) { alert('Error: ' + e.message); }
+    finally { btn.disabled = false; btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-loading').classList.add('hidden'); }
   }
   
-  async function updateStatus(id, status) {
-    if (!confirm(`${status === 'active' ? 'Reactivate' : 'Unsubscribe'} this subscriber?`)) {
-      return;
-    }
-    
+  async function addSubscriber() {
+    const email = document.getElementById('newSubscriberEmail').value.trim();
+    const name = document.getElementById('newSubscriberName').value.trim();
+    const source = document.getElementById('newSubscriberSource').value;
+    if (!email) { alert('Enter email'); return; }
     try {
-      const response = await fetch('/api/newsletter/subscribers', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscriberId: id, status })
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // Update local data
-        const subscriber = allSubscribers.find(s => s.id === id);
-        if (subscriber) {
-          subscriber.status = status;
-          if (status === 'unsubscribed') {
-            selectedIds.delete(id);
-          }
-        }
-        
-        // Update stats
-        const activeCount = allSubscribers.filter(s => s.status === 'active').length;
-        const unsubCount = allSubscribers.filter(s => s.status === 'unsubscribed').length;
-        document.getElementById('activeCount').textContent = activeCount;
-        document.getElementById('unsubscribedCount').textContent = unsubCount;
-        
-        renderSubscribers();
-      } else {
-        alert(data.error || 'Failed to update subscriber');
-      }
-    } catch (err) {
-      alert('Error updating subscriber');
-    }
+      const res = await fetch('/api/newsletter/subscribers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, name, source }) });
+      const data = await res.json();
+      if (data.success) { closeModal('addSubscriberModal'); loadSubscribers(); }
+      else alert(data.error || 'Failed');
+    } catch (e) { alert('Error'); }
   }
   
-  async function deleteSubscriber(id) {
-    if (!confirm('Permanently delete this subscriber?')) {
-      return;
-    }
-    
+  function editSubscriber(id) {
+    const s = allSubscribers.find(x => x.id === id); if (!s) return;
+    document.getElementById('editSubscriberId').value = id;
+    document.getElementById('editSubscriberEmail').value = s.email;
+    document.getElementById('editSubscriberName').value = s.name || '';
+    document.getElementById('editSubscriberStatus').value = s.status;
+    document.getElementById('editSubscriberModal').classList.add('active');
+  }
+  
+  async function saveSubscriber() {
+    const id = document.getElementById('editSubscriberId').value;
+    const name = document.getElementById('editSubscriberName').value.trim();
+    const status = document.getElementById('editSubscriberStatus').value;
     try {
-      const response = await fetch('/api/newsletter/subscribers', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscriberId: id })
-      });
-      
-      const data = await response.json();
-      
+      const res = await fetch('/api/newsletter/subscribers', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscriberId: id, name, status }) });
+      const data = await res.json();
       if (data.success) {
-        allSubscribers = allSubscribers.filter(s => s.id !== id);
-        selectedIds.delete(id);
-        
-        // Update stats
+        const s = allSubscribers.find(x => x.id === id);
+        if (s) { s.name = name; s.status = status; if (status === 'unsubscribed') selectedIds.delete(id); }
+        closeModal('editSubscriberModal'); renderSubscribers();
+        document.getElementById('activeCount').textContent = allSubscribers.filter(s => s.status === 'active').length;
+        document.getElementById('unsubscribedCount').textContent = allSubscribers.filter(s => s.status === 'unsubscribed').length;
+      } else alert(data.error || 'Failed');
+    } catch (e) { alert('Error'); }
+  }
+  
+  function deleteSubscriber(id) {
+    const s = allSubscribers.find(x => x.id === id); if (!s) return;
+    document.getElementById('deleteSubscriberId').value = id;
+    document.getElementById('deleteEmail').textContent = s.email;
+    document.getElementById('deleteModal').classList.add('active');
+  }
+  
+  async function confirmDelete() {
+    const id = document.getElementById('deleteSubscriberId').value;
+    try {
+      const res = await fetch('/api/newsletter/subscribers', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscriberId: id }) });
+      const data = await res.json();
+      if (data.success) {
+        allSubscribers = allSubscribers.filter(s => s.id !== id); selectedIds.delete(id);
+        closeModal('deleteModal');
         document.getElementById('totalCount').textContent = allSubscribers.length;
         document.getElementById('activeCount').textContent = allSubscribers.filter(s => s.status === 'active').length;
         document.getElementById('unsubscribedCount').textContent = allSubscribers.filter(s => s.status === 'unsubscribed').length;
-        
-        renderSubscribers();
-      } else {
-        alert(data.error || 'Failed to delete subscriber');
-      }
-    } catch (err) {
-      alert('Error deleting subscriber');
-    }
+        if (allSubscribers.length === 0) { document.getElementById('subscribersTable').style.display = 'none'; document.getElementById('emptyState').style.display = 'block'; }
+        else renderSubscribers();
+      } else alert(data.error || 'Failed');
+    } catch (e) { alert('Error'); }
   }
 </script>

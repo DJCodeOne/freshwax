@@ -2,49 +2,58 @@
 // src/pages/shipping.astro
 import InfoPageLayout from '../layouts/InfoPageLayout.astro';
 
+const lastUpdated = 'December 2024';
+
 const faqs = [
   {
     question: "How much does UK shipping cost?",
-    answer: "UK shipping starts from £3.50 for Royal Mail 2nd Class (2-3 working days). We offer free UK shipping on orders over £50. Faster options include Royal Mail 1st Class (£4.95), Tracked 24 (£6.95), and DPD Next Day (£8.95)."
+    answer: "UK shipping starts from £3.50 for Royal Mail 2nd Class. We offer free UK shipping on orders over £50. Express options are available at checkout."
   },
   {
     question: "Do you ship vinyl records internationally?",
-    answer: "Yes, we ship worldwide. European shipping starts from £8.95 (5-7 working days). USA, Canada, Australia, and Japan shipping starts from £12.95-£14.95. All vinyl records are carefully packed in custom mailers with cardboard stiffeners."
-  },
-  {
-    question: "How long does international shipping take?",
-    answer: "Delivery times vary by destination: Western Europe 5-7 working days, Eastern Europe 7-10 days, USA & Canada 7-14 days, Australia & NZ 10-21 days, Rest of World 14-28 days."
-  },
-  {
-    question: "Will I have to pay import duties on EU orders?",
-    answer: "Since Brexit, orders to EU countries may be subject to customs duties and import VAT. These charges are determined by your country's customs authority and are the responsibility of the customer."
-  },
-  {
-    question: "How quickly are orders dispatched?",
-    answer: "Orders placed before 2pm UK time on working days are dispatched the same day. Orders placed after 2pm are dispatched the next working day. Pre-orders ship on or shortly after the release date."
-  },
-  {
-    question: "What if my order arrives damaged?",
-    answer: "If your order arrives damaged, please take photos of the packaging and item and contact us within 48 hours. We'll arrange a replacement or refund. All vinyl records are shipped in protective custom mailers to minimise damage risk."
+    answer: "Yes, we ship worldwide. All vinyl records are carefully packed in custom mailers with cardboard stiffeners to ensure safe delivery."
   },
   {
     question: "How are digital downloads delivered?",
-    answer: "Digital downloads are available immediately after purchase. You'll receive an email with download links, and files are also available in your account dashboard. Downloads include WAV, FLAC, and MP3 formats."
+    answer: "Digital downloads are available immediately after purchase. You'll receive an email with download links, and files are also available in your account dashboard in WAV and MP3 formats."
+  },
+  {
+    question: "Can I return a vinyl record?",
+    answer: "Sealed vinyl can be returned within 14 days. Opened vinyl cannot be returned unless faulty. We inspect all vinyl before shipping to ensure quality."
+  },
+  {
+    question: "What if my order arrives damaged?",
+    answer: "Contact us within 48 hours with photos of the damage. We'll arrange a replacement or full refund including any return shipping costs."
+  },
+  {
+    question: "Are digital downloads refundable?",
+    answer: "Digital downloads are non-refundable once downloaded, as per UK consumer law for digital content. Exceptions may be made for technical issues."
   }
 ];
 ---
 
 <InfoPageLayout 
-  title="Shipping Information" 
-  description="Fresh Wax shipping rates, delivery times, and international shipping information. Free UK shipping on orders over £50."
+  title="Shipping & Returns" 
+  description="Fresh Wax shipping rates, delivery times, returns policy and refund information. Free UK shipping on orders over £50."
+  lastUpdated={lastUpdated}
   faqs={faqs}
 >
   <p class="text-xl text-gray-600 mb-8">
-    We ship worldwide from the United Kingdom. Find all the information you need about delivery times, costs, and tracking below.
+    Everything you need to know about shipping, delivery, returns, and refunds at <span class="text-black font-semibold">Fresh</span> <span class="text-red-600 font-semibold">Wax</span>.
   </p>
 
-  <h2>UK Shipping</h2>
-  
+  <!-- SHIPPING SECTION -->
+  <h2>Shipping Information</h2>
+
+  <h3>Digital Downloads</h3>
+  <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6">
+    <p class="font-semibold text-green-800">Instant Delivery</p>
+    <p class="text-green-700 text-sm mt-1">
+      Digital downloads are available immediately after purchase. Download links are sent via email and accessible in your account dashboard. Available formats: WAV and MP3 (320kbps).
+    </p>
+  </div>
+
+  <h3>UK Shipping</h3>
   <div class="overflow-x-auto mb-6">
     <table class="w-full border-collapse">
       <thead>
@@ -72,20 +81,19 @@ const faqs = [
         </tr>
         <tr class="border-b border-gray-200 bg-gray-50">
           <td class="p-3 font-semibold">DPD Next Day</td>
-          <td class="p-3">Next working day</td>
+          <td class="p-3">Next working day (signed)</td>
           <td class="p-3">£8.95</td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-8">
-    <p class="font-semibold text-green-800">🎉 Free UK Shipping on orders over £50!</p>
-    <p class="text-green-700 text-sm">Automatically applied at checkout (Royal Mail 2nd Class)</p>
+  <div class="bg-red-50 border-l-4 border-red-600 p-4 mb-8">
+    <p class="font-semibold text-red-800">Free UK Shipping on orders over £50</p>
+    <p class="text-red-700 text-sm mt-1">Automatically applied at checkout (Royal Mail 2nd Class)</p>
   </div>
 
-  <h2>European Shipping</h2>
-  
+  <h3>European Shipping</h3>
   <div class="overflow-x-auto mb-6">
     <table class="w-full border-collapse">
       <thead>
@@ -116,12 +124,13 @@ const faqs = [
   </div>
 
   <div class="bg-amber-50 border-l-4 border-amber-500 p-4 mb-8">
-    <p class="font-semibold text-amber-800">⚠️ EU Customers - Import Duties</p>
-    <p class="text-amber-700 text-sm">Since Brexit, orders to EU countries may be subject to customs duties and import VAT. These charges are the responsibility of the customer and vary by country.</p>
+    <p class="font-semibold text-amber-800">EU Customers – Import Duties</p>
+    <p class="text-amber-700 text-sm mt-1">
+      Since Brexit, orders to EU countries may be subject to customs duties and import VAT. These charges are determined by your country's customs authority and are the responsibility of the customer.
+    </p>
   </div>
 
-  <h2>Rest of World</h2>
-  
+  <h3>Rest of World</h3>
   <div class="overflow-x-auto mb-6">
     <table class="w-full border-collapse">
       <thead>
@@ -138,7 +147,7 @@ const faqs = [
           <td class="p-3">From £12.95</td>
         </tr>
         <tr class="border-b border-gray-200 bg-gray-50">
-          <td class="p-3 font-semibold">Australia & NZ</td>
+          <td class="p-3 font-semibold">Australia & New Zealand</td>
           <td class="p-3">10-21 working days</td>
           <td class="p-3">From £14.95</td>
         </tr>
@@ -156,54 +165,161 @@ const faqs = [
     </table>
   </div>
 
-  <h2>Digital Downloads</h2>
-  <p>
-    Digital downloads are available immediately after purchase. You'll receive an email with download links, and files will also be available in your account dashboard. Downloads are provided in multiple formats including WAV, FLAC, and MP3.
-  </p>
-
-  <h2>Vinyl Packaging</h2>
-  <p>We take great care in packaging vinyl records to ensure they arrive safely:</p>
+  <h3>Vinyl Packaging</h3>
+  <p>We take great care in packaging vinyl records:</p>
   <ul>
     <li>All vinyl shipped in custom record mailers</li>
-    <li>Extra cardboard stiffeners for protection</li>
-    <li>"Do Not Bend" labels on all packages</li>
+    <li>Cardboard stiffeners for protection</li>
+    <li>"Do Not Bend" and "Fragile" labels</li>
     <li>Multiple records shipped in reinforced boxes</li>
+    <li>Records removed from sleeves to prevent seam splits</li>
   </ul>
 
-  <h2>Order Processing</h2>
+  <h3>Order Processing</h3>
   <ul>
     <li>Orders placed before 2pm (UK time) on working days are dispatched same day</li>
     <li>Orders placed after 2pm are dispatched the next working day</li>
     <li>Pre-orders ship on or shortly after the release date</li>
-    <li>Orders containing pre-order items ship together when all items are available</li>
+    <li>We do not dispatch on weekends or UK bank holidays</li>
   </ul>
 
-  <h2>Tracking Your Order</h2>
+  <!-- RETURNS SECTION -->
+  <h2>Returns & Refunds</h2>
+
+  <h3>Your Legal Rights</h3>
   <p>
-    Once your order is dispatched, you'll receive an email with tracking information (where available). You can also track your order by logging into your account.
+    Under the Consumer Contracts Regulations 2013, you have the right to cancel your order within 14 days of receiving your goods. This is in addition to your statutory rights under the Consumer Rights Act 2015.
   </p>
+
+  <h3>Physical Products (Vinyl, Merch)</h3>
+  
+  <p><strong>14-Day Returns:</strong></p>
+  <p>You can return physical products within 14 days of delivery if:</p>
+  <ul>
+    <li>The item is unused and in original condition</li>
+    <li>Vinyl records are still sealed (shrink wrap intact)</li>
+    <li>Clothing has tags attached and is unworn/unwashed</li>
+    <li>Original packaging is intact</li>
+  </ul>
+
+  <p><strong>Non-Returnable Items:</strong></p>
+  <ul>
+    <li>Opened/unsealed vinyl records (unless faulty)</li>
+    <li>Worn clothing or items without tags</li>
+    <li>Personalised or custom-made items</li>
+    <li>Items marked as "Final Sale"</li>
+    <li>Gift cards</li>
+  </ul>
+
+  <h3>Damaged or Faulty Items</h3>
+  <p>If your order arrives damaged or faulty:</p>
+  <ul>
+    <li>Contact us within 48 hours of delivery</li>
+    <li>Provide photos of the damage and packaging</li>
+    <li>Keep all packaging until the issue is resolved</li>
+    <li>We will arrange a replacement or full refund</li>
+    <li>We cover return shipping costs for faulty items</li>
+  </ul>
+
+  <h3>Digital Downloads</h3>
+  <div class="bg-gray-100 border-l-4 border-black p-4 mb-6">
+    <p class="font-semibold">Digital downloads are non-refundable</p>
+    <p class="text-gray-600 text-sm mt-2">
+      Once you have downloaded digital content, we cannot offer a refund. By purchasing digital content, you acknowledge that you lose your right to cancel once the download begins. This is in accordance with the Consumer Contracts Regulations 2013.
+    </p>
+  </div>
+  
+  <p><strong>Exceptions may be made if:</strong></p>
+  <ul>
+    <li>The files are corrupted and cannot be fixed</li>
+    <li>The product was significantly misrepresented</li>
+    <li>Technical issues on our end prevented access</li>
+  </ul>
+
+  <h3>How to Return an Item</h3>
+  
+  <p><strong>Step 1:</strong> Contact us at <a href="mailto:contact@freshwax.co.uk">contact@freshwax.co.uk</a> with:</p>
+  <ul>
+    <li>Your order number</li>
+    <li>Items you wish to return</li>
+    <li>Reason for return</li>
+    <li>Photos (if damaged/faulty)</li>
+  </ul>
+
+  <p><strong>Step 2:</strong> We'll review your request and send return instructions within 2 working days.</p>
+
+  <p><strong>Step 3:</strong> Pack the item securely and ship to the address provided. Include your order number.</p>
+
+  <p><strong>Step 4:</strong> Once received and inspected, we'll process your refund within 5-7 working days.</p>
+
+  <h3>Return Shipping Costs</h3>
+  <ul>
+    <li><strong>Change of mind:</strong> You pay return shipping</li>
+    <li><strong>Damaged/faulty/wrong item:</strong> We provide a prepaid label or refund shipping costs</li>
+  </ul>
+
+  <h3>Refund Timeline</h3>
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full border-collapse">
+      <thead>
+        <tr class="bg-black text-white">
+          <th class="p-3 text-left">Payment Method</th>
+          <th class="p-3 text-left">Refund Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b border-gray-200">
+          <td class="p-3">Credit/Debit Card</td>
+          <td class="p-3">5-10 working days</td>
+        </tr>
+        <tr class="border-b border-gray-200 bg-gray-50">
+          <td class="p-3">PayPal</td>
+          <td class="p-3">3-5 working days</td>
+        </tr>
+        <tr class="border-b border-gray-200">
+          <td class="p-3">Store Credit</td>
+          <td class="p-3">Immediate</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Pre-Orders</h3>
   <p>
-    <strong>Note:</strong> Standard shipping services may not include full tracking. For guaranteed tracking, please select a tracked shipping option at checkout.
+    Pre-orders can be cancelled for a full refund at any time before the item ships. Once shipped, standard return policies apply.
   </p>
+
+  <h3>International Returns</h3>
+  <ul>
+    <li>International customers are responsible for return shipping costs (unless faulty)</li>
+    <li>Mark returns as "Returned Goods" on customs forms</li>
+    <li>We are not responsible for customs charges on returns</li>
+    <li>Use a tracked shipping service for your protection</li>
+  </ul>
 
   <h2>Delivery Issues</h2>
+
   <h3>Missing Orders</h3>
   <p>
-    If your order hasn't arrived within the expected timeframe, please wait a few extra days as postal services can experience delays. If it still hasn't arrived, contact us and we'll investigate.
+    If your order hasn't arrived within the expected timeframe, please allow a few extra days as postal services can experience delays. If it still hasn't arrived:
   </p>
-
-  <h3>Damaged Items</h3>
-  <p>
-    If your order arrives damaged, please take photos of the packaging and item, and contact us within 48 hours. We'll arrange a replacement or refund.
-  </p>
+  <ul>
+    <li>Check tracking information (if available)</li>
+    <li>Check with neighbours or reception</li>
+    <li>Contact us and we'll investigate with the carrier</li>
+  </ul>
 
   <h3>Wrong Address</h3>
   <p>
-    Please double-check your shipping address before completing your order. We cannot be held responsible for orders sent to incorrect addresses provided by the customer.
+    Please double-check your shipping address before completing your order. We cannot be held responsible for orders sent to incorrect addresses provided by the customer. Address changes after dispatch may not be possible.
   </p>
 
-  <h2>Questions?</h2>
+  <h2>Contact Us</h2>
   <p>
-    If you have any questions about shipping, please <a href="/contact">contact us</a> or email <a href="mailto:orders@freshwax.co.uk">orders@freshwax.co.uk</a>.
+    For shipping or returns enquiries:
+  </p>
+  <p>
+    <strong>Email:</strong> <a href="mailto:contact@freshwax.co.uk">contact@freshwax.co.uk</a><br>
+    <strong>Contact Form:</strong> <a href="/contact">freshwax.co.uk/contact</a>
   </p>
 </InfoPageLayout>

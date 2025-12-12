@@ -12,7 +12,8 @@ let error = null;
 let comments = [];
 
 try {
-  const apiUrl = `${Astro.url.origin}/api/get-dj-mix?id=${id}`;
+  // Add nocache timestamp to ensure fresh data (plays/likes/comments update frequently)
+  const apiUrl = `${Astro.url.origin}/api/get-dj-mix?id=${id}&nocache=${Date.now()}`;
   
   const response = await fetch(apiUrl);
   const data = await response.json();
@@ -40,7 +41,7 @@ const {
   title = 'Untitled Mix',
   dj_name = 'Unknown DJ',
   genre = 'Jungle & Drum and Bass',
-  artwork_url = '/logo.webp',
+  artwork_url = '/place-holder.webp',
   audio_url = '',
   upload_date = new Date().toISOString(),
   description = '',
@@ -126,14 +127,14 @@ const formattedDate = mix ? new Date(upload_date).toLocaleDateString('en-GB', {
         </a>
 
         <!-- Main Info Section -->
-        <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white p-3 sm:p-4 md:p-8 mb-3 sm:mb-4 md:mb-6 shadow-xl">
+        <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white p-3 sm:p-4 md:p-8 mb-3 sm:mb-4 md:mb-6 shadow-xl overflow-hidden">
           <div class="flex flex-col lg:flex-row gap-4 sm:gap-6 md:gap-8">
             
             <!-- Info Column - Now First on Desktop -->
-            <div class="lg:flex-1 space-y-3 sm:space-y-4 md:space-y-6 order-1 lg:order-1">
-              <div class="text-center lg:text-left">
-                <h1 class="text-5xl md:text-7xl font-black text-red-500 mb-2 md:mb-3 leading-tight uppercase drop-shadow-lg truncate" title={title}>{title.length > 40 ? title.substring(0, 37) + '...' : title}</h1>
-                <p class="text-3xl md:text-4xl font-black text-white mb-1 md:mb-2 uppercase drop-shadow-md truncate" title={dj_name}>{dj_name.length > 40 ? dj_name.substring(0, 37) + '...' : dj_name}</p>
+            <div class="lg:flex-1 space-y-3 sm:space-y-4 md:space-y-6 order-1 lg:order-1 min-w-0">
+              <div class="text-center lg:text-left overflow-hidden">
+                <h1 class="text-5xl md:text-7xl font-black text-red-500 mb-2 md:mb-3 leading-tight uppercase drop-shadow-lg truncate" title={title}>{title}</h1>
+                <p class="text-3xl md:text-4xl font-black text-white mb-1 md:mb-2 uppercase drop-shadow-md truncate" title={dj_name}>{dj_name}</p>
               </div>
 
               <!-- Info Grid -->
@@ -246,13 +247,13 @@ const formattedDate = mix ? new Date(upload_date).toLocaleDateString('en-GB', {
             </div>
 
             <!-- Artwork Column - Bottom Right -->
-            <div class="order-2 lg:order-2 flex flex-col items-center lg:items-end lg:justify-end lg:self-end">
+            <div class="order-2 lg:order-2 flex flex-col items-center lg:items-end lg:justify-end lg:self-end flex-shrink-0">
               <!-- Artwork -->
               <img 
                 src={artwork_url} 
                 alt={`${title} by ${dj_name}`}
                 class="w-full max-w-[280px] sm:max-w-[320px] lg:w-72 xl:w-80 mx-auto lg:mx-0 border-2 sm:border-4 border-white shadow-2xl"
-                onerror="this.src='/logo.webp'"
+                onerror="this.src='/place-holder.webp'"
               />
             </div>
           </div>
@@ -302,7 +303,7 @@ const formattedDate = mix ? new Date(upload_date).toLocaleDateString('en-GB', {
                 <div class="mb-3 flex-shrink-0">
                   <div class="flex items-center justify-between mb-2">
                     <p class="text-xs font-black text-gray-300 uppercase tracking-wide">Quick Emojis:</p>
-                    <button type="button" id="gif-picker-btn" class="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-xs font-bold uppercase rounded transition-all">
+                    <button type="button" id="gif-picker-btn" class="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold uppercase rounded transition-all">
                       <span>GIF</span>
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -339,7 +340,7 @@ const formattedDate = mix ? new Date(upload_date).toLocaleDateString('en-GB', {
                 
                 <!-- GIF Preview -->
                 <div id="gif-preview-container" class="hidden mb-3 relative">
-                  <img id="gif-preview" src="" alt="Selected GIF" class="max-h-24 rounded border-2 border-purple-500">
+                  <img id="gif-preview" src="" alt="Selected GIF" class="max-h-24 rounded border-2 border-blue-500">
                   <button type="button" id="remove-gif-btn" class="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-700">×</button>
                 </div>
                 
@@ -375,10 +376,17 @@ const formattedDate = mix ? new Date(upload_date).toLocaleDateString('en-GB', {
                     <div class="comment-item p-3 bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-500 hover:border-red-600 transition-all rounded shadow-md relative">
                       <span class="absolute top-2 right-3 text-xs text-gray-400">{new Date(comment.timestamp || comment.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                       <div class="flex items-start gap-3">
-                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg">
-                          <span class="text-white font-bold text-base">
-                            {(comment.userName || 'A').charAt(0).toUpperCase()}
-                          </span>
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg overflow-hidden">
+                          {comment.avatarUrl ? (
+                            <img src={comment.avatarUrl} alt="" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+                            <span class="text-white font-bold text-base" style="display:none;">
+                              {(comment.userName || 'A').charAt(0).toUpperCase()}
+                            </span>
+                          ) : (
+                            <span class="text-white font-bold text-base">
+                              {(comment.userName || 'A').charAt(0).toUpperCase()}
+                            </span>
+                          )}
                         </div>
                         <div class="flex-1 min-w-0 pt-1">
                           <span class="text-white text-sm uppercase block mb-1">{comment.userName || 'Anonymous'}</span>
@@ -520,8 +528,8 @@ Artist - Track Title
   <div id="giphy-modal" class="fixed inset-0 z-50 hidden">
     <div class="fixed inset-0 bg-black bg-opacity-80 transition-opacity" id="giphy-modal-backdrop"></div>
     <div class="fixed inset-0 flex items-center justify-center p-3 sm:p-4">
-      <div class="bg-gray-900 max-w-lg w-full transform transition-all border-2 border-purple-500 rounded-lg mx-2 max-h-[80vh] overflow-hidden flex flex-col">
-        <div class="flex items-center justify-between p-3 sm:p-4 border-b-2 border-purple-500 bg-gradient-to-r from-purple-600 to-pink-600">
+      <div class="bg-gray-900 max-w-lg w-full transform transition-all border-2 border-blue-500 rounded-lg mx-2 max-h-[80vh] overflow-hidden flex flex-col">
+        <div class="flex items-center justify-between p-3 sm:p-4 border-b-2 border-blue-500 bg-gradient-to-r from-blue-600 to-indigo-600">
           <h3 class="text-sm sm:text-base md:text-lg font-black text-white uppercase flex items-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -539,15 +547,11 @@ Artist - Track Title
             type="text" 
             id="giphy-search-input" 
             placeholder="Search for GIFs..." 
-            class="w-full px-4 py-3 border-2 border-gray-600 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            class="w-full px-4 py-3 border-2 border-gray-600 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <div id="giphy-results" class="flex-1 overflow-y-auto p-4 pt-0 grid grid-cols-2 sm:grid-cols-3 gap-2" style="min-height: 200px; max-height: 400px;">
           <p class="col-span-full text-center text-gray-400 py-8">Search for GIFs above</p>
-        </div>
-        <div class="p-3 border-t border-gray-700 text-center">
-          <img src="https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif" alt="Powered by GIPHY" class="hidden"/>
-          <span class="text-xs text-gray-500">Powered by GIPHY</span>
         </div>
       </div>
     </div>
@@ -988,12 +992,14 @@ Artist - Track Title
   // Check for logged-in user
   let currentUser = null;
   let currentUserName = null;
+  let currentUserAvatar = null;
 
   // Function to update UI based on auth state
-  function updateCommentUI(user, userName) {
+  function updateCommentUI(user, userName, avatarUrl) {
     if (user && userName) {
       currentUser = user;
       currentUserName = userName;
+      currentUserAvatar = avatarUrl || null;
       if (commentUsername) {
         commentUsername.value = userName;
         commentUsername.classList.remove('cursor-not-allowed');
@@ -1002,6 +1008,7 @@ Artist - Track Title
     } else {
       currentUser = null;
       currentUserName = null;
+      currentUserAvatar = null;
       if (commentUsername) {
         commentUsername.value = '';
         commentUsername.placeholder = 'Login to comment';
@@ -1041,8 +1048,8 @@ Artist - Track Title
       window.firebaseAuth = auth;
       window.firebaseDb = db;
       
-      // Helper to fetch user name using cached API (reduces 3 reads to 1)
-      async function fetchUserName(user) {
+      // Helper to fetch user profile using cached API (reduces 3 reads to 1)
+      async function fetchUserProfile(user) {
         try {
           // Check sessionStorage cache first
           const cacheKey = `fw_user_profile_${user.uid}`;
@@ -1052,7 +1059,12 @@ Artist - Track Title
               const profile = JSON.parse(cached);
               // Cache valid for 5 minutes
               if (profile.cachedAt && Date.now() - profile.cachedAt < 300000) {
-                return profile.name || profile.partnerDisplayName || user.displayName || user.email?.split('@')[0] || 'User';
+                // Firebase Auth displayName is the public name (same as Header.astro)
+                const displayName = user.displayName || profile.partnerDisplayName || user.email?.split('@')[0] || 'User';
+                return {
+                  name: displayName,
+                  avatarUrl: profile.avatarUrl || user.photoURL || null
+                };
               }
             } catch (e) { /* ignore parse errors */ }
           }
@@ -1065,34 +1077,38 @@ Artist - Track Title
               // Cache the result
               profile.cachedAt = Date.now();
               try { sessionStorage.setItem(cacheKey, JSON.stringify(profile)); } catch (e) {}
-              return profile.name || profile.partnerDisplayName || user.displayName || user.email?.split('@')[0] || 'User';
+              // Firebase Auth displayName is the public name (same as Header.astro)
+              const displayName = user.displayName || profile.partnerDisplayName || user.email?.split('@')[0] || 'User';
+              return {
+                name: displayName,
+                avatarUrl: profile.avatarUrl || user.photoURL || null
+              };
             }
           }
-          return user.displayName || user.email?.split('@')[0] || 'User';
+          return { name: user.displayName || user.email?.split('@')[0] || 'User', avatarUrl: user.photoURL || null };
         } catch (err) {
-          return user.displayName || user.email?.split('@')[0] || 'User';
+          return { name: user.displayName || user.email?.split('@')[0] || 'User', avatarUrl: user.photoURL || null };
         }
       }
       
       // Listen for auth state changes - this is the reliable method
       onAuthStateChanged(auth, async function(user) {
         if (user) {
-          const userName = await fetchUserName(user);
-          updateCommentUI(user, userName);
+          const profile = await fetchUserProfile(user);
+          updateCommentUI(user, profile.name, profile.avatarUrl);
         } else {
-          updateCommentUI(null, null);
+          updateCommentUI(null, null, null);
         }
       });
       
-      // Also check immediately in case auth state is already known
-      // Use a small delay to allow Firebase to restore session
-      setTimeout(async function() {
-        const user = auth.currentUser;
+      // Also check immediately using authReady from Header
+      if (window.authReady) {
+        const user = await window.authReady;
         if (user && !currentUser) {
-          const userName = await fetchUserName(user);
-          updateCommentUI(user, userName);
+          const profile = await fetchUserProfile(user);
+          updateCommentUI(user, profile.name, profile.avatarUrl);
         }
-      }, 500);
+      }
       
     } catch (err) {
       console.error('[Comments] Firebase init error:', err);
@@ -1175,7 +1191,8 @@ Artist - Track Title
         userName: userName,
         comment: comment || '',
         gifUrl: selectedGifUrl,
-        userId: currentUser.uid
+        userId: currentUser.uid,
+        avatarUrl: currentUserAvatar || null
       })
     }).then(function(response) {
       return response.json();
@@ -1194,7 +1211,15 @@ Artist - Track Title
           commentContent += '<img src="' + selectedGifUrl + '" alt="GIF" class="mt-2 max-h-48 rounded border border-gray-500" loading="lazy" />';
         }
         
-        const newCommentHtml = '<div class="comment-item p-3 bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-500 hover:border-red-600 transition-all rounded shadow-md relative"><span class="absolute top-2 right-3 text-xs text-gray-400">Just now</span><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg"><span class="text-white font-bold text-base">' + initial + '</span></div><div class="flex-1 min-w-0 pt-1"><span class="text-white text-sm uppercase block mb-1">' + safeUserName + '</span>' + commentContent + '</div></div></div>';
+        // Avatar HTML - use image if available, fallback to initial
+        let avatarHtml;
+        if (currentUserAvatar) {
+          avatarHtml = '<img src="' + currentUserAvatar + '" alt="" class="w-full h-full object-cover" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';" /><span class="text-white font-bold text-base hidden items-center justify-center w-full h-full">' + initial + '</span>';
+        } else {
+          avatarHtml = '<span class="text-white font-bold text-base">' + initial + '</span>';
+        }
+        
+        const newCommentHtml = '<div class="comment-item p-3 bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-500 hover:border-red-600 transition-all rounded shadow-md relative"><span class="absolute top-2 right-3 text-xs text-gray-400">Just now</span><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg overflow-hidden">' + avatarHtml + '</div><div class="flex-1 min-w-0 pt-1"><span class="text-white text-sm uppercase block mb-1">' + safeUserName + '</span>' + commentContent + '</div></div></div>';
         
         // Get fresh reference to comments container
         const commentsContainer = document.getElementById('comments-list');
@@ -1283,7 +1308,11 @@ Artist - Track Title
       const auth = getAuth(app);
       const db = getFirestore(app);
       
-      const user = auth.currentUser;
+      // Wait for auth to be ready
+      let user = auth.currentUser;
+      if (!user && window.authReady) {
+        user = await window.authReady;
+      }
       if (!user) return;
       
       // Check if user owns this mix
@@ -1527,7 +1556,7 @@ Artist - Track Title
     giphyResults.innerHTML = gifs.map(function(gif) {
       const previewUrl = gif.images.fixed_height_small.url;
       const fullUrl = gif.images.fixed_height.url;
-      return '<div class="gif-item cursor-pointer rounded overflow-hidden border-2 border-transparent hover:border-purple-500 transition-all" data-gif-url="' + fullUrl + '">' +
+      return '<div class="gif-item cursor-pointer rounded overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all" data-gif-url="' + fullUrl + '">' +
         '<img src="' + previewUrl + '" alt="' + (gif.title || 'GIF') + '" class="w-full h-24 object-cover" loading="lazy" />' +
         '</div>';
     }).join('');
@@ -1573,7 +1602,8 @@ Artist - Track Title
         userName: userName,
         comment: '',
         gifUrl: url,
-        userId: currentUser.uid
+        userId: currentUser.uid,
+        avatarUrl: currentUserAvatar || null
       })
     }).then(function(response) {
       return response.json();
@@ -1582,7 +1612,15 @@ Artist - Track Title
         const safeUserName = userName.replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const initial = safeUserName.charAt(0).toUpperCase();
         
-        const newCommentHtml = '<div class="comment-item p-3 bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-500 hover:border-red-600 transition-all rounded shadow-md relative"><span class="absolute top-2 right-3 text-xs text-gray-400">Just now</span><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg"><span class="text-white font-bold text-base">' + initial + '</span></div><div class="flex-1 min-w-0 pt-1"><span class="text-white text-sm uppercase block mb-1">' + safeUserName + '</span><img src="' + url + '" alt="GIF" class="mt-2 max-h-48 rounded border border-gray-500" loading="lazy" /></div></div></div>';
+        // Avatar HTML - use image if available, fallback to initial
+        let avatarHtml;
+        if (currentUserAvatar) {
+          avatarHtml = '<img src="' + currentUserAvatar + '" alt="" class="w-full h-full object-cover" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';" /><span class="text-white font-bold text-base hidden items-center justify-center w-full h-full">' + initial + '</span>';
+        } else {
+          avatarHtml = '<span class="text-white font-bold text-base">' + initial + '</span>';
+        }
+        
+        const newCommentHtml = '<div class="comment-item p-3 bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-500 hover:border-red-600 transition-all rounded shadow-md relative"><span class="absolute top-2 right-3 text-xs text-gray-400">Just now</span><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg overflow-hidden">' + avatarHtml + '</div><div class="flex-1 min-w-0 pt-1"><span class="text-white text-sm uppercase block mb-1">' + safeUserName + '</span><img src="' + url + '" alt="GIF" class="mt-2 max-h-48 rounded border border-gray-500" loading="lazy" /></div></div></div>';
         
         const commentsContainer = document.getElementById('comments-list');
         if (commentsContainer) {

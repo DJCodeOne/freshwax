@@ -289,6 +289,7 @@ export const prerender = false;
               fullName: data.name || data.fullName || '',
               email: data.email || '',
               phone: data.phone || data.whatsapp || '',
+              avatarUrl: data.avatarUrl || data.photoURL || data.imageUrl || null,
               isArtist: data.isArtist === true,
               isMerchSupplier: data.isMerchSupplier === true,
               approved: data.approved === true,
@@ -353,6 +354,7 @@ export const prerender = false;
               fullName: data.name || data.fullName || '',
               email: data.email || '',
               phone: data.phone || data.whatsapp || '',
+              avatarUrl: data.avatarUrl || data.photoURL || data.imageUrl || null,
               isArtist: data.isArtist === true,
               isMerchSupplier: data.isMerchSupplier === true,
               approved: data.approved === true,
@@ -442,7 +444,7 @@ export const prerender = false;
             <tr>
               <td>
                 <div class="item-cell">
-                  <div class="avatar">${p.name.charAt(0).toUpperCase()}</div>
+                  <div class="avatar">${p.avatarUrl ? `<img src="${p.avatarUrl}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><span style="display:none;">${p.name.charAt(0).toUpperCase()}</span>` : p.name.charAt(0).toUpperCase()}</div>
                   <div class="item-info">
                     <h4>${p.name}</h4>
                     ${p.fullName && p.fullName !== p.name ? `<p>${p.fullName}</p>` : ''}
@@ -578,7 +580,7 @@ export const prerender = false;
   </Fragment>
 </AdminLayout>
 
-<style>
+<style is:global>
   .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; }
   .stat-card { background: #fff; border: 2px solid #e5e5e5; padding: 1.25rem; text-align: center; }
   .stat-card.success { border-color: #16a34a; }
@@ -612,7 +614,8 @@ export const prerender = false;
   .status-option input:checked + .status-card.pending { border-color: #d97706; background: #fffbeb; }
   .status-option input:checked + .status-card.suspended { border-color: #dc2626; background: #fef2f2; }
   
-  .avatar { width: 40px; height: 40px; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; }
+  .avatar { width: 40px; height: 40px; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
   .loading-spinner { text-align: center; padding: 3rem; }
   .spinner { width: 40px; height: 40px; border: 3px solid #e5e5e5; border-top-color: #dc2626; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
   @keyframes spin { to { transform: rotate(360deg); } }

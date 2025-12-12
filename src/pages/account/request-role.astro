@@ -1,0 +1,649 @@
+---
+// Request Role Page
+// Users can request Artist or Merch Seller roles
+---
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request Pro Access | Fresh Wax</title>
+  <link rel="stylesheet" href="/styles/global.css">
+</head>
+<body>
+  <div class="page-container">
+    <header class="page-header">
+      <a href="/account" class="back-link">← Back to Account</a>
+      <h1>Request Pro Access</h1>
+      <p>Apply for Artist or Merch Seller roles to access the Pro Dashboard</p>
+    </header>
+
+    <main class="page-content" id="pageContent">
+      <div class="loading" id="loadingState">Loading...</div>
+
+      <!-- Current Status -->
+      <div id="statusSection" class="status-section" style="display: none;">
+        <h2>Your Current Roles</h2>
+        <div class="roles-grid" id="rolesGrid"></div>
+      </div>
+
+      <!-- Request Forms -->
+      <div id="requestForms" class="request-forms" style="display: none;">
+        <!-- Artist Request -->
+        <div class="request-card" id="artistRequestCard">
+          <div class="card-header">
+            <div class="card-icon">🎵</div>
+            <div class="card-title">
+              <h3>Artist / Label</h3>
+              <p>Upload and sell your releases on Fresh Wax</p>
+            </div>
+          </div>
+          
+          <div id="artistStatus" class="request-status"></div>
+
+          <form id="artistForm" class="request-form">
+            <div class="form-group">
+              <label for="artistName">Artist / Label Name *</label>
+              <input type="text" id="artistName" required placeholder="Your artist or label name">
+            </div>
+            <div class="form-group">
+              <label for="artistBio">Tell us about yourself *</label>
+              <textarea id="artistBio" required rows="3" placeholder="Brief description of your music, releases, previous work, etc."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="artistLinks">Links (SoundCloud, Bandcamp, etc.)</label>
+              <input type="text" id="artistLinks" placeholder="https://soundcloud.com/yourname">
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Request</button>
+          </form>
+        </div>
+
+        <!-- Merch Seller Request -->
+        <div class="request-card" id="merchRequestCard">
+          <div class="card-header">
+            <div class="card-icon">📦</div>
+            <div class="card-title">
+              <h3>Merch Seller</h3>
+              <p>Sell merchandise through Fresh Wax</p>
+            </div>
+          </div>
+
+          <div id="merchStatus" class="request-status"></div>
+
+          <form id="merchForm" class="request-form">
+            <div class="form-group">
+              <label for="businessName">Business / Brand Name *</label>
+              <input type="text" id="businessName" required placeholder="Your business or brand name">
+            </div>
+            <div class="form-group">
+              <label for="merchDescription">What do you sell? *</label>
+              <textarea id="merchDescription" required rows="3" placeholder="Describe the merchandise you want to sell"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="merchWebsite">Website (optional)</label>
+              <input type="text" id="merchWebsite" placeholder="https://yourwebsite.com">
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Request</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- DJ Bypass Request -->
+      <div id="djBypassSection" class="dj-bypass-section" style="display: none;">
+        <div class="request-card">
+          <div class="card-header">
+            <div class="card-icon">🎧</div>
+            <div class="card-title">
+              <h3>DJ Lobby Access</h3>
+              <p>Request early access to the DJ Lobby</p>
+            </div>
+          </div>
+
+          <div id="djStatus" class="request-status"></div>
+
+          <div id="djRequirements" class="requirements-info">
+            <p>To access the DJ Lobby, you need:</p>
+            <ul>
+              <li>At least <strong id="reqMixes">1</strong> uploaded DJ mix</li>
+              <li>With at least <strong id="reqLikes">10</strong> likes</li>
+            </ul>
+            <div id="djProgress" class="progress-info"></div>
+          </div>
+
+          <form id="djBypassForm" class="request-form" style="display: none;">
+            <div class="form-group">
+              <label for="bypassReason">Why should we grant you early access?</label>
+              <textarea id="bypassReason" rows="3" placeholder="Tell us about your DJ experience, upcoming events, etc."></textarea>
+            </div>
+            <button type="submit" class="btn btn-secondary">Request Bypass</button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <style>
+    .page-container {
+      min-height: 100vh;
+      background: var(--bg-primary, #0a0a0a);
+    }
+
+    .page-header {
+      padding: 2rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .back-link {
+      color: var(--text-secondary, #a3a3a3);
+      text-decoration: none;
+      font-size: 0.875rem;
+      display: inline-block;
+      margin-bottom: 1rem;
+    }
+
+    .back-link:hover {
+      color: var(--accent, #22c55e);
+    }
+
+    .page-header h1 {
+      color: var(--text-primary, #fff);
+      margin: 0 0 0.5rem;
+    }
+
+    .page-header p {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0;
+    }
+
+    .page-content {
+      padding: 0 2rem 2rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .status-section {
+      margin-bottom: 2rem;
+    }
+
+    .status-section h2 {
+      color: var(--text-primary, #fff);
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+    }
+
+    .roles-grid {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 6px;
+      font-size: 0.875rem;
+    }
+
+    .role-badge.active {
+      background: rgba(34, 197, 94, 0.1);
+      border-color: rgba(34, 197, 94, 0.3);
+      color: #22c55e;
+    }
+
+    .role-badge.pending {
+      background: rgba(251, 191, 36, 0.1);
+      border-color: rgba(251, 191, 36, 0.3);
+      color: #fbbf24;
+    }
+
+    .request-forms {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .request-card {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+
+    .card-header {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-icon {
+      font-size: 2rem;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-tertiary, #1a1a1a);
+      border-radius: 8px;
+    }
+
+    .card-title h3 {
+      color: var(--text-primary, #fff);
+      margin: 0 0 0.25rem;
+    }
+
+    .card-title p {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0;
+      font-size: 0.875rem;
+    }
+
+    .request-status {
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+    }
+
+    .request-status.approved {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #22c55e;
+    }
+
+    .request-status.pending {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      color: #fbbf24;
+    }
+
+    .request-status.denied {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+
+    .request-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-group label {
+      color: var(--text-secondary, #a3a3a3);
+      font-size: 0.875rem;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      padding: 0.75rem 1rem;
+      background: var(--bg-tertiary, #1a1a1a);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 6px;
+      color: var(--text-primary, #fff);
+      font-size: 1rem;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent, #22c55e);
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      align-self: flex-start;
+    }
+
+    .btn-primary {
+      background: var(--accent, #22c55e);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover, #16a34a);
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary, #1a1a1a);
+      color: var(--text-primary, #fff);
+      border: 1px solid var(--border-color, #262626);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .dj-bypass-section {
+      margin-top: 1.5rem;
+    }
+
+    .requirements-info {
+      padding: 1rem;
+      background: var(--bg-tertiary, #1a1a1a);
+      border-radius: 6px;
+      margin-bottom: 1rem;
+    }
+
+    .requirements-info p {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0 0 0.5rem;
+    }
+
+    .requirements-info ul {
+      margin: 0;
+      padding-left: 1.25rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .requirements-info li {
+      margin-bottom: 0.25rem;
+    }
+
+    .progress-info {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border-color, #262626);
+      font-size: 0.875rem;
+    }
+
+    .progress-info.eligible {
+      color: #22c55e;
+    }
+
+    .progress-info.not-eligible {
+      color: var(--text-secondary, #a3a3a3);
+    }
+  </style>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+    const firebaseConfig = window.FIREBASE_CONFIG || {};
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const loadingState = document.getElementById('loadingState');
+    const statusSection = document.getElementById('statusSection');
+    const rolesGrid = document.getElementById('rolesGrid');
+    const requestForms = document.getElementById('requestForms');
+    const djBypassSection = document.getElementById('djBypassSection');
+
+    let currentUser = null;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = '/login?redirect=/account/request-role';
+        return;
+      }
+
+      currentUser = user;
+      await loadUserData(user.uid);
+    });
+
+    async function loadUserData(uid) {
+      try {
+        // Get user document
+        const userDoc = await getDoc(doc(db, 'users', uid));
+        const userData = userDoc.exists ? userDoc.data() : {};
+        const roles = userData.roles || {};
+        const pendingRoles = userData.pendingRoles || {};
+
+        // Show status section
+        loadingState.style.display = 'none';
+        statusSection.style.display = 'block';
+        requestForms.style.display = 'block';
+        djBypassSection.style.display = 'block';
+
+        // Build roles display
+        let rolesHtml = '';
+        rolesHtml += `<span class="role-badge active">✓ Customer</span>`;
+        
+        if (roles.djEligible) {
+          rolesHtml += `<span class="role-badge active">✓ DJ Eligible</span>`;
+        }
+        if (roles.artist) {
+          rolesHtml += `<span class="role-badge active">✓ Artist</span>`;
+        } else if (pendingRoles.artist?.status === 'pending') {
+          rolesHtml += `<span class="role-badge pending">⏳ Artist (Pending)</span>`;
+        }
+        if (roles.merchSeller) {
+          rolesHtml += `<span class="role-badge active">✓ Merch Seller</span>`;
+        } else if (pendingRoles.merchSeller?.status === 'pending') {
+          rolesHtml += `<span class="role-badge pending">⏳ Merch Seller (Pending)</span>`;
+        }
+
+        rolesGrid.innerHTML = rolesHtml;
+
+        // Update Artist form/status
+        updateArtistSection(roles, pendingRoles);
+        
+        // Update Merch form/status
+        updateMerchSection(roles, pendingRoles);
+
+        // Load DJ eligibility
+        await loadDJEligibility(uid, roles, pendingRoles);
+
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        loadingState.textContent = 'Error loading data';
+      }
+    }
+
+    function updateArtistSection(roles, pendingRoles) {
+      const artistForm = document.getElementById('artistForm');
+      const artistStatus = document.getElementById('artistStatus');
+
+      if (roles.artist) {
+        artistForm.style.display = 'none';
+        artistStatus.className = 'request-status approved';
+        artistStatus.innerHTML = '✓ You have Artist access. <a href="/pro">Go to Pro Dashboard</a>';
+      } else if (pendingRoles.artist?.status === 'pending') {
+        artistForm.style.display = 'none';
+        artistStatus.className = 'request-status pending';
+        artistStatus.textContent = '⏳ Your request is pending review';
+      } else if (pendingRoles.artist?.status === 'denied') {
+        artistStatus.className = 'request-status denied';
+        artistStatus.textContent = `✗ Request denied: ${pendingRoles.artist.denialReason || 'No reason provided'}`;
+        // Allow resubmission
+      } else {
+        artistStatus.style.display = 'none';
+      }
+    }
+
+    function updateMerchSection(roles, pendingRoles) {
+      const merchForm = document.getElementById('merchForm');
+      const merchStatus = document.getElementById('merchStatus');
+
+      if (roles.merchSeller) {
+        merchForm.style.display = 'none';
+        merchStatus.className = 'request-status approved';
+        merchStatus.innerHTML = '✓ You have Merch Seller access. <a href="/pro">Go to Pro Dashboard</a>';
+      } else if (pendingRoles.merchSeller?.status === 'pending') {
+        merchForm.style.display = 'none';
+        merchStatus.className = 'request-status pending';
+        merchStatus.textContent = '⏳ Your request is pending review';
+      } else if (pendingRoles.merchSeller?.status === 'denied') {
+        merchStatus.className = 'request-status denied';
+        merchStatus.textContent = `✗ Request denied: ${pendingRoles.merchSeller.denialReason || 'No reason provided'}`;
+      } else {
+        merchStatus.style.display = 'none';
+      }
+    }
+
+    async function loadDJEligibility(uid, roles, pendingRoles) {
+      const djStatus = document.getElementById('djStatus');
+      const djProgress = document.getElementById('djProgress');
+      const djBypassForm = document.getElementById('djBypassForm');
+
+      if (roles.djEligible) {
+        djStatus.className = 'request-status approved';
+        djStatus.innerHTML = '✓ You have DJ Lobby access. <a href="/dj-lobby">Go to DJ Lobby</a>';
+        document.getElementById('djRequirements').style.display = 'none';
+        djBypassForm.style.display = 'none';
+        return;
+      }
+
+      if (pendingRoles.djBypass?.status === 'pending') {
+        djStatus.className = 'request-status pending';
+        djStatus.textContent = '⏳ Your bypass request is pending review';
+        djBypassForm.style.display = 'none';
+        return;
+      }
+
+      // Fetch eligibility data
+      try {
+        const response = await fetch(`/api/dj/eligibility?action=checkEligibility&uid=${uid}`);
+        const data = await response.json();
+
+        if (data.success) {
+          document.getElementById('reqMixes').textContent = data.requirements.requiredMixes;
+          document.getElementById('reqLikes').textContent = data.requirements.requiredLikes;
+
+          if (data.meetsRequirements) {
+            djProgress.className = 'progress-info eligible';
+            djProgress.textContent = '✓ You meet the requirements! Your DJ status will be activated shortly.';
+            djBypassForm.style.display = 'none';
+          } else {
+            djProgress.className = 'progress-info not-eligible';
+            djProgress.innerHTML = `Your progress: ${data.progress.mixesWithEnoughLikes}/${data.requirements.requiredMixes} qualifying mixes`;
+            
+            if (data.canRequestBypass) {
+              djBypassForm.style.display = 'block';
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading DJ eligibility:', error);
+      }
+    }
+
+    // Form submissions
+    document.getElementById('artistForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      try {
+        const response = await fetch('/api/roles/manage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'requestRole',
+            uid: currentUser.uid,
+            roleType: 'artist',
+            artistName: document.getElementById('artistName').value,
+            bio: document.getElementById('artistBio').value,
+            links: document.getElementById('artistLinks').value
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          alert('Request submitted! We\'ll review it shortly.');
+          location.reload();
+        } else {
+          alert(data.error || 'Error submitting request');
+        }
+      } catch (error) {
+        alert('Error submitting request');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Submit Request';
+    });
+
+    document.getElementById('merchForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      try {
+        const response = await fetch('/api/roles/manage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'requestRole',
+            uid: currentUser.uid,
+            roleType: 'merchSeller',
+            businessName: document.getElementById('businessName').value,
+            description: document.getElementById('merchDescription').value,
+            website: document.getElementById('merchWebsite').value
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          alert('Request submitted! We\'ll review it shortly.');
+          location.reload();
+        } else {
+          alert(data.error || 'Error submitting request');
+        }
+      } catch (error) {
+        alert('Error submitting request');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Submit Request';
+    });
+
+    document.getElementById('djBypassForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      try {
+        const response = await fetch('/api/dj/eligibility', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'requestBypass',
+            uid: currentUser.uid,
+            reason: document.getElementById('bypassReason').value
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          alert('Bypass request submitted! We\'ll review it shortly.');
+          location.reload();
+        } else {
+          alert(data.error || 'Error submitting request');
+        }
+      } catch (error) {
+        alert('Error submitting request');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Request Bypass';
+    });
+  </script>
+</body>
+</html>

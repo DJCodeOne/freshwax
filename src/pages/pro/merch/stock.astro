@@ -1,0 +1,339 @@
+---
+// Merch Stock Levels - Pro Dashboard
+// View-only stock monitoring
+import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+---
+<ProDashboardLayout title="Stock Levels" activeSection="/pro/merch/stock">
+  <div class="stock-page">
+    <div class="page-header">
+      <div class="header-content">
+        <p class="subtitle">Monitor your inventory levels</p>
+      </div>
+      <a href="/contact" class="btn btn-secondary">Request Stock Update</a>
+    </div>
+
+    <!-- Stock Summary -->
+    <div class="stock-summary" id="stockSummary">
+      <div class="summary-card">
+        <div class="summary-value" id="totalStock">-</div>
+        <div class="summary-label">Total Units</div>
+      </div>
+      <div class="summary-card warning">
+        <div class="summary-value" id="lowStockCount">-</div>
+        <div class="summary-label">Low Stock Items</div>
+      </div>
+      <div class="summary-card danger">
+        <div class="summary-value" id="outOfStockCount">-</div>
+        <div class="summary-label">Out of Stock</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value" id="totalProducts">-</div>
+        <div class="summary-label">Total Products</div>
+      </div>
+    </div>
+
+    <!-- Stock Table -->
+    <div class="stock-table-wrapper">
+      <table class="stock-table" id="stockTable">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>SKU</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>Stock</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="stockTableBody">
+          <tr>
+            <td colspan="6" class="loading">Loading stock data...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Info -->
+    <div class="info-box">
+      <p><strong>Need to update stock levels?</strong> Contact the Fresh Wax team to adjust your inventory.</p>
+    </div>
+  </div>
+
+  <style>
+    .stock-page {
+      max-width: 1200px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .header-content .subtitle {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary, #141414);
+      color: var(--text-primary, #fff);
+      border: 1px solid var(--border-color, #262626);
+    }
+
+    .stock-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .summary-card {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .summary-card.warning {
+      border-color: rgba(251, 191, 36, 0.3);
+      background: rgba(251, 191, 36, 0.05);
+    }
+
+    .summary-card.danger {
+      border-color: rgba(239, 68, 68, 0.3);
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .summary-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary, #fff);
+      margin-bottom: 0.25rem;
+    }
+
+    .summary-card.warning .summary-value {
+      color: #fbbf24;
+    }
+
+    .summary-card.danger .summary-value {
+      color: #ef4444;
+    }
+
+    .summary-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .stock-table-wrapper {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+
+    .stock-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .stock-table th,
+    .stock-table td {
+      padding: 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color, #262626);
+    }
+
+    .stock-table th {
+      background: var(--bg-tertiary, #1a1a1a);
+      font-weight: 600;
+      color: var(--text-secondary, #a3a3a3);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stock-table td {
+      color: var(--text-primary, #fff);
+    }
+
+    .stock-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .stock-table tbody tr:hover {
+      background: var(--bg-tertiary, #1a1a1a);
+    }
+
+    .loading {
+      text-align: center;
+      color: var(--text-secondary, #a3a3a3);
+      padding: 2rem;
+    }
+
+    .product-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .product-thumb {
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      object-fit: cover;
+      background: var(--bg-tertiary, #1a1a1a);
+    }
+
+    .stock-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .stock-ok {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    .stock-low {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+    }
+
+    .stock-out {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .info-box {
+      padding: 1rem 1.25rem;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 8px;
+    }
+
+    .info-box p {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0;
+      font-size: 0.9rem;
+    }
+
+    .info-box strong {
+      color: var(--text-primary, #fff);
+    }
+
+    @media (max-width: 768px) {
+      .stock-table-wrapper {
+        overflow-x: auto;
+      }
+
+      .stock-table {
+        min-width: 600px;
+      }
+    }
+  </style>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+    const firebaseConfig = window.FIREBASE_CONFIG || {};
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const stockTableBody = document.getElementById('stockTableBody');
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      await loadStock(user.uid);
+    });
+
+    async function loadStock(uid) {
+      try {
+        const productsQuery = query(
+          collection(db, 'merch'),
+          where('sellerId', '==', uid)
+        );
+        const snapshot = await getDocs(productsQuery);
+        
+        let totalStock = 0;
+        let lowStockCount = 0;
+        let outOfStockCount = 0;
+
+        const products = [];
+        snapshot.forEach(doc => {
+          const product = { id: doc.id, ...doc.data() };
+          products.push(product);
+          
+          const stock = product.stock || 0;
+          totalStock += stock;
+          if (stock === 0) outOfStockCount++;
+          else if (stock < 5) lowStockCount++;
+        });
+
+        // Update summary
+        document.getElementById('totalStock').textContent = totalStock;
+        document.getElementById('lowStockCount').textContent = lowStockCount;
+        document.getElementById('outOfStockCount').textContent = outOfStockCount;
+        document.getElementById('totalProducts').textContent = products.length;
+
+        if (products.length === 0) {
+          stockTableBody.innerHTML = '<tr><td colspan="6" class="loading">No products found</td></tr>';
+          return;
+        }
+
+        // Sort by stock level (lowest first)
+        products.sort((a, b) => (a.stock || 0) - (b.stock || 0));
+
+        stockTableBody.innerHTML = products.map(product => {
+          const stock = product.stock || 0;
+          const stockClass = stock === 0 ? 'stock-out' : stock < 5 ? 'stock-low' : 'stock-ok';
+          const statusText = stock === 0 ? 'Out of Stock' : stock < 5 ? 'Low Stock' : 'In Stock';
+
+          return `
+            <tr>
+              <td>
+                <div class="product-cell">
+                  <img src="${product.image || '/images/placeholder-product.jpg'}" alt="${product.name}" class="product-thumb">
+                  <span>${product.name || 'Unnamed'}</span>
+                </div>
+              </td>
+              <td>${product.sku || '-'}</td>
+              <td>${product.category || '-'}</td>
+              <td>£${(product.price || 0).toFixed(2)}</td>
+              <td><strong>${stock}</strong></td>
+              <td><span class="stock-badge ${stockClass}">${statusText}</span></td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (error) {
+        console.error('Error loading stock:', error);
+        stockTableBody.innerHTML = '<tr><td colspan="6" class="loading">Error loading stock data</td></tr>';
+      }
+    }
+  </script>
+</ProDashboardLayout>

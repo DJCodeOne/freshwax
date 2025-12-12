@@ -3,7 +3,12 @@
 // Live stream viewing page with schedule calendar, booking, and lobby system
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
+import LiveMiniPlayer from '../components/live/LiveMiniPlayer.astro';
+import LiveChat from '../components/live/LiveChat.astro';
+import LiveListeners from '../components/live/LiveListeners.astro';
+import LiveReactions from '../components/live/LiveReactions.astro';
+import '../styles/live.css';
+import ScheduleModal from '../components/ScheduleModal.astro';
 
 export const prerender = false;
 
@@ -14,36 +19,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   <Header />
   
   <!-- Sticky Mini Player for Mobile -->
-  <div id="miniPlayer" class="mini-player hidden">
-    <div class="mini-player-info">
-      <img id="miniDjAvatar" src="/logo.webp" alt="" class="mini-avatar" />
-      <div class="mini-text">
-        <span id="miniDjName" class="mini-dj">-</span>
-        <span id="miniStatus" class="mini-status">Live</span>
-      </div>
-    </div>
-    <div class="mini-controls">
-      <button id="miniPlayBtn" class="mini-play-btn">
-        <svg id="miniPlayIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        <svg id="miniPauseIcon" class="hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-      </button>
-      <button id="miniExpandBtn" class="mini-expand-btn" title="Back to player">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
-      </button>
-    </div>
-    <div class="mini-progress">
-      <div id="miniLedStrip" class="mini-led-strip">
-        <span class="mini-led"></span>
-        <span class="mini-led"></span>
-        <span class="mini-led"></span>
-        <span class="mini-led"></span>
-        <span class="mini-led"></span>
-        <span class="mini-led"></span>
-        <span class="mini-led"></span>
-        <span class="mini-led"></span>
-      </div>
-    </div>
-  </div>
+  <LiveMiniPlayer />
   
   <div id="fullscreenMode" class="fullscreen-mode hidden">
     <div class="fullscreen-header">
@@ -54,7 +30,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         </div>
         <h1 id="fsStreamTitle">No Live Streams</h1>
         <div class="fs-dj-info">
-          <img id="fsDjAvatar" src="/logo.webp" alt="DJ" />
+          <img id="fsDjAvatar" src="/place-holder.webp" alt="DJ" />
           <span id="fsDjName">-</span>
         </div>
       </div>
@@ -65,6 +41,32 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       </div>
       <button id="exitFullscreen" class="fs-exit-btn">Exit</button>
     </div>
+    
+    <!-- Fullscreen Controls Bar -->
+    <div class="fs-controls-bar">
+      <div class="fs-reactions">
+        <button class="fs-reaction-btn" data-emoji="❤️" title="Love">❤️</button>
+        <button class="fs-reaction-btn" data-emoji="🔥" title="Fire">🔥</button>
+        <button class="fs-reaction-btn" data-emoji="💥" title="Explosion">💥</button>
+        <button class="fs-reaction-btn" data-emoji="⭐" title="Star">⭐</button>
+        <button class="fs-reaction-btn" data-emoji="🔊" title="Bass">🔊</button>
+        <button class="fs-reaction-btn" data-emoji="👊" title="Fist">👊</button>
+        <button class="fs-reaction-btn" data-emoji="🚀" title="Rocket">🚀</button>
+        <button id="fsAnimToggleBtn" class="fs-reaction-btn fs-anim-toggle" title="Turn off emoji animations">
+          <svg class="anim-on-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+          <svg class="anim-off-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
+        </button>
+      </div>
+      <button id="fsShoutoutBtn" class="fs-shoutout-btn" title="Send a shoutout">
+        <span>📣</span>
+        <span>SHOUTOUT</span>
+      </button>
+      <div class="fs-volume">
+        <svg class="fs-volume-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+        <input type="range" id="fsVolumeSlider" min="0" max="100" value="80" />
+      </div>
+    </div>
+    
     <div class="fullscreen-content">
       <div class="fs-player" id="fsPlayer">
         <div class="fs-offline-overlay" id="fsOfflineOverlay">
@@ -108,35 +110,60 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         <div class="schedule-header">
           <h1>LIVE <span class="red">STREAM</span></h1>
           <p>Watch live DJ sets</p>
-          <div id="djButtons" class="schedule-buttons hidden">
-            <button id="goLiveNowBtn" class="go-live-now-btn">Go Live Now</button>
-            <button id="bookSlotBtn" class="book-btn">Book a Slot</button>
+          <div id="djButtons" class="schedule-buttons">
+            <button id="goLiveNowBtn" class="go-live-now-btn">
+              <span class="btn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              </span>
+              <span class="btn-content">
+                <span class="btn-label">Go Live</span>
+                <span class="btn-sublabel">Start streaming now</span>
+              </span>
+            </button>
+            <button id="bookSlotBtn" class="book-btn">
+              <span class="btn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                  <path d="M9 16l2 2 4-4"/>
+                </svg>
+              </span>
+              <span class="btn-content">
+                <span class="btn-label">Book Slot</span>
+                <span class="btn-sublabel">Reserve your time</span>
+              </span>
+            </button>
           </div>
         </div>
         
-        <div class="live-status-card" id="liveStatusCard">
-          <div class="live-indicator" id="liveIndicator">
-            <span class="pulse-dot"></span>
-            <span id="liveIndicatorText">OFFLINE</span>
-          </div>
-          <div class="live-dj-info" id="liveDjInfoCard">
-            <img id="liveDjAvatarCard" src="/logo.webp" alt="" />
-            <div>
-              <span class="live-dj-name" id="liveDjNameCard">No one streaming</span>
-              <span class="live-dj-ends" id="liveDjEndsCard">Check back soon</span>
-            </div>
-          </div>
-        </div>
+        <button id="viewScheduleBtn" class="full-schedule-btn">
+          <span class="schedule-btn-icon">📅</span>
+          <span class="schedule-btn-text">
+            <span class="schedule-btn-label">View Full Schedule</span>
+            <span class="schedule-btn-sub">See all upcoming streams</span>
+          </span>
+          <span class="schedule-btn-arrow">→</span>
+        </button>
         
         <div class="sidebar-card">
-          <h3>📅 UP NEXT</h3>
+          <h3>⏭️ UP NEXT</h3>
           <div id="queueListCard" class="queue-list-card">
             <span class="empty-message">No upcoming DJs</span>
           </div>
         </div>
         
-        <div class="sidebar-card">
-          <h3>🎧 TODAY'S LINEUP</h3>
+        <div class="sidebar-card schedule-card">
+          <div class="schedule-header">
+            <h3>🎧 TODAY'S LINEUP</h3>
+            <button id="viewFullScheduleBtn" class="view-full-btn" onclick="openPublicSchedule()">
+              View All
+            </button>
+          </div>
           <div id="scheduleList" class="schedule-list">
             <p class="empty-message">No shows today</p>
           </div>
@@ -153,7 +180,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
             <div class="stream-meta">
               <h1 id="streamTitle">No Live Streams</h1>
               <div class="stream-dj">
-                <img id="djAvatar" src="/logo.webp" alt="DJ" class="dj-avatar" />
+                <img id="djAvatar" src="/place-holder.webp" alt="DJ" class="dj-avatar" />
                 <span id="djName">-</span>
                 <span class="stream-genre" id="streamGenre">Jungle / D&B</span>
               </div>
@@ -179,11 +206,12 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         </div>
         
         <div class="player-container" id="playerContainer">
+          
+          <!-- Offline Overlay -->
           <div id="offlineOverlay" class="offline-overlay">
             <div class="offline-overlay-content">
               <div class="offline-icon-large">OFFLINE</div>
               <h2>No one is streaming right now</h2>
-              <p>Check the schedule for upcoming shows</p>
             </div>
           </div>
           
@@ -191,7 +219,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
             <div class="countdown-content">
               <h2>NEXT DJ STARTING SOON</h2>
               <div class="countdown-dj">
-                <img id="countdownDjAvatar" src="/logo.webp" alt="" class="countdown-avatar" />
+                <img id="countdownDjAvatar" src="/place-holder.webp" alt="" class="countdown-avatar" />
                 <span id="countdownDjName">-</span>
               </div>
               <div class="countdown-timer">
@@ -210,7 +238,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
               <div class="vinyl-container">
                 <div class="vinyl-record">
                   <div class="vinyl-label">
-                    <img id="vinylDjAvatar" src="/logo.webp" alt="DJ" class="vinyl-avatar" />
+                    <img id="vinylDjAvatar" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
                   </div>
                   <div class="vinyl-grooves"></div>
                 </div>
@@ -220,7 +248,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
               <!-- DJ Info -->
               <div class="audio-dj-info">
                 <div class="audio-dj-name" id="audioDjName">DJ Name</div>
-                <div class="audio-show-title" id="audioShowTitle">Live on Fresh Wax</div>
+                <div class="audio-show-title" id="audioShowTitle">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
                 <div class="audio-live-badge">
                   <span class="live-pulse"></span>
                   AUDIO ONLY
@@ -299,112 +327,43 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
             </div>
           </div>
           
-          <!-- Inline Reactions -->
-          <div class="inline-reactions">
-            <button id="likeBtn" class="inline-btn reaction-btn like-btn" title="Love" data-emoji="❤️,💖,💗,💓,💕">
-              <span class="reaction-emoji">❤️</span>
+          <LiveReactions />
+        </div>
+        
+        <!-- Shoutout Bar -->
+        <div class="shoutout-bar" id="shoutoutBar">
+          <div class="shoutout-left">
+            <span class="shoutout-label">📣 SHOUT OUTS</span>
+            <button id="shoutoutBtn" class="shoutout-btn" title="Send a shoutout">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
             </button>
-            <button id="fireBtn" class="inline-btn reaction-btn fire-btn" title="Fire" data-emoji="🔥,🔥,🔥,🔥,🔥">
-              <span class="reaction-emoji">🔥</span>
-            </button>
-            <button id="explosionBtn" class="inline-btn reaction-btn explosion-btn" title="Explosion" data-emoji="💥,💥,💥,💥,💥">
-              <span class="reaction-emoji">💥</span>
-            </button>
-            <div class="inline-rating">
-              <div class="star-rating" id="starRating">
-                <button class="star" data-rating="1">★</button>
-                <button class="star" data-rating="2">★</button>
-                <button class="star" data-rating="3">★</button>
-                <button class="star" data-rating="4">★</button>
-                <button class="star" data-rating="5">★</button>
-              </div>
-              <span class="avg-rating" id="avgRating">0.0</span>
+          </div>
+          <div class="shoutout-marquee">
+            <div class="shoutout-track" id="shoutoutTrack">
+              <span class="shoutout-placeholder">🎉 Send a shoutout to appear here!</span>
             </div>
-            <button id="shareBtn" class="inline-btn share-btn" title="Share">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
-            </button>
           </div>
-          
-          <!-- Record Button -->
-          <div class="record-control">
-            <button id="recordBtn" class="record-btn" disabled title="Record live stream">
-              <span class="record-dot"></span>
-              <span class="record-text">REC</span>
-            </button>
-            <span id="recordDuration" class="record-duration hidden">00:00</span>
+        </div>
+        
+        <!-- DJ Info Bar -->
+        <div class="dj-info-bar">
+          <div class="dj-info-left">
+            <span class="dj-info-label">NOW PLAYING</span>
+            <span class="dj-info-name" id="controlsDjName">--</span>
           </div>
-          
-          <div class="volume-control">
-            <svg class="volume-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
-            <input type="range" id="volumeSlider" min="0" max="100" value="80" />
+          <div class="dj-info-right">
+            <span class="dj-info-title-label">SET</span>
+            <span class="dj-info-title" id="controlsSetTitle">Waiting for stream...</span>
           </div>
         </div>
       </div>
       
       <aside class="chat-column">
         <div class="chat-listeners-grid">
-          <div class="chat-section">
-            <div class="chat-header">
-              <h3>LIVE CHAT</h3>
-              <span class="chat-viewers" id="chatViewers">0 watching</span>
-            </div>
-            
-            <div class="chat-messages" id="chatMessages">
-              <div class="chat-welcome">
-                <p>Welcome to Fresh Wax Live Stream!</p>
-                <p class="chat-hint">Chat is active during live streams.</p>
-              </div>
-            </div>
-            
-            <div id="chatInputSection" class="chat-input-section">
-              <div id="loginPrompt" class="login-prompt">
-                <p><a href="/login">Sign in</a> to chat</p>
-              </div>
-              
-              <div id="chatForm" class="chat-form hidden">
-                <div class="chat-tools">
-                  <button type="button" id="emojiBtn" class="tool-btn" title="Emojis">:)</button>
-                  <button type="button" id="giphyBtn" class="tool-btn" title="GIFs">GIF</button>
-                </div>
-                <div class="chat-input-wrapper">
-                  <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
-                  <button type="submit" id="sendBtn">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            <div id="emojiPicker" class="emoji-picker hidden">
-              <div class="emoji-categories">
-                <button class="emoji-cat active" data-cat="music">Music</button>
-                <button class="emoji-cat" data-cat="reactions">Fire</button>
-                <button class="emoji-cat" data-cat="faces">Faces</button>
-                <button class="emoji-cat" data-cat="vibes">Vibes</button>
-              </div>
-              <div class="emoji-grid" id="emojiGrid"></div>
-            </div>
-            
-            <div id="giphyPicker" class="giphy-picker hidden">
-              <div class="giphy-search">
-                <input type="text" id="giphySearch" placeholder="Search GIFs..." />
-              </div>
-              <div class="giphy-grid" id="giphyGrid">
-                <p class="giphy-hint">Search for a GIF above</p>
-              </div>
-              <div class="giphy-attribution">Powered by GIPHY</div>
-            </div>
-          </div>
-          
-          <div class="listeners-card">
-            <div class="listeners-header">
-              <h3>👥 Listening</h3>
-              <span class="listener-badge" id="listenerCountBadge">0</span>
-            </div>
-            <div id="listenersList" class="listeners-list">
-              <span class="empty-message">No one listening yet</span>
-            </div>
-          </div>
+          <LiveChat />
+          <LiveListeners />
         </div>
       </aside>
     </div>
@@ -627,8 +586,19 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
           <span id="lobbySlotTime">-</span>
         </div>
         <div class="lobby-countdown-big">
-          <span class="countdown-label">Time until live:</span>
+          <span id="lobbyCountdownLabel" class="countdown-label">Time until live:</span>
           <span id="lobbyCountdownBig">--:--</span>
+        </div>
+        <div id="lobbyGracePeriod" class="lobby-grace-period hidden">
+          <span class="grace-warning">⚠️ LATE - Press Ready within:</span>
+          <span id="graceCountdown" class="grace-countdown">3:00</span>
+        </div>
+      </div>
+      
+      <div class="lobby-ready-status" id="lobbyReadyStatus">
+        <div class="ready-indicator" id="readyIndicator">
+          <span class="ready-dot"></span>
+          <span id="readyStatusText">Not Ready</span>
         </div>
       </div>
       
@@ -663,9 +633,22 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         <button class="copy-key-btn" onclick="copyRtmpUrl()">Copy</button>
       </div>
       <div class="lobby-buttons">
+        <button id="readyBtn" class="lobby-btn ready">✓ Ready</button>
         <button id="goLiveBtn" class="lobby-btn primary" disabled>Go Live</button>
         <button id="endStreamBtn" class="lobby-btn end-stream hidden">⏹️ End Stream</button>
         <button id="leaveLobbyBtn" class="lobby-btn cancel">Leave</button>
+      </div>
+      
+      <!-- Slot Available for Takeover -->
+      <div id="slotAvailableSection" class="slot-available-section hidden">
+        <div class="slot-available-alert">
+          <span class="alert-icon">🔓</span>
+          <div class="alert-text">
+            <strong>Slot Available!</strong>
+            <p>Previous DJ missed their window. First to claim gets it!</p>
+          </div>
+        </div>
+        <button id="claimSlotBtn" class="lobby-btn claim">🎧 Claim This Slot</button>
       </div>
       
       <!-- Takeover Request Section -->
@@ -678,7 +661,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         <div class="takeover-current-dj">
           <span class="lobby-label">Currently Live:</span>
           <div class="current-dj-info">
-            <img id="takeoverDjAvatar" src="/logo.webp" alt="" class="current-dj-avatar" />
+            <img id="takeoverDjAvatar" src="/place-holder.webp" alt="" class="current-dj-avatar" />
             <span id="takeoverDjName">-</span>
           </div>
         </div>
@@ -724,7 +707,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         <span class="pulse-badge-large">⚡ TAKEOVER REQUEST</span>
       </div>
       <div class="incoming-takeover-dj">
-        <img id="incomingTakeoverAvatar" src="/logo.webp" alt="" />
+        <img id="incomingTakeoverAvatar" src="/place-holder.webp" alt="" />
         <div>
           <strong id="incomingTakeoverName">DJ Name</strong>
           <span>wants to take over your stream</span>
@@ -748,7 +731,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         <div class="share-preview">
           <div class="share-preview-badge">LIVE NOW</div>
           <div class="share-preview-dj">
-            <img id="sharePreviewAvatar" src="/logo.webp" alt="" />
+            <img id="sharePreviewAvatar" src="/place-holder.webp" alt="" />
             <div class="share-preview-info">
               <h3 id="sharePreviewName">DJ Name</h3>
               <p id="sharePreviewCrew">Fresh Wax Live Stream</p>
@@ -787,7 +770,51 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     </div>
   </div>
   
-  <Footer />
+  <!-- Shoutout Modal -->
+  <div id="shoutoutModal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content shoutout-modal-content">
+      <div class="modal-header">
+        <h2>📣 SEND A SHOUTOUT</h2>
+        <button class="modal-close" id="closeShoutoutModal">X</button>
+      </div>
+      <div class="modal-body">
+        <p class="shoutout-hint">Birthdays 🎂 • Big ups 🙌 • Locations 📍 • Party vibes 🎉</p>
+        <div class="shoutout-input-wrapper">
+          <input type="text" id="shoutoutInput" placeholder="Type your shoutout..." maxlength="30" autocomplete="off" />
+          <span class="shoutout-char-count"><span id="shoutoutCharCount">0</span>/30</span>
+        </div>
+        <div class="shoutout-emoji-row">
+          <button type="button" class="shoutout-emoji" data-emoji="🎂">🎂</button>
+          <button type="button" class="shoutout-emoji" data-emoji="🎉">🎉</button>
+          <button type="button" class="shoutout-emoji" data-emoji="🔥">🔥</button>
+          <button type="button" class="shoutout-emoji" data-emoji="❤️">❤️</button>
+          <button type="button" class="shoutout-emoji" data-emoji="🙌">🙌</button>
+          <button type="button" class="shoutout-emoji" data-emoji="📍">📍</button>
+          <button type="button" class="shoutout-emoji" data-emoji="🎵">🎵</button>
+          <button type="button" class="shoutout-emoji" data-emoji="👊">👊</button>
+        </div>
+        <button id="sendShoutoutBtn" class="send-shoutout-btn" disabled>
+          <span>SEND SHOUTOUT</span>
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Simple Footer -->
+  <!-- Schedule Modals (Public & Booking) -->
+  <ScheduleModal />
+  
+  <footer class="live-footer">
+    <span>© 2025 <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></span>
+    <span class="footer-divider">•</span>
+    <a href="/terms">Terms</a>
+    <span class="footer-divider">•</span>
+    <a href="/privacy">Privacy</a>
+    <span class="footer-divider">•</span>
+    <a href="/contact">Contact</a>
+  </footer>
 </Layout>
 
 <script define:vars={{ giphyApiKey }}>
@@ -796,4478 +823,6 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
-<style>
-  /* Hearts are appended directly to body - no container needed */
-  
-  .fullscreen-mode {
-    position: fixed;
-    inset: 0;
-    background: #000;
-    z-index: 10000;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .fullscreen-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.5rem;
-    background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, transparent 100%);
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 10;
-  }
-  
-  .fs-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-  
-  .fs-live-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: #333;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    color: #888;
-    font-weight: 700;
-  }
-  
-  .fs-live-badge.is-live {
-    background: #dc2626;
-    color: #fff;
-  }
-  
-  .fs-live-dot {
-    width: 10px;
-    height: 10px;
-    background: #666;
-    border-radius: 50%;
-  }
-  
-  .fs-live-badge.is-live .fs-live-dot {
-    background: #fff;
-    animation: pulse 1.5s infinite;
-  }
-  
-  .fullscreen-header h1 {
-    margin: 0;
-    color: #fff;
-    font-size: 1.5rem;
-  }
-  
-  .fs-dj-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .fs-dj-info img {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 2px solid #dc2626;
-  }
-  
-  .fs-dj-info span {
-    color: #ccc;
-    font-size: 1rem;
-  }
-  
-  .fs-stats {
-    display: flex;
-    gap: 2rem;
-  }
-  
-  .fs-stat {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #fff;
-    font-size: 1.25rem;
-    font-weight: 600;
-  }
-  
-  .fs-exit-btn {
-    padding: 0.75rem 1.5rem;
-    background: rgba(255,255,255,0.1);
-    border: 2px solid rgba(255,255,255,0.3);
-    border-radius: 8px;
-    color: #fff;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  
-  .fs-exit-btn:hover {
-    background: #dc2626;
-    border-color: #dc2626;
-  }
-  
-  .fullscreen-content {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 400px;
-    gap: 0;
-  }
-  
-  .fs-player {
-    position: relative;
-    background: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .fs-offline-overlay {
-    text-align: center;
-    color: #fff;
-  }
-  
-  .fs-offline-icon {
-    font-size: 3rem;
-    opacity: 0.5;
-    margin-bottom: 1rem;
-  }
-  
-  .fs-offline-overlay h2 {
-    font-size: 2rem;
-  }
-  
-  .fs-video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
-  
-  .fs-chat {
-    display: flex;
-    flex-direction: column;
-    background: #111;
-    border-left: 2px solid #333;
-  }
-  
-  .fs-chat-header {
-    padding: 1rem 1.5rem;
-    background: #1a1a1a;
-    color: #fff;
-    font-weight: 700;
-    font-size: 1.125rem;
-    border-bottom: 2px solid #333;
-  }
-  
-  .fs-chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1rem;
-  }
-  
-  .fs-chat-input {
-    padding: 1rem;
-    border-top: 2px solid #333;
-    display: flex;
-    gap: 0.5rem;
-  }
-  
-  .fs-chat-input input {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    background: #1a1a1a;
-    border: 2px solid #333;
-    border-radius: 8px;
-    color: #fff;
-    font-size: 1rem;
-  }
-  
-  .fs-chat-input button {
-    padding: 0.75rem 1.5rem;
-    background: #dc2626;
-    border: none;
-    border-radius: 8px;
-    color: #fff;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  
-  .live-main {
-    min-height: 100vh;
-    background: #f5f5f5;
-  }
-  
-  .live-layout {
-    display: grid;
-    grid-template-columns: 260px 1fr 600px;
-    gap: 1.5rem;
-    max-width: 1920px;
-    margin: 0 auto;
-    padding: 1.5rem 2rem;
-    min-height: calc(100vh - 80px);
-  }
-  
-  @media (max-width: 1700px) {
-    .live-layout {
-      grid-template-columns: 240px 1fr 550px;
-      gap: 1rem;
-      padding: 1rem;
-    }
-  }
-  
-  @media (max-width: 1500px) {
-    .live-layout {
-      grid-template-columns: 220px 1fr 500px;
-      gap: 1rem;
-      padding: 1rem;
-    }
-  }
-  
-  @media (max-width: 1300px) {
-    .live-layout {
-      grid-template-columns: 200px 1fr 400px;
-      gap: 0.75rem;
-      padding: 0.75rem;
-    }
-  }
-  
-  @media (max-width: 1100px) {
-    .live-layout {
-      grid-template-columns: 1fr;
-    }
-    .schedule-column { order: 2; }
-    .player-column { order: 1; }
-    .chat-column { order: 3; }
-  }
-  
-  .schedule-column {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .schedule-header {
-    background: #fff;
-    padding: 1.25rem;
-    border-radius: 12px;
-    border: 2px solid #e5e7eb;
-  }
-  
-  .schedule-header h1 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 3rem;
-    color: #111;
-    margin: 0;
-    letter-spacing: 0.5px;
-  }
-  
-  .schedule-header h1 .red { color: #dc2626; }
-  
-  .schedule-header p {
-    color: #666;
-    font-size: 1rem;
-    margin: 0.25rem 0 1rem 0;
-  }
-  
-  .schedule-buttons {
-    display: flex;
-    gap: 0.5rem;
-  }
-  
-  .go-live-now-btn {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  
-  .go-live-now-btn:hover {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-    transform: translateY(-1px);
-  }
-  
-  .go-live-now-btn:disabled {
-    background: #666;
-    cursor: not-allowed;
-    transform: none;
-  }
-  
-  .book-btn {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    background: #dc2626;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
-    justify-content: center;
-  }
-  
-  .book-btn:hover {
-    background: #b91c1c;
-  }
-  
-  .live-status-card {
-    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
-    padding: 1rem;
-    border-radius: 12px;
-    border: 2px solid #333;
-  }
-  
-  .live-status-card.is-live {
-    border-color: #dc2626;
-  }
-  
-  .live-indicator {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #888;
-    font-weight: 700;
-    font-size: 1rem;
-    margin-bottom: 0.75rem;
-  }
-  
-  .live-indicator.is-live {
-    color: #dc2626;
-  }
-  
-  .pulse-dot {
-    width: 10px;
-    height: 10px;
-    background: #444;
-    border-radius: 50%;
-  }
-  
-  .live-indicator.is-live .pulse-dot {
-    background: #dc2626;
-    animation: pulse 1.5s infinite;
-  }
-  
-  @keyframes pulse {
-    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
-    50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
-  }
-  
-  .live-dj-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  
-  .live-dj-info img {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    border: 2px solid #333;
-  }
-  
-  .live-dj-name {
-    display: block;
-    color: #fff;
-    font-weight: 600;
-    font-size: 1.25rem;
-  }
-  
-  .live-dj-ends {
-    display: block;
-    color: #888;
-    font-size: 1rem;
-  }
-  
-  .queue-card, .calendar-card, .today-card, .listeners-card, .sidebar-card {
-    background: #fff;
-    padding: 1rem;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    overflow: hidden;
-  }
-  
-  .sidebar-card h3 {
-    margin: 0 0 0.75rem 0;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.75rem;
-    font-weight: 400;
-    color: #111;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    letter-spacing: 0.5px;
-  }
-  
-  .sidebar-card h3 .red { color: #dc2626; }
-  
-  .listener-badge {
-    background: #dc2626;
-    color: #fff;
-    font-size: 0.6875rem;
-    padding: 0.125rem 0.5rem;
-    border-radius: 10px;
-    font-weight: 600;
-    min-width: 20px;
-    text-align: center;
-  }
-  
-  .listener-badge:empty,
-  .listener-badge:contains("0") {
-    background: #9ca3af;
-  }
-  
-  .listeners-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.375rem;
-  }
-  
-  .listener-item {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.25rem 0.5rem;
-    background: #f3f4f6;
-    border-radius: 16px;
-    font-size: 0.75rem;
-    color: #333;
-  }
-  
-  .listener-avatar {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid #e5e7eb;
-  }
-  
-  .listener-name {
-    font-weight: 500;
-    max-width: 70px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  
-  .empty-message {
-    color: #9ca3af;
-    font-size: 1rem;
-    font-style: italic;
-  }
-  
-  .queue-list-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-  }
-  
-  .queue-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.625rem;
-    background: #f3f4f6;
-    border-radius: 8px;
-    font-size: 0.8125rem;
-    color: #333;
-    border-left: 3px solid #dc2626;
-  }
-  
-  .queue-item span:first-child {
-    flex: 1;
-    font-weight: 500;
-  }
-  
-  .queue-time {
-    color: #6b7280;
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
-  
-  .status-badge {
-    display: inline-block;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.625rem;
-    font-weight: 600;
-    margin-left: 0.5rem;
-    text-transform: uppercase;
-  }
-  
-  .status-badge.lobby {
-    background: #f59e0b;
-    color: #fff;
-  }
-  
-  .status-badge.queued {
-    background: #3b82f6;
-    color: #fff;
-  }
-  
-  .calendar-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.75rem;
-    gap: 0.5rem;
-  }
-  
-  .cal-nav-btn {
-    padding: 0.375rem 0.75rem;
-    background: #f3f4f6;
-    border: 2px solid #e5e7eb;
-    border-radius: 6px;
-    font-size: 0.8125rem;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-  
-  .cal-nav-btn:hover {
-    border-color: #dc2626;
-    color: #dc2626;
-  }
-  
-  .week-label {
-    font-weight: 600;
-    color: #333;
-    font-size: 0.75rem;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-  }
-  
-  .calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 2px;
-  }
-  
-  .cal-day {
-    background: #f9fafb;
-    border-radius: 4px;
-    padding: 0.25rem;
-    min-height: 50px;
-    font-size: 0.625rem;
-    overflow: hidden;
-  }
-  
-  .cal-day.today {
-    border: 2px solid #dc2626;
-  }
-  
-  .cal-day-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 0.125rem;
-  }
-  
-  .cal-day-name {
-    font-weight: 600;
-    color: #666;
-    font-size: 0.5rem;
-    text-transform: uppercase;
-  }
-  
-  .cal-day-num {
-    font-weight: 700;
-    color: #111;
-    font-size: 0.625rem;
-  }
-  
-  .cal-slots {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  
-  .cal-slot {
-    padding: 2px 4px;
-    border-radius: 3px;
-    font-size: 0.5625rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    background: #e5e7eb;
-    color: #333;
-  }
-  
-  .cal-slot.my-slot {
-    background: #dc2626;
-    color: #fff;
-  }
-  
-  .cal-slot.live {
-    background: #10b981;
-    color: #fff;
-  }
-  
-  .schedule-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    max-height: 300px;
-    overflow-y: auto;
-  }
-  
-  .schedule-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background: #f9fafb;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 0.8125rem;
-  }
-  
-  .schedule-item:hover {
-    border-color: #dc2626;
-  }
-  
-  .schedule-item.my-slot {
-    border-color: #dc2626;
-    background: #fef2f2;
-  }
-  
-  .schedule-item.live {
-    border-color: #10b981;
-    background: #f0fdf4;
-  }
-  
-  .schedule-time {
-    min-width: 55px;
-    text-align: center;
-  }
-  
-  .schedule-time-range {
-    font-weight: 700;
-    color: #111;
-    font-size: 0.75rem;
-  }
-  
-  .schedule-time-duration {
-    font-size: 0.625rem;
-    color: #888;
-  }
-  
-  .schedule-dj {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    min-width: 0;
-  }
-  
-  .schedule-dj-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    flex-shrink: 0;
-  }
-  
-  .schedule-dj-info {
-    min-width: 0;
-  }
-  
-  .schedule-dj-info h4 {
-    margin: 0;
-    font-size: 0.8125rem;
-    color: #111;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  .schedule-crew {
-    display: block;
-    font-size: 0.625rem;
-    color: #dc2626;
-  }
-  
-  .schedule-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-  }
-  
-  .schedule-status {
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.625rem;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
-  
-  .schedule-status.scheduled {
-    background: #e5e7eb;
-    color: #333;
-  }
-  
-  .schedule-status.in_lobby {
-    background: #fef3c7;
-    color: #92400e;
-  }
-  
-  .schedule-status.live {
-    background: #10b981;
-    color: #fff;
-  }
-  
-  .schedule-status.queued {
-    background: #dbeafe;
-    color: #1d4ed8;
-  }
-  
-  .cancel-slot-btn {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: #fee2e2;
-    border: 1px solid #fecaca;
-    color: #dc2626;
-    cursor: pointer;
-    font-size: 0.75rem;
-    font-weight: 700;
-  }
-  
-  .cancel-slot-btn:hover {
-    background: #dc2626;
-    border-color: #dc2626;
-    color: #fff;
-  }
-  
-  .empty-schedule {
-    color: #888;
-    font-size: 0.875rem;
-    text-align: center;
-    padding: 1rem;
-  }
-  
-  .player-column {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .fullpage-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.75rem;
-    background: #333;
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    text-decoration: none;
-    font-size: 0.8rem;
-    font-weight: 600;
-    transition: all 0.2s;
-    margin-left: 0.5rem;
-  }
-  
-  .fullpage-btn:hover {
-    background: #dc2626;
-  }
-  
-  .dj-lobby-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.75rem;
-    background: #10b981;
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-left: 0.5rem;
-  }
-  
-  .dj-lobby-btn:hover {
-    background: #059669;
-  }
-  
-  .speed-test-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: #f3f4f6;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
-  }
-  
-  .speed-test-btn:hover {
-    border-color: #dc2626;
-    color: #dc2626;
-  }
-  
-  .speed-test-btn.testing {
-    background: #fef3c7;
-    border-color: #f59e0b;
-  }
-  
-  .speed-result {
-    display: flex;
-    gap: 1rem;
-    font-weight: 600;
-    font-size: 0.875rem;
-  }
-  
-  .speed-down {
-    color: #10b981;
-  }
-  
-  .speed-up {
-    color: #6366f1;
-  }
-  
-  .speed-result.slow .speed-down,
-  .speed-result.slow .speed-up {
-    color: #dc2626;
-  }
-  
-  .speed-result.medium .speed-down,
-  .speed-result.medium .speed-up {
-    color: #f59e0b;
-  }
-  
-  .stream-info-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.25rem;
-    background: linear-gradient(90deg, #1a1a1a 0%, #111 100%);
-    border: 2px solid #333;
-    border-radius: 12px;
-    flex-wrap: wrap;
-    gap: 1rem;
-  }
-  
-  .stream-info-bar.is-live {
-    border-color: #dc2626;
-  }
-  
-  .stream-info-left {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-  
-  .live-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: #333;
-    border-radius: 6px;
-    color: #888;
-    font-weight: 700;
-    font-size: 0.875rem;
-  }
-  
-  .live-badge.is-live {
-    background: #dc2626;
-    color: #fff;
-  }
-  
-  .live-badge .live-dot {
-    width: 8px;
-    height: 8px;
-    background: #666;
-    border-radius: 50%;
-  }
-  
-  .live-badge.is-live .live-dot {
-    background: #fff;
-    animation: pulse 1.5s infinite;
-  }
-  
-  .stream-meta h1 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.5rem;
-    color: #fff;
-    margin: 0;
-  }
-  
-  .stream-dj {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.25rem;
-  }
-  
-  .dj-avatar {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-  
-  #djName {
-    color: #ccc;
-    font-size: 0.9375rem;
-  }
-  
-  .stream-genre {
-    color: #888;
-    font-size: 0.8125rem;
-    padding-left: 0.5rem;
-    border-left: 1px solid #444;
-  }
-  
-  .stream-stats {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-  }
-  
-  .stat {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #fff;
-    font-weight: 600;
-  }
-  
-  .stat-icon { 
-    font-size: 0.75rem;
-    opacity: 0.7;
-  }
-  
-  .chat-column {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .chat-listeners-grid {
-    display: grid;
-    grid-template-columns: 1fr 240px;
-    gap: 1rem;
-    height: 100%;
-  }
-  
-  @media (max-width: 1500px) {
-    .chat-listeners-grid {
-      grid-template-columns: 1fr 200px;
-    }
-  }
-  
-  @media (max-width: 1300px) {
-    .chat-listeners-grid {
-      grid-template-columns: 1fr 180px;
-    }
-  }
-  
-  @media (max-width: 1100px) {
-    .chat-listeners-grid {
-      grid-template-columns: 1fr;
-    }
-    .listeners-card {
-      order: -1;
-    }
-  }
-  
-  .listeners-card {
-    background: #fff;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 0.75rem;
-    height: fit-content;
-    max-height: 600px;
-    overflow: hidden;
-  }
-  
-  .listeners-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-  }
-  
-  .listeners-header h3 {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #111;
-    margin: 0;
-  }
-  
-  .listener-badge {
-    background: #dc2626;
-    color: #fff;
-    padding: 0.15rem 0.5rem;
-    border-radius: 10px;
-    font-size: 0.7rem;
-    font-weight: 700;
-  }
-  
-  .listeners-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    max-height: 520px;
-    overflow-y: auto;
-  }
-  
-  .listeners-list .empty-message {
-    color: #888;
-    font-size: 0.75rem;
-    text-align: center;
-    padding: 0.5rem 0;
-  }
-  
-  @media (max-width: 900px) {
-    .chat-column {
-      order: 3;
-    }
-  }
-  
-  .player-container {
-    position: relative;
-    background: #111;
-    border: 2px solid #333;
-    border-radius: 12px;
-    min-height: 400px;
-    flex: 1;
-    overflow: hidden;
-  }
-  
-  .offline-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #1a1a1a 0%, #111 50%, #1a1a1a 100%);
-    z-index: 10;
-  }
-  
-  .offline-overlay-content {
-    text-align: center;
-    padding: 2rem;
-  }
-  
-  .offline-icon-large {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-    color: #fff;
-  }
-  
-  .offline-overlay h2 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.75rem;
-    color: #fff;
-    margin: 0 0 0.5rem 0;
-  }
-  
-  .offline-overlay p {
-    color: #888;
-    margin: 0;
-  }
-  
-  .countdown-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #1a0a0a 0%, #111 50%, #1a0a0a 100%);
-    z-index: 20;
-  }
-  
-  .countdown-content {
-    text-align: center;
-    padding: 2rem;
-  }
-  
-  .countdown-overlay h2 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.5rem;
-    color: #dc2626;
-    margin: 0 0 1rem 0;
-    letter-spacing: 0.1em;
-  }
-  
-  .countdown-dj {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-  }
-  
-  .countdown-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: 3px solid #dc2626;
-    object-fit: cover;
-  }
-  
-  #countdownDjName {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #fff;
-  }
-  
-  .countdown-timer {
-    margin-bottom: 1rem;
-  }
-  
-  .countdown-timer .countdown-label {
-    display: block;
-    color: #888;
-    font-size: 0.875rem;
-    margin-bottom: 0.25rem;
-  }
-  
-  .countdown-timer .countdown-value {
-    font-family: 'Bebas Neue', monospace;
-    font-size: 4rem;
-    color: #dc2626;
-    text-shadow: 0 0 30px rgba(220, 38, 38, 0.6);
-  }
-  
-  .countdown-bar {
-    width: 200px;
-    height: 6px;
-    background: #333;
-    border-radius: 3px;
-    margin: 0 auto;
-    overflow: hidden;
-  }
-  
-  .countdown-progress {
-    height: 100%;
-    background: linear-gradient(90deg, #dc2626, #ef4444);
-    width: 100%;
-    transition: width 1s linear;
-  }
-  
-  .audio-player, .video-player {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .audio-only-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1.5rem;
-    padding: 2rem;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
-  }
-  
-  /* Spinning Vinyl */
-  .vinyl-container {
-    position: relative;
-    width: 200px;
-    height: 200px;
-  }
-  
-  .vinyl-record {
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    background: 
-      radial-gradient(circle at center, transparent 28%, #111 29%, #111 31%, transparent 32%),
-      radial-gradient(circle at center, transparent 38%, #222 39%, #222 41%, transparent 42%),
-      radial-gradient(circle at center, transparent 58%, #1a1a1a 59%, #1a1a1a 61%, transparent 62%),
-      radial-gradient(circle at center, transparent 78%, #222 79%, #222 81%, transparent 82%),
-      radial-gradient(circle at center, transparent 88%, #333 89%, #333 91%, transparent 92%),
-      linear-gradient(135deg, #111 0%, #000 100%);
-    box-shadow: 
-      0 0 0 3px #333,
-      0 0 30px rgba(0,0,0,0.8),
-      inset 0 0 60px rgba(0,0,0,0.5);
-    animation: spin 3s linear infinite;
-  }
-  
-  .vinyl-label {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-    box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-  }
-  
-  .vinyl-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid rgba(255,255,255,0.2);
-  }
-  
-  .vinyl-label::after {
-    content: '';
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    background: #111;
-    border-radius: 50%;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
-  }
-  
-  .tonearm {
-    position: absolute;
-    top: -10px;
-    right: -20px;
-    width: 80px;
-    height: 8px;
-    background: linear-gradient(90deg, #666 0%, #444 50%, #333 100%);
-    border-radius: 4px;
-    transform-origin: right center;
-    transform: rotate(-25deg);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-  }
-  
-  .tonearm::before {
-    content: '';
-    position: absolute;
-    right: -8px;
-    top: -4px;
-    width: 16px;
-    height: 16px;
-    background: #555;
-    border-radius: 50%;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-  }
-  
-  .tonearm::after {
-    content: '';
-    position: absolute;
-    left: -6px;
-    top: 1px;
-    width: 12px;
-    height: 6px;
-    background: #888;
-    border-radius: 2px;
-  }
-  
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  
-  /* DJ Info */
-  .audio-dj-info {
-    text-align: center;
-  }
-  
-  .audio-dj-name {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2rem;
-    color: #fff;
-    letter-spacing: 1px;
-    margin-bottom: 0.25rem;
-  }
-  
-  .audio-show-title {
-    font-size: 1rem;
-    color: #888;
-    margin-bottom: 0.75rem;
-  }
-  
-  .audio-live-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: rgba(220, 38, 38, 0.2);
-    border: 1px solid #dc2626;
-    padding: 0.35rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #dc2626;
-    letter-spacing: 1px;
-  }
-  
-  .live-pulse {
-    width: 8px;
-    height: 8px;
-    background: #dc2626;
-    border-radius: 50%;
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-  
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.8); }
-  }
-  
-  /* Audio Bars */
-  .audio-bars {
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 4px;
-    height: 50px;
-    margin-top: 0.5rem;
-  }
-  
-  .audio-bar {
-    width: 6px;
-    background: linear-gradient(to top, #dc2626, #f87171);
-    border-radius: 3px;
-    animation: barPulse 0.8s ease-in-out infinite;
-  }
-  
-  .audio-bar:nth-child(1) { height: 20%; animation-delay: 0s; }
-  .audio-bar:nth-child(2) { height: 40%; animation-delay: 0.1s; }
-  .audio-bar:nth-child(3) { height: 60%; animation-delay: 0.15s; }
-  .audio-bar:nth-child(4) { height: 80%; animation-delay: 0.2s; }
-  .audio-bar:nth-child(5) { height: 100%; animation-delay: 0.25s; }
-  .audio-bar:nth-child(6) { height: 70%; animation-delay: 0.3s; }
-  .audio-bar:nth-child(7) { height: 90%; animation-delay: 0.35s; }
-  .audio-bar:nth-child(8) { height: 50%; animation-delay: 0.4s; }
-  .audio-bar:nth-child(9) { height: 80%; animation-delay: 0.45s; }
-  .audio-bar:nth-child(10) { height: 60%; animation-delay: 0.5s; }
-  .audio-bar:nth-child(11) { height: 40%; animation-delay: 0.55s; }
-  .audio-bar:nth-child(12) { height: 25%; animation-delay: 0.6s; }
-  
-  @keyframes barPulse {
-    0%, 100% { transform: scaleY(1); }
-    50% { transform: scaleY(0.4); }
-  }
-  
-  .hls-video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    background: #000;
-  }
-  
-  .player-controls {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.75rem 1rem;
-    background: #111;
-    border: 2px solid #333;
-    border-radius: 10px;
-  }
-  
-  /* Stereo LED Meters */
-  .stereo-meters {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    flex: 1;
-    min-width: 0;
-  }
-  
-  .meter-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  
-  .meter-label {
-    font-size: 10px;
-    font-weight: bold;
-    color: #666;
-    width: 12px;
-    text-align: center;
-  }
-  
-  .led-strip {
-    display: flex;
-    gap: 3px;
-    flex: 1;
-  }
-  
-  .led {
-    width: 12px;
-    height: 8px;
-    border-radius: 2px;
-    background: #222;
-    transition: background 0.05s ease, box-shadow 0.05s ease;
-  }
-  
-  .led.green { background: #1a3d1a; }
-  .led.yellow { background: #3d3d1a; }
-  .led.orange { background: #3d2a1a; }
-  .led.red { background: #3d1a1a; }
-  .led.clip { background: #3d1a1a; }
-  
-  .led.green.active { 
-    background: #22c55e; 
-    box-shadow: 0 0 6px #22c55e;
-  }
-  .led.yellow.active { 
-    background: #eab308; 
-    box-shadow: 0 0 6px #eab308;
-  }
-  .led.orange.active { 
-    background: #f97316; 
-    box-shadow: 0 0 6px #f97316;
-  }
-  .led.red.active { 
-    background: #ef4444; 
-    box-shadow: 0 0 6px #ef4444;
-  }
-  .led.clip.active { 
-    background: #ff0000; 
-    box-shadow: 0 0 10px #ff0000;
-    animation: clip-flash 0.1s ease;
-  }
-  
-  @keyframes clip-flash {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-  
-  .play-btn {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: #dc2626;
-    border: none;
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-  
-  .play-btn:disabled {
-    background: #444;
-    cursor: not-allowed;
-  }
-  
-  .play-btn:not(:disabled):hover {
-    background: #b91c1c;
-    transform: scale(1.05);
-  }
-  
-  .play-btn svg {
-    width: 24px;
-    height: 24px;
-  }
-  
-  /* Inline Reactions Styles */
-  .inline-reactions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-left: auto;
-    padding: 0 0.75rem;
-    border-left: 1px solid #333;
-    border-right: 1px solid #333;
-  }
-  
-  .inline-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    background: #222;
-    border: 2px solid #444;
-    border-radius: 8px;
-    color: #888;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  
-  .inline-btn:hover {
-    border-color: #666;
-    transform: scale(1.1);
-  }
-  
-  .inline-btn.reaction-btn {
-    font-size: 20px;
-  }
-  
-  .inline-btn.reaction-btn:hover {
-    border-color: #888;
-  }
-  
-  .inline-btn.reaction-btn:active {
-    transform: scale(0.95);
-  }
-  
-  .inline-btn.like-btn:hover {
-    border-color: #dc2626;
-    background: rgba(220, 38, 38, 0.1);
-  }
-  
-  .inline-btn.fire-btn:hover {
-    border-color: #f97316;
-    background: rgba(249, 115, 22, 0.1);
-  }
-  
-  .inline-btn.explosion-btn:hover {
-    border-color: #eab308;
-    background: rgba(234, 179, 8, 0.1);
-  }
-  
-  .inline-btn.like-btn.liked {
-    background: rgba(220, 38, 38, 0.2);
-    border-color: #dc2626;
-    color: #dc2626;
-  }
-  
-  .reaction-emoji {
-    line-height: 1;
-  }
-  
-  .inline-btn svg {
-    width: 18px;
-    height: 18px;
-  }
-  
-  .inline-rating {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-  }
-  
-  .inline-rating .star-rating {
-    display: flex;
-    gap: 2px;
-  }
-  
-  .inline-rating .star {
-    background: none;
-    border: none;
-    color: #444;
-    font-size: 18px;
-    cursor: pointer;
-    padding: 0;
-    transition: all 0.15s ease;
-    line-height: 1;
-  }
-  
-  .inline-rating .star:hover,
-  .inline-rating .star.active {
-    color: #fbbf24;
-    transform: scale(1.2);
-  }
-  
-  .inline-rating .avg-rating {
-    font-size: 12px;
-    font-weight: bold;
-    color: #fbbf24;
-    min-width: 24px;
-    text-align: center;
-  }
-  
-  /* Record Button Styles */
-  .record-control {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-right: 0.5rem;
-  }
-  
-  .record-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    background: #222;
-    border: 2px solid #444;
-    border-radius: 8px;
-    color: #888;
-    font-size: 11px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  
-  .record-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  
-  .record-btn:not(:disabled):hover {
-    border-color: #dc2626;
-    color: #dc2626;
-  }
-  
-  .record-btn .record-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #666;
-    transition: all 0.2s ease;
-  }
-  
-  .record-btn:not(:disabled):hover .record-dot {
-    background: #dc2626;
-  }
-  
-  .record-btn.recording {
-    border-color: #dc2626;
-    background: rgba(220, 38, 38, 0.15);
-    color: #dc2626;
-  }
-  
-  .record-btn.recording .record-dot {
-    background: #dc2626;
-    animation: record-pulse 1s ease-in-out infinite;
-  }
-  
-  .record-btn.recording .record-text {
-    color: #dc2626;
-  }
-  
-  @keyframes record-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.9); }
-  }
-  
-  .record-duration {
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    font-weight: bold;
-    color: #dc2626;
-    min-width: 50px;
-  }
-  
-  .volume-control {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-shrink: 0;
-    margin-left: 1.5rem;
-  }
-  
-  .volume-icon {
-    width: 20px;
-    height: 20px;
-    color: #888;
-  }
-  
-  #volumeSlider {
-    width: 100px;
-    height: 6px;
-    -webkit-appearance: none;
-    background: #333;
-    border-radius: 3px;
-    outline: none;
-  }
-  
-  #volumeSlider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #dc2626;
-    cursor: pointer;
-  }
-  
-  .reactions-bar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    padding: 0.75rem 1rem;
-    background: #111;
-    border: 2px solid #333;
-    border-radius: 10px;
-    flex-wrap: wrap;
-  }
-  
-  .reaction-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 1rem;
-    background: #1a1a1a;
-    border: 2px solid #333;
-    border-radius: 8px;
-    color: #fff;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
-  }
-  
-  .reaction-btn:hover {
-    border-color: #dc2626;
-    background: #2a1a1a;
-  }
-  
-  .reaction-btn.liked {
-    background: #dc2626;
-    border-color: #dc2626;
-    animation: likePopAnim 0.3s ease;
-  }
-  
-  @keyframes likePopAnim {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(1); }
-  }
-  
-  .rating-section {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .rating-label {
-    color: #888;
-    font-size: 0.8125rem;
-  }
-  
-  .star-rating {
-    display: flex;
-    gap: 0.125rem;
-  }
-  
-  .star {
-    background: none;
-    border: none;
-    font-size: 1.25rem;
-    color: #444;
-    cursor: pointer;
-    padding: 0.125rem;
-  }
-  
-  .star:hover,
-  .star.active {
-    color: #fbbf24;
-    transform: scale(1.2);
-  }
-  
-  .avg-rating {
-    color: #fbbf24;
-    font-weight: 700;
-    font-size: 0.875rem;
-  }
-  
-  .chat-section {
-    background: #111;
-    border: 2px solid #333;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 500px;
-  }
-  
-  .chat-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.25rem;
-    border-bottom: 2px solid #333;
-  }
-  
-  .chat-header h3 {
-    margin: 0;
-    color: #fff;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.125rem;
-    letter-spacing: 0.05em;
-  }
-  
-  .chat-viewers {
-    color: #888;
-    font-size: 0.8125rem;
-  }
-  
-  .chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .chat-welcome {
-    text-align: center;
-    padding: 1rem;
-    background: #1a1a2e;
-    border-radius: 8px;
-  }
-  
-  .chat-welcome p {
-    color: #a5b4fc;
-    margin: 0;
-    font-size: 0.9375rem;
-  }
-  
-  .chat-hint {
-    font-size: 0.8125rem !important;
-    margin-top: 0.5rem !important;
-  }
-  
-  .chat-input-section {
-    padding: 1rem;
-    border-top: 2px solid #333;
-    position: relative;
-  }
-  
-  .login-prompt {
-    text-align: center;
-    padding: 0.75rem;
-    background: #1a1a2e;
-    border-radius: 8px;
-  }
-  
-  .login-prompt p {
-    margin: 0;
-    color: #a5b4fc;
-  }
-  
-  .login-prompt a {
-    color: #818cf8;
-    font-weight: 600;
-  }
-  
-  .chat-form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .chat-tools {
-    display: flex;
-    gap: 0.5rem;
-  }
-  
-  .tool-btn {
-    padding: 0.5rem 0.75rem;
-    background: #1a1a1a;
-    border: 2px solid #333;
-    border-radius: 6px;
-    color: #fff;
-    cursor: pointer;
-    font-size: 1rem;
-  }
-  
-  .tool-btn:hover,
-  .tool-btn.active {
-    border-color: #6366f1;
-    background: #1a1a2e;
-  }
-  
-  .chat-input-wrapper {
-    display: flex;
-    gap: 0.5rem;
-  }
-  
-  .chat-input-wrapper input {
-    flex: 1;
-    padding: 0.875rem 1rem;
-    background: #1a1a1a;
-    border: 2px solid #333;
-    border-radius: 8px;
-    color: #fff;
-    font-size: 1rem;
-  }
-  
-  .chat-input-wrapper input:focus {
-    outline: none;
-    border-color: #6366f1;
-  }
-  
-  .chat-input-wrapper button {
-    padding: 0.875rem 1.25rem;
-    background: #dc2626;
-    border: none;
-    border-radius: 8px;
-    color: #fff;
-    cursor: pointer;
-  }
-  
-  .chat-input-wrapper button:hover {
-    background: #b91c1c;
-  }
-  
-  .chat-input-wrapper button svg {
-    width: 20px;
-    height: 20px;
-  }
-  
-  .emoji-picker, .giphy-picker {
-    position: absolute;
-    bottom: 100%;
-    left: 1rem;
-    right: 1rem;
-    background: #1a1a1a;
-    border: 2px solid #333;
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 0.5rem;
-    z-index: 50;
-  }
-  
-  .emoji-categories {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid #333;
-  }
-  
-  .emoji-cat {
-    padding: 0.5rem;
-    background: none;
-    border: 2px solid transparent;
-    border-radius: 6px;
-    font-size: 0.875rem;
-    cursor: pointer;
-    color: #888;
-  }
-  
-  .emoji-cat:hover,
-  .emoji-cat.active {
-    border-color: #6366f1;
-    background: #2a2a4e;
-    color: #fff;
-  }
-  
-  .emoji-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 0.5rem;
-  }
-  
-  .giphy-picker {
-    max-height: 350px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .giphy-search input {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    background: #111;
-    border: 2px solid #333;
-    border-radius: 8px;
-    color: #fff;
-    font-size: 0.9375rem;
-    margin-bottom: 0.75rem;
-  }
-  
-  .giphy-search input:focus {
-    outline: none;
-    border-color: #6366f1;
-  }
-  
-  .giphy-grid {
-    flex: 1;
-    overflow-y: auto;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
-  }
-  
-  .giphy-hint {
-    grid-column: 1 / -1;
-    text-align: center;
-    color: #666;
-    padding: 2rem;
-  }
-  
-  .giphy-attribution {
-    text-align: center;
-    padding-top: 0.75rem;
-    color: #666;
-    font-size: 0.75rem;
-    border-top: 1px solid #333;
-    margin-top: 0.75rem;
-  }
-  
-  .modal {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-  }
-  
-  .modal-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-  }
-  
-  .modal-content {
-    position: relative;
-    background: #fff;
-    border-radius: 16px;
-    max-width: 500px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-  }
-  
-  .booking-modal-content {
-    max-width: 580px;
-  }
-  
-  .booking-type-toggle {
-    display: flex;
-    gap: 0.5rem;
-    background: #f3f4f6;
-    padding: 0.25rem;
-    border-radius: 8px;
-  }
-  
-  .booking-type-btn {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
-    background: transparent;
-    color: #666;
-    transition: all 0.2s;
-  }
-  
-  .booking-type-btn.active {
-    background: #dc2626;
-    color: #fff;
-  }
-  
-  .booking-type-btn:hover:not(.active) {
-    background: #e5e7eb;
-  }
-  
-  .calendar-picker {
-    background: #f9fafb;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 1rem;
-  }
-  
-  .calendar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-  }
-  
-  .cal-month-year {
-    font-weight: 700;
-    font-size: 1.125rem;
-    color: #111;
-  }
-  
-  .cal-nav-btn {
-    width: 36px;
-    height: 36px;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    background: #fff;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 1rem;
-    color: #333;
-  }
-  
-  .cal-nav-btn:hover {
-    background: #f3f4f6;
-    border-color: #dc2626;
-  }
-  
-  .calendar-weekdays {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.25rem;
-    margin-bottom: 0.5rem;
-  }
-  
-  .calendar-weekdays span {
-    text-align: center;
-    font-weight: 600;
-    font-size: 0.75rem;
-    color: #666;
-    padding: 0.5rem 0;
-  }
-  
-  .calendar-days {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.25rem;
-  }
-  
-  .cal-day {
-    aspect-ratio: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    border-radius: 8px;
-    background: #fff;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.9375rem;
-    color: #333;
-    transition: all 0.15s;
-  }
-  
-  .cal-day:hover:not(.disabled):not(.selected) {
-    background: #fee2e2;
-    color: #dc2626;
-  }
-  
-  .cal-day.selected,
-  #calDays .cal-day.selected,
-  .calendar-days .cal-day.selected {
-    background: #dc2626 !important;
-    color: #fff !important;
-    font-weight: 700 !important;
-    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4) !important;
-  }
-  
-  .cal-day.today {
-    border: 2px solid #dc2626;
-  }
-  
-  .cal-day.today.selected,
-  #calDays .cal-day.today.selected {
-    border: 2px solid #fff !important;
-  }
-  
-  .cal-day.disabled {
-    color: #ccc;
-    cursor: not-allowed;
-    background: transparent;
-  }
-  
-  .cal-day.other-month {
-    color: #ccc;
-  }
-  
-  .time-dropdown-row {
-    display: flex;
-    align-items: flex-end;
-    gap: 0.5rem;
-  }
-  
-  .time-dropdown-group {
-    flex: 1;
-  }
-  
-  .time-dropdown-label {
-    display: block;
-    font-size: 0.75rem;
-    color: #666;
-    margin-bottom: 0.375rem;
-    font-weight: 600;
-  }
-  
-  .time-dropdown {
-    width: 100%;
-    padding: 1rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 10px;
-    font-size: 1.5rem;
-    font-weight: 700;
-    font-family: monospace;
-    text-align: center;
-    background: #fff;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23666'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    background-size: 1.25rem;
-    padding-right: 2.5rem;
-  }
-  
-  .time-dropdown:focus {
-    outline: none;
-    border-color: #dc2626;
-  }
-  
-  .time-dropdown:hover {
-    border-color: #dc2626;
-  }
-  
-  .time-separator {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #333;
-    padding-bottom: 0.5rem;
-  }
-  
-  .time-dropdown.unavailable {
-    background-color: #f3f4f6;
-    color: #9ca3af;
-  }
-  
-  .selected-time-info {
-    margin-top: 0.75rem;
-    padding: 0.75rem 1rem;
-    background: #f0fdf4;
-    border: 2px solid #10b981;
-    border-radius: 8px;
-    font-weight: 600;
-    color: #065f46;
-    text-align: center;
-  }
-  
-  .selected-time-info.error {
-    background: #fef2f2;
-    border-color: #dc2626;
-    color: #991b1b;
-  }
-  
-  .time-legend {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 0.75rem;
-    font-size: 0.75rem;
-  }
-  
-  .time-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    color: #666;
-  }
-  
-  .time-legend-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-  }
-  
-  .time-legend-dot.available {
-    background: #fff;
-    border: 2px solid #e5e7eb;
-  }
-  
-  .time-legend-dot.booked {
-    background: #f3f4f6;
-    border: 2px solid #9ca3af;
-  }
-  
-  .queue-info-box {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border: 2px solid #f59e0b;
-    border-radius: 12px;
-    padding: 1.5rem;
-    text-align: center;
-  }
-  
-  .queue-icon {
-    display: inline-block;
-    background: #f59e0b;
-    color: #fff;
-    padding: 0.5rem 1.5rem;
-    border-radius: 20px;
-    font-weight: 700;
-    font-size: 0.875rem;
-    margin-bottom: 1rem;
-  }
-  
-  .queue-info-box p {
-    margin: 0 0 0.5rem 0;
-    color: #92400e;
-    font-size: 0.9375rem;
-  }
-  
-  .queue-note {
-    font-size: 0.8125rem !important;
-    color: #b45309 !important;
-    font-style: italic;
-  }
-  
-  .share-modal-content {
-    max-width: 420px;
-  }
-  
-  .share-header {
-    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-    border-bottom: none;
-  }
-  
-  .share-header h2 {
-    color: #fff;
-  }
-  
-  .share-header .modal-close {
-    color: #fff;
-  }
-  
-  .share-preview {
-    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
-    border-radius: 12px;
-    padding: 1.25rem;
-    margin-bottom: 1.5rem;
-    position: relative;
-  }
-  
-  .share-preview-badge {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: #dc2626;
-    color: #fff;
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    animation: pulse-badge 2s infinite;
-  }
-  
-  @keyframes pulse-badge {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-  
-  .share-preview-dj {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-  
-  .share-preview-dj img {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    border: 3px solid #dc2626;
-    object-fit: cover;
-  }
-  
-  .share-preview-info h3 {
-    color: #fff;
-    font-size: 1.25rem;
-    margin: 0 0 0.25rem 0;
-  }
-  
-  .share-preview-info p {
-    color: #888;
-    margin: 0;
-    font-size: 0.875rem;
-  }
-  
-  .share-link-box {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-  }
-  
-  .share-link-box input {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    background: #f9fafb;
-    color: #333;
-  }
-  
-  .copy-share-btn {
-    padding: 0.75rem 1.25rem;
-    background: #dc2626;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  
-  .copy-share-btn:hover {
-    background: #b91c1c;
-  }
-  
-  .share-buttons {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-  }
-  
-  .share-social-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
-    color: #fff;
-    transition: transform 0.15s, opacity 0.15s;
-  }
-  
-  .share-social-btn:hover {
-    transform: translateY(-2px);
-    opacity: 0.9;
-  }
-  
-  .share-social-btn .share-icon {
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255,255,255,0.2);
-    border-radius: 4px;
-    font-weight: 700;
-  }
-  
-  .share-social-btn.twitter {
-    background: #000;
-  }
-  
-  .share-social-btn.facebook {
-    background: #1877f2;
-  }
-  
-  .share-social-btn.whatsapp {
-    background: #25d366;
-  }
-  
-  .share-social-btn.telegram {
-    background: #0088cc;
-  }
-  
-  .native-share-btn {
-    width: 100%;
-    padding: 1rem;
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    margin-top: 0.5rem;
-  }
-  
-  .native-share-btn:hover {
-    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
-  }
-  
-  #shareBtn.live-active {
-    background: #dc2626;
-    color: #fff;
-    animation: pulse-share 2s infinite;
-  }
-  
-  @keyframes pulse-share {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
-  }
-  
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem;
-    border-bottom: 2px solid #e5e5e5;
-  }
-  
-  .modal-header h2 {
-    margin: 0;
-    font-size: 1.25rem;
-    color: #111;
-  }
-  
-  .modal-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: #666;
-    padding: 0.5rem;
-    line-height: 1;
-  }
-  
-  .go-live-header {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    border-bottom: none;
-  }
-  
-  .go-live-header h2 {
-    color: #fff;
-  }
-  
-  .go-live-header .modal-close {
-    color: #fff;
-  }
-  
-  .go-live-info {
-    background: #f0fdf4;
-    border: 2px solid #10b981;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    color: #065f46;
-    font-size: 0.9375rem;
-  }
-  
-  .go-live-submit {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  }
-  
-  .go-live-submit:hover {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-  }
-  
-  .go-live-icon {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: #fff;
-    padding: 1rem 2rem;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 1.5rem;
-    display: inline-block;
-  }
-  
-  .session-end-time {
-    font-size: 1.125rem;
-    color: #333;
-    margin: 1rem 0;
-  }
-  
-  .session-end-time strong {
-    color: #dc2626;
-    font-size: 1.25rem;
-  }
-  
-  .rtmp-info {
-    background: #1a1a1a;
-    padding: 1rem;
-    border-radius: 8px;
-    margin: 1rem 0;
-  }
-  
-  .rtmp-info p {
-    color: #888;
-    margin: 0 0 0.5rem 0;
-    font-size: 0.875rem;
-  }
-  
-  .rtmp-info code {
-    display: block;
-    background: #000;
-    padding: 0.5rem;
-    border-radius: 6px;
-    color: #a5b4fc;
-    font-family: monospace;
-    font-size: 0.8125rem;
-  }
-  
-  .go-live-hint {
-    color: #666;
-    font-size: 0.875rem;
-    margin-top: 1rem;
-  }
-  
-  .modal-body {
-    padding: 1.5rem;
-  }
-  
-  .form-group {
-    margin-bottom: 1.25rem;
-  }
-  
-  .form-group label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #333;
-    font-size: 0.9375rem;
-  }
-  
-  .form-group label .required {
-    color: #dc2626;
-  }
-  
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-  }
-  
-  @media (max-width: 500px) {
-    .form-row {
-      grid-template-columns: 1fr;
-    }
-  }
-  
-  .form-group input,
-  .form-group select,
-  .form-group textarea {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 2px solid #e5e5eb;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-family: inherit;
-  }
-  
-  .form-group textarea {
-    resize: vertical;
-    min-height: 60px;
-  }
-  
-  .form-group input:focus,
-  .form-group select:focus,
-  .form-group textarea:focus {
-    outline: none;
-    border-color: #dc2626;
-  }
-  
-  .char-count {
-    display: block;
-    text-align: right;
-    font-size: 0.75rem;
-    color: #888;
-    margin-top: 0.25rem;
-  }
-  
-  .duration-options {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.5rem;
-  }
-  
-  .duration-option {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.625rem;
-    background: #f3f4f6;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  
-  .duration-option input {
-    display: none;
-  }
-  
-  .duration-option:has(input:checked) {
-    background: #dc2626;
-    border-color: #dc2626;
-    color: #fff;
-  }
-  
-  .duration-option span {
-    font-weight: 600;
-    font-size: 0.8125rem;
-  }
-  
-  .form-error {
-    padding: 0.75rem;
-    background: #fef2f2;
-    border: 2px solid #fecaca;
-    border-radius: 8px;
-    color: #b91c1c;
-    font-size: 0.875rem;
-    margin-bottom: 1rem;
-  }
-  
-  .submit-btn {
-    width: 100%;
-    padding: 1rem;
-    background: #dc2626;
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 1rem;
-    cursor: pointer;
-  }
-  
-  .submit-btn:hover {
-    background: #b91c1c;
-  }
-  
-  .submit-btn:disabled {
-    background: #999;
-    cursor: not-allowed;
-  }
-  
-  .booking-success {
-    text-align: center;
-    padding: 2rem 1rem;
-  }
-  
-  .success-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-    color: #10b981;
-  }
-  
-  .booking-success h3 {
-    font-size: 1.5rem;
-    color: #111;
-    margin: 0 0 0.5rem 0;
-  }
-  
-  .stream-key-info {
-    background: #1a1a1a;
-    padding: 1.25rem;
-    border-radius: 10px;
-    margin: 1.5rem 0;
-  }
-  
-  .stream-key-info p {
-    color: #888;
-    margin: 0 0 0.5rem 0;
-    font-size: 0.875rem;
-  }
-  
-  .stream-key-info code {
-    display: block;
-    background: #000;
-    padding: 0.75rem;
-    border-radius: 6px;
-    color: #10b981;
-    font-family: monospace;
-    font-size: 0.9375rem;
-    margin-bottom: 0.75rem;
-    word-break: break-all;
-  }
-  
-  .copy-btn {
-    padding: 0.5rem 1rem;
-    background: #333;
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    font-size: 0.8125rem;
-    cursor: pointer;
-  }
-  
-  .copy-btn:hover {
-    background: #444;
-  }
-  
-  .lobby-note {
-    color: #666;
-    font-size: 0.875rem;
-    margin: 0;
-  }
-  
-  .lobby-panel {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    width: 320px;
-    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
-    border: 2px solid #333;
-    border-radius: 16px;
-    z-index: 100;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-  }
-  
-  .lobby-content {
-    padding: 1.25rem;
-  }
-  
-  .lobby-content h3 {
-    color: #fff;
-    margin: 0 0 1rem 0;
-    font-size: 1.125rem;
-  }
-  
-  .lobby-info {
-    margin-bottom: 1rem;
-  }
-  
-  .lobby-slot-info {
-    margin-bottom: 0.75rem;
-  }
-  
-  .lobby-label {
-    color: #888;
-    font-size: 0.8125rem;
-    display: block;
-    margin-bottom: 0.25rem;
-  }
-  
-  #lobbySlotTime {
-    color: #fff;
-    font-weight: 600;
-    font-size: 1rem;
-  }
-  
-  .lobby-countdown-big {
-    background: #000;
-    padding: 1rem;
-    border-radius: 8px;
-    text-align: center;
-    margin-bottom: 1rem;
-  }
-  
-  .lobby-countdown-big .countdown-label {
-    color: #888;
-    font-size: 0.75rem;
-    display: block;
-    margin-bottom: 0.25rem;
-  }
-  
-  #lobbyCountdownBig {
-    font-family: 'Bebas Neue', monospace;
-    font-size: 2.5rem;
-    color: #dc2626;
-  }
-  
-  .lobby-speed-test {
-    background: #000;
-    border-radius: 10px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-  }
-  
-  .lobby-speed-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.75rem;
-  }
-  
-  .lobby-speed-header .lobby-label {
-    margin-bottom: 0;
-    color: #fff;
-    font-weight: 600;
-  }
-  
-  .lobby-speed-test .speed-test-btn {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.75rem;
-    background: #333;
-    border-color: #444;
-    color: #fff;
-  }
-  
-  .lobby-speed-test .speed-test-btn:hover {
-    background: #dc2626;
-    border-color: #dc2626;
-    color: #fff;
-  }
-  
-  .lobby-speed-test .speed-test-btn.testing {
-    background: #f59e0b;
-    border-color: #f59e0b;
-  }
-  
-  .lobby-speed-test .speed-result {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .lobby-speed-test .speed-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .lobby-speed-test .speed-label {
-    color: #888;
-    font-size: 0.8125rem;
-  }
-  
-  .lobby-speed-test .speed-value {
-    font-weight: 700;
-    font-size: 1rem;
-  }
-  
-  .speed-recommendation {
-    margin-top: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
-  
-  .speed-recommendation.good {
-    background: rgba(16, 185, 129, 0.2);
-    color: #10b981;
-  }
-  
-  .speed-recommendation.ok {
-    background: rgba(245, 158, 11, 0.2);
-    color: #f59e0b;
-  }
-  
-  .speed-recommendation.poor {
-    background: rgba(220, 38, 38, 0.2);
-    color: #dc2626;
-  }
-  
-  .lobby-stream-key {
-    margin-bottom: 1rem;
-  }
-  
-  .lobby-stream-key code {
-    display: block;
-    background: #000;
-    padding: 0.5rem 0.75rem;
-    border-radius: 6px;
-    color: #10b981;
-    font-family: monospace;
-    font-size: 0.75rem;
-    word-break: break-all;
-    margin-top: 0.25rem;
-  }
-  
-  .lobby-rtmp {
-    margin-bottom: 1rem;
-  }
-  
-  .lobby-rtmp code {
-    display: block;
-    background: #000;
-    padding: 0.5rem 0.75rem;
-    border-radius: 6px;
-    color: #a5b4fc;
-    font-family: monospace;
-    font-size: 0.6875rem;
-    margin-top: 0.25rem;
-  }
-  
-  .lobby-buttons {
-    display: flex;
-    gap: 0.75rem;
-  }
-  
-  .lobby-btn {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
-  }
-  
-  .lobby-btn.primary {
-    background: #10b981;
-    color: #fff;
-  }
-  
-  .lobby-btn.primary:hover {
-    background: #059669;
-  }
-  
-  .lobby-btn.primary:disabled {
-    background: #666;
-    cursor: not-allowed;
-  }
-  
-  .lobby-btn.cancel {
-    background: #333;
-    color: #fff;
-  }
-  
-  .lobby-btn.cancel:hover {
-    background: #444;
-  }
-  
-  .lobby-btn.end-stream {
-    background: #dc2626;
-    color: #fff;
-  }
-  
-  .lobby-btn.end-stream:hover {
-    background: #b91c1c;
-  }
-
-  .lobby-btn.primary.is-live {
-    background: #dc2626;
-    cursor: default;
-    animation: pulse-live 2s infinite;
-  }
-  
-  @keyframes pulse-live {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
-  }
-  
-  .lobby-status-msg {
-    margin-top: 0.75rem;
-    padding: 0.5rem;
-    border-radius: 6px;
-    font-size: 0.8125rem;
-    text-align: center;
-  }
-  
-  /* Copy button for stream key */
-  .copy-key-btn {
-    margin-top: 0.5rem;
-    padding: 0.375rem 0.75rem;
-    background: #333;
-    border: none;
-    border-radius: 4px;
-    color: #fff;
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .copy-key-btn:hover {
-    background: #10b981;
-  }
-  
-  /* Takeover Section in Lobby */
-  .takeover-section {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-  }
-  .takeover-divider {
-    height: 1px;
-    background: linear-gradient(to right, transparent, #444, transparent);
-    margin-bottom: 1.5rem;
-  }
-  .takeover-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-  }
-  .takeover-header .takeover-icon {
-    font-size: 1.25rem;
-  }
-  .takeover-header h4 {
-    color: #fbbf24;
-    margin: 0;
-    font-size: 1rem;
-  }
-  .takeover-current-dj {
-    margin-bottom: 0.75rem;
-  }
-  .current-dj-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 0.375rem;
-    padding: 0.5rem;
-    background: rgba(220, 38, 38, 0.1);
-    border: 1px solid #dc2626;
-    border-radius: 6px;
-  }
-  .current-dj-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-  .current-dj-info span {
-    color: #fff;
-    font-weight: 600;
-  }
-  .takeover-desc {
-    color: #888;
-    font-size: 0.8125rem;
-    margin: 0 0 1rem 0;
-  }
-  .takeover-request-btn {
-    width: 100%;
-    padding: 0.875rem;
-    background: linear-gradient(135deg, #f59e0b, #d97706);
-    border: none;
-    border-radius: 8px;
-    color: #fff;
-    font-weight: 600;
-    font-size: 0.9375rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .takeover-request-btn:hover {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-  }
-  .takeover-request-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-  .takeover-pending {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.875rem;
-    background: rgba(245, 158, 11, 0.15);
-    border: 1px dashed #f59e0b;
-    border-radius: 8px;
-    color: #fbbf24;
-    font-size: 0.875rem;
-  }
-  .takeover-pending .pending-icon {
-    animation: spin 2s linear infinite;
-  }
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  .cancel-takeover-btn {
-    margin-left: auto;
-    padding: 0.375rem 0.75rem;
-    background: #444;
-    border: none;
-    border-radius: 4px;
-    color: #fff;
-    font-size: 0.75rem;
-    cursor: pointer;
-  }
-  .cancel-takeover-btn:hover {
-    background: #dc2626;
-  }
-  
-  /* Takeover notification for current DJ */
-  .takeover-notification-lobby {
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.1));
-    border: 2px solid #f59e0b;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-top: 1rem;
-  }
-  .takeover-notification-lobby h4 {
-    color: #fbbf24;
-    margin: 0 0 0.5rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .takeover-notification-lobby p {
-    color: #fff;
-    margin: 0 0 0.75rem 0;
-    font-size: 0.875rem;
-  }
-  .takeover-approve-btns {
-    display: flex;
-    gap: 0.5rem;
-  }
-  .takeover-approve-btns button {
-    flex: 1;
-    padding: 0.625rem;
-    border: none;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 0.875rem;
-    cursor: pointer;
-  }
-  .takeover-approve-btns .approve {
-    background: #22c55e;
-    color: #fff;
-  }
-  .takeover-approve-btns .approve:hover {
-    background: #16a34a;
-  }
-  .takeover-approve-btns .deny {
-    background: #333;
-    color: #fff;
-  }
-  .takeover-approve-btns .deny:hover {
-    background: #dc2626;
-  }
-  
-  /* Takeover Approved State */
-  .takeover-approved {
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.1));
-    border: 2px solid #22c55e;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-top: 1rem;
-  }
-  .takeover-approved .approved-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.75rem;
-  }
-  .takeover-approved .approved-icon {
-    width: 24px;
-    height: 24px;
-    background: #22c55e;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-weight: bold;
-  }
-  .takeover-approved h4 {
-    color: #22c55e;
-    margin: 0;
-  }
-  .takeover-approved > p {
-    color: #ccc;
-    font-size: 0.875rem;
-    margin: 0 0 1rem 0;
-  }
-  .takeover-credentials {
-    background: #000;
-    border-radius: 6px;
-    padding: 0.75rem;
-    margin-bottom: 0.75rem;
-  }
-  .takeover-cred-item {
-    margin-bottom: 0.75rem;
-  }
-  .takeover-cred-item:last-child {
-    margin-bottom: 0;
-  }
-  .takeover-cred-item code {
-    display: block;
-    background: #111;
-    padding: 0.5rem;
-    border-radius: 4px;
-    color: #10b981;
-    font-family: monospace;
-    font-size: 0.75rem;
-    word-break: break-all;
-    margin: 0.25rem 0;
-  }
-  .takeover-note {
-    color: #888;
-    font-size: 0.8125rem;
-    margin: 0;
-  }
-  
-  /* Incoming Takeover Notification */
-  .incoming-takeover-notification {
-    position: fixed;
-    top: 100px;
-    right: 20px;
-    z-index: 1000;
-    animation: slideInRight 0.3s ease-out;
-  }
-  
-  @keyframes slideInRight {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-  
-  .incoming-takeover-content {
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-    border: 3px solid #dc2626;
-    border-radius: 16px;
-    padding: 1.5rem;
-    max-width: 350px;
-    box-shadow: 0 10px 40px rgba(220, 38, 38, 0.3);
-  }
-  
-  .incoming-takeover-header {
-    margin-bottom: 1rem;
-  }
-  
-  .pulse-badge-large {
-    display: inline-block;
-    background: #dc2626;
-    color: #fff;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-weight: 700;
-    font-size: 0.9rem;
-    animation: pulse-badge 1s infinite;
-  }
-  
-  @keyframes pulse-badge {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.03); }
-  }
-  
-  .incoming-takeover-dj {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.25rem;
-  }
-  
-  .incoming-takeover-dj img {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    border: 3px solid #dc2626;
-  }
-  
-  .incoming-takeover-dj strong {
-    display: block;
-    font-size: 1.1rem;
-    color: #111;
-  }
-  
-  .incoming-takeover-dj span {
-    color: #666;
-    font-size: 0.9rem;
-  }
-  
-  .incoming-takeover-actions {
-    display: flex;
-    gap: 0.75rem;
-  }
-  
-  .accept-takeover-btn, .decline-takeover-btn {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  
-  .accept-takeover-btn {
-    background: #10b981;
-    color: #fff;
-  }
-  
-  .accept-takeover-btn:hover {
-    background: #059669;
-  }
-  
-  .decline-takeover-btn {
-    background: #6b7280;
-    color: #fff;
-  }
-  
-  .decline-takeover-btn:hover {
-    background: #4b5563;
-  }
-  
-  @media (max-width: 768px) {
-    .stream-chat-grid {
-      grid-template-columns: 1fr;
-    }
-    .chat-section {
-      height: 450px;
-    }
-    .fullscreen-content {
-      grid-template-columns: 1fr;
-    }
-    .fs-chat {
-      display: none;
-    }
-    .duration-options {
-      grid-template-columns: repeat(2, 1fr);
-    }
-    .lobby-panel {
-      left: 1rem;
-      width: calc(100% - 2rem);
-    }
-    .reactions-bar {
-      gap: 0.5rem;
-    }
-    
-    /* Audio placeholder mobile */
-    .vinyl-container {
-      width: 150px;
-      height: 150px;
-    }
-    .vinyl-record {
-      width: 150px;
-      height: 150px;
-    }
-    .vinyl-label {
-      width: 50px;
-      height: 50px;
-    }
-    .vinyl-avatar {
-      width: 35px;
-      height: 35px;
-    }
-    .vinyl-label::after {
-      width: 6px;
-      height: 6px;
-    }
-    .tonearm {
-      width: 60px;
-      height: 6px;
-      top: -8px;
-      right: -15px;
-    }
-    .audio-dj-name {
-      font-size: 1.5rem;
-    }
-    .audio-show-title {
-      font-size: 0.875rem;
-    }
-    .audio-bars {
-      height: 35px;
-    }
-    .audio-bar {
-      width: 4px;
-    }
-  }
-  
-  /* ============================================
-     MOBILE & TABLET OPTIMIZATIONS FOR LISTENERS
-     Optimized for streaming via Bluetooth to cars, speakers, soundbars, casting to TV
-     ============================================ */
-  
-  /* Tablet landscape */
-  @media (max-width: 1024px) {
-    .live-layout {
-      padding: 0.75rem;
-      gap: 0.75rem;
-    }
-    
-    .player-container {
-      min-height: 300px;
-    }
-  }
-  
-  /* Tablet portrait & large phones */
-  @media (max-width: 768px) {
-    body {
-      font-size: 16px; /* Prevent zoom on input focus */
-    }
-    
-    /* Sticky player controls at bottom for easy access */
-    .player-controls-bar {
-      position: sticky;
-      bottom: 0;
-      z-index: 100;
-      background: #111;
-      border-top: 2px solid #333;
-      padding: 0.75rem;
-      margin: 0 -0.75rem -0.75rem -0.75rem;
-      border-radius: 0;
-    }
-    
-    .player-container {
-      min-height: 200px;
-      border-radius: 8px;
-    }
-    
-    /* Larger touch targets - minimum 44px for accessibility */
-    .player-btn,
-    .control-btn,
-    button {
-      min-width: 48px;
-      min-height: 48px;
-      padding: 0.75rem;
-    }
-    
-    .player-btn svg,
-    .control-btn svg {
-      width: 24px;
-      height: 24px;
-    }
-    
-    /* Volume slider optimization for touch */
-    .volume-slider,
-    input[type="range"] {
-      height: 8px;
-      -webkit-appearance: none;
-      appearance: none;
-    }
-    
-    .volume-slider::-webkit-slider-thumb,
-    input[type="range"]::-webkit-slider-thumb {
-      width: 28px;
-      height: 28px;
-      -webkit-appearance: none;
-      border-radius: 50%;
-      cursor: pointer;
-    }
-    
-    /* LED meters mobile optimization */
-    .stereo-meters {
-      min-width: 120px;
-    }
-    
-    .led {
-      width: 8px;
-      height: 6px;
-    }
-    
-    .led-strip {
-      gap: 2px;
-    }
-    
-    .meter-label {
-      font-size: 8px;
-      width: 10px;
-    }
-    
-    .volume-control {
-      margin-left: 0.75rem;
-    }
-    
-    #volumeSlider {
-      width: 70px;
-    }
-    
-    /* Inline reactions mobile optimization */
-    .inline-reactions {
-      gap: 0.4rem;
-      padding: 0 0.5rem;
-    }
-    
-    .inline-btn {
-      width: 30px;
-      height: 30px;
-    }
-    
-    .inline-btn.reaction-btn {
-      font-size: 16px;
-    }
-    
-    .inline-btn svg {
-      width: 14px;
-      height: 14px;
-    }
-    
-    .inline-rating .star {
-      font-size: 14px;
-    }
-    
-    .inline-rating .avg-rating {
-      font-size: 10px;
-      min-width: 20px;
-    }
-    
-    /* Record button mobile optimization */
-    .record-control {
-      margin-left: 0.5rem;
-      margin-right: 0.25rem;
-    }
-    
-    .record-btn {
-      padding: 6px 8px;
-      font-size: 9px;
-    }
-    
-    .record-btn .record-dot {
-      width: 8px;
-      height: 8px;
-    }
-    
-    .record-duration {
-      font-size: 11px;
-      min-width: 40px;
-    }
-    
-    /* Stream info prominent display */
-    .stream-info {
-      padding: 0.75rem;
-      text-align: center;
-    }
-    
-    .dj-avatar {
-      width: 48px;
-      height: 48px;
-    }
-    
-    .dj-name {
-      font-size: 1.1rem;
-    }
-    
-    .stream-title {
-      font-size: 0.9rem;
-    }
-    
-    /* Chat section adjustments */
-    .chat-section {
-      height: 350px;
-      border-radius: 8px;
-    }
-    
-    .chat-input {
-      font-size: 16px; /* Prevent zoom on iOS */
-      padding: 0.75rem;
-    }
-    
-    .chat-send-btn {
-      min-width: 48px;
-      min-height: 48px;
-    }
-    
-    /* Reactions bar - horizontal scroll on mobile */
-    .reactions-bar {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      padding: 0.5rem 0;
-    }
-    
-    .reactions-bar::-webkit-scrollbar {
-      display: none;
-    }
-    
-    .reaction-btn {
-      min-width: 44px;
-      min-height: 44px;
-      font-size: 1.25rem;
-      flex-shrink: 0;
-    }
-    
-    /* Listener count */
-    .listener-count {
-      font-size: 0.85rem;
-      padding: 0.4rem 0.75rem;
-    }
-    
-    /* Schedule/sidebar - hide on mobile, show on demand */
-    .sidebar-column {
-      display: none;
-    }
-    
-    /* Fullscreen button more prominent */
-    .fullscreen-btn {
-      min-width: 48px;
-      min-height: 48px;
-    }
-  }
-  
-  /* Small phones */
-  @media (max-width: 480px) {
-    .live-layout {
-      padding: 0.5rem;
-    }
-    
-    .player-container {
-      min-height: 180px;
-      border-radius: 6px;
-    }
-    
-    /* Simplify controls layout */
-    .player-controls-bar {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 0.5rem;
-    }
-    
-    /* Play/pause button larger and centered */
-    .play-pause-btn {
-      width: 64px;
-      height: 64px;
-      order: -1;
-      flex-basis: 100%;
-      margin: 0 auto 0.5rem;
-    }
-    
-    .play-pause-btn svg {
-      width: 32px;
-      height: 32px;
-    }
-    
-    /* Volume as full width slider */
-    .volume-control {
-      width: 100%;
-      order: 10;
-    }
-    
-    .volume-slider {
-      width: 100%;
-    }
-    
-    .chat-section {
-      height: 280px;
-    }
-    
-    .chat-message {
-      padding: 0.5rem;
-    }
-    
-    .message-avatar {
-      width: 28px;
-      height: 28px;
-    }
-    
-    .message-name {
-      font-size: 0.8rem;
-    }
-    
-    .message-text {
-      font-size: 0.9rem;
-    }
-  }
-  
-  /* Touch device optimizations */
-  @media (hover: none) and (pointer: coarse) {
-    /* Larger touch targets across the board */
-    button,
-    .player-btn,
-    .reaction-btn,
-    a.btn {
-      min-height: 44px;
-      min-width: 44px;
-    }
-    
-    /* Remove hover effects that cause issues on touch */
-    button:hover,
-    .player-btn:hover,
-    .reaction-btn:hover {
-      transform: none;
-    }
-    
-    /* Smooth scrolling for chat */
-    .chat-messages {
-      -webkit-overflow-scrolling: touch;
-      scroll-behavior: smooth;
-    }
-    
-    /* Prevent accidental text selection */
-    button,
-    .player-btn,
-    .reaction-btn {
-      -webkit-user-select: none;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    
-    /* Active states for touch feedback */
-    button:active,
-    .player-btn:active {
-      opacity: 0.8;
-      transform: scale(0.95);
-    }
-  }
-  
-  /* Landscape phone - maximize player, minimize chrome */
-  @media (max-height: 500px) and (orientation: landscape) {
-    .live-layout {
-      padding: 0.5rem;
-      gap: 0.5rem;
-    }
-    
-    /* Hide non-essential elements */
-    .chat-section,
-    .sidebar-column,
-    .schedule-section {
-      display: none;
-    }
-    
-    /* Full height player */
-    .player-container {
-      min-height: calc(100vh - 80px);
-      height: calc(100vh - 80px);
-    }
-    
-    /* Compact controls overlay */
-    .player-controls-bar {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: linear-gradient(transparent, rgba(0,0,0,0.8));
-      padding: 1rem;
-    }
-    
-    .stream-info {
-      position: absolute;
-      top: 0.5rem;
-      left: 0.5rem;
-      background: rgba(0,0,0,0.7);
-      border-radius: 8px;
-      padding: 0.5rem;
-    }
-  }
-  
-  /* Reduce motion for performance and accessibility */
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-    }
-    
-    .audio-viz-bar,
-    .visualizer-bar {
-      animation: none;
-    }
-    
-    .reaction-float {
-      animation: none;
-      display: none;
-    }
-  }
-  
-  /* High contrast mode for accessibility */
-  @media (prefers-contrast: high) {
-    .player-btn,
-    .reaction-btn,
-    button {
-      border: 2px solid currentColor;
-    }
-    
-    .chat-section {
-      border: 2px solid #fff;
-    }
-  }
-  
-  /* ============================================
-     MOBILE TAB NAVIGATION
-     ============================================ */
-  .mobile-tabs {
-    display: none;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: #111;
-    border-bottom: 2px solid #222;
-    padding: 0;
-    /* Safe area for notch */
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-  
-  .mobile-tab {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.25rem;
-    padding: 0.75rem 0.5rem;
-    background: transparent;
-    border: none;
-    color: #666;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    transition: color 0.2s, background 0.2s;
-    position: relative;
-  }
-  
-  .mobile-tab svg {
-    width: 22px;
-    height: 22px;
-  }
-  
-  .mobile-tab.active {
-    color: #dc2626;
-    background: rgba(220, 38, 38, 0.1);
-  }
-  
-  .mobile-tab.active::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 20%;
-    right: 20%;
-    height: 3px;
-    background: #dc2626;
-    border-radius: 3px 3px 0 0;
-  }
-  
-  .mobile-tab:active {
-    background: rgba(255,255,255,0.05);
-  }
-  
-  /* Chat notification badge */
-  .mobile-tab .tab-badge {
-    position: absolute;
-    top: 6px;
-    right: 50%;
-    transform: translateX(12px);
-    background: #dc2626;
-    color: #fff;
-    font-size: 0.6rem;
-    min-width: 16px;
-    height: 16px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-  }
-  
-  /* Show tabs only on mobile */
-  @media (max-width: 900px) {
-    .mobile-tabs {
-      display: flex;
-    }
-  }
-  
-  /* ============================================
-     MOBILE LAYOUT OVERRIDES
-     ============================================ */
-  @media (max-width: 900px) {
-    /* Hide sections based on active tab */
-    .schedule-column,
-    .chat-column {
-      display: none;
-    }
-    
-    .schedule-column.mobile-active,
-    .chat-column.mobile-active,
-    .player-column.mobile-active {
-      display: flex !important;
-    }
-    
-    .player-column {
-      display: flex;
-    }
-    
-    .live-layout {
-      grid-template-columns: 1fr;
-      gap: 0;
-      padding: 0;
-      min-height: auto;
-    }
-    
-    .live-main {
-      padding-bottom: 80px; /* Space for mini player */
-    }
-    
-    /* Player takes full width */
-    .player-column {
-      padding: 0.75rem;
-    }
-    
-    .player-container {
-      border-radius: 8px;
-      min-height: 220px;
-      aspect-ratio: 16/9;
-    }
-    
-    /* Stream info bar mobile */
-    .stream-info-bar {
-      flex-wrap: wrap;
-      padding: 0.5rem;
-      gap: 0.5rem;
-    }
-    
-    .stream-info-left {
-      flex: 1 1 100%;
-      margin-bottom: 0.25rem;
-    }
-    
-    .stream-info-right {
-      flex: 1 1 100%;
-      justify-content: space-between;
-    }
-    
-    .stat {
-      font-size: 0.75rem;
-    }
-    
-    .dj-lobby-btn span,
-    .fullpage-btn span {
-      display: none;
-    }
-    
-    /* Chat section mobile */
-    .chat-column.mobile-active {
-      flex-direction: column;
-      height: calc(100vh - 140px);
-      padding: 0.75rem;
-    }
-    
-    .chat-section {
-      flex: 1;
-      height: auto;
-      max-height: none;
-      border-radius: 12px;
-    }
-    
-    .chat-messages {
-      flex: 1;
-      min-height: 200px;
-    }
-    
-    /* Schedule section mobile */
-    .schedule-column.mobile-active {
-      padding: 0.75rem;
-      max-height: calc(100vh - 140px);
-      overflow-y: auto;
-    }
-    
-    .schedule-header {
-      padding: 1rem;
-    }
-    
-    .schedule-header h1 {
-      font-size: 2rem;
-    }
-  }
-  
-  /* ============================================
-     MOBILE PLAYER CONTROLS - THUMB-FRIENDLY
-     ============================================ */
-  @media (max-width: 900px) {
-    .player-controls {
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 0.75rem;
-      padding: 1rem;
-      background: #0a0a0a;
-      border-radius: 12px;
-      margin-top: 0.75rem;
-    }
-    
-    /* Big play button */
-    .play-btn {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background: #dc2626;
-      border: none;
-      flex-shrink: 0;
-    }
-    
-    .play-btn svg {
-      width: 32px;
-      height: 32px;
-      fill: #fff;
-    }
-    
-    .play-btn:disabled {
-      background: #333;
-      opacity: 0.5;
-    }
-    
-    /* Reactions in a row */
-    .inline-reactions {
-      display: flex;
-      gap: 0.5rem;
-      order: 1;
-    }
-    
-    .inline-btn.reaction-btn {
-      width: 52px;
-      height: 52px;
-      font-size: 26px;
-      border-radius: 50%;
-      background: #1a1a1a;
-      border: 2px solid #333;
-    }
-    
-    .inline-btn.reaction-btn:active {
-      transform: scale(0.9);
-      background: #222;
-    }
-    
-    /* Hide rating on mobile */
-    .inline-rating {
-      display: none;
-    }
-    
-    /* LED meters simplified */
-    .stereo-meters {
-      display: none;
-    }
-    
-    /* Volume full width at bottom */
-    .volume-control {
-      width: 100%;
-      order: 10;
-      margin-top: 0.5rem;
-      padding: 0 0.5rem;
-    }
-    
-    #volumeSlider {
-      width: 100%;
-      height: 8px;
-      -webkit-appearance: none;
-      appearance: none;
-      background: #333;
-      border-radius: 4px;
-    }
-    
-    #volumeSlider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 24px;
-      height: 24px;
-      background: #dc2626;
-      border-radius: 50%;
-      cursor: pointer;
-    }
-    
-    /* Share and record buttons */
-    .share-btn,
-    .record-control button {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-    }
-    
-    .record-control {
-      order: 2;
-    }
-  }
-  
-  /* ============================================
-     SMALL PHONE OPTIMIZATIONS (< 400px)
-     ============================================ */
-  @media (max-width: 400px) {
-    .mobile-tab {
-      padding: 0.6rem 0.25rem;
-    }
-    
-    .mobile-tab span {
-      font-size: 0.6rem;
-    }
-    
-    .player-controls {
-      padding: 0.75rem;
-      gap: 0.5rem;
-    }
-    
-    .play-btn {
-      width: 56px;
-      height: 56px;
-    }
-    
-    .play-btn svg {
-      width: 28px;
-      height: 28px;
-    }
-    
-    .inline-btn.reaction-btn {
-      width: 44px;
-      height: 44px;
-      font-size: 22px;
-    }
-    
-    .schedule-header h1 {
-      font-size: 1.75rem;
-    }
-    
-    .sidebar-card h3 {
-      font-size: 1.25rem;
-    }
-    
-    .mini-player {
-      padding: 0.4rem 0.5rem;
-    }
-    
-    .mini-avatar {
-      width: 36px;
-      height: 36px;
-    }
-    
-    .mini-play-btn {
-      width: 42px;
-      height: 42px;
-    }
-  }
-  
-  /* Print styles - for sharing schedules */
-  @media print {
-    .player-container,
-    .chat-section,
-    .reactions-bar,
-    button {
-      display: none;
-    }
-  }
-  
-  /* ============================================
-     STICKY MINI PLAYER FOR MOBILE
-     ============================================ */
-  .mini-player {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
-    border-top: 2px solid #dc2626;
-    padding: 0.5rem 0.75rem;
-    z-index: 9998;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    transform: translateY(100%);
-    transition: transform 0.3s ease;
-    /* Safe area for iPhone notch/home indicator */
-    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
-  }
-  
-  .mini-player.visible {
-    transform: translateY(0);
-  }
-  
-  .mini-player.hidden {
-    display: flex !important;
-    transform: translateY(100%);
-  }
-  
-  .mini-player-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex: 1;
-  }
-  
-  .mini-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid #333;
-  }
-  
-  .mini-text {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-width: 0;
-  }
-  
-  .mini-dj {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.1rem;
-    color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  
-  .mini-status {
-    font-size: 0.7rem;
-    color: #dc2626;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-  }
-  
-  .mini-status::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    background: #dc2626;
-    border-radius: 50%;
-    animation: pulse 1.5s infinite;
-  }
-  
-  .mini-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .mini-play-btn {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: #dc2626;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: transform 0.15s, background 0.15s;
-  }
-  
-  .mini-play-btn:active {
-    transform: scale(0.95);
-    background: #b91c1c;
-  }
-  
-  .mini-play-btn svg {
-    width: 24px;
-    height: 24px;
-    fill: #fff;
-  }
-  
-  .mini-expand-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    background: #333;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-  }
-  
-  .mini-expand-btn svg {
-    width: 20px;
-    height: 20px;
-    fill: #888;
-  }
-  
-  .mini-progress {
-    width: 100%;
-  }
-  
-  .mini-led-strip {
-    display: flex;
-    gap: 3px;
-    justify-content: center;
-  }
-  
-  .mini-led {
-    width: 100%;
-    height: 3px;
-    background: #333;
-    border-radius: 2px;
-    transition: background 0.1s;
-  }
-  
-  .mini-led.active {
-    background: linear-gradient(90deg, #22c55e 0%, #22c55e 60%, #eab308 70%, #dc2626 100%);
-  }
-  
-  /* Only show mini player on mobile */
-  @media (min-width: 769px) {
-    .mini-player {
-      display: none !important;
-    }
-  }
-  
-  /* ============================================
-     ENHANCED MOBILE PLAYER CONTROLS
-     ============================================ */
-  @media (max-width: 768px) {
-    /* Reorganize player controls for mobile */
-    .player-controls {
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 0.75rem;
-    }
-    
-    /* Big central play button */
-    .play-btn {
-      width: 56px;
-      height: 56px;
-      order: 0;
-    }
-    
-    .play-btn svg {
-      width: 28px;
-      height: 28px;
-    }
-    
-    /* Reactions row */
-    .inline-reactions {
-      order: 1;
-      flex: 1;
-      justify-content: center;
-    }
-    
-    /* Hide LED meters on very small screens, show simplified in mini player */
-    .stereo-meters {
-      display: none;
-    }
-    
-    /* Volume at bottom full width */
-    .volume-control {
-      order: 3;
-      width: 100%;
-      margin: 0.5rem 0 0 0;
-    }
-    
-    #volumeSlider {
-      width: 100%;
-    }
-    
-    /* Record button */
-    .record-control {
-      order: 2;
-    }
-    
-    /* Hide star rating on mobile, keep reactions */
-    .inline-rating {
-      display: none;
-    }
-    
-    /* Make reaction buttons bigger on mobile */
-    .inline-btn.reaction-btn {
-      width: 48px;
-      height: 48px;
-      font-size: 24px;
-    }
-  }
-  
-  /* Extra small phones */
-  @media (max-width: 380px) {
-    .mini-dj {
-      font-size: 0.95rem;
-    }
-    
-    .mini-avatar {
-      width: 36px;
-      height: 36px;
-    }
-    
-    .mini-play-btn {
-      width: 44px;
-      height: 44px;
-    }
-    
-    .inline-btn.reaction-btn {
-      width: 44px;
-      height: 44px;
-      font-size: 20px;
-    }
-  }
-  
-  /* Swipe gesture hint */
-  .swipe-hint {
-    position: fixed;
-    bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.8);
-    color: #fff;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    opacity: 0;
-    transition: opacity 0.3s;
-    pointer-events: none;
-    z-index: 9999;
-  }
-  
-  .swipe-hint.visible {
-    opacity: 1;
-  }
-  
-  .hidden { display: none !important; }
-</style>
 
 <script>
   // Speed Test - Download and Upload
@@ -5371,7 +926,12 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   document.getElementById('speedTestBtn')?.addEventListener('click', runSpeedTest);
   
   // Floating Reactions - Rise from button with JS animation
+  let emojiAnimationsEnabled = true;
+  
   function createFloatingEmoji(startX, startY, emojiList) {
+    // Check if animations are enabled
+    if (!emojiAnimationsEnabled) return;
+    
     const heart = document.createElement('div');
     
     // Pick random emoji from the list
@@ -5490,6 +1050,15 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   async function triggerReaction(e) {
     e.preventDefault();
     
+    // Require login for all reactions
+    const auth = window.firebaseAuth;
+    const user = auth?.currentUser;
+    
+    if (!user) {
+      alert('Please sign in to react');
+      return;
+    }
+    
     // Cooldown to prevent spam
     const now = Date.now();
     if (now - lastReactionTime < REACTION_COOLDOWN) return;
@@ -5497,13 +1066,14 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     
     const btn = e.currentTarget || e.target;
     const emojiList = btn?.dataset?.emoji?.split(',') || ['❤️'];
+    const emojiType = btn?.id?.replace('Btn', '') || 'like';
     
-    // Trigger visual animation
+    // Trigger visual animation locally
     triggerReactionBurst(btn, emojiList);
     btn?.classList.add('liked');
     setTimeout(() => btn?.classList.remove('liked'), 300);
     
-    // Increment like count via API
+    // Broadcast to all viewers and increment like count via API
     try {
       // Get current stream ID from the page
       const streamId = window.currentStreamId || document.body.dataset.streamId;
@@ -5513,16 +1083,21 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         return;
       }
       
-      // Get current user from Firebase auth
-      const auth = window.firebaseAuth;
-      const user = auth?.currentUser;
+      // Broadcast emoji reaction to all viewers
+      await fetch('/api/livestream/react', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'emoji',
+          streamId,
+          userId: user.uid,
+          userName: user.displayName || user.email?.split('@')[0] || 'Viewer',
+          emoji: emojiList.join(','),
+          emojiType: emojiType
+        })
+      });
       
-      if (!user) {
-        // Still show animation but don't record the like
-        console.log('[Reaction] User not logged in, animation only');
-        return;
-      }
-      
+      // Also record as like
       const response = await fetch('/api/livestream/react', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -5543,19 +1118,37 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       }
     } catch (error) {
       console.error('[Reaction] API error:', error);
-      // Animation still shows even if API fails
     }
   }
   
   // Setup reaction button click handlers
   setTimeout(() => {
-    ['likeBtn', 'fireBtn', 'explosionBtn'].forEach(id => {
+    ['likeBtn', 'fireBtn', 'explosionBtn', 'starBtn', 'bassBtn', 'fistBtn', 'rocketBtn'].forEach(id => {
       const btn = document.getElementById(id);
       if (btn) {
         btn.addEventListener('click', triggerReaction);
       }
     });
   }, 100);
+  
+  // Animation toggle button
+  const animToggleBtn = document.getElementById('animToggleBtn');
+  const fsAnimToggleBtn = document.getElementById('fsAnimToggleBtn');
+  
+  function toggleEmojiAnimations() {
+    emojiAnimationsEnabled = !emojiAnimationsEnabled;
+    const isOff = !emojiAnimationsEnabled;
+    const title = emojiAnimationsEnabled ? 'Turn off emoji animations' : 'Turn on emoji animations';
+    
+    // Sync both buttons
+    animToggleBtn?.classList.toggle('off', isOff);
+    fsAnimToggleBtn?.classList.toggle('off', isOff);
+    if (animToggleBtn) animToggleBtn.title = title;
+    if (fsAnimToggleBtn) fsAnimToggleBtn.title = title;
+  }
+  
+  animToggleBtn?.addEventListener('click', toggleEmojiAnimations);
+  fsAnimToggleBtn?.addEventListener('click', toggleEmojiAnimations);
   
   // Fullscreen Mode
   function openFullscreen() {
@@ -5564,6 +1157,10 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       fs.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
       syncFullscreenState();
+      // Sync volume slider
+      const fsVol = document.getElementById('fsVolumeSlider');
+      const mainVol = document.getElementById('volumeSlider');
+      if (fsVol && mainVol) fsVol.value = mainVol.value;
     }
   }
   
@@ -5614,6 +1211,63 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       mainInput.value = input.value;
       mainSend.click();
       input.value = '';
+    }
+  });
+  
+  // Enter key for fullscreen chat
+  document.getElementById('fsChatInput')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('fsSendBtn')?.click();
+    }
+  });
+  
+  // Fullscreen reaction buttons - trigger main page reactions
+  document.querySelectorAll('.fs-reaction-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const emoji = btn.dataset.emoji;
+      // Find matching main page button and click it
+      const mainBtns = {
+        '❤️': 'likeBtn',
+        '🔥': 'fireBtn',
+        '💥': 'explosionBtn',
+        '⭐': 'starBtn',
+        '🔊': 'bassBtn',
+        '👊': 'fistBtn',
+        '🚀': 'rocketBtn'
+      };
+      const mainBtn = document.getElementById(mainBtns[emoji]);
+      mainBtn?.click();
+    });
+  });
+  
+  // Fullscreen shoutout button - open main shoutout modal
+  document.getElementById('fsShoutoutBtn')?.addEventListener('click', () => {
+    document.getElementById('shoutoutBtn')?.click();
+  });
+  
+  // Fullscreen volume slider - sync with main volume
+  const fsVolumeSlider = document.getElementById('fsVolumeSlider');
+  const mainVolumeSlider = document.getElementById('volumeSlider');
+  
+  fsVolumeSlider?.addEventListener('input', (e) => {
+    const value = e.target.value;
+    if (mainVolumeSlider) {
+      mainVolumeSlider.value = value;
+      mainVolumeSlider.dispatchEvent(new Event('input'));
+    }
+  });
+  
+  // Sync volume sliders when fullscreen opens
+  function syncVolumeSliders() {
+    if (fsVolumeSlider && mainVolumeSlider) {
+      fsVolumeSlider.value = mainVolumeSlider.value;
+    }
+  }
+  
+  // Also sync main to fullscreen
+  mainVolumeSlider?.addEventListener('input', () => {
+    if (fsVolumeSlider) {
+      fsVolumeSlider.value = mainVolumeSlider.value;
     }
   });
   
@@ -5692,7 +1346,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     today.setHours(0, 0, 0, 0);
     
     const maxDate = new Date();
-    maxDate.setDate(maxDate.getDate() + 14);
+    maxDate.setDate(maxDate.getDate() + 30); // Allow booking up to 1 month ahead
     
     document.getElementById('calMonthYear').textContent = 
       calendarDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
@@ -5871,70 +1525,33 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   document.getElementById('bookSlotBtn')?.addEventListener('click', () => {
     // Check if user is logged in by looking for auth state
     const checkAuth = async () => {
-      const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-      const auth = getAuth();
+      // Wait for auth to be ready
+      let user = null;
+      if (window.authReady) {
+        user = await window.authReady;
+      } else {
+        const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+        const auth = getAuth();
+        user = auth.currentUser;
+      }
       
-      if (!auth.currentUser) {
+      if (!user) {
         // Not logged in - redirect to login
         window.location.href = '/login?redirect=/live';
         return;
       }
       
-      // Logged in - open modal
-      const modal = document.getElementById('bookingModal');
-      const form = document.getElementById('bookingForm');
-      const success = document.getElementById('bookingSuccess');
-      const errorDiv = document.getElementById('bookingError');
-      
-      if (modal) modal.classList.remove('hidden');
-      if (form) form.classList.remove('hidden');
-      if (success) success.classList.add('hidden');
-      if (errorDiv) errorDiv.classList.add('hidden');
-      
-      // Reset form fields
-      document.getElementById('bookingDjName').value = '';
-      document.getElementById('bookingCrew').value = '';
-      document.getElementById('bookingDescription').value = '';
-      
-      // Reset booking mode
-      bookingMode = 'schedule';
-      document.getElementById('bookingTypeSchedule')?.classList.add('active');
-      document.getElementById('bookingTypeQueue')?.classList.remove('active');
-      document.getElementById('scheduledTimeSection')?.classList.remove('hidden');
-      document.getElementById('queueSection')?.classList.add('hidden');
-      
-      // Initialize calendar to current month and select today
-      calendarDate = new Date();
-      selectedDate = new Date();
-      selectedDate.setHours(0, 0, 0, 0);
-      selectedTime = null;
-      selectedDuration = 60; // Reset to default 1hr
-      
-      // Reset duration radio buttons
-      document.querySelectorAll('input[name="duration"]').forEach(radio => {
-        radio.checked = radio.value === '60';
-      });
-      
-      document.getElementById('bookingDate').value = selectedDate.toISOString().split('T')[0];
-      document.getElementById('bookingTime').value = '';
-      
-      // Reset time info display
-      const timeInfo = document.getElementById('selectedTimeInfo');
-      if (timeInfo) {
-        timeInfo.classList.add('hidden');
-        timeInfo.className = 'selected-time-info hidden';
-      }
-      
-      // Reset time dropdowns
-      const hourSelect = document.getElementById('bookingHour');
-      const minuteSelect = document.getElementById('bookingMinute');
-      if (hourSelect) hourSelect.value = '';
-      if (minuteSelect) minuteSelect.value = '';
-      
-      renderCalendar();
+      // Logged in - open booking schedule modal
+      const displayName = user.displayName || user.email?.split('@')[0] || 'DJ';
+      window.openBookingSchedule(user.uid, displayName);
     };
     
     checkAuth();
+  });
+  
+  // View Full Schedule - open public schedule modal (read-only)
+  document.getElementById('viewScheduleBtn')?.addEventListener('click', () => {
+    window.openPublicSchedule();
   });
   
   document.getElementById('closeBookingModal')?.addEventListener('click', () => {
@@ -5953,10 +1570,17 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   // Go Live Now button handler - redirects to lobby page for preparation
   document.getElementById('goLiveNowBtn')?.addEventListener('click', () => {
     const checkAuth = async () => {
-      const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-      const auth = getAuth();
+      // Wait for auth to be ready
+      let user = null;
+      if (window.authReady) {
+        user = await window.authReady;
+      } else {
+        const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+        const auth = getAuth();
+        user = auth.currentUser;
+      }
       
-      if (!auth.currentUser) {
+      if (!user) {
         window.location.href = '/login?redirect=/account/go-live';
         return;
       }
@@ -6001,7 +1625,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   function updateSharePreview(djName, djAvatar, crew) {
     currentLiveInfo = { djName, djAvatar, crew };
     document.getElementById('sharePreviewName').textContent = djName || 'Live Now';
-    document.getElementById('sharePreviewAvatar').src = djAvatar || '/logo.webp';
+    document.getElementById('sharePreviewAvatar').src = djAvatar || '/place-holder.webp';
     document.getElementById('sharePreviewCrew').textContent = crew || 'Fresh Wax Live Stream';
   }
   
@@ -6089,20 +1713,172 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   
   // Make updateSharePreview available globally
   window.updateSharePreview = updateSharePreview;
+  
+  // ============================================
+  // SHOUTOUT FUNCTIONALITY
+  // ============================================
+  
+  const shoutoutBtn = document.getElementById('shoutoutBtn');
+  const shoutoutModal = document.getElementById('shoutoutModal');
+  const closeShoutoutModal = document.getElementById('closeShoutoutModal');
+  const shoutoutInput = document.getElementById('shoutoutInput');
+  const shoutoutCharCount = document.getElementById('shoutoutCharCount');
+  const sendShoutoutBtn = document.getElementById('sendShoutoutBtn');
+  const shoutoutTrack = document.getElementById('shoutoutTrack');
+  
+  let shoutoutQueue = [];
+  let isShoutoutPlaying = false;
+  
+  // Open shoutout modal function
+  function openShoutoutModal() {
+    const isLoggedIn = window.currentUserInfo?.loggedIn || false;
+    if (!isLoggedIn) {
+      alert('Please sign in to send a shoutout');
+      return;
+    }
+    shoutoutModal?.classList.remove('hidden');
+    shoutoutInput?.focus();
+  }
+  
+  // Open shoutout modal
+  shoutoutBtn?.addEventListener('click', openShoutoutModal);
+  
+  // Close shoutout modal
+  closeShoutoutModal?.addEventListener('click', () => {
+    shoutoutModal?.classList.add('hidden');
+    if (shoutoutInput) shoutoutInput.value = '';
+    if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
+    if (sendShoutoutBtn) sendShoutoutBtn.disabled = true;
+  });
+  
+  // Close on overlay click
+  shoutoutModal?.querySelector('.modal-overlay')?.addEventListener('click', () => {
+    shoutoutModal?.classList.add('hidden');
+    if (shoutoutInput) shoutoutInput.value = '';
+    if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
+    if (sendShoutoutBtn) sendShoutoutBtn.disabled = true;
+  });
+  
+  // Character count and enable/disable send button
+  shoutoutInput?.addEventListener('input', () => {
+    const len = shoutoutInput.value.length;
+    if (shoutoutCharCount) shoutoutCharCount.textContent = len;
+    if (sendShoutoutBtn) sendShoutoutBtn.disabled = len === 0;
+  });
+  
+  // Emoji buttons
+  document.querySelectorAll('.shoutout-emoji').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (shoutoutInput && shoutoutInput.value.length < 30) {
+        const emoji = btn.dataset.emoji;
+        const remaining = 30 - shoutoutInput.value.length;
+        if (emoji.length <= remaining) {
+          shoutoutInput.value += emoji;
+          shoutoutInput.dispatchEvent(new Event('input'));
+          shoutoutInput.focus();
+        }
+      }
+    });
+  });
+  
+  // Send shoutout
+  sendShoutoutBtn?.addEventListener('click', async () => {
+    const message = shoutoutInput?.value.trim();
+    if (!message) return;
+    
+    // Use displayName for shoutouts (matches fullpage behavior)
+    const userName = window.currentUserInfo?.displayName || window.currentUserInfo?.name || 'Anonymous';
+    const userId = window.currentUserInfo?.id || null;
+    
+    // Disable button while sending
+    sendShoutoutBtn.disabled = true;
+    sendShoutoutBtn.innerHTML = '<span>Sending...</span>';
+    
+    try {
+      // Get current stream ID from the page
+      const streamId = window.currentStreamId || 'default';
+      
+      // Send via API to broadcast to all viewers
+      const response = await fetch('/api/livestream/react', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'shoutout',
+          streamId: streamId,
+          userId: userId,
+          userName: userName,
+          message: message
+        })
+      });
+      
+      if (response.ok) {
+        // Also play locally immediately
+        shoutoutQueue.push({ name: userName, message: message });
+        playNextShoutout();
+      }
+    } catch (e) {
+      console.error('Shoutout error:', e);
+    }
+    
+    // Close modal and reset
+    shoutoutModal?.classList.add('hidden');
+    if (shoutoutInput) shoutoutInput.value = '';
+    if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
+    sendShoutoutBtn.disabled = true;
+    sendShoutoutBtn.innerHTML = '<span>Send Shoutout</span><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
+  });
+  
+  // Play shoutout animation
+  function playNextShoutout() {
+    if (isShoutoutPlaying || shoutoutQueue.length === 0) return;
+    
+    isShoutoutPlaying = true;
+    const shoutout = shoutoutQueue.shift();
+    
+    if (shoutoutTrack) {
+      shoutoutTrack.innerHTML = `<span class="shoutout-message"><span class="shoutout-name">${shoutout.name}:</span> ${shoutout.message}</span>`;
+      shoutoutTrack.classList.remove('scrolling');
+      
+      // Trigger reflow to restart animation
+      void shoutoutTrack.offsetWidth;
+      shoutoutTrack.classList.add('scrolling');
+      
+      // After animation ends, check for more shoutouts
+      setTimeout(() => {
+        isShoutoutPlaying = false;
+        if (shoutoutQueue.length > 0) {
+          playNextShoutout();
+        } else {
+          // Reset to placeholder
+          shoutoutTrack.classList.remove('scrolling');
+          shoutoutTrack.innerHTML = '<span class="shoutout-placeholder">🎉 Send a shoutout to appear here!</span>';
+        }
+      }, 30000); // Match animation duration
+    }
+  }
+  
+  // Listen for incoming shoutouts from Pusher
+  window.handleIncomingShoutout = function(data) {
+    shoutoutQueue.push({ name: data.name, message: data.message });
+    playNextShoutout();
+  };
+  
+  // Store user info globally for shoutout access
+  window.currentUserInfo = { loggedIn: false, name: 'Anonymous', displayName: 'Anonymous', id: null };
 </script>
 
 <script type="module">
   import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { getFirestore, doc, onSnapshot, setDoc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+  import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
-    authDomain: "fresh-wax.firebaseapp.com",
-    projectId: "fresh-wax",
-    storageBucket: "fresh-wax.firebasestorage.app",
-    messagingSenderId: "307622215498",
-    appId: "1:307622215498:web:e66cee39e098fe973c7081"
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store",
+    storageBucket: "freshwax-store.firebasestorage.app",
+    messagingSenderId: "675435782973",
+    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
   };
 
   // Prevent duplicate app initialization
@@ -6119,6 +1895,42 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   let scheduleCache = null;
   let scheduleCacheTime = 0;
   const CACHE_DURATION = 900000; // 15 minute cache to reduce Firebase reads
+  
+  // Chat clear timer - clears chat 20 minutes after stream ends
+  let wasLive = false;
+  let chatClearTimer = null;
+  const CHAT_CLEAR_DELAY = 20 * 60 * 1000; // 20 minutes in milliseconds
+  
+  function clearChatMessages() {
+    const chatMessages = document.getElementById('chatMessages');
+    const fsChatMessages = document.getElementById('fsChatMessages');
+    if (chatMessages) {
+      chatMessages.innerHTML = '<div class="chat-system-message">Chat cleared</div>';
+    }
+    if (fsChatMessages) {
+      fsChatMessages.innerHTML = '<div class="chat-system-message">Chat cleared</div>';
+    }
+    console.log('[Chat] Cleared chat messages 20 minutes after stream ended');
+  }
+  
+  function scheduleChatClear() {
+    // Cancel any existing timer
+    if (chatClearTimer) {
+      clearTimeout(chatClearTimer);
+      chatClearTimer = null;
+    }
+    // Schedule chat clear in 20 minutes
+    chatClearTimer = setTimeout(clearChatMessages, CHAT_CLEAR_DELAY);
+    console.log('[Chat] Chat will be cleared in 20 minutes');
+  }
+  
+  function cancelChatClear() {
+    if (chatClearTimer) {
+      clearTimeout(chatClearTimer);
+      chatClearTimer = null;
+      console.log('[Chat] Chat clear cancelled - new stream started');
+    }
+  }
   
   function getWeekStart(date) {
     const d = new Date(date);
@@ -6155,18 +1967,28 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       
       if (result.success) {
         isLoggedIn = true;
+        // Use Firebase Auth displayName first (same as Header.astro)
+        const displayName = currentUser?.displayName || result.partnerDisplayName || result.name || 'User';
         userInfo = {
           id: userId,
-          name: result.name || result.partnerDisplayName || 'User',
-          avatar: result.avatarUrl || null,
+          name: displayName,
+          avatar: result.avatarUrl || currentUser?.photoURL || null,
           isDj: result.roles?.dj === true || result.roles?.artist === true,
           isAdmin: result.isAdmin || false,
           isApproved: result.isApproved || false
         };
         
+        // Update global user info for shoutouts
+        window.currentUserInfo = {
+          loggedIn: true,
+          name: displayName,
+          displayName: displayName,
+          id: userId
+        };
+        
         const djNameField = document.getElementById('bookingDjName');
-        if (djNameField && result.partnerDisplayName) {
-          djNameField.value = result.partnerDisplayName;
+        if (djNameField) {
+          djNameField.value = displayName;
         }
         
         // Show chat form
@@ -6175,10 +1997,8 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         
         // Show DJ-only elements for approved DJs and admins
         if ((userInfo.isDj && userInfo.isApproved) || userInfo.isAdmin) {
-          document.getElementById('djButtons')?.classList.remove('hidden');
           document.getElementById('djLobbyBtn')?.classList.remove('hidden');
           document.getElementById('takeoverSection')?.classList.remove('hidden');
-          document.querySelector('.schedule-header p').textContent = 'Book your slot and go live';
           
           // Subscribe to incoming takeover requests
           subscribeToIncomingTakeover();
@@ -6190,37 +2010,76 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     }
   }
   
-  // Subscribe to incoming takeover requests (for streaming DJs)
-  function subscribeToIncomingTakeover() {
+  // Subscribe to incoming takeover requests (for streaming DJs) - Using Pusher
+  async function subscribeToIncomingTakeover() {
     if (!currentUser || !userInfo?.isDj) return;
     
-    const takeoverDocRef = doc(firestoreDb, 'djTakeoverRequests', currentUser.uid);
-    
-    onSnapshot(takeoverDocRef, (snapshot) => {
-      const notification = document.getElementById('incomingTakeoverNotification');
-      
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        
-        if (data.status === 'pending' && data.targetDjId === currentUser.uid) {
-          // Show incoming takeover request
-          document.getElementById('incomingTakeoverName').textContent = data.requesterName || 'A DJ';
-          document.getElementById('incomingTakeoverAvatar').src = data.requesterAvatar || '/logo.webp';
-          notification.classList.remove('hidden');
-          notification.dataset.requesterId = data.requesterId;
-        } else {
-          notification.classList.add('hidden');
+    // Wait for Pusher to be available (loaded by live-stream.js)
+    const waitForPusher = () => new Promise((resolve) => {
+      if (window.Pusher) return resolve();
+      const check = setInterval(() => {
+        if (window.Pusher) {
+          clearInterval(check);
+          resolve();
         }
-      } else {
-        notification.classList.add('hidden');
-      }
-    }, (error) => {
-      // Handle permission errors gracefully
-      console.warn('[Takeover] Firestore listener error:', error.code);
-      if (error.code === 'permission-denied') {
-        console.info('[Takeover] Update Firestore rules to allow reading djTakeoverRequests collection');
-      }
+      }, 100);
+      // Timeout after 5 seconds
+      setTimeout(() => { clearInterval(check); resolve(); }, 5000);
     });
+    
+    await waitForPusher();
+    
+    if (!window.Pusher) {
+      console.warn('[Takeover] Pusher not available, falling back to polling');
+      // Fallback: poll API every 10 seconds
+      setInterval(async () => {
+        try {
+          const response = await fetch(`/api/dj-lobby/takeover?userId=${currentUser.uid}`);
+          const result = await response.json();
+          if (result.success && result.incoming?.status === 'pending') {
+            showTakeoverNotification(result.incoming);
+          } else {
+            hideTakeoverNotification();
+          }
+        } catch (e) { console.warn('[Takeover] Poll error:', e); }
+      }, 10000);
+      return;
+    }
+    
+    // Subscribe to private channel for takeover notifications
+    const PUSHER_KEY = window.PUSHER_CONFIG?.key || '';
+    const PUSHER_CLUSTER = window.PUSHER_CONFIG?.cluster || 'eu';
+    
+    const pusher = new window.Pusher(PUSHER_KEY, {
+      cluster: PUSHER_CLUSTER,
+      authEndpoint: '/api/dj-lobby/pusher-auth',
+      auth: { params: { user_id: currentUser.uid } }
+    });
+    
+    const privateChannel = pusher.subscribe(`private-dj-${currentUser.uid}`);
+    
+    privateChannel.bind('takeover-request', (data) => {
+      console.log('[Takeover] Received request via Pusher:', data);
+      showTakeoverNotification(data);
+    });
+    
+    privateChannel.bind('takeover-cancelled', () => {
+      hideTakeoverNotification();
+    });
+    
+    console.log('[Takeover] Subscribed to Pusher channel');
+  }
+  
+  function showTakeoverNotification(data) {
+    const notification = document.getElementById('incomingTakeoverNotification');
+    document.getElementById('incomingTakeoverName').textContent = data.requesterName || 'A DJ';
+    document.getElementById('incomingTakeoverAvatar').src = data.requesterAvatar || '/place-holder.webp';
+    notification.classList.remove('hidden');
+    notification.dataset.requesterId = data.requesterId;
+  }
+  
+  function hideTakeoverNotification() {
+    document.getElementById('incomingTakeoverNotification').classList.add('hidden');
   }
   
   // Setup takeover action buttons
@@ -6358,7 +2217,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       if (listeners.length > 0) {
         listenersList.innerHTML = listeners.map(listener => `
           <div class="listener-item">
-            <img class="listener-avatar" src="${listener.avatar || '/logo.webp'}" alt="" onerror="this.src='/logo.webp'" />
+            <img class="listener-avatar" src="${listener.avatar || '/place-holder.webp'}" alt="" onerror="this.src='/place-holder.webp'" />
             <span class="listener-name">${listener.name}</span>
           </div>
         `).join('');
@@ -6455,6 +2314,9 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     const panel = document.getElementById('lobbyPanel');
     if (!panel) return;
     
+    // Reset lobby state when entering
+    resetLobbyState();
+    
     panel.classList.remove('hidden');
     document.getElementById('lobbySlotTime').textContent = `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`;
     document.getElementById('lobbyStreamKey').textContent = slot.streamKey || 'Loading...';
@@ -6494,7 +2356,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         // Show takeover section
         takeoverSection.classList.remove('hidden');
         document.getElementById('takeoverDjName').textContent = liveSlot.djName;
-        document.getElementById('takeoverDjAvatar').src = liveSlot.djAvatar || '/logo.webp';
+        document.getElementById('takeoverDjAvatar').src = liveSlot.djAvatar || '/place-holder.webp';
         
         // Store live slot ID for takeover request
         takeoverSection.dataset.slotId = liveSlot.id;
@@ -6699,32 +2561,213 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     }
   });
   
+  // DJ Ready state
+  let isDjReady = false;
+  let slotExpired = false;
+  const GRACE_PERIOD_SECONDS = 180; // 3 minutes
+  
   function updateLobbyCountdown(slot) {
     const countdown = document.getElementById('lobbyCountdownBig');
+    const countdownLabel = document.getElementById('lobbyCountdownLabel');
     const goLiveBtn = document.getElementById('goLiveBtn');
+    const readyBtn = document.getElementById('readyBtn');
+    const gracePeriod = document.getElementById('lobbyGracePeriod');
+    const graceCountdown = document.getElementById('graceCountdown');
+    const slotAvailable = document.getElementById('slotAvailableSection');
     
     const update = () => {
       const now = new Date();
       const start = new Date(slot.startTime);
-      const secs = Math.floor((start - now) / 1000);
+      const secsUntilStart = Math.floor((start - now) / 1000);
       
-      if (secs <= 0) {
-        countdown.textContent = 'NOW!';
-        goLiveBtn.disabled = false;
+      // Before start time
+      if (secsUntilStart > 0) {
+        gracePeriod?.classList.add('hidden');
+        slotAvailable?.classList.add('hidden');
+        
+        const mins = Math.floor(secsUntilStart / 60);
+        const s = secsUntilStart % 60;
+        countdown.textContent = `${mins}:${s.toString().padStart(2, '0')}`;
+        if (countdownLabel) countdownLabel.textContent = 'Time until live:';
+        
+        // Enable go live 2 mins before if ready
+        if (isDjReady && secsUntilStart <= 120) {
+          goLiveBtn.disabled = false;
+        } else {
+          goLiveBtn.disabled = true;
+        }
+        
+        setTimeout(update, 1000);
         return;
       }
       
-      const mins = Math.floor(secs / 60);
-      const s = secs % 60;
-      countdown.textContent = `${mins}:${s.toString().padStart(2, '0')}`;
+      // After start time - check grace period
+      const secsLate = Math.abs(secsUntilStart);
+      const graceRemaining = GRACE_PERIOD_SECONDS - secsLate;
       
-      // Enable go live 2 mins before
-      goLiveBtn.disabled = secs > 120;
+      if (graceRemaining > 0 && !isDjReady && !slotExpired) {
+        // In grace period - DJ is late but can still claim
+        countdown.textContent = 'LATE';
+        if (countdownLabel) countdownLabel.textContent = 'Your slot started!';
+        gracePeriod?.classList.remove('hidden');
+        slotAvailable?.classList.add('hidden');
+        
+        const gMins = Math.floor(graceRemaining / 60);
+        const gSecs = graceRemaining % 60;
+        if (graceCountdown) {
+          graceCountdown.textContent = `${gMins}:${gSecs.toString().padStart(2, '0')}`;
+        }
+        
+        // DJ can still press ready and go live
+        goLiveBtn.disabled = !isDjReady;
+        
+        setTimeout(update, 1000);
+        return;
+      }
       
-      setTimeout(update, 1000);
+      if (isDjReady) {
+        // DJ is ready - can go live
+        countdown.textContent = 'NOW!';
+        if (countdownLabel) countdownLabel.textContent = 'You\'re ready!';
+        gracePeriod?.classList.add('hidden');
+        slotAvailable?.classList.add('hidden');
+        goLiveBtn.disabled = false;
+        readyBtn?.classList.add('hidden');
+        return;
+      }
+      
+      // Grace period expired - slot is up for grabs
+      if (!slotExpired) {
+        slotExpired = true;
+        handleSlotExpired(slot);
+      }
+      
+      countdown.textContent = 'EXPIRED';
+      if (countdownLabel) countdownLabel.textContent = 'Slot forfeited';
+      gracePeriod?.classList.add('hidden');
+      goLiveBtn.disabled = true;
+      readyBtn?.classList.add('hidden');
+      
+      // Show slot available for others (but not for the late DJ)
+      // The late DJ sees their slot is forfeited
     };
     
     update();
+  }
+  
+  function handleSlotExpired(slot) {
+    console.log('[Lobby] Slot expired for DJ:', slot.djName);
+    
+    // Notify server that slot is available for takeover
+    notifySlotAvailable(slot.id);
+  }
+  
+  async function notifySlotAvailable(slotId) {
+    try {
+      const token = await currentUser?.getIdToken();
+      await fetch('/api/livestream/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'slot_expired',
+          slotId,
+          token
+        })
+      });
+    } catch (err) {
+      console.error('Failed to notify slot expiry:', err);
+    }
+  }
+  
+  function setDjReady() {
+    isDjReady = true;
+    
+    const readyBtn = document.getElementById('readyBtn');
+    const readyIndicator = document.getElementById('readyIndicator');
+    const readyStatusText = document.getElementById('readyStatusText');
+    const goLiveBtn = document.getElementById('goLiveBtn');
+    const gracePeriod = document.getElementById('lobbyGracePeriod');
+    
+    if (readyBtn) {
+      readyBtn.classList.add('is-ready');
+      readyBtn.textContent = 'Ready!';
+      readyBtn.disabled = true;
+    }
+    
+    if (readyIndicator) {
+      readyIndicator.classList.add('is-ready');
+    }
+    
+    if (readyStatusText) {
+      readyStatusText.textContent = 'Ready to go live';
+    }
+    
+    // Hide grace period warning if it was showing
+    gracePeriod?.classList.add('hidden');
+    
+    // Enable go live if start time has passed or is within 2 mins
+    if (myUpcomingSlot) {
+      const now = new Date();
+      const start = new Date(myUpcomingSlot.startTime);
+      const secsUntil = Math.floor((start - now) / 1000);
+      
+      if (secsUntil <= 120) {
+        goLiveBtn.disabled = false;
+      }
+    }
+    
+    // Notify server that DJ is ready
+    notifyDjReady();
+  }
+  
+  async function notifyDjReady() {
+    if (!myUpcomingSlot || !currentUser) return;
+    
+    try {
+      const token = await currentUser.getIdToken();
+      await fetch('/api/livestream/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'dj_ready',
+          slotId: myUpcomingSlot.id,
+          token
+        })
+      });
+      console.log('[Lobby] DJ marked as ready');
+    } catch (err) {
+      console.error('Failed to notify ready status:', err);
+    }
+  }
+  
+  // Ready button click handler
+  document.getElementById('readyBtn')?.addEventListener('click', setDjReady);
+  
+  // Reset ready state when entering lobby
+  function resetLobbyState() {
+    isDjReady = false;
+    slotExpired = false;
+    
+    const readyBtn = document.getElementById('readyBtn');
+    const readyIndicator = document.getElementById('readyIndicator');
+    const readyStatusText = document.getElementById('readyStatusText');
+    
+    if (readyBtn) {
+      readyBtn.classList.remove('is-ready', 'hidden');
+      readyBtn.textContent = '✓ Ready';
+      readyBtn.disabled = false;
+    }
+    
+    if (readyIndicator) {
+      readyIndicator.classList.remove('is-ready');
+    }
+    
+    if (readyStatusText) {
+      readyStatusText.textContent = 'Not Ready';
+    }
+    
+    document.getElementById('lobbyGracePeriod')?.classList.add('hidden');
+    document.getElementById('slotAvailableSection')?.classList.add('hidden');
   }
   
   function renderCalendar() {
@@ -6756,7 +2799,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       daySlots.slice(0, 3).forEach(slot => {
         const isMySlot = currentUser && slot.djId === currentUser.uid;
         const isLive = slot.status === 'live';
-        html += `<div class="cal-slot${isMySlot ? ' my-slot' : ''}${isLive ? ' live' : ''}">${formatTime(slot.startTime)} ${slot.djName}</div>`;
+        html += `<div class="cal-slot${isMySlot ? ' my-slot' : ''}${isLive ? ' live' : ''}"><span class="cal-time">${formatTime(slot.startTime)}</span> <span class="cal-dj">${slot.djName}</span></div>`;
       });
       
       if (daySlots.length > 3) {
@@ -6781,14 +2824,24 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     const list = document.getElementById('scheduleList');
     if (!list) return;
     
-    const today = new Date().toISOString().split('T')[0];
-    const todaySlots = allSlots.filter(s => s.startTime.startsWith(today));
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    
+    // Filter to today's slots that are current or future (not completed past shows)
+    const todaySlots = allSlots.filter(s => {
+      if (!s.startTime.startsWith(today)) return false;
+      if (s.status === 'cancelled') return false;
+      
+      // Show if live, or if end time is in the future
+      const endTime = new Date(s.endTime);
+      return s.status === 'live' || endTime > now;
+    });
     
     // Sort by start time
     todaySlots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
     
     if (todaySlots.length === 0) {
-      list.innerHTML = '<p class="empty-message">No shows today</p>';
+      list.innerHTML = '<p class="empty-message">No upcoming shows today</p>';
       return;
     }
     
@@ -6805,21 +2858,16 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       else if (slot.status === 'live') statusText = 'LIVE';
       
       return `<div class="schedule-item${isMySlot ? ' my-slot' : ''}${isLive ? ' live' : ''}">
-        <div class="schedule-time">
-          <div class="schedule-time-range">${formatTime(slot.startTime)}</div>
-          <div class="schedule-time-duration">${duration}m</div>
-        </div>
-        <div class="schedule-dj">
-          <img src="${slot.djAvatar || '/logo.webp'}" alt="" class="schedule-dj-avatar" />
-          <div class="schedule-dj-info">
-            <h4>${slot.djName}</h4>
-            ${slot.crew ? `<span class="schedule-crew">${slot.crew}</span>` : ''}
+        <div class="schedule-dj-info">
+          <h4>${slot.djName}</h4>
+          <div class="schedule-meta">
+            <span class="schedule-time-val">${formatTime(slot.startTime)}</span>
+            <span class="schedule-separator">•</span>
+            <span class="schedule-duration">${duration}m</span>
           </div>
+          ${statusText ? `<span class="schedule-status ${slot.status}">${statusText}</span>` : ''}
         </div>
-        <div class="schedule-actions">
-          <span class="schedule-status ${slot.status}">${statusText}</span>
-          ${isMySlot && (slot.status === 'scheduled' || slot.status === 'queued') ? `<button class="cancel-slot-btn" onclick="cancelSlot('${slot.id}')">X</button>` : ''}
-        </div>
+        ${isMySlot && (slot.status === 'scheduled' || slot.status === 'queued') ? `<button class="cancel-slot-btn" onclick="cancelSlot('${slot.id}')">×</button>` : ''}
       </div>`;
     }).join('');
   }
@@ -6844,11 +2892,22 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     const countdownOverlay = document.getElementById('countdownOverlay');
     const playBtn = document.getElementById('playBtn');
     
+    // Track live status changes for chat clear timer
+    const isLiveNow = !!currentLive;
+    if (wasLive && !isLiveNow) {
+      // Stream just ended - schedule chat clear in 20 minutes
+      scheduleChatClear();
+    } else if (!wasLive && isLiveNow) {
+      // Stream just started - cancel any pending chat clear
+      cancelChatClear();
+    }
+    wasLive = isLiveNow;
+    
     if (currentLive) {
       liveStatusCard?.classList.add('is-live');
       liveIndicator?.classList.add('is-live');
       if (liveIndicatorText) liveIndicatorText.textContent = 'NOW LIVE';
-      if (liveDjAvatarCard) liveDjAvatarCard.src = currentLive.djAvatar || '/logo.webp';
+      if (liveDjAvatarCard) liveDjAvatarCard.src = currentLive.djAvatar || '/place-holder.webp';
       if (liveDjNameCard) liveDjNameCard.textContent = currentLive.djName;
       if (liveDjEndsCard) liveDjEndsCard.textContent = `Ends ${formatTime(currentLive.endTime)}`;
       
@@ -6856,8 +2915,16 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       liveBadge?.classList.add('is-live');
       if (liveStatusText) liveStatusText.textContent = 'LIVE';
       if (streamTitle) streamTitle.textContent = currentLive.title || `${currentLive.djName} Live`;
-      if (djAvatar) djAvatar.src = currentLive.djAvatar || '/logo.webp';
+      if (djAvatar) djAvatar.src = currentLive.djAvatar || '/place-holder.webp';
       if (djName) djName.textContent = currentLive.djName;
+      
+      // Update controls DJ info bar
+      const controlsDjName = document.getElementById('controlsDjName');
+      const controlsSetTitle = document.getElementById('controlsSetTitle');
+      const djInfoBar = document.querySelector('.dj-info-bar');
+      if (controlsDjName) controlsDjName.textContent = currentLive.djName || 'DJ';
+      if (controlsSetTitle) controlsSetTitle.textContent = currentLive.title || 'Live Set';
+      if (djInfoBar) djInfoBar.classList.add('is-live');
       
       offlineOverlay?.classList.add('hidden');
       countdownOverlay?.classList.add('hidden');
@@ -6877,7 +2944,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       liveStatusCard?.classList.remove('is-live');
       liveIndicator?.classList.remove('is-live');
       if (liveIndicatorText) liveIndicatorText.textContent = 'OFFLINE';
-      if (liveDjAvatarCard) liveDjAvatarCard.src = '/logo.webp';
+      if (liveDjAvatarCard) liveDjAvatarCard.src = '/place-holder.webp';
       if (liveDjNameCard) liveDjNameCard.textContent = 'No one streaming';
       if (liveDjEndsCard) liveDjEndsCard.textContent = 'Check back soon';
       
@@ -6885,8 +2952,16 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       liveBadge?.classList.remove('is-live');
       if (liveStatusText) liveStatusText.textContent = 'OFFLINE';
       if (streamTitle) streamTitle.textContent = 'No Live Streams';
-      if (djAvatar) djAvatar.src = '/logo.webp';
+      if (djAvatar) djAvatar.src = '/place-holder.webp';
       if (djName) djName.textContent = 'Offline';
+      
+      // Update controls DJ info bar to offline state
+      const controlsDjName = document.getElementById('controlsDjName');
+      const controlsSetTitle = document.getElementById('controlsSetTitle');
+      const djInfoBar = document.querySelector('.dj-info-bar');
+      if (controlsDjName) controlsDjName.textContent = '--';
+      if (controlsSetTitle) controlsSetTitle.textContent = 'Waiting for stream...';
+      if (djInfoBar) djInfoBar.classList.remove('is-live');
       
       if (playBtn) playBtn.disabled = true;
       
@@ -6941,7 +3016,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     offlineOverlay?.classList.add('hidden');
     countdownOverlay?.classList.remove('hidden');
     
-    if (countdownDjAvatar) countdownDjAvatar.src = nextDj.djAvatar || '/logo.webp';
+    if (countdownDjAvatar) countdownDjAvatar.src = nextDj.djAvatar || '/place-holder.webp';
     if (countdownDjName) countdownDjName.textContent = nextDj.djName;
     
     if (countdownInterval) clearInterval(countdownInterval);
@@ -7215,6 +3290,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         body: JSON.stringify({
           action: 'cancel',
           slotId,
+          djId: currentUser.uid,
           token
         })
       });
@@ -7260,6 +3336,98 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   document.getElementById('leaveLobbyBtn')?.addEventListener('click', () => {
     document.getElementById('lobbyPanel')?.classList.add('hidden');
   });
+  
+  // Claim available slot handler
+  document.getElementById('claimSlotBtn')?.addEventListener('click', async () => {
+    const claimBtn = document.getElementById('claimSlotBtn');
+    if (!claimBtn) return;
+    
+    claimBtn.disabled = true;
+    claimBtn.textContent = '⏳ Claiming...';
+    
+    try {
+      const token = await currentUser.getIdToken();
+      const response = await fetch('/api/livestream/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'claim_slot',
+          token
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Successfully claimed - update UI
+        document.getElementById('slotAvailableSection')?.classList.add('hidden');
+        document.getElementById('lobbyStreamKey').textContent = result.streamKey || 'Ready!';
+        
+        // Reset and show ready state
+        isDjReady = true;
+        setDjReady();
+        
+        alert('Slot claimed! You can now go live.');
+        
+        // Refresh schedule
+        scheduleCache = null;
+        await loadSchedule(true);
+      } else {
+        alert(result.error || 'Failed to claim slot - someone else may have claimed it first.');
+        claimBtn.disabled = false;
+        claimBtn.textContent = '🎧 Claim This Slot';
+      }
+    } catch (err) {
+      console.error('Failed to claim slot:', err);
+      alert('Network error. Please try again.');
+      claimBtn.disabled = false;
+      claimBtn.textContent = '🎧 Claim This Slot';
+    }
+  });
+  
+  // Poll for available slots (for DJs not currently in the late slot)
+  let availableSlotPollInterval = null;
+  
+  function startAvailableSlotPolling() {
+    if (availableSlotPollInterval) return;
+    
+    availableSlotPollInterval = setInterval(async () => {
+      // Only poll if user is a DJ and lobby panel is visible
+      if (!userInfo?.isDj || document.getElementById('lobbyPanel')?.classList.contains('hidden')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/livestream/slots?checkAvailable=true');
+        const result = await response.json();
+        
+        if (result.availableSlot) {
+          // There's an available slot - show claim option
+          const slotAvailable = document.getElementById('slotAvailableSection');
+          const mySlotId = myUpcomingSlot?.id;
+          
+          // Don't show to the DJ who forfeited their own slot
+          if (result.availableSlot.id !== mySlotId) {
+            slotAvailable?.classList.remove('hidden');
+          }
+        }
+      } catch (err) {
+        console.error('Error polling for available slots:', err);
+      }
+    }, 5000); // Poll every 5 seconds
+  }
+  
+  function stopAvailableSlotPolling() {
+    if (availableSlotPollInterval) {
+      clearInterval(availableSlotPollInterval);
+      availableSlotPollInterval = null;
+    }
+  }
+  
+  // Start polling when page loads for DJs
+  if (userInfo?.isDj) {
+    startAvailableSlotPolling();
+  }
   
   // End Stream button handler
   document.getElementById('endStreamBtn')?.addEventListener('click', async () => {
@@ -7337,7 +3505,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   // Smart polling with visibility API to reduce Firebase reads
   let refreshInterval = null;
   const REFRESH_INTERVAL = 900000; // 15 minutes when visible
-  const QUICK_REFRESH = 60000; // 1 minute for live status during active streams
+  const QUICK_REFRESH = 90000; // 1.5 minutes for live status during active streams (was 60s)
   
   function startRefreshInterval() {
     if (refreshInterval) clearInterval(refreshInterval);
@@ -7368,6 +3536,13 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       loadSchedule(true);
       startRefreshInterval();
     }
+  });
+  
+  // Listen for schedule updates from booking modal
+  window.addEventListener('schedule-updated', () => {
+    console.log('[Schedule] Booking update detected, refreshing lineup...');
+    scheduleCache = null;
+    loadSchedule(true);
   });
   
   // ============================================

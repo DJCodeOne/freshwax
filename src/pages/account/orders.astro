@@ -33,7 +33,7 @@ export const prerender = false;
   <Footer />
 </Layout>
 
-<style>
+<style is:global>
   .orders-main {
     min-height: 100vh;
     background: #000;
@@ -395,7 +395,7 @@ export const prerender = false;
         var item = items[j];
         itemsHtml += 
           '<div class="order-item">' +
-            '<img src="' + (item.image || '/logo.webp') + '" alt="' + (item.name || item.title || 'Item') + '" class="order-item-image" onerror="this.src=\'/logo.webp\'" />' +
+            '<img src="' + (item.image || '/place-holder.webp') + '" alt="' + (item.name || item.title || 'Item') + '" class="order-item-image" onerror="this.src=\'/place-holder.webp\'" />' +
             '<div class="order-item-details">' +
               '<div class="order-item-name">' + (item.name || item.title || 'Unknown Item') + '</div>' +
               '<div class="order-item-meta">' + (item.type || 'Digital') + ' × ' + (item.quantity || 1) + '</div>' +

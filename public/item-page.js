@@ -2,6 +2,17 @@
 // FIXED: Uses lazy audio creation like ReleasePlate.astro
 // Audio elements are created on first play click, not pre-rendered
 
+// ========== AUTH HELPER ==========
+// Wait for auth to be ready and return the current user
+async function getAuthUser() {
+  // If authReady promise exists (from Header), wait for it
+  if (window.authReady) {
+    await window.authReady;
+  }
+  // Return the authenticated user
+  return window.firebaseAuth?.currentUser || window.authUser || null;
+}
+
 // ========== CART HELPER FUNCTIONS ==========
 function getCustomerId() {
   var cookies = document.cookie.split(';');
@@ -399,29 +410,53 @@ async function initRatings() {
   // Prevent duplicate initialization
   if (document.querySelector('.rating-star[data-rating-init]')) return;
 
-  try {
-    const res = await fetch(`/api/get-ratings?releaseId=${releaseId}`);
-    const data = await res.json();
+  // OPTIMIZED: Use SSR data if available instead of fetching
+  const ssrData = window.__SSR_RELEASE_DATA__;
+  if (ssrData && ssrData.releaseId === releaseId && ssrData.ratings) {
+    console.log('[Ratings] Using SSR data, skipping fetch');
+    const data = ssrData.ratings;
     
-    if (data.success) {
-      const ratingValue = document.querySelector('.rating-value');
-      if (ratingValue) {
-        ratingValue.textContent = data.average.toFixed(1);
-        const countSpan = ratingValue.nextElementSibling;
-        if (countSpan) countSpan.textContent = ` (${data.count})`;
-      }
-      
-      const stars = document.querySelectorAll('.rating-star');
-      stars.forEach(star => {
-        const starNum = parseInt(star.getAttribute('data-star') || '0');
-        const svg = star.querySelector('svg');
-        if (svg) {
-          svg.setAttribute('fill', starNum <= Math.round(data.average) ? 'currentColor' : 'none');
-        }
-      });
+    const ratingValue = document.querySelector('.rating-value');
+    if (ratingValue) {
+      ratingValue.textContent = (data.average || 0).toFixed(1);
+      const countSpan = ratingValue.nextElementSibling;
+      if (countSpan) countSpan.textContent = ` (${data.count || 0})`;
     }
-  } catch (err) {
-    console.error('[Ratings] Failed to fetch:', err);
+    
+    const stars = document.querySelectorAll('.rating-star');
+    stars.forEach(star => {
+      const starNum = parseInt(star.getAttribute('data-star') || '0');
+      const svg = star.querySelector('svg');
+      if (svg) {
+        svg.setAttribute('fill', starNum <= Math.round(data.average || 0) ? 'currentColor' : 'none');
+      }
+    });
+  } else {
+    // Fallback: fetch from API if no SSR data
+    try {
+      const res = await fetch(`/api/get-ratings?releaseId=${releaseId}`);
+      const data = await res.json();
+      
+      if (data.success) {
+        const ratingValue = document.querySelector('.rating-value');
+        if (ratingValue) {
+          ratingValue.textContent = data.average.toFixed(1);
+          const countSpan = ratingValue.nextElementSibling;
+          if (countSpan) countSpan.textContent = ` (${data.count})`;
+        }
+        
+        const stars = document.querySelectorAll('.rating-star');
+        stars.forEach(star => {
+          const starNum = parseInt(star.getAttribute('data-star') || '0');
+          const svg = star.querySelector('svg');
+          if (svg) {
+            svg.setAttribute('fill', starNum <= Math.round(data.average) ? 'currentColor' : 'none');
+          }
+        });
+      }
+    } catch (err) {
+      console.error('[Ratings] Failed to fetch:', err);
+    }
   }
 
   document.querySelectorAll('.rating-star').forEach(star => {
@@ -433,15 +468,14 @@ async function initRatings() {
       const releaseId = star.getAttribute('data-release-id');
       const rating = parseInt(star.getAttribute('data-star') || '0');
       
-      const auth = window.firebaseAuth;
+      // Wait for auth to be ready
+      const user = await getAuthUser();
       
-      if (!auth || !auth.currentUser) {
+      if (!user) {
         alert('Please log in to rate releases. You can log in as either a customer or artist.');
         window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
         return;
       }
-      
-      const user = auth.currentUser;
       
       try {
         const response = await fetch('/api/rate-release', {
@@ -507,17 +541,18 @@ async function initComments() {
   });
 
   // Function to update username field
-  function updateUsernameField() {
-    const auth = window.firebaseAuth;
+  async function updateUsernameField() {
+    // Wait for auth to be ready
+    const user = await getAuthUser();
+    
     console.log('[Comments] Checking auth state:', { 
-      authExists: !!auth, 
-      currentUser: auth?.currentUser,
-      displayName: auth?.currentUser?.displayName,
-      email: auth?.currentUser?.email
+      user: user,
+      displayName: user?.displayName,
+      email: user?.email
     });
     
-    if (auth && auth.currentUser && commentUsername) {
-      const fullName = auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'User';
+    if (user && commentUsername) {
+      const fullName = user.displayName || user.email?.split('@')[0] || 'User';
       const firstName = fullName.split(' ')[0];
       console.log('[Comments] Setting username to:', firstName);
       commentUsername.value = firstName;
@@ -539,25 +574,12 @@ async function initComments() {
 
   updateUsernameField();
 
+  // Also listen for auth state changes after initial load
   if (window.firebaseAuth) {
     window.firebaseAuth.onAuthStateChanged((user) => {
       console.log('[Comments] Auth state changed:', user);
       updateUsernameField();
     });
-  } else {
-    const checkAuth = setInterval(() => {
-      if (window.firebaseAuth) {
-        console.log('[Comments] Firebase auth now available');
-        clearInterval(checkAuth);
-        updateUsernameField();
-        window.firebaseAuth.onAuthStateChanged((user) => {
-          console.log('[Comments] Auth state changed:', user);
-          updateUsernameField();
-        });
-      }
-    }, 100);
-    
-    setTimeout(() => clearInterval(checkAuth), 5000);
   }
 
   async function loadComments() {
@@ -657,15 +679,15 @@ async function initComments() {
     submitBtn.addEventListener('click', async () => {
       console.log('[Comments] Submit button clicked');
       
-      const auth = window.firebaseAuth;
+      // Wait for auth to be ready
+      const user = await getAuthUser();
       
-      if (!auth || !auth.currentUser) {
+      if (!user) {
         alert('Please log in to comment. You can log in as either a customer or artist.');
         window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
         return;
       }
       
-      const user = auth.currentUser;
       const text = commentText?.value.trim();
       
       if (!text) {
@@ -849,82 +871,22 @@ async function loadSuggestions() {
   const currentGenre = metaDiv.getAttribute('data-genre') || '';
 
   try {
-    const response = await fetch('/api/get-releases');
+    // OPTIMIZED: Use lightweight suggestions endpoint instead of fetching all releases
+    const params = new URLSearchParams({
+      currentId: releaseId,
+      artist: currentArtist,
+      label: currentLabel,
+      genre: currentGenre,
+      limit: '8'
+    });
+    
+    const response = await fetch(`/api/get-suggestions?${params}`);
     const data = await response.json();
     
-    if (data.success && data.releases) {
-      // Filter out current release and non-live releases
-      const availableReleases = data.releases.filter(
-        (r) => r.id !== releaseId && (r.status === 'live' || r.published)
-      );
-      
-      // Score releases by relevance
-      const scoredReleases = availableReleases.map((release) => {
-        let score = 0;
-        
-        // Same artist = highest priority (+100)
-        if (currentArtist && release.artistName && 
-            release.artistName.toLowerCase() === currentArtist.toLowerCase()) {
-          score += 100;
-        }
-        
-        // Same label = high priority (+50)
-        const releaseLabel = release.labelName || release.recordLabel || release.copyrightHolder || '';
-        if (currentLabel && releaseLabel && 
-            releaseLabel.toLowerCase() === currentLabel.toLowerCase()) {
-          score += 50;
-        }
-        
-        // Same genre = medium priority (+25)
-        if (currentGenre && release.genre && 
-            release.genre.toLowerCase() === currentGenre.toLowerCase()) {
-          score += 25;
-        }
-        
-        // Recency bonus (newer releases get slight boost)
-        const releaseDate = new Date(release.releaseDate || release.publishedAt || release.createdAt || 0);
-        const daysSinceRelease = (Date.now() - releaseDate.getTime()) / (1000 * 60 * 60 * 24);
-        if (daysSinceRelease < 30) score += 10;
-        else if (daysSinceRelease < 90) score += 5;
-        
-        return { ...release, relevanceScore: score };
-      });
-      
-      // Sort by score (highest first), then by date
-      scoredReleases.sort((a, b) => {
-        if (b.relevanceScore !== a.relevanceScore) {
-          return b.relevanceScore - a.relevanceScore;
-        }
-        // If same score, sort by date (newest first)
-        const dateA = new Date(a.releaseDate || a.publishedAt || 0).getTime();
-        const dateB = new Date(b.releaseDate || b.publishedAt || 0).getTime();
-        return dateB - dateA;
-      });
-      
-      // Take top 8 suggestions
-      const suggestions = scoredReleases.slice(0, 8);
-      
-      // Group by category for display labels
-      const getMatchLabel = (release) => {
-        if (currentArtist && release.artistName && 
-            release.artistName.toLowerCase() === currentArtist.toLowerCase()) {
-          return 'More from Artist';
-        }
-        const releaseLabel = release.labelName || release.recordLabel || release.copyrightHolder || '';
-        if (currentLabel && releaseLabel && 
-            releaseLabel.toLowerCase() === currentLabel.toLowerCase()) {
-          return 'Same Label';
-        }
-        if (currentGenre && release.genre && 
-            release.genre.toLowerCase() === currentGenre.toLowerCase()) {
-          return 'Similar Style';
-        }
-        return '';
-      };
-      
-      carousel.innerHTML = suggestions.map((release) => {
-        const matchLabel = getMatchLabel(release);
-        const price = release.pricePerSale || (release.trackPrice * (release.tracks?.length || 1)) || 0;
+    if (data.success && data.suggestions && data.suggestions.length > 0) {
+      carousel.innerHTML = data.suggestions.map((release) => {
+        const price = release.pricePerSale || 0;
+        const matchLabel = release.matchType || '';
         
         return `
           <a href="/item/${release.id}" class="suggestion-card flex-shrink-0 w-36 md:w-44 block bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-700 transition-all border-2 border-gray-700 hover:border-red-600 snap-start">
@@ -946,11 +908,8 @@ async function loadSuggestions() {
           </a>
         `;
       }).join('');
-      
-      // If no suggestions, show message
-      if (suggestions.length === 0) {
-        carousel.innerHTML = '<p class="text-gray-400 text-center py-8 w-full">No recommendations available yet</p>';
-      }
+    } else {
+      carousel.innerHTML = '<p class="text-gray-400 text-center py-8 w-full">No recommendations available yet</p>';
     }
   } catch (error) {
     console.error('[Suggestions] Error loading:', error);

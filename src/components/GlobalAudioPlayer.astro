@@ -43,7 +43,7 @@
             <div class="absolute inset-0 bg-red-600 blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
             <img 
               id="mini-artwork" 
-              src="/logo.webp" 
+              src="/place-holder.webp" 
               alt="Now Playing"
               class="w-10 h-10 sm:w-12 sm:h-12 border-2 border-white shadow-lg object-cover relative z-10 group-hover:scale-105 transition-transform duration-300"
             />
@@ -678,7 +678,7 @@ if (miniPlayBtn) {
         
         var trackTitle = track.title || track.trackName || track.name || 'Unknown Track';
         var trackArtist = track.artist || track.artistName || 'Unknown Artist';
-        var trackArtwork = track.artwork || track.coverArtUrl || track.artworkUrl || '/logo.webp';
+        var trackArtwork = track.artwork || track.coverArtUrl || track.artworkUrl || '/place-holder.webp';
         var trackAudioUrl = track.previewUrl || track.audioUrl || track.mp3Url;
         var trackReleaseId = track.releaseId || '';
         
@@ -824,7 +824,7 @@ if (miniPlayBtn) {
             titleEl.textContent = mixTitle.length > 30 ? mixTitle.substring(0, 27) + '...' : mixTitle;
           }
           if (djEl) djEl.textContent = mixData.dj_name || 'Unknown DJ';
-          if (artworkEl) artworkEl.src = mixData.artwork_url || '/logo.webp';
+          if (artworkEl) artworkEl.src = mixData.artwork_url || '/place-holder.webp';
           if (artworkLink) artworkLink.href = '/dj-mix/' + mixData.id;
           if (infoLink) infoLink.href = '/dj-mix/' + mixData.id;
           

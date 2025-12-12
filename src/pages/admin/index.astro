@@ -6,6 +6,7 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import '../../styles/admin/index.css';
 
 // Initialize Firebase Admin
 if (!getApps().length) {
@@ -27,14 +28,18 @@ const [
   artistsSnapshot,
   customersSnapshot,
   merchSnapshot,
-  mixesSnapshot
+  mixesSnapshot,
+  livestreamsSnapshot,
+  bypassRequestsSnapshot
 ] = await Promise.all([
   db.collection('orders').orderBy('createdAt', 'desc').limit(50).get(),
   db.collection('releases').get(),
   db.collection('artists').get(),
   db.collection('customers').limit(1).get(), // Just need count
   db.collection('merch').get(),
-  db.collection('dj-mixes').get()
+  db.collection('dj-mixes').get(),
+  db.collection('livestreams').orderBy('startedAt', 'desc').limit(10).get(),
+  db.collection('bypassRequests').where('status', '==', 'pending').orderBy('createdAt', 'desc').limit(20).get().catch(() => ({ docs: [] }))
 ]);
 
 // Process orders
@@ -89,6 +94,37 @@ const mixes = mixesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 const publishedMixes = mixes.filter(m => m.published);
 const totalPlays = mixes.reduce((sum, m) => sum + (m.plays || 0), 0);
 
+// Livestream stats
+const livestreams = livestreamsSnapshot.docs.map(doc => {
+  const data = doc.data();
+  return {
+    id: doc.id,
+    ...data,
+    startedAt: data.startedAt?.toDate?.() || null,
+    endedAt: data.endedAt?.toDate?.() || null
+  };
+});
+const activeLivestream = livestreams.find(ls => ls.status === 'live');
+const recentLivestreams = livestreams.slice(0, 5);
+
+// Bypass requests - filter out expired ones (15 minutes)
+const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
+const bypassRequests = bypassRequestsSnapshot.docs
+  .map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt || null
+    };
+  })
+  .filter(req => {
+    // Filter out requests older than 15 minutes
+    if (!req.createdAt) return true;
+    const createdDate = new Date(req.createdAt);
+    return createdDate > fifteenMinsAgo;
+  });
+
 // Recent orders (last 5)
 const recentOrders = orders.slice(0, 5);
 
@@ -120,10 +156,10 @@ if (pendingOrders.length > 0) {
   alerts.push({ type: 'info', icon: '📦', text: `${pendingOrders.length} order${pendingOrders.length !== 1 ? 's' : ''} need processing`, link: '/admin/orders' });
 }
 if (lowStockMerch.length > 0) {
-  alerts.push({ type: 'warning', icon: '⚠️', text: `${lowStockMerch.length} product${lowStockMerch.length !== 1 ? 's' : ''} running low on stock`, link: '/admin/merch/manage' });
+  alerts.push({ type: 'warning', icon: '⚠️', text: `${lowStockMerch.length} product${lowStockMerch.length !== 1 ? 's' : ''} running low on stock`, link: '/admin/inventory' });
 }
 if (outOfStockMerch.length > 0) {
-  alerts.push({ type: 'danger', icon: '🚫', text: `${outOfStockMerch.length} product${outOfStockMerch.length !== 1 ? 's' : ''} out of stock`, link: '/admin/merch/manage' });
+  alerts.push({ type: 'danger', icon: '🚫', text: `${outOfStockMerch.length} product${outOfStockMerch.length !== 1 ? 's' : ''} out of stock`, link: '/admin/inventory' });
 }
 
 export const prerender = false;
@@ -156,7 +192,7 @@ export const prerender = false;
   )}
 
   <!-- Main Stats Grid -->
-  <div class="stats-grid mb-4">
+  <div class="stats-grid cols-6 mb-4">
     <div class="stat-card highlight">
       <div class="stat-label">Today's Revenue</div>
       <div class="stat-value">{formatCurrency(todayRevenue)}</div>
@@ -203,6 +239,13 @@ export const prerender = false;
     <a href="/admin/merch/upload" class="action-card">
       <span class="card-icon">👕</span>
       <span class="card-title">Add Merch</span>
+    </a>
+    <a href="/admin/streaming" class="action-card" style="position: relative;">
+      <span class="card-icon">🔴</span>
+      <span class="card-title">Live Stream</span>
+      {activeLivestream && (
+        <span class="card-badge live-pulse">LIVE</span>
+      )}
     </a>
     <a href="/admin/orders" class="action-card" style="position: relative;">
       <span class="card-icon">📋</span>
@@ -283,9 +326,9 @@ export const prerender = false;
             <span class="quick-text">Manage Partners</span>
             <span class="quick-count">{approvedPartners.length}</span>
           </a>
-          <a href="/admin/merch/manage" class="quick-link">
+          <a href="/admin/inventory" class="quick-link">
             <span class="quick-icon">👕</span>
-            <span class="quick-text">Manage Merch</span>
+            <span class="quick-text">Stock & Inventory</span>
             <span class="quick-count">{merch.length}</span>
           </a>
           <a href="/admin/dj-mixes/manage" class="quick-link">
@@ -293,9 +336,14 @@ export const prerender = false;
             <span class="quick-text">Manage DJ Mixes</span>
             <span class="quick-count">{mixes.length}</span>
           </a>
-          <a href="/admin/account/manage" class="quick-link">
+          <a href="/admin/streaming" class="quick-link">
+            <span class="quick-icon">🔴</span>
+            <span class="quick-text">Manage Live Stream</span>
+            <span class="quick-count">{activeLivestream ? 'LIVE' : 'Off'}</span>
+          </a>
+          <a href="/admin/users" class="quick-link">
             <span class="quick-icon">👥</span>
-            <span class="quick-text">Customer Accounts</span>
+            <span class="quick-text">User Management</span>
             <span class="quick-count">-</span>
           </a>
           <a href="/admin/merch/suppliers" class="quick-link">
@@ -303,6 +351,121 @@ export const prerender = false;
             <span class="quick-text">Merch Suppliers</span>
             <span class="quick-count">-</span>
           </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Stream Management -->
+  <div class="card mt-4 livestream-card">
+    <div class="card-header">
+      <h2>🔴 Live Stream Control</h2>
+      <a href="/admin/streaming" class="btn btn-primary btn-sm">Manage Live →</a>
+    </div>
+    <div class="card-body">
+      <div class="livestream-status-grid">
+        <!-- Current Status -->
+        <div class="livestream-status-panel">
+          <div class="status-indicator {activeLivestream ? 'live' : 'offline'}">
+            <span class="status-dot-large"></span>
+            <span class="status-text">{activeLivestream ? 'ON AIR' : 'OFFLINE'}</span>
+          </div>
+          {activeLivestream ? (
+            <div class="live-info">
+              <div class="live-detail">
+                <span class="detail-label">DJ</span>
+                <span class="detail-value">{activeLivestream.djName || 'Unknown'}</span>
+              </div>
+              <div class="live-detail">
+                <span class="detail-label">Title</span>
+                <span class="detail-value">{activeLivestream.title || 'Live Session'}</span>
+              </div>
+              <div class="live-detail">
+                <span class="detail-label">Started</span>
+                <span class="detail-value">{activeLivestream.startedAt ? formatDate(activeLivestream.startedAt) : '-'}</span>
+              </div>
+              <div class="live-detail">
+                <span class="detail-label">Viewers</span>
+                <span class="detail-value" id="viewerCount">{activeLivestream.viewerCount || 0}</span>
+              </div>
+            </div>
+          ) : (
+            <div class="offline-message">
+              <p>No active stream. DJs can go live from the DJ Lobby.</p>
+              <a href="/live" class="btn btn-ghost btn-sm">View Live Page →</a>
+            </div>
+          )}
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="livestream-actions">
+          <a href="/admin/streaming" class="livestream-action-btn">
+            <span class="action-icon">⚙️</span>
+            <span class="action-label">Stream Settings</span>
+          </a>
+          <a href="/admin/streaming/schedule" class="livestream-action-btn">
+            <span class="action-icon">📅</span>
+            <span class="action-label">Schedule</span>
+          </a>
+          <a href="/live" class="livestream-action-btn" target="_blank">
+            <span class="action-icon">📺</span>
+            <span class="action-label">Watch Live</span>
+          </a>
+          <a href="/admin/streaming/history" class="livestream-action-btn">
+            <span class="action-icon">📜</span>
+            <span class="action-label">History</span>
+          </a>
+        </div>
+      </div>
+
+      {recentLivestreams.length > 0 && (
+        <div class="recent-streams">
+          <h4>Recent Streams</h4>
+          <div class="streams-list">
+            {recentLivestreams.slice(0, 3).map(stream => (
+              <div class="stream-item">
+                <span class="stream-dj">{stream.djName || 'Unknown DJ'}</span>
+                <span class="stream-title">{stream.title || 'Live Session'}</span>
+                <span class="stream-date">{stream.startedAt ? formatDate(stream.startedAt) : '-'}</span>
+                <span class={`stream-status status-${stream.status}`}>{stream.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Bypass Requests Section -->
+      <div class="bypass-requests-section" id="bypassRequestsSection">
+        <h4>🎫 Go Live Bypass Requests</h4>
+        <div id="bypassRequestsList" class="bypass-requests-list">
+          {bypassRequests.length === 0 ? (
+            <div class="no-requests">
+              <span class="no-requests-icon">✓</span>
+              <span>No pending requests</span>
+            </div>
+          ) : (
+            bypassRequests.map(req => (
+              <div class="bypass-request-item" data-request-id={req.id} data-created-at={req.createdAt}>
+                <div class="request-info">
+                  <span class="request-user">{req.userName || req.userEmail || 'Unknown User'}</span>
+                  <span class="request-email">{req.userEmail || ''}</span>
+                  {req.reason && <span class="request-reason">"{req.reason}"</span>}
+                </div>
+                <div class="request-meta">
+                  <span class="request-time" data-time={req.createdAt}></span>
+                  <span class="request-status pending">Pending</span>
+                </div>
+                <div class="request-actions">
+                  <button class="btn-approve" data-id={req.id} data-user={req.userId}>
+                    ✓ Approve
+                  </button>
+                  <button class="btn-reject" data-id={req.id}>
+                    ✕ Reject
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
@@ -482,370 +645,152 @@ export const prerender = false;
   });
 </script>
 
-<style>
-  /* Alerts Section */
-  .alerts-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+
+<script>
+  // Bypass Request Management
+  const EXPIRY_TIME = 15 * 60 * 1000; // 15 minutes
+  
+  // Update time displays and check for expired requests
+  function updateRequestTimes() {
+    document.querySelectorAll('.bypass-request-item').forEach(item => {
+      const createdAt = item.dataset.createdAt;
+      if (!createdAt) return;
+      
+      const createdDate = new Date(createdAt);
+      const now = Date.now();
+      const elapsed = now - createdDate.getTime();
+      const remaining = EXPIRY_TIME - elapsed;
+      
+      const timeEl = item.querySelector('.request-time');
+      const statusEl = item.querySelector('.request-status');
+      
+      if (remaining <= 0) {
+        // Request expired
+        item.classList.add('expired');
+        if (statusEl) {
+          statusEl.textContent = 'Expired';
+          statusEl.className = 'request-status expired';
+        }
+        if (timeEl) timeEl.textContent = 'Expired';
+        
+        // Disable buttons
+        item.querySelectorAll('button').forEach(btn => btn.disabled = true);
+        
+        // Auto-expire on server
+        autoExpireRequest(item.dataset.requestId);
+      } else {
+        // Show countdown
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        if (timeEl) timeEl.textContent = `${mins}:${secs.toString().padStart(2, '0')} left`;
+      }
+    });
   }
   
-  .alert-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    background: var(--bg-secondary);
-    border: 2px solid var(--border-light);
-    text-decoration: none;
-    color: var(--text-primary);
-    transition: all 0.15s ease;
-  }
-  
-  .alert-item:hover {
-    border-color: var(--border-dark);
-    transform: translateX(4px);
-  }
-  
-  .alert-warning {
-    border-left: 4px solid var(--accent-amber);
-  }
-  
-  .alert-info {
-    border-left: 4px solid var(--accent-blue);
-  }
-  
-  .alert-danger {
-    border-left: 4px solid var(--accent-red);
-  }
-  
-  .alert-icon {
-    font-size: 1.25rem;
-  }
-  
-  .alert-text {
-    flex: 1;
-    font-weight: 500;
-  }
-  
-  .alert-arrow {
-    color: var(--text-muted);
-  }
-  
-  /* Quick Links */
-  .quick-links {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .quick-link {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-light);
-    text-decoration: none;
-    color: var(--text-primary);
-    transition: all 0.15s ease;
-  }
-  
-  .quick-link:hover {
-    background: var(--bg-secondary);
-    border-color: var(--border-dark);
-    transform: translateX(4px);
-  }
-  
-  .quick-icon {
-    font-size: 1.25rem;
-  }
-  
-  .quick-text {
-    flex: 1;
-    font-weight: 500;
-  }
-  
-  .quick-count {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: var(--text-muted);
-    background: var(--bg-secondary);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-  }
-  
-  /* Status Items */
-  .status-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.85rem;
-  }
-  
-  .status-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  
-  .status-ok {
-    background: var(--accent-green);
-    box-shadow: 0 0 6px rgba(22, 163, 74, 0.5);
-  }
-  
-  .status-warn {
-    background: var(--accent-amber);
-  }
-  
-  .status-error {
-    background: var(--accent-red);
-  }
-  
-  /* Action Card Badge */
-  .action-card .card-badge {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background: var(--accent-red);
-    color: white;
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 0.2rem 0.5rem;
-    border-radius: 9999px;
-    min-width: 20px;
-    text-align: center;
-  }
-  
-  @media (max-width: 768px) {
-    .quick-links {
-      gap: 0.25rem;
+  // Auto-expire request on server
+  async function autoExpireRequest(requestId) {
+    try {
+      await fetch('/api/admin/bypass-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'expire', requestId })
+      });
+    } catch (e) {
+      console.error('Failed to expire request:', e);
     }
   }
-
-  /* Feature Toggles */
-  .toggle-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .toggle-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem;
-    background: var(--bg-secondary);
-    border-radius: 8px;
-  }
-
-  .toggle-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .toggle-label {
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .toggle-desc {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-  }
-
-  .toggle-switch {
-    position: relative;
-    width: 48px;
-    height: 24px;
-  }
-
-  .toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .toggle-slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: 0.3s;
-    border-radius: 24px;
-  }
-
-  .toggle-slider:before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: 0.3s;
-    border-radius: 50%;
-  }
-
-  .toggle-switch input:checked + .toggle-slider {
-    background-color: var(--accent-green);
-  }
-
-  .toggle-switch input:checked + .toggle-slider:before {
-    transform: translateX(24px);
-  }
-
-  /* Danger Zone */
-  .danger-zone {
-    border-color: var(--accent-red);
-  }
-
-  .danger-header {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    border-bottom-color: var(--accent-red);
-  }
-
-  .danger-header h2 {
-    color: #991b1b;
-  }
-
-  .danger-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 2rem;
-    padding: 1.5rem;
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    border-radius: 8px;
-  }
-
-  .danger-info h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #991b1b;
-    margin: 0 0 0.5rem 0;
-  }
-
-  .danger-info p {
-    font-size: 0.85rem;
-    color: #7f1d1d;
-    margin: 0;
-  }
-
-  .btn-danger {
-    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    font-weight: 600;
-    border-radius: 8px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.2s;
-  }
-
-  .btn-danger:hover {
-    background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
-    transform: translateY(-1px);
-  }
-
-  .btn-danger:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  /* Modal */
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
-
-  .modal-overlay.hidden {
-    display: none;
-  }
-
-  .modal-content {
-    background: white;
-    border-radius: 12px;
-    padding: 2rem;
-    max-width: 500px;
-    width: 90%;
-  }
-
-  .danger-modal {
-    border: 2px solid #dc2626;
-  }
-
-  .danger-modal h2 {
-    color: #991b1b;
-    margin: 0 0 1rem 0;
-  }
-
-  .danger-modal ul {
-    margin: 1rem 0;
-    padding-left: 1.5rem;
-    color: #7f1d1d;
-  }
-
-  .danger-modal li {
-    margin-bottom: 0.5rem;
-  }
-
-  .danger-warning {
-    font-weight: 600;
-    color: #dc2626;
-    margin-top: 1.5rem;
-  }
-
-  .reset-confirm-input {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 2px solid #dc2626;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    text-align: center;
-    margin: 0.5rem 0 1rem;
-  }
-
-  .reset-confirm-input:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
-  }
-
-  .modal-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-  }
-
-  .btn-secondary {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-dark);
-    padding: 0.75rem 1.5rem;
-    font-weight: 600;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-secondary:hover {
-    background: var(--bg-primary);
-  }
-</style>
+  
+  // Handle approve button click
+  document.querySelectorAll('.btn-approve').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const requestId = btn.dataset.id;
+      const userId = btn.dataset.user;
+      const item = btn.closest('.bypass-request-item');
+      
+      btn.disabled = true;
+      btn.textContent = 'Approving...';
+      
+      try {
+        const response = await fetch('/api/admin/bypass-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'approve', requestId })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          item.classList.remove('expired');
+          item.classList.add('approved');
+          const statusEl = item.querySelector('.request-status');
+          if (statusEl) {
+            statusEl.textContent = 'Approved';
+            statusEl.className = 'request-status approved';
+          }
+          item.querySelectorAll('button').forEach(b => b.style.display = 'none');
+          
+          // Show success message
+          const timeEl = item.querySelector('.request-time');
+          if (timeEl) timeEl.textContent = '✓ User can now go live';
+        } else {
+          btn.disabled = false;
+          btn.textContent = '✓ Approve';
+          alert('Failed to approve: ' + result.error);
+        }
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = '✓ Approve';
+        alert('Error approving request');
+      }
+    });
+  });
+  
+  // Handle reject button click
+  document.querySelectorAll('.btn-reject').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const requestId = btn.dataset.id;
+      const item = btn.closest('.bypass-request-item');
+      
+      if (!confirm('Reject this bypass request?')) return;
+      
+      btn.disabled = true;
+      btn.textContent = 'Rejecting...';
+      
+      try {
+        const response = await fetch('/api/admin/bypass-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'deny', requestId })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          item.classList.remove('expired');
+          item.classList.add('rejected');
+          const statusEl = item.querySelector('.request-status');
+          if (statusEl) {
+            statusEl.textContent = 'Rejected';
+            statusEl.className = 'request-status rejected';
+          }
+          item.querySelectorAll('button').forEach(b => b.style.display = 'none');
+          
+          const timeEl = item.querySelector('.request-time');
+          if (timeEl) timeEl.textContent = '✕ Request denied';
+        } else {
+          btn.disabled = false;
+          btn.textContent = '✕ Reject';
+          alert('Failed to reject: ' + result.error);
+        }
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = '✕ Reject';
+        alert('Error rejecting request');
+      }
+    });
+  });
+  
+  // Initial update and set interval
+  updateRequestTimes();
+  setInterval(updateRequestTimes, 1000); // Update every second
+</script>

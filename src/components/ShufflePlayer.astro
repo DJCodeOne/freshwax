@@ -52,7 +52,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
 
     <!-- Now Playing Info -->
     <div id="shuffle-now-playing" class="shuffle-now-playing hidden">
-      <img id="shuffle-artwork" src="/logo.webp" alt="Now Playing" class="shuffle-artwork" />
+      <img id="shuffle-artwork" src="/place-holder.webp" alt="Now Playing" class="shuffle-artwork" />
       <div class="shuffle-track-info">
         <p id="shuffle-track-title" class="shuffle-track-title">No track selected</p>
         <p id="shuffle-track-artist" class="shuffle-track-artist">--</p>
@@ -816,7 +816,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
         
         // Update UI
         this.els.nowPlaying.classList.remove('hidden');
-        this.els.artwork.src = track.artwork || '/logo.webp';
+        this.els.artwork.src = track.artwork || '/place-holder.webp';
         this.els.trackTitle.textContent = track.title;
         this.els.trackArtist.textContent = track.artist;
         this.els.releaseTitle.textContent = track.releaseTitle;
@@ -911,7 +911,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
         this.els.queueList.innerHTML = upcoming.map(function(track, i) {
           var actualIndex = self.currentIndex + 1 + i;
           return '<div class="queue-item" data-index="' + actualIndex + '">' +
-            '<img src="' + (track.artwork || '/logo.webp') + '" alt="" onerror="this.src=\'/logo.webp\'">' +
+            '<img src="' + (track.artwork || '/place-holder.webp') + '" alt="" onerror="this.src=\'/place-holder.webp\'">' +
             '<div class="queue-item-info">' +
             '<p class="queue-item-title">' + self.escapeHtml(track.title) + '</p>' +
             '<p class="queue-item-artist">' + self.escapeHtml(track.artist) + '</p>' +

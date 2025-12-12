@@ -1,108 +1,161 @@
 // src/pages/api/get-ratings-batch.ts
-// Fetches ratings for multiple releases in one call
-import type { APIRoute } from 'astro';
-import { getDocument } from '../../lib/firebase-rest';
+// Batch fetch ratings for multiple releases in a single API call
+// Reduces Firebase reads significantly by batching and caching
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+import type { APIRoute } from 'astro';
+import { getDocumentsBatch, CACHE_TTL } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request }) => {
-  try {
-    const url = new URL(request.url);
-    const idsParam = url.searchParams.get('ids');
+// Simple in-memory cache for API responses
+const responseCache = new Map<string, { data: any; expires: number }>();
+const RESPONSE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-    if (!idsParam) {
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'Release IDs required (comma-separated)' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+function getCachedResponse(key: string): any | null {
+  const entry = responseCache.get(key);
+  if (entry && Date.now() < entry.expires) {
+    return entry.data;
+  }
+  if (entry) {
+    responseCache.delete(key);
+  }
+  return null;
+}
 
-    const releaseIds = idsParam.split(',').map(id => id.trim()).filter(Boolean);
-    
-    if (releaseIds.length === 0) {
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'No valid release IDs provided' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    const maxBatchSize = 50;
-    const limitedIds = releaseIds.slice(0, maxBatchSize);
-    
-    log.info('[get-ratings-batch] Fetching ratings for', limitedIds.length, 'releases');
-
-    const results = await Promise.all(
-      limitedIds.map(async (releaseId) => {
-        try {
-          const release = await getDocument('releases', releaseId);
-          if (!release) {
-            return { id: releaseId, found: false };
-          }
-          
-          const ratings = release.ratings || {};
-          return {
-            id: releaseId,
-            found: true,
-            average: ratings.average || 0,
-            count: ratings.count || 0,
-            fiveStarCount: ratings.fiveStarCount || 0,
-            total: ratings.total || 0
-          };
-        } catch (err) {
-          log.error('[get-ratings-batch] Error fetching', releaseId);
-          return { id: releaseId, found: false, error: true };
-        }
-      })
-    );
-
-    const ratingsMap: Record<string, any> = {};
-    results.forEach(result => {
-      if (result.found) {
-        ratingsMap[result.id] = {
-          average: result.average,
-          count: result.count,
-          fiveStarCount: result.fiveStarCount,
-          total: result.total
-        };
+function setCachedResponse(key: string, data: any): void {
+  responseCache.set(key, {
+    data,
+    expires: Date.now() + RESPONSE_CACHE_TTL
+  });
+  
+  // Cleanup if cache grows too large
+  if (responseCache.size > 100) {
+    const now = Date.now();
+    for (const [k, v] of responseCache) {
+      if (now >= v.expires) {
+        responseCache.delete(k);
       }
-    });
+    }
+  }
+}
 
-    log.info('[get-ratings-batch] Returned ratings for', Object.keys(ratingsMap).length, 'releases');
-
+export const POST: APIRoute = async ({ request }) => {
+  try {
+    const body = await request.json();
+    const { releaseIds } = body;
+    
+    if (!releaseIds || !Array.isArray(releaseIds)) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'releaseIds array required'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Limit batch size to prevent abuse
+    const limitedIds = releaseIds.slice(0, 50);
+    
+    // Check response cache first
+    const cacheKey = `ratings:${limitedIds.sort().join(',')}`;
+    const cached = getCachedResponse(cacheKey);
+    if (cached) {
+      return new Response(JSON.stringify({
+        success: true,
+        ratings: cached,
+        source: 'cache'
+      }), {
+        status: 200,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=300'
+        }
+      });
+    }
+    
+    // Fetch releases in batch (much more efficient than individual reads)
+    const releases = await getDocumentsBatch('releases', limitedIds, CACHE_TTL.RATINGS);
+    
+    // Extract ratings from releases
+    const ratings: Record<string, { average: number; count: number; fiveStarCount: number }> = {};
+    
+    for (const releaseId of limitedIds) {
+      const release = releases.get(releaseId);
+      if (release) {
+        ratings[releaseId] = {
+          average: release.ratings?.average || 0,
+          count: release.ratings?.count || 0,
+          fiveStarCount: release.ratings?.fiveStarCount || 0
+        };
+      } else {
+        // Release not found, return default
+        ratings[releaseId] = { average: 0, count: 0, fiveStarCount: 0 };
+      }
+    }
+    
+    // Cache the response
+    setCachedResponse(cacheKey, ratings);
+    
     return new Response(JSON.stringify({
       success: true,
-      ratings: ratingsMap,
-      requested: limitedIds.length,
-      found: Object.keys(ratingsMap).length,
-      source: 'firebase-rest'
+      ratings,
+      source: 'firestore'
     }), {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60, s-maxage=60'
+        'Cache-Control': 'public, max-age=300'
       }
     });
-
+    
   } catch (error) {
-    log.error('[get-ratings-batch] Error:', error);
+    console.error('[get-ratings-batch] Error:', error);
+    
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to fetch ratings batch'
+      error: 'Failed to fetch ratings',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
   }
+};
+
+// Also support GET with query params for simpler usage
+export const GET: APIRoute = async ({ request }) => {
+  const url = new URL(request.url);
+  const idsParam = url.searchParams.get('ids');
+  
+  if (!idsParam) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'ids query parameter required (comma-separated)'
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  
+  const releaseIds = idsParam.split(',').map(id => id.trim()).filter(Boolean);
+  
+  if (releaseIds.length === 0) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'No valid release IDs provided'
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  
+  // Reuse POST logic
+  const syntheticRequest = new Request(request.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ releaseIds })
+  });
+  
+  return POST({ request: syntheticRequest } as any);
 };

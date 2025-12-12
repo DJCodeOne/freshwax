@@ -77,13 +77,39 @@ export const POST: APIRoute = async ({ request }) => {
     // Get all form fields with character limits
     const audioFile = formData.get('audioFile') as File;
     const artworkFile = formData.get('artworkFile') as File | null;
-    const djName = (formData.get('djName') as string || '').trim().slice(0, 15);
-    const mixTitle = (formData.get('mixTitle') as string || '').trim().slice(0, 20);
+    const djNameFromForm = (formData.get('djName') as string || '').trim().slice(0, 30);
+    const mixTitle = (formData.get('mixTitle') as string || '').trim().slice(0, 50);
     const mixDescription = (formData.get('mixDescription') as string || '').trim().slice(0, 150);
     const genre = (formData.get('genre') as string || 'Jungle').trim().slice(0, 30);
     const tracklistRaw = (formData.get('tracklist') as string || '').trim().slice(0, 1500);
     const durationSeconds = parseInt(formData.get('durationSeconds') as string || '0', 10) || 0;
     const userId = (formData.get('userId') as string || '').trim();
+    
+    // Fetch the user's preferred displayName from their profile
+    let displayName = djNameFromForm;
+    if (userId) {
+      try {
+        // Check customers collection first (preferred display name)
+        let userDoc = await db.collection('customers').doc(userId).get();
+        if (userDoc.exists && userDoc.data()?.displayName) {
+          displayName = userDoc.data()?.displayName;
+          log.info(`[upload-mix] Using displayName from customers: ${displayName}`);
+        } else {
+          // Fallback to users collection
+          userDoc = await db.collection('users').doc(userId).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            displayName = userData?.displayName || userData?.partnerInfo?.displayName || djNameFromForm;
+            log.info(`[upload-mix] Using displayName from users: ${displayName}`);
+          }
+        }
+      } catch (e) {
+        log.info(`[upload-mix] Could not fetch displayName, using form value: ${djNameFromForm}`);
+      }
+    }
+    
+    // Use displayName for public display, keep original for reference
+    const djName = displayName;
 
     const tracklistArray = parseTracklist(tracklistRaw);
 
@@ -143,13 +169,14 @@ export const POST: APIRoute = async ({ request }) => {
 
       artworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
     } else {
-      artworkUrl = '/logo.webp';
+      artworkUrl = '/place-holder.webp';
     }
 
     // Save to Firebase
     const mixData = {
       id: mixId,
       userId: userId,
+      displayName: displayName, // User's preferred display name for public views
       dj_name: djName,
       djName: djName,
       title: mixTitle,

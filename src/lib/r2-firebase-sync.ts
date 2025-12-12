@@ -98,11 +98,11 @@ export class R2FirebaseSync {
     log.info(`📄 Loaded metadata for: ${metadata.artistName} - ${metadata.releaseName}`);
 
     // Upload files to R2
-    await this.uploadToR2(releaseId, releaseDir);
+    const { coverFilename } = await this.uploadToR2(releaseId, releaseDir);
     log.info('✅ Files uploaded to R2');
 
     // Sync to Firebase
-    await this.syncToFirebase(releaseId, metadata);
+    await this.syncToFirebase(releaseId, metadata, coverFilename);
     log.info('✅ Synced to Firebase');
 
     // Cleanup
@@ -129,8 +129,9 @@ export class R2FirebaseSync {
   /**
    * Upload all files from release directory to R2
    */
-  private async uploadToR2(releaseId: string, releaseDir: string): Promise<void> {
+  private async uploadToR2(releaseId: string, releaseDir: string): Promise<{ coverFilename: string | null }> {
     const uploads: Promise<void>[] = [];
+    let coverFilename: string | null = null;
 
     // Upload artwork
     const artworkDir = path.join(releaseDir, 'artwork');
@@ -139,9 +140,17 @@ export class R2FirebaseSync {
       for (const file of artworkFiles) {
         const filePath = path.join(artworkDir, file);
         const key = `releases/${releaseId}/artwork/${file}`;
-        uploads.push(this.uploadFileToR2(filePath, key, 'image/webp'));
+        const contentType = file.endsWith('.webp') ? 'image/webp' : 
+                           file.endsWith('.png') ? 'image/png' : 
+                           file.endsWith('.jpg') || file.endsWith('.jpeg') ? 'image/jpeg' : 'image/webp';
+        uploads.push(this.uploadFileToR2(filePath, key, contentType));
+        
+        // Track the cover file (first file or one named 'cover')
+        if (!coverFilename || file.toLowerCase().startsWith('cover')) {
+          coverFilename = file;
+        }
       }
-      log.info(`📸 Queued ${artworkFiles.length} artwork files`);
+      log.info(`📸 Queued ${artworkFiles.length} artwork files, cover: ${coverFilename}`);
     }
 
     // Upload previews
@@ -172,6 +181,8 @@ export class R2FirebaseSync {
     // Wait for all uploads
     await Promise.all(uploads);
     log.info(`✅ All files uploaded to R2`);
+    
+    return { coverFilename };
   }
 
   /**
@@ -194,12 +205,15 @@ export class R2FirebaseSync {
   /**
    * Sync release metadata to Firebase
    */
-  private async syncToFirebase(releaseId: string, metadata: any): Promise<void> {
+  private async syncToFirebase(releaseId: string, metadata: any, coverFilename: string | null): Promise<void> {
     // Ensure URLs use the public domain
     const publicDomain = this.config.r2.publicDomain;
     
-    // Update cover art URL
-    if (metadata.coverArtUrl) {
+    // Update cover art URL - use actual uploaded filename
+    if (coverFilename) {
+      metadata.coverArtUrl = `${publicDomain}/releases/${releaseId}/artwork/${coverFilename}`;
+    } else if (metadata.coverArtUrl) {
+      // Fallback to cover.webp if no filename detected
       metadata.coverArtUrl = `${publicDomain}/releases/${releaseId}/artwork/cover.webp`;
     }
 

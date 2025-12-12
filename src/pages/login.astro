@@ -187,11 +187,11 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
     
     const firebaseConfig = {
       apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
-      authDomain: "fresh-wax.firebaseapp.com",
-      projectId: "fresh-wax",
-      storageBucket: "fresh-wax.firebasestorage.app",
-      messagingSenderId: "307622215498",
-      appId: "1:307622215498:web:e66cee39e098fe973c7081"
+      authDomain: "freshwax-store.firebaseapp.com",
+      projectId: "freshwax-store",
+      storageBucket: "freshwax-store.firebasestorage.app",
+      messagingSenderId: "675435782973",
+      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
     };
     
     const app = initializeApp(firebaseConfig);
@@ -281,13 +281,17 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
         // Cookie expiry: 30 days if remember me, 1 day otherwise
         const cookieMaxAge = rememberMe ? 2592000 : 86400;
         
-        // Everyone goes to customer dashboard
+        // Everyone goes to customer dashboard by default
         let finalRedirect = redirectTo;
         
         try {
           // Use consolidated API endpoint (single call instead of multiple Firebase reads)
           const profileResponse = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`);
           const profile = await profileResponse.json();
+          
+          console.log('[Login] User profile response:', profile);
+          console.log('[Login] User UID:', user.uid);
+          console.log('[Login] isAdmin:', profile.isAdmin);
           
           // Cache the profile in sessionStorage for future use
           if (profile.success) {
@@ -306,7 +310,16 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
           document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
           document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
           
+          // If admin, redirect to admin dashboard (unless a specific redirect was requested)
+          if (profile.success && profile.isAdmin && redirectTo === '/account/dashboard') {
+            console.log('[Login] Redirecting to admin dashboard');
+            finalRedirect = '/admin';
+          } else {
+            console.log('[Login] Redirecting to:', finalRedirect);
+          }
+          
         } catch (err) {
+          console.error('[Login] Error fetching user profile:', err);
           document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
           document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
         }

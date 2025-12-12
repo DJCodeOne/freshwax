@@ -49,11 +49,51 @@ export function getDb(): Firestore {
 }
 
 // ============================================
+// CLIENT-SIDE CACHE - Reduces Firebase reads for browsers
+// ============================================
+interface ClientCacheEntry {
+  data: any;
+  expires: number;
+}
+
+const clientCache = new Map<string, ClientCacheEntry>();
+const CLIENT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes for client-side
+
+function getClientCached(key: string): any | null {
+  const entry = clientCache.get(key);
+  if (entry && Date.now() < entry.expires) {
+    console.log('[firebase-client] Cache HIT:', key);
+    return entry.data;
+  }
+  if (entry) {
+    clientCache.delete(key);
+  }
+  return null;
+}
+
+function setClientCache(key: string, data: any): void {
+  clientCache.set(key, {
+    data,
+    expires: Date.now() + CLIENT_CACHE_TTL
+  });
+  // Cleanup if too large
+  if (clientCache.size > 20) {
+    const oldest = clientCache.keys().next().value;
+    if (oldest) clientCache.delete(oldest);
+  }
+}
+
+// ============================================
 // READ OPERATIONS
 // ============================================
 
-// Get all live releases
+// Get all live releases (CACHED)
 export async function getReleases(limitCount: number = 100): Promise<any[]> {
+  // Check cache first
+  const cacheKey = `releases:${limitCount}`;
+  const cached = getClientCached(cacheKey);
+  if (cached) return cached;
+  
   const db = getDb();
   const q = query(
     collection(db, 'releases'),
@@ -73,6 +113,9 @@ export async function getReleases(limitCount: number = 100): Promise<any[]> {
     const dateB = new Date(b.releaseDate || 0).getTime();
     return dateB - dateA;
   });
+  
+  // Cache the results
+  setClientCache(cacheKey, releases);
   
   return releases;
 }
@@ -133,8 +176,13 @@ export async function getComments(releaseId: string): Promise<any[]> {
   });
 }
 
-// Get DJ mixes
+// Get DJ mixes (CACHED)
 export async function getDJMixes(limitCount: number = 50): Promise<any[]> {
+  // Check cache first
+  const cacheKey = `dj-mixes:${limitCount}`;
+  const cached = getClientCached(cacheKey);
+  if (cached) return cached;
+  
   const db = getDb();
   
   // Try 'published' field first
@@ -152,10 +200,15 @@ export async function getDJMixes(limitCount: number = 50): Promise<any[]> {
     snapshot = await getDocs(q);
   }
   
-  return snapshot.docs.map(doc => ({
+  const mixes = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data()
   }));
+  
+  // Cache the results
+  setClientCache(cacheKey, mixes);
+  
+  return mixes;
 }
 
 // Get single DJ mix
@@ -191,7 +244,7 @@ export async function getShuffleTracks(limitCount: number = 30): Promise<any[]> 
           releaseId: release.id,
           title: track.trackName || track.title || track.name || `Track ${i + 1}`,
           artist: release.artistName || release.artist || 'Unknown Artist',
-          artwork: release.coverArtUrl || release.artworkUrl || '/logo.webp',
+          artwork: release.coverArtUrl || release.artworkUrl || '/place-holder.webp',
           previewUrl: audioUrl,
           duration: track.duration || null
         });
@@ -208,12 +261,13 @@ export async function getShuffleTracks(limitCount: number = 30): Promise<any[]> 
   return tracks.slice(0, limitCount);
 }
 
-// Search releases
+// Search releases (uses cached releases when available)
 export async function searchReleases(searchQuery: string, limitCount: number = 20): Promise<any[]> {
   const query_lower = searchQuery.toLowerCase().trim();
   if (query_lower.length < 2) return [];
   
-  const releases = await getReleases(200);
+  // Use 100 releases max for search (cached after first load)
+  const releases = await getReleases(100);
   
   const matched = releases.filter(release => {
     const searchFields = [

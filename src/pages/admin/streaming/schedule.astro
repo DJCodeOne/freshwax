@@ -1,0 +1,827 @@
+---
+// src/pages/admin/streaming/schedule.astro
+// Full streaming schedule view for admins
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import DailySchedule from '../../../components/DailySchedule.astro';
+
+export const prerender = false;
+---
+
+<AdminLayout title="Streaming Schedule">
+  <Fragment slot="actions">
+    <a href="/admin/streaming" class="btn btn-outline">← Back to Streaming</a>
+  </Fragment>
+
+  <div class="schedule-page">
+    <!-- Stats Row -->
+    <div class="stats-grid cols-4 mb-4">
+      <div class="stat-card">
+        <div class="stat-label">Today's Slots</div>
+        <div class="stat-value" id="todaySlots">-</div>
+        <div class="stat-detail" id="todayHours">0 hours scheduled</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">This Week</div>
+        <div class="stat-value" id="weekSlots">-</div>
+        <div class="stat-detail" id="weekDJs">0 DJs booked</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-label">Active Now</div>
+        <div class="stat-value" id="liveNow">0</div>
+        <div class="stat-detail" id="inLobby">0 in lobby</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Next 24hrs</div>
+        <div class="stat-value" id="next24">-</div>
+        <div class="stat-detail">upcoming</div>
+      </div>
+    </div>
+
+    <!-- Daily Schedule Calendar (Admin Mode) -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2>📅 Daily Schedule</h2>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        <DailySchedule mode="admin" id="adminSchedule" />
+      </div>
+    </div>
+
+    <!-- Weekly Calendar Navigation -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2>📆 Weekly Overview</h2>
+        <div class="calendar-nav">
+          <button id="prevWeek" class="btn btn-outline btn-sm">← Previous</button>
+          <span id="weekRange" class="week-range">Loading...</span>
+          <button id="nextWeek" class="btn btn-outline btn-sm">Next →</button>
+          <button id="todayBtn" class="btn btn-primary btn-sm">Today</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        <div id="calendarGrid" class="calendar-grid">
+          <!-- Calendar will be rendered here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Slot Details Modal -->
+    <div id="slotModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalTitle">Slot Details</h3>
+          <button id="closeModal" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+          <!-- Slot details will be rendered here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- All Bookings Table -->
+    <div class="card">
+      <div class="card-header">
+        <h2>📋 All Bookings</h2>
+        <div class="header-actions">
+          <select id="statusFilter" class="form-select" style="width: auto;">
+            <option value="all">All Status</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="in_lobby">In Lobby</option>
+            <option value="live">Live</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <button id="refreshBtn" class="btn btn-outline btn-sm">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>DJ</th>
+              <th>Title</th>
+              <th class="text-center">Duration</th>
+              <th class="text-center">Status</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bookingsTable">
+            <tr><td colspan="6" class="text-center">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DJ Allowance Management -->
+    <div class="card mt-4">
+      <div class="card-header">
+        <h2>⚙️ DJ Weekly Allowances</h2>
+        <button id="addAllowanceBtn" class="btn btn-primary btn-sm">+ Add Override</button>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-4">Default: DJs can book 2 slots (up to 2 hours) per week. Use overrides to adjust limits for specific DJs.</p>
+        <div id="allowancesList" class="allowances-list">
+          <p class="text-muted">Loading allowances...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Allowance Modal -->
+  <div id="allowanceModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Set DJ Allowance Override</h3>
+        <button class="modal-close" onclick="closeAllowanceModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">DJ Email or ID</label>
+          <input type="text" id="allowanceDjId" class="form-input" placeholder="Enter DJ email or user ID">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Weekly Slots Allowed</label>
+          <select id="allowanceSlots" class="form-select">
+            <option value="2">2 slots/week (default)</option>
+            <option value="1">1 slot/week</option>
+            <option value="3">3 slots/week</option>
+            <option value="5">5 slots/week</option>
+            <option value="7">7 slots/week (daily)</option>
+            <option value="14">14 slots/week (unlimited)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max Hours Per Day</label>
+          <select id="allowanceHours" class="form-select">
+            <option value="2">2 hours (default)</option>
+            <option value="4">4 hours</option>
+            <option value="6">6 hours</option>
+            <option value="8">8 hours</option>
+            <option value="12">12 hours</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reason (optional)</label>
+          <input type="text" id="allowanceReason" class="form-input" placeholder="e.g., Special event, resident DJ">
+        </div>
+        <div class="form-actions">
+          <button onclick="closeAllowanceModal()" class="btn btn-outline">Cancel</button>
+          <button onclick="saveAllowance()" class="btn btn-primary">Save Override</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<style is:global>
+  .schedule-page {
+    max-width: 100%;
+  }
+
+  .calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .week-range {
+    font-weight: 700;
+    min-width: 200px;
+    text-align: center;
+  }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: 60px repeat(7, 1fr);
+    border: 1px solid var(--border-light);
+    overflow-x: auto;
+  }
+
+  .calendar-header {
+    background: var(--bg-dark);
+    color: var(--text-light);
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    border-right: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .calendar-header:first-child {
+    background: #333;
+  }
+
+  .calendar-header.today {
+    background: var(--accent-red);
+  }
+
+  .time-label {
+    background: #f5f5f5;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #666;
+    border-bottom: 1px solid var(--border-light);
+    border-right: 1px solid var(--border-light);
+    text-align: right;
+  }
+
+  .calendar-cell {
+    min-height: 60px;
+    border-bottom: 1px solid var(--border-light);
+    border-right: 1px solid var(--border-light);
+    position: relative;
+    padding: 2px;
+  }
+
+  .calendar-cell.today {
+    background: rgba(220, 38, 38, 0.05);
+  }
+
+  .slot-block {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    background: #4f46e5;
+    color: #fff;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    overflow: hidden;
+    z-index: 1;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+
+  .slot-block:hover {
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 10;
+  }
+
+  .slot-block.live {
+    background: #dc2626;
+    animation: pulse-live 2s infinite;
+  }
+
+  .slot-block.in_lobby {
+    background: #f59e0b;
+  }
+
+  .slot-block.completed {
+    background: #6b7280;
+    opacity: 0.7;
+  }
+
+  .slot-block.cancelled {
+    background: #9ca3af;
+    opacity: 0.5;
+    text-decoration: line-through;
+  }
+
+  .slot-block .slot-time {
+    font-weight: 700;
+    font-size: 0.65rem;
+    opacity: 0.9;
+  }
+
+  .slot-block .slot-dj {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @keyframes pulse-live {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+  }
+
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal.hidden {
+    display: none;
+  }
+
+  .modal-content {
+    background: #fff;
+    border: 3px solid #000;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    background: #000;
+    color: #fff;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    text-transform: uppercase;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+
+  .slot-detail {
+    margin-bottom: 1rem;
+  }
+
+  .slot-detail-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #666;
+    font-weight: 600;
+  }
+
+  .slot-detail-value {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .allowances-list {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .allowance-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f9f9f9;
+    border: 1px solid var(--border-light);
+  }
+
+  .allowance-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+  }
+
+  .allowance-info p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #666;
+  }
+
+  .allowance-badge {
+    background: #4f46e5;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .text-muted {
+    color: #666;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+</style>
+
+<script>
+  let allSlots = [];
+  let currentWeekStart = getWeekStart(new Date());
+  let allowances = [];
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadSchedule();
+    loadAllowances();
+    setupEventListeners();
+  });
+
+  function setupEventListeners() {
+    document.getElementById('prevWeek').addEventListener('click', () => {
+      currentWeekStart = new Date(currentWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+      renderCalendar();
+    });
+
+    document.getElementById('nextWeek').addEventListener('click', () => {
+      currentWeekStart = new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+      renderCalendar();
+    });
+
+    document.getElementById('todayBtn').addEventListener('click', () => {
+      currentWeekStart = getWeekStart(new Date());
+      renderCalendar();
+    });
+
+    document.getElementById('refreshBtn').addEventListener('click', loadSchedule);
+    document.getElementById('statusFilter').addEventListener('change', renderBookingsTable);
+    document.getElementById('closeModal').addEventListener('click', closeModal);
+    document.getElementById('addAllowanceBtn').addEventListener('click', openAllowanceModal);
+  }
+
+  function getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  async function loadSchedule() {
+    try {
+      const start = new Date();
+      start.setDate(start.getDate() - 7);
+      const end = new Date();
+      end.setDate(end.getDate() + 30);
+
+      const response = await fetch(`/api/livestream/slots?start=${start.toISOString()}&end=${end.toISOString()}&includeAll=true`);
+      const data = await response.json();
+
+      if (data.success) {
+        allSlots = data.slots || [];
+        updateStats();
+        renderCalendar();
+        renderBookingsTable();
+      }
+    } catch (error) {
+      console.error('Failed to load schedule:', error);
+    }
+  }
+
+  function updateStats() {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+    const weekEnd = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const todaySlots = allSlots.filter(s => {
+      const start = new Date(s.startTime);
+      return start >= todayStart && start < todayEnd && s.status !== 'cancelled';
+    });
+
+    const weekSlots = allSlots.filter(s => {
+      const start = new Date(s.startTime);
+      return start >= todayStart && start < weekEnd && s.status !== 'cancelled';
+    });
+
+    const liveSlots = allSlots.filter(s => s.status === 'live');
+    const lobbySlots = allSlots.filter(s => s.status === 'in_lobby');
+
+    const next24Slots = allSlots.filter(s => {
+      const start = new Date(s.startTime);
+      return start > now && start < new Date(now.getTime() + 24 * 60 * 60 * 1000) && s.status === 'scheduled';
+    });
+
+    document.getElementById('todaySlots').textContent = todaySlots.length;
+    document.getElementById('todayHours').textContent = `${(todaySlots.reduce((sum, s) => sum + (s.duration || 60), 0) / 60).toFixed(1)} hours scheduled`;
+
+    document.getElementById('weekSlots').textContent = weekSlots.length;
+    const uniqueDJs = new Set(weekSlots.map(s => s.djId));
+    document.getElementById('weekDJs').textContent = `${uniqueDJs.size} DJs booked`;
+
+    document.getElementById('liveNow').textContent = liveSlots.length;
+    document.getElementById('inLobby').textContent = `${lobbySlots.length} in lobby`;
+
+    document.getElementById('next24').textContent = next24Slots.length;
+  }
+
+  function renderCalendar() {
+    const grid = document.getElementById('calendarGrid');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Update week range text
+    const weekEnd = new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+    document.getElementById('weekRange').textContent = 
+      `${currentWeekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - ${weekEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+    // Build calendar HTML
+    let html = '<div class="calendar-header">Time</div>';
+
+    // Day headers
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(currentWeekStart.getTime() + i * 24 * 60 * 60 * 1000);
+      const isToday = day.getTime() === today.getTime();
+      html += `<div class="calendar-header ${isToday ? 'today' : ''}">
+        ${day.toLocaleDateString('en-GB', { weekday: 'short' })}<br>
+        ${day.getDate()}
+      </div>`;
+    }
+
+    // Time rows (6am to midnight)
+    for (let hour = 6; hour <= 23; hour++) {
+      html += `<div class="time-label">${hour.toString().padStart(2, '0')}:00</div>`;
+
+      for (let day = 0; day < 7; day++) {
+        const cellDate = new Date(currentWeekStart.getTime() + day * 24 * 60 * 60 * 1000);
+        cellDate.setHours(hour, 0, 0, 0);
+        const isToday = cellDate.toDateString() === today.toDateString();
+
+        html += `<div class="calendar-cell ${isToday ? 'today' : ''}" data-date="${cellDate.toISOString()}" data-hour="${hour}"></div>`;
+      }
+    }
+
+    grid.innerHTML = html;
+
+    // Add slot blocks
+    const cells = grid.querySelectorAll('.calendar-cell');
+    allSlots.forEach(slot => {
+      const startTime = new Date(slot.startTime);
+      const endTime = new Date(slot.endTime);
+
+      // Check if slot is in current week
+      if (startTime < currentWeekStart || startTime >= new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000)) {
+        return;
+      }
+
+      // Find the cell
+      const dayIndex = Math.floor((startTime - currentWeekStart) / (24 * 60 * 60 * 1000));
+      const hourIndex = startTime.getHours() - 6;
+
+      if (hourIndex < 0 || hourIndex > 17 || dayIndex < 0 || dayIndex > 6) return;
+
+      const cellIndex = (hourIndex * 8) + dayIndex + 8; // +8 for header row, +1 for time column
+      const cell = cells[cellIndex - 1]; // -1 because cells doesn't include headers
+
+      if (cell) {
+        const durationHours = (endTime - startTime) / (60 * 60 * 1000);
+        const heightPx = durationHours * 60; // 60px per hour
+        const topOffset = (startTime.getMinutes() / 60) * 60;
+
+        const slotEl = document.createElement('div');
+        slotEl.className = `slot-block ${slot.status}`;
+        slotEl.style.height = `${heightPx}px`;
+        slotEl.style.top = `${topOffset}px`;
+        slotEl.innerHTML = `
+          <div class="slot-time">${startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+          <div class="slot-dj">${slot.djName}</div>
+        `;
+        slotEl.addEventListener('click', () => showSlotDetails(slot));
+        cell.appendChild(slotEl);
+      }
+    });
+  }
+
+  function renderBookingsTable() {
+    const filter = document.getElementById('statusFilter').value;
+    const tbody = document.getElementById('bookingsTable');
+
+    let filtered = allSlots;
+    if (filter !== 'all') {
+      filtered = allSlots.filter(s => s.status === filter);
+    }
+
+    // Sort by start time descending
+    filtered.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center">No bookings found</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.slice(0, 50).map(slot => {
+      const startTime = new Date(slot.startTime);
+      const endTime = new Date(slot.endTime);
+      const statusClass = {
+        'scheduled': 'badge-pending',
+        'in_lobby': 'badge-processing',
+        'live': 'badge-live',
+        'completed': 'badge-approved',
+        'cancelled': 'badge-cancelled'
+      }[slot.status] || 'badge-info';
+
+      return `
+        <tr>
+          <td>
+            <div class="cell-primary">${startTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</div>
+            <div class="cell-secondary">${startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+          </td>
+          <td>
+            <div class="cell-primary">${slot.djName}</div>
+            <div class="cell-mono">${slot.djId?.slice(0, 8) || '-'}</div>
+          </td>
+          <td>${slot.title || '-'}</td>
+          <td class="text-center">${slot.duration || 60} min</td>
+          <td class="text-center"><span class="badge ${statusClass}">${slot.status}</span></td>
+          <td class="text-center">
+            <button class="btn btn-sm btn-outline" onclick="showSlotDetails(${JSON.stringify(slot).replace(/"/g, '&quot;')})">View</button>
+            ${slot.status === 'scheduled' ? `<button class="btn btn-sm btn-danger" onclick="cancelSlot('${slot.id}')">Cancel</button>` : ''}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function showSlotDetails(slot) {
+    const modal = document.getElementById('slotModal');
+    const body = document.getElementById('modalBody');
+
+    const startTime = new Date(slot.startTime);
+    const endTime = new Date(slot.endTime);
+
+    body.innerHTML = `
+      <div class="slot-detail">
+        <div class="slot-detail-label">DJ</div>
+        <div class="slot-detail-value">${slot.djName}</div>
+      </div>
+      <div class="slot-detail">
+        <div class="slot-detail-label">Title</div>
+        <div class="slot-detail-value">${slot.title || 'Untitled'}</div>
+      </div>
+      <div class="slot-detail">
+        <div class="slot-detail-label">Date & Time</div>
+        <div class="slot-detail-value">${startTime.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}<br>
+        ${startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+      </div>
+      <div class="slot-detail">
+        <div class="slot-detail-label">Duration</div>
+        <div class="slot-detail-value">${slot.duration || 60} minutes</div>
+      </div>
+      <div class="slot-detail">
+        <div class="slot-detail-label">Status</div>
+        <div class="slot-detail-value">${slot.status}</div>
+      </div>
+      <div class="slot-detail">
+        <div class="slot-detail-label">Genre</div>
+        <div class="slot-detail-value">${slot.genre || 'Jungle / D&B'}</div>
+      </div>
+      ${slot.description ? `
+      <div class="slot-detail">
+        <div class="slot-detail-label">Description</div>
+        <div class="slot-detail-value">${slot.description}</div>
+      </div>` : ''}
+      ${slot.representing ? `
+      <div class="slot-detail">
+        <div class="slot-detail-label">Representing</div>
+        <div class="slot-detail-value">${slot.representing}</div>
+      </div>` : ''}
+      <div class="slot-detail">
+        <div class="slot-detail-label">DJ ID</div>
+        <div class="slot-detail-value" style="font-family: monospace; font-size: 0.85rem;">${slot.djId}</div>
+      </div>
+      ${slot.viewerPeak ? `
+      <div class="slot-detail">
+        <div class="slot-detail-label">Peak Viewers</div>
+        <div class="slot-detail-value">${slot.viewerPeak}</div>
+      </div>` : ''}
+    `;
+
+    modal.classList.remove('hidden');
+  }
+
+  function closeModal() {
+    document.getElementById('slotModal').classList.add('hidden');
+  }
+
+  async function cancelSlot(slotId) {
+    if (!confirm('Are you sure you want to cancel this booking?')) return;
+
+    try {
+      const response = await fetch('/api/livestream/slots', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slotId, adminCancel: true })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert('Slot cancelled');
+        loadSchedule();
+      } else {
+        alert(data.error || 'Failed to cancel');
+      }
+    } catch (error) {
+      alert('Error cancelling slot');
+    }
+  }
+
+  // Allowance management
+  async function loadAllowances() {
+    try {
+      const response = await fetch('/api/livestream/allowances');
+      const data = await response.json();
+      if (data.success) {
+        allowances = data.allowances || [];
+        renderAllowances();
+      }
+    } catch (error) {
+      console.error('Failed to load allowances:', error);
+    }
+  }
+
+  function renderAllowances() {
+    const container = document.getElementById('allowancesList');
+
+    if (allowances.length === 0) {
+      container.innerHTML = '<p class="text-muted">No overrides set. All DJs using default limits (2 slots/week, 2 hours/day max).</p>';
+      return;
+    }
+
+    container.innerHTML = allowances.map(a => `
+      <div class="allowance-card">
+        <div class="allowance-info">
+          <h4>${a.djName || a.djId}</h4>
+          <p>${a.weeklySlots} slots/week • ${a.maxHoursPerDay}h/day max${a.reason ? ` • ${a.reason}` : ''}</p>
+        </div>
+        <div>
+          <span class="allowance-badge">${a.weeklySlots}x</span>
+          <button class="btn btn-sm btn-danger" onclick="removeAllowance('${a.djId}')" style="margin-left: 0.5rem;">Remove</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openAllowanceModal() {
+    document.getElementById('allowanceModal').classList.remove('hidden');
+  }
+
+  window.closeAllowanceModal = function() {
+    document.getElementById('allowanceModal').classList.add('hidden');
+  }
+
+  window.saveAllowance = async function() {
+    const djId = document.getElementById('allowanceDjId').value.trim();
+    const weeklySlots = parseInt(document.getElementById('allowanceSlots').value);
+    const maxHoursPerDay = parseInt(document.getElementById('allowanceHours').value);
+    const reason = document.getElementById('allowanceReason').value.trim();
+
+    if (!djId) {
+      alert('Please enter DJ email or ID');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/livestream/allowances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ djId, weeklySlots, maxHoursPerDay, reason })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        closeAllowanceModal();
+        loadAllowances();
+      } else {
+        alert(data.error || 'Failed to save');
+      }
+    } catch (error) {
+      alert('Error saving allowance');
+    }
+  }
+
+  window.removeAllowance = async function(djId) {
+    if (!confirm('Remove this DJ\'s override?')) return;
+
+    try {
+      const response = await fetch('/api/livestream/allowances', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ djId })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        loadAllowances();
+      }
+    } catch (error) {
+      alert('Error removing allowance');
+    }
+  }
+
+  // Expose functions for onclick handlers
+  window.showSlotDetails = showSlotDetails;
+  window.cancelSlot = cancelSlot;
+</script>

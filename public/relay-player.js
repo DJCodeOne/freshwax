@@ -35,7 +35,7 @@ export function initRelaySystem() {
 
 // Start periodic check for Fresh Wax DJs
 function startFreshWaxCheck() {
-  // Check every 30 seconds if a Fresh Wax DJ has gone live
+  // Check every 60 seconds if a Fresh Wax DJ has gone live (was 30s)
   checkInterval = setInterval(async () => {
     if (!currentRelay) return; // Only check when playing relay
     
@@ -59,7 +59,7 @@ function startFreshWaxCheck() {
     } catch (error) {
       console.error('[Relay] Error checking Fresh Wax status:', error);
     }
-  }, 30000);
+  }, 60000);
 }
 
 // Check what's playing on external stations

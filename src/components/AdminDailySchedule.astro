@@ -1,0 +1,771 @@
+---
+// src/components/AdminDailySchedule.astro
+// Admin daily calendar view for managing DJ slots
+// Shows same data as DJ booking calendar but with edit/delete capabilities
+---
+
+<div class="admin-daily-schedule" id="adminDailySchedule">
+  <div class="schedule-header">
+    <div class="date-nav">
+      <button type="button" class="nav-btn" id="adminPrevDay">←</button>
+      <h2 id="adminDateLabel">Loading...</h2>
+      <button type="button" class="nav-btn" id="adminNextDay">→</button>
+      <button type="button" class="today-btn" id="adminTodayBtn">Today</button>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="add-slot-btn" id="adminAddSlotBtn">+ Add Slot</button>
+      <button type="button" class="refresh-btn" id="adminRefreshBtn">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="schedule-info">
+    <span class="info-item">📅 Daily view: 9am - 8am (next day)</span>
+    <span class="info-item" id="dayStats">Loading stats...</span>
+  </div>
+
+  <div class="time-grid-container">
+    <div class="time-grid" id="adminTimeGrid">
+      <!-- Slots rendered by JS -->
+    </div>
+  </div>
+
+  <!-- Edit Slot Modal -->
+  <div id="editSlotModal" class="edit-modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="editModalTitle">Edit Slot</h3>
+        <button type="button" class="modal-close" id="closeEditModal">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="slot-details" id="editSlotDetails">
+          <!-- Slot details rendered by JS -->
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-danger" id="deleteSlotBtn">Delete Slot</button>
+          <button type="button" class="btn-secondary" id="cancelEditBtn">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Slot Modal -->
+  <div id="addSlotModal" class="edit-modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Slot (Admin)</h3>
+        <button type="button" class="modal-close" id="closeAddModal">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="addSlotForm">
+          <div class="form-group">
+            <label>DJ Name *</label>
+            <input type="text" id="addDjName" required placeholder="DJ Name" />
+          </div>
+          <div class="form-group">
+            <label>DJ User ID</label>
+            <input type="text" id="addDjId" placeholder="Firebase User ID (optional)" />
+          </div>
+          <div class="form-group">
+            <label>Start Time *</label>
+            <select id="addStartHour">
+              <!-- Hours populated by JS -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Duration *</label>
+            <select id="addDuration">
+              <option value="60">1 hour</option>
+              <option value="120">2 hours</option>
+              <option value="180">3 hours</option>
+              <option value="240">4 hours</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" id="addTitle" placeholder="Stream title (optional)" />
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" id="cancelAddBtn">Cancel</button>
+            <button type="submit" class="btn-primary">Add Slot</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .admin-daily-schedule {
+    background: var(--bg-secondary, #fff);
+    border: 2px solid var(--border-light, #e5e5e5);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .schedule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--bg-dark, #000);
+    color: #fff;
+  }
+
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .date-nav h2 {
+    margin: 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.375rem;
+    letter-spacing: 0.02em;
+    min-width: 200px;
+  }
+
+  .nav-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 1.125rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .nav-btn:hover {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .today-btn {
+    background: var(--accent-red, #dc2626);
+    border: none;
+    color: #fff;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .add-slot-btn {
+    background: var(--accent-green, #16a34a);
+    border: none;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .add-slot-btn:hover {
+    background: #15803d;
+  }
+
+  .refresh-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .schedule-info {
+    display: flex;
+    gap: 2rem;
+    padding: 0.625rem 1.5rem;
+    background: var(--bg-primary, #f5f5f5);
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+    font-size: 0.8125rem;
+    color: var(--text-secondary, #666);
+  }
+
+  .time-grid-container {
+    max-height: 600px;
+    overflow-y: auto;
+  }
+
+  .time-grid {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+  }
+
+  .time-label {
+    padding: 1rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary, #666);
+    text-align: right;
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+    background: var(--bg-primary, #f5f5f5);
+  }
+
+  .time-slot-cell {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+    min-height: 64px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .time-slot-cell:hover {
+    background: rgba(0,0,0,0.02);
+  }
+
+  .time-slot-cell.has-booking {
+    padding: 0.25rem;
+  }
+
+  .slot-block {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    color: #fff;
+    padding: 0.625rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+
+  .slot-block:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  }
+
+  .slot-block.live {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+    animation: pulse-bg 2s infinite;
+  }
+
+  @keyframes pulse-bg {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+  }
+
+  .slot-block.in_lobby {
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  }
+
+  .slot-block .slot-dj {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.125rem;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .slot-block .slot-time {
+    font-size: 0.75rem;
+    opacity: 0.9;
+  }
+
+  .slot-block .slot-status {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .past-slot {
+    opacity: 0.5;
+  }
+
+  /* Modal styles */
+  .edit-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .edit-modal.hidden {
+    display: none;
+  }
+
+  .edit-modal .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+  }
+
+  .edit-modal .modal-content {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    width: 95%;
+    max-width: 450px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+
+  .edit-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+  }
+
+  .edit-modal .modal-header h3 {
+    margin: 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.375rem;
+  }
+
+  .edit-modal .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+  }
+
+  .edit-modal .modal-body {
+    padding: 1.5rem;
+  }
+
+  .slot-details {
+    margin-bottom: 1.5rem;
+  }
+
+  .detail-row {
+    display: flex;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+  }
+
+  .detail-row:last-child {
+    border-bottom: none;
+  }
+
+  .detail-label {
+    width: 100px;
+    color: var(--text-muted, #888);
+    font-size: 0.8125rem;
+  }
+
+  .detail-value {
+    flex: 1;
+    font-weight: 600;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+
+  .btn-danger {
+    padding: 0.625rem 1.25rem;
+    background: #fee2e2;
+    color: #dc2626;
+    border: 2px solid #fecaca;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-danger:hover {
+    background: #dc2626;
+    color: #fff;
+    border-color: #dc2626;
+  }
+
+  .btn-secondary {
+    padding: 0.625rem 1.25rem;
+    background: #fff;
+    border: 2px solid var(--border-light, #e5e5e5);
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    padding: 0.625rem 1.25rem;
+    background: var(--bg-dark, #000);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 0.625rem;
+    border: 2px solid var(--border-light, #e5e5e5);
+    border-radius: 6px;
+    font-size: 0.9375rem;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+  }
+</style>
+
+<script>
+  // Admin Daily Schedule Logic
+  (function() {
+    const container = document.getElementById('adminDailySchedule');
+    const dateLabel = document.getElementById('adminDateLabel');
+    const timeGrid = document.getElementById('adminTimeGrid');
+    const dayStats = document.getElementById('dayStats');
+    
+    const prevBtn = document.getElementById('adminPrevDay');
+    const nextBtn = document.getElementById('adminNextDay');
+    const todayBtn = document.getElementById('adminTodayBtn');
+    const refreshBtn = document.getElementById('adminRefreshBtn');
+    const addSlotBtn = document.getElementById('adminAddSlotBtn');
+    
+    const editModal = document.getElementById('editSlotModal');
+    const addModal = document.getElementById('addSlotModal');
+    
+    let currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    let existingBookings: any[] = [];
+    let selectedSlot: any = null;
+    
+    const START_HOUR = 9;
+    const TOTAL_HOURS = 23;
+    
+    // Navigation
+    prevBtn?.addEventListener('click', () => navigate(-1));
+    nextBtn?.addEventListener('click', () => navigate(1));
+    todayBtn?.addEventListener('click', goToToday);
+    refreshBtn?.addEventListener('click', loadAndRender);
+    
+    function navigate(delta: number) {
+      currentDate.setDate(currentDate.getDate() + delta);
+      loadAndRender();
+    }
+    
+    function goToToday() {
+      currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0);
+      loadAndRender();
+    }
+    
+    async function loadAndRender() {
+      if (!dateLabel || !timeGrid) return;
+      
+      dateLabel.textContent = currentDate.toLocaleDateString('en-GB', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+      
+      await loadBookings();
+      renderGrid();
+      updateStats();
+    }
+    
+    async function loadBookings() {
+      try {
+        const startDate = new Date(currentDate);
+        startDate.setHours(START_HOUR, 0, 0, 0);
+        
+        const endDate = new Date(currentDate);
+        endDate.setDate(endDate.getDate() + 1);
+        endDate.setHours(8, 0, 0, 0);
+        
+        const response = await fetch(
+          `/api/livestream/slots?start=${startDate.toISOString()}&end=${endDate.toISOString()}&_t=${Date.now()}`
+        );
+        
+        const data = await response.json();
+        existingBookings = data.success ? (data.slots || []) : [];
+      } catch (error) {
+        console.error('Failed to load bookings:', error);
+        existingBookings = [];
+      }
+    }
+    
+    function renderGrid() {
+      if (!timeGrid) return;
+      
+      const now = new Date();
+      timeGrid.innerHTML = '';
+      
+      for (let i = 0; i < TOTAL_HOURS; i++) {
+        const hour = (START_HOUR + i) % 24;
+        const isNextDay = START_HOUR + i >= 24;
+        
+        const slotDate = new Date(currentDate);
+        if (isNextDay) slotDate.setDate(slotDate.getDate() + 1);
+        slotDate.setHours(hour, 0, 0, 0);
+        
+        const isPast = slotDate < now;
+        const booking = findBookingForSlot(slotDate);
+        
+        // Time label
+        const timeLabel = document.createElement('div');
+        timeLabel.className = 'time-label';
+        timeLabel.textContent = formatHour(hour);
+        timeGrid.appendChild(timeLabel);
+        
+        // Slot cell
+        const cell = document.createElement('div');
+        cell.className = `time-slot-cell ${isPast ? 'past-slot' : ''} ${booking ? 'has-booking' : ''}`;
+        
+        if (booking) {
+          const startTime = new Date(booking.startTime);
+          const endTime = new Date(booking.endTime);
+          
+          const slotBlock = document.createElement('div');
+          slotBlock.className = `slot-block ${booking.status}`;
+          slotBlock.innerHTML = `
+            <div class="slot-dj">
+              ${booking.djName}
+              <span class="slot-status">${booking.status}</span>
+            </div>
+            <div class="slot-time">
+              ${startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - 
+              ${endTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          `;
+          
+          slotBlock.addEventListener('click', () => openEditModal(booking));
+          cell.appendChild(slotBlock);
+        }
+        
+        timeGrid.appendChild(cell);
+      }
+    }
+    
+    function findBookingForSlot(slotTime: Date): any {
+      const slotStart = slotTime.getTime();
+      const slotEnd = slotStart + 60 * 60 * 1000;
+      
+      return existingBookings.find(booking => {
+        const bookingStart = new Date(booking.startTime).getTime();
+        const bookingEnd = new Date(booking.endTime).getTime();
+        return slotStart >= bookingStart && slotStart < bookingEnd;
+      });
+    }
+    
+    function formatHour(hour: number): string {
+      const period = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      return `${displayHour}:00 ${period}`;
+    }
+    
+    function updateStats() {
+      if (!dayStats) return;
+      
+      const activeBookings = existingBookings.filter(b => 
+        ['scheduled', 'in_lobby', 'live'].includes(b.status)
+      );
+      
+      const totalHours = activeBookings.reduce((sum, b) => {
+        return sum + ((b.duration || 60) / 60);
+      }, 0);
+      
+      dayStats.textContent = `${activeBookings.length} slots booked • ${totalHours.toFixed(1)} hours`;
+    }
+    
+    // Edit Modal
+    function openEditModal(booking: any) {
+      selectedSlot = booking;
+      
+      const details = document.getElementById('editSlotDetails');
+      const title = document.getElementById('editModalTitle');
+      
+      if (details && title) {
+        title.textContent = booking.djName;
+        
+        const startTime = new Date(booking.startTime);
+        const endTime = new Date(booking.endTime);
+        
+        details.innerHTML = `
+          <div class="detail-row">
+            <span class="detail-label">DJ Name</span>
+            <span class="detail-value">${booking.djName}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Title</span>
+            <span class="detail-value">${booking.title || 'Untitled'}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Date</span>
+            <span class="detail-value">${startTime.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Time</span>
+            <span class="detail-value">${startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Duration</span>
+            <span class="detail-value">${booking.duration || 60} minutes</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Status</span>
+            <span class="detail-value">${booking.status}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">DJ ID</span>
+            <span class="detail-value" style="font-family: monospace; font-size: 0.75rem;">${booking.djId || 'N/A'}</span>
+          </div>
+        `;
+      }
+      
+      editModal?.classList.remove('hidden');
+    }
+    
+    document.getElementById('closeEditModal')?.addEventListener('click', closeEditModal);
+    document.getElementById('cancelEditBtn')?.addEventListener('click', closeEditModal);
+    editModal?.querySelector('.modal-overlay')?.addEventListener('click', closeEditModal);
+    
+    function closeEditModal() {
+      editModal?.classList.add('hidden');
+      selectedSlot = null;
+    }
+    
+    document.getElementById('deleteSlotBtn')?.addEventListener('click', async () => {
+      if (!selectedSlot) return;
+      
+      if (!confirm(`Delete ${selectedSlot.djName}'s slot?\n\nThis will free up the time for other DJs.`)) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/livestream/slots', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slotId: selectedSlot.id,
+            adminCancel: true
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          closeEditModal();
+          loadAndRender();
+        } else {
+          alert(data.error || 'Failed to delete slot');
+        }
+      } catch (error) {
+        alert('Failed to delete slot');
+      }
+    });
+    
+    // Add Slot Modal
+    addSlotBtn?.addEventListener('click', () => {
+      populateHourSelect();
+      addModal?.classList.remove('hidden');
+    });
+    
+    document.getElementById('closeAddModal')?.addEventListener('click', closeAddModal);
+    document.getElementById('cancelAddBtn')?.addEventListener('click', closeAddModal);
+    addModal?.querySelector('.modal-overlay')?.addEventListener('click', closeAddModal);
+    
+    function closeAddModal() {
+      addModal?.classList.add('hidden');
+    }
+    
+    function populateHourSelect() {
+      const select = document.getElementById('addStartHour') as HTMLSelectElement;
+      if (!select) return;
+      
+      select.innerHTML = '';
+      
+      for (let i = 0; i < TOTAL_HOURS; i++) {
+        const hour = (START_HOUR + i) % 24;
+        const option = document.createElement('option');
+        option.value = hour.toString();
+        option.textContent = formatHour(hour);
+        select.appendChild(option);
+      }
+    }
+    
+    document.getElementById('addSlotForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const djName = (document.getElementById('addDjName') as HTMLInputElement).value.trim();
+      const djId = (document.getElementById('addDjId') as HTMLInputElement).value.trim() || `admin_${Date.now()}`;
+      const startHour = parseInt((document.getElementById('addStartHour') as HTMLSelectElement).value);
+      const duration = parseInt((document.getElementById('addDuration') as HTMLSelectElement).value);
+      const title = (document.getElementById('addTitle') as HTMLInputElement).value.trim();
+      
+      if (!djName) {
+        alert('DJ Name is required');
+        return;
+      }
+      
+      // Calculate if this hour is next day
+      const isNextDay = startHour < START_HOUR;
+      const startTime = new Date(currentDate);
+      if (isNextDay) startTime.setDate(startTime.getDate() + 1);
+      startTime.setHours(startHour, 0, 0, 0);
+      
+      try {
+        const response = await fetch('/api/livestream/slots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'book',
+            djId,
+            djName,
+            title: title || `${djName} Live`,
+            startTime: startTime.toISOString(),
+            duration,
+            adminBook: true
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          closeAddModal();
+          (document.getElementById('addSlotForm') as HTMLFormElement).reset();
+          loadAndRender();
+        } else {
+          alert(data.error || 'Failed to add slot');
+        }
+      } catch (error) {
+        alert('Failed to add slot');
+      }
+    });
+    
+    // Initialize
+    loadAndRender();
+  })();
+</script>

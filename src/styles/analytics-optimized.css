@@ -1,0 +1,160 @@
+/* src/styles/analytics-optimized.css */
+/* Analytics Page Enhancements - centered compact layout */
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 1400px) {
+  .stat-card .stat-value {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 1200px) {
+  .stat-card {
+    padding: 0.875rem 1.25rem;
+  }
+  
+  .stat-card .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .stat-card .stat-label {
+    font-size: 0.6rem;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Restore full width on smaller screens */
+  .admin-main > *,
+  .stats-grid,
+  .grid-2,
+  .grid-3,
+  .grid-4,
+  .grid-6,
+  .card-full,
+  .section-centered {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .stat-card {
+    padding: 0.75rem 1rem;
+  }
+  
+  .stat-card .stat-label {
+    font-size: 0.55rem;
+  }
+  
+  .stat-card .stat-value {
+    font-size: 1.35rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-card {
+    padding: 0.75rem 1rem;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .stat-card .stat-label {
+    font-size: 0.55rem;
+    margin-bottom: 0;
+    flex: 1;
+  }
+  
+  .stat-card .stat-value {
+    font-size: 1.25rem;
+    text-align: right;
+  }
+  
+  .stat-card .stat-detail {
+    display: none;
+  }
+}
+
+/* ============================================
+   TABLE MOBILE OPTIMIZATIONS
+   ============================================ */
+
+@media (max-width: 768px) {
+  .data-table {
+    font-size: 0.75rem;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 0.5rem 0.35rem;
+  }
+  
+  .data-table th {
+    font-size: 0.55rem;
+  }
+}
+
+/* ============================================
+   ITEM CELL MOBILE
+   ============================================ */
+
+@media (max-width: 640px) {
+  .item-cell {
+    gap: 0.35rem;
+  }
+  
+  .item-cell img {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .item-cell .item-info h4 {
+    font-size: 0.7rem;
+    line-height: 1.2;
+  }
+  
+  .item-cell .item-info p {
+    font-size: 0.55rem;
+  }
+}
+
+/* ============================================
+   PRINT
+   ============================================ */
+
+@media print {
+  .admin-main > *,
+  .stats-grid,
+  .grid-2,
+  .grid-3,
+  .grid-4,
+  .grid-6,
+  .card-full,
+  .section-centered {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .stat-card {
+    padding: 0.5rem;
+    border-width: 1px;
+  }
+  
+  .stat-card .stat-value {
+    font-size: 1.25rem;
+  }
+  
+  .stat-card .stat-label {
+    font-size: 0.5rem;
+  }
+}

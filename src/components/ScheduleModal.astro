@@ -1,0 +1,203 @@
+---
+// src/components/ScheduleModal.astro
+// Modal wrapper for public and booking schedule views
+// Opens as overlay modal on the live page
+
+import DailySchedule from './DailySchedule.astro';
+---
+
+<!-- Public Schedule Modal (Read-only) -->
+<div id="publicScheduleModal" class="schedule-modal-wrapper hidden">
+  <div class="schedule-modal-overlay"></div>
+  <div class="schedule-modal-container">
+    <div class="schedule-modal-header">
+      <h2>📅 Full Schedule</h2>
+      <p class="modal-subtitle">Fresh Wax Live - DJ Streaming Schedule</p>
+      <button type="button" class="schedule-modal-close" id="closePublicSchedule">×</button>
+    </div>
+    <div class="schedule-modal-body">
+      <DailySchedule mode="public" id="publicSchedule" />
+    </div>
+  </div>
+</div>
+
+<!-- Booking Schedule Modal (DJ Selection) -->
+<div id="bookingScheduleModal" class="schedule-modal-wrapper hidden">
+  <div class="schedule-modal-overlay"></div>
+  <div class="schedule-modal-container booking-mode">
+    <div class="schedule-modal-header">
+      <h2>🎧 Book Your Slot</h2>
+      <p class="modal-subtitle">Select your preferred time slots (max 2 hours/day)</p>
+      <button type="button" class="schedule-modal-close" id="closeBookingSchedule">×</button>
+    </div>
+    <div class="schedule-modal-body">
+      <DailySchedule mode="booking" id="bookingSchedule" />
+    </div>
+  </div>
+</div>
+
+<style>
+  .schedule-modal-wrapper {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .schedule-modal-wrapper.hidden {
+    display: none;
+  }
+
+  .schedule-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+  }
+
+  .schedule-modal-container {
+    position: relative;
+    background: var(--bg-secondary, #fff);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 700px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+  }
+
+  .schedule-modal-header {
+    position: relative;
+    padding: 1.75rem 1.5rem 1.25rem;
+    background: linear-gradient(135deg, #000 0%, #1a1a1a 100%);
+    color: #fff;
+    text-align: center;
+  }
+
+  .schedule-modal-header h2 {
+    margin: 0 0 0.25rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    letter-spacing: 0.03em;
+  }
+
+  .modal-subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .schedule-modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .schedule-modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .schedule-modal-body {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* Remove duplicate border/radius since modal provides it */
+  .schedule-modal-body :global(.daily-schedule) {
+    border: none;
+    border-radius: 0;
+  }
+
+  /* Booking mode styling */
+  .booking-mode .schedule-modal-header {
+    background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  }
+
+  @media (max-width: 768px) {
+    .schedule-modal-wrapper {
+      padding: 0;
+    }
+
+    .schedule-modal-container {
+      max-width: none;
+      max-height: none;
+      height: 100%;
+      border-radius: 0;
+    }
+
+    .schedule-modal-header h2 {
+      font-size: 1.5rem;
+    }
+  }
+</style>
+
+<script>
+  // Schedule Modal Controllers
+  (function() {
+    const publicModal = document.getElementById('publicScheduleModal');
+    const bookingModal = document.getElementById('bookingScheduleModal');
+
+    // Open Public Schedule
+    window.openPublicSchedule = function() {
+      publicModal?.classList.remove('hidden');
+      window.schedule_publicSchedule?.refresh();
+    };
+
+    // Open Booking Schedule
+    window.openBookingSchedule = function(userId, displayName) {
+      // Set user info on the schedule component
+      window.schedule_bookingSchedule?.setUser(userId, displayName);
+      bookingModal?.classList.remove('hidden');
+      window.schedule_bookingSchedule?.refresh();
+    };
+
+    // Close function for booking schedule (called from DailySchedule)
+    window.closeScheduleModal = function() {
+      publicModal?.classList.add('hidden');
+      bookingModal?.classList.add('hidden');
+    };
+
+    // Close handlers
+    document.getElementById('closePublicSchedule')?.addEventListener('click', () => {
+      publicModal?.classList.add('hidden');
+    });
+
+    document.getElementById('closeBookingSchedule')?.addEventListener('click', () => {
+      bookingModal?.classList.add('hidden');
+    });
+
+    publicModal?.querySelector('.schedule-modal-overlay')?.addEventListener('click', () => {
+      publicModal?.classList.add('hidden');
+    });
+
+    bookingModal?.querySelector('.schedule-modal-overlay')?.addEventListener('click', () => {
+      bookingModal?.classList.add('hidden');
+    });
+
+    // Keyboard close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        publicModal?.classList.add('hidden');
+        bookingModal?.classList.add('hidden');
+      }
+    });
+  })();
+</script>

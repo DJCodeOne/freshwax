@@ -23,16 +23,28 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-const partnerId = Astro.cookies.get('partnerId')?.value || '';
+// Check for partnerId cookie first, then fall back to userId or customerId
+let partnerId = Astro.cookies.get('partnerId')?.value || '';
+if (!partnerId) {
+  // Fallback to userId cookie
+  partnerId = Astro.cookies.get('userId')?.value || '';
+}
+if (!partnerId) {
+  // Fallback to customerId cookie
+  partnerId = Astro.cookies.get('customerId')?.value || '';
+}
+
+// Debug logging
+console.log('[Partner Dashboard] partnerId:', partnerId || 'NOT SET');
+console.log('[Partner Dashboard] Cookies - partnerId:', Astro.cookies.get('partnerId')?.value || 'none', 
+            'userId:', Astro.cookies.get('userId')?.value || 'none',
+            'customerId:', Astro.cookies.get('customerId')?.value || 'none');
+
 let partner = null;
 let stats = {
   releases: 0,
   liveReleases: 0,
   pendingReleases: 0,
-  mixes: 0,
-  mixPlays: 0,
-  mixLikes: 0,
-  mixRatings: 0,
   merchProducts: 0,
   merchSold: 0,
   totalOrders: 0
@@ -40,9 +52,57 @@ let stats = {
 
 if (partnerId) {
   try {
+    // Try artists collection first
     const partnerDoc = await db.collection('artists').doc(partnerId).get();
+    console.log('[Partner Dashboard] artists doc exists:', partnerDoc.exists);
+    
     if (partnerDoc.exists) {
       partner = { id: partnerDoc.id, ...partnerDoc.data() };
+      console.log('[Partner Dashboard] Found in artists:', partner.artistName);
+    } else {
+      // Fallback: check users collection for partner info
+      const userDoc = await db.collection('users').doc(partnerId).get();
+      console.log('[Partner Dashboard] users doc exists:', userDoc.exists);
+      
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        console.log('[Partner Dashboard] User roles:', JSON.stringify(userData?.roles));
+        
+        // Check if they have partner roles
+        if (userData.roles?.artist || userData.roles?.dj || userData.roles?.merchSupplier) {
+          partner = {
+            id: userDoc.id,
+            artistName: userData.partnerInfo?.displayName || userData.displayName || userData.fullName || userData.name || 'Partner',
+            email: userData.email,
+            isArtist: userData.roles?.artist || false,
+            isDJ: userData.roles?.dj || false,
+            isMerchSupplier: userData.roles?.merchSupplier || false,
+            approved: userData.partnerInfo?.approved || userData.approved || false,
+            avatarUrl: userData.avatarUrl || null
+          };
+          console.log('[Partner Dashboard] Created partner from users:', partner.artistName, 'approved:', partner.approved);
+        }
+      }
+    }
+    
+    if (partner) {
+      // Fetch displayName and avatar from customers collection (user's preferred display name)
+      try {
+        const customerDoc = await db.collection('customers').doc(partnerId).get();
+        if (customerDoc.exists) {
+          const customerData = customerDoc.data();
+          // Use customer's displayName if available (this is what they set in their profile)
+          if (customerData?.displayName) {
+            partner.displayName = customerData.displayName;
+          }
+          // Also get avatar if not already set
+          if (!partner.avatarUrl && !partner.imageUrl && !partner.photoURL) {
+            partner.avatarUrl = customerData?.avatarUrl || customerData?.photoURL || null;
+          }
+        }
+      } catch (e) {
+        // Ignore errors fetching customer data
+      }
       
       const approved = partner.approved === true;
       const effectiveIsArtist = partner.isArtist !== false;
@@ -51,47 +111,105 @@ if (partnerId) {
       
       // Fetch artist/label stats (only if approved)
       if (effectiveIsArtist && approved) {
-        const releasesSnap = await db.collection('releases')
-          .where('artistId', '==', partnerId)
-          .get();
-        stats.releases = releasesSnap.size;
-        stats.liveReleases = releasesSnap.docs.filter(d => d.data().status === 'live').length;
-        stats.pendingReleases = releasesSnap.docs.filter(d => d.data().status === 'pending').length;
-      }
-      
-      // Fetch DJ/mix stats (always available - no approval needed)
-      if (effectiveIsDJ || effectiveIsArtist) {
-        // Query by userId first
-        let mixesSnap = await db.collection('dj-mixes')
-          .where('userId', '==', partnerId)
-          .get();
-        
-        // If no results, also try matching by djName (for older mixes without userId)
-        if (mixesSnap.empty && partner.artistName) {
-          const byNameSnap = await db.collection('dj-mixes')
-            .where('djName', '==', partner.artistName)
+        // Query releases by email since uploads use email, not artistId
+        const artistEmail = partner.email;
+        if (artistEmail) {
+          const releasesSnap = await db.collection('releases')
+            .where('email', '==', artistEmail)
             .get();
-          if (!byNameSnap.empty) {
-            mixesSnap = byNameSnap;
-          }
+          stats.releases = releasesSnap.size;
+          stats.liveReleases = releasesSnap.docs.filter(d => d.data().status === 'live').length;
+          stats.pendingReleases = releasesSnap.docs.filter(d => d.data().status === 'pending').length;
         }
-        
-        stats.mixes = mixesSnap.size;
-        stats.mixPlays = mixesSnap.docs.reduce((sum, d) => sum + (d.data().plays || 0), 0);
-        stats.mixLikes = mixesSnap.docs.reduce((sum, d) => sum + (d.data().likes || 0), 0);
-        stats.mixRatings = mixesSnap.docs.reduce((sum, d) => {
-          const ratings = d.data().ratings;
-          return sum + (ratings?.count || 0);
-        }, 0);
       }
       
       // Fetch merch stats (only if approved)
       if (effectiveIsMerchSupplier && approved) {
-        const merchSnap = await db.collection('merch')
+        // Try multiple strategies to find products linked to this supplier
+        let merchDocs: any[] = [];
+        
+        // Strategy 1: Query by supplierId
+        const byIdSnap = await db.collection('merch')
           .where('supplierId', '==', partnerId)
           .get();
-        stats.merchProducts = merchSnap.size;
-        stats.merchSold = merchSnap.docs.reduce((sum, d) => sum + (d.data().totalSold || 0), 0);
+        if (!byIdSnap.empty) {
+          merchDocs = byIdSnap.docs;
+        }
+        
+        // Strategy 2: If no results, try by supplier name
+        if (merchDocs.length === 0 && partner.artistName) {
+          const byNameSnap = await db.collection('merch')
+            .where('supplierName', '==', partner.artistName)
+            .get();
+          if (!byNameSnap.empty) {
+            merchDocs = byNameSnap.docs;
+          }
+        }
+        
+        // Strategy 3: Check merch-suppliers collection for linked products
+        if (merchDocs.length === 0) {
+          try {
+            const supplierDoc = await db.collection('merch-suppliers').doc(partnerId).get();
+            if (supplierDoc.exists) {
+              const supplierData = supplierDoc.data();
+              // If supplier has linked products, fetch them
+              if (supplierData?.products && supplierData.products.length > 0) {
+                const productPromises = supplierData.products.slice(0, 50).map((pid: string) => 
+                  db.collection('merch').doc(pid).get()
+                );
+                const productDocs = await Promise.all(productPromises);
+                merchDocs = productDocs.filter(d => d.exists);
+              }
+            }
+          } catch (e) {
+            // Ignore errors from merch-suppliers lookup
+          }
+        }
+        
+        stats.merchProducts = merchDocs.length;
+        
+        // Get product IDs for order matching
+        const productIds = merchDocs.map(doc => doc.id);
+        
+        // Calculate total stock from products
+        const totalProductStock = merchDocs.reduce((sum, d) => {
+          const data = d.data();
+          return sum + (data.totalStock || data.stock || 0);
+        }, 0);
+        
+        // Fetch orders containing this supplier's products
+        if (productIds.length > 0) {
+          const ordersSnap = await db.collection('orders')
+            .where('status', '!=', 'cancelled')
+            .orderBy('status')
+            .orderBy('createdAt', 'desc')
+            .limit(100)
+            .get();
+          
+          let unitsSold = 0;
+          let orderCount = 0;
+          
+          ordersSnap.docs.forEach(doc => {
+            const order = doc.data();
+            const supplierItems = (order.items || []).filter((item: any) => 
+              productIds.includes(item.productId) || item.supplierId === partnerId
+            );
+            
+            if (supplierItems.length > 0) {
+              orderCount++;
+              unitsSold += supplierItems.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
+            }
+          });
+          
+          stats.merchSold = unitsSold;
+          stats.totalOrders = orderCount;
+        } else {
+          // Fall back to totalSold/soldStock from product docs
+          stats.merchSold = merchDocs.reduce((sum, d) => {
+            const data = d.data();
+            return sum + (data.totalSold || data.soldStock || data.sales || 0);
+          }, 0);
+        }
       }
     }
   } catch (e) {
@@ -109,7 +227,6 @@ const isMerchSupplier = partner?.isMerchSupplier || false;
 
 // Show sections (even if grayed out)
 const showReleaseSection = isArtist;
-const showMixSection = isDJ || isArtist;
 const showMerchSection = isMerchSupplier;
 
 const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num || 0);
@@ -121,24 +238,44 @@ export const prerender = false;
   <Header />
   
   <main class="dashboard-main">
-    {!isLoggedIn ? (
-      <div class="login-prompt">
-        <div class="login-card">
-          <img src="/logo.webp" alt="Fresh Wax" class="login-logo" />
-          <h1>Partner Dashboard</h1>
-          <p>Sign in to manage your releases, mixes, and sales.</p>
-          <a href="/login" class="btn-primary">Sign In</a>
-          <a href="/register" class="btn-secondary">Create Account</a>
+    <!-- Loading state - shown while checking auth (hidden if already logged in server-side) -->
+    <div id="loadingState" class="login-prompt" style={isLoggedIn ? 'display: none;' : ''}>
+      <div class="login-card">
+        <img src="/logo.webp" alt="Fresh Wax" class="login-logo" />
+        <h1>Partner Dashboard</h1>
+        <p>Checking authentication...</p>
+        <div style="display: flex; justify-content: center; padding: 2rem;">
+          <div class="spinner"></div>
         </div>
       </div>
-    ) : (
+    </div>
+    
+    <!-- Login prompt - shown if not logged in -->
+    <div id="loginPrompt" class="login-prompt" style="display: none;">
+      <div class="login-card">
+        <img src="/logo.webp" alt="Fresh Wax" class="login-logo" />
+        <h1>Partner Dashboard</h1>
+        <p>Sign in to manage your releases, mixes, and sales.</p>
+        <a href="/login" class="btn-primary">Sign In</a>
+        <a href="/register" class="btn-secondary">Create Account</a>
+      </div>
+    </div>
+    
+    {isLoggedIn && (
       <div class="container">
         <!-- Welcome Section -->
         <div class="welcome-section">
           <div class="welcome-left">
-            <div class="avatar">{partner.artistName?.charAt(0).toUpperCase() || '?'}</div>
+            <div class="avatar">
+              {partner.avatarUrl || partner.imageUrl || partner.photoURL ? (
+                <img src={partner.avatarUrl || partner.imageUrl || partner.photoURL} alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                <span style="display:none;">{(partner.displayName || partner.artistName)?.charAt(0).toUpperCase() || '?'}</span>
+              ) : (
+                <span>{(partner.displayName || partner.artistName)?.charAt(0).toUpperCase() || '?'}</span>
+              )}
+            </div>
             <div class="welcome-text">
-              <h1>Welcome back, {partner.artistName || 'Partner'}</h1>
+              <h1>Welcome back, {partner.displayName || partner.artistName || 'Partner'}</h1>
               <div class="role-badges">
                 {isArtist && <span class={`role-badge artist ${!isApproved ? 'pending' : ''}`}>Artist / Producer / Label {!isApproved && '(Pending)'}</span>}
                 {isDJ && <span class="role-badge dj">DJ</span>}
@@ -154,48 +291,14 @@ export const prerender = false;
           )}
         </div>
 
-        <!-- DJ MIXES SECTION (Always Available) -->
-        {showMixSection && (
-          <section class="dashboard-section">
-            <div class="section-header">
-              <div class="section-title-wrap">
-                <span class="section-icon">🎧</span>
-                <h2>DJ Mixes</h2>
-                <span class="section-badge available">No Approval Required</span>
-              </div>
-              <p class="section-desc">Upload and manage your DJ mixes</p>
-            </div>
-
-            <div class="cards-grid two-col">
-              <a href="/upload-mix" class="action-card primary">
-                <div class="card-icon">⬆️</div>
-                <div class="card-body">
-                  <h3>Upload Mix</h3>
-                  <p>Share a new mix or set</p>
-                </div>
-                <span class="card-arrow">→</span>
-              </a>
-
-              <a href="/artist/mixes" class="action-card">
-                <div class="card-icon">📂</div>
-                <div class="card-body">
-                  <h3>My Mixes</h3>
-                  <p>View, edit & manage your mixes</p>
-                </div>
-                <span class="mix-count">{stats.mixes}</span>
-              </a>
-            </div>
-          </section>
-        )}
-
         <!-- MUSIC RELEASES SECTION (Requires Approval) -->
         {showReleaseSection && (
-          <section class={`dashboard-section ${!isApproved ? 'restricted' : ''}`}>
+          <section class={`dashboard-section releases-section ${!isApproved ? 'restricted' : ''}`}>
             <div class="section-header">
               <div class="section-title-wrap">
                 <span class="section-icon">💿</span>
                 <h2>Music Releases</h2>
-                {!isApproved && <span class="section-badge pending">Approval Required</span>}
+                {!isApproved && <span class="section-badge pending-red">Approval Required</span>}
               </div>
               <p class="section-desc">Upload and manage your music releases</p>
             </div>
@@ -211,7 +314,7 @@ export const prerender = false;
             )}
 
             <div class="cards-grid two-col">
-              <a href={isApproved ? "https://freshwax-uploader.pages.dev" : "#"} class={`action-card primary ${!isApproved ? 'disabled' : ''}`} target={isApproved ? "_blank" : undefined}>
+              <a href={isApproved ? "https://freshwax-uploader.pages.dev" : "#"} class={`action-card primary-red ${!isApproved ? 'disabled' : ''}`} target={isApproved ? "_blank" : undefined}>
                 <div class="card-icon">📦</div>
                 <div class="card-body">
                   <h3>Upload Release</h3>
@@ -220,7 +323,7 @@ export const prerender = false;
                 <span class="card-arrow">→</span>
               </a>
 
-              <a href={isApproved ? "/artist/releases" : "#"} class={`action-card ${!isApproved ? 'disabled' : ''}`}>
+              <a href={isApproved ? "/artist/releases" : "#"} class={`action-card release-card ${!isApproved ? 'disabled' : ''}`}>
                 <div class="card-icon">📂</div>
                 <div class="card-body">
                   <h3>My Releases</h3>
@@ -269,14 +372,11 @@ export const prerender = false;
               </div>
             </div>
 
-            <div class="info-banner">
-              <span class="info-icon">ℹ️</span>
-              <span>To add or update products, please contact Fresh Wax admin</span>
-            </div>
-
-            <div class="cards-grid">
-              <a href={isApproved ? "/artist/merch" : "#"} class={`action-card ${!isApproved ? 'disabled' : ''}`}>
-                <div class="card-icon">📦</div>
+            <div class="cards-grid merch-grid">
+              <a href={isApproved ? "/artist/merch" : "#"} class={`action-card merch-card ${!isApproved ? 'disabled' : ''}`}>
+                <div class="card-icon-wrap">
+                  <div class="card-icon">📦</div>
+                </div>
                 <div class="card-body">
                   <h3>View Stock</h3>
                   <p>Check current inventory levels</p>
@@ -284,8 +384,10 @@ export const prerender = false;
                 <span class="card-arrow">→</span>
               </a>
 
-              <a href={isApproved ? "/artist/merch-sales" : "#"} class={`action-card ${!isApproved ? 'disabled' : ''}`}>
-                <div class="card-icon">💰</div>
+              <a href={isApproved ? "/artist/merch-sales" : "#"} class={`action-card merch-card ${!isApproved ? 'disabled' : ''}`}>
+                <div class="card-icon-wrap">
+                  <div class="card-icon">💰</div>
+                </div>
                 <div class="card-body">
                   <h3>Sales Report</h3>
                   <p>Track orders and revenue</p>
@@ -293,8 +395,10 @@ export const prerender = false;
                 <span class="card-arrow">→</span>
               </a>
 
-              <a href={isApproved ? "/artist/merch-orders" : "#"} class={`action-card ${!isApproved ? 'disabled' : ''}`}>
-                <div class="card-icon">📋</div>
+              <a href={isApproved ? "/artist/merch-orders" : "#"} class={`action-card merch-card ${!isApproved ? 'disabled' : ''}`}>
+                <div class="card-icon-wrap">
+                  <div class="card-icon">📋</div>
+                </div>
                 <div class="card-body">
                   <h3>Order History</h3>
                   <p>View all customer orders</p>
@@ -302,8 +406,10 @@ export const prerender = false;
                 <span class="card-arrow">→</span>
               </a>
 
-              <a href={isApproved ? "/artist/merch-analytics" : "#"} class={`action-card ${!isApproved ? 'disabled' : ''}`}>
-                <div class="card-icon">📊</div>
+              <a href={isApproved ? "/artist/merch-analytics" : "#"} class={`action-card merch-card ${!isApproved ? 'disabled' : ''}`}>
+                <div class="card-icon-wrap">
+                  <div class="card-icon">📊</div>
+                </div>
                 <div class="card-body">
                   <h3>Analytics</h3>
                   <p>Sales trends and insights</p>
@@ -354,7 +460,7 @@ export const prerender = false;
 <style>
   .dashboard-main {
     min-height: calc(100vh - 200px);
-    background: #f5f5f5;
+    background: linear-gradient(to bottom, #000000, #111827);
   }
   
   .container {
@@ -372,15 +478,28 @@ export const prerender = false;
     padding: 2rem;
   }
   
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #374151;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
   .login-card {
-    background: #fff;
+    background: linear-gradient(to bottom, #1f2937, #111827);
     padding: 3rem;
     border-radius: 16px;
     text-align: center;
     max-width: 400px;
     width: 100%;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    border: 2px solid #e5e5e5;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    border: 2px solid #374151;
   }
   
   .login-logo {
@@ -392,11 +511,11 @@ export const prerender = false;
     font-family: 'Bebas Neue', sans-serif;
     font-size: 2rem;
     margin-bottom: 0.5rem;
-    color: #000;
+    color: #fff;
   }
   
   .login-card p {
-    color: #666;
+    color: #9ca3af;
     margin-bottom: 2rem;
     font-size: 1rem;
   }
@@ -424,8 +543,8 @@ export const prerender = false;
     display: block;
     width: 100%;
     padding: 1rem;
-    background: #fff;
-    color: #000;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    color: #fff;
     text-decoration: none;
     border-radius: 10px;
     font-weight: 600;
@@ -435,14 +554,14 @@ export const prerender = false;
   }
   
   .btn-secondary:hover {
-    border-color: #000;
+    border-color: #fff;
   }
   
   /* Welcome Section */
   .welcome-section {
-    background: #000;
+    background: linear-gradient(135deg, #000 0%, #1a1a2e 50%, #16213e 100%);
     color: #fff;
-    padding: 2rem 2.5rem;
+    padding: 2.5rem 3rem;
     border-radius: 16px;
     margin-bottom: 2rem;
     display: flex;
@@ -450,55 +569,68 @@ export const prerender = false;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 1.5rem;
+    border: 2px solid #374151;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
   
   .welcome-left {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
+    gap: 1.5rem;
   }
   
   .avatar {
-    width: 64px;
-    height: 64px;
-    background: #fff;
-    color: #000;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #374151, #1f2937);
+    color: #fff;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.75rem;
+    font-size: 2.25rem;
     font-weight: 700;
     font-family: 'Bebas Neue', sans-serif;
+    border: 3px solid #4b5563;
+    overflow: hidden;
+  }
+  
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
   
   .welcome-text h1 {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.75rem;
+    font-size: 2.5rem;
     font-weight: 400;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.02em;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
   
   .role-badges {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.625rem;
     flex-wrap: wrap;
   }
   
   .role-badge {
     display: inline-block;
-    padding: 0.375rem 0.875rem;
+    padding: 0.5rem 1rem;
     border-radius: 20px;
-    font-size: 0.8125rem;
-    font-weight: 600;
+    font-size: 0.875rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
   
   .role-badge.artist { background: #22c55e; color: #fff; }
   .role-badge.artist.pending { background: #fbbf24; color: #000; }
   .role-badge.dj { background: #dc2626; color: #fff; }
-  .role-badge.merch { background: #fff; color: #000; }
+  .role-badge.merch { background: linear-gradient(to bottom, #374151, #1f2937); color: #fff; border: 2px solid #4b5563; }
   .role-badge.merch.pending { background: #fbbf24; color: #000; }
   
   .approval-notice {
@@ -515,8 +647,8 @@ export const prerender = false;
   
   /* Dashboard Sections */
   .dashboard-section {
-    background: #fff;
-    border: 2px solid #e5e5e5;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
     border-radius: 16px;
     padding: 2rem;
     margin-bottom: 1.5rem;
@@ -541,7 +673,7 @@ export const prerender = false;
   }
   
   .restricted-message {
-    background: #fff;
+    background: linear-gradient(to bottom, #1f2937, #111827);
     border: 2px solid #fbbf24;
     border-radius: 12px;
     padding: 1.5rem 2rem;
@@ -549,8 +681,8 @@ export const prerender = false;
   }
   
   .lock-icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
-  .restricted-message h3 { font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem; color: #000; }
-  .restricted-message p { font-size: 0.9375rem; color: #666; max-width: 300px; margin: 0 auto; }
+  .restricted-message h3 { font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff; }
+  .restricted-message p { font-size: 0.9375rem; color: #9ca3af; max-width: 300px; margin: 0 auto; }
   
   .section-header { margin-bottom: 1.5rem; }
   
@@ -568,7 +700,7 @@ export const prerender = false;
     font-family: 'Bebas Neue', sans-serif;
     font-size: 2rem;
     font-weight: 400;
-    color: #000;
+    color: #fff;
   }
   
   .section-badge {
@@ -581,10 +713,19 @@ export const prerender = false;
     letter-spacing: 0.03em;
   }
   
-  .section-badge.available { background: #dcfce7; color: #16a34a; }
-  .section-badge.pending { background: #fef3c7; color: #d97706; }
+  .section-badge.available { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+  .section-badge.pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+  .section-badge.pending-red { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
   
-  .section-desc { color: #888; font-size: 1.0625rem; margin-left: 2.5rem; }
+  .dashboard-section.releases-section {
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+  
+  .dashboard-section.releases-section:hover {
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+  
+  .section-desc { color: #9ca3af; font-size: 1.0625rem; margin-left: 2.5rem; }
   
   /* Stats Row */
   .stats-row {
@@ -595,33 +736,33 @@ export const prerender = false;
   }
   
   .stat-card {
-    background: #f8f8f8;
-    border: 2px solid #e5e5e5;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
     border-radius: 12px;
     padding: 1.25rem;
     text-align: center;
   }
   
-  .stat-card.green { background: #f0fdf4; border-color: #86efac; }
-  .stat-card.red { background: #fef2f2; border-color: #fca5a5; }
-  .stat-card.amber { background: #fffbeb; border-color: #fcd34d; }
+  .stat-card.green { background: rgba(16, 185, 129, 0.15); border-color: #10b981; }
+  .stat-card.red { background: rgba(220, 38, 38, 0.15); border-color: #dc2626; }
+  .stat-card.amber { background: rgba(251, 191, 36, 0.15); border-color: #fcd34d; }
   
   .stat-number {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 2.5rem;
     line-height: 1;
-    color: #000;
+    color: #fff;
     margin-bottom: 0.25rem;
   }
   
-  .stat-card.green .stat-number { color: #16a34a; }
+  .stat-card.green .stat-number { color: #10b981; }
   .stat-card.red .stat-number { color: #dc2626; }
-  .stat-card.amber .stat-number { color: #d97706; }
+  .stat-card.amber .stat-number { color: #fbbf24; }
   
   .stat-label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #888;
+    color: #9ca3af;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -635,14 +776,77 @@ export const prerender = false;
   
   .cards-grid.small { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
   .cards-grid.two-col { grid-template-columns: repeat(2, 1fr); }
+  .cards-grid.four-col { grid-template-columns: repeat(4, 1fr); }
+  
+  /* Merch Cards Grid - 2x2 Layout */
+  .cards-grid.merch-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .action-card.merch-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.25rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .action-card.merch-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(102, 126, 234, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+  
+  .action-card.merch-card .card-icon-wrap {
+    flex-shrink: 0;
+  }
+  
+  .action-card.merch-card .card-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 12px;
+    font-size: 1.5rem;
+  }
+  
+  .action-card.merch-card .card-body h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.125rem;
+  }
+  
+  .action-card.merch-card .card-body p {
+    font-size: 0.8rem;
+    color: #6b7280;
+  }
+  
+  .action-card.merch-card .card-arrow {
+    font-size: 1.25rem;
+    color: #4b5563;
+  }
+  
+  .action-card.merch-card:hover .card-arrow {
+    color: #667eea;
+  }
+  
+  @media (max-width: 640px) {
+    .cards-grid.merch-grid {
+      grid-template-columns: 1fr;
+    }
+  }
   
   .action-card {
-    background: #f8f8f8;
-    border: 2px solid #e5e5e5;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
     border-radius: 12px;
     padding: 1.75rem;
     text-decoration: none;
-    color: inherit;
+    color: #fff;
     display: flex;
     align-items: center;
     gap: 1.25rem;
@@ -650,22 +854,24 @@ export const prerender = false;
   }
   
   .action-card:hover {
-    border-color: #000;
-    background: #fff;
+    border-color: #4b5563;
+    background: linear-gradient(to bottom, #374151, #1f2937);
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
   }
   
-  .action-card.primary { background: #000; border-color: #000; color: #fff; }
-  .action-card.primary:hover { background: #222; border-color: #222; }
+  .action-card.primary { background: #000; border-color: #3b82f6; color: #fff; }
+  .action-card.primary:hover { background: #111; border-color: #60a5fa; }
+  .action-card.primary-red { background: #000; border-color: #ef4444; color: #fff; }
+  .action-card.primary-red:hover { background: #111; border-color: #f87171; }
   .action-card.disabled { opacity: 0.5; pointer-events: none; filter: grayscale(100%); }
   .action-card.compact { padding: 1.25rem; }
   
   .card-icon {
     width: 56px;
     height: 56px;
-    background: #fff;
-    border: 2px solid #e5e5e5;
+    background: linear-gradient(to bottom, #374151, #1f2937);
+    border: 2px solid #4b5563;
     border-radius: 14px;
     display: flex;
     align-items: center;
@@ -674,34 +880,28 @@ export const prerender = false;
     flex-shrink: 0;
   }
   
-  .action-card.primary .card-icon { background: #222; border-color: #333; }
+  .action-card.primary .card-icon { background: #1f2937; border-color: #3b82f6; }
+  .action-card.primary-red .card-icon { background: #1f2937; border-color: #ef4444; }
   .action-card.compact .card-icon { width: 40px; height: 40px; font-size: 1.25rem; }
   
   .card-body { flex: 1; min-width: 0; }
-  .card-body h3 { font-size: 1.375rem; font-weight: 700; margin-bottom: 0.25rem; }
-  .card-body p { font-size: 1.0625rem; color: #888; line-height: 1.4; }
-  .action-card.primary .card-body p { color: #aaa; }
+  .card-body h3 { font-size: 1.375rem; font-weight: 700; margin-bottom: 0.25rem; color: #fff; }
+  .card-body p { font-size: 1.0625rem; color: #9ca3af; line-height: 1.4; }
+  .action-card.primary .card-body p { color: #9ca3af; }
+  .action-card.primary-red .card-body p { color: #9ca3af; }
   .action-card.compact .card-body h3 { font-size: 1rem; }
   .action-card.compact .card-body p { font-size: 0.875rem; }
   
-  .card-arrow { font-size: 1.5rem; color: #ccc; transition: transform 0.2s; }
-  .action-card:hover .card-arrow { transform: translateX(4px); color: #000; }
-  .action-card.primary .card-arrow { color: #666; }
+  .card-arrow { font-size: 1.5rem; color: #6b7280; transition: transform 0.2s; }
+  .action-card:hover .card-arrow { transform: translateX(4px); color: #fff; }
+  .action-card.primary .card-arrow { color: #9ca3af; }
   .action-card.primary:hover .card-arrow { color: #fff; }
+  .action-card.primary-red .card-arrow { color: #9ca3af; }
+  .action-card.primary-red:hover .card-arrow { color: #fff; }
   
-  .mix-count {
-    background: #dc2626;
-    color: #fff;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2rem;
-    min-width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 1rem;
-  }
+  .action-card.release-card { border-color: rgba(239, 68, 68, 0.4); }
+  .action-card.release-card:hover { border-color: #ef4444; }
+  .action-card.release-card .card-icon { border-color: rgba(239, 68, 68, 0.5); }
   
   .release-count {
     background: #dc2626;
@@ -733,22 +933,27 @@ export const prerender = false;
   
   .info-icon { font-size: 1.25rem; }
   
-  /* Account Section */
-  .account-section { background: #f8f8f8; border-color: #e5e5e5; }
+  /* Account Section - same dark theme as other sections */
+  .account-section { background: linear-gradient(to bottom, #1f2937, #111827); border-color: #374151; }
   
   /* Responsive */
+  @media (max-width: 1200px) {
+    .cards-grid.four-col { grid-template-columns: repeat(2, 1fr); }
+  }
+  
   @media (max-width: 768px) {
     .container { padding: 1rem; }
     .welcome-section { padding: 1.5rem; flex-direction: column; text-align: center; }
     .welcome-left { flex-direction: column; }
-    .welcome-text h1 { font-size: 1.5rem; }
-    .avatar { width: 50px; height: 50px; font-size: 1.5rem; }
+    .welcome-text h1 { font-size: 2rem; }
+    .avatar { width: 60px; height: 60px; font-size: 1.75rem; }
     .role-badges { justify-content: center; }
     .dashboard-section { padding: 1.5rem; }
     .section-desc { margin-left: 0; margin-top: 0.5rem; }
     .stats-row { grid-template-columns: repeat(2, 1fr); }
     .cards-grid { grid-template-columns: 1fr; }
     .cards-grid.two-col { grid-template-columns: 1fr; }
+    .cards-grid.four-col { grid-template-columns: 1fr; }
     .restricted-overlay { position: relative; top: 0; transform: none; margin-bottom: 1rem; }
   }
   
@@ -774,9 +979,84 @@ export const prerender = false;
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   
-  onAuthStateChanged(auth, (user) => {
+  // Helper to check if a cookie is properly set (not empty or expired)
+  function hasCookie(name) {
+    const value = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+    return value && !value.endsWith('=') && !value.endsWith('=;');
+  }
+  
+  // Get UI elements
+  const loadingState = document.getElementById('loadingState');
+  const loginPrompt = document.getElementById('loginPrompt');
+  
+  function showLoading() {
+    if (loadingState) loadingState.style.display = 'flex';
+    if (loginPrompt) loginPrompt.style.display = 'none';
+  }
+  
+  function showLogin() {
+    if (loadingState) loadingState.style.display = 'none';
+    if (loginPrompt) loginPrompt.style.display = 'flex';
+  }
+  
+  function hideAll() {
+    if (loadingState) loadingState.style.display = 'none';
+    if (loginPrompt) loginPrompt.style.display = 'none';
+  }
+  
+  onAuthStateChanged(auth, async (user) => {
+    console.log('[Partner Dashboard Client] Auth state changed, user:', user?.uid || 'NOT LOGGED IN');
+    
     if (!user) {
+      // Not logged in - show login prompt
+      console.log('[Partner Dashboard Client] No user, showing login prompt');
       document.cookie = 'partnerId=; path=/; max-age=0';
+      showLogin();
+      return;
+    }
+    
+    // User is logged in
+    console.log('[Partner Dashboard Client] User logged in:', user.uid);
+    
+    // Always ensure userId cookie is set
+    if (!hasCookie('userId')) {
+      document.cookie = `userId=${user.uid}; path=/; max-age=2592000; SameSite=Lax`;
+      console.log('[Partner Dashboard Client] Set userId cookie');
+    }
+    
+    // Check if partnerId cookie exists and is valid
+    const hasPartnerCookie = hasCookie('partnerId');
+    console.log('[Partner Dashboard Client] hasPartnerCookie:', hasPartnerCookie);
+    
+    if (!hasPartnerCookie) {
+      console.log('[Partner Dashboard Client] No partnerId cookie, checking profile...');
+      showLoading();
+      
+      try {
+        // Fetch user profile to check if they're a partner
+        const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`);
+        const profile = await response.json();
+        
+        console.log('[Partner Dashboard Client] Profile:', profile);
+        
+        // If they have any partner role, set the cookie and reload
+        if (profile.success && (profile.isPro || profile.roles?.artist || profile.roles?.dj || profile.roles?.merchSupplier)) {
+          document.cookie = `partnerId=${user.uid}; path=/; max-age=2592000; SameSite=Lax`;
+          console.log('[Partner Dashboard Client] Set partnerId cookie, reloading...');
+          window.location.reload();
+        } else {
+          // They're logged in but not a partner - show login prompt with message
+          console.log('[Partner Dashboard Client] User has no partner roles, showing login');
+          showLogin();
+        }
+      } catch (e) {
+        console.error('[Partner Dashboard Client] Error fetching profile:', e);
+        showLogin();
+      }
+    } else {
+      // partnerId cookie exists - if we're seeing this, the server should have rendered the dashboard
+      // Hide loading state just in case
+      hideAll();
     }
   });
 </script>

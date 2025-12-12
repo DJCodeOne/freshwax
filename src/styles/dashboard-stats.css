@@ -1,0 +1,67 @@
+/* Dashboard Stats Cards - Compact Layout Fix */
+
+/* Stats grid - tighter spacing */
+.stats-grid,
+.performance-stats,
+.dj-mixes-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+
+/* Individual stat card */
+.stat-card,
+.stat-box,
+.performance-stat {
+  padding: 1rem 1.25rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-card:last-child,
+.stat-box:last-child,
+.performance-stat:last-child {
+  border-right: none;
+}
+
+/* Label above number */
+.stat-label,
+.stat-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 0.25rem;
+}
+
+/* Number - aligned left under label */
+.stat-value,
+.stat-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+/* Mobile: 2 columns */
+@media (max-width: 768px) {
+  .stats-grid,
+  .performance-stats,
+  .dj-mixes-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .stat-card:nth-child(2),
+  .stat-box:nth-child(2),
+  .performance-stat:nth-child(2) {
+    border-right: none;
+  }
+  
+  .stat-card:nth-child(1),
+  .stat-card:nth-child(2),
+  .stat-box:nth-child(1),
+  .stat-box:nth-child(2),
+  .performance-stat:nth-child(1),
+  .performance-stat:nth-child(2) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}

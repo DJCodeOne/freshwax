@@ -25,7 +25,7 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-type StockOperation = 'receive' | 'adjust' | 'sell' | 'return' | 'reserve' | 'unreserve' | 'damaged' | 'transfer';
+type StockOperation = 'receive' | 'adjust' | 'sell' | 'return' | 'reserve' | 'unreserve' | 'damaged' | 'transfer' | 'set';
 
 interface StockUpdate {
   productId: string;
@@ -60,7 +60,7 @@ export const POST: APIRoute = async ({ request }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     
-    if (quantity < 0 && !['adjust', 'damaged'].includes(operation)) {
+    if (quantity < 0 && !['adjust', 'damaged', 'set'].includes(operation)) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Quantity must be positive for this operation'
@@ -142,6 +142,12 @@ export const POST: APIRoute = async ({ request }) => {
       case 'damaged':
         newStock = Math.max(0, previousStock - Math.abs(quantity));
         stockDelta = -Math.abs(quantity);
+        break;
+      
+      case 'set':
+        // Set stock to absolute value (for stock takes)
+        newStock = Math.max(0, quantity);
+        stockDelta = newStock - previousStock;
         break;
         
       default:
@@ -318,13 +324,16 @@ export const GET: APIRoute = async ({ url }) => {
         category: data.categoryName,
         supplierId: data.supplierId,
         supplierName: data.supplierName,
+        supplier: data.supplierName || 'Fresh Wax',
         totalStock: data.totalStock,
         reservedStock: data.reservedStock || 0,
         soldStock: data.soldStock || 0,
         isLowStock: data.isLowStock,
         isOutOfStock: data.isOutOfStock,
         lowStockThreshold: data.lowStockThreshold,
-        variantStock: data.variantStock
+        variantStock: data.variantStock,
+        images: data.images || [],
+        primaryImage: data.primaryImage || data.images?.[0]?.url || null
       });
     });
     

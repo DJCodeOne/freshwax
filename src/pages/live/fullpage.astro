@@ -1,6 +1,6 @@
 ---
 // src/pages/live/fullpage.astro
-// Full page live stream view - player and chat only
+// Full page live stream view - large player with chat and reactions
 export const prerender = false;
 
 const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
@@ -12,14 +12,44 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Live Stream - Fresh Wax</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+  
+  <!-- Shoutout Modal -->
+  <div id="shoutoutModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content shoutout-modal-content">
+      <button class="modal-close" id="closeShoutoutModal">×</button>
+      <h2>📣 Send a Shoutout</h2>
+      <p class="shoutout-hint">Birthdays 🎂 • Big ups 🙌 • Locations 📍 • Party vibes 🎉</p>
+      <div class="shoutout-input-wrapper">
+        <input type="text" id="shoutoutInput" placeholder="Type your shoutout..." maxlength="30" autocomplete="off" />
+        <span class="shoutout-char-count"><span id="shoutoutCharCount">0</span>/30</span>
+      </div>
+      <div class="shoutout-emoji-row">
+        <button type="button" class="shoutout-emoji" data-emoji="🎂">🎂</button>
+        <button type="button" class="shoutout-emoji" data-emoji="🎉">🎉</button>
+        <button type="button" class="shoutout-emoji" data-emoji="🔥">🔥</button>
+        <button type="button" class="shoutout-emoji" data-emoji="❤️">❤️</button>
+        <button type="button" class="shoutout-emoji" data-emoji="🙌">🙌</button>
+        <button type="button" class="shoutout-emoji" data-emoji="📍">📍</button>
+        <button type="button" class="shoutout-emoji" data-emoji="🎵">🎵</button>
+        <button type="button" class="shoutout-emoji" data-emoji="👊">👊</button>
+      </div>
+      <button id="sendShoutoutBtn" class="send-shoutout-btn" disabled>
+        <span>Send Shoutout</span>
+        <span class="shoutout-cost">FREE</span>
+      </button>
+    </div>
+  </div>
+  
   <div class="fullpage-container">
     <div class="player-section">
+      <!-- Top Bar -->
       <div class="top-bar">
         <a href="/live" class="back-btn">
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
@@ -34,25 +64,16 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
             <span id="liveStatusText">OFFLINE</span>
           </div>
           <h1 id="streamTitle">No Live Streams</h1>
-          <div class="dj-info">
-            <img id="djAvatar" src="/logo.webp" alt="" class="dj-avatar" />
-            <span id="djName">-</span>
-            <span class="genre" id="streamGenre">Jungle / D&B</span>
-          </div>
         </div>
         
         <div class="stream-stats">
           <div class="stat">
-            <span class="stat-label">Views</span>
             <span class="stat-value" id="viewerCount">0</span>
+            <span class="stat-label">Views</span>
           </div>
           <div class="stat">
-            <span class="stat-label">Likes</span>
-            <span class="stat-value" id="likeCount">0</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Duration</span>
             <span class="stat-value" id="streamDuration">0:00</span>
+            <span class="stat-label">Duration</span>
           </div>
           <a href="/account/dj-lobby" id="djLobbyBtn" class="dj-lobby-btn hidden">
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
@@ -63,6 +84,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         </div>
       </div>
       
+      <!-- Player Area -->
       <div class="player-wrapper">
         <div id="offlineOverlay" class="offline-overlay">
           <div class="offline-content">
@@ -73,12 +95,32 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         </div>
         
         <div id="audioPlayer" class="audio-player hidden">
-          <div class="audio-visualizer" id="audioVisualizer">
-            <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
-            <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
-          </div>
-          <div class="audio-cover">
-            <img id="streamCover" src="/logo.webp" alt="Stream Cover" />
+          <div class="audio-content">
+            <div class="audio-cover">
+              <img id="streamCover" src="/place-holder.webp" alt="Stream Cover" />
+            </div>
+            <div class="audio-info">
+              <div class="audio-live-badge">
+                <span class="live-pulse"></span>
+                <span>LIVE</span>
+              </div>
+              <div class="audio-title" id="audioTitle">Live Stream</div>
+              <div class="audio-dj" id="audioDjName">DJ Name</div>
+            </div>
+            <div class="audio-bars">
+              <div class="audio-bar"></div>
+              <div class="audio-bar"></div>
+              <div class="audio-bar"></div>
+              <div class="audio-bar"></div>
+              <div class="audio-bar"></div>
+              <div class="audio-bar"></div>
+              <div class="audio-bar"></div>
+              <div class="audio-bar"></div>
+              <div class="audio-bar"></div>
+              <div class="audio-bar"></div>
+              <div class="audio-bar"></div>
+              <div class="audio-bar"></div>
+            </div>
           </div>
           <audio id="audioElement" crossorigin="anonymous"></audio>
         </div>
@@ -88,40 +130,109 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         </div>
       </div>
       
+      <!-- Controls Bar -->
       <div class="player-controls">
         <button id="playPauseBtn" class="control-btn play-btn">
-          <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+          <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
             <path d="M8 5v14l11-7z"/>
           </svg>
-          <svg id="pauseIcon" class="hidden" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+          <svg id="pauseIcon" class="hidden" viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
             <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
           </svg>
         </button>
         
-        <div class="volume-control">
-          <button id="muteBtn" class="control-btn mute-btn">
-            <svg id="volumeIcon" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
-            </svg>
+        <!-- Emoji Reactions -->
+        <div class="inline-reactions">
+          <button id="likeBtn" class="reaction-btn" title="Love" data-emoji="❤️,💖,💗,💓,💕">
+            <span class="reaction-emoji">❤️</span>
           </button>
+          <button id="fireBtn" class="reaction-btn" title="Fire" data-emoji="🔥,🔥,🔥,🔥,🔥">
+            <span class="reaction-emoji">🔥</span>
+          </button>
+          <button id="explosionBtn" class="reaction-btn" title="Explosion" data-emoji="💥,💥,💥,💥,💥">
+            <span class="reaction-emoji">💥</span>
+          </button>
+          <button id="starBtn" class="reaction-btn" title="Star" data-emoji="⭐,🌟,✨,⭐,🌟">
+            <span class="reaction-emoji">⭐</span>
+          </button>
+          <button id="bassBtn" class="reaction-btn" title="Bass" data-emoji="🔊,🔊,🔉,🔊,🎵">
+            <span class="reaction-emoji">🔊</span>
+          </button>
+          <button id="fistBtn" class="reaction-btn" title="Fist" data-emoji="👊,👊,👊,👊,👊">
+            <span class="reaction-emoji">👊</span>
+          </button>
+          <button id="rocketBtn" class="reaction-btn" title="Rocket" data-emoji="🚀,🚀,🚀,🚀,🚀">
+            <span class="reaction-emoji">🚀</span>
+          </button>
+          <button id="animToggleBtn" class="reaction-btn anim-toggle-btn" title="Turn off emoji animations">
+            <svg class="anim-on-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            <svg class="anim-off-icon hidden" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
+          </button>
+        </div>
+        
+        <div class="volume-control">
+          <svg class="volume-icon" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+          </svg>
           <input type="range" id="volumeSlider" min="0" max="100" value="80" class="volume-slider" />
         </div>
         
-        <div class="reaction-buttons">
-          <button id="likeBtn" class="reaction-btn like-btn">
-            <span class="heart-icon">❤️</span>
-            <span id="likeBtnCount">0</span>
+        <div class="listeners-dropdown-container">
+          <button class="listeners-toggle" id="listenersToggle">
+            <span>👥</span>
+            <span id="listenerCountMini">0</span>
+            <span>listening</span>
+            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+              <path d="M7 10l5 5 5-5z"/>
+            </svg>
+          </button>
+          <div class="listeners-dropdown hidden" id="listenersDropdown">
+            <div class="listeners-header">
+              <span>👥 Listeners</span>
+              <span class="listeners-count-badge" id="listenersCountBadge">0</span>
+            </div>
+            <div class="listeners-list" id="listenersList">
+              <div class="listeners-empty">No listeners yet</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Shoutout Bar -->
+      <div class="shoutout-bar" id="shoutoutBar">
+        <div class="shoutout-left">
+          <span class="shoutout-label">📣 SHOUT OUTS</span>
+          <button id="shoutoutBtn" class="shoutout-btn" title="Send a shoutout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
           </button>
         </div>
-        
-        <div class="listeners-mini">
-          <span>👥</span>
-          <span id="listenerCountMini">0</span>
-          <span>listening</span>
+        <div class="shoutout-marquee">
+          <div class="shoutout-track" id="shoutoutTrack">
+            <span class="shoutout-placeholder">🎉 Send a shoutout to appear here!</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Now Playing Bar -->
+      <div class="now-playing-bar">
+        <div class="now-playing-left">
+          <img id="djAvatar" src="/place-holder.webp" alt="" class="np-avatar" />
+          <div class="np-info">
+            <span class="np-label">NOW PLAYING</span>
+            <span class="np-name" id="djName">--</span>
+          </div>
+        </div>
+        <div class="now-playing-right">
+          <span class="np-set-label">SET</span>
+          <span class="np-set-title" id="setTitle">Waiting for stream...</span>
+          <span class="np-genre" id="streamGenre">Jungle / D&B</span>
         </div>
       </div>
     </div>
     
+    <!-- Chat Sidebar -->
     <aside class="chat-section">
       <div class="chat-header">
         <h3>LIVE CHAT</h3>
@@ -130,7 +241,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       
       <div class="chat-messages" id="chatMessages">
         <div class="chat-welcome">
-          <p>Welcome to Fresh Wax Live!</p>
+          <p>Welcome to <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span> Live!</p>
           <p class="chat-hint">Chat is active during live streams.</p>
         </div>
       </div>
@@ -142,7 +253,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         
         <div id="chatForm" class="chat-form hidden">
           <div class="chat-tools">
-            <button type="button" id="emojiBtn" class="tool-btn" title="Emojis">:)</button>
+            <button type="button" id="emojiBtn" class="tool-btn" title="Emojis">😊</button>
             <button type="button" id="giphyBtn" class="tool-btn" title="GIFs">GIF</button>
           </div>
           <div class="chat-input-wrapper">
@@ -171,21 +282,16 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         <div class="giphy-grid" id="giphyGrid">
           <p class="giphy-hint">Search for a GIF above</p>
         </div>
-        <div class="giphy-attribution">Powered by GIPHY</div>
       </div>
     </aside>
   </div>
 
 <style>
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
   
   body {
     font-family: 'Inter', sans-serif;
-    background: #0a0a0a;
+    background: linear-gradient(135deg, #0a0a0f 0%, #111118 50%, #0d0d12 100%);
     color: #fff;
     overflow: hidden;
   }
@@ -194,33 +300,29 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     display: grid;
     grid-template-columns: 1fr 380px;
     height: 100vh;
-    gap: 0;
   }
   
   @media (max-width: 1000px) {
-    .fullpage-container {
-      grid-template-columns: 1fr;
-      grid-template-rows: 1fr auto;
-    }
-    .chat-section {
-      height: 300px;
-    }
+    .fullpage-container { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+    .chat-section { height: 300px; }
   }
   
   .player-section {
     display: flex;
     flex-direction: column;
-    background: #111;
+    background: linear-gradient(180deg, #111 0%, #0a0a0a 100%);
+    min-width: 0;
+    overflow: hidden;
   }
   
   .top-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 1.5rem;
-    background: #1a1a1a;
-    border-bottom: 2px solid #333;
-    gap: 1.5rem;
+    padding: 0.75rem 1.25rem;
+    background: rgba(0,0,0,0.5);
+    border-bottom: 1px solid #222;
+    gap: 1rem;
     flex-wrap: wrap;
   }
   
@@ -229,18 +331,17 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background: #333;
+    background: #222;
     border-radius: 8px;
     color: #fff;
     text-decoration: none;
     font-weight: 600;
     font-size: 0.875rem;
     transition: all 0.2s;
+    border: 1px solid #333;
   }
   
-  .back-btn:hover {
-    background: #dc2626;
-  }
+  .back-btn:hover { background: #dc2626; border-color: #dc2626; }
   
   .stream-info {
     display: flex;
@@ -257,113 +358,48 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     padding: 0.4rem 0.75rem;
     background: #333;
     border-radius: 6px;
-    font-weight: 700;
     font-size: 0.75rem;
-    letter-spacing: 0.05em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #888;
   }
   
-  .live-badge.is-live {
-    background: #dc2626;
-  }
+  .live-badge.is-live { background: rgba(220, 38, 38, 0.2); border: 1px solid #dc2626; color: #dc2626; }
+  .live-dot { width: 8px; height: 8px; background: #888; border-radius: 50%; }
+  .live-badge.is-live .live-dot { background: #dc2626; animation: pulse 1.5s ease-in-out infinite; }
   
-  .live-dot {
-    width: 8px;
-    height: 8px;
-    background: #888;
-    border-radius: 50%;
-  }
-  
-  .live-badge.is-live .live-dot {
-    background: #fff;
-    animation: pulse 1.5s infinite;
-  }
-  
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
   
   .stream-info h1 {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 1.5rem;
     font-weight: 400;
+    letter-spacing: 1px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 300px;
   }
   
-  .dj-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .dj-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 2px solid #333;
-    object-fit: cover;
-  }
-  
-  .dj-info span {
-    font-size: 0.875rem;
-    color: #aaa;
-  }
-  
-  .genre {
-    padding: 0.2rem 0.5rem;
-    background: #dc2626;
-    border-radius: 4px;
-    color: #fff !important;
-    font-size: 0.75rem !important;
-    font-weight: 600;
-  }
-  
-  .stream-stats {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-  }
-  
-  .stat {
-    text-align: center;
-  }
-  
-  .stat-label {
-    display: block;
-    font-size: 0.7rem;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  
-  .stat-value {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #fff;
-  }
+  .stream-stats { display: flex; align-items: center; gap: 1.5rem; }
+  .stat { display: flex; flex-direction: column; align-items: center; gap: 0.125rem; }
+  .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; color: #dc2626; }
+  .stat-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 1px; color: #888; }
   
   .dj-lobby-btn {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
     padding: 0.5rem 1rem;
-    background: #10b981;
-    border: none;
+    background: linear-gradient(135deg, #9333ea, #7c3aed);
     border-radius: 8px;
     color: #fff;
     text-decoration: none;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 600;
     transition: all 0.2s;
-    margin-left: 0.5rem;
   }
   
-  .dj-lobby-btn:hover {
-    background: #059669;
-  }
+  .dj-lobby-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4); }
   
   .player-wrapper {
     flex: 1;
@@ -371,7 +407,8 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 50%, #1a1a1a 100%);
+    background: #000;
+    min-height: 0;
   }
   
   .offline-overlay {
@@ -380,418 +417,240 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #0a0a0a 100%);
   }
   
-  .offline-content {
-    text-align: center;
-    padding: 2rem;
-  }
-  
-  .offline-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    opacity: 0.4;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-  }
-  
-  .offline-content h2 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-  }
-  
-  .offline-content p {
-    color: #888;
-  }
+  .offline-content { text-align: center; }
+  .offline-icon { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; color: #333; letter-spacing: 0.25rem; margin-bottom: 1rem; }
+  .offline-content h2 { font-size: 1.25rem; color: #666; margin-bottom: 0.5rem; }
+  .offline-content p { font-size: 0.875rem; color: #555; }
   
   .audio-player {
-    text-align: center;
-    padding: 3rem;
-  }
-  
-  .audio-visualizer {
+    position: absolute;
+    inset: 0;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
-    gap: 4px;
-    height: 80px;
-    margin-bottom: 2rem;
+    background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0a 100%);
   }
   
-  .viz-bar {
-    width: 8px;
-    background: #dc2626;
-    border-radius: 4px;
-    animation: viz 0.5s ease-in-out infinite alternate;
-  }
+  .audio-content { text-align: center; padding: 2rem; }
+  .audio-cover { width: 200px; height: 200px; margin: 0 auto 1.5rem; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.5); border: 3px solid #333; }
+  .audio-cover img { width: 100%; height: 100%; object-fit: cover; }
+  .audio-info { margin-bottom: 1rem; }
+  .audio-live-badge { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(220, 38, 38, 0.2); border: 1px solid #dc2626; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; color: #dc2626; letter-spacing: 1px; margin-bottom: 0.75rem; }
+  .live-pulse { width: 8px; height: 8px; background: #dc2626; border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
+  .audio-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 1px; margin-bottom: 0.25rem; }
+  .audio-dj { font-size: 1rem; color: #888; }
   
-  .viz-bar:nth-child(1) { height: 30%; animation-delay: 0s; }
-  .viz-bar:nth-child(2) { height: 60%; animation-delay: 0.1s; }
-  .viz-bar:nth-child(3) { height: 40%; animation-delay: 0.2s; }
-  .viz-bar:nth-child(4) { height: 80%; animation-delay: 0.3s; }
-  .viz-bar:nth-child(5) { height: 50%; animation-delay: 0.4s; }
-  .viz-bar:nth-child(6) { height: 70%; animation-delay: 0.5s; }
-  .viz-bar:nth-child(7) { height: 35%; animation-delay: 0.6s; }
-  .viz-bar:nth-child(8) { height: 55%; animation-delay: 0.7s; }
+  .audio-bars { display: flex; align-items: flex-end; justify-content: center; gap: 4px; height: 50px; margin-top: 1rem; }
+  .audio-bar { width: 6px; background: linear-gradient(to top, #dc2626, #f87171); border-radius: 3px; animation: barPulse 0.8s ease-in-out infinite; }
+  .audio-bar:nth-child(1) { height: 20%; animation-delay: 0s; }
+  .audio-bar:nth-child(2) { height: 40%; animation-delay: 0.1s; }
+  .audio-bar:nth-child(3) { height: 60%; animation-delay: 0.15s; }
+  .audio-bar:nth-child(4) { height: 80%; animation-delay: 0.2s; }
+  .audio-bar:nth-child(5) { height: 100%; animation-delay: 0.25s; }
+  .audio-bar:nth-child(6) { height: 70%; animation-delay: 0.3s; }
+  .audio-bar:nth-child(7) { height: 90%; animation-delay: 0.35s; }
+  .audio-bar:nth-child(8) { height: 50%; animation-delay: 0.4s; }
+  .audio-bar:nth-child(9) { height: 80%; animation-delay: 0.45s; }
+  .audio-bar:nth-child(10) { height: 60%; animation-delay: 0.5s; }
+  .audio-bar:nth-child(11) { height: 40%; animation-delay: 0.55s; }
+  .audio-bar:nth-child(12) { height: 25%; animation-delay: 0.6s; }
+  @keyframes barPulse { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.4); } }
   
-  @keyframes viz {
-    to { height: 100%; }
-  }
-  
-  .audio-cover img {
-    width: 200px;
-    height: 200px;
-    border-radius: 12px;
-    border: 4px solid #333;
-    object-fit: cover;
-  }
-  
-  .video-player {
-    width: 100%;
-    height: 100%;
-  }
-  
-  .hls-video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
+  .video-player { position: absolute; inset: 0; }
+  .hls-video { width: 100%; height: 100%; object-fit: contain; background: #000; }
   
   .player-controls {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 2rem;
-    padding: 1.25rem 1.5rem;
-    background: #1a1a1a;
-    border-top: 2px solid #333;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #111;
+    border-top: 1px solid #222;
+    border-bottom: 1px solid #222;
   }
   
   .control-btn {
-    background: #333;
+    width: 48px;
+    height: 48px;
+    background: #dc2626;
     border: none;
     border-radius: 50%;
     color: #fff;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s;
+    flex-shrink: 0;
   }
   
-  .play-btn {
-    width: 64px;
-    height: 64px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+  .control-btn:hover { background: #b91c1c; transform: scale(1.05); }
   
-  .play-btn:hover {
-    background: #dc2626;
-    transform: scale(1.05);
-  }
-  
-  .mute-btn {
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .mute-btn:hover {
-    background: #444;
-  }
-  
-  .volume-control {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  
-  .volume-slider {
-    width: 100px;
-    height: 6px;
-    -webkit-appearance: none;
-    background: #333;
-    border-radius: 3px;
-    cursor: pointer;
-  }
-  
-  .volume-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #dc2626;
-    border-radius: 50%;
-    cursor: pointer;
-  }
-  
-  .reaction-buttons {
-    display: flex;
-    gap: 0.75rem;
-  }
+  .inline-reactions { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
   
   .reaction-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.25rem;
-    background: #333;
-    border: none;
-    border-radius: 25px;
-    color: #fff;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  
-  .like-btn:hover {
-    background: #dc2626;
-    transform: scale(1.05);
-  }
-  
-  .like-btn.liked {
-    background: #dc2626;
-  }
-  
-  .listeners-mini {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: #222;
-    border-radius: 20px;
-    font-size: 0.875rem;
-    color: #aaa;
-  }
-  
-  .listeners-mini span:first-child {
-    font-size: 1rem;
-  }
-  
-  /* Chat Section */
-  .chat-section {
-    display: flex;
-    flex-direction: column;
-    background: #fff;
-    border-left: 2px solid #e5e7eb;
-  }
-  
-  .chat-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.25rem;
-    background: #111;
-    color: #fff;
-    border-bottom: 2px solid #333;
-  }
-  
-  .chat-header h3 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.25rem;
-    font-weight: 400;
-    letter-spacing: 0.05em;
-  }
-  
-  .chat-viewers {
-    font-size: 0.8rem;
-    color: #888;
-  }
-  
-  .chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1rem;
-    background: #fafafa;
-  }
-  
-  .chat-welcome {
-    text-align: center;
-    padding: 2rem 1rem;
-    color: #666;
-  }
-  
-  .chat-welcome p:first-child {
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 0.5rem;
-  }
-  
-  .chat-hint {
-    font-size: 0.875rem;
-    color: #888;
-  }
-  
-  .chat-input-section {
-    padding: 1rem;
-    background: #fff;
-    border-top: 1px solid #e5e7eb;
-  }
-  
-  .login-prompt {
-    text-align: center;
-    padding: 0.75rem;
-    background: #f5f5f5;
-    border-radius: 8px;
-  }
-  
-  .login-prompt a {
-    color: #dc2626;
-    font-weight: 600;
-  }
-  
-  .chat-form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .chat-tools {
-    display: flex;
-    gap: 0.5rem;
-  }
-  
-  .tool-btn {
-    padding: 0.4rem 0.75rem;
-    background: #f5f5f5;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  
-  .tool-btn:hover {
-    background: #e5e7eb;
-  }
-  
-  .chat-input-wrapper {
-    display: flex;
-    gap: 0.5rem;
-  }
-  
-  .chat-input-wrapper input {
-    flex: 1;
-    padding: 0.75rem 1rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 0.9rem;
-  }
-  
-  .chat-input-wrapper input:focus {
-    outline: none;
-    border-color: #dc2626;
-  }
-  
-  .chat-input-wrapper button {
-    width: 44px;
-    height: 44px;
-    background: #dc2626;
-    border: none;
-    border-radius: 8px;
-    color: #fff;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s;
   }
   
-  .chat-input-wrapper button:hover {
-    background: #b91c1c;
-  }
+  .reaction-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); transform: scale(1.1); }
+  .reaction-btn:active { transform: scale(0.95); }
+  .reaction-btn.liked { transform: scale(1.2); }
+  .reaction-btn.disabled { opacity: 0.5; cursor: not-allowed; }
+  .reaction-btn.disabled:hover { transform: none; background: rgba(255,255,255,0.05); }
+  .reaction-emoji { font-size: 1.25rem; }
   
-  .chat-input-wrapper button svg {
-    width: 20px;
-    height: 20px;
-  }
+  .reaction-btn.anim-toggle-btn { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); }
+  .reaction-btn.anim-toggle-btn:hover { background: rgba(16, 185, 129, 0.2); }
+  .reaction-btn.anim-toggle-btn.off { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); }
+  .reaction-btn.anim-toggle-btn .anim-off-icon { display: none; }
+  .reaction-btn.anim-toggle-btn .anim-on-icon { display: block; color: #10b981; }
+  .reaction-btn.anim-toggle-btn.off .anim-off-icon { display: block; color: #ef4444; }
+  .reaction-btn.anim-toggle-btn.off .anim-on-icon { display: none; }
   
-  .emoji-picker, .giphy-picker {
-    position: absolute;
-    bottom: 100%;
-    left: 1rem;
-    right: 1rem;
-    background: #fff;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
-    z-index: 100;
-  }
+  .volume-control { display: flex; align-items: center; gap: 0.5rem; }
+  .volume-icon { color: #888; }
+  .volume-slider { width: 100px; height: 6px; -webkit-appearance: none; appearance: none; background: #333; border-radius: 3px; cursor: pointer; }
+  .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: #dc2626; border-radius: 50%; cursor: pointer; }
   
-  .emoji-categories {
-    display: flex;
-    gap: 0.25rem;
-    padding: 0.5rem;
-    border-bottom: 1px solid #e5e7eb;
-  }
+  .listeners-dropdown-container { position: relative; }
+  .listeners-toggle { display: flex; align-items: center; gap: 0.375rem; font-size: 0.8125rem; color: #888; padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+  .listeners-toggle:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .listeners-toggle.active { background: rgba(220, 38, 38, 0.2); border-color: #dc2626; color: #fff; }
+  .listeners-toggle.active .dropdown-arrow { transform: rotate(180deg); }
+  .dropdown-arrow { transition: transform 0.2s; }
   
-  .emoji-cat {
-    padding: 0.4rem 0.75rem;
-    background: #f5f5f5;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    cursor: pointer;
-  }
+  .listeners-dropdown { position: absolute; bottom: calc(100% + 0.5rem); right: 0; width: 280px; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; box-shadow: 0 -4px 20px rgba(0,0,0,0.4); z-index: 100; overflow: hidden; }
+  .listeners-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: #111; border-bottom: 1px solid #333; font-weight: 600; font-size: 0.875rem; }
+  .listeners-count-badge { background: #dc2626; color: #fff; font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 10px; }
+  .listeners-list { max-height: 250px; overflow-y: auto; }
+  .listeners-empty { padding: 1.5rem; text-align: center; color: #666; font-size: 0.875rem; }
+  .listener-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 1rem; border-bottom: 1px solid #222; transition: background 0.2s; }
+  .listener-item:last-child { border-bottom: none; }
+  .listener-item:hover { background: rgba(255,255,255,0.05); }
+  .listener-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: linear-gradient(135deg, #374151, #1f2937); display: flex; align-items: center; justify-content: center; font-size: 0.875rem; flex-shrink: 0; }
+  .listener-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+  .listener-info { flex: 1; min-width: 0; }
+  .listener-name { font-size: 0.875rem; font-weight: 500; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .listener-status { font-size: 0.75rem; color: #888; display: flex; align-items: center; gap: 0.25rem; }
+  .listener-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; }
   
-  .emoji-cat.active {
-    background: #dc2626;
-    color: #fff;
-  }
+  .listeners-mini { display: flex; align-items: center; gap: 0.375rem; font-size: 0.8125rem; color: #888; padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.05); border-radius: 8px; }
   
-  .emoji-grid {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 0.25rem;
-    padding: 0.75rem;
-    max-height: 200px;
-    overflow-y: auto;
-  }
+  .shoutout-bar { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1rem; background: linear-gradient(90deg, rgba(220, 38, 38, 0.1) 0%, transparent 50%); border-bottom: 1px solid #222; width: 100%; overflow: hidden; }
+  .shoutout-left { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+  .shoutout-label { font-family: 'Bebas Neue', sans-serif; font-size: 0.875rem; letter-spacing: 1px; color: #dc2626; }
+  .shoutout-btn { width: 28px; height: 28px; background: #dc2626; border: none; border-radius: 6px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .shoutout-btn:hover { background: #b91c1c; transform: scale(1.1); }
+  .shoutout-btn.disabled { opacity: 0.5; cursor: not-allowed; }
+  .shoutout-btn.disabled:hover { background: #dc2626; transform: none; }
+  .shoutout-marquee { flex: 1; overflow: hidden; min-width: 0; position: relative; display: flex; align-items: center; justify-content: center; min-height: 24px; }
+  .shoutout-track { display: inline-block; white-space: nowrap; }
+  .shoutout-track.scrolling { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); animation: shoutout-scroll 20s linear forwards; text-align: left; }
+  .shoutout-track:hover { animation-play-state: paused; }
+  .shoutout-item { color: #fff; font-size: 0.9rem; font-weight: 500; }
+  .shoutout-divider { color: #dc2626; padding: 0 1.5rem; }
+  .shoutout-placeholder { color: #555; font-size: 0.875rem; font-style: italic; }
+  @keyframes shoutout-scroll { 0% { transform: translateY(-50%) translateX(0); } 100% { transform: translateY(-50%) translateX(calc(-100% - 100vw)); } }
   
-  .giphy-search {
-    padding: 0.75rem;
-    border-bottom: 1px solid #e5e7eb;
-  }
+  .now-playing-bar { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: #0a0a0a; border-top: 2px solid #222; }
+  .now-playing-left { display: flex; align-items: center; gap: 0.75rem; }
+  .np-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #333; }
+  .np-info { display: flex; flex-direction: column; gap: 0.125rem; }
+  .np-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 1px; color: #dc2626; }
+  .np-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.125rem; letter-spacing: 0.5px; }
+  .now-playing-right { display: flex; align-items: center; gap: 0.75rem; text-align: right; }
+  .np-set-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+  .np-set-title { font-size: 0.9375rem; color: #ccc; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .np-genre { font-size: 0.75rem; color: #dc2626; background: rgba(220, 38, 38, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px; }
   
-  .giphy-search input {
-    width: 100%;
-    padding: 0.5rem 0.75rem;
-    border: 2px solid #e5e7eb;
-    border-radius: 6px;
-  }
+  .chat-section { display: flex; flex-direction: column; background: #111; border-left: 2px solid #222; }
+  .chat-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #0a0a0a; border-bottom: 2px solid #222; }
+  .chat-header h3 { font-family: 'Bebas Neue', sans-serif; font-size: 1.125rem; letter-spacing: 1px; }
+  .chat-viewers { font-size: 0.75rem; color: #888; }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+  .chat-welcome { text-align: center; padding: 2rem; color: #9ca3af; }
+  .chat-welcome p { font-size: 0.875rem; margin-bottom: 0.5rem; }
+  .chat-hint { font-size: 0.75rem; color: #9ca3af; }
   
-  .giphy-grid {
-    padding: 0.75rem;
-    max-height: 200px;
-    overflow-y: auto;
-  }
+  /* Fresh Wax Branding */
+  .brand-fresh { color: #fff; font-weight: 700; }
+  .brand-wax { color: #dc2626; font-weight: 700; }
+  .brand-fresh.dark { color: #000; }
+  .brand-logo { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
+  .chat-input-section { padding: 1rem; background: #0a0a0a; border-top: 2px solid #222; position: relative; }
+  .login-prompt { text-align: center; padding: 0.75rem; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.875rem; color: #888; }
+  .login-prompt a { color: #dc2626; font-weight: 600; }
+  .chat-form { display: flex; flex-direction: column; gap: 0.5rem; }
+  .chat-tools { display: flex; gap: 0.5rem; }
+  .tool-btn { padding: 0.375rem 0.625rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #888; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+  .tool-btn:hover { background: #333; color: #fff; }
+  .chat-input-wrapper { display: flex; gap: 0.5rem; }
+  .chat-input-wrapper input { flex: 1; padding: 0.75rem; background: #222; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 0.875rem; }
+  .chat-input-wrapper input:focus { outline: none; border-color: #dc2626; }
+  .chat-input-wrapper button { width: 44px; height: 44px; background: #dc2626; border: none; border-radius: 8px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .chat-input-wrapper button:hover { background: #b91c1c; }
+  .chat-input-wrapper button svg { width: 20px; height: 20px; }
   
-  .giphy-hint {
-    text-align: center;
-    color: #888;
-    font-size: 0.875rem;
-    padding: 1rem;
-  }
+  .emoji-picker, .giphy-picker { position: absolute; bottom: 100%; left: 1rem; right: 1rem; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; box-shadow: 0 -4px 20px rgba(0,0,0,0.3); z-index: 100; }
+  .emoji-categories { display: flex; gap: 0.25rem; padding: 0.5rem; border-bottom: 1px solid #333; }
+  .emoji-cat { padding: 0.4rem 0.75rem; background: #222; border: none; border-radius: 6px; font-size: 0.75rem; color: #888; cursor: pointer; transition: all 0.2s; }
+  .emoji-cat.active { background: #dc2626; color: #fff; }
+  .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.25rem; padding: 0.75rem; max-height: 200px; overflow-y: auto; }
+  .giphy-search { padding: 0.75rem; border-bottom: 1px solid #333; }
+  .giphy-search input { width: 100%; padding: 0.5rem 0.75rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #fff; }
+  .giphy-grid { padding: 0.75rem; max-height: 200px; overflow-y: auto; }
+  .giphy-hint { text-align: center; color: #666; font-size: 0.875rem; padding: 1rem; }
   
-  .giphy-attribution {
-    text-align: center;
-    padding: 0.5rem;
-    font-size: 0.7rem;
-    color: #888;
-    border-top: 1px solid #e5e7eb;
-  }
+  /* Floating emojis handled via inline JS styles */
+  
+  .modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
+  .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.8); }
+  .modal-content { position: relative; background: #1a1a1a; border: 2px solid #333; border-radius: 20px; padding: 3rem; max-width: 580px; width: 90%; }
+  .modal-close { position: absolute; top: 1.25rem; right: 1.25rem; width: 40px; height: 40px; background: #333; border: none; border-radius: 50%; color: #fff; font-size: 1.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .shoutout-modal-content h2 { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; margin-bottom: 1rem; }
+  .shoutout-hint { font-size: 1rem; color: #888; margin-bottom: 1.5rem; }
+  .shoutout-input-wrapper { position: relative; margin-bottom: 1.25rem; }
+  .shoutout-input-wrapper input { width: 100%; padding: 1.25rem 4.5rem 1.25rem 1.5rem; background: #222; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1.25rem; }
+  .shoutout-char-count { position: absolute; right: 1.25rem; top: 50%; transform: translateY(-50%); font-size: 1rem; color: #666; }
+  .shoutout-emoji-row { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: center; }
+  .shoutout-emoji { width: 54px; height: 54px; background: #222; border: 2px solid #333; border-radius: 10px; font-size: 1.75rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+  .shoutout-emoji:hover { background: #333; border-color: #dc2626; transform: scale(1.1); }
+  .send-shoutout-btn { width: 100%; padding: 1.25rem; background: #dc2626; border: none; border-radius: 10px; color: #fff; font-weight: 700; font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s; }
+  .send-shoutout-btn:disabled { background: #333; cursor: not-allowed; }
+  .shoutout-cost { font-size: 1rem; background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 4px; }
   
   .hidden { display: none !important; }
+  
+  @media (max-width: 768px) {
+    .stream-stats { gap: 1rem; }
+    .stat-value { font-size: 1rem; }
+    .inline-reactions { gap: 0.125rem; }
+    .reaction-btn { width: 36px; height: 36px; }
+    .reaction-emoji { font-size: 1rem; }
+    .volume-slider { width: 60px; }
+    .now-playing-right { display: none; }
+  }
 </style>
 
-<script>
-  const GIPHY_API_KEY = '${giphyApiKey}';
+<script define:vars={{ giphyApiKey }}>
+  const GIPHY_API_KEY = giphyApiKey;
   
-  // Firebase initialization
   let currentUser = null;
   let currentStream = null;
   let userInfo = null;
+  let animationsEnabled = true;
   
   async function initAuth() {
     try {
@@ -808,51 +667,56 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       onAuthStateChanged(auth, async (user) => {
         currentUser = user;
         updateChatUI();
-        if (user) {
-          await checkIfDj(user.uid);
-        }
+        if (user) await checkIfDj(user.uid);
       });
-    } catch (e) {
-      console.error('Auth error:', e);
-    }
+    } catch (e) { console.error('Auth error:', e); }
   }
   
   async function checkIfDj(userId) {
     try {
       const response = await fetch(`/api/get-user-type?uid=${userId}`);
       const result = await response.json();
-      
       if (result.success) {
-        userInfo = {
-          isDj: result.roles?.dj === true || result.roles?.artist === true,
-          isAdmin: result.isAdmin || false,
-          isApproved: result.isApproved || false
-        };
-        
-        // Show DJ Lobby button for approved DJs and admins
-        if ((userInfo.isDj && userInfo.isApproved) || userInfo.isAdmin) {
-          document.getElementById('djLobbyBtn')?.classList.remove('hidden');
-        }
+        userInfo = { isDj: result.roles?.dj === true || result.roles?.artist === true, isAdmin: result.isAdmin || false, isApproved: result.isApproved || false };
+        if ((userInfo.isDj && userInfo.isApproved) || userInfo.isAdmin) document.getElementById('djLobbyBtn')?.classList.remove('hidden');
       }
-    } catch (e) {
-      console.log('Could not check DJ status');
-    }
+    } catch (e) { console.log('Could not check DJ status'); }
   }
   
   function updateChatUI() {
     const loginPrompt = document.getElementById('loginPrompt');
     const chatForm = document.getElementById('chatForm');
+    const reactionBtns = document.querySelectorAll('.reaction-btn[data-emoji]');
+    const shoutoutBtn = document.getElementById('shoutoutBtn');
     
     if (currentUser) {
       loginPrompt?.classList.add('hidden');
       chatForm?.classList.remove('hidden');
+      // Enable reaction buttons
+      reactionBtns.forEach(btn => {
+        btn.classList.remove('disabled');
+        btn.title = btn.dataset.originalTitle || btn.title;
+      });
+      if (shoutoutBtn) {
+        shoutoutBtn.classList.remove('disabled');
+        shoutoutBtn.title = 'Send a shoutout';
+      }
     } else {
       loginPrompt?.classList.remove('hidden');
       chatForm?.classList.add('hidden');
+      // Show login required on reaction buttons
+      reactionBtns.forEach(btn => {
+        btn.dataset.originalTitle = btn.title;
+        btn.title = 'Sign in to react';
+        btn.classList.add('disabled');
+      });
+      if (shoutoutBtn) {
+        shoutoutBtn.title = 'Sign in to send a shoutout';
+        shoutoutBtn.classList.add('disabled');
+      }
     }
   }
   
-  // Load stream status
   async function loadStreamStatus() {
     try {
       const response = await fetch('/api/livestream/status');
@@ -866,17 +730,18 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         document.getElementById('liveStatusText').textContent = 'LIVE';
         document.getElementById('streamTitle').textContent = stream.title || 'Live Stream';
         document.getElementById('djName').textContent = stream.djName || 'DJ';
+        document.getElementById('setTitle').textContent = stream.title || 'Live Set';
         document.getElementById('streamGenre').textContent = stream.genre || 'Jungle / D&B';
         document.getElementById('viewerCount').textContent = stream.currentViewers || 0;
-        document.getElementById('likeCount').textContent = stream.totalLikes || 0;
-        document.getElementById('likeBtnCount').textContent = stream.totalLikes || 0;
         document.getElementById('listenerCountMini').textContent = stream.currentViewers || 0;
+        document.getElementById('audioTitle').textContent = stream.title || 'Live Stream';
+        document.getElementById('audioDjName').textContent = stream.djName || 'DJ';
         
         if (stream.djAvatar) {
           document.getElementById('djAvatar').src = stream.djAvatar;
+          document.getElementById('streamCover').src = stream.djAvatar;
         }
         
-        // Hide offline, show player
         document.getElementById('offlineOverlay')?.classList.add('hidden');
         
         if (stream.streamType === 'audio' || stream.streamUrl?.includes('8000')) {
@@ -884,19 +749,18 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         } else {
           document.getElementById('videoPlayer')?.classList.remove('hidden');
         }
+        
+        // Register as listener if logged in
+        registerAsListener();
       }
-    } catch (e) {
-      console.error('Error loading stream:', e);
-    }
+    } catch (e) { console.error('Error loading stream:', e); }
   }
   
-  // Play/Pause
   document.getElementById('playPauseBtn')?.addEventListener('click', () => {
     const audio = document.getElementById('audioElement');
     const video = document.getElementById('hlsVideoElement');
     const playIcon = document.getElementById('playIcon');
     const pauseIcon = document.getElementById('pauseIcon');
-    
     const activePlayer = audio?.src ? audio : video;
     
     if (activePlayer?.paused) {
@@ -910,7 +774,6 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     }
   });
   
-  // Volume
   document.getElementById('volumeSlider')?.addEventListener('input', (e) => {
     const volume = e.target.value / 100;
     const audio = document.getElementById('audioElement');
@@ -919,57 +782,379 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     if (video) video.volume = volume;
   });
   
-  document.getElementById('muteBtn')?.addEventListener('click', () => {
-    const audio = document.getElementById('audioElement');
-    const video = document.getElementById('hlsVideoElement');
-    const slider = document.getElementById('volumeSlider');
+  function createFloatingEmoji(startX, startY, emojiList) {
+    if (!animationsEnabled) return;
     
-    const activePlayer = audio?.src ? audio : video;
-    if (activePlayer) {
-      activePlayer.muted = !activePlayer.muted;
-      if (slider) slider.value = activePlayer.muted ? 0 : activePlayer.volume * 100;
+    const heart = document.createElement('div');
+    const emojis = emojiList || ['❤️', '💖', '💗', '💓', '💕'];
+    heart.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    
+    const spreadX = (Math.random() - 0.5) * 60;
+    const wiggleAmount = 20 + Math.random() * 30;
+    const duration = 2000 + Math.random() * 1000;
+    const fontSize = 28 + Math.floor(Math.random() * 20);
+    const posX = startX + spreadX;
+    const posY = startY;
+    
+    Object.assign(heart.style, {
+      position: 'fixed',
+      left: posX + 'px',
+      top: posY + 'px',
+      fontSize: fontSize + 'px',
+      lineHeight: '1',
+      pointerEvents: 'none',
+      zIndex: '99999',
+      opacity: '1',
+      transform: 'scale(0)',
+      margin: '0',
+      padding: '0'
+    });
+    
+    document.body.appendChild(heart);
+    
+    const startTime = performance.now();
+    
+    function animate(time) {
+      const elapsed = time - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const moveY = easeOut * 350;
+      const wiggle = Math.sin(progress * Math.PI * 4) * wiggleAmount * (1 - progress);
+      
+      let scale = 1;
+      if (progress < 0.1) scale = progress * 12;
+      else if (progress < 0.2) scale = 1.2 - (progress - 0.1) * 2;
+      else scale = 1 - (progress - 0.2) * 0.3;
+      
+      const opacity = progress > 0.6 ? 1 - (progress - 0.6) / 0.4 : 1;
+      
+      heart.style.left = (posX + wiggle) + 'px';
+      heart.style.top = (posY - moveY) + 'px';
+      heart.style.opacity = String(opacity);
+      heart.style.transform = 'scale(' + scale + ')';
+      
+      if (progress < 1) requestAnimationFrame(animate);
+      else heart.remove();
     }
+    
+    requestAnimationFrame(animate);
+  }
+  
+  function triggerReactionBurst(element, emojiList) {
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+    
+    if (element && element.getBoundingClientRect) {
+      const rect = element.getBoundingClientRect();
+      x = rect.left + rect.width / 2;
+      y = rect.top + rect.height / 2;
+    }
+    
+    const numHearts = 6 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < numHearts; i++) {
+      setTimeout(() => createFloatingEmoji(x, y, emojiList), i * 70);
+    }
+  }
+  
+  document.querySelectorAll('.reaction-btn[data-emoji]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      // Require login for reactions
+      if (!currentUser) {
+        alert('Please sign in to react to the stream');
+        return;
+      }
+      
+      const emojiList = btn.dataset.emoji.split(',');
+      
+      // Trigger visual animation
+      triggerReactionBurst(btn, emojiList);
+      btn.classList.add('liked');
+      setTimeout(() => btn.classList.remove('liked'), 300);
+      
+      // Send reaction to server
+      if (currentStream) {
+        try {
+          await fetch('/api/livestream/react', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'emoji',
+              emoji: emojiList.join(','),
+              streamId: currentStream.id,
+              userId: currentUser.uid
+            })
+          });
+        } catch (e) { console.log('Reaction sent locally'); }
+      }
+    });
   });
   
-  // Like button
-  document.getElementById('likeBtn')?.addEventListener('click', async () => {
-    if (!currentUser || !currentStream) return;
+  document.getElementById('animToggleBtn')?.addEventListener('click', () => {
+    animationsEnabled = !animationsEnabled;
+    document.getElementById('animToggleBtn')?.classList.toggle('off', !animationsEnabled);
+  });
+  
+  document.getElementById('shoutoutBtn')?.addEventListener('click', () => {
+    // Require login for shoutouts
+    if (!currentUser) {
+      alert('Please sign in to send a shoutout');
+      return;
+    }
+    document.getElementById('shoutoutModal')?.classList.remove('hidden');
+  });
+  document.getElementById('closeShoutoutModal')?.addEventListener('click', () => document.getElementById('shoutoutModal')?.classList.add('hidden'));
+  document.querySelector('.modal-backdrop')?.addEventListener('click', () => document.getElementById('shoutoutModal')?.classList.add('hidden'));
+  
+  const shoutoutInput = document.getElementById('shoutoutInput');
+  const shoutoutCharCount = document.getElementById('shoutoutCharCount');
+  const sendShoutoutBtn = document.getElementById('sendShoutoutBtn');
+  
+  shoutoutInput?.addEventListener('input', () => {
+    const len = shoutoutInput.value.length;
+    if (shoutoutCharCount) shoutoutCharCount.textContent = len;
+    if (sendShoutoutBtn) sendShoutoutBtn.disabled = len === 0;
+  });
+  
+  document.querySelectorAll('.shoutout-emoji').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (shoutoutInput && shoutoutInput.value.length < 30) {
+        shoutoutInput.value += btn.dataset.emoji;
+        shoutoutInput.dispatchEvent(new Event('input'));
+      }
+    });
+  });
+  
+  sendShoutoutBtn?.addEventListener('click', async () => {
+    // Require login for shoutouts
+    if (!currentUser) {
+      alert('Please sign in to send a shoutout');
+      return;
+    }
+    
+    const message = shoutoutInput?.value.trim();
+    if (!message) return;
+    
+    const userName = currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous';
+    const userId = currentUser.uid;
+    
+    // Disable button while sending
+    sendShoutoutBtn.disabled = true;
+    sendShoutoutBtn.innerHTML = '<span>Sending...</span>';
     
     try {
+      const streamId = currentStream?.id || 'default';
+      
       const response = await fetch('/api/livestream/react', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'like',
+          action: 'shoutout',
+          streamId: streamId,
+          userId: userId,
+          userName: userName,
+          message: message
+        })
+      });
+      
+      if (response.ok) {
+        // Add to local track - scrolls from right to left
+        const track = document.getElementById('shoutoutTrack');
+        if (track) {
+          track.innerHTML = `<span class="shoutout-item">📣 ${userName}: ${message}</span>`;
+          track.classList.add('scrolling');
+          // Reset animation after it completes
+          track.addEventListener('animationend', () => {
+            track.classList.remove('scrolling');
+            track.innerHTML = '<span class="shoutout-placeholder">🎉 Send a shoutout to appear here!</span>';
+          }, { once: true });
+        }
+      }
+    } catch (e) { console.error('Shoutout error:', e); }
+    
+    // Close modal and reset
+    document.getElementById('shoutoutModal')?.classList.add('hidden');
+    shoutoutInput.value = '';
+    if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
+    sendShoutoutBtn.disabled = true;
+    sendShoutoutBtn.innerHTML = '<span>Send Shoutout</span><span class="shoutout-cost">FREE</span>';
+  });
+  
+  const emojiCategories = {
+    music: ['🎵', '🎶', '🎧', '🎤', '🎹', '🥁', '🎸', '🎺', '🎷', '🎻', '🪘', '🎼', '📻', '💿', '📀', '🔊'],
+    reactions: ['🔥', '💥', '⭐', '✨', '💫', '🌟', '⚡', '💯', '🚀', '💪', '👊', '🙌', '👏', '🤙', '🤘', '👆'],
+    faces: ['😀', '😁', '😂', '🤣', '😍', '🥳', '🤩', '😎', '🥺', '😭', '💀', '🫠', '🤯', '😈', '👻', '🤖'],
+    vibes: ['❤️', '💖', '💗', '💓', '💕', '💜', '💙', '💚', '💛', '🧡', '🖤', '🤍', '💝', '💘', '💞', '❣️']
+  };
+  
+  const emojiGrid = document.getElementById('emojiGrid');
+  
+  function renderEmojis(category) {
+    if (!emojiGrid) return;
+    emojiGrid.innerHTML = '';
+    emojiCategories[category].forEach(emoji => {
+      const btn = document.createElement('button');
+      btn.className = 'emoji-btn';
+      btn.textContent = emoji;
+      btn.style.cssText = 'width:32px;height:32px;background:transparent;border:none;font-size:1.25rem;cursor:pointer;border-radius:4px;';
+      btn.addEventListener('click', () => {
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) chatInput.value += emoji;
+        document.getElementById('emojiPicker')?.classList.add('hidden');
+      });
+      emojiGrid.appendChild(btn);
+    });
+  }
+  
+  document.querySelectorAll('.emoji-cat').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.emoji-cat').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderEmojis(btn.dataset.cat);
+    });
+  });
+  
+  document.getElementById('emojiBtn')?.addEventListener('click', () => {
+    document.getElementById('giphyPicker')?.classList.add('hidden');
+    document.getElementById('emojiPicker')?.classList.toggle('hidden');
+    renderEmojis('music');
+  });
+  
+  document.getElementById('giphyBtn')?.addEventListener('click', () => {
+    document.getElementById('emojiPicker')?.classList.add('hidden');
+    document.getElementById('giphyPicker')?.classList.toggle('hidden');
+  });
+  
+  // Listeners dropdown
+  const listenersToggle = document.getElementById('listenersToggle');
+  const listenersDropdown = document.getElementById('listenersDropdown');
+  const listenersList = document.getElementById('listenersList');
+  const listenersCountBadge = document.getElementById('listenersCountBadge');
+  let listeners = [];
+  
+  listenersToggle?.addEventListener('click', () => {
+    listenersToggle.classList.toggle('active');
+    listenersDropdown?.classList.toggle('hidden');
+    if (!listenersDropdown?.classList.contains('hidden')) {
+      loadListeners();
+    }
+  });
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.listeners-dropdown-container')) {
+      listenersToggle?.classList.remove('active');
+      listenersDropdown?.classList.add('hidden');
+    }
+  });
+  
+  async function loadListeners() {
+    if (!currentStream?.id) return;
+    
+    try {
+      const response = await fetch(`/api/livestream/listeners?streamId=${currentStream.id}`);
+      const result = await response.json();
+      
+      if (result.success && result.listeners) {
+        listeners = result.listeners;
+        renderListeners();
+      }
+    } catch (e) {
+      console.log('Could not load listeners');
+      // Show mock data for testing
+      renderListeners();
+    }
+  }
+  
+  function renderListeners() {
+    if (!listenersList) return;
+    
+    if (listeners.length === 0) {
+      listenersList.innerHTML = '<div class="listeners-empty">No listeners yet</div>';
+      if (listenersCountBadge) listenersCountBadge.textContent = '0';
+      return;
+    }
+    
+    if (listenersCountBadge) listenersCountBadge.textContent = listeners.length;
+    
+    listenersList.innerHTML = listeners.map(listener => `
+      <div class="listener-item">
+        <div class="listener-avatar">
+          ${listener.avatarUrl 
+            ? `<img src="${listener.avatarUrl}" alt="" onerror="this.parentElement.innerHTML='${(listener.name || 'A')[0].toUpperCase()}'" />`
+            : (listener.name || 'A')[0].toUpperCase()
+          }
+        </div>
+        <div class="listener-info">
+          <div class="listener-name">${listener.name || 'Anonymous'}</div>
+          <div class="listener-status">
+            <span class="listener-dot"></span>
+            <span>Listening now</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+  
+  // Register current user as listener when stream loads
+  async function registerAsListener() {
+    if (!currentUser || !currentStream?.id) return;
+    
+    try {
+      await fetch('/api/livestream/listeners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'join',
+          streamId: currentStream.id,
+          userId: currentUser.uid,
+          userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous',
+          avatarUrl: currentUser.photoURL || null
+        })
+      });
+    } catch (e) {
+      console.log('Could not register as listener');
+    }
+  }
+  
+  // Send heartbeat to keep listener active
+  async function sendListenerHeartbeat() {
+    if (!currentUser || !currentStream?.id) return;
+    
+    try {
+      await fetch('/api/livestream/listeners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'heartbeat',
           streamId: currentStream.id,
           userId: currentUser.uid
         })
       });
-      
-      const result = await response.json();
-      if (result.success) {
-        const btn = document.getElementById('likeBtn');
-        const count = document.getElementById('likeBtnCount');
-        const mainCount = document.getElementById('likeCount');
-        
-        if (result.liked) {
-          btn?.classList.add('liked');
-        } else {
-          btn?.classList.remove('liked');
-        }
-        
-        // Refresh counts
-        loadStreamStatus();
-      }
     } catch (e) {
-      console.error('Like error:', e);
+      // Silently fail
+    }
+  }
+  
+  // Unregister when leaving
+  window.addEventListener('beforeunload', () => {
+    if (currentUser && currentStream?.id) {
+      navigator.sendBeacon('/api/livestream/listeners', JSON.stringify({
+        action: 'leave',
+        streamId: currentStream.id,
+        userId: currentUser.uid
+      }));
     }
   });
   
-  // Initialize
   initAuth();
   loadStreamStatus();
   setInterval(loadStreamStatus, 30000);
+  setInterval(sendListenerHeartbeat, 30000); // Send heartbeat every 30 seconds
+  setInterval(() => {
+    if (!listenersDropdown?.classList.contains('hidden')) {
+      loadListeners();
+    }
+  }, 10000); // Refresh listeners every 10 seconds when dropdown is open
 </script>
 </body>
 </html>

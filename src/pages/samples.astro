@@ -1,0 +1,441 @@
+---
+// src/pages/samples.astro
+// Sample Packs Store Page
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const faqs = [
+  {
+    question: "What are Fresh Wax sample packs?",
+    answer: "Our sample packs are professionally curated collections of sounds designed for jungle and drum & bass production. Each pack is sourced directly from producers and stockists, featuring drums, breaks, basslines, atmospheres, and more."
+  },
+  {
+    question: "How do I receive my sample pack?",
+    answer: "Sample packs are delivered the same way as our vinyl - directly from the stockist or producer. Digital download availability varies by pack and will be clearly indicated on the product listing."
+  },
+  {
+    question: "Are the samples royalty-free?",
+    answer: "Licensing terms vary by pack and producer. Each product listing will clearly state the usage rights included with your purchase."
+  },
+  {
+    question: "Can I use these in commercial releases?",
+    answer: "Usage rights depend on the specific sample pack. Check each product listing for detailed licensing information before purchase."
+  }
+];
+---
+
+<Layout 
+  title="Sample Packs - Fresh Wax" 
+  description="Professional jungle and drum & bass sample packs from trusted producers and stockists. Drums, breaks, basslines, and atmospheres for music production."
+  faqs={faqs}
+>
+  <Header />
+  
+  <main class="samples-main">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-content">
+        <div class="hero-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+          </svg>
+        </div>
+        <h1>SAMPLE <span class="red">PACKS</span></h1>
+        <p class="hero-subtitle">Professional sounds for jungle & drum and bass production</p>
+      </div>
+    </section>
+    
+    <!-- Coming Soon Section -->
+    <section class="coming-soon">
+      <div class="coming-soon-content">
+        <div class="coming-soon-icon">🔊</div>
+        <h2>Coming Soon</h2>
+        <p>We're partnering with producers and stockists to bring you an exclusive collection of sample packs designed specifically for jungle and drum & bass production.</p>
+        
+        <div class="features-grid">
+          <div class="feature">
+            <div class="feature-icon">🥁</div>
+            <h3>Breaks & Drums</h3>
+            <p>Classic breaks, processed drums, and percussion loops</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">🔉</div>
+            <h3>Basslines</h3>
+            <p>Deep subs, reese basses, and rolling bass patterns</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">🎹</div>
+            <h3>Atmospheres</h3>
+            <p>Pads, textures, FX, and ambient soundscapes</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">🎤</div>
+            <h3>Vocals & Chops</h3>
+            <p>Vocal samples, MC phrases, and chopped hooks</p>
+          </div>
+        </div>
+        
+        <div class="notify-section">
+          <h3>Get Notified</h3>
+          <p>Sign up to our newsletter to be the first to know when sample packs are available.</p>
+          <a href="/newsletter" class="notify-btn">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            Subscribe to Newsletter
+          </a>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Why Fresh Wax Samples -->
+    <section class="why-section">
+      <h2>Why Fresh Wax Samples?</h2>
+      <div class="why-grid">
+        <div class="why-card">
+          <div class="why-number">01</div>
+          <h3>Authentic Sound</h3>
+          <p>Sourced from producers deeply rooted in the jungle and D&B scene. No generic sounds - only authentic vibes.</p>
+        </div>
+        <div class="why-card">
+          <div class="why-number">02</div>
+          <h3>Direct From Source</h3>
+          <p>Sample packs delivered directly from stockists and producers, same trusted system as our vinyl sales.</p>
+        </div>
+        <div class="why-card">
+          <div class="why-number">03</div>
+          <h3>Studio Quality</h3>
+          <p>Professional grade samples processed with high-end analogue gear for that warm, punchy sound.</p>
+        </div>
+        <div class="why-card">
+          <div class="why-number">04</div>
+          <h3>Curated Selection</h3>
+          <p>Every pack hand-picked by the Fresh Wax team. Quality over quantity, always.</p>
+        </div>
+      </div>
+    </section>
+    
+    <!-- For Artists Section -->
+    <section class="artists-section">
+      <div class="artists-content">
+        <h2>Are You A Producer?</h2>
+        <p>Want to sell your sample packs on Fresh Wax? We're always looking for talented producers to join our roster.</p>
+        <a href="/contact" class="artists-btn">Get In Touch</a>
+      </div>
+    </section>
+  </main>
+  
+  <Footer />
+</Layout>
+
+<style>
+  .samples-main {
+    background: #000;
+    min-height: 100vh;
+  }
+  
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #1a1a1a 0%, #000 50%, #1a0a0a 100%);
+    padding: 4rem 1.5rem;
+    text-align: center;
+    border-bottom: 4px solid #dc2626;
+  }
+  
+  .hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .hero-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .hero-icon svg {
+    width: 48px;
+    height: 48px;
+    color: #fff;
+  }
+  
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4rem;
+    color: #fff;
+    margin: 0;
+    letter-spacing: 0.05em;
+  }
+  
+  .hero h1 .red {
+    color: #dc2626;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.125rem;
+    color: #9ca3af;
+    margin: 1rem 0 0 0;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+  
+  /* Coming Soon */
+  .coming-soon {
+    padding: 4rem 1.5rem;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  
+  .coming-soon-content {
+    text-align: center;
+  }
+  
+  .coming-soon-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .coming-soon h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    color: #fff;
+    margin: 0 0 1rem 0;
+  }
+  
+  .coming-soon > .coming-soon-content > p {
+    font-size: 1.125rem;
+    color: #888;
+    max-width: 600px;
+    margin: 0 auto 3rem;
+    line-height: 1.7;
+  }
+  
+  /* Features Grid */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+  
+  .feature {
+    background: #111;
+    border: 2px solid #333;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  
+  .feature:hover {
+    border-color: #dc2626;
+    transform: translateY(-4px);
+  }
+  
+  .feature-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .feature h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: #fff;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .feature p {
+    color: #888;
+    font-size: 0.9375rem;
+    margin: 0;
+    line-height: 1.5;
+  }
+  
+  /* Notify Section */
+  .notify-section {
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
+    border: 2px solid #dc2626;
+    border-radius: 16px;
+    padding: 2.5rem;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+  
+  .notify-section h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    color: #fff;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  .notify-section p {
+    color: #888;
+    margin: 0 0 1.5rem 0;
+    font-size: 1rem;
+  }
+  
+  .notify-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #dc2626;
+    color: #fff;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  
+  .notify-btn:hover {
+    background: #b91c1c;
+    transform: translateY(-2px);
+  }
+  
+  .notify-btn svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  
+  /* Why Section */
+  .why-section {
+    padding: 4rem 1.5rem;
+    background: #111;
+    border-top: 2px solid #222;
+    border-bottom: 2px solid #222;
+  }
+  
+  .why-section h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: #fff;
+    text-align: center;
+    margin: 0 0 3rem 0;
+  }
+  
+  .why-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .why-card {
+    background: #000;
+    border: 2px solid #333;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+  }
+  
+  .why-number {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: #dc2626;
+    margin-bottom: 1rem;
+  }
+  
+  .why-card h3 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.75rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  
+  .why-card p {
+    color: #888;
+    font-size: 0.9375rem;
+    margin: 0;
+    line-height: 1.6;
+  }
+  
+  /* Artists Section */
+  .artists-section {
+    padding: 4rem 1.5rem;
+    text-align: center;
+  }
+  
+  .artists-content {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .artists-section h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: #fff;
+    margin: 0 0 1rem 0;
+  }
+  
+  .artists-section p {
+    color: #888;
+    font-size: 1.125rem;
+    margin: 0 0 2rem 0;
+    line-height: 1.7;
+  }
+  
+  .artists-btn {
+    display: inline-block;
+    background: transparent;
+    color: #fff;
+    border: 2px solid #fff;
+    padding: 1rem 2.5rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  
+  .artists-btn:hover {
+    background: #fff;
+    color: #000;
+  }
+  
+  /* Responsive */
+  @media (max-width: 900px) {
+    .why-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  
+  @media (max-width: 600px) {
+    .hero h1 {
+      font-size: 3rem;
+    }
+    
+    .hero-subtitle {
+      font-size: 1rem;
+    }
+    
+    .coming-soon h2 {
+      font-size: 2.25rem;
+    }
+    
+    .features-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .why-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .why-section h2,
+    .artists-section h2 {
+      font-size: 2rem;
+    }
+  }
+</style>

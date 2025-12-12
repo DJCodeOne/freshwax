@@ -5,10 +5,22 @@
 // - OR have an admin-granted bypass
 // - Also returns bypass request status
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument } from '../../lib/firebase-rest';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 export const prerender = false;
 
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
 const REQUIRED_LIKES = 10;
 
 const isDev = import.meta.env.DEV;
@@ -35,10 +47,11 @@ export const GET: APIRoute = async ({ request }) => {
   
   try {
     // First check if user is banned or on hold
-    const moderation = await getDocument('djModeration', userId);
+    const modDoc = await db.collection('djModeration').doc(userId).get();
     
-    if (moderation) {
-      if (moderation.status === 'banned') {
+    if (modDoc.exists) {
+      const moderation = modDoc.data();
+      if (moderation?.status === 'banned') {
         log.info('[check-dj-eligibility] User is banned');
         return new Response(JSON.stringify({ 
           success: true,
@@ -52,7 +65,7 @@ export const GET: APIRoute = async ({ request }) => {
         });
       }
       
-      if (moderation.status === 'hold') {
+      if (moderation?.status === 'hold') {
         log.info('[check-dj-eligibility] User is on hold');
         return new Response(JSON.stringify({ 
           success: true,
@@ -67,16 +80,17 @@ export const GET: APIRoute = async ({ request }) => {
       }
     }
     
-    // Check if user has an admin-granted bypass
-    const bypass = await getDocument('djLobbyBypass', userId);
+    // Check if user has an admin-granted bypass (legacy collection)
+    const bypassDoc = await db.collection('djLobbyBypass').doc(userId).get();
     
-    if (bypass) {
-      log.info('[check-dj-eligibility] User has admin bypass');
+    if (bypassDoc.exists) {
+      const bypass = bypassDoc.data();
+      log.info('[check-dj-eligibility] User has admin bypass (djLobbyBypass collection)');
       return new Response(JSON.stringify({ 
         success: true,
         eligible: true,
         bypassGranted: true,
-        reason: bypass.reason || null,
+        reason: bypass?.reason || null,
         message: 'Access granted by admin'
       }), {
         status: 200,
@@ -84,14 +98,47 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
     
+    // Check if user has go-liveBypassed flag on their user document
+    const userDoc = await db.collection('users').doc(userId).get();
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      if (userData?.['go-liveBypassed'] === true) {
+        log.info('[check-dj-eligibility] User has go-live bypass flag on user doc');
+        return new Response(JSON.stringify({ 
+          success: true,
+          eligible: true,
+          bypassGranted: true,
+          message: 'Access granted by admin'
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+    
     // Check for pending bypass request
-    const bypassRequest = await getDocument('djBypassRequests', userId);
+    const bypassRequestDoc = await db.collection('bypassRequests')
+      .where('userId', '==', userId)
+      .where('status', '==', 'pending')
+      .limit(1)
+      .get();
+    
+    let bypassRequest = null;
+    if (!bypassRequestDoc.empty) {
+      const reqData = bypassRequestDoc.docs[0].data();
+      bypassRequest = {
+        status: reqData.status,
+        requestedAt: reqData.requestedAt || reqData.createdAt,
+        denialReason: reqData.denialReason || null
+      };
+    }
     
     // Get all mixes for this user
-    const mixes = await queryCollection('dj-mixes', {
-      filters: [{ field: 'userId', op: 'EQUAL', value: userId }]
-    });
+    const mixesSnapshot = await db.collection('dj-mixes')
+      .where('userId', '==', userId)
+      .get();
     
+    const mixes = mixesSnapshot.docs.map(doc => doc.data());
     log.info('[check-dj-eligibility] Found', mixes.length, 'mixes for user');
     
     // Check if they have any mixes
@@ -104,12 +151,7 @@ export const GET: APIRoute = async ({ request }) => {
         mixCount: 0,
         qualifyingMixes: 0,
         requiredLikes: REQUIRED_LIKES,
-        // Include bypass request status
-        bypassRequest: bypassRequest ? {
-          status: bypassRequest.status,
-          requestedAt: bypassRequest.requestedAt,
-          denialReason: bypassRequest.denialReason || null
-        } : null
+        bypassRequest
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
@@ -144,12 +186,7 @@ export const GET: APIRoute = async ({ request }) => {
         bestMixLikes: bestLikes,
         requiredLikes: REQUIRED_LIKES,
         likesNeeded: REQUIRED_LIKES - bestLikes,
-        // Include bypass request status
-        bypassRequest: bypassRequest ? {
-          status: bypassRequest.status,
-          requestedAt: bypassRequest.requestedAt,
-          denialReason: bypassRequest.denialReason || null
-        } : null
+        bypassRequest
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }

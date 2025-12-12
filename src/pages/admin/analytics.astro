@@ -48,8 +48,27 @@ try {
 
 // Calculate metrics
 function calculateMetrics(ordersSubset) {
-  const revenue = ordersSubset.reduce((sum, o) => sum + (o.total || 0), 0);
-  const fees = ordersSubset.reduce((sum, o) => sum + (o.platformFee || 0), 0);
+  const revenue = ordersSubset.reduce((sum, o) => {
+    // Check nested totals object first (as used in create-order)
+    let orderTotal = o.totals?.total || o.total || o.orderTotal || o.grandTotal || o.amount || 0;
+    
+    // If still no total, try summing items
+    if (orderTotal === 0 && o.items && Array.isArray(o.items)) {
+      orderTotal = o.items.reduce((itemSum, item) => {
+        const itemPrice = (item.price || item.total || 0) * (item.quantity || 1);
+        return itemSum + itemPrice;
+      }, 0);
+    }
+    
+    return sum + orderTotal;
+  }, 0);
+  
+  const fees = ordersSubset.reduce((sum, o) => {
+    // Platform fee could be in different places
+    const fee = o.platformFee || o.fees || o.serviceFee || o.totals?.platformFee || 0;
+    return sum + fee;
+  }, 0);
+  
   const avgOrder = ordersSubset.length > 0 ? revenue / ordersSubset.length : 0;
   return { revenue, fees, orders: ordersSubset.length, avgOrder };
 }
@@ -73,11 +92,14 @@ function calcGrowth(current, previous) {
 const revenueGrowth = calcGrowth(thisMonth.revenue, lastMonth.revenue);
 const ordersGrowth = calcGrowth(thisMonth.orders, lastMonth.orders);
 
-// Top selling releases
+// Top selling releases (exclude merch)
 const releaseSales = {};
 orders.forEach(order => {
   (order.items || []).forEach(item => {
-    if (item.type === 'release' || item.type === 'digital' || item.releaseId) {
+    // Only include actual releases, not merch
+    const isRelease = (item.type === 'release' || item.type === 'digital' || item.releaseId) && 
+                      item.type !== 'merch' && !item.isPhysical && !item.isMerch;
+    if (isRelease) {
       const key = item.releaseId || item.title || 'Unknown';
       if (!releaseSales[key]) {
         releaseSales[key] = {
@@ -88,8 +110,10 @@ orders.forEach(order => {
           revenue: 0
         };
       }
-      releaseSales[key].sales += item.quantity || 1;
-      releaseSales[key].revenue += item.price || 0;
+      const qty = item.quantity || 1;
+      const price = item.price || item.total || 0;
+      releaseSales[key].sales += qty;
+      releaseSales[key].revenue += price * qty;
     }
   });
 });
@@ -98,11 +122,14 @@ const topReleases = Object.values(releaseSales)
   .sort((a, b) => b.revenue - a.revenue)
   .slice(0, 5);
 
-// Top selling merch
+// Top selling merch (physical products only)
 const merchSales = {};
 orders.forEach(order => {
   (order.items || []).forEach(item => {
-    if (item.type === 'merch' || item.isPhysical) {
+    // Include merch and physical items, exclude releases
+    const isMerch = item.type === 'merch' || item.isPhysical || item.isMerch || 
+                    (item.productId && item.type !== 'release' && item.type !== 'digital' && !item.releaseId);
+    if (isMerch) {
       const key = item.productId || item.title || 'Unknown';
       if (!merchSales[key]) {
         merchSales[key] = {
@@ -112,8 +139,10 @@ orders.forEach(order => {
           revenue: 0
         };
       }
-      merchSales[key].sales += item.quantity || 1;
-      merchSales[key].revenue += item.price || 0;
+      const qty = item.quantity || 1;
+      const price = item.price || item.total || 0;
+      merchSales[key].sales += qty;
+      merchSales[key].revenue += price * qty;
     }
   });
 });
@@ -163,7 +192,7 @@ export const prerender = false;
   </Fragment>
 
   <!-- Revenue Stats -->
-  <div class="stats-grid mb-4">
+  <div class="stats-grid cols-6 mb-4">
     <div class="stat-card">
       <div class="stat-label">This Month Revenue</div>
       <div class="stat-value">{formatCurrency(thisMonth.revenue)}</div>
@@ -211,7 +240,7 @@ export const prerender = false;
       <h2>🎧 DJ Mixes Performance</h2>
     </div>
     <div class="card-body">
-      <div class="grid grid-4 gap-2">
+      <div class="stats-grid cols-4" style="margin-bottom: 0;">
         <div class="stat-card" style="border-color: var(--border-light);">
           <div class="stat-label">Total Plays</div>
           <div class="stat-value">{formatNumber(totalPlays)}</div>
@@ -252,8 +281,8 @@ export const prerender = false;
               <thead>
                 <tr>
                   <th>Release</th>
-                  <th class="text-right">Sales</th>
-                  <th class="text-right">Revenue</th>
+                  <th class="text-center" style="width: 100px;">Sales</th>
+                  <th class="text-center" style="width: 120px;">Revenue</th>
                 </tr>
               </thead>
               <tbody>
@@ -270,8 +299,8 @@ export const prerender = false;
                         </div>
                       </div>
                     </td>
-                    <td class="text-right font-bold">{release.sales}</td>
-                    <td class="text-right font-bold">{formatCurrency(release.revenue)}</td>
+                    <td class="text-center font-bold">{release.sales}</td>
+                    <td class="text-center font-bold">{formatCurrency(release.revenue)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -299,8 +328,8 @@ export const prerender = false;
               <thead>
                 <tr>
                   <th>Product</th>
-                  <th class="text-right">Sales</th>
-                  <th class="text-right">Revenue</th>
+                  <th class="text-center" style="width: 100px;">Sales</th>
+                  <th class="text-center" style="width: 120px;">Revenue</th>
                 </tr>
               </thead>
               <tbody>
@@ -316,8 +345,8 @@ export const prerender = false;
                         </div>
                       </div>
                     </td>
-                    <td class="text-right font-bold">{item.sales}</td>
-                    <td class="text-right font-bold">{formatCurrency(item.revenue)}</td>
+                    <td class="text-center font-bold">{item.sales}</td>
+                    <td class="text-center font-bold">{formatCurrency(item.revenue)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -339,40 +368,40 @@ export const prerender = false;
           <thead>
             <tr>
               <th>Period</th>
-              <th class="text-right">Orders</th>
-              <th class="text-right">Revenue</th>
-              <th class="text-right">Platform Fees</th>
-              <th class="text-right">Avg Order</th>
+              <th class="text-center">Orders</th>
+              <th class="text-center">Revenue</th>
+              <th class="text-center">Platform Fees</th>
+              <th class="text-center">Avg Order</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td class="font-bold">This Month</td>
-              <td class="text-right">{thisMonth.orders}</td>
-              <td class="text-right font-bold">{formatCurrency(thisMonth.revenue)}</td>
-              <td class="text-right">{formatCurrency(thisMonth.fees)}</td>
-              <td class="text-right">{formatCurrency(thisMonth.avgOrder)}</td>
+              <td class="text-center">{thisMonth.orders}</td>
+              <td class="text-center font-bold">{formatCurrency(thisMonth.revenue)}</td>
+              <td class="text-center">{formatCurrency(thisMonth.fees)}</td>
+              <td class="text-center">{formatCurrency(thisMonth.avgOrder)}</td>
             </tr>
             <tr>
               <td class="font-bold">Last Month</td>
-              <td class="text-right">{lastMonth.orders}</td>
-              <td class="text-right font-bold">{formatCurrency(lastMonth.revenue)}</td>
-              <td class="text-right">{formatCurrency(lastMonth.fees)}</td>
-              <td class="text-right">{formatCurrency(lastMonth.avgOrder)}</td>
+              <td class="text-center">{lastMonth.orders}</td>
+              <td class="text-center font-bold">{formatCurrency(lastMonth.revenue)}</td>
+              <td class="text-center">{formatCurrency(lastMonth.fees)}</td>
+              <td class="text-center">{formatCurrency(lastMonth.avgOrder)}</td>
             </tr>
             <tr>
               <td class="font-bold">Year to Date</td>
-              <td class="text-right">{thisYear.orders}</td>
-              <td class="text-right font-bold">{formatCurrency(thisYear.revenue)}</td>
-              <td class="text-right">{formatCurrency(thisYear.fees)}</td>
-              <td class="text-right">{formatCurrency(thisYear.avgOrder)}</td>
+              <td class="text-center">{thisYear.orders}</td>
+              <td class="text-center font-bold">{formatCurrency(thisYear.revenue)}</td>
+              <td class="text-center">{formatCurrency(thisYear.fees)}</td>
+              <td class="text-center">{formatCurrency(thisYear.avgOrder)}</td>
             </tr>
             <tr style="background: var(--bg-hover);">
               <td class="font-bold">All Time</td>
-              <td class="text-right">{allTime.orders}</td>
-              <td class="text-right font-bold">{formatCurrency(allTime.revenue)}</td>
-              <td class="text-right">{formatCurrency(allTime.fees)}</td>
-              <td class="text-right">{formatCurrency(allTime.avgOrder)}</td>
+              <td class="text-center">{allTime.orders}</td>
+              <td class="text-center font-bold">{formatCurrency(allTime.revenue)}</td>
+              <td class="text-center">{formatCurrency(allTime.fees)}</td>
+              <td class="text-center">{formatCurrency(allTime.avgOrder)}</td>
             </tr>
           </tbody>
         </table>
@@ -382,9 +411,173 @@ export const prerender = false;
 </AdminLayout>
 
 <style>
+  /* Item cell layout */
+  .item-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .item-cell img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  
+  .item-info {
+    min-width: 0;
+    overflow: hidden;
+  }
+  
+  .item-info h4 {
+    margin: 0;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .item-info p {
+    margin: 0;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
   @media print {
+    /* Page setup */
+    @page {
+      size: A4;
+      margin: 15mm 10mm;
+    }
+    
+    /* Hide non-essential elements */
+    .admin-header,
+    .admin-sidebar,
+    .admin-nav,
+    .btn,
+    button,
+    nav,
+    .tab-nav,
+    footer {
+      display: none !important;
+    }
+    
+    /* Reset backgrounds for printing */
+    body,
+    .admin-layout,
+    .admin-main,
+    .admin-content {
+      background: white !important;
+      color: black !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    
+    /* Print header */
+    .admin-content::before {
+      content: "Fresh Wax Analytics Report - Printed: " attr(data-print-date);
+      display: block;
+      font-size: 12pt;
+      font-weight: bold;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #000;
+    }
+    
+    /* Card styling for print */
+    .card,
     .stat-card {
       break-inside: avoid;
+      page-break-inside: avoid;
+      border: 1px solid #ccc !important;
+      background: white !important;
+      margin-bottom: 10px !important;
+      box-shadow: none !important;
+    }
+    
+    .card-header {
+      background: #f5f5f5 !important;
+      color: black !important;
+      border-bottom: 1px solid #ccc !important;
+    }
+    
+    .card-header h2 {
+      color: black !important;
+      font-size: 14pt !important;
+    }
+    
+    /* Stats grid for print */
+    .stats-grid {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 10px !important;
+    }
+    
+    .stats-grid.cols-6 {
+      grid-template-columns: repeat(3, 1fr) !important;
+    }
+    
+    .stats-grid.cols-4 {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    .stat-card {
+      padding: 10px !important;
+      min-height: auto !important;
+    }
+    
+    .stat-label {
+      font-size: 9pt !important;
+      color: #666 !important;
+    }
+    
+    .stat-value {
+      font-size: 14pt !important;
+      color: black !important;
+    }
+    
+    .stat-detail {
+      font-size: 8pt !important;
+    }
+    
+    /* Table styling for print */
+    table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+      font-size: 10pt !important;
+    }
+    
+    th, td {
+      border: 1px solid #ccc !important;
+      padding: 6px 8px !important;
+      text-align: left !important;
+      color: black !important;
+      background: white !important;
+    }
+    
+    th {
+      background: #f5f5f5 !important;
+      font-weight: bold !important;
+    }
+    
+    tr {
+      page-break-inside: avoid !important;
+    }
+    
+    /* Ensure sections don't break awkwardly */
+    .mb-4,
+    .card {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    
+    /* Force page break before major sections if needed */
+    .card:nth-child(4) {
+      page-break-before: auto;
     }
   }
 </style>

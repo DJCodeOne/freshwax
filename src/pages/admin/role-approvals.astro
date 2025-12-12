@@ -1,0 +1,556 @@
+---
+// Admin Role Approvals
+// Approve or deny Artist, Merch Seller, and DJ Bypass requests
+---
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Role Approvals | Admin | Fresh Wax</title>
+  <link rel="stylesheet" href="/styles/global.css">
+</head>
+<body>
+  <div class="admin-page">
+    <header class="admin-header">
+      <a href="/admin" class="back-link">← Back to Admin</a>
+      <h1>Role Approvals</h1>
+    </header>
+
+    <main class="admin-content">
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" data-tab="artist">
+          Artist Requests
+          <span class="badge" id="artistCount">0</span>
+        </button>
+        <button class="tab" data-tab="merch">
+          Merch Seller Requests
+          <span class="badge" id="merchCount">0</span>
+        </button>
+        <button class="tab" data-tab="dj">
+          DJ Bypass Requests
+          <span class="badge" id="djCount">0</span>
+        </button>
+      </div>
+
+      <!-- Artist Requests Tab -->
+      <div class="tab-content active" id="artistTab">
+        <div class="requests-list" id="artistRequests">
+          <div class="loading">Loading requests...</div>
+        </div>
+      </div>
+
+      <!-- Merch Seller Requests Tab -->
+      <div class="tab-content" id="merchTab">
+        <div class="requests-list" id="merchRequests">
+          <div class="loading">Loading requests...</div>
+        </div>
+      </div>
+
+      <!-- DJ Bypass Requests Tab -->
+      <div class="tab-content" id="djTab">
+        <div class="requests-list" id="djRequests">
+          <div class="loading">Loading requests...</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <style>
+    .admin-page {
+      min-height: 100vh;
+      background: var(--bg-primary, #0a0a0a);
+    }
+
+    .admin-header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border-color, #262626);
+      background: var(--bg-secondary, #141414);
+    }
+
+    .back-link {
+      color: var(--text-secondary, #a3a3a3);
+      text-decoration: none;
+      font-size: 0.875rem;
+      display: inline-block;
+      margin-bottom: 0.5rem;
+    }
+
+    .back-link:hover {
+      color: var(--accent, #22c55e);
+    }
+
+    .admin-header h1 {
+      color: var(--text-primary, #fff);
+      margin: 0;
+    }
+
+    .admin-content {
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color, #262626);
+      padding-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary, #a3a3a3);
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      color: var(--text-primary, #fff);
+      background: var(--bg-secondary, #141414);
+    }
+
+    .tab.active {
+      color: var(--accent, #22c55e);
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    .tab .badge {
+      background: var(--bg-tertiary, #1a1a1a);
+      color: var(--text-secondary, #a3a3a3);
+      padding: 0.15rem 0.5rem;
+      border-radius: 10px;
+      font-size: 0.75rem;
+    }
+
+    .tab.active .badge {
+      background: var(--accent, #22c55e);
+      color: #000;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .requests-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-secondary, #a3a3a3);
+      background: var(--bg-secondary, #141414);
+      border: 1px dashed var(--border-color, #262626);
+      border-radius: 8px;
+    }
+
+    .request-card {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+
+    .request-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .request-user {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .request-name {
+      font-weight: 600;
+      color: var(--text-primary, #fff);
+      font-size: 1.1rem;
+    }
+
+    .request-email {
+      color: var(--text-secondary, #a3a3a3);
+      font-size: 0.875rem;
+    }
+
+    .request-date {
+      color: var(--text-muted, #666);
+      font-size: 0.8rem;
+    }
+
+    .request-details {
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: var(--bg-tertiary, #1a1a1a);
+      border-radius: 6px;
+    }
+
+    .detail-row {
+      display: flex;
+      margin-bottom: 0.5rem;
+    }
+
+    .detail-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .detail-label {
+      width: 120px;
+      color: var(--text-secondary, #a3a3a3);
+      font-size: 0.875rem;
+    }
+
+    .detail-value {
+      color: var(--text-primary, #fff);
+      font-size: 0.875rem;
+      flex: 1;
+    }
+
+    .request-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      padding: 0.625rem 1.25rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      font-size: 0.875rem;
+    }
+
+    .btn-approve {
+      background: var(--accent, #22c55e);
+      color: #000;
+    }
+
+    .btn-approve:hover {
+      background: var(--accent-hover, #16a34a);
+    }
+
+    .btn-deny {
+      background: transparent;
+      color: #ef4444;
+      border: 1px solid #ef4444;
+    }
+
+    .btn-deny:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+    const firebaseConfig = window.FIREBASE_CONFIG || {};
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Admin UID check
+    const ADMIN_UID = 'Y3TGc171cHSWTqZDRSniyu7Jxc33';
+
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    // Tab switching
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        
+        tab.classList.add('active');
+        document.getElementById(`${tab.dataset.tab}Tab`).classList.add('active');
+      });
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = '/login?redirect=/admin/role-approvals';
+        return;
+      }
+
+      // Check admin status
+      if (user.uid !== ADMIN_UID) {
+        const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+        if (!adminDoc.exists()) {
+          window.location.href = '/';
+          return;
+        }
+      }
+
+      // Load all requests
+      await loadRequests();
+    });
+
+    async function loadRequests() {
+      // Get all users with pending role requests
+      const usersQuery = query(collection(db, 'users'));
+      const snapshot = await getDocs(usersQuery);
+
+      const artistRequests = [];
+      const merchRequests = [];
+      const djRequests = [];
+
+      snapshot.forEach(doc => {
+        const user = { uid: doc.id, ...doc.data() };
+        const pending = user.pendingRoles || {};
+
+        if (pending.artist?.status === 'pending') {
+          artistRequests.push({ ...user, request: pending.artist, type: 'artist' });
+        }
+        if (pending.merchSeller?.status === 'pending') {
+          merchRequests.push({ ...user, request: pending.merchSeller, type: 'merchSeller' });
+        }
+        if (pending.djBypass?.status === 'pending') {
+          djRequests.push({ ...user, request: pending.djBypass, type: 'djBypass' });
+        }
+      });
+
+      // Update counts
+      document.getElementById('artistCount').textContent = artistRequests.length;
+      document.getElementById('merchCount').textContent = merchRequests.length;
+      document.getElementById('djCount').textContent = djRequests.length;
+
+      // Render lists
+      renderArtistRequests(artistRequests);
+      renderMerchRequests(merchRequests);
+      renderDJRequests(djRequests);
+    }
+
+    function renderArtistRequests(requests) {
+      const container = document.getElementById('artistRequests');
+      
+      if (requests.length === 0) {
+        container.innerHTML = '<div class="empty-state">No pending artist requests</div>';
+        return;
+      }
+
+      container.innerHTML = requests.map(r => `
+        <div class="request-card" data-uid="${r.uid}">
+          <div class="request-header">
+            <div class="request-user">
+              <div class="request-name">${r.displayName || 'Unknown'}</div>
+              <div class="request-email">${r.email}</div>
+              <div class="request-date">Requested: ${formatDate(r.request.requestedAt)}</div>
+            </div>
+          </div>
+          <div class="request-details">
+            <div class="detail-row">
+              <span class="detail-label">Artist Name:</span>
+              <span class="detail-value">${r.request.artistName || '-'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Bio:</span>
+              <span class="detail-value">${r.request.bio || '-'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Links:</span>
+              <span class="detail-value">${r.request.links || '-'}</span>
+            </div>
+          </div>
+          <div class="request-actions">
+            <button class="btn btn-approve" onclick="approveRequest('${r.uid}', 'artist')">Approve</button>
+            <button class="btn btn-deny" onclick="denyRequest('${r.uid}', 'artist')">Deny</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderMerchRequests(requests) {
+      const container = document.getElementById('merchRequests');
+      
+      if (requests.length === 0) {
+        container.innerHTML = '<div class="empty-state">No pending merch seller requests</div>';
+        return;
+      }
+
+      container.innerHTML = requests.map(r => `
+        <div class="request-card" data-uid="${r.uid}">
+          <div class="request-header">
+            <div class="request-user">
+              <div class="request-name">${r.displayName || 'Unknown'}</div>
+              <div class="request-email">${r.email}</div>
+              <div class="request-date">Requested: ${formatDate(r.request.requestedAt)}</div>
+            </div>
+          </div>
+          <div class="request-details">
+            <div class="detail-row">
+              <span class="detail-label">Business:</span>
+              <span class="detail-value">${r.request.businessName || '-'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Description:</span>
+              <span class="detail-value">${r.request.description || '-'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Website:</span>
+              <span class="detail-value">${r.request.website || '-'}</span>
+            </div>
+          </div>
+          <div class="request-actions">
+            <button class="btn btn-approve" onclick="approveRequest('${r.uid}', 'merchSeller')">Approve</button>
+            <button class="btn btn-deny" onclick="denyRequest('${r.uid}', 'merchSeller')">Deny</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderDJRequests(requests) {
+      const container = document.getElementById('djRequests');
+      
+      if (requests.length === 0) {
+        container.innerHTML = '<div class="empty-state">No pending DJ bypass requests</div>';
+        return;
+      }
+
+      container.innerHTML = requests.map(r => `
+        <div class="request-card" data-uid="${r.uid}">
+          <div class="request-header">
+            <div class="request-user">
+              <div class="request-name">${r.displayName || 'Unknown'}</div>
+              <div class="request-email">${r.email}</div>
+              <div class="request-date">Requested: ${formatDate(r.request.requestedAt)}</div>
+            </div>
+          </div>
+          <div class="request-details">
+            <div class="detail-row">
+              <span class="detail-label">Reason:</span>
+              <span class="detail-value">${r.request.reason || '-'}</span>
+            </div>
+          </div>
+          <div class="request-actions">
+            <button class="btn btn-approve" onclick="approveRequest('${r.uid}', 'djBypass')">Approve</button>
+            <button class="btn btn-deny" onclick="denyRequest('${r.uid}', 'djBypass')">Deny</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function formatDate(timestamp) {
+      if (!timestamp) return '-';
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleDateString('en-GB', { 
+        day: 'numeric', 
+        month: 'short', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Global functions for button onclick
+    window.approveRequest = async function(uid, roleType) {
+      if (!confirm(`Approve this ${roleType === 'djBypass' ? 'DJ bypass' : roleType} request?`)) return;
+
+      try {
+        const userRef = doc(db, 'users', uid);
+        const updateData = {
+          updatedAt: serverTimestamp()
+        };
+
+        // Set the role to true
+        if (roleType === 'djBypass') {
+          updateData['roles.djEligible'] = true;
+          updateData['pendingRoles.djBypass.status'] = 'approved';
+          updateData['pendingRoles.djBypass.approvedAt'] = serverTimestamp();
+        } else if (roleType === 'artist') {
+          updateData['roles.artist'] = true;
+          updateData['pendingRoles.artist.status'] = 'approved';
+          updateData['pendingRoles.artist.approvedAt'] = serverTimestamp();
+        } else if (roleType === 'merchSeller') {
+          updateData['roles.merchSeller'] = true;
+          updateData['pendingRoles.merchSeller.status'] = 'approved';
+          updateData['pendingRoles.merchSeller.approvedAt'] = serverTimestamp();
+        }
+
+        await updateDoc(userRef, updateData);
+
+        // Remove card from UI
+        document.querySelector(`.request-card[data-uid="${uid}"]`)?.remove();
+        
+        // Update count
+        await loadRequests();
+
+        alert('Request approved!');
+      } catch (error) {
+        console.error('Error approving request:', error);
+        alert('Error approving request');
+      }
+    };
+
+    window.denyRequest = async function(uid, roleType) {
+      const reason = prompt('Reason for denial (optional):');
+      if (reason === null) return; // Cancelled
+
+      try {
+        const userRef = doc(db, 'users', uid);
+        const updateData = {
+          updatedAt: serverTimestamp()
+        };
+
+        if (roleType === 'djBypass') {
+          updateData['pendingRoles.djBypass.status'] = 'denied';
+          updateData['pendingRoles.djBypass.deniedAt'] = serverTimestamp();
+          updateData['pendingRoles.djBypass.denialReason'] = reason;
+        } else if (roleType === 'artist') {
+          updateData['pendingRoles.artist.status'] = 'denied';
+          updateData['pendingRoles.artist.deniedAt'] = serverTimestamp();
+          updateData['pendingRoles.artist.denialReason'] = reason;
+        } else if (roleType === 'merchSeller') {
+          updateData['pendingRoles.merchSeller.status'] = 'denied';
+          updateData['pendingRoles.merchSeller.deniedAt'] = serverTimestamp();
+          updateData['pendingRoles.merchSeller.denialReason'] = reason;
+        }
+
+        await updateDoc(userRef, updateData);
+
+        // Remove card from UI
+        document.querySelector(`.request-card[data-uid="${uid}"]`)?.remove();
+        
+        // Update count
+        await loadRequests();
+
+        alert('Request denied');
+      } catch (error) {
+        console.error('Error denying request:', error);
+        alert('Error denying request');
+      }
+    };
+  </script>
+</body>
+</html>

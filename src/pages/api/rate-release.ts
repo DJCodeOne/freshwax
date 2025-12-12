@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { clearCache } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -131,13 +132,23 @@ export const POST: APIRoute = async ({ request }) => {
 
     log.info('[rate-release] Updated:', releaseData.ratings.average, 'avg,', releaseData.ratings.count, 'count');
 
-    // Save to Firebase
+    // Save to Firebase - update both ratings and overallRating for backward compatibility
     await releaseRef.update({
       ratings: releaseData.ratings,
+      overallRating: {
+        average: releaseData.ratings.average,
+        count: releaseData.ratings.count,
+        total: releaseData.ratings.count, // total same as count
+        fiveStarCount: releaseData.ratings.fiveStarCount
+      },
       updatedAt: releaseData.updatedAt
     });
 
     log.info('[rate-release] Saved to Firebase');
+
+    // Invalidate cache for this release so fresh data is served
+    clearCache(`releases:${releaseId}`);
+    clearCache(`doc:releases:${releaseId}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -146,7 +157,10 @@ export const POST: APIRoute = async ({ request }) => {
       fiveStarCount: releaseData.ratings.fiveStarCount
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      }
     });
 
   } catch (error) {

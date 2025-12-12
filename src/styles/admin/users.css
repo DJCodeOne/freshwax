@@ -1,0 +1,80 @@
+  .stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; }
+  .stat-card { background: #fff; border: 2px solid #e5e5e5; padding: 1.25rem; text-align: center; }
+  .stat-card.success { border-color: #16a34a; }
+  .stat-card.warning { border-color: #d97706; }
+  .stat-card.info { border-color: #0ea5e9; }
+  .stat-card.revenue { border-color: #7c3aed; }
+  .stat-value { font-size: 2rem; font-weight: 800; color: #000; line-height: 1; }
+  .stat-card.success .stat-value { color: #16a34a; }
+  .stat-card.warning .stat-value { color: #d97706; }
+  .stat-card.info .stat-value { color: #0ea5e9; }
+  .stat-card.revenue .stat-value { color: #7c3aed; }
+  .stat-label { font-size: 0.8rem; color: #666; margin-top: 0.5rem; }
+  
+  .form-section { margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e5e5e5; }
+  .form-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .form-section-title { font-size: 0.9rem; font-weight: 700; text-transform: uppercase; color: #666; margin-bottom: 1rem; }
+  
+  .role-cards { display: flex; flex-direction: column; gap: 0.75rem; }
+  .role-card-select { cursor: pointer; }
+  .role-card-select input { display: none; }
+  .role-card-content { display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 2px solid #e5e5e5; background: #fafafa; transition: all 0.2s; }
+  .role-card-select:hover .role-card-content { border-color: #ccc; }
+  .role-card-select input:checked + .role-card-content { border-color: #000; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  .role-card-content .role-icon { font-size: 1.5rem; }
+  .role-card-content .role-info { flex: 1; }
+  .role-card-content .role-info strong { display: block; font-size: 0.95rem; }
+  .role-card-content .role-info span { font-size: 0.8rem; color: #666; }
+  .role-card-content .role-check { width: 24px; height: 24px; border: 2px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: transparent; transition: all 0.2s; }
+  .role-card-select input:checked + .role-card-content .role-check { background: #000; border-color: #000; color: #fff; }
+  
+  .permissions-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+  .permission-toggle { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: #fafafa; border: 2px solid #e5e5e5; cursor: pointer; transition: all 0.2s; }
+  .permission-toggle:hover { border-color: #ccc; }
+  .permission-toggle input { width: 18px; height: 18px; accent-color: #000; }
+  .permission-toggle input:checked + .permission-label { font-weight: 600; }
+  .permission-label { font-size: 0.9rem; }
+  
+  .status-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+  .status-option { cursor: pointer; }
+  .status-option input { display: none; }
+  .status-card { padding: 1rem; border: 2px solid #e5e5e5; text-align: center; transition: all 0.2s; }
+  .status-card .status-icon { font-size: 1.5rem; display: block; margin-bottom: 0.5rem; }
+  .status-card strong { display: block; font-size: 0.9rem; }
+  .status-card span { font-size: 0.75rem; color: #666; }
+  .status-option input:checked + .status-card.approved { border-color: #16a34a; background: #f0fdf4; }
+  .status-option input:checked + .status-card.pending { border-color: #d97706; background: #fffbeb; }
+  .status-option input:checked + .status-card.suspended { border-color: #dc2626; background: #fef2f2; }
+  
+  .user-cell { display: flex; align-items: center; gap: 0.75rem; }
+  .user-name { font-weight: 600; }
+  .avatar { width: 40px; height: 40px; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0; border-radius: 50%; overflow: hidden; }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  
+  .loading-spinner { text-align: center; padding: 3rem; }
+  .spinner { width: 40px; height: 40px; border: 3px solid #e5e5e5; border-top-color: #dc2626; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  
+  .badge-purple { background: #7c3aed; color: #fff; }
+  .badge-pending { background: #d97706; color: #fff; }
+  .btn-group { display: flex; gap: 0.5rem; justify-content: flex-end; }
+  .btn-outline { background: transparent; border: 1px solid #ccc; color: #666; }
+  .btn-outline:hover { background: #f5f5f5; }
+  .text-sm { font-size: 0.8rem; }
+  .text-center { text-align: center; }
+  .modal-lg { max-width: 700px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  
+  .checkbox-label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+  .checkbox-label input { width: 18px; height: 18px; }
+
+  @media (max-width: 1400px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .status-options { grid-template-columns: 1fr; } .form-row { grid-template-columns: 1fr; } .permissions-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr; } }
+
+  /* Always-on roles (Customer/DJ) - visually show they cannot be unchecked */
+  .role-card-select.always-on { cursor: default; }
+  .role-card-select.always-on .role-card-content { border-color: #16a34a; background: #f0fdf4; }
+  .role-card-select.always-on .role-check { background: #16a34a; border-color: #16a34a; color: #fff; }
+

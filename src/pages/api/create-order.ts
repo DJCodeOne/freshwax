@@ -235,6 +235,15 @@ export const POST: APIRoute = async ({ request }) => {
     }));
     
     // Create order document
+    // Check if any items are pre-orders
+    const hasPreOrderItems = itemsWithDownloads.some((item: any) => item.isPreOrder === true);
+    const preOrderReleaseDates = itemsWithDownloads
+      .filter((item: any) => item.isPreOrder && item.releaseDate)
+      .map((item: any) => new Date(item.releaseDate));
+    const latestPreOrderDate = preOrderReleaseDates.length > 0 
+      ? new Date(Math.max(...preOrderReleaseDates.map((d: Date) => d.getTime()))).toISOString()
+      : null;
+    
     const order = {
       orderNumber,
       customer: {
@@ -253,9 +262,11 @@ export const POST: APIRoute = async ({ request }) => {
         total: orderData.totals.total
       },
       hasPhysicalItems: orderData.hasPhysicalItems,
+      hasPreOrderItems,
+      preOrderDeliveryDate: latestPreOrderDate,
       paymentMethod: orderData.paymentMethod || 'test_mode',
       paymentStatus: 'completed',
-      orderStatus: orderData.hasPhysicalItems ? 'processing' : 'completed',
+      orderStatus: hasPreOrderItems ? 'awaiting_release' : (orderData.hasPhysicalItems ? 'processing' : 'completed'),
       createdAt: now,
       updatedAt: now
     };
@@ -385,7 +396,13 @@ export const POST: APIRoute = async ({ request }) => {
       if (RESEND_API_KEY && order.customer?.email) {
         log.info('[create-order] Sending email to:', order.customer.email);
         
-        const emailHtml = buildOrderConfirmationEmail(orderRef.id, orderNumber, order);
+        // Extract short order number for customer display (e.g., "FW-ABC123" from "FW-241204-abc123")
+        const orderParts = orderNumber.split('-');
+        const shortOrderNumber = orderParts.length >= 3 
+          ? (orderParts[0] + '-' + orderParts[orderParts.length - 1]).toUpperCase()
+          : orderNumber.toUpperCase();
+        
+        const emailHtml = buildOrderConfirmationEmail(orderRef.id, shortOrderNumber, order);
         
         const emailResponse = await fetch('https://api.resend.com/emails', {
           method: 'POST',
@@ -396,7 +413,7 @@ export const POST: APIRoute = async ({ request }) => {
           body: JSON.stringify({
             from: 'Fresh Wax <orders@freshwax.co.uk>',
             to: [order.customer.email],
-            subject: 'Order Confirmed - ' + orderNumber,
+            subject: 'Order Confirmed - ' + shortOrderNumber,
             html: emailHtml
           })
         });
@@ -553,7 +570,7 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
     
     // Header with logo and brand - BLACK background
     '<tr><td style="background: #000000; padding: 32px 24px; border-radius: 12px 12px 0 0; text-align: center;">' +
-    '<div style="font-size: 28px; font-weight: 800; color: #fff; letter-spacing: 1px;">FRESH WAX</div>' +
+    '<div style="font-size: 28px; font-weight: 800; letter-spacing: 1px;"><span style="color: #ffffff;">FRESH</span> <span style="color: #dc2626;">WAX</span></div>' +
     '<div style="font-size: 12px; color: #9ca3af; margin-top: 4px; letter-spacing: 2px;">JUNGLE • DRUM AND BASS</div>' +
     '</td></tr>' +
     
@@ -573,7 +590,7 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
     '<tr><td align="center" style="padding-bottom: 24px;">' +
     '<div style="display: inline-block; background: #f3f4f6; padding: 12px 24px; border-radius: 8px;">' +
     '<div style="color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Order Number</div>' +
-    '<div style="color: #111; font-size: 18px; font-weight: 700; margin-top: 4px;">' + orderNumber + '</div>' +
+    '<div style="color: #dc2626; font-size: 18px; font-weight: 700; margin-top: 4px;">' + orderNumber + '</div>' +
     '</div></td></tr>' +
     
     // Divider

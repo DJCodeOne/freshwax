@@ -1,0 +1,160 @@
+/* Analytics Page - Targeted Fix for stats-grid and grid-4 */
+/* Add this to AdminLayout.astro or create as separate CSS import */
+
+/* ============================================
+   TOP STATS ROW - 6 columns compact
+   ============================================ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.stats-grid .stat-card {
+  padding: 0.875rem 1rem;
+  border: none;
+  border-right: 1px solid #e5e5e5;
+  border-radius: 0;
+  background: transparent;
+}
+
+.stats-grid .stat-card:last-child {
+  border-right: none;
+}
+
+.stats-grid .stat-card.success {
+  border: 2px solid #22c55e;
+  margin: -1px;
+  background: rgba(34, 197, 94, 0.03);
+}
+
+.stats-grid .stat-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #888;
+  margin-bottom: 0.25rem;
+}
+
+.stats-grid .stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #000;
+  line-height: 1.1;
+}
+
+.stats-grid .stat-detail {
+  font-size: 0.65rem;
+  color: #999;
+  margin-top: 0.25rem;
+}
+
+/* ============================================
+   DJ MIXES - 50% smaller, inline (no boxes)
+   ============================================ */
+.card .grid.grid-4 {
+  display: flex !important;
+  gap: 0;
+  max-width: 50%;
+}
+
+.card .grid.grid-4 .stat-card {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: none !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.card .grid.grid-4 .stat-card:first-child {
+  padding-left: 0;
+}
+
+.card .grid.grid-4 .stat-card:last-child {
+  border-right: none !important;
+  padding-right: 0;
+}
+
+.card .grid.grid-4 .stat-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 0.2rem;
+}
+
+.card .grid.grid-4 .stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+/* ============================================
+   RESPONSIVE - Stack on smaller screens
+   ============================================ */
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .stats-grid .stat-card:nth-child(3) {
+    border-right: none;
+  }
+  
+  .stats-grid .stat-card:nth-child(n+4) {
+    border-top: 1px solid #e5e5e5;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .stats-grid .stat-card {
+    border-right: 1px solid #e5e5e5;
+  }
+  
+  .stats-grid .stat-card:nth-child(2n) {
+    border-right: none;
+  }
+  
+  .stats-grid .stat-card:nth-child(n+3) {
+    border-top: 1px solid #e5e5e5;
+  }
+  
+  .card .grid.grid-4 {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  
+  .card .grid.grid-4 .stat-card {
+    flex: 0 0 50%;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .card .grid.grid-4 .stat-card:nth-child(2n) {
+    border-right: none !important;
+  }
+  
+  .card .grid.grid-4 .stat-card:nth-child(n+3) {
+    border-bottom: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid .stat-value {
+    font-size: 1.1rem;
+  }
+  
+  .card .grid.grid-4 .stat-value {
+    font-size: 1.25rem;
+  }
+}

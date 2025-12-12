@@ -1,0 +1,634 @@
+---
+// src/pages/weekly-chart.astro
+// Weekly New Releases Chart - Ranked by sales, ratings, and engagement
+// Shows releases from the last 7 days
+
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+// Calculate date range (last 7 days)
+const now = new Date();
+const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+// Rating calculation function for releases
+function calculateScore(release: any): number {
+  const sales = release.salesCount || release.sales || 0;
+  const rating = release.ratings?.average || release.overallRating?.average || 0;
+  const ratingCount = release.ratings?.count || release.overallRating?.count || 0;
+  const views = release.views || release.stats?.views || 0;
+  
+  // Weighted score: sales most valuable, then ratings, views
+  const score = (sales * 10) + (rating * ratingCount * 2) + (views * 0.1);
+  return score;
+}
+
+let releases: any[] = [];
+let chartWeekStart = oneWeekAgo.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+let chartWeekEnd = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+try {
+  // Get all live releases
+  const releasesSnap = await db.collection('releases')
+    .where('status', '==', 'live')
+    .get();
+  
+  // Filter to releases from the last 7 days and calculate scores
+  releases = releasesSnap.docs
+    .map(doc => {
+      const data = { id: doc.id, ...doc.data() };
+      return data;
+    })
+    .filter(release => {
+      const releaseDate = new Date(release.releaseDate || release.publishedAt || release.createdAt);
+      return releaseDate >= oneWeekAgo && releaseDate <= now;
+    })
+    .map(release => ({
+      ...release,
+      chartScore: calculateScore(release)
+    }));
+  
+  // Sort by chart score descending
+  releases.sort((a, b) => b.chartScore - a.chartScore);
+  
+} catch (e) {
+  console.error('Error fetching weekly releases:', e);
+}
+
+const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num || 0);
+
+// Format release date
+const formatDate = (dateStr: string) => {
+  try {
+    return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  } catch {
+    return '';
+  }
+};
+
+// Get label from release
+const getLabel = (release: any) => release.labelName || release.recordLabel || release.copyrightHolder || 'Unknown Label';
+
+export const prerender = false;
+---
+
+<Layout title="Weekly Chart | Fresh Wax">
+  <Header />
+  
+  <main class="chart-main">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-grid"></div>
+      <div class="hero-content">
+        <span class="hero-badge">📅 This Week</span>
+        <h1>WEEKLY <span class="red">CHART</span></h1>
+        <p class="subtitle">New releases • {chartWeekStart} - {chartWeekEnd}</p>
+      </div>
+    </section>
+
+    <div class="container">
+      <!-- Stats Bar -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-number">{releases.length}</span>
+          <span class="stat-label">New Release{releases.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-number">7</span>
+          <span class="stat-label">Days</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-number">{releases.filter(r => r.vinylRelease).length}</span>
+          <span class="stat-label">On Vinyl</span>
+        </div>
+      </div>
+
+      {releases.length === 0 ? (
+        <div class="empty-state">
+          <div class="empty-icon">🎵</div>
+          <h2>No New Releases This Week</h2>
+          <p>Check back soon for fresh drops!</p>
+          <a href="/releases" class="browse-btn">Browse All Releases</a>
+        </div>
+      ) : (
+        <div class="chart-list">
+          {releases.slice(0, 20).map((release, index) => (
+            <a href={`/item/${release.id}`} class={`chart-item ${index < 3 ? 'top-three' : ''}`}>
+              <div class="rank">
+                {index === 0 && <span class="medal gold">🥇</span>}
+                {index === 1 && <span class="medal silver">🥈</span>}
+                {index === 2 && <span class="medal bronze">🥉</span>}
+                {index > 2 && <span class="rank-number">{index + 1}</span>}
+              </div>
+              
+              <img 
+                src={release.coverArtUrl || '/place-holder.webp'} 
+                alt={`${release.releaseName} by ${release.artistName}`}
+                class="artwork"
+                loading="lazy"
+              />
+              
+              <div class="release-info">
+                <h2>{release.releaseName}</h2>
+                <p class="artist-name">{release.artistName}</p>
+                <div class="release-meta">
+                  <span class="label">{getLabel(release)}</span>
+                  {release.labelCode && (
+                    <>
+                      <span class="dot">•</span>
+                      <span class="code">{release.labelCode}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              <div class="release-details">
+                <div class="detail-row">
+                  <span class="detail-label">Released</span>
+                  <span class="detail-value">{formatDate(release.releaseDate)}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Tracks</span>
+                  <span class="detail-value">{release.tracks?.length || 0}</span>
+                </div>
+                {release.genre && (
+                  <div class="detail-row">
+                    <span class="detail-label">Genre</span>
+                    <span class="detail-value genre-tag">{release.genre}</span>
+                  </div>
+                )}
+              </div>
+              
+              <div class="price-section">
+                <div class="price">£{(release.pricePerSale || release.pricing?.digital || 0).toFixed(2)}</div>
+                {release.vinylRelease && (
+                  <span class="vinyl-badge">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                    </svg>
+                    Vinyl
+                  </span>
+                )}
+              </div>
+              
+              <div class="arrow">→</div>
+            </a>
+          ))}
+        </div>
+      )}
+      
+      <!-- View All Link -->
+      {releases.length > 0 && (
+        <div class="view-all">
+          <a href="/releases" class="view-all-btn">View All Releases →</a>
+        </div>
+      )}
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .chart-main {
+    min-height: calc(100vh - 200px);
+    background: #0a0a0a;
+  }
+  
+  /* Hero Section */
+  .hero {
+    background: linear-gradient(135deg, #000 0%, #1a1a1a 50%, #0d0d0d 100%);
+    color: #fff;
+    padding: 4rem 1.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), 
+                      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+  
+  .hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .hero-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    color: #fff;
+    padding: 0.5rem 1.25rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+  }
+  
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4rem;
+    margin: 0 0 0.5rem;
+    letter-spacing: 0.05em;
+    color: #fff;
+  }
+  
+  .hero h1 .red {
+    color: #dc2626;
+  }
+  
+  .hero .subtitle {
+    font-size: 1.125rem;
+    color: #9ca3af;
+    font-weight: 500;
+    margin: 0;
+  }
+  
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  
+  /* Stats Bar */
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    background: linear-gradient(135deg, #1f2937, #111827);
+    border: 1px solid #374151;
+    border-radius: 12px;
+    padding: 1.25rem 2rem;
+    margin-bottom: 2rem;
+  }
+  
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  .stat-number {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: #dc2626;
+  }
+  
+  .stat-label {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  .stat-divider {
+    width: 1px;
+    height: 40px;
+    background: #374151;
+  }
+  
+  /* Empty State */
+  .empty-state {
+    background: linear-gradient(135deg, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 16px;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+  
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+  
+  .empty-state h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+  }
+  
+  .empty-state p {
+    color: #9ca3af;
+    margin-bottom: 1.5rem;
+  }
+  
+  .browse-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    color: #fff;
+    padding: 0.875rem 2rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  
+  .browse-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(220, 38, 38, 0.3);
+  }
+  
+  /* Chart List */
+  .chart-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .chart-item {
+    display: grid;
+    grid-template-columns: 60px 90px 1fr auto auto auto;
+    gap: 1.25rem;
+    align-items: center;
+    background: linear-gradient(135deg, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+  }
+  
+  .chart-item:hover {
+    border-color: #dc2626;
+    transform: translateX(4px);
+    box-shadow: 0 4px 20px rgba(220, 38, 38, 0.15);
+  }
+  
+  .chart-item.top-three {
+    border-width: 3px;
+  }
+  
+  .chart-item.top-three:nth-child(1) {
+    background: linear-gradient(135deg, #1a1a0a 0%, #2a2a0a 100%);
+    border-color: #fbbf24;
+  }
+  
+  .chart-item.top-three:nth-child(2) {
+    background: linear-gradient(135deg, #1a1a1f 0%, #2a2a30 100%);
+    border-color: #94a3b8;
+  }
+  
+  .chart-item.top-three:nth-child(3) {
+    background: linear-gradient(135deg, #1a1510 0%, #2a2015 100%);
+    border-color: #f97316;
+  }
+  
+  /* Rank */
+  .rank {
+    text-align: center;
+  }
+  
+  .medal {
+    font-size: 2rem;
+  }
+  
+  .rank-number {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    color: #4b5563;
+  }
+  
+  /* Artwork */
+  .artwork {
+    width: 90px;
+    height: 90px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 2px solid #374151;
+  }
+  
+  /* Release Info */
+  .release-info {
+    min-width: 0;
+  }
+  
+  .release-info h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .artist-name {
+    font-size: 1rem;
+    color: #dc2626;
+    margin: 0 0 0.375rem;
+    font-weight: 600;
+  }
+  
+  .release-meta {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: #6b7280;
+  }
+  
+  .release-meta .dot {
+    color: #4b5563;
+  }
+  
+  .release-meta .code {
+    font-family: monospace;
+    background: #374151;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+  }
+  
+  /* Release Details */
+  .release-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 120px;
+  }
+  
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.8125rem;
+  }
+  
+  .detail-label {
+    color: #6b7280;
+  }
+  
+  .detail-value {
+    color: #d1d5db;
+    font-weight: 500;
+  }
+  
+  .genre-tag {
+    background: #374151;
+    padding: 0.125rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+  }
+  
+  /* Price Section */
+  .price-section {
+    text-align: center;
+    min-width: 80px;
+  }
+  
+  .price {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: #fff;
+    margin-bottom: 0.25rem;
+  }
+  
+  .vinyl-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.6875rem;
+    color: #dc2626;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+  
+  .vinyl-badge svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  /* Arrow */
+  .arrow {
+    font-size: 1.5rem;
+    color: #4b5563;
+    transition: all 0.2s;
+  }
+  
+  .chart-item:hover .arrow {
+    color: #dc2626;
+    transform: translateX(4px);
+  }
+  
+  /* View All */
+  .view-all {
+    margin-top: 2rem;
+    text-align: center;
+  }
+  
+  .view-all-btn {
+    display: inline-block;
+    background: transparent;
+    color: #dc2626;
+    padding: 0.875rem 2rem;
+    border: 2px solid #dc2626;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  
+  .view-all-btn:hover {
+    background: #dc2626;
+    color: #fff;
+  }
+  
+  /* Responsive */
+  @media (max-width: 900px) {
+    .chart-item {
+      grid-template-columns: 50px 70px 1fr auto;
+      gap: 1rem;
+    }
+    
+    .release-details {
+      display: none;
+    }
+    
+    .arrow {
+      display: none;
+    }
+    
+    .stats-bar {
+      gap: 1rem;
+      padding: 1rem;
+    }
+    
+    .stat-number {
+      font-size: 1.5rem;
+    }
+  }
+  
+  @media (max-width: 600px) {
+    .hero h1 {
+      font-size: 2.5rem;
+    }
+    
+    .chart-item {
+      grid-template-columns: 40px 60px 1fr;
+      padding: 1rem;
+    }
+    
+    .price-section {
+      display: none;
+    }
+    
+    .artwork {
+      width: 60px;
+      height: 60px;
+    }
+    
+    .release-info h2 {
+      font-size: 1rem;
+    }
+    
+    .artist-name {
+      font-size: 0.875rem;
+    }
+    
+    .rank-number {
+      font-size: 1.25rem;
+    }
+    
+    .medal {
+      font-size: 1.5rem;
+    }
+    
+    .stats-bar {
+      flex-wrap: wrap;
+    }
+    
+    .stat-divider {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,540 @@
+---
+// /src/pages/artist/merch-orders.astro
+// Merch Supplier Order History (Read Only)
+// For partners with isMerchSupplier role to view orders containing their products
+
+export const prerender = false;
+
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+// Get partner from session
+const partnerId = Astro.cookies.get('partnerId')?.value || '';
+let partner: any = null;
+let orders: any[] = [];
+let products: any[] = [];
+
+if (partnerId) {
+  try {
+    const partnerDoc = await db.collection('artists').doc(partnerId).get();
+    if (partnerDoc.exists) {
+      partner = { id: partnerDoc.id, ...partnerDoc.data() };
+      
+      // Try multiple strategies to find products linked to this supplier
+      let merchDocs: any[] = [];
+      
+      // Strategy 1: Query by supplierId
+      const byIdSnap = await db.collection('merch')
+        .where('supplierId', '==', partnerId)
+        .get();
+      if (!byIdSnap.empty) {
+        merchDocs = byIdSnap.docs;
+      }
+      
+      // Strategy 2: If no results, try by supplier name
+      if (merchDocs.length === 0 && partner.artistName) {
+        const byNameSnap = await db.collection('merch')
+          .where('supplierName', '==', partner.artistName)
+          .get();
+        if (!byNameSnap.empty) {
+          merchDocs = byNameSnap.docs;
+        }
+      }
+      
+      // Strategy 3: Check merch-suppliers collection for linked products
+      if (merchDocs.length === 0) {
+        try {
+          const supplierDoc = await db.collection('merch-suppliers').doc(partnerId).get();
+          if (supplierDoc.exists) {
+            const supplierData = supplierDoc.data();
+            if (supplierData?.products && supplierData.products.length > 0) {
+              const productPromises = supplierData.products.slice(0, 50).map((pid: string) => 
+                db.collection('merch').doc(pid).get()
+              );
+              const productDocs = await Promise.all(productPromises);
+              merchDocs = productDocs.filter(d => d.exists);
+            }
+          }
+        } catch (e) {
+          // Ignore errors from merch-suppliers lookup
+        }
+      }
+      
+      const productIds = merchDocs.map(doc => doc.id);
+      products = merchDocs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Fetch orders containing this supplier's products
+      if (productIds.length > 0) {
+        const ordersSnap = await db.collection('orders')
+          .orderBy('createdAt', 'desc')
+          .limit(200)
+          .get();
+        
+        // Filter orders to only include items from this supplier
+        ordersSnap.docs.forEach(doc => {
+          const order = doc.data();
+          const supplierItems = (order.items || []).filter((item: any) => 
+            productIds.includes(item.productId) || item.supplierId === partnerId
+          );
+          
+          if (supplierItems.length > 0) {
+            orders.push({
+              id: doc.id,
+              orderNumber: order.orderNumber || doc.id.slice(-8).toUpperCase(),
+              createdAt: order.createdAt?.toDate?.() || new Date(),
+              status: order.status || 'pending',
+              customerName: order.customerName || order.shippingAddress?.name || 'Customer',
+              shippingAddress: order.shippingAddress || {},
+              items: supplierItems,
+              itemCount: supplierItems.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0),
+              total: supplierItems.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0)
+            });
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.error('Error fetching data:', e);
+  }
+}
+
+const isLoggedIn = !!partner;
+const isMerchSupplier = partner?.isMerchSupplier === true;
+
+// Calculate stats
+const totalOrders = orders.length;
+const pendingOrders = orders.filter(o => o.status === 'pending' || o.status === 'processing').length;
+const shippedOrders = orders.filter(o => o.status === 'shipped' || o.status === 'completed' || o.status === 'delivered').length;
+const cancelledOrders = orders.filter(o => o.status === 'cancelled' || o.status === 'refunded').length;
+
+// Format helpers
+const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+const formatDate = (date: Date) => new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order History | Fresh Wax</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    h1 .page-icon {
+      font-size: 1.5rem;
+    }
+    
+    h1 .page-title {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .back-link {
+      color: #a0a0a0;
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+    
+    .back-link:hover { color: #667eea; }
+    
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+    
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    
+    .stat-value.blue { color: #60a5fa; }
+    .stat-value.yellow { color: #fbbf24; }
+    .stat-value.green { color: #4ade80; }
+    .stat-value.red { color: #f87171; }
+    
+    .stat-label {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-top: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    /* Orders Table */
+    .orders-table-wrap {
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    
+    .orders-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .orders-table th {
+      text-align: left;
+      padding: 1rem;
+      background: rgba(255,255,255,0.05);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #9ca3af;
+      font-weight: 600;
+    }
+    
+    .orders-table td {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      vertical-align: top;
+    }
+    
+    .orders-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .orders-table tr:hover td {
+      background: rgba(255,255,255,0.02);
+    }
+    
+    .order-number {
+      font-weight: 600;
+      color: #fff;
+      font-family: monospace;
+    }
+    
+    .order-date {
+      color: #9ca3af;
+      font-size: 0.875rem;
+    }
+    
+    .order-customer {
+      color: #d1d5db;
+    }
+    
+    .order-items {
+      font-size: 0.875rem;
+    }
+    
+    .order-item {
+      padding: 0.25rem 0;
+      color: #d1d5db;
+    }
+    
+    .order-item-qty {
+      color: #9ca3af;
+    }
+    
+    .order-total {
+      font-weight: 600;
+      color: #4ade80;
+    }
+    
+    /* Status Badges */
+    .status-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .status-badge.pending { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+    .status-badge.processing { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
+    .status-badge.shipped { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+    .status-badge.delivered, .status-badge.completed { background: rgba(74, 222, 128, 0.15); color: #4ade80; }
+    .status-badge.cancelled, .status-badge.refunded { background: rgba(248, 113, 113, 0.15); color: #f87171; }
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      border: 1px dashed rgba(255,255,255,0.1);
+    }
+    
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+    
+    .empty-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+    
+    .empty-text {
+      color: #9ca3af;
+      font-size: 0.875rem;
+    }
+    
+    /* Auth */
+    .auth-message {
+      text-align: center;
+      padding: 4rem 2rem;
+    }
+    
+    .auth-message h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #fff;
+    }
+    
+    .auth-message p {
+      color: #9ca3af;
+      margin-bottom: 1.5rem;
+    }
+    
+    .auth-link {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+    
+    /* Mobile */
+    .mobile-card {
+      display: none;
+    }
+    
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      
+      .orders-table-wrap { display: none; }
+      
+      .mobile-card {
+        display: block;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+      
+      .mobile-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+      }
+      
+      .mobile-card-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-top: 1px solid rgba(255,255,255,0.05);
+        font-size: 0.875rem;
+      }
+      
+      .mobile-card-label {
+        color: #9ca3af;
+      }
+      
+      .mobile-card-value {
+        color: #d1d5db;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    {!isLoggedIn ? (
+      <div class="auth-message">
+        <h2>Sign In Required</h2>
+        <p>Please sign in to view your orders.</p>
+        <a href="/login" class="auth-link">Partner Login</a>
+      </div>
+    ) : !isMerchSupplier ? (
+      <div class="auth-message">
+        <h2>Access Restricted</h2>
+        <p>This page is only available to merchandise suppliers.</p>
+        <a href="/artist/dashboard" class="auth-link">Back to Dashboard</a>
+      </div>
+    ) : (
+      <div class="content-wrapper">
+        <header>
+          <h1><span class="page-icon">📋</span><span class="page-title">Order History</span></h1>
+          <a href="/artist/dashboard" class="back-link">← Back to Dashboard</a>
+        </header>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value blue">{totalOrders}</div>
+            <div class="stat-label">Total Orders</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value yellow">{pendingOrders}</div>
+            <div class="stat-label">Pending</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value green">{shippedOrders}</div>
+            <div class="stat-label">Shipped/Completed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value red">{cancelledOrders}</div>
+            <div class="stat-label">Cancelled</div>
+          </div>
+        </div>
+        
+        {orders.length === 0 ? (
+          <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <div class="empty-title">No Orders Yet</div>
+            <div class="empty-text">Orders containing your products will appear here.</div>
+          </div>
+        ) : (
+          <div class="orders-content">
+            <div class="orders-table-wrap">
+              <table class="orders-table">
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map(order => (
+                    <tr>
+                      <td>
+                        <span class="order-number">#{order.orderNumber}</span>
+                      </td>
+                      <td>
+                        <span class="order-date">{formatDate(order.createdAt)}</span>
+                      </td>
+                      <td>
+                        <span class="order-customer">{order.customerName}</span>
+                      </td>
+                      <td>
+                        <div class="order-items">
+                          {order.items.slice(0, 3).map((item: any) => (
+                            <div class="order-item">
+                              {item.name || item.productName || 'Product'} <span class="order-item-qty">×{item.quantity || 1}</span>
+                            </div>
+                          ))}
+                          {order.items.length > 3 && (
+                            <div class="order-item" style="color: #6b7280; font-style: italic;">
+                              +{order.items.length - 3} more items
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span class="order-total">{formatCurrency(order.total)}</span>
+                      </td>
+                      <td>
+                        <span class={'status-badge ' + order.status}>{order.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Mobile Cards */}
+            {orders.map(order => (
+              <div class="mobile-card">
+                <div class="mobile-card-header">
+                  <div>
+                    <span class="order-number">#{order.orderNumber}</span>
+                    <div class="order-date">{formatDate(order.createdAt)}</div>
+                  </div>
+                  <span class={'status-badge ' + order.status}>{order.status}</span>
+                </div>
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">Customer</span>
+                  <span class="mobile-card-value">{order.customerName}</span>
+                </div>
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">Items</span>
+                  <span class="mobile-card-value">{order.itemCount} item{order.itemCount !== 1 ? 's' : ''}</span>
+                </div>
+                <div class="mobile-card-row">
+                  <span class="mobile-card-label">Total</span>
+                  <span class="order-total">{formatCurrency(order.total)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+</body>
+</html>

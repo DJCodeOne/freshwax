@@ -1,0 +1,515 @@
+---
+// /src/pages/artist/merch.astro
+// Merch Supplier Stock View (Read Only)
+// For partners with isMerchSupplier role to view their product inventory
+
+export const prerender = false;
+
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+// Get partner from session
+const partnerId = Astro.cookies.get('partnerId')?.value || '';
+let partner: any = null;
+let products: any[] = [];
+
+if (partnerId) {
+  try {
+    const partnerDoc = await db.collection('artists').doc(partnerId).get();
+    if (partnerDoc.exists) {
+      partner = { id: partnerDoc.id, ...partnerDoc.data() };
+      
+      // Try multiple strategies to find products linked to this supplier
+      let merchDocs: any[] = [];
+      
+      // Strategy 1: Query by supplierId
+      const byIdSnap = await db.collection('merch')
+        .where('supplierId', '==', partnerId)
+        .get();
+      if (!byIdSnap.empty) {
+        merchDocs = byIdSnap.docs;
+      }
+      
+      // Strategy 2: If no results, try by supplier name
+      if (merchDocs.length === 0 && partner.artistName) {
+        const byNameSnap = await db.collection('merch')
+          .where('supplierName', '==', partner.artistName)
+          .get();
+        if (!byNameSnap.empty) {
+          merchDocs = byNameSnap.docs;
+        }
+      }
+      
+      // Strategy 3: Check merch-suppliers collection for linked products
+      if (merchDocs.length === 0) {
+        try {
+          const supplierDoc = await db.collection('merch-suppliers').doc(partnerId).get();
+          if (supplierDoc.exists) {
+            const supplierData = supplierDoc.data();
+            if (supplierData?.products && supplierData.products.length > 0) {
+              const productPromises = supplierData.products.slice(0, 50).map((pid: string) => 
+                db.collection('merch').doc(pid).get()
+              );
+              const productDocs = await Promise.all(productPromises);
+              merchDocs = productDocs.filter(d => d.exists);
+            }
+          }
+        } catch (e) {
+          // Ignore errors from merch-suppliers lookup
+        }
+      }
+      
+      products = merchDocs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    }
+  } catch (e) {
+    console.error('Error fetching data:', e);
+  }
+}
+
+const isLoggedIn = !!partner;
+const isMerchSupplier = partner?.isMerchSupplier === true;
+
+// Calculate stats
+const totalProducts = products.length;
+const totalStock = products.reduce((sum, p) => sum + (p.totalStock || p.stock || 0), 0);
+const lowStockCount = products.filter(p => {
+  const stock = p.totalStock || p.stock || 0;
+  const threshold = p.lowStockThreshold || 5;
+  return stock > 0 && stock <= threshold;
+}).length;
+const outOfStockCount = products.filter(p => (p.totalStock || p.stock || 0) === 0).length;
+
+// Format currency
+const formatCurrency = (amount: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+
+// Pre-process products for template
+const processedProducts = products.map(product => {
+  const stock = product.totalStock || product.stock || 0;
+  const threshold = product.lowStockThreshold || 5;
+  let stockStatus = 'in-stock';
+  let stockLabel = stock + ' in stock';
+  if (stock === 0) {
+    stockStatus = 'out-of-stock';
+    stockLabel = 'Out of Stock';
+  } else if (stock <= threshold) {
+    stockStatus = 'low-stock';
+    stockLabel = 'Low Stock (' + stock + ')';
+  }
+  
+  const imageUrl = product.primaryImage || (product.images && product.images[0] ? (product.images[0].url || product.images[0]) : null);
+  const variantEntries = product.variantStock ? Object.entries(product.variantStock) : [];
+  const showVariants = variantEntries.length > 1;
+  const displayVariants = variantEntries.slice(0, 6).map(([key, v]: [string, any]) => {
+    const vStock = v.stock || 0;
+    let vClass = '';
+    if (vStock === 0) vClass = 'out';
+    else if (vStock <= 3) vClass = 'low';
+    const vLabel = [v.size, v.color].filter(Boolean).join(' / ') || key;
+    return { key, stock: vStock, className: vClass, label: vLabel };
+  });
+  const extraVariants = variantEntries.length > 6 ? variantEntries.length - 6 : 0;
+  
+  return {
+    ...product,
+    stockStatus,
+    stockLabel,
+    imageUrl,
+    showVariants,
+    displayVariants,
+    extraVariants,
+    formattedPrice: formatCurrency(product.retailPrice || product.price || 0),
+    typeLabel: product.productTypeName || product.productType || 'Item'
+  };
+});
+---
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Stock | Fresh Wax</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    h1 .page-icon {
+      font-size: 1.5rem;
+    }
+    
+    h1 .page-title {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .back-link {
+      color: #a0a0a0;
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+    
+    .back-link:hover { color: #667eea; }
+    
+    .readonly-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      font-size: 0.875rem;
+      color: #a78bfa;
+    }
+    
+    /* Stats */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 1.25rem;
+    }
+    
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    
+    .stat-value.green { color: #4ade80; }
+    .stat-value.yellow { color: #fbbf24; }
+    .stat-value.red { color: #f87171; }
+    
+    .stat-label {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-top: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    /* Products Grid */
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .product-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+    
+    .product-card:hover {
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-2px);
+    }
+    
+    .product-image {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      background: rgba(0,0,0,0.3);
+    }
+    
+    .product-info {
+      padding: 1rem;
+    }
+    
+    .product-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+    
+    .product-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    
+    .product-type {
+      font-size: 0.75rem;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .product-price {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #4ade80;
+    }
+    
+    .stock-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .stock-label {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+    
+    .stock-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+    }
+    
+    .stock-badge.in-stock { background: rgba(74, 222, 128, 0.15); color: #4ade80; }
+    .stock-badge.low-stock { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+    .stock-badge.out-of-stock { background: rgba(248, 113, 113, 0.15); color: #f87171; }
+    
+    /* Variants */
+    .variants-section {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .variants-title {
+      font-size: 0.7rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+    
+    .variant-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.35rem 0;
+      font-size: 0.8rem;
+    }
+    
+    .variant-name {
+      color: #d1d5db;
+    }
+    
+    .variant-stock {
+      color: #9ca3af;
+    }
+    
+    .variant-stock.low { color: #fbbf24; }
+    .variant-stock.out { color: #f87171; }
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      border: 1px dashed rgba(255,255,255,0.1);
+    }
+    
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+    
+    .empty-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+    
+    .empty-text {
+      color: #9ca3af;
+      font-size: 0.875rem;
+    }
+    
+    /* Auth */
+    .auth-message {
+      text-align: center;
+      padding: 4rem 2rem;
+    }
+    
+    .auth-message h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #fff;
+    }
+    
+    .auth-message p {
+      color: #9ca3af;
+      margin-bottom: 1.5rem;
+    }
+    
+    .auth-link {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 500;
+    }
+    
+    @media (max-width: 640px) {
+      .container { padding: 1rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .products-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    {!isLoggedIn ? (
+      <div class="auth-message">
+        <h2>Sign In Required</h2>
+        <p>Please sign in to view your stock.</p>
+        <a href="/login" class="auth-link">Partner Login</a>
+      </div>
+    ) : !isMerchSupplier ? (
+      <div class="auth-message">
+        <h2>Access Restricted</h2>
+        <p>This page is only available to merchandise suppliers.</p>
+        <a href="/artist/dashboard" class="auth-link">Back to Dashboard</a>
+      </div>
+    ) : (
+      <div class="content-wrapper">
+        <header>
+          <h1><span class="page-icon">📦</span><span class="page-title">My Stock</span></h1>
+          <a href="/artist/dashboard" class="back-link">← Back to Dashboard</a>
+        </header>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">{totalProducts}</div>
+            <div class="stat-label">Products</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value green">{totalStock}</div>
+            <div class="stat-label">Total Units</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value yellow">{lowStockCount}</div>
+            <div class="stat-label">Low Stock</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value red">{outOfStockCount}</div>
+            <div class="stat-label">Out of Stock</div>
+          </div>
+        </div>
+        
+        {products.length === 0 ? (
+          <div class="empty-state">
+            <div class="empty-icon">📦</div>
+            <div class="empty-title">No Products Yet</div>
+            <div class="empty-text">Your merchandise inventory will appear here once products are added.</div>
+          </div>
+        ) : (
+          <div class="products-grid">
+            {processedProducts.map(product => (
+              <div class="product-card">
+                {product.imageUrl ? (
+                  <img src={product.imageUrl} alt={product.name} class="product-image" />
+                ) : (
+                  <div class="product-image" style="display: flex; align-items: center; justify-content: center; font-size: 3rem;">👕</div>
+                )}
+                <div class="product-info">
+                  <div class="product-name">{product.name}</div>
+                  <div class="product-meta">
+                    <span class="product-type">{product.typeLabel}</span>
+                    <span class="product-price">{product.formattedPrice}</span>
+                  </div>
+                  <div class="stock-row">
+                    <span class="stock-label">Stock Status</span>
+                    <span class={'stock-badge ' + product.stockStatus}>{product.stockLabel}</span>
+                  </div>
+                  {product.showVariants && (
+                    <div class="variants-section">
+                      <div class="variants-title">Variants</div>
+                      {product.displayVariants.map(v => (
+                        <div class="variant-row">
+                          <span class="variant-name">{v.label}</span>
+                          <span class={'variant-stock ' + v.className}>{v.stock} units</span>
+                        </div>
+                      ))}
+                      {product.extraVariants > 0 && (
+                        <div class="variant-row" style="color: #6b7280; font-style: italic;">
+                          +{product.extraVariants} more variants
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+</body>
+</html>

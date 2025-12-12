@@ -1,0 +1,409 @@
+---
+// Merch Analytics - Pro Dashboard
+// View sales and performance analytics
+import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+---
+<ProDashboardLayout title="Analytics" activeSection="/pro/merch/analytics">
+  <div class="analytics-page">
+    <div class="page-header">
+      <div class="header-content">
+        <p class="subtitle">View your merchandise sales and performance</p>
+      </div>
+      <div class="period-selector">
+        <select id="periodSelect">
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+          <option value="365">Last year</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-value" id="totalRevenue">£0.00</div>
+        <div class="metric-label">Total Revenue</div>
+        <div class="metric-change positive" id="revenueChange">-</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="totalOrders">0</div>
+        <div class="metric-label">Orders</div>
+        <div class="metric-change" id="ordersChange">-</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="totalUnits">0</div>
+        <div class="metric-label">Units Sold</div>
+        <div class="metric-change" id="unitsChange">-</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="avgOrder">£0.00</div>
+        <div class="metric-label">Avg. Order Value</div>
+        <div class="metric-change" id="avgChange">-</div>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>Sales Over Time</h3>
+        <div class="chart-placeholder" id="salesChart">
+          <p>Chart visualization would appear here</p>
+          <p class="sub">Showing daily sales for the selected period</p>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>Top Products</h3>
+        <div id="topProducts" class="top-list">
+          <div class="loading">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Sales -->
+    <div class="section">
+      <h3>Recent Sales</h3>
+      <div id="recentSales" class="sales-table-wrapper">
+        <table class="sales-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Product</th>
+              <th>Quantity</th>
+              <th>Revenue</th>
+            </tr>
+          </thead>
+          <tbody id="salesTableBody">
+            <tr>
+              <td colspan="4" class="loading">Loading sales data...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .analytics-page {
+      max-width: 1200px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .subtitle {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0;
+    }
+
+    .period-selector select {
+      padding: 0.5rem 1rem;
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 6px;
+      color: var(--text-primary, #fff);
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary, #fff);
+      margin-bottom: 0.25rem;
+    }
+
+    .metric-label {
+      font-size: 0.9rem;
+      color: var(--text-secondary, #a3a3a3);
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-change {
+      font-size: 0.8rem;
+      color: var(--text-muted, #666);
+    }
+
+    .metric-change.positive {
+      color: #22c55e;
+    }
+
+    .metric-change.negative {
+      color: #ef4444;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 900px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-card {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+
+    .chart-card h3 {
+      color: var(--text-primary, #fff);
+      font-size: 1rem;
+      margin: 0 0 1rem;
+    }
+
+    .chart-placeholder {
+      height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-tertiary, #1a1a1a);
+      border-radius: 6px;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .chart-placeholder .sub {
+      font-size: 0.8rem;
+      color: var(--text-muted, #666);
+    }
+
+    .top-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .top-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      background: var(--bg-tertiary, #1a1a1a);
+      border-radius: 6px;
+    }
+
+    .top-item-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .top-item-name {
+      color: var(--text-primary, #fff);
+      font-weight: 500;
+    }
+
+    .top-item-units {
+      font-size: 0.8rem;
+      color: var(--text-muted, #666);
+    }
+
+    .top-item-revenue {
+      color: var(--accent, #22c55e);
+      font-weight: 600;
+    }
+
+    .section {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+
+    .section h3 {
+      color: var(--text-primary, #fff);
+      font-size: 1rem;
+      margin: 0 0 1rem;
+    }
+
+    .sales-table-wrapper {
+      overflow-x: auto;
+    }
+
+    .sales-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .sales-table th,
+    .sales-table td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color, #262626);
+    }
+
+    .sales-table th {
+      font-weight: 600;
+      color: var(--text-secondary, #a3a3a3);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+    }
+
+    .sales-table td {
+      color: var(--text-primary, #fff);
+    }
+
+    .sales-table tbody tr:hover {
+      background: var(--bg-tertiary, #1a1a1a);
+    }
+
+    .loading {
+      text-align: center;
+      color: var(--text-secondary, #a3a3a3);
+      padding: 1rem;
+    }
+
+    .empty-message {
+      text-align: center;
+      color: var(--text-secondary, #a3a3a3);
+      padding: 2rem;
+    }
+  </style>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getFirestore, collection, query, where, getDocs, orderBy, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+    const firebaseConfig = window.FIREBASE_CONFIG || {};
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+    let currentPeriod = 30;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      currentUserId = user.uid;
+      await loadAnalytics();
+    });
+
+    document.getElementById('periodSelect').addEventListener('change', async (e) => {
+      currentPeriod = parseInt(e.target.value);
+      await loadAnalytics();
+    });
+
+    async function loadAnalytics() {
+      if (!currentUserId) return;
+
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - currentPeriod);
+
+      try {
+        // Get orders for period
+        const ordersQuery = query(
+          collection(db, 'orders'),
+          where('sellerId', '==', currentUserId),
+          where('createdAt', '>=', Timestamp.fromDate(startDate)),
+          orderBy('createdAt', 'desc')
+        );
+        
+        const snapshot = await getDocs(ordersQuery);
+        
+        let totalRevenue = 0;
+        let totalOrders = 0;
+        let totalUnits = 0;
+        const productSales = {};
+        const recentSales = [];
+
+        snapshot.forEach(doc => {
+          const order = doc.data();
+          totalOrders++;
+          totalRevenue += order.total || 0;
+          
+          (order.items || []).forEach(item => {
+            const qty = item.quantity || 1;
+            totalUnits += qty;
+            
+            // Track product sales
+            if (!productSales[item.name]) {
+              productSales[item.name] = { units: 0, revenue: 0 };
+            }
+            productSales[item.name].units += qty;
+            productSales[item.name].revenue += (item.price || 0) * qty;
+
+            // Add to recent sales
+            recentSales.push({
+              date: order.createdAt?.toDate?.() || new Date(),
+              product: item.name,
+              quantity: qty,
+              revenue: (item.price || 0) * qty
+            });
+          });
+        });
+
+        // Update metrics
+        document.getElementById('totalRevenue').textContent = '£' + totalRevenue.toFixed(2);
+        document.getElementById('totalOrders').textContent = totalOrders;
+        document.getElementById('totalUnits').textContent = totalUnits;
+        document.getElementById('avgOrder').textContent = totalOrders > 0 
+          ? '£' + (totalRevenue / totalOrders).toFixed(2) 
+          : '£0.00';
+
+        // Top products
+        const topProducts = Object.entries(productSales)
+          .sort((a, b) => b[1].revenue - a[1].revenue)
+          .slice(0, 5);
+
+        const topProductsEl = document.getElementById('topProducts');
+        if (topProducts.length === 0) {
+          topProductsEl.innerHTML = '<div class="empty-message">No sales data yet</div>';
+        } else {
+          topProductsEl.innerHTML = topProducts.map(([name, data]) => `
+            <div class="top-item">
+              <div class="top-item-info">
+                <span class="top-item-name">${name}</span>
+                <span class="top-item-units">${data.units} units</span>
+              </div>
+              <span class="top-item-revenue">£${data.revenue.toFixed(2)}</span>
+            </div>
+          `).join('');
+        }
+
+        // Recent sales table
+        const tableBody = document.getElementById('salesTableBody');
+        if (recentSales.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="4" class="empty-message">No sales in this period</td></tr>';
+        } else {
+          tableBody.innerHTML = recentSales.slice(0, 10).map(sale => `
+            <tr>
+              <td>${sale.date.toLocaleDateString('en-GB')}</td>
+              <td>${sale.product}</td>
+              <td>${sale.quantity}</td>
+              <td>£${sale.revenue.toFixed(2)}</td>
+            </tr>
+          `).join('');
+        }
+
+      } catch (error) {
+        console.error('Error loading analytics:', error);
+      }
+    }
+  </script>
+</ProDashboardLayout>

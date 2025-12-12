@@ -145,3 +145,32 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 };
+// Support DELETE method with query params
+export const DELETE: APIRoute = async ({ request, url }) => {
+  const mixId = url.searchParams.get('id');
+  
+  if (!mixId) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: 'Mix ID is required' 
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  
+  // Create a mock request with JSON body for the POST handler
+  const mockRequest = new Request(request.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mixId })
+  });
+  
+  // Call the POST handler
+  return POST({ request: mockRequest, url } as any);
+};
+
+// Support GET method for simple browser/fetch calls
+export const GET: APIRoute = async (context) => {
+  return DELETE(context);
+};

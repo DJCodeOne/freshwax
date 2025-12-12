@@ -60,21 +60,21 @@ import Footer from '../components/Footer.astro';
 
     <!-- Upload Form -->
     <section class="container mx-auto px-6 py-12 max-w-4xl relative z-10">
-      <div class="bg-white rounded-2xl shadow-xl border-2 border-gray-200 overflow-hidden">
+      <div class="bg-white rounded-2xl shadow-xl border-2 border-black overflow-hidden">
         <form id="upload-form" class="p-8 space-y-6">
           
           <!-- DJ Name -->
           <div>
             <label for="dj-name" class="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide">
               DJ Name <span class="text-red-600">*</span>
-              <span class="text-gray-500 text-xs font-normal ml-2">(<span id="dj-name-count">0</span>/15)</span>
+              <span class="text-gray-500 text-xs font-normal ml-2">(<span id="dj-name-count">0</span>/30)</span>
             </label>
             <input
               type="text"
               id="dj-name"
               name="djName"
               required
-              maxlength="15"
+              maxlength="30"
               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
               placeholder="Enter your DJ name"
             />
@@ -84,14 +84,14 @@ import Footer from '../components/Footer.astro';
           <div>
             <label for="mix-title" class="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide">
               Mix Title <span class="text-red-600">*</span>
-              <span class="text-gray-500 text-xs font-normal ml-2">(<span id="mix-title-count">0</span>/20)</span>
+              <span class="text-gray-500 text-xs font-normal ml-2">(<span id="mix-title-count">0</span>/50)</span>
             </label>
             <input
               type="text"
               id="mix-title"
               name="mixTitle"
               required
-              maxlength="20"
+              maxlength="50"
               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
               placeholder="Enter mix title"
             />
@@ -155,7 +155,7 @@ import Footer from '../components/Footer.astro';
             ></textarea>
             
             <!-- Emoji Selector -->
-            <div class="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div class="mt-2 p-3 bg-gray-50 rounded-lg border-2 border-gray-400">
               <p class="text-xs font-bold text-gray-700 mb-3 uppercase tracking-wide">Quick Emojis:</p>
               <div class="emoji-grid">
                 <button type="button" class="emoji-btn" data-emoji="🔥" title="Fire">🔥</button>
@@ -195,7 +195,7 @@ import Footer from '../components/Footer.astro';
               name="tracklist"
               rows="8"
               maxlength="1500"
-              class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all resize-none font-mono text-sm"
+              class="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all resize-none font-mono text-sm"
               placeholder="Artist - Track Title
 Artist - Track Title
 Artist - Track Title
@@ -566,6 +566,12 @@ Artist - Track Title
 
 <script>
 
+  // Auth helper - wait for auth to be ready
+  async function getAuthUser() {
+    if (window.authReady) await window.authReady;
+    return window.firebaseAuth?.currentUser || window.authUser || null;
+  }
+
   let selectedAudioFile = null;
   let selectedArtworkFile = null;
   let audioDurationSeconds = 0;
@@ -880,8 +886,9 @@ Artist - Track Title
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const auth = window.firebaseAuth;
-    if (!auth || !auth.currentUser) {
+    // Wait for auth to be ready
+    const user = await getAuthUser();
+    if (!user) {
       alert('Please log in to upload mixes');
       window.location.href = '/login?redirect=/upload-mix';
       return;
@@ -943,9 +950,8 @@ Artist - Track Title
       formData.append('durationSeconds', audioDurationSeconds.toString());
       formData.append('audioFile', selectedAudioFile);
       
-      // Add userId from auth or cookie
-      const auth = window.firebaseAuth;
-      const userId = auth?.currentUser?.uid || getCookie('partnerId') || getCookie('customerId') || '';
+      // Add userId from auth (user is already verified above) or cookie fallback
+      const userId = user?.uid || getCookie('partnerId') || getCookie('customerId') || '';
       formData.append('userId', userId);
       
       if (selectedArtworkFile) {
@@ -954,29 +960,76 @@ Artist - Track Title
 
       statusText.textContent = 'Uploading audio file...';
 
-      let progress = 0;
-      const progressInterval = setInterval(() => {
-        progress += 5;
-        if (progress <= 90) {
-          progressBar.style.width = progress + '%';
-          progressText.textContent = progress + '%';
-        }
-      }, 500);
-
-      const response = await fetch('/api/upload-mix', {
-        method: 'POST',
-        body: formData
+      // Use XMLHttpRequest for real upload progress tracking
+      const result = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        // Track upload progress (data being sent to server)
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const percentComplete = Math.round((e.loaded / e.total) * 100);
+            // Cap visual progress at 85% during upload phase
+            // Server processing takes the remaining 15%
+            const visualProgress = Math.min(percentComplete * 0.85, 85);
+            progressBar.style.width = visualProgress + '%';
+            progressText.textContent = Math.round(visualProgress) + '%';
+            
+            // Update status text based on progress
+            if (percentComplete < 100) {
+              const mbUploaded = (e.loaded / (1024 * 1024)).toFixed(1);
+              const mbTotal = (e.total / (1024 * 1024)).toFixed(1);
+              statusText.textContent = `Uploading... ${mbUploaded}MB / ${mbTotal}MB`;
+            }
+          }
+        });
+        
+        // When upload to server completes, show processing state
+        xhr.upload.addEventListener('load', () => {
+          progressBar.style.width = '90%';
+          progressText.textContent = '90%';
+          statusText.textContent = 'Processing on server...';
+          submitBtn.textContent = 'Processing...';
+        });
+        
+        // Handle response
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              resolve(response);
+            } catch (e) {
+              reject(new Error('Invalid server response'));
+            }
+          } else {
+            try {
+              const errorResponse = JSON.parse(xhr.responseText);
+              reject(new Error(errorResponse.error || errorResponse.details || `Server error: ${xhr.status}`));
+            } catch (e) {
+              reject(new Error(`Server error: ${xhr.status}`));
+            }
+          }
+        });
+        
+        xhr.addEventListener('error', () => {
+          reject(new Error('Network error - please check your connection'));
+        });
+        
+        xhr.addEventListener('abort', () => {
+          reject(new Error('Upload cancelled'));
+        });
+        
+        xhr.open('POST', '/api/upload-mix');
+        xhr.send(formData);
       });
 
-      clearInterval(progressInterval);
+      // Upload complete!
       progressBar.style.width = '100%';
       progressText.textContent = '100%';
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (result.success) {
         
         statusText.textContent = 'Upload complete! Mix is now LIVE!';
+        submitBtn.textContent = 'Complete!';
         
         alert(`✅ Mix uploaded and published successfully!
 

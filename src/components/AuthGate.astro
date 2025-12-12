@@ -1,0 +1,140 @@
+---
+// src/components/AuthGate.astro
+// Reusable component that shows login prompt for non-authenticated users
+// Usage: Wrap any interactive content that requires login
+
+interface Props {
+  message?: string;
+  buttonText?: string;
+  returnTo?: string;
+}
+
+const { 
+  message = "You must be logged in to interact",
+  buttonText = "Sign In",
+  returnTo = ""
+} = Astro.props;
+---
+
+<div class="auth-gate-wrapper" data-return-to={returnTo}>
+  <!-- Shown when NOT logged in -->
+  <div class="auth-gate-prompt hidden" id="authGatePrompt">
+    <div class="auth-gate-content">
+      <span class="auth-gate-icon">🔒</span>
+      <p class="auth-gate-message">{message}</p>
+      <a href="/login" class="auth-gate-btn">{buttonText}</a>
+    </div>
+  </div>
+  
+  <!-- Shown when logged in - slot content -->
+  <div class="auth-gate-content-wrapper hidden" id="authGateContent">
+    <slot />
+  </div>
+</div>
+
+<style is:global>
+  .auth-gate-wrapper {
+    position: relative;
+  }
+  
+  .auth-gate-prompt {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px dashed #ddd;
+    border-radius: 8px;
+  }
+  
+  .auth-gate-content {
+    text-align: center;
+  }
+  
+  .auth-gate-icon {
+    font-size: 1.5rem;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  
+  .auth-gate-message {
+    color: #666;
+    margin: 0 0 0.75rem 0;
+    font-size: 0.9rem;
+  }
+  
+  .auth-gate-btn {
+    display: inline-block;
+    background: #dc2626;
+    color: #fff;
+    padding: 0.5rem 1.25rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: background 0.2s;
+  }
+  
+  .auth-gate-btn:hover {
+    background: #b91c1c;
+  }
+  
+  .auth-gate-wrapper .hidden {
+    display: none !important;
+  }
+</style>
+
+<script>
+  // Initialize auth gates on page load
+  function initAuthGates() {
+    import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js').then(({ initializeApp }) => {
+      import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js').then(({ getAuth, onAuthStateChanged }) => {
+        const firebaseConfig = {
+          apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+          authDomain: "freshwax-store.firebaseapp.com",
+          projectId: "freshwax-store",
+          storageBucket: "freshwax-store.firebasestorage.app",
+          messagingSenderId: "675435782973",
+          appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        onAuthStateChanged(auth, (user) => {
+          document.querySelectorAll('.auth-gate-wrapper').forEach(wrapper => {
+            const prompt = wrapper.querySelector('#authGatePrompt, .auth-gate-prompt');
+            const content = wrapper.querySelector('#authGateContent, .auth-gate-content-wrapper');
+            
+            if (user) {
+              // User is logged in - show content
+              prompt?.classList.add('hidden');
+              content?.classList.remove('hidden');
+            } else {
+              // User is not logged in - show prompt
+              prompt?.classList.remove('hidden');
+              content?.classList.add('hidden');
+              
+              // Update return URL if specified
+              const returnTo = wrapper.dataset.returnTo;
+              if (returnTo) {
+                const btn = prompt?.querySelector('.auth-gate-btn');
+                if (btn) {
+                  btn.href = `/login?returnTo=${encodeURIComponent(returnTo)}`;
+                }
+              }
+            }
+          });
+        });
+      });
+    });
+  }
+  
+  // Run on initial load and after view transitions
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAuthGates);
+  } else {
+    initAuthGates();
+  }
+  document.addEventListener('astro:page-load', initAuthGates);
+</script>

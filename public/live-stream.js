@@ -1,21 +1,27 @@
 // public/live-stream.js
 // Fresh Wax Live Stream - Mobile-First Optimized
-// Version: 2.0 - December 2025
+// Version: 2.1 - December 2025 - Pusher Chat Integration
 
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { getFirestore, collection, query, where, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+// Pusher for real-time chat (config from window.PUSHER_CONFIG set by Layout.astro)
+let pusher = null;
+let chatChannel = null;
+const PUSHER_KEY = window.PUSHER_CONFIG?.key || '';
+const PUSHER_CLUSTER = window.PUSHER_CONFIG?.cluster || 'eu';
 
 // ==========================================
 // FIREBASE CONFIGURATION
 // ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
-  authDomain: "fresh-wax.firebaseapp.com",
-  projectId: "fresh-wax",
-  storageBucket: "fresh-wax.firebasestorage.app",
-  messagingSenderId: "307622215498",
-  appId: "1:307622215498:web:e66cee39e098fe973c7081"
+  authDomain: "freshwax-store.firebaseapp.com",
+  projectId: "freshwax-store",
+  storageBucket: "freshwax-store.firebasestorage.app",
+  messagingSenderId: "675435782973",
+  appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
 };
 
 // Prevent duplicate app initialization
@@ -30,7 +36,7 @@ let currentUser = null;
 let currentStream = null;
 let viewerSessionId = null;
 let isPlaying = false;
-let chatUnsubscribe = null;
+let chatMessages = []; // Store chat messages for Pusher updates
 
 // Recording state
 let mediaRecorder = null;
@@ -218,15 +224,8 @@ function handleVisibilityChange() {
 
 // Refresh viewer count
 async function refreshViewerCount(streamId) {
-  try {
-    const response = await fetch('/api/livestream/status');
-    const result = await response.json();
-    if (result.success && result.primaryStream) {
-      const viewerCount = document.getElementById('viewerCount');
-      if (viewerCount) viewerCount.textContent = result.primaryStream.currentViewers || 0;
-    }
-  } catch (e) {
-    console.warn('[Live] Failed to refresh viewer count');
+  if (streamId && viewerSessionId) {
+    sendHeartbeat(streamId);
   }
 }
 
@@ -968,49 +967,26 @@ function setupAudioPlayer(stream) {
 // VIEWER SESSION
 // ==========================================
 async function joinStream(streamId) {
-  viewerSessionId = `viewer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
-  try {
-    await fetch('/api/livestream/react', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'join',
-        streamId,
-        userId: currentUser?.uid || null,
-        sessionId: viewerSessionId
-      })
-    });
-    
-    // Heartbeat every 30 seconds
-    setInterval(() => {
-      if (currentStream) {
-        fetch('/api/livestream/react', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'heartbeat',
-            streamId: currentStream.id,
-            sessionId: viewerSessionId
-          })
-        }).then(res => res.json()).then(data => {
-          if (data.success) {
-            const viewerCount = document.getElementById('viewerCount');
-            const likeCount = document.getElementById('likeCount');
-            if (viewerCount) viewerCount.textContent = data.currentViewers;
-            if (likeCount) likeCount.textContent = data.totalLikes;
-          }
-        }).catch(() => {});
-      }
-    }, 30000);
-  } catch (error) {
-    console.error('[Viewer] Join error:', error);
+  // Get or create persistent session ID
+  if (!sessionStorage.getItem('viewerSessionId')) {
+    sessionStorage.setItem('viewerSessionId', `v_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   }
+  viewerSessionId = sessionStorage.getItem('viewerSessionId');
+  
+  // Send initial heartbeat
+  sendHeartbeat(streamId);
+  
+  // Heartbeat every 30 seconds
+  setInterval(() => {
+    if (currentStream) {
+      sendHeartbeat(currentStream.id);
+    }
+  }, 30000);
   
   // Leave on page unload
   window.addEventListener('beforeunload', () => {
     if (currentStream && viewerSessionId) {
-      navigator.sendBeacon('/api/livestream/react', JSON.stringify({
+      navigator.sendBeacon('/api/livestream/heartbeat', JSON.stringify({
         action: 'leave',
         streamId: currentStream.id,
         sessionId: viewerSessionId
@@ -1019,39 +995,131 @@ async function joinStream(streamId) {
   });
 }
 
+async function sendHeartbeat(streamId) {
+  try {
+    const response = await fetch('/api/livestream/heartbeat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        streamId,
+        sessionId: viewerSessionId
+      })
+    });
+    
+    const data = await response.json();
+    const count = data.count || 0;
+    
+    // Update viewer count displays
+    const viewerCount = document.getElementById('viewerCount');
+    const chatViewers = document.getElementById('chatViewers');
+    
+    if (viewerCount) {
+      viewerCount.textContent = count;
+    }
+    if (chatViewers) {
+      chatViewers.textContent = `${count} watching`;
+    }
+  } catch (error) {
+    console.warn('[Heartbeat] Failed:', error);
+  }
+}
+
 // ==========================================
-// CHAT SYSTEM
+// CHAT SYSTEM - Pusher Real-time
 // ==========================================
-function setupChat(streamId) {
-  const chatQuery = query(
-    collection(db, 'livestream-chat'),
-    where('streamId', '==', streamId),
-    where('isModerated', '==', false),
-    orderBy('createdAt', 'desc'),
-    limit(100)
-  );
+async function setupChat(streamId) {
+  // Load Pusher script if not already loaded
+  if (!window.Pusher) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
   
-  chatUnsubscribe = onSnapshot(chatQuery, (snapshot) => {
-    const messages = [];
-    let hasNewMessage = false;
-    
-    snapshot.docChanges().forEach(change => {
-      if (change.type === 'added') hasNewMessage = true;
+  // Initialize Pusher
+  if (!pusher) {
+    pusher = new window.Pusher(PUSHER_KEY, {
+      cluster: PUSHER_CLUSTER,
+      forceTLS: true
     });
+  }
+  
+  // Load initial messages via API (20 messages, 20 Firebase reads total)
+  try {
+    const response = await fetch(`/api/livestream/chat?streamId=${streamId}&limit=20`);
+    const result = await response.json();
+    if (result.success) {
+      chatMessages = result.messages || [];
+      renderChatMessages(chatMessages);
+    }
+  } catch (error) {
+    console.warn('[Chat] Failed to load initial messages:', error);
+  }
+  
+  // Subscribe to Pusher channel for real-time updates (no Firebase reads!)
+  if (chatChannel) {
+    chatChannel.unbind_all();
+    pusher.unsubscribe(chatChannel.name);
+  }
+  
+  chatChannel = pusher.subscribe(`stream-${streamId}`);
+  
+  chatChannel.bind('new-message', (message) => {
+    // Add new message to array
+    chatMessages.push(message);
     
-    snapshot.forEach(doc => {
-      messages.push({ id: doc.id, ...doc.data() });
-    });
+    // Keep only last 50 messages in memory
+    if (chatMessages.length > 50) {
+      chatMessages = chatMessages.slice(-50);
+    }
     
-    messages.reverse();
-    renderChatMessages(messages);
+    // Re-render
+    renderChatMessages(chatMessages);
     
-    if (hasNewMessage && typeof window.notifyNewChatMessage === 'function') {
+    // Notify mobile tab badge
+    if (typeof window.notifyNewChatMessage === 'function') {
       window.notifyNewChatMessage();
     }
-  }, (error) => {
-    console.warn('[Chat] Error:', error.code);
   });
+  
+  // Listen for reactions from other viewers
+  chatChannel.bind('reaction', (data) => {
+    console.log('[Reaction] Received:', data);
+    
+    // Skip if this is our own reaction (we already showed it locally)
+    if (currentUser && data.userId === currentUser.uid) {
+      console.log('[Reaction] Skipping own reaction');
+      return;
+    }
+    
+    // Display the reaction animation - all reactions are emoji
+    const emoji = data.emoji || '❤️';
+    const emojiList = emoji.split(',');
+    
+    // Create burst of emojis in random positions
+    const numEmojis = 4 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < numEmojis; i++) {
+      setTimeout(() => {
+        createFloatingEmojiFromBroadcast(emojiList);
+      }, i * 70);
+    }
+  });
+  
+  // Listen for shoutouts from other viewers
+  chatChannel.bind('shoutout', (data) => {
+    console.log('[Shoutout] Received:', data);
+    if (typeof window.handleIncomingShoutout === 'function') {
+      window.handleIncomingShoutout(data);
+    }
+  });
+  
+  // Make channel available for shoutout sending
+  window.pusherChannel = chatChannel;
+  
+  console.log('[Chat] Pusher connected to stream-' + streamId);
   
   setupEmojiPicker();
   setupGiphyPicker();
@@ -1064,32 +1132,39 @@ function renderChatMessages(messages) {
   
   const wasAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
   
+  // Helper to format time
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  };
+  
   container.innerHTML = `
     <div class="chat-welcome" style="text-align: center; padding: 0.75rem; background: #1a1a2e; border-radius: 8px; margin-bottom: 0.5rem;">
       <p style="color: #a5b4fc; margin: 0; font-size: 0.8125rem;">Welcome! Be respectful 🎵</p>
     </div>
     ${messages.map(msg => {
-      const initial = (msg.userName || 'A')[0].toUpperCase();
+      const time = formatTime(msg.createdAt);
       
       if (msg.type === 'giphy' && msg.giphyUrl) {
         return `
-          <div class="chat-message" style="display: flex; gap: 0.5rem; padding: 0.5rem 0; animation: slideIn 0.2s ease-out;">
-            <div style="width: 28px; height: 28px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.6875rem; color: #fff; flex-shrink: 0;">${initial}</div>
-            <div style="flex: 1; min-width: 0;">
-              <div style="font-weight: 600; color: #6366f1; font-size: 0.75rem; margin-bottom: 0.25rem;">${msg.userName}</div>
-              <img src="${msg.giphyUrl}" alt="GIF" style="max-width: 150px; border-radius: 6px;" loading="lazy" />
+          <div class="chat-message" style="padding: 0.5rem 0; animation: slideIn 0.2s ease-out;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
+              <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem;">${msg.userName}</span>
+              <span style="font-size: 0.6875rem; color: #666;">${time}</span>
             </div>
+            <img src="${msg.giphyUrl}" alt="GIF" style="max-width: 150px; border-radius: 6px;" loading="lazy" />
           </div>
         `;
       }
       
       return `
-        <div class="chat-message" style="display: flex; gap: 0.5rem; padding: 0.5rem 0; animation: slideIn 0.2s ease-out;">
-          <div style="width: 28px; height: 28px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.6875rem; color: #fff; flex-shrink: 0;">${initial}</div>
-          <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 600; color: #6366f1; font-size: 0.75rem; margin-bottom: 0.125rem;">${msg.userName}</div>
-            <div style="color: #fff; font-size: 0.875rem; word-break: break-word; line-height: 1.4;">${escapeHtml(msg.message)}</div>
+        <div class="chat-message" style="padding: 0.5rem 0; animation: slideIn 0.2s ease-out;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.125rem;">
+            <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem;">${msg.userName}</span>
+            <span style="font-size: 0.6875rem; color: #666;">${time}</span>
           </div>
+          <div style="color: #fff; font-size: 0.875rem; word-break: break-word; line-height: 1.4;">${escapeHtml(msg.message)}</div>
         </div>
       `;
     }).join('')}
@@ -1292,46 +1367,7 @@ function setupChatInput(streamId) {
 // REACTIONS
 // ==========================================
 function setupReactions(streamId) {
-  const starBtns = document.querySelectorAll('.star');
   const shareBtn = document.getElementById('shareBtn');
-  
-  // Star rating
-  starBtns.forEach(btn => {
-    btn.onmouseenter = () => {
-      const rating = parseInt(btn.dataset.rating);
-      starBtns.forEach((s, i) => s.classList.toggle('active', i < rating));
-    };
-    
-    btn.onclick = async () => {
-      if (!currentUser) {
-        alert('Please sign in to rate');
-        return;
-      }
-      
-      const rating = parseInt(btn.dataset.rating);
-      
-      try {
-        const response = await fetch('/api/livestream/react', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'rate',
-            streamId,
-            userId: currentUser.uid,
-            rating
-          })
-        });
-        
-        const result = await response.json();
-        if (result.success) {
-          const avgRating = document.getElementById('avgRating');
-          if (avgRating) avgRating.textContent = result.averageRating.toFixed(1);
-        }
-      } catch (error) {
-        console.error('[Reaction] Rating error:', error);
-      }
-    };
-  });
   
   // Share button - uses native share on mobile
   if (shareBtn) {
@@ -1355,6 +1391,61 @@ function setupReactions(streamId) {
   }
 }
 
+// Create floating emoji from broadcast (random position)
+function createFloatingEmojiFromBroadcast(emojiList) {
+  const playerArea = document.querySelector('.player-wrapper') || document.querySelector('.player-column');
+  let x, y;
+  
+  if (playerArea) {
+    const rect = playerArea.getBoundingClientRect();
+    x = rect.left + Math.random() * rect.width;
+    y = rect.top + rect.height * 0.6 + Math.random() * rect.height * 0.3;
+  } else {
+    x = window.innerWidth * 0.3 + Math.random() * window.innerWidth * 0.4;
+    y = window.innerHeight * 0.4 + Math.random() * window.innerHeight * 0.3;
+  }
+  
+  // Create the floating emoji
+  const emoji = document.createElement('div');
+  emoji.textContent = emojiList[Math.floor(Math.random() * emojiList.length)];
+  
+  const spreadX = (Math.random() - 0.5) * 60;
+  const wiggleAmount = 20 + Math.random() * 30;
+  const duration = 2000 + Math.random() * 1000;
+  const fontSize = 28 + Math.floor(Math.random() * 20);
+  
+  Object.assign(emoji.style, {
+    position: 'fixed',
+    left: (x + spreadX) + 'px',
+    top: y + 'px',
+    fontSize: fontSize + 'px',
+    lineHeight: '1',
+    pointerEvents: 'none',
+    zIndex: '99999',
+    opacity: '1',
+    transform: 'scale(0)',
+    margin: '0',
+    padding: '0'
+  });
+  
+  document.body.appendChild(emoji);
+  
+  const randomWiggle = Math.random() > 0.5 ? 1 : -1;
+  const keyframes = [
+    { transform: 'scale(0) rotate(0deg)', opacity: 0.8 },
+    { transform: `scale(1.3) translateY(-30px) translateX(${randomWiggle * wiggleAmount * 0.3}px) rotate(${randomWiggle * 15}deg)`, opacity: 1 },
+    { transform: `scale(1.1) translateY(-80px) translateX(${randomWiggle * wiggleAmount * 0.6}px) rotate(${randomWiggle * -10}deg)`, opacity: 0.9 },
+    { transform: `scale(0.9) translateY(-150px) translateX(${randomWiggle * wiggleAmount}px) rotate(${randomWiggle * 20}deg)`, opacity: 0.6 },
+    { transform: `scale(0.7) translateY(-220px) translateX(${randomWiggle * wiggleAmount * 1.2}px) rotate(${randomWiggle * 30}deg)`, opacity: 0 }
+  ];
+  
+  emoji.animate(keyframes, {
+    duration: duration,
+    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+    fill: 'forwards'
+  }).onfinish = () => emoji.remove();
+}
+
 async function loadUserReactions(streamId) {
   if (!currentUser) return;
   
@@ -1366,8 +1457,15 @@ async function loadUserReactions(streamId) {
       document.getElementById('likeBtn')?.classList.toggle('liked', result.hasLiked);
       
       if (result.userRating) {
-        document.querySelectorAll('.star').forEach((s, i) => {
-          s.classList.toggle('active', i < result.userRating);
+        const starBtns = document.querySelectorAll('.star');
+        starBtns.forEach((s, i) => {
+          s.classList.remove('active', 'user-rated');
+          if (i < result.userRating) {
+            s.classList.add('active');
+          }
+          if (i === result.userRating - 1) {
+            s.classList.add('user-rated');
+          }
         });
       }
     }

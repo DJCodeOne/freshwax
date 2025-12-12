@@ -1,0 +1,854 @@
+---
+// DJ Booking Component
+// Simplified booking: DJ name, title, description, and visual slot selection
+// Options: 2hr concurrent OR 2x1hr split (same day only)
+
+interface Props {
+  userId: string;
+}
+
+const { userId } = Astro.props;
+---
+<div class="dj-booking" id="djBooking">
+  <div class="booking-header">
+    <h2>Book a Slot</h2>
+    <p>Select your slot on today's schedule. You can book up to 2 hours per day.</p>
+  </div>
+
+  <!-- Booking Form -->
+  <form id="bookingForm" class="booking-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="djName">DJ Name <span class="required">*</span></label>
+        <input type="text" id="djName" name="djName" required placeholder="Your DJ name">
+      </div>
+      <div class="form-group">
+        <label for="streamTitle">Stream Title <span class="required">*</span></label>
+        <input type="text" id="streamTitle" name="streamTitle" required placeholder="e.g. Sunday Sessions">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="description">Description <span class="optional">(optional)</span></label>
+      <textarea id="description" name="description" rows="2" placeholder="What will you be playing? This shows on the scroller when there are no shoutouts." maxlength="200"></textarea>
+      <span class="char-count"><span id="descCount">0</span>/200</span>
+    </div>
+
+    <!-- Duration Selection -->
+    <div class="form-group">
+      <label>How do you want to use your 2 hours? <span class="required">*</span></label>
+      <div class="duration-options">
+        <label class="duration-option">
+          <input type="radio" name="durationType" value="2hr" checked>
+          <div class="option-content">
+            <span class="option-title">2 Hour Block</span>
+            <span class="option-desc">One continuous 2-hour session</span>
+          </div>
+        </label>
+        <label class="duration-option">
+          <input type="radio" name="durationType" value="split">
+          <div class="option-content">
+            <span class="option-title">Split Sessions</span>
+            <span class="option-desc">Two separate 1-hour slots today</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Date Selection -->
+    <div class="form-group">
+      <label>Select Date</label>
+      <div class="date-nav">
+        <button type="button" id="prevDay" class="nav-btn" disabled>←</button>
+        <span id="selectedDate" class="current-date">Today</span>
+        <button type="button" id="nextDay" class="nav-btn">→</button>
+      </div>
+    </div>
+
+    <!-- Daily Schedule -->
+    <div class="schedule-section">
+      <label>Select Your Slot(s) <span class="required">*</span></label>
+      <p class="schedule-help" id="scheduleHelp">Click on an available slot to select it</p>
+      
+      <div class="daily-schedule" id="dailySchedule">
+        <!-- Slots will be rendered here -->
+      </div>
+
+      <div class="selection-summary" id="selectionSummary" style="display: none;">
+        <strong>Selected:</strong> <span id="selectedSlots"></span>
+      </div>
+    </div>
+
+    <!-- Remaining Allowance -->
+    <div class="allowance-info" id="allowanceInfo">
+      <span class="allowance-label">Your daily allowance:</span>
+      <span class="allowance-value" id="allowanceValue">2 hours remaining</span>
+    </div>
+
+    <!-- Submit -->
+    <div class="form-actions">
+      <button type="button" id="clearSelection" class="btn btn-secondary">Clear Selection</button>
+      <button type="submit" id="submitBooking" class="btn btn-primary" disabled>Book Slot</button>
+    </div>
+
+    <div id="formMessage" class="form-message" style="display: none;"></div>
+  </form>
+</div>
+
+<style>
+  .dj-booking {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .booking-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .booking-header h2 {
+    color: var(--text-primary, #fff);
+    margin: 0 0 0.5rem;
+  }
+
+  .booking-header p {
+    color: var(--text-secondary, #a3a3a3);
+    margin: 0;
+    font-size: 0.9rem;
+  }
+
+  .booking-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 500px) {
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .form-group label {
+    font-size: 0.9rem;
+    color: var(--text-primary, #fff);
+    font-weight: 500;
+  }
+
+  .required {
+    color: #ef4444;
+  }
+
+  .optional {
+    color: var(--text-muted, #666);
+    font-weight: 400;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    padding: 0.75rem 1rem;
+    background: var(--bg-tertiary, #1a1a1a);
+    border: 1px solid var(--border-color, #262626);
+    border-radius: 8px;
+    color: var(--text-primary, #fff);
+    font-size: 1rem;
+  }
+
+  .form-group input:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: var(--accent, #22c55e);
+  }
+
+  .char-count {
+    font-size: 0.75rem;
+    color: var(--text-muted, #666);
+    text-align: right;
+  }
+
+  /* Duration Options */
+  .duration-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .duration-option {
+    display: block;
+    cursor: pointer;
+  }
+
+  .duration-option input {
+    display: none;
+  }
+
+  .duration-option .option-content {
+    padding: 1rem;
+    background: var(--bg-tertiary, #1a1a1a);
+    border: 2px solid var(--border-color, #262626);
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .duration-option input:checked + .option-content {
+    border-color: var(--accent, #22c55e);
+    background: rgba(34, 197, 94, 0.1);
+  }
+
+  .option-title {
+    display: block;
+    font-weight: 600;
+    color: var(--text-primary, #fff);
+    margin-bottom: 0.25rem;
+  }
+
+  .option-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #a3a3a3);
+  }
+
+  /* Date Navigation */
+  .date-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: var(--bg-tertiary, #1a1a1a);
+    border-radius: 8px;
+  }
+
+  .nav-btn {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary, #141414);
+    border: 1px solid var(--border-color, #262626);
+    border-radius: 6px;
+    color: var(--text-primary, #fff);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .nav-btn:hover:not(:disabled) {
+    border-color: var(--accent, #22c55e);
+  }
+
+  .nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .current-date {
+    font-weight: 600;
+    color: var(--text-primary, #fff);
+    min-width: 150px;
+    text-align: center;
+  }
+
+  /* Daily Schedule */
+  .schedule-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .schedule-help {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #a3a3a3);
+    margin: 0;
+  }
+
+  .daily-schedule {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    padding: 1rem;
+    background: var(--bg-secondary, #141414);
+    border: 1px solid var(--border-color, #262626);
+    border-radius: 8px;
+  }
+
+  @media (max-width: 400px) {
+    .daily-schedule {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .slot {
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+  }
+
+  .slot-time {
+    font-weight: 600;
+    color: var(--text-primary, #fff);
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+
+  .slot-status {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Available slot */
+  .slot.available {
+    background: var(--bg-tertiary, #1a1a1a);
+    border-color: var(--border-color, #262626);
+  }
+
+  .slot.available:hover {
+    border-color: var(--accent, #22c55e);
+    background: rgba(34, 197, 94, 0.1);
+  }
+
+  .slot.available .slot-status {
+    color: var(--accent, #22c55e);
+  }
+
+  /* Selected slot */
+  .slot.selected {
+    background: var(--accent, #22c55e);
+    border-color: var(--accent, #22c55e);
+  }
+
+  .slot.selected .slot-time,
+  .slot.selected .slot-status {
+    color: #000;
+  }
+
+  /* Booked slot */
+  .slot.booked {
+    background: var(--bg-tertiary, #1a1a1a);
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .slot.booked .slot-status {
+    color: var(--text-muted, #666);
+  }
+
+  .slot.booked .booked-by {
+    font-size: 0.65rem;
+    color: var(--text-muted, #666);
+    display: block;
+    margin-top: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Your booking */
+  .slot.yours {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: #3b82f6;
+    cursor: not-allowed;
+  }
+
+  .slot.yours .slot-status {
+    color: #60a5fa;
+  }
+
+  /* Past slot */
+  .slot.past {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .selection-summary {
+    padding: 0.75rem 1rem;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--text-primary, #fff);
+  }
+
+  .allowance-info {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: var(--bg-tertiary, #1a1a1a);
+    border-radius: 6px;
+    font-size: 0.875rem;
+  }
+
+  .allowance-label {
+    color: var(--text-secondary, #a3a3a3);
+  }
+
+  .allowance-value {
+    color: var(--accent, #22c55e);
+    font-weight: 600;
+  }
+
+  .allowance-value.warning {
+    color: #fbbf24;
+  }
+
+  .allowance-value.empty {
+    color: #ef4444;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+
+  .btn-primary {
+    background: var(--accent, #22c55e);
+    color: #000;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover, #16a34a);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: var(--bg-tertiary, #1a1a1a);
+    color: var(--text-primary, #fff);
+    border: 1px solid var(--border-color, #262626);
+  }
+
+  .form-message {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  .form-message.success {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #22c55e;
+  }
+
+  .form-message.error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+  }
+</style>
+
+<script type="module" define:vars={{ userId }}>
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import { getFirestore, collection, query, where, getDocs, addDoc, serverTimestamp, Timestamp, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+  const firebaseConfig = window.FIREBASE_CONFIG || {};
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // State
+  let currentDate = new Date();
+  let selectedSlots = [];
+  let durationType = '2hr';
+  let dailyBookings = [];
+  let userDailyHours = 0;
+  const MAX_DAILY_HOURS = 2;
+
+  // Elements
+  const form = document.getElementById('bookingForm');
+  const dailySchedule = document.getElementById('dailySchedule');
+  const selectedDateEl = document.getElementById('selectedDate');
+  const prevDayBtn = document.getElementById('prevDay');
+  const nextDayBtn = document.getElementById('nextDay');
+  const selectionSummary = document.getElementById('selectionSummary');
+  const selectedSlotsEl = document.getElementById('selectedSlots');
+  const scheduleHelp = document.getElementById('scheduleHelp');
+  const submitBtn = document.getElementById('submitBooking');
+  const clearBtn = document.getElementById('clearSelection');
+  const allowanceValue = document.getElementById('allowanceValue');
+  const descriptionInput = document.getElementById('description');
+  const descCountEl = document.getElementById('descCount');
+
+  // Character count
+  descriptionInput.addEventListener('input', () => {
+    descCountEl.textContent = descriptionInput.value.length;
+  });
+
+  // Duration type change
+  document.querySelectorAll('input[name="durationType"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      durationType = e.target.value;
+      selectedSlots = [];
+      updateScheduleHelp();
+      renderSchedule();
+    });
+  });
+
+  // Date navigation
+  prevDayBtn.addEventListener('click', () => {
+    currentDate.setDate(currentDate.getDate() - 1);
+    updateDateDisplay();
+    loadBookings();
+  });
+
+  nextDayBtn.addEventListener('click', () => {
+    currentDate.setDate(currentDate.getDate() + 1);
+    updateDateDisplay();
+    loadBookings();
+  });
+
+  function updateDateDisplay() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const compareDate = new Date(currentDate);
+    compareDate.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    if (compareDate.getTime() === today.getTime()) {
+      selectedDateEl.textContent = 'Today';
+    } else if (compareDate.getTime() === tomorrow.getTime()) {
+      selectedDateEl.textContent = 'Tomorrow';
+    } else {
+      selectedDateEl.textContent = currentDate.toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short'
+      });
+    }
+
+    // Disable prev if today
+    prevDayBtn.disabled = compareDate.getTime() <= today.getTime();
+    
+    // Limit to 7 days ahead
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + 7);
+    nextDayBtn.disabled = compareDate.getTime() >= maxDate.getTime();
+  }
+
+  function updateScheduleHelp() {
+    if (durationType === '2hr') {
+      scheduleHelp.textContent = 'Click on an available slot to start your 2-hour block';
+    } else {
+      scheduleHelp.textContent = 'Click on two available slots for your 1-hour sessions';
+    }
+  }
+
+  async function loadBookings() {
+    const startOfDay = new Date(currentDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(currentDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    try {
+      const bookingsQuery = query(
+        collection(db, 'livestream-bookings'),
+        where('startTime', '>=', Timestamp.fromDate(startOfDay)),
+        where('startTime', '<=', Timestamp.fromDate(endOfDay))
+      );
+
+      const snapshot = await getDocs(bookingsQuery);
+      dailyBookings = [];
+      userDailyHours = 0;
+
+      snapshot.forEach(doc => {
+        const booking = { id: doc.id, ...doc.data() };
+        dailyBookings.push(booking);
+        
+        // Count user's hours for today
+        if (booking.djId === userId) {
+          userDailyHours += booking.duration || 1;
+        }
+      });
+
+      updateAllowanceDisplay();
+      renderSchedule();
+    } catch (error) {
+      console.error('Error loading bookings:', error);
+    }
+  }
+
+  function updateAllowanceDisplay() {
+    const remaining = MAX_DAILY_HOURS - userDailyHours;
+    allowanceValue.textContent = `${remaining} hour${remaining !== 1 ? 's' : ''} remaining`;
+    
+    if (remaining === 0) {
+      allowanceValue.className = 'allowance-value empty';
+    } else if (remaining === 1) {
+      allowanceValue.className = 'allowance-value warning';
+    } else {
+      allowanceValue.className = 'allowance-value';
+    }
+  }
+
+  function renderSchedule() {
+    const now = new Date();
+    const isToday = currentDate.toDateString() === now.toDateString();
+    const currentHour = now.getHours();
+
+    // Generate slots for broadcast hours (e.g., 12:00 - 00:00)
+    const startHour = 12; // Noon
+    const endHour = 24; // Midnight
+    
+    let html = '';
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      const slotTime = new Date(currentDate);
+      slotTime.setHours(hour, 0, 0, 0);
+
+      const isPast = isToday && hour <= currentHour;
+      const booking = getBookingForSlot(hour);
+      const isSelected = selectedSlots.includes(hour);
+      const isYours = booking && booking.djId === userId;
+
+      let slotClass = 'slot';
+      let statusText = 'Available';
+      let bookedBy = '';
+
+      if (isPast) {
+        slotClass += ' past';
+        statusText = 'Past';
+      } else if (isSelected) {
+        slotClass += ' selected';
+        statusText = 'Selected';
+      } else if (isYours) {
+        slotClass += ' yours';
+        statusText = 'Your Slot';
+      } else if (booking) {
+        slotClass += ' booked';
+        statusText = 'Booked';
+        bookedBy = booking.djName || 'DJ';
+      } else {
+        slotClass += ' available';
+      }
+
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      const ampm = hour >= 12 && hour < 24 ? 'PM' : 'AM';
+
+      html += `
+        <div class="${slotClass}" data-hour="${hour}" ${isPast || booking ? '' : 'onclick="selectSlot(' + hour + ')"'}>
+          <span class="slot-time">${displayHour}:00 ${ampm}</span>
+          <span class="slot-status">${statusText}</span>
+          ${bookedBy ? `<span class="booked-by">${bookedBy}</span>` : ''}
+        </div>
+      `;
+    }
+
+    dailySchedule.innerHTML = html;
+    updateSelectionSummary();
+    updateSubmitButton();
+  }
+
+  function getBookingForSlot(hour) {
+    return dailyBookings.find(b => {
+      const startHour = b.startTime.toDate().getHours();
+      const duration = b.duration || 1;
+      return hour >= startHour && hour < startHour + duration;
+    });
+  }
+
+  window.selectSlot = function(hour) {
+    const remaining = MAX_DAILY_HOURS - userDailyHours;
+    
+    if (durationType === '2hr') {
+      // Check if 2-hour block is available
+      const nextHourBooking = getBookingForSlot(hour + 1);
+      if (nextHourBooking) {
+        showMessage('Cannot book 2-hour block here - next slot is taken', 'error');
+        return;
+      }
+      
+      // Check if we have 2 hours remaining
+      if (remaining < 2) {
+        showMessage('You don\'t have enough hours remaining today', 'error');
+        return;
+      }
+
+      // Select the 2-hour block
+      if (selectedSlots.includes(hour)) {
+        selectedSlots = [];
+      } else {
+        selectedSlots = [hour, hour + 1];
+      }
+    } else {
+      // Split mode - select individual hours
+      if (selectedSlots.includes(hour)) {
+        selectedSlots = selectedSlots.filter(h => h !== hour);
+      } else {
+        if (selectedSlots.length >= 2) {
+          showMessage('You can only select 2 slots', 'error');
+          return;
+        }
+        if (selectedSlots.length + 1 > remaining) {
+          showMessage('You don\'t have enough hours remaining today', 'error');
+          return;
+        }
+        selectedSlots.push(hour);
+      }
+    }
+
+    renderSchedule();
+  };
+
+  function updateSelectionSummary() {
+    if (selectedSlots.length === 0) {
+      selectionSummary.style.display = 'none';
+      return;
+    }
+
+    selectionSummary.style.display = 'block';
+    
+    const times = selectedSlots.sort((a, b) => a - b).map(hour => {
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      const ampm = hour >= 12 && hour < 24 ? 'PM' : 'AM';
+      return `${displayHour}:00 ${ampm}`;
+    });
+
+    if (durationType === '2hr' && selectedSlots.length === 2) {
+      const startHour = Math.min(...selectedSlots);
+      const endHour = Math.max(...selectedSlots) + 1;
+      const startDisplay = startHour > 12 ? startHour - 12 : startHour;
+      const endDisplay = endHour > 12 ? endHour - 12 : endHour;
+      const startAmpm = startHour >= 12 ? 'PM' : 'AM';
+      const endAmpm = endHour >= 12 && endHour < 24 ? 'PM' : 'AM';
+      selectedSlotsEl.textContent = `${startDisplay}:00 ${startAmpm} - ${endDisplay}:00 ${endAmpm} (2 hours)`;
+    } else {
+      selectedSlotsEl.textContent = times.join(' and ') + ` (${selectedSlots.length} hour${selectedSlots.length > 1 ? 's' : ''})`;
+    }
+  }
+
+  function updateSubmitButton() {
+    const djName = document.getElementById('djName').value.trim();
+    const streamTitle = document.getElementById('streamTitle').value.trim();
+    
+    const hasSlots = durationType === '2hr' ? selectedSlots.length === 2 : selectedSlots.length > 0;
+    submitBtn.disabled = !djName || !streamTitle || !hasSlots;
+  }
+
+  // Form input handlers
+  document.getElementById('djName').addEventListener('input', updateSubmitButton);
+  document.getElementById('streamTitle').addEventListener('input', updateSubmitButton);
+
+  // Clear selection
+  clearBtn.addEventListener('click', () => {
+    selectedSlots = [];
+    renderSchedule();
+  });
+
+  // Form submission
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const djName = document.getElementById('djName').value.trim();
+    const streamTitle = document.getElementById('streamTitle').value.trim();
+    const description = document.getElementById('description').value.trim();
+
+    if (!djName || !streamTitle || selectedSlots.length === 0) {
+      showMessage('Please fill in all required fields and select a slot', 'error');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Booking...';
+
+    try {
+      if (durationType === '2hr') {
+        // Create one 2-hour booking
+        const startHour = Math.min(...selectedSlots);
+        const startTime = new Date(currentDate);
+        startTime.setHours(startHour, 0, 0, 0);
+
+        await addDoc(collection(db, 'livestream-bookings'), {
+          djId: userId,
+          djName,
+          streamTitle,
+          description,
+          startTime: Timestamp.fromDate(startTime),
+          duration: 2,
+          status: 'confirmed',
+          createdAt: serverTimestamp()
+        });
+      } else {
+        // Create separate 1-hour bookings
+        for (const hour of selectedSlots) {
+          const startTime = new Date(currentDate);
+          startTime.setHours(hour, 0, 0, 0);
+
+          await addDoc(collection(db, 'livestream-bookings'), {
+            djId: userId,
+            djName,
+            streamTitle,
+            description,
+            startTime: Timestamp.fromDate(startTime),
+            duration: 1,
+            status: 'confirmed',
+            createdAt: serverTimestamp()
+          });
+        }
+      }
+
+      showMessage('Slot booked successfully! It will appear on the schedule.', 'success');
+      
+      // Reset form
+      selectedSlots = [];
+      document.getElementById('streamTitle').value = '';
+      document.getElementById('description').value = '';
+      descCountEl.textContent = '0';
+      
+      // Reload bookings
+      await loadBookings();
+
+    } catch (error) {
+      console.error('Booking error:', error);
+      showMessage('Error booking slot: ' + error.message, 'error');
+    }
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Book Slot';
+  });
+
+  function showMessage(text, type) {
+    const messageEl = document.getElementById('formMessage');
+    messageEl.textContent = text;
+    messageEl.className = `form-message ${type}`;
+    messageEl.style.display = 'block';
+
+    if (type === 'success') {
+      setTimeout(() => {
+        messageEl.style.display = 'none';
+      }, 5000);
+    }
+  }
+
+  // Initialize
+  updateDateDisplay();
+  updateScheduleHelp();
+  loadBookings();
+</script>

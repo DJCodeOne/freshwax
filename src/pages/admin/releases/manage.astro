@@ -176,9 +176,9 @@ export const prerender = false;
                   </div>
                 </td>
                 <td class="font-bold">
-                  {formatCurrency(release.digitalPrice || release.price || 0)}
-                  {release.vinylRelease && release.vinylPrice && (
-                    <div class="cell-secondary">Vinyl: {formatCurrency(release.vinylPrice)}</div>
+                  {formatCurrency(release.pricePerSale || release.pricing?.digital || release.digitalPrice || release.price || 0)}
+                  {release.vinylRelease && (release.vinylPrice || release.pricing?.vinyl) && (
+                    <div class="cell-secondary">Vinyl: {formatCurrency(release.vinylPrice || release.pricing?.vinyl)}</div>
                   )}
                 </td>
                 <td>

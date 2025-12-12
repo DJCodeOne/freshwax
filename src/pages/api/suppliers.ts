@@ -334,10 +334,10 @@ export const PUT: APIRoute = async ({ request }) => {
   }
 };
 
-// DELETE - Deactivate supplier (soft delete)
-export const DELETE: APIRoute = async ({ request }) => {
+// DELETE - Deactivate or permanently delete supplier
+export const DELETE: APIRoute = async ({ request, url }) => {
   try {
-    const { supplierId } = await request.json();
+    const { supplierId, hardDelete } = await request.json();
     
     if (!supplierId) {
       return new Response(JSON.stringify({
@@ -346,27 +346,43 @@ export const DELETE: APIRoute = async ({ request }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     
-    await db.collection('merch-suppliers').doc(supplierId).update({
-      active: false,
-      deactivatedAt: new Date().toISOString()
-    });
-    
-    log.info('[suppliers] Deactivated supplier:', supplierId);
-    
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Supplier deactivated successfully'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    if (hardDelete) {
+      // Permanently delete the supplier
+      await db.collection('merch-suppliers').doc(supplierId).delete();
+      
+      log.info('[suppliers] Permanently deleted supplier:', supplierId);
+      
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Supplier permanently deleted'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } else {
+      // Soft delete - just deactivate
+      await db.collection('merch-suppliers').doc(supplierId).update({
+        active: false,
+        deactivatedAt: new Date().toISOString()
+      });
+      
+      log.info('[suppliers] Deactivated supplier:', supplierId);
+      
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Supplier deactivated successfully'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
     
   } catch (error) {
     log.error('[suppliers] DELETE Error:', error);
     
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to deactivate supplier',
+      error: 'Failed to delete supplier',
       details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,

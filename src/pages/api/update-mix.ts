@@ -20,7 +20,7 @@ const db = getFirestore();
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    const { mixId, description, tracklist, userId } = await request.json();
+    const { mixId, title, description, tracklist, artworkUrl, userId: userIdFromBody } = await request.json();
     
     if (!mixId) {
       return new Response(JSON.stringify({ 
@@ -32,10 +32,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
     }
     
-    // Verify the user owns this mix
+    // Get user ID from cookies or request body
     const partnerId = cookies.get('partnerId')?.value || '';
     const customerId = cookies.get('customerId')?.value || '';
-    const currentUserId = partnerId || customerId;
+    const firebaseUid = cookies.get('firebaseUid')?.value || '';
+    const currentUserId = partnerId || customerId || firebaseUid || userIdFromBody;
+    
+    console.log('[update-mix] Auth check:', { partnerId, customerId, firebaseUid, userIdFromBody, currentUserId });
     
     if (!currentUserId) {
       return new Response(JSON.stringify({ 
@@ -63,17 +66,27 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     
     const mixData = mixDoc.data();
     
-    // Check ownership (by userId or djName match - case insensitive)
-    const partnerDoc = await db.collection('artists').doc(currentUserId).get();
-    const partnerName = partnerDoc.exists ? partnerDoc.data()?.artistName?.toLowerCase().trim() : null;
+    // Check ownership - allow if userId matches
+    const isOwner = mixData?.userId === currentUserId;
     
-    const mixDjName = (mixData?.djName || mixData?.dj_name || '').toLowerCase().trim();
-    
-    const isOwner = 
-      mixData?.userId === currentUserId ||
-      (partnerName && mixDjName === partnerName);
-    
-    if (!isOwner) {
+    // Also check by artist name if partnerId is set
+    if (!isOwner && partnerId) {
+      const partnerDoc = await db.collection('artists').doc(partnerId).get();
+      const partnerName = partnerDoc.exists ? partnerDoc.data()?.artistName?.toLowerCase().trim() : null;
+      const mixDjName = (mixData?.djName || mixData?.dj_name || '').toLowerCase().trim();
+      
+      if (partnerName && mixDjName === partnerName) {
+        // Owner via artist name match - OK
+      } else {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Not authorized to edit this mix' 
+        }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    } else if (!isOwner) {
       return new Response(JSON.stringify({ 
         success: false, 
         error: 'Not authorized to edit this mix' 
@@ -88,9 +101,21 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       updatedAt: new Date().toISOString()
     };
     
+    // Update title if provided
+    if (title !== undefined) {
+      updateData.title = title.slice(0, 80);
+    }
+    
     if (description !== undefined) {
       updateData.description = description.slice(0, 150);
       updateData.shoutOuts = description.slice(0, 150);
+    }
+    
+    // Update artwork URL if provided (from artwork upload)
+    if (artworkUrl) {
+      updateData.artwork_url = artworkUrl;
+      updateData.artworkUrl = artworkUrl;
+      updateData.imageUrl = artworkUrl;
     }
     
     // Handle tracklist update - strip leading track numbers for consistent display

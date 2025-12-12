@@ -118,22 +118,22 @@ function buildOrderEmailHtml(orderId: string, orderNumber: string, order: any): 
   
   const itemsHtml = order.items.map((item: any) => `
     <tr>
-      <td style="padding: 16px 0; border-bottom: 1px solid #333;">
+      <td style="padding: 14px 0; border-bottom: 1px solid #eee;">
         <table cellpadding="0" cellspacing="0" border="0" width="100%">
           <tr>
-            <td width="60" style="padding-right: 16px;">
-              <img src="${item.image || 'https://freshwax.co.uk/logo.webp'}" alt="${item.name}" width="60" height="60" style="border-radius: 8px; object-fit: cover;">
+            <td width="56" style="padding-right: 14px; vertical-align: top;">
+              <img src="${item.image || 'https://freshwax.co.uk/logo.webp'}" alt="${item.name}" width="56" height="56" style="border-radius: 6px; object-fit: cover; border: 1px solid #eee;">
             </td>
             <td style="vertical-align: top;">
-              <div style="font-weight: 600; color: #fff; margin-bottom: 4px;">${item.name}</div>
-              <div style="font-size: 13px; color: #888;">
-                ${item.type || ''}
+              <div style="font-weight: 600; color: #111; margin-bottom: 3px; font-size: 14px;">${item.name}</div>
+              <div style="font-size: 12px; color: #888;">
+                ${item.type === 'merch' ? 'Merchandise' : item.type === 'release' || item.type === 'digital' ? 'Digital Download' : item.type || ''}
                 ${item.size ? ` • Size: ${item.size}` : ''}
                 ${item.color ? ` • ${item.color}` : ''}
                 ${item.quantity > 1 ? ` • Qty: ${item.quantity}` : ''}
               </div>
             </td>
-            <td width="80" style="text-align: right; font-weight: 600; color: #fff;">
+            <td width="70" style="text-align: right; font-weight: 600; color: #111; vertical-align: top; font-size: 14px;">
               £${(item.price * item.quantity).toFixed(2)}
             </td>
           </tr>
@@ -148,23 +148,25 @@ function buildOrderEmailHtml(orderId: string, orderNumber: string, order: any): 
   
   const downloadSection = hasDigitalItems ? `
     <tr>
-      <td style="padding: 24px; background: #052e16; border-radius: 8px; margin-top: 24px;">
-        <div style="color: #22c55e; font-weight: 700; font-size: 16px; margin-bottom: 8px;">🎵 Your Downloads Are Ready</div>
-        <div style="color: #86efac; font-size: 14px; margin-bottom: 16px;">
-          Click the button below to access your digital purchases including MP3, WAV files and artwork.
+      <td style="background: #fff; padding: 16px 24px;">
+        <div style="padding: 20px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+          <div style="color: #166534; font-weight: 700; font-size: 15px; margin-bottom: 6px;">🎵 Your Downloads Are Ready</div>
+          <div style="color: #15803d; font-size: 13px; margin-bottom: 14px;">
+            Click below to access your digital purchases including MP3, WAV files and artwork.
+          </div>
+          <a href="${confirmationUrl}" style="display: inline-block; padding: 10px 20px; background: #16a34a; color: #fff; text-decoration: none; border-radius: 5px; font-weight: 700; font-size: 13px;">
+            Download Your Music
+          </a>
         </div>
-        <a href="${confirmationUrl}" style="display: inline-block; padding: 12px 24px; background: #22c55e; color: #000; text-decoration: none; border-radius: 6px; font-weight: 700; font-size: 14px;">
-          Download Your Music
-        </a>
       </td>
     </tr>
   ` : '';
   
   const shippingSection = order.shipping ? `
     <tr>
-      <td style="padding: 24px 0;">
-        <div style="font-weight: 700; color: #fff; margin-bottom: 12px; font-size: 16px;">Shipping To</div>
-        <div style="color: #ccc; line-height: 1.7;">
+      <td style="background: #fff; padding: 0 24px 24px;">
+        <div style="font-weight: 700; color: #333; margin-bottom: 10px; font-size: 14px;">Shipping To</div>
+        <div style="color: #555; line-height: 1.6; font-size: 14px;">
           ${order.customer.firstName} ${order.customer.lastName}<br>
           ${order.shipping.address1}<br>
           ${order.shipping.address2 ? order.shipping.address2 + '<br>' : ''}
@@ -190,41 +192,56 @@ function buildOrderEmailHtml(orderId: string, orderNumber: string, order: any): 
       <td align="center" style="padding: 40px 20px;">
         <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px;">
           
-          <!-- Logo & Title -->
+          <!-- Header -->
           <tr>
-            <td align="center" style="padding-bottom: 32px;">
-              <img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" width="80" height="80" style="border-radius: 12px; margin-bottom: 16px;">
+            <td align="center" style="padding: 32px 24px; background: #111; border-radius: 8px 8px 0 0;">
               <div style="font-size: 32px; font-weight: 800; letter-spacing: 0.02em;">
                 <span style="color: #ffffff;">FRESH</span> <span style="color: #dc2626;">WAX</span>
               </div>
+              <div style="color: #888; font-size: 12px; letter-spacing: 0.15em; margin-top: 6px;">JUNGLE • DRUM AND BASS</div>
             </td>
           </tr>
           
-          <!-- Success Header -->
+          <!-- Success Header (white background) -->
           <tr>
-            <td align="center" style="padding-bottom: 24px;">
-              <div style="width: 60px; height: 60px; background: #052e16; border: 2px solid #22c55e; border-radius: 50%; margin: 0 auto 16px; line-height: 56px; text-align: center;">
-                <span style="color: #22c55e; font-size: 28px;">✓</span>
-              </div>
-              <h1 style="margin: 0; color: #fff; font-size: 28px; font-weight: 800;">Order Confirmed!</h1>
+            <td style="background: #fff; padding: 32px 24px 0; border-radius: 0 0 0 0;">
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <div style="width: 56px; height: 56px; background: #dcfce7; border-radius: 50%; margin: 0 auto 16px; line-height: 56px; text-align: center;">
+                      <span style="color: #16a34a; font-size: 28px;">✓</span>
+                    </div>
+                    <h1 style="margin: 0; color: #111; font-size: 26px; font-weight: 800;">Order Confirmed!</h1>
+                    <p style="color: #666; font-size: 14px; margin: 8px 0 0;">Thank you for your purchase</p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           
           <!-- Order Number (short version for customer) -->
           <tr>
-            <td align="center" style="padding-bottom: 32px;">
-              <div style="color: #888; font-size: 15px;">Order number</div>
-              <div style="color: #fff; font-size: 20px; font-weight: 700; margin-top: 4px; font-family: monospace;">${shortOrderNumber}</div>
+            <td align="center" style="background: #fff; padding: 24px 24px 0;">
+              <div style="background: #f8f8f8; display: inline-block; padding: 16px 32px; border-radius: 8px; border: 1px solid #e5e5e5;">
+                <div style="color: #999; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px;">Order Number</div>
+                <div style="color: #dc2626; font-size: 22px; font-weight: 700; font-family: 'SF Mono', 'Menlo', monospace; letter-spacing: 0.05em;">${shortOrderNumber}</div>
+              </div>
             </td>
           </tr>
           
           <!-- Download Section -->
           ${downloadSection}
           
+          <!-- Order Details Header -->
+          <tr>
+            <td style="background: #fff; padding: 24px 24px 8px;">
+              <div style="font-weight: 700; color: #dc2626; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;">Order Details</div>
+            </td>
+          </tr>
+          
           <!-- Items -->
           <tr>
-            <td style="padding: 24px 0;">
-              <div style="font-weight: 700; color: #fff; margin-bottom: 16px; font-size: 16px;">Order Details</div>
+            <td style="background: #fff; padding: 0 24px;">
               <table cellpadding="0" cellspacing="0" border="0" width="100%">
                 ${itemsHtml}
               </table>
@@ -233,19 +250,19 @@ function buildOrderEmailHtml(orderId: string, orderNumber: string, order: any): 
           
           <!-- Totals -->
           <tr>
-            <td style="padding: 16px 0; border-top: 1px solid #333;">
-              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <td style="background: #fff; padding: 16px 24px 24px;">
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-top: 1px solid #dc2626;">
                 <tr>
-                  <td style="color: #888; padding: 8px 0;">Subtotal</td>
-                  <td style="color: #fff; text-align: right; padding: 8px 0;">£${order.totals.subtotal.toFixed(2)}</td>
+                  <td style="color: #666; padding: 12px 0 6px;">Subtotal</td>
+                  <td style="color: #111; text-align: right; padding: 12px 0 6px;">£${order.totals.subtotal.toFixed(2)}</td>
                 </tr>
                 <tr>
-                  <td style="color: #888; padding: 8px 0;">Shipping</td>
-                  <td style="color: #fff; text-align: right; padding: 8px 0;">${order.hasPhysicalItems ? (order.totals.shipping === 0 ? 'FREE' : '£' + order.totals.shipping.toFixed(2)) : 'Digital delivery'}</td>
+                  <td style="color: #666; padding: 6px 0;">Shipping</td>
+                  <td style="color: ${order.hasPhysicalItems && order.totals.shipping === 0 ? '#16a34a' : '#111'}; text-align: right; padding: 6px 0; font-weight: ${order.hasPhysicalItems && order.totals.shipping === 0 ? '600' : '400'};">${order.hasPhysicalItems ? (order.totals.shipping === 0 ? 'FREE' : '£' + order.totals.shipping.toFixed(2)) : 'Digital delivery'}</td>
                 </tr>
                 <tr>
-                  <td style="color: #fff; font-weight: 700; font-size: 18px; padding: 16px 0 8px; border-top: 2px solid #333;">Total</td>
-                  <td style="color: #fff; font-weight: 700; font-size: 18px; text-align: right; padding: 16px 0 8px; border-top: 2px solid #333;">£${order.totals.total.toFixed(2)}</td>
+                  <td style="color: #111; font-weight: 700; font-size: 18px; padding: 16px 0 8px; border-top: 2px solid #111;">Total</td>
+                  <td style="color: #dc2626; font-weight: 700; font-size: 18px; text-align: right; padding: 16px 0 8px; border-top: 2px solid #111;">£${order.totals.total.toFixed(2)}</td>
                 </tr>
               </table>
             </td>
@@ -256,8 +273,8 @@ function buildOrderEmailHtml(orderId: string, orderNumber: string, order: any): 
           
           <!-- View Order Button -->
           <tr>
-            <td align="center" style="padding: 32px 0;">
-              <a href="${confirmationUrl}" style="display: inline-block; padding: 14px 32px; background: #fff; color: #000; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 15px;">
+            <td align="center" style="background: #fff; padding: 16px 24px 32px; border-radius: 0 0 8px 8px;">
+              <a href="${confirmationUrl}" style="display: inline-block; padding: 14px 32px; background: #111; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 700; font-size: 14px;">
                 View Order Details
               </a>
             </td>
@@ -265,13 +282,13 @@ function buildOrderEmailHtml(orderId: string, orderNumber: string, order: any): 
           
           <!-- Footer -->
           <tr>
-            <td align="center" style="padding: 32px 0; border-top: 1px solid #333;">
-              <div style="color: #666; font-size: 13px; line-height: 1.6;">
-                Thank you for shopping with <span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span>!<br>
-                Questions? Reply to this email or visit our <a href="https://freshwax.co.uk/contact" style="color: #888;">contact page</a>.
+            <td align="center" style="padding: 24px 0;">
+              <div style="color: #888; font-size: 13px; line-height: 1.6;">
+                Thank you for shopping with Fresh<span style="color: #dc2626;">Wax</span><br>
+                Questions? <a href="mailto:contact@freshwax.co.uk" style="color: #666;">contact@freshwax.co.uk</a>
               </div>
-              <div style="margin-top: 16px;">
-                <a href="https://freshwax.co.uk" style="color: #888; font-size: 12px; text-decoration: none;">freshwax.co.uk</a>
+              <div style="margin-top: 12px;">
+                <a href="https://freshwax.co.uk" style="color: #666; font-size: 12px; text-decoration: none;">freshwax.co.uk</a>
               </div>
             </td>
           </tr>

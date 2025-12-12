@@ -1,10 +1,16 @@
 // src/pages/api/upload-merch.ts
 // Comprehensive merch upload - Firebase for data, R2 for images
+// Images auto-processed to 800x800 WebP
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import sharp from 'sharp';
+
+// Image processing settings
+const IMAGE_SIZE = 800;
+const WEBP_QUALITY = 85;
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -145,11 +151,24 @@ export const POST: APIRoute = async ({ request }) => {
     
     log.info('[upload-merch] ID:', productId, 'SKU:', generatedSKU);
     
+    // Parse image-color mappings
+    let imageColorMap: Array<{index: number; color: string | null; colorHex: string | null}> = [];
+    try {
+      const mapJson = formData.get('imageColorMap') as string;
+      if (mapJson) {
+        imageColorMap = JSON.parse(mapJson);
+      }
+    } catch (e) {
+      log.info('[upload-merch] No image color map provided');
+    }
+    
     const uploadedImages: Array<{
       url: string;
       key: string;
       index: number;
       isPrimary: boolean;
+      color: string | null;
+      colorHex: string | null;
     }> = [];
     
     for (let i = 0; i < imageCount; i++) {
@@ -159,32 +178,62 @@ export const POST: APIRoute = async ({ request }) => {
         continue;
       }
       
-      log.info('[upload-merch] Uploading image', i + 1);
+      log.info('[upload-merch] Processing image', i + 1);
       
-      const imageBuffer = await imageFile.arrayBuffer();
-      const imageExt = imageFile.name.split('.').pop() || 'jpg';
-      const imageKey = folderPath + '/image_' + i + '.' + imageExt;
+      const inputBuffer = Buffer.from(await imageFile.arrayBuffer());
+      
+      // Get image metadata for square crop
+      const metadata = await sharp(inputBuffer).metadata();
+      const { width = 0, height = 0 } = metadata;
+      
+      // Calculate center crop to square
+      const size = Math.min(width, height);
+      const left = Math.floor((width - size) / 2);
+      const top = Math.floor((height - size) / 2);
+      
+      // Process: crop to square, resize, convert to WebP
+      const processedBuffer = await sharp(inputBuffer)
+        .extract({ left, top, width: size, height: size })
+        .resize(IMAGE_SIZE, IMAGE_SIZE, {
+          fit: 'cover',
+          position: 'center'
+        })
+        .webp({ 
+          quality: WEBP_QUALITY,
+          effort: 4
+        })
+        .toBuffer();
+      
+      // Always save as .webp
+      const imageKey = folderPath + '/image_' + i + '.webp';
       
       await s3Client.send(
         new PutObjectCommand({
           Bucket: R2_CONFIG.bucketName,
           Key: imageKey,
-          Body: Buffer.from(imageBuffer),
-          ContentType: imageFile.type,
+          Body: processedBuffer,
+          ContentType: 'image/webp',
           CacheControl: 'public, max-age=31536000',
         })
       );
       
       const imageUrl = R2_CONFIG.publicDomain + '/' + imageKey;
       
+      // Find color mapping for this image
+      const colorMapping = imageColorMap.find(m => m.index === i);
+      
       uploadedImages.push({
         url: imageUrl,
         key: imageKey,
         index: i,
-        isPrimary: i === 0
+        isPrimary: i === 0,
+        color: colorMapping?.color || null,
+        colorHex: colorMapping?.colorHex || null
       });
       
-      log.info('[upload-merch] Image uploaded:', imageUrl);
+      log.info('[upload-merch] Image processed and uploaded:', imageUrl, 
+        `(${(inputBuffer.length/1024).toFixed(1)}KB → ${(processedBuffer.length/1024).toFixed(1)}KB)`,
+        colorMapping?.color ? `[Color: ${colorMapping.color}]` : '');
     }
     
     if (uploadedImages.length === 0) {

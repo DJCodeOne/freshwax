@@ -1,0 +1,401 @@
+---
+// Artist Releases - Pro Dashboard
+// View, edit, and manage releases
+import ProDashboardLayout from '../../layouts/ProDashboardLayout.astro';
+---
+<ProDashboardLayout title="My Releases" activeSection="/pro/releases">
+  <div class="releases-page">
+    <div class="page-header">
+      <div class="header-content">
+        <p class="subtitle">Manage your music releases on Fresh Wax</p>
+      </div>
+      <a href="/pro/releases/new" class="btn btn-primary">
+        <span>+</span> New Release
+      </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-status="all">All</button>
+        <button class="filter-tab" data-status="live">Live</button>
+        <button class="filter-tab" data-status="pending">Pending</button>
+        <button class="filter-tab" data-status="draft">Drafts</button>
+      </div>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search releases...">
+      </div>
+    </div>
+
+    <!-- Releases List -->
+    <div id="releasesList" class="releases-list">
+      <div class="loading">Loading releases...</div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <div class="empty-icon">📀</div>
+      <h3>No releases yet</h3>
+      <p>Upload your first release to start selling on Fresh Wax</p>
+      <a href="/pro/releases/new" class="btn btn-primary">Upload Release</a>
+    </div>
+  </div>
+
+  <style>
+    .releases-page {
+      max-width: 1200px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .header-content .subtitle {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--accent, #22c55e);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover, #16a34a);
+    }
+
+    .filters-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .filter-tab {
+      padding: 0.5rem 1rem;
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 6px;
+      color: var(--text-secondary, #a3a3a3);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-tab:hover {
+      color: var(--text-primary, #fff);
+      border-color: var(--text-secondary, #a3a3a3);
+    }
+
+    .filter-tab.active {
+      background: var(--accent, #22c55e);
+      color: #000;
+      border-color: var(--accent, #22c55e);
+    }
+
+    .search-box input {
+      padding: 0.5rem 1rem;
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 6px;
+      color: var(--text-primary, #fff);
+      width: 250px;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--accent, #22c55e);
+    }
+
+    .releases-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .release-card {
+      display: grid;
+      grid-template-columns: 80px 1fr auto;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      align-items: center;
+      transition: all 0.2s;
+    }
+
+    .release-card:hover {
+      border-color: var(--accent, #22c55e);
+    }
+
+    .release-artwork {
+      width: 80px;
+      height: 80px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: var(--bg-tertiary, #1a1a1a);
+    }
+
+    .release-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .release-title {
+      font-weight: 600;
+      color: var(--text-primary, #fff);
+    }
+
+    .release-meta {
+      font-size: 0.85rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .release-stats {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.8rem;
+      color: var(--text-muted, #666);
+      margin-top: 0.25rem;
+    }
+
+    .release-status {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-live {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    .status-pending {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+    }
+
+    .status-draft {
+      background: rgba(156, 163, 175, 0.2);
+      color: #9ca3af;
+    }
+
+    .status-rejected {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .release-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .action-btn {
+      padding: 0.5rem 0.75rem;
+      background: var(--bg-tertiary, #1a1a1a);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 6px;
+      color: var(--text-secondary, #a3a3a3);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      font-size: 0.85rem;
+    }
+
+    .action-btn:hover {
+      color: var(--text-primary, #fff);
+      border-color: var(--text-secondary, #a3a3a3);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: var(--bg-secondary, #141414);
+      border: 1px dashed var(--border-color, #262626);
+      border-radius: 8px;
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .empty-state h3 {
+      color: var(--text-primary, #fff);
+      margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+      color: var(--text-secondary, #a3a3a3);
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 640px) {
+      .release-card {
+        grid-template-columns: 60px 1fr;
+      }
+
+      .release-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+      }
+
+      .release-artwork {
+        width: 60px;
+        height: 60px;
+      }
+    }
+  </style>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getFirestore, collection, query, where, getDocs, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+    const firebaseConfig = window.FIREBASE_CONFIG || {};
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const releasesList = document.getElementById('releasesList');
+    const emptyState = document.getElementById('emptyState');
+    const filterTabs = document.querySelectorAll('.filter-tab');
+    const searchInput = document.getElementById('searchInput');
+
+    let allReleases = [];
+    let currentFilter = 'all';
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      await loadReleases(user.uid);
+    });
+
+    async function loadReleases(uid) {
+      try {
+        const releasesQuery = query(
+          collection(db, 'releases'),
+          where('artistId', '==', uid),
+          orderBy('createdAt', 'desc')
+        );
+        const snapshot = await getDocs(releasesQuery);
+        
+        allReleases = [];
+        snapshot.forEach(doc => {
+          allReleases.push({ id: doc.id, ...doc.data() });
+        });
+
+        renderReleases();
+      } catch (error) {
+        console.error('Error loading releases:', error);
+        releasesList.innerHTML = '<div class="loading">Error loading releases</div>';
+      }
+    }
+
+    function renderReleases() {
+      const searchTerm = searchInput.value.toLowerCase();
+      
+      let filtered = allReleases.filter(release => {
+        // Status filter
+        if (currentFilter !== 'all') {
+          if (currentFilter === 'live' && release.status !== 'approved' && release.status !== 'live') return false;
+          if (currentFilter === 'pending' && release.status !== 'pending') return false;
+          if (currentFilter === 'draft' && release.status !== 'draft') return false;
+        }
+
+        // Search filter
+        if (searchTerm) {
+          const title = (release.title || '').toLowerCase();
+          const artist = (release.artistName || '').toLowerCase();
+          if (!title.includes(searchTerm) && !artist.includes(searchTerm)) return false;
+        }
+
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        releasesList.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      releasesList.style.display = 'flex';
+
+      releasesList.innerHTML = filtered.map(release => {
+        const statusClass = release.status === 'approved' || release.status === 'live' ? 'status-live' : 
+                           release.status === 'pending' ? 'status-pending' :
+                           release.status === 'rejected' ? 'status-rejected' : 'status-draft';
+        const statusText = release.status === 'approved' ? 'live' : release.status || 'draft';
+        
+        return `
+          <div class="release-card" data-id="${release.id}">
+            <img src="${release.artwork || '/images/placeholder-album.jpg'}" alt="${release.title}" class="release-artwork">
+            <div class="release-info">
+              <div class="release-title">${release.title || 'Untitled'}</div>
+              <div class="release-meta">${release.artistName || 'Unknown Artist'} • ${release.trackCount || 0} tracks</div>
+              <div class="release-stats">
+                <span>💰 ${release.salesCount || 0} sales</span>
+                <span>▶️ ${release.plays || 0} plays</span>
+              </div>
+            </div>
+            <div class="release-actions">
+              <span class="release-status ${statusClass}">${statusText}</span>
+              <a href="/pro/releases/${release.id}" class="action-btn">Edit</a>
+              <a href="/item/${release.id}" class="action-btn" target="_blank">View</a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Filter tabs
+    filterTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        filterTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.dataset.status;
+        renderReleases();
+      });
+    });
+
+    // Search
+    searchInput.addEventListener('input', () => {
+      renderReleases();
+    });
+  </script>
+</ProDashboardLayout>

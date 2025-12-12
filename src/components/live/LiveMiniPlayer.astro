@@ -1,0 +1,35 @@
+---
+// src/components/live/LiveMiniPlayer.astro
+// Sticky mini player for mobile - appears when scrolling past main player
+---
+
+<div id="miniPlayer" class="mini-player hidden">
+  <div class="mini-player-info">
+    <img id="miniDjAvatar" src="/place-holder.webp" alt="" class="mini-avatar" />
+    <div class="mini-text">
+      <span id="miniDjName" class="mini-dj">-</span>
+      <span id="miniStatus" class="mini-status">Live</span>
+    </div>
+  </div>
+  <div class="mini-controls">
+    <button id="miniPlayBtn" class="mini-play-btn">
+      <svg id="miniPlayIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="miniPauseIcon" class="hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+    <button id="miniExpandBtn" class="mini-expand-btn" title="Back to player">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+    </button>
+  </div>
+  <div class="mini-progress">
+    <div id="miniLedStrip" class="mini-led-strip">
+      <span class="mini-led"></span>
+      <span class="mini-led"></span>
+      <span class="mini-led"></span>
+      <span class="mini-led"></span>
+      <span class="mini-led"></span>
+      <span class="mini-led"></span>
+      <span class="mini-led"></span>
+      <span class="mini-led"></span>
+    </div>
+  </div>
+</div>

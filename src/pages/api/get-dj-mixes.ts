@@ -53,7 +53,7 @@ export const GET: APIRoute = async ({ request }) => {
       id: mix.id,
       title: mix.title || mix.name || 'Untitled Mix',
       artist: mix.artist || mix.djName || 'Unknown DJ',
-      artwork: mix.artworkUrl || mix.coverUrl || mix.imageUrl || '/logo.webp',
+      artwork: mix.artworkUrl || mix.coverUrl || mix.imageUrl || '/place-holder.webp',
       audioUrl: mix.audioUrl || mix.mp3Url || mix.streamUrl || null,
       duration: mix.duration || null,
       genre: mix.genre || mix.genres || [],

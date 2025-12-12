@@ -23,8 +23,10 @@ const navItems = [
   { href: '/admin/orders', label: 'Orders', icon: '📋', id: 'orders' },
   { href: '/admin/releases/manage', label: 'Releases', icon: '💿', id: 'releases' },
   { href: '/admin/users', label: 'Users', icon: '👥', id: 'users' },
+  { href: '/admin/account/manage', label: 'Partners', icon: '🤝', id: 'partners' },
   { href: '/admin/merch/manage', label: 'Merch', icon: '👕', id: 'merch' },
   { href: '/admin/dj-mixes/manage', label: 'DJ Mixes', icon: '🎧', id: 'mixes' },
+  { href: '/admin/streaming', label: 'Live', icon: '🔴', id: 'live' },
   { href: '/admin/newsletter', label: 'Newsletter', icon: '📧', id: 'newsletter' },
   { href: '/admin/analytics', label: 'Analytics', icon: '📈', id: 'analytics' },
 ];
@@ -36,7 +38,7 @@ const navItems = [
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{title} | Fresh Wax Admin</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -343,6 +345,25 @@ const navItems = [
       padding: var(--spacing-xl);
     }
     
+    /* Center all direct children of admin-main at 91% width */
+    .admin-main > * {
+      max-width: 91%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .admin-main > *.full-width {
+      max-width: 100%;
+    }
+    
+    /* Stats grid inside cards should fill the card width */
+    .card .stats-grid,
+    .card-body .stats-grid {
+      max-width: 100%;
+      margin-left: 0;
+      margin-right: 0;
+    }
+    
     /* =============================================
        CARDS & PANELS
        ============================================= */
@@ -364,7 +385,7 @@ const navItems = [
     }
     
     .card-header h2 {
-      font-size: 0.875rem;
+      font-size: 1rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -404,7 +425,7 @@ const navItems = [
     .data-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.875rem;
+      font-size: 1rem;
     }
     
     .data-table th {
@@ -412,17 +433,34 @@ const navItems = [
       color: var(--text-light);
       padding: var(--spacing-md);
       text-align: left;
-      font-size: 0.7rem;
+      font-size: 0.8rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       white-space: nowrap;
     }
     
+    .data-table th.text-right {
+      text-align: right;
+    }
+    
+    .data-table th.text-center {
+      text-align: center;
+    }
+    
     .data-table td {
       padding: var(--spacing-md);
       border-bottom: 1px solid var(--border-light);
       vertical-align: middle;
+      font-size: 0.95rem;
+    }
+    
+    .data-table td.text-right {
+      text-align: right;
+    }
+    
+    .data-table td.text-center {
+      text-align: center;
     }
     
     .data-table tbody tr:hover {
@@ -432,16 +470,17 @@ const navItems = [
     .data-table .cell-primary {
       font-weight: 600;
       color: var(--text-primary);
+      font-size: 1rem;
     }
     
     .data-table .cell-secondary {
       color: var(--text-secondary);
-      font-size: 0.8rem;
+      font-size: 0.9rem;
     }
     
     .data-table .cell-mono {
       font-family: 'SF Mono', Monaco, monospace;
-      font-size: 0.75rem;
+      font-size: 0.85rem;
       color: var(--text-muted);
     }
     
@@ -455,7 +494,7 @@ const navItems = [
       justify-content: center;
       gap: 0.5rem;
       padding: 0.625rem 1.25rem;
-      font-size: 0.8rem;
+      font-size: 0.875rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.03em;
@@ -638,8 +677,8 @@ const navItems = [
       display: inline-flex;
       align-items: center;
       gap: 0.25rem;
-      padding: 0.25rem 0.625rem;
-      font-size: 0.7rem;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.8rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.03em;
@@ -892,16 +931,46 @@ const navItems = [
     
     .stats-grid {
       display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: var(--spacing-lg);
+    }
+    
+    .stats-grid.cols-6 {
       grid-template-columns: repeat(6, 1fr);
-      gap: var(--spacing-md);
-      margin-bottom: var(--spacing-xl);
+    }
+    
+    .stats-grid.cols-5 {
+      grid-template-columns: repeat(5, 1fr);
+    }
+    
+    .stats-grid.cols-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .stats-grid.cols-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .stats-grid.full-width,
+    .stats-grid.fill {
+      max-width: 100%;
+      margin-left: 0;
+      margin-right: 0;
     }
     
     .stat-card {
       background: var(--bg-secondary);
       border: 2px solid var(--border-light);
-      padding: var(--spacing-lg);
+      padding: 1rem 1.25rem;
       transition: all var(--transition-fast);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      min-width: 0;
+      min-height: 100px;
     }
     
     .stat-card:hover {
@@ -919,23 +988,37 @@ const navItems = [
     }
     
     .stat-card .stat-label {
-      font-size: 0.7rem;
+      font-size: 0.75rem;
       font-weight: 600;
       text-transform: uppercase;
       color: var(--text-muted);
       margin-bottom: 0.5rem;
+      line-height: 1.3;
+      letter-spacing: 0.02em;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      text-align: center;
+      width: 100%;
     }
     
     .stat-card .stat-value {
-      font-size: 1.75rem;
+      font-size: 2rem;
       font-weight: 800;
       color: var(--text-primary);
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+      width: 100%;
     }
     
     .stat-card .stat-detail {
-      font-size: 0.75rem;
+      font-size: 0.85rem;
       color: var(--text-secondary);
-      margin-top: 0.25rem;
+      margin-top: 0.4rem;
+      text-align: center;
+      width: 100%;
     }
     
     /* =============================================
@@ -944,7 +1027,7 @@ const navItems = [
     
     .actions-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(6, 1fr);
       gap: var(--spacing-md);
       margin-bottom: var(--spacing-xl);
     }
@@ -981,11 +1064,11 @@ const navItems = [
     }
     
     .action-card .card-icon {
-      font-size: 1.5rem;
+      font-size: 1.75rem;
     }
     
     .action-card .card-title {
-      font-size: 0.8rem;
+      font-size: 0.9rem;
       font-weight: 700;
       text-transform: uppercase;
     }
@@ -996,9 +1079,9 @@ const navItems = [
       right: -8px;
       background: var(--accent-red);
       color: var(--text-light);
-      font-size: 0.7rem;
+      font-size: 0.8rem;
       font-weight: 700;
-      padding: 0.2rem 0.5rem;
+      padding: 0.25rem 0.6rem;
       border-radius: var(--radius-full);
     }
     
@@ -1035,11 +1118,21 @@ const navItems = [
     .justify-between { justify-content: space-between; }
     .justify-end { justify-content: flex-end; }
     
-    .grid { display: grid; }
-    .grid-2 { grid-template-columns: repeat(2, 1fr); }
-    .grid-3 { grid-template-columns: repeat(3, 1fr); }
-    .grid-4 { grid-template-columns: repeat(4, 1fr); }
-    .grid-6 { grid-template-columns: repeat(6, 1fr); }
+    .grid { display: grid; gap: 1rem; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 0 auto var(--spacing-lg); max-width: 91%; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 0 auto var(--spacing-lg); max-width: 91%; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 0 auto var(--spacing-lg); max-width: 91%; }
+    .grid-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; margin: 0 auto var(--spacing-lg); max-width: 91%; }
+    
+    /* Centered container matching grid width - use for standalone cards/sections */
+    .card-full,
+    .section-centered {
+      margin: 0 auto var(--spacing-lg);
+      max-width: 91%;
+    }
+    
+    /* Override to restore full width when needed */
+    .full-width { max-width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; }
     
     .hidden { display: none !important; }
     
@@ -1073,10 +1166,22 @@ const navItems = [
        ============================================= */
     
     @media (max-width: 1200px) {
-      .stats-grid { grid-template-columns: repeat(3, 1fr); }
+      .stats-grid.cols-6, .stats-grid.cols-5, .stats-grid.cols-4 { 
+        grid-template-columns: repeat(3, 1fr); 
+      }
       .actions-grid { grid-template-columns: repeat(3, 1fr); }
       .grid-6 { grid-template-columns: repeat(3, 1fr); }
       .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    @media (max-width: 900px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .admin-main > *,
+      .stats-grid, .grid-2, .grid-3, .grid-4, .grid-6, .card-full, .section-centered { 
+        max-width: 100%; 
+        margin-left: 0;
+        margin-right: 0;
+      }
     }
     
     @media (max-width: 768px) {
@@ -1169,19 +1274,181 @@ const navItems = [
     
     /* Print Styles */
     @media print {
+      @page {
+        size: A4;
+        margin: 15mm 10mm;
+      }
+      
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      
+      /* Hide navigation and interactive elements */
       .admin-topbar,
       .header-actions,
       .toolbar,
-      .toast {
+      .toast,
+      .btn,
+      button:not(.no-hide-print),
+      nav,
+      .topbar-right,
+      .header-breadcrumb a,
+      .modal,
+      .modal-overlay {
         display: none !important;
       }
       
-      body {
-        background: white;
+      /* Reset backgrounds */
+      body,
+      .admin-main,
+      .content-wrapper {
+        background: white !important;
+        color: black !important;
+        padding: 0 !important;
+        margin: 0 !important;
       }
       
+      /* Page header for print */
+      .page-header {
+        background: white !important;
+        border-bottom: 2px solid black !important;
+        padding: 0 0 10px 0 !important;
+        margin-bottom: 15px !important;
+      }
+      
+      .page-header h1 {
+        color: black !important;
+        font-size: 18pt !important;
+      }
+      
+      .header-breadcrumb {
+        display: none !important;
+      }
+      
+      /* Stats bar for print */
+      .stats-bar {
+        background: #f5f5f5 !important;
+        border: 1px solid #ccc !important;
+        padding: 10px !important;
+        margin-bottom: 15px !important;
+        page-break-inside: avoid !important;
+      }
+      
+      .stat-item {
+        border-right-color: #ccc !important;
+      }
+      
+      .stat-value {
+        color: black !important;
+        font-size: 14pt !important;
+      }
+      
+      .stat-label {
+        color: #666 !important;
+        font-size: 8pt !important;
+      }
+      
+      /* Card styling for print */
       .card {
-        border: 1px solid #ccc;
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+        background: white !important;
+        margin-bottom: 15px !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      
+      .card-header {
+        background: #f5f5f5 !important;
+        border-bottom: 1px solid #ccc !important;
+        padding: 8px 12px !important;
+      }
+      
+      .card-header h2 {
+        color: black !important;
+        font-size: 12pt !important;
+      }
+      
+      .card-body {
+        padding: 12px !important;
+      }
+      
+      /* Table styling for print */
+      table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 9pt !important;
+      }
+      
+      th {
+        background: #333 !important;
+        color: white !important;
+        padding: 6px 8px !important;
+        font-size: 8pt !important;
+        text-align: left !important;
+      }
+      
+      td {
+        padding: 5px 8px !important;
+        border-bottom: 1px solid #ddd !important;
+        color: black !important;
+      }
+      
+      tr {
+        page-break-inside: avoid !important;
+      }
+      
+      /* Stats grid for print */
+      .stats-grid {
+        display: grid !important;
+        gap: 10px !important;
+        page-break-inside: avoid !important;
+      }
+      
+      .stats-grid.cols-4 {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+      
+      .stats-grid.cols-6 {
+        grid-template-columns: repeat(3, 1fr) !important;
+      }
+      
+      .stat-card {
+        border: 1px solid #ccc !important;
+        padding: 10px !important;
+        background: #f9f9f9 !important;
+        min-height: auto !important;
+      }
+      
+      /* Print date header */
+      .admin-main::before {
+        content: "Fresh Wax Admin Report - Printed: " attr(data-print-date);
+        display: block !important;
+        font-size: 9pt !important;
+        color: #666 !important;
+        text-align: right !important;
+        margin-bottom: 10px !important;
+        padding-bottom: 5px !important;
+        border-bottom: 1px solid #ddd !important;
+      }
+      
+      /* Ensure sections don't break awkwardly */
+      .mb-4,
+      .mb-3,
+      section {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+      
+      /* Keep headers with their content */
+      h2, h3, h4 {
+        page-break-after: avoid !important;
+      }
+      
+      /* Links should show URL */
+      a[href]:after {
+        content: none !important;
       }
     }
   </style>

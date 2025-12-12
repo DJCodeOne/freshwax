@@ -1,180 +1,236 @@
 ---
-// src/pages/terms.astro
-import InfoPageLayout from '../layouts/InfoPageLayout.astro';
-
-const lastUpdated = 'November 2024';
+// Terms of Service page
 ---
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service | Fresh Wax</title>
+</head>
+<body>
+  <main class="legal-container">
+    <div class="legal-card">
+      <div class="legal-header">
+        <a href="/" class="logo-link">
+          <div class="logo-wrapper">
+            <img src="/logo.webp" alt="Fresh Wax" class="logo-img">
+          </div>
+        </a>
+        <h1><span class="fresh">Fresh</span> <span class="wax">Wax</span></h1>
+        <h2>Terms of Service</h2>
+        <p class="last-updated">Last updated: December 2024</p>
+      </div>
 
-<InfoPageLayout 
-  title="Terms & Conditions" 
-  description="Terms and conditions for using Fresh Wax website and purchasing products. Please read carefully before making a purchase."
-  lastUpdated={lastUpdated}
->
-  <p class="text-xl text-gray-600 mb-8">
-    These terms and conditions govern your use of the Fresh Wax website and the purchase of products from us. By using our website or making a purchase, you agree to these terms.
-  </p>
+      <div class="legal-content">
+        <section>
+          <h3>1. About Fresh Wax</h3>
+          <p>Fresh Wax is an online music store and community platform specialising in jungle and drum & bass music. We sell digital releases, vinyl records, and branded merchandise. We also provide a platform for DJ mixes and livestreaming.</p>
+        </section>
 
-  <h2>1. About Us</h2>
-  <p>
-    <span class="text-black font-semibold">Fresh</span> <span class="text-red-600 font-semibold">Wax</span> is a UK-based independent online music store specialising in jungle and drum & bass music, including digital downloads, vinyl records, DJ mixes, and merchandise. 
-    These terms are between you ("Customer", "you") and Fresh Wax ("we", "us", "our").
-  </p>
+        <section>
+          <h3>2. Account Types</h3>
+          <p>When you register for a Fresh Wax account, you automatically receive:</p>
+          <ul>
+            <li>Customer access to purchase releases and merchandise</li>
+            <li>Ability to comment on and rate content</li>
+            <li>Ability to upload DJ mixes for free listening, download, and community interaction</li>
+          </ul>
+          <p>Additional roles (Artist/Label, Merch Seller) require admin approval and are subject to additional terms.</p>
+        </section>
 
-  <h2>2. Using Our Website</h2>
-  <h3>Eligibility</h3>
-  <p>You must be at least 18 years old or have parental consent to make purchases from our website.</p>
-  
-  <h3>Account Responsibilities</h3>
-  <ul>
-    <li>You are responsible for maintaining the confidentiality of your account</li>
-    <li>You must provide accurate and complete information</li>
-    <li>You are responsible for all activities under your account</li>
-    <li>Notify us immediately of any unauthorised use</li>
-  </ul>
+        <section>
+          <h3>3. DJ Mixes</h3>
+          <p>DJ mixes uploaded to Fresh Wax are provided for:</p>
+          <ul>
+            <li>Free listening on the platform</li>
+            <li>Free instant download by registered users</li>
+            <li>Community engagement through comments and ratings</li>
+          </ul>
+          <p>DJ mixes are not sold. By uploading a mix, you confirm you have the right to distribute the content and accept responsibility for any copyright issues arising from your upload.</p>
+        </section>
 
-  <h3>Prohibited Activities</h3>
-  <p>You may not:</p>
-  <ul>
-    <li>Use the website for any unlawful purpose</li>
-    <li>Attempt to gain unauthorised access to our systems</li>
-    <li>Interfere with the website's operation</li>
-    <li>Copy, modify, or distribute our content without permission</li>
-    <li>Use automated systems to access the website</li>
-  </ul>
+        <section>
+          <h3>4. Livestreams</h3>
+          <p>Fresh Wax provides livestreaming capabilities for eligible DJs. Regarding livestream content:</p>
+          <ul>
+            <li>You may record, redistribute, and rebroadcast Fresh Wax livestreams</li>
+            <li>This permission is granted provided it does not infringe on copyright laws</li>
+            <li>DJs are responsible for ensuring their streamed content complies with copyright regulations</li>
+            <li>Fresh Wax is not liable for copyright infringement by DJs or viewers</li>
+          </ul>
+        </section>
 
-  <h2>3. Products and Pricing</h2>
-  <h3>Product Descriptions</h3>
-  <p>
-    We make every effort to ensure product descriptions and images are accurate. However, colours may vary slightly due to screen settings, and vinyl weights/packaging may vary by pressing plant.
-  </p>
+        <section>
+          <h3>5. Purchases</h3>
+          <p>All purchases of digital releases, vinyl, and merchandise are final unless the item is faulty or not as described. Digital downloads are provided immediately upon payment confirmation.</p>
+        </section>
 
-  <h3>Pricing</h3>
-  <ul>
-    <li>All prices are in GBP (£) and include VAT where applicable</li>
-    <li>Prices are subject to change without notice</li>
-    <li>We reserve the right to correct pricing errors</li>
-    <li>Shipping costs are calculated at checkout</li>
-  </ul>
+        <section>
+          <h3>6. User Conduct</h3>
+          <p>You agree to:</p>
+          <ul>
+            <li>Provide accurate information when registering</li>
+            <li>Not upload content that infringes copyright or other rights</li>
+            <li>Treat other community members with respect</li>
+            <li>Not attempt to circumvent platform security or restrictions</li>
+          </ul>
+        </section>
 
-  <h3>Availability</h3>
-  <p>
-    All products are subject to availability. We will notify you if a product becomes unavailable after you've placed an order.
-  </p>
+        <section>
+          <h3>7. Content Ownership</h3>
+          <p>You retain ownership of content you upload (mixes, comments, etc.). By uploading, you grant Fresh Wax a licence to host, display, and distribute your content on the platform.</p>
+        </section>
 
-  <h2>4. Orders and Payment</h2>
-  <h3>Placing Orders</h3>
-  <p>
-    When you place an order, you are making an offer to purchase. We will send an order confirmation email, but this does not constitute acceptance. The contract is formed when we dispatch your order.
-  </p>
+        <section>
+          <h3>8. Termination</h3>
+          <p>We reserve the right to suspend or terminate accounts that violate these terms or engage in behaviour harmful to the community.</p>
+        </section>
 
-  <h3>Payment</h3>
-  <ul>
-    <li>We accept major credit/debit cards and PayPal</li>
-    <li>Payment is taken at the time of order</li>
-    <li>All transactions are processed securely</li>
-    <li>We reserve the right to refuse orders</li>
-  </ul>
+        <section>
+          <h3>9. Changes to Terms</h3>
+          <p>We may update these terms from time to time. Continued use of the platform constitutes acceptance of any changes.</p>
+        </section>
 
-  <h3>Order Cancellation</h3>
-  <p>
-    You may cancel your order before it has been dispatched by contacting us. Once dispatched, please refer to our Returns Policy.
-  </p>
+        <section>
+          <h3>10. Contact</h3>
+          <p>For questions about these terms, please contact us through the platform.</p>
+        </section>
+      </div>
 
-  <h2>5. Digital Downloads</h2>
-  <h3>Licence Grant</h3>
-  <p>
-    When you purchase digital downloads, you receive a personal, non-exclusive, non-transferable licence to:
-  </p>
-  <ul>
-    <li>Download the files to your devices</li>
-    <li>Listen to the music for personal, non-commercial use</li>
-    <li>Create personal backup copies</li>
-  </ul>
+      <div class="legal-footer">
+        <a href="/register" class="btn btn-primary">Back to Register</a>
+      </div>
+    </div>
+  </main>
 
-  <h3>Restrictions</h3>
-  <p>You may NOT:</p>
-  <ul>
-    <li>Redistribute, share, or resell the files</li>
-    <li>Upload to file-sharing services or streaming platforms</li>
-    <li>Use in commercial productions without a licence</li>
-    <li>Remove or alter any metadata or watermarks</li>
-  </ul>
+  <style>
+    .legal-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem;
+      background: var(--bg-primary, #0a0a0a);
+    }
 
-  <h3>Download Limits</h3>
-  <p>
-    Digital purchases include a limited number of downloads (typically 5). Contact us if you need additional downloads.
-  </p>
+    .legal-card {
+      width: 100%;
+      max-width: 700px;
+      background: var(--bg-secondary, #141414);
+      border-radius: 12px;
+      padding: 2.5rem;
+      border: 1px solid var(--border-color, #262626);
+      margin: 2rem 0;
+    }
 
-  <h2>6. Vinyl and Physical Products</h2>
-  <h3>Quality Standards</h3>
-  <p>
-    We inspect all vinyl before shipping. Minor cosmetic variations in vinyl colour or label printing are normal and not considered defects.
-  </p>
+    .legal-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color, #262626);
+    }
 
-  <h3>Limited Editions</h3>
-  <p>
-    Limited edition releases are sold on a first-come, first-served basis. We cannot guarantee availability and do not accept pre-orders unless specifically stated.
-  </p>
+    .logo-link {
+      display: inline-block;
+      margin-bottom: 1rem;
+    }
 
-  <h2>7. Shipping and Delivery</h2>
-  <p>
-    Please see our <a href="/shipping">Shipping Information</a> page for full details on delivery times, costs, and methods.
-  </p>
+    .logo-wrapper {
+      width: 80px;
+      height: 80px;
+      background: #fff;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      padding: 0.5rem;
+    }
 
-  <h2>8. Returns and Refunds</h2>
-  <p>
-    Please see our <a href="/returns">Returns Policy</a> for full details on returns, exchanges, and refunds.
-  </p>
+    .logo-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
 
-  <h2>9. Intellectual Property</h2>
-  <h3>Our Content</h3>
-  <p>
-    All content on this website, including text, images, audio, logos, and designs, is owned by Fresh Wax or our licensors and is protected by copyright, trademark, and other intellectual property laws.
-  </p>
+    .legal-header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 1rem 0 0.5rem;
+    }
 
-  <h3>Music Rights</h3>
-  <p>
-    All music sold through Fresh Wax is protected by copyright. Purchase grants you a licence to listen, not ownership of the underlying rights.
-  </p>
+    .legal-header h1 .fresh {
+      color: #fff;
+    }
 
-  <h3>User Content</h3>
-  <p>
-    By submitting reviews, comments, or other content, you grant us a non-exclusive, royalty-free licence to use, display, and distribute that content.
-  </p>
+    .legal-header h1 .wax {
+      color: #ef4444;
+    }
 
-  <h2>10. Limitation of Liability</h2>
-  <p>To the maximum extent permitted by law:</p>
-  <ul>
-    <li>We are not liable for indirect, incidental, or consequential damages</li>
-    <li>Our total liability is limited to the amount you paid for the relevant product</li>
-    <li>We are not liable for delays or failures beyond our control</li>
-  </ul>
-  <p>
-    Nothing in these terms excludes our liability for death or personal injury caused by negligence, fraud, or any other liability that cannot be excluded by law.
-  </p>
+    .legal-header h2 {
+      font-size: 1.5rem;
+      color: var(--text-primary, #fff);
+      margin: 0.5rem 0;
+    }
 
-  <h2>11. Indemnification</h2>
-  <p>
-    You agree to indemnify and hold harmless Fresh Wax from any claims, damages, or expenses arising from your breach of these terms or misuse of our services.
-  </p>
+    .last-updated {
+      color: var(--text-muted, #666);
+      font-size: 0.9rem;
+      margin: 0;
+    }
 
-  <h2>12. Governing Law</h2>
-  <p>
-    These terms are governed by the laws of England and Wales. Any disputes will be subject to the exclusive jurisdiction of the courts of England and Wales.
-  </p>
+    .legal-content {
+      color: var(--text-secondary, #a3a3a3);
+      line-height: 1.7;
+    }
 
-  <h2>13. Changes to Terms</h2>
-  <p>
-    We may update these terms from time to time. Changes will be posted on this page with an updated "Last updated" date. Continued use of the website after changes constitutes acceptance of the new terms.
-  </p>
+    .legal-content section {
+      margin-bottom: 1.75rem;
+    }
 
-  <h2>14. Severability</h2>
-  <p>
-    If any provision of these terms is found to be invalid or unenforceable, the remaining provisions will continue in full force and effect.
-  </p>
+    .legal-content h3 {
+      color: var(--text-primary, #fff);
+      font-size: 1.1rem;
+      margin-bottom: 0.75rem;
+    }
 
-  <h2>15. Contact</h2>
-  <p>
-    For questions about these terms, please contact us at <a href="mailto:legal@freshwax.co.uk">legal@freshwax.co.uk</a>.
-  </p>
-</InfoPageLayout>
+    .legal-content p {
+      margin-bottom: 0.75rem;
+    }
+
+    .legal-content ul {
+      margin: 0.75rem 0;
+      padding-left: 1.5rem;
+    }
+
+    .legal-content li {
+      margin-bottom: 0.5rem;
+    }
+
+    .legal-footer {
+      text-align: center;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-color, #262626);
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #ef4444;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #dc2626;
+    }
+  </style>
+</body>
+</html>

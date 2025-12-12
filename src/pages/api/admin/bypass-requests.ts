@@ -1,93 +1,172 @@
 // src/pages/api/admin/bypass-requests.ts
 // Handle DJ bypass requests - DJs can request immediate access to go live
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection } from '../../../lib/firebase-rest';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 export const prerender = false;
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
 
 // Helper to generate a unique ID
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 }
 
-// Helper to make Firestore REST API calls for writes
-async function firestoreWrite(method: 'POST' | 'PATCH' | 'DELETE', path: string, data?: Record<string, any>) {
-  const projectId = import.meta.env.FIREBASE_PROJECT_ID;
-  const apiKey = import.meta.env.FIREBASE_API_KEY;
-  
-  if (!projectId || !apiKey) {
-    throw new Error('Firebase configuration missing');
-  }
-
-  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${path}?key=${apiKey}`;
-
-  const options: RequestInit = {
-    method,
-    headers: { 'Content-Type': 'application/json' }
-  };
-
-  if (data && method !== 'DELETE') {
-    const fields: Record<string, any> = {};
-    for (const [key, value] of Object.entries(data)) {
-      fields[key] = convertToFirestoreValue(value);
-    }
-    options.body = JSON.stringify({ fields });
-  }
-
-  const response = await fetch(url, options);
-  
-  if (!response.ok && response.status !== 404) {
-    const error = await response.text();
-    throw new Error(`Firestore error: ${response.status} - ${error}`);
-  }
-
-  if (method === 'DELETE') {
-    return { success: true };
-  }
-
-  return response.json();
-}
-
-function convertToFirestoreValue(value: any): any {
-  if (value === null || value === undefined) return { nullValue: null };
-  if (typeof value === 'string') return { stringValue: value };
-  if (typeof value === 'number') {
-    return Number.isInteger(value) ? { integerValue: String(value) } : { doubleValue: value };
-  }
-  if (typeof value === 'boolean') return { booleanValue: value };
-  if (value instanceof Date) return { timestampValue: value.toISOString() };
-  if (Array.isArray(value)) {
-    return { arrayValue: { values: value.map(v => convertToFirestoreValue(v)) } };
-  }
-  if (typeof value === 'object') {
-    const mapFields: Record<string, any> = {};
-    for (const [k, v] of Object.entries(value)) {
-      mapFields[k] = convertToFirestoreValue(v);
-    }
-    return { mapValue: { fields: mapFields } };
-  }
-  return { stringValue: String(value) };
-}
-
-// GET - List all pending bypass requests (admin only)
+// GET - List all pending bypass requests (admin) OR check status for specific user
 export const GET: APIRoute = async ({ request }) => {
   try {
-    // Query pending requests
-    const requests = await queryCollection('bypassRequests', {
-      filters: [
-        { field: 'status', op: 'EQUAL', value: 'pending' }
-      ],
-      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-      limit: 50
-    });
+    const url = new URL(request.url);
+    const action = url.searchParams.get('action');
+    const userId = url.searchParams.get('userId');
+    
+    // Check status for a specific user
+    if (action === 'status' && userId) {
+      try {
+        const snapshot = await db.collection('bypassRequests')
+          .where('userId', '==', userId)
+          .orderBy('createdAt', 'desc')
+          .limit(5)
+          .get();
+        
+        const userRequests = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        // Find the most recent pending, approved, or denied request
+        const pendingRequest = userRequests.find((r: any) => r.status === 'pending');
+        const approvedRequest = userRequests.find((r: any) => r.status === 'approved');
+        const deniedRequest = userRequests.find((r: any) => r.status === 'denied');
+        
+        // Determine the current active request (pending takes priority)
+        const activeRequest = pendingRequest || approvedRequest || deniedRequest || null;
+        
+        return new Response(JSON.stringify({ 
+          success: true,
+          hasRequest: !!activeRequest,
+          request: activeRequest,
+          hasPending: !!pendingRequest,
+          hasApproved: !!approvedRequest,
+          hasDenied: !!deniedRequest
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (queryError: any) {
+        console.warn('[bypass-requests] Status check query error:', queryError.message);
+        // Return empty status on error
+        return new Response(JSON.stringify({ 
+          success: true,
+          hasRequest: false,
+          request: null,
+          hasPending: false,
+          hasApproved: false,
+          hasDenied: false
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+    
+    // Admin: list all pending requests (action=list or no action)
+    try {
+      const snapshot = await db.collection('bypassRequests')
+        .where('status', '==', 'pending')
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .get();
+      
+      // Enrich requests with user data and mix stats
+      const requests = await Promise.all(snapshot.docs.map(async doc => {
+        const data = doc.data();
+        const userId = data.userId;
+        
+        // Get user profile for name/email
+        let djName = data.userName || 'Unknown DJ';
+        let email = data.userEmail || '';
+        
+        try {
+          // Try to get more details from users collection
+          const userDoc = await db.collection('users').doc(userId).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            djName = userData?.displayName || userData?.name || djName;
+            email = userData?.email || email;
+          }
+          
+          // Also check artists collection
+          if (!email || djName === 'Unknown DJ') {
+            const artistDoc = await db.collection('artists').doc(userId).get();
+            if (artistDoc.exists) {
+              const artistData = artistDoc.data();
+              djName = artistData?.name || artistData?.djName || djName;
+              email = artistData?.email || email;
+            }
+          }
+        } catch (e) {
+          // Ignore errors fetching user data
+        }
+        
+        // Get mix stats
+        let mixCount = 0;
+        let bestMixLikes = 0;
+        
+        try {
+          const mixesSnapshot = await db.collection('dj-mixes')
+            .where('userId', '==', userId)
+            .get();
+          
+          mixCount = mixesSnapshot.size;
+          mixesSnapshot.docs.forEach(mixDoc => {
+            const mixData = mixDoc.data();
+            const likes = mixData.likeCount || mixData.likes || 0;
+            if (likes > bestMixLikes) bestMixLikes = likes;
+          });
+        } catch (e) {
+          // Ignore errors fetching mix data
+        }
+        
+        return {
+          id: doc.id,
+          ...data,
+          djName,
+          email,
+          mixCount,
+          bestMixLikes,
+          requestedAt: data.createdAt // Alias for consistency
+        };
+      }));
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      requests 
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      return new Response(JSON.stringify({ 
+        success: true, 
+        requests 
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (queryError: any) {
+      console.warn('[bypass-requests] List query error:', queryError.message);
+      return new Response(JSON.stringify({ 
+        success: true, 
+        requests: [] 
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
   } catch (error) {
     console.error('Error fetching bypass requests:', error);
     return new Response(JSON.stringify({ 
@@ -104,10 +183,10 @@ export const GET: APIRoute = async ({ request }) => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { action, requestId, userId, userEmail, userName, requestType, reason } = body;
+    const { action, requestId, userId, userEmail, userName, email, djName, requestType, reason, mixCount, bestMixLikes } = body;
 
-    // Admin action: approve or deny
-    if (action === 'approve' || action === 'deny') {
+    // Admin action: approve, deny, or expire
+    if (action === 'approve' || action === 'deny' || action === 'expire') {
       if (!requestId) {
         return new Response(JSON.stringify({ 
           success: false, 
@@ -119,8 +198,8 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       // Get the request
-      const existingRequest = await getDocument('bypassRequests', requestId);
-      if (!existingRequest) {
+      const requestDoc = await db.collection('bypassRequests').doc(requestId).get();
+      if (!requestDoc.exists) {
         return new Response(JSON.stringify({ 
           success: false, 
           error: 'Request not found' 
@@ -130,25 +209,51 @@ export const POST: APIRoute = async ({ request }) => {
         });
       }
 
-      if (action === 'approve') {
-        // Update user's bypassed status
-        const targetUserId = existingRequest.userId;
-        const targetRequestType = existingRequest.requestType || 'go-live';
-        
-        // Get current user data
-        const userData = await getDocument('users', targetUserId);
-        
-        // Update user with bypass permission
-        await firestoreWrite('PATCH', `users/${targetUserId}`, {
-          ...userData,
-          [`${targetRequestType}Bypassed`]: true,
-          bypassedAt: new Date().toISOString(),
-          bypassedBy: 'admin'
+      const existingRequest = requestDoc.data();
+      
+      // Handle expire action
+      if (action === 'expire') {
+        await db.collection('bypassRequests').doc(requestId).update({
+          status: 'expired',
+          processedAt: new Date().toISOString()
         });
 
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: 'Request expired' 
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (action === 'approve') {
+        // Update user's bypassed status
+        const targetUserId = existingRequest?.userId;
+        const targetRequestType = existingRequest?.requestType || 'go-live';
+        const userEmail = existingRequest?.userEmail || '';
+        const userName = existingRequest?.userName || '';
+        
+        if (targetUserId) {
+          // Update user with bypass permission
+          await db.collection('users').doc(targetUserId).set({
+            [`${targetRequestType}Bypassed`]: true,
+            bypassedAt: new Date().toISOString(),
+            bypassedBy: 'admin'
+          }, { merge: true });
+          
+          // Also add to djLobbyBypass collection for the admin list
+          await db.collection('djLobbyBypass').doc(targetUserId).set({
+            email: userEmail,
+            name: userName,
+            reason: existingRequest?.reason || 'Approved via bypass request',
+            grantedAt: new Date(),
+            grantedBy: 'admin'
+          });
+        }
+
         // Update request status
-        await firestoreWrite('PATCH', `bypassRequests/${requestId}`, {
-          ...existingRequest,
+        await db.collection('bypassRequests').doc(requestId).update({
           status: 'approved',
           processedAt: new Date().toISOString()
         });
@@ -162,8 +267,7 @@ export const POST: APIRoute = async ({ request }) => {
         });
       } else {
         // Deny - just update status
-        await firestoreWrite('PATCH', `bypassRequests/${requestId}`, {
-          ...existingRequest,
+        await db.collection('bypassRequests').doc(requestId).update({
           status: 'denied',
           processedAt: new Date().toISOString()
         });
@@ -190,13 +294,18 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Check if user already has a pending request
-    const existingRequests = await queryCollection('bypassRequests', {
-      filters: [
-        { field: 'userId', op: 'EQUAL', value: userId },
-        { field: 'status', op: 'EQUAL', value: 'pending' }
-      ],
-      limit: 1
-    });
+    let existingRequests: any[] = [];
+    try {
+      const snapshot = await db.collection('bypassRequests')
+        .where('userId', '==', userId)
+        .where('status', '==', 'pending')
+        .limit(1)
+        .get();
+      existingRequests = snapshot.docs;
+    } catch (queryError: any) {
+      console.warn('[bypass-requests] Check existing query error:', queryError.message);
+      // Continue - allow request even if we can't check for duplicates
+    }
 
     if (existingRequests.length > 0) {
       return new Response(JSON.stringify({ 
@@ -212,15 +321,18 @@ export const POST: APIRoute = async ({ request }) => {
     const newRequestId = generateId();
     const newRequest = {
       userId,
-      userEmail: userEmail || '',
-      userName: userName || 'Unknown',
+      userEmail: userEmail || email || '',
+      userName: userName || djName || 'Unknown',
       requestType: requestType || 'go-live',
       reason: reason || '',
       status: 'pending',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      // Store mix stats for admin review
+      mixCount: mixCount || 0,
+      bestMixLikes: bestMixLikes || 0
     };
 
-    await firestoreWrite('PATCH', `bypassRequests/${newRequestId}`, newRequest);
+    await db.collection('bypassRequests').doc(newRequestId).set(newRequest);
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -259,7 +371,7 @@ export const DELETE: APIRoute = async ({ request }) => {
       });
     }
 
-    await firestoreWrite('DELETE', `bypassRequests/${requestId}`);
+    await db.collection('bypassRequests').doc(requestId).delete();
 
     return new Response(JSON.stringify({ 
       success: true, 

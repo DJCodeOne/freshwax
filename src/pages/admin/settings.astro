@@ -1,0 +1,897 @@
+---
+// src/pages/admin/settings.astro
+// Admin settings for artist editable fields, livestream configuration, and system settings
+import AdminLayout from '../../layouts/AdminLayout.astro';
+
+export const prerender = false;
+---
+
+<AdminLayout title="Admin Settings">
+  <div class="settings-page">
+    <div class="settings-header">
+      <h1>⚙️ Settings</h1>
+      <p>Configure store permissions and system settings</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="settings-tabs">
+      <button class="tab-btn active" data-tab="artist-fields">Artist Field Permissions</button>
+      <button class="tab-btn" data-tab="livestream">Livestream Settings</button>
+      <button class="tab-btn" data-tab="release-defaults">Release Defaults</button>
+      <button class="tab-btn" data-tab="notifications">Notifications</button>
+    </div>
+
+    <!-- Artist Field Permissions Tab -->
+    <div id="artist-fields-tab" class="tab-content active">
+      <div class="card">
+        <div class="card-header">
+          <h2>📝 Artist Editable Fields</h2>
+          <p class="card-desc">Control which release fields artists can edit from their dashboard</p>
+        </div>
+        <div class="card-body">
+          <div class="quick-actions">
+            <button id="enableAll" class="quick-btn">✓ Enable All</button>
+            <button id="disableAll" class="quick-btn">✕ Disable All</button>
+            <button id="resetDefaults" class="quick-btn">↺ Reset to Defaults</button>
+          </div>
+          
+          <div class="fields-grid">
+            <!-- Content Fields -->
+            <div class="field-category">
+              <h3>📄 Content</h3>
+              <div class="field-toggles">
+                <label class="toggle-row">
+                  <input type="checkbox" id="releaseDescription" class="field-toggle" data-field="releaseDescription">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">Release Description</span>
+                </label>
+                <label class="toggle-row">
+                  <input type="checkbox" id="genre" class="field-toggle" data-field="genre">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">Genre</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Pricing Fields -->
+            <div class="field-category">
+              <h3>💰 Pricing</h3>
+              <div class="field-toggles">
+                <label class="toggle-row">
+                  <input type="checkbox" id="trackPrice" class="field-toggle" data-field="trackPrice">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">Track Price</span>
+                </label>
+                <label class="toggle-row">
+                  <input type="checkbox" id="pricePerSale" class="field-toggle" data-field="pricePerSale">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">Artist Revenue Share</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Track Metadata Fields -->
+            <div class="field-category">
+              <h3>🎵 Track Metadata</h3>
+              <div class="field-toggles">
+                <label class="toggle-row">
+                  <input type="checkbox" id="bpm" class="field-toggle" data-field="bpm">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">BPM</span>
+                </label>
+                <label class="toggle-row">
+                  <input type="checkbox" id="key" class="field-toggle" data-field="key">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">Musical Key</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Credits Fields -->
+            <div class="field-category">
+              <h3>👥 Credits</h3>
+              <div class="field-toggles">
+                <label class="toggle-row">
+                  <input type="checkbox" id="featured" class="field-toggle" data-field="featured">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">Featured Artist</span>
+                </label>
+                <label class="toggle-row">
+                  <input type="checkbox" id="remixer" class="field-toggle" data-field="remixer">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">Remixer</span>
+                </label>
+                <label class="toggle-row">
+                  <input type="checkbox" id="masteredBy" class="field-toggle" data-field="masteredBy">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">Mastered By</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Legal Fields -->
+            <div class="field-category">
+              <h3>⚖️ Legal</h3>
+              <div class="field-toggles">
+                <label class="toggle-row">
+                  <input type="checkbox" id="copyrightHolder" class="field-toggle" data-field="copyrightHolder">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">Copyright Holder</span>
+                </label>
+                <label class="toggle-row">
+                  <input type="checkbox" id="releaseDate" class="field-toggle" data-field="releaseDate">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">Release Date</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Contact/Social Fields -->
+            <div class="field-category">
+              <h3>🔗 Contact & Social</h3>
+              <div class="field-toggles">
+                <label class="toggle-row">
+                  <input type="checkbox" id="socialLinks" class="field-toggle" data-field="socialLinks">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label">Social Media Links</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Livestream Settings Tab -->
+    <div id="livestream-tab" class="tab-content hidden">
+      <div class="card">
+        <div class="card-header">
+          <h2>📡 Livestream Settings</h2>
+          <p class="card-desc">Configure DJ streaming rules and limits</p>
+        </div>
+        <div class="card-body">
+          <div class="settings-section">
+            <h3>📅 Booking Limits</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Default Daily Hours Limit</label>
+                <select id="defaultDailyHours" class="form-select">
+                  <option value="1">1 hour</option>
+                  <option value="2" selected>2 hours</option>
+                  <option value="3">3 hours</option>
+                  <option value="4">4 hours</option>
+                  <option value="6">6 hours</option>
+                  <option value="8">8 hours</option>
+                </select>
+                <span class="form-hint">Maximum streaming hours per DJ per day</span>
+              </div>
+              <div class="form-group">
+                <label>Default Weekly Slots</label>
+                <select id="defaultWeeklySlots" class="form-select">
+                  <option value="1" selected>1 slot</option>
+                  <option value="2">2 slots</option>
+                  <option value="3">3 slots</option>
+                  <option value="5">5 slots</option>
+                  <option value="7">7 slots (daily)</option>
+                </select>
+                <span class="form-hint">Default slots per week (can override per DJ)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>⏱️ Timing Settings</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Stream Key Reveal Time</label>
+                <select id="streamKeyRevealMinutes" class="form-select">
+                  <option value="5">5 minutes before</option>
+                  <option value="10">10 minutes before</option>
+                  <option value="15" selected>15 minutes before</option>
+                  <option value="30">30 minutes before</option>
+                  <option value="60">1 hour before</option>
+                </select>
+                <span class="form-hint">When stream key becomes visible to DJ</span>
+              </div>
+              <div class="form-group">
+                <label>Grace Period After Start</label>
+                <select id="gracePeriodMinutes" class="form-select">
+                  <option value="1">1 minute</option>
+                  <option value="2">2 minutes</option>
+                  <option value="3" selected>3 minutes</option>
+                  <option value="5">5 minutes</option>
+                </select>
+                <span class="form-hint">Time allowed after slot start before key expires</span>
+              </div>
+              <div class="form-group">
+                <label>Session End Countdown</label>
+                <select id="sessionEndCountdown" class="form-select">
+                  <option value="5">5 seconds</option>
+                  <option value="10" selected>10 seconds</option>
+                  <option value="15">15 seconds</option>
+                  <option value="30">30 seconds</option>
+                </select>
+                <span class="form-hint">Countdown shown at end of DJ session</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>🎧 DJ Requirements</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Required Mix Uploads</label>
+                <select id="requiredMixes" class="form-select">
+                  <option value="0">No requirement</option>
+                  <option value="1" selected>1 mix</option>
+                  <option value="2">2 mixes</option>
+                  <option value="3">3 mixes</option>
+                </select>
+                <span class="form-hint">Minimum mixes required to go live</span>
+              </div>
+              <div class="form-group">
+                <label>Required Likes on Best Mix</label>
+                <select id="requiredLikes" class="form-select">
+                  <option value="0">No requirement</option>
+                  <option value="5">5 likes</option>
+                  <option value="10" selected>10 likes</option>
+                  <option value="20">20 likes</option>
+                  <option value="50">50 likes</option>
+                </select>
+                <span class="form-hint">Minimum likes needed on at least one mix</span>
+              </div>
+            </div>
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="allowBypassRequests" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Allow Bypass Requests</span>
+            </label>
+            <span class="form-hint">Let DJs request to bypass requirements</span>
+          </div>
+
+          <div class="settings-section">
+            <h3>🔧 Stream Options</h3>
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="allowGoLiveNow" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Allow "Go Live Now"</span>
+            </label>
+            <span class="form-hint">Let approved DJs go live instantly without booking</span>
+            
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="allowGoLiveAfter" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Allow "Go Live After Current DJ"</span>
+            </label>
+            <span class="form-hint">Let DJs queue to go live after the current stream</span>
+            
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="allowTakeover" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Allow Stream Takeover</span>
+            </label>
+            <span class="form-hint">Let DJs request to take over a live stream</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Release Defaults Tab -->
+    <div id="release-defaults-tab" class="tab-content hidden">
+      <div class="card">
+        <div class="card-header">
+          <h2>📀 Release Defaults</h2>
+          <p class="card-desc">Default settings for new release submissions</p>
+        </div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Default Release Status</label>
+              <select id="defaultReleaseStatus" class="form-select">
+                <option value="pending" selected>Pending Review</option>
+                <option value="draft">Draft</option>
+                <option value="live">Live (Auto-approve)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="toggles-list">
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="autoApprove">
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Auto-approve trusted artists</span>
+            </label>
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="requireArtwork" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Require artwork upload</span>
+            </label>
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="requirePreview" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Require preview clip</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications Tab -->
+    <div id="notifications-tab" class="tab-content hidden">
+      <div class="card">
+        <div class="card-header">
+          <h2>🔔 Notification Settings</h2>
+          <p class="card-desc">Configure admin notifications</p>
+        </div>
+        <div class="card-body">
+          <div class="toggles-list">
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="emailOnNewRelease" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Email on new release submission</span>
+            </label>
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="emailOnArtistEdit">
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Email when artist edits release</span>
+            </label>
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="emailOnBypassRequest" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Email on DJ bypass request</span>
+            </label>
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="emailOnDJGoLive">
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Email when DJ goes live</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="save-section">
+      <div id="saveStatus" class="save-status"></div>
+      <button id="saveSettings" class="save-btn">
+        <span class="save-text">💾 Save All Settings</span>
+        <span class="saving-text hidden">Saving...</span>
+      </button>
+    </div>
+  </div>
+</AdminLayout>
+
+<style is:global>
+  .settings-page {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .settings-header {
+    margin-bottom: 2rem;
+  }
+
+  .settings-header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .settings-header p {
+    color: #666;
+    margin: 0;
+  }
+
+  .settings-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0;
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    background: transparent;
+    border: none;
+    padding: 0.75rem 1.25rem;
+    font-weight: 600;
+    color: #666;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+  }
+
+  .tab-btn:hover {
+    color: #111;
+  }
+
+  .tab-btn.active {
+    color: #dc2626;
+    border-bottom-color: #dc2626;
+  }
+
+  .tab-content {
+    display: block;
+  }
+
+  .tab-content.hidden {
+    display: none;
+  }
+
+  .card {
+    background: #fff;
+    border: 2px solid #111;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .card-header h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    margin: 0 0 0.25rem 0;
+  }
+
+  .card-desc {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0;
+  }
+
+  .card-body {
+    padding: 1.25rem;
+  }
+
+  .quick-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .quick-btn {
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .quick-btn:hover {
+    background: #e5e5e5;
+  }
+
+  .fields-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .field-category {
+    background: #fafafa;
+    padding: 1rem;
+    border-radius: 8px;
+  }
+
+  .field-category h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 0.75rem 0;
+    color: #333;
+  }
+
+  .field-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+
+  .toggle-row:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  .toggle-row.standalone {
+    padding: 0.75rem 0;
+  }
+
+  .toggle-row input[type="checkbox"] {
+    display: none;
+  }
+
+  .toggle-slider {
+    width: 44px;
+    height: 24px;
+    background: #ccc;
+    border-radius: 12px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .toggle-slider::after {
+    content: '';
+    width: 20px;
+    height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s;
+  }
+
+  .toggle-row input:checked + .toggle-slider {
+    background: #22c55e;
+  }
+
+  .toggle-row input:checked + .toggle-slider::after {
+    transform: translateX(20px);
+  }
+
+  .toggle-label {
+    font-size: 0.9rem;
+  }
+
+  .settings-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .settings-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  .settings-section h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+    color: #333;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .form-select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background: #fff;
+  }
+
+  .form-hint {
+    font-size: 0.75rem;
+    color: #888;
+  }
+
+  .toggles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .save-section {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 0;
+  }
+
+  .save-status {
+    font-size: 0.9rem;
+    color: #22c55e;
+  }
+
+  .save-btn {
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    padding: 0.75rem 2rem;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .save-btn:hover {
+    background: #b91c1c;
+  }
+
+  .save-btn:disabled {
+    background: #999;
+    cursor: not-allowed;
+  }
+
+  .save-btn .hidden {
+    display: none;
+  }
+
+  @media (max-width: 640px) {
+    .settings-tabs {
+      gap: 0;
+    }
+
+    .tab-btn {
+      flex: 1;
+      text-align: center;
+      padding: 0.6rem 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .fields-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  const ADMIN_KEY = 'fresh-wax-admin-2024';
+  
+  // Default values
+  const defaultSettings = {
+    artistEditableFields: {
+      releaseDescription: true,
+      trackPrice: true,
+      pricePerSale: false,
+      bpm: true,
+      key: true,
+      genre: false,
+      releaseDate: false,
+      masteredBy: false,
+      copyrightHolder: false,
+      socialLinks: false,
+      featured: true,
+      remixer: true
+    },
+    livestream: {
+      defaultDailyHours: 2,
+      defaultWeeklySlots: 1,
+      streamKeyRevealMinutes: 15,
+      gracePeriodMinutes: 3,
+      sessionEndCountdown: 10,
+      requiredMixes: 1,
+      requiredLikes: 10,
+      allowBypassRequests: true,
+      allowGoLiveNow: true,
+      allowGoLiveAfter: true,
+      allowTakeover: true
+    },
+    releaseDefaults: {
+      defaultStatus: 'pending',
+      autoApprove: false,
+      requireArtwork: true,
+      requirePreview: true
+    },
+    notifications: {
+      emailOnNewRelease: true,
+      emailOnArtistEdit: false,
+      emailOnBypassRequest: true,
+      emailOnDJGoLive: false
+    }
+  };
+
+  let currentSettings = JSON.parse(JSON.stringify(defaultSettings));
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+      
+      btn.classList.add('active');
+      document.getElementById(`${btn.dataset.tab}-tab`).classList.remove('hidden');
+    });
+  });
+
+  // Load settings on page load
+  async function loadSettings() {
+    try {
+      const response = await fetch('/api/admin/update-settings?action=load');
+      const result = await response.json();
+      
+      if (result.success && result.settings) {
+        currentSettings = { ...defaultSettings, ...result.settings };
+        
+        // Merge nested objects properly
+        if (result.settings.artistEditableFields) {
+          currentSettings.artistEditableFields = { ...defaultSettings.artistEditableFields, ...result.settings.artistEditableFields };
+        }
+        if (result.settings.livestream) {
+          currentSettings.livestream = { ...defaultSettings.livestream, ...result.settings.livestream };
+        }
+        if (result.settings.releaseDefaults) {
+          currentSettings.releaseDefaults = { ...defaultSettings.releaseDefaults, ...result.settings.releaseDefaults };
+        }
+        if (result.settings.notifications) {
+          currentSettings.notifications = { ...defaultSettings.notifications, ...result.settings.notifications };
+        }
+      }
+      
+      applySettingsToUI();
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      applySettingsToUI();
+    }
+  }
+
+  function applySettingsToUI() {
+    // Artist editable fields
+    Object.entries(currentSettings.artistEditableFields).forEach(([field, enabled]) => {
+      const checkbox = document.getElementById(field);
+      if (checkbox) checkbox.checked = enabled;
+    });
+
+    // Livestream settings
+    Object.entries(currentSettings.livestream).forEach(([key, value]) => {
+      const el = document.getElementById(key);
+      if (el) {
+        if (el.type === 'checkbox') {
+          el.checked = value;
+        } else {
+          el.value = value;
+        }
+      }
+    });
+
+    // Release defaults
+    Object.entries(currentSettings.releaseDefaults).forEach(([key, value]) => {
+      const el = document.getElementById(key === 'defaultStatus' ? 'defaultReleaseStatus' : key);
+      if (el) {
+        if (el.type === 'checkbox') {
+          el.checked = value;
+        } else {
+          el.value = value;
+        }
+      }
+    });
+
+    // Notifications
+    Object.entries(currentSettings.notifications).forEach(([key, value]) => {
+      const checkbox = document.getElementById(key);
+      if (checkbox) checkbox.checked = value;
+    });
+  }
+
+  function collectSettingsFromUI() {
+    // Artist editable fields
+    const artistEditableFields = {};
+    document.querySelectorAll('.field-toggle').forEach(checkbox => {
+      artistEditableFields[checkbox.dataset.field] = checkbox.checked;
+    });
+
+    // Livestream settings
+    const livestream = {
+      defaultDailyHours: parseInt(document.getElementById('defaultDailyHours').value),
+      defaultWeeklySlots: parseInt(document.getElementById('defaultWeeklySlots').value),
+      streamKeyRevealMinutes: parseInt(document.getElementById('streamKeyRevealMinutes').value),
+      gracePeriodMinutes: parseInt(document.getElementById('gracePeriodMinutes').value),
+      sessionEndCountdown: parseInt(document.getElementById('sessionEndCountdown').value),
+      requiredMixes: parseInt(document.getElementById('requiredMixes').value),
+      requiredLikes: parseInt(document.getElementById('requiredLikes').value),
+      allowBypassRequests: document.getElementById('allowBypassRequests').checked,
+      allowGoLiveNow: document.getElementById('allowGoLiveNow').checked,
+      allowGoLiveAfter: document.getElementById('allowGoLiveAfter').checked,
+      allowTakeover: document.getElementById('allowTakeover').checked
+    };
+
+    // Release defaults
+    const releaseDefaults = {
+      defaultStatus: document.getElementById('defaultReleaseStatus').value,
+      autoApprove: document.getElementById('autoApprove').checked,
+      requireArtwork: document.getElementById('requireArtwork').checked,
+      requirePreview: document.getElementById('requirePreview').checked
+    };
+
+    // Notifications
+    const notifications = {
+      emailOnNewRelease: document.getElementById('emailOnNewRelease').checked,
+      emailOnArtistEdit: document.getElementById('emailOnArtistEdit').checked,
+      emailOnBypassRequest: document.getElementById('emailOnBypassRequest').checked,
+      emailOnDJGoLive: document.getElementById('emailOnDJGoLive').checked
+    };
+
+    return { artistEditableFields, livestream, releaseDefaults, notifications };
+  }
+
+  // Quick actions
+  document.getElementById('enableAll').addEventListener('click', () => {
+    document.querySelectorAll('.field-toggle').forEach(cb => cb.checked = true);
+  });
+
+  document.getElementById('disableAll').addEventListener('click', () => {
+    document.querySelectorAll('.field-toggle').forEach(cb => cb.checked = false);
+  });
+
+  document.getElementById('resetDefaults').addEventListener('click', () => {
+    currentSettings = JSON.parse(JSON.stringify(defaultSettings));
+    applySettingsToUI();
+  });
+
+  // Save settings
+  document.getElementById('saveSettings').addEventListener('click', async () => {
+    const btn = document.getElementById('saveSettings');
+    const status = document.getElementById('saveStatus');
+    
+    btn.disabled = true;
+    btn.querySelector('.save-text').classList.add('hidden');
+    btn.querySelector('.saving-text').classList.remove('hidden');
+    status.textContent = '';
+
+    try {
+      const settings = collectSettingsFromUI();
+      
+      const response = await fetch('/api/admin/update-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save',
+          settings,
+          adminKey: ADMIN_KEY
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        status.textContent = '✓ Settings saved!';
+        status.style.color = '#22c55e';
+      } else {
+        status.textContent = result.error || 'Failed to save';
+        status.style.color = '#dc2626';
+      }
+    } catch (error) {
+      status.textContent = 'Error saving settings';
+      status.style.color = '#dc2626';
+      console.error('Save error:', error);
+    } finally {
+      btn.disabled = false;
+      btn.querySelector('.save-text').classList.remove('hidden');
+      btn.querySelector('.saving-text').classList.add('hidden');
+      
+      setTimeout(() => { status.textContent = ''; }, 3000);
+    }
+  });
+
+  // Load on page ready
+  loadSettings();
+</script>

@@ -1,9 +1,11 @@
 // src/pages/api/livestream/chat.ts
 // Live stream chat - send messages, get recent messages
+// Uses Pusher for real-time delivery (reduces Firebase reads)
 
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { createHmac, createHash } from 'crypto';
 
 if (!getApps().length) {
   initializeApp({
@@ -17,12 +19,61 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-// Get recent chat messages
+// Pusher configuration (from .env)
+const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
+const PUSHER_KEY = import.meta.env.PUBLIC_PUSHER_KEY;
+const PUSHER_SECRET = import.meta.env.PUSHER_SECRET;
+const PUSHER_CLUSTER = import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu';
+
+// Trigger Pusher event
+async function triggerPusher(channel: string, event: string, data: any): Promise<boolean> {
+  try {
+    const body = JSON.stringify({
+      name: event,
+      channel: channel,
+      data: JSON.stringify(data)
+    });
+    
+    const bodyMd5 = createHash('md5').update(body).digest('hex');
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    
+    const params = new URLSearchParams({
+      auth_key: PUSHER_KEY,
+      auth_timestamp: timestamp,
+      auth_version: '1.0',
+      body_md5: bodyMd5
+    });
+    params.sort();
+    
+    const stringToSign = `POST\n/apps/${PUSHER_APP_ID}/events\n${params.toString()}`;
+    const signature = createHmac('sha256', PUSHER_SECRET).update(stringToSign).digest('hex');
+    
+    const url = `https://api-${PUSHER_CLUSTER}.pusher.com/apps/${PUSHER_APP_ID}/events?${params.toString()}&auth_signature=${signature}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+    
+    if (!response.ok) {
+      console.error('[Pusher] Failed:', response.status, await response.text());
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('[Pusher] Error:', error);
+    return false;
+  }
+}
+
+// Get recent chat messages (initial load only - no real-time)
 export const GET: APIRoute = async ({ request }) => {
   try {
     const url = new URL(request.url);
     const streamId = url.searchParams.get('streamId');
-    const limit = parseInt(url.searchParams.get('limit') || '50');
+    const limit = parseInt(url.searchParams.get('limit') || '20');
     const after = url.searchParams.get('after'); // For pagination
     
     if (!streamId) {
@@ -138,6 +189,13 @@ export const POST: APIRoute = async ({ request }) => {
     };
     
     const messageRef = await db.collection('livestream-chat').add(chatMessage);
+    
+    // Trigger Pusher for real-time delivery to all connected clients
+    // This replaces Firebase onSnapshot - no more reads per client!
+    await triggerPusher(`stream-${streamId}`, 'new-message', {
+      id: messageRef.id,
+      ...chatMessage
+    });
     
     return new Response(JSON.stringify({
       success: true,

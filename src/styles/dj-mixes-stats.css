@@ -1,0 +1,79 @@
+/* DJ Mixes Performance - Compact Stats Fix */
+
+/* Remove individual stat box borders, make inline */
+.dj-mixes-performance .stats-row,
+.dj-mixes-stats,
+.performance-stats-grid {
+  display: flex;
+  gap: 0;
+  padding: 1rem 1.25rem;
+}
+
+/* Each stat - no border, compact */
+.dj-mixes-performance .stat-box,
+.dj-mixes-stats .stat-item,
+.performance-stat-item {
+  flex: 1;
+  padding: 0 1.5rem;
+  border: none !important;
+  background: transparent !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dj-mixes-performance .stat-box:first-child,
+.dj-mixes-stats .stat-item:first-child,
+.performance-stat-item:first-child {
+  padding-left: 0;
+}
+
+.dj-mixes-performance .stat-box:last-child,
+.dj-mixes-stats .stat-item:last-child,
+.performance-stat-item:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+/* Label */
+.dj-mixes-performance .stat-label,
+.dj-mixes-stats .stat-label,
+.performance-stat-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+/* Value */
+.dj-mixes-performance .stat-value,
+.dj-mixes-stats .stat-value,
+.performance-stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .dj-mixes-performance .stats-row,
+  .dj-mixes-stats,
+  .performance-stats-grid {
+    flex-wrap: wrap;
+  }
+  
+  .dj-mixes-performance .stat-box,
+  .dj-mixes-stats .stat-item,
+  .performance-stat-item {
+    flex: 0 0 50%;
+    padding: 0.75rem;
+    border-right: none;
+  }
+  
+  .dj-mixes-performance .stat-box:nth-child(odd),
+  .dj-mixes-stats .stat-item:nth-child(odd),
+  .performance-stat-item:nth-child(odd) {
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}

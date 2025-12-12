@@ -170,7 +170,7 @@ export const prerender = false;
         try {
           // Upload with progress tracking
           const formData = new FormData();
-          formData.append('file', file);
+          formData.append('zipFile', file);
 
           const xhr = new XMLHttpRequest();
           
@@ -196,8 +196,8 @@ export const prerender = false;
               }
             } else {
               try {
-                const error = JSON.parse(xhr.responseText);
-                showError(error.message || 'Upload failed');
+                const errorResponse = JSON.parse(xhr.responseText);
+                showError(errorResponse.error || errorResponse.message || 'Upload failed');
               } catch (e) {
                 showError('Upload failed: ' + xhr.statusText);
               }
@@ -229,18 +229,18 @@ export const prerender = false;
                 <div class="result-info">
                   <h3>${release.releaseName || 'Unknown Release'}</h3>
                   <p>by ${release.artistName || 'Unknown Artist'}</p>
-                  <span class="badge badge-live">Ready to Publish</span>
+                  <span class="badge badge-pending">Pending Review</span>
                 </div>
               </div>
               
               <div class="result-details mt-3">
                 <div class="detail-row">
                   <span class="detail-label">Catalogue #</span>
-                  <span class="detail-value">${release.catalogNumber || '-'}</span>
+                  <span class="detail-value">${release.catalogNumber || 'Not set'}</span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Tracks</span>
-                  <span class="detail-value">${release.tracks?.length || 0} tracks</span>
+                  <span class="detail-value">${release.tracks?.length || release.trackCount || 0} tracks</span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Release ID</span>
@@ -256,9 +256,13 @@ export const prerender = false;
                   </ol>
                 </div>
               ` : ''}
+              
+              <div class="result-note mt-3">
+                <strong>⚠️ Note:</strong> This release is pending review. Go to <a href="/admin/releases/manage">Manage Releases</a> to review, edit details, and publish it live.
+              </div>
             </div>
           `;
-          showToast('Release uploaded successfully!');
+          showToast('Release uploaded successfully! Awaiting review.');
         } else {
           showError(result.message || 'Processing failed');
         }
@@ -283,7 +287,7 @@ export const prerender = false;
   </Fragment>
 </AdminLayout>
 
-<style>
+<style is:global>
   .drop-zone {
     border: 3px dashed var(--border-medium);
     padding: 3rem 2rem;
@@ -471,6 +475,44 @@ export const prerender = false;
   .tracks-list li {
     padding: 0.25rem 0;
     font-size: 0.9rem;
+  }
+  
+  .badge-pending {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 4px;
+  }
+  
+  .badge-live {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 4px;
+  }
+  
+  .result-note {
+    padding: 1rem;
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    font-size: 0.875rem;
+    color: #92400e;
+  }
+  
+  .result-note a {
+    color: #92400e;
+    font-weight: 600;
+    text-decoration: underline;
   }
   
   .hidden {

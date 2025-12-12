@@ -301,7 +301,7 @@ export const prerender = false;
     </div>
   </div>
 
-<style>
+<style is:global>
   * {
     margin: 0;
     padding: 0;
@@ -310,8 +310,8 @@ export const prerender = false;
   
   body {
     font-family: 'Inter', sans-serif;
-    background: #f5f5f5;
-    color: #111;
+    background: linear-gradient(to bottom, #000000, #111827, #1f2937);
+    color: #fff;
     min-height: 100vh;
   }
   
@@ -326,14 +326,15 @@ export const prerender = false;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: #f5f5f5;
+    background: linear-gradient(to bottom, #000000, #111827);
     gap: 1rem;
+    color: #9ca3af;
   }
   
   .loading-spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid #e5e7eb;
+    border: 3px solid #333;
     border-top-color: #dc2626;
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -377,7 +378,7 @@ export const prerender = false;
   
   .speed-test-btn {
     padding: 0.6rem 1.25rem;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
     border: none;
     border-radius: 8px;
     color: #fff;
@@ -389,7 +390,7 @@ export const prerender = false;
   
   .speed-test-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
   }
   
   /* Layout */
@@ -401,8 +402,8 @@ export const prerender = false;
   
   /* Speed Results Card */
   .speed-results-card {
-    background: #fff;
-    border: 2px solid #3b82f6;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #dc2626;
     border-radius: 12px;
     padding: 1.5rem;
     margin-bottom: 2rem;
@@ -417,7 +418,7 @@ export const prerender = false;
   
   .results-header h3 {
     font-size: 1.1rem;
-    color: #111;
+    color: #fff;
   }
   
   .close-results-btn {
@@ -428,7 +429,7 @@ export const prerender = false;
     cursor: pointer;
   }
   
-  .close-results-btn:hover { color: #111; }
+  .close-results-btn:hover { color: #fff; }
   
   .speed-results-grid {
     display: grid;
@@ -444,12 +445,12 @@ export const prerender = false;
   }
   
   .speed-result-box.download {
-    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    background: rgba(16, 185, 129, 0.15);
     border: 2px solid #10b981;
   }
   
   .speed-result-box.upload {
-    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
     border: 2px solid #3b82f6;
   }
   
@@ -457,7 +458,7 @@ export const prerender = false;
     display: block;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #666;
+    color: #9ca3af;
     text-transform: uppercase;
     margin-bottom: 0.25rem;
   }
@@ -465,18 +466,18 @@ export const prerender = false;
   .result-value {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 1.75rem;
-    color: #111;
+    color: #fff;
   }
   
   .recommendation-section h4 {
     font-size: 0.95rem;
     margin-bottom: 0.75rem;
-    color: #111;
+    color: #fff;
   }
   
   .rec-card {
-    background: #f9fafb;
-    border: 2px solid #e5e7eb;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
     border-radius: 8px;
     padding: 0.75rem;
     margin-bottom: 0.5rem;
@@ -490,7 +491,7 @@ export const prerender = false;
   }
   
   .rec-icon { font-size: 1.1rem; }
-  .rec-title { flex: 1; font-weight: 600; font-size: 0.9rem; }
+  .rec-title { flex: 1; font-weight: 600; font-size: 0.9rem; color: #fff; }
   
   .rec-status {
     padding: 0.15rem 0.6rem;
@@ -506,7 +507,7 @@ export const prerender = false;
   
   .rec-details {
     font-size: 0.8rem;
-    color: #666;
+    color: #9ca3af;
   }
   
   .rec-details ul {
@@ -515,7 +516,7 @@ export const prerender = false;
   }
   
   .rec-details li { margin-bottom: 0.2rem; }
-  .rec-details strong { color: #111; }
+  .rec-details strong { color: #fff; }
   
   /* Testing Overlay */
   .testing-overlay {
@@ -529,7 +530,7 @@ export const prerender = false;
   }
   
   .testing-content {
-    background: #fff;
+    background: linear-gradient(to bottom, #1f2937, #111827);
     padding: 3rem;
     border-radius: 16px;
     text-align: center;
@@ -538,8 +539,8 @@ export const prerender = false;
   .speed-spinner {
     width: 60px;
     height: 60px;
-    border: 4px solid #e5e7eb;
-    border-top-color: #3b82f6;
+    border: 4px solid #374151;
+    border-top-color: #dc2626;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 1.5rem;
@@ -548,7 +549,7 @@ export const prerender = false;
   .testing-content h3 {
     font-size: 1.25rem;
     margin-bottom: 1rem;
-    color: #111;
+    color: #fff;
   }
   
   .countdown-display {
@@ -560,12 +561,12 @@ export const prerender = false;
   .countdown-display #testCountdown {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 3rem;
-    color: #3b82f6;
+    color: #dc2626;
     line-height: 1;
   }
   
   .countdown-display span:last-child {
-    color: #666;
+    color: #9ca3af;
     font-size: 0.9rem;
   }
   
@@ -578,24 +579,24 @@ export const prerender = false;
   
   .tab-btn {
     padding: 0.75rem 1.5rem;
-    background: #fff;
-    border: 2px solid #e5e7eb;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
     border-radius: 8px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    color: #666;
+    color: #9ca3af;
     transition: all 0.2s;
   }
   
   .tab-btn:hover {
-    border-color: #111;
+    border-color: #fff;
   }
   
   .tab-btn.active {
     background: #111;
     color: #fff;
-    border-color: #111;
+    border-color: #fff;
   }
   
   .tab-btn.butt-tab {
@@ -604,8 +605,8 @@ export const prerender = false;
   
   /* Instructions Panel */
   .instructions-panel {
-    background: #fff;
-    border: 2px solid #e5e7eb;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
     border-radius: 12px;
     overflow: hidden;
   }
@@ -615,8 +616,8 @@ export const prerender = false;
     align-items: center;
     gap: 1rem;
     padding: 1.5rem;
-    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-    border-bottom: 2px solid #e5e7eb;
+    background: linear-gradient(135deg, #374151, #1f2937);
+    border-bottom: 2px solid #374151;
   }
   
   .software-icon {
@@ -628,7 +629,7 @@ export const prerender = false;
   .butt-icon {
     width: 48px;
     height: 48px;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -643,7 +644,7 @@ export const prerender = false;
   }
   
   .panel-header p {
-    color: #666;
+    color: #9ca3af;
     font-size: 0.9rem;
   }
   
@@ -657,7 +658,7 @@ export const prerender = false;
     gap: 1rem;
     padding-bottom: 1.5rem;
     margin-bottom: 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid #374151;
   }
   
   .step.final {
@@ -686,11 +687,11 @@ export const prerender = false;
   .step-content h3 {
     font-size: 1.1rem;
     margin-bottom: 0.5rem;
-    color: #111;
+    color: #fff;
   }
   
   .step-content p {
-    color: #555;
+    color: #9ca3af;
     font-size: 0.95rem;
     margin-bottom: 0.75rem;
   }
@@ -714,8 +715,8 @@ export const prerender = false;
   }
   
   .settings-box {
-    background: #f9fafb;
-    border: 2px solid #e5e7eb;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
     border-radius: 8px;
     padding: 1rem;
   }
@@ -725,7 +726,7 @@ export const prerender = false;
     align-items: center;
     gap: 0.75rem;
     padding: 0.5rem 0;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid #374151;
     flex-wrap: wrap;
   }
   
@@ -735,16 +736,17 @@ export const prerender = false;
   
   .setting-label {
     font-weight: 600;
-    color: #666;
+    color: #9ca3af;
     min-width: 100px;
   }
   
   .setting-value {
-    color: #111;
+    color: #fff;
   }
   
   .setting-value.highlight {
-    background: #fef3c7;
+    background: #dc2626;
+    color: #fff;
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
     font-weight: 600;
@@ -766,19 +768,19 @@ export const prerender = false;
   
   .copy-small-btn {
     padding: 0.25rem 0.6rem;
-    background: #e5e7eb;
+    background: #374151;
     border: none;
     border-radius: 4px;
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
-    color: #666;
+    color: #9ca3af;
     margin-left: auto;
   }
   
   .copy-small-btn:hover {
     background: #d1d5db;
-    color: #111;
+    color: #fff;
   }
   
   /* Mobile */

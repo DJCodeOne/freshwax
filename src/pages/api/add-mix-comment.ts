@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { clearCache } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -140,9 +141,9 @@ function validateContent(text: string): { valid: boolean; error?: string } {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const { mixId, comment, userName, userId, gifUrl } = await request.json();
+    const { mixId, comment, userName, userId, gifUrl, avatarUrl } = await request.json();
 
-    log.info('[add-mix-comment] Received request:', { mixId, userName, userId, hasGif: !!gifUrl });
+    log.info('[add-mix-comment] Received request:', { mixId, userName, userId, hasGif: !!gifUrl, hasAvatar: !!avatarUrl });
 
     if (!userId) {
       return new Response(JSON.stringify({ 
@@ -239,6 +240,7 @@ export const POST: APIRoute = async ({ request }) => {
       id: 'comment_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       userId,
       userName: userName.trim(),
+      avatarUrl: avatarUrl || null,
       comment: comment?.trim() || '',
       gifUrl: gifUrl || null,
       timestamp: new Date().toISOString(),
@@ -255,6 +257,9 @@ export const POST: APIRoute = async ({ request }) => {
       updatedAt: new Date().toISOString()
     });
 
+    // Invalidate cache for this mix so fresh data is served
+    clearCache(`doc:dj-mixes:${mixId}`);
+
     log.info('[add-mix-comment] Comment saved');
 
     return new Response(JSON.stringify({
@@ -263,7 +268,10 @@ export const POST: APIRoute = async ({ request }) => {
       commentCount: mixData.comments.length
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      }
     });
 
   } catch (error) {

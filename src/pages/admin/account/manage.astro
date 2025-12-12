@@ -1,604 +1,889 @@
-<!-- src/pages/admin/account/manage.astro -->
 ---
+// src/pages/admin/account/manage.astro
+// Partner Management - Artists and Merch Suppliers only
+// Customers and DJs are managed in User Management
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+export const prerender = false;
 ---
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Customer Management - Fresh Wax Admin</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-background: #ffffff;
-min-height: 100vh;
-}
-.admin-logo-header {
-background: #000;
-padding: 20px;
-margin-bottom: 30px;
-display: flex;
-justify-content: center;
-border: 3px solid #000;
-}
-.admin-logo {
-height: 80px;
-width: auto;
-background: #fff;
-padding: 10px 20px;
-}
-.admin-container {
-max-width: 1400px;
-margin: 0 auto;
-padding: 20px;
-background: #ffffff;
-}
-.admin-header {
-background: #fff;
-padding: 30px;
-margin-bottom: 30px;
-border: 3px solid #000;
-display: flex;
-justify-content: space-between;
-align-items: center;
-flex-wrap: wrap;
-gap: 15px;
-}
-.admin-header h1 {
-font-size: 32px;
-color: #000;
-margin: 0;
-font-weight: 900;
-text-transform: uppercase;
-}
-.admin-back-btn {
-padding: 12px 24px;
-background: #000;
-color: white;
-border: 3px solid #000;
-font-size: 14px;
-font-weight: 700;
-cursor: pointer;
-text-decoration: none;
-text-transform: uppercase;
-transition: all 0.2s;
-}
-.admin-back-btn:hover {
-background: #fff;
-color: #000;
-transform: translate(-4px, -4px);
-box-shadow: 8px 8px 0 #000;
-}
-.admin-stats-row {
-display: grid;
-grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-gap: 20px;
-margin-bottom: 30px;
-}
-.admin-stat-card {
-background: white;
-padding: 20px;
-border: 3px solid #000;
-transition: all 0.2s;
-}
-.admin-stat-card:hover {
-transform: translate(-4px, -4px);
-box-shadow: 8px 8px 0 #000;
-}
-.admin-stat-label {
-font-size: 11px;
-color: #666;
-margin-bottom: 8px;
-font-weight: 700;
-text-transform: uppercase;
-letter-spacing: 1px;
-}
-.admin-stat-value {
-font-size: 32px;
-font-weight: 900;
-color: #000;
-}
-.admin-toolbar {
-background: #fff;
-padding: 20px;
-margin-bottom: 20px;
-border: 3px solid #000;
-display: flex;
-gap: 15px;
-flex-wrap: wrap;
-align-items: center;
-}
-.admin-search {
-flex: 1;
-min-width: 250px;
-padding: 12px;
-border: 3px solid #000;
-font-size: 14px;
-font-weight: 600;
-}
-.admin-table-container {
-background: #fff;
-border: 3px solid #000;
-overflow-x: auto;
-}
-.admin-table {
-width: 100%;
-border-collapse: collapse;
-}
-.admin-table thead {
-background: #000;
-color: #fff;
-}
-.admin-table th {
-padding: 15px;
-text-align: left;
-font-weight: 900;
-text-transform: uppercase;
-font-size: 12px;
-letter-spacing: 1px;
-}
-.admin-table td {
-padding: 15px;
-border-bottom: 2px solid #e0e0e0;
-font-weight: 600;
-background: #fff;
-}
-.admin-table tbody tr:hover {
-background: #f9f9f9;
-}
-.admin-table tbody tr:hover td {
-background: #f9f9f9;
-}
-.admin-action-btns {
-display: flex;
-gap: 8px;
-}
-.admin-btn-icon {
-width: 35px;
-height: 35px;
-display: flex;
-align-items: center;
-justify-content: center;
-border: 2px solid #000;
-background: #fff;
-cursor: pointer;
-transition: all 0.2s;
-font-weight: 700;
-}
-.admin-btn-icon:hover {
-background: #000;
-color: #fff;
-transform: scale(1.1);
-}
-.admin-modal-overlay {
-display: none;
-position: fixed;
-top: 0;
-left: 0;
-right: 0;
-bottom: 0;
-background: rgba(0,0,0,0.8);
-z-index: 1000;
-padding: 20px;
-overflow-y: auto;
-}
-.admin-modal-overlay.active {
-display: flex;
-align-items: center;
-justify-content: center;
-}
-.admin-modal {
-background: #fff;
-border: 3px solid #000;
-max-width: 700px;
-width: 100%;
-max-height: 90vh;
-overflow-y: auto;
-}
-.admin-modal-header {
-background: #000;
-color: #fff;
-padding: 20px;
-display: flex;
-justify-content: space-between;
-align-items: center;
-}
-.admin-modal-header h2 {
-margin: 0;
-font-size: 24px;
-font-weight: 900;
-text-transform: uppercase;
-}
-.admin-modal-close {
-background: none;
-border: none;
-color: #fff;
-font-size: 30px;
-cursor: pointer;
-line-height: 1;
-}
-.admin-modal-body {
-padding: 30px;
-background: #fff;
-}
-.admin-detail-grid {
-display: grid;
-gap: 20px;
-}
-.admin-detail-item {
-padding-bottom: 15px;
-border-bottom: 2px solid #e0e0e0;
-}
-.admin-detail-label {
-font-size: 11px;
-font-weight: 700;
-text-transform: uppercase;
-color: #666;
-letter-spacing: 1px;
-margin-bottom: 5px;
-}
-.admin-detail-value {
-font-size: 16px;
-font-weight: 600;
-color: #000;
-}
-.admin-orders-list {
-margin-top: 20px;
-}
-.admin-order-item {
-padding: 15px;
-border: 2px solid #000;
-margin-bottom: 10px;
-background: #f9f9f9;
-}
-.admin-loading {
-text-align: center;
-padding: 60px;
-background: #fff;
-}
-.admin-spinner {
-width: 50px;
-height: 50px;
-border: 3px solid #e0e0e0;
-border-top: 3px solid #000;
-border-radius: 50%;
-animation: spin 1s linear infinite;
-margin: 0 auto 20px;
-}
-@keyframes spin {
-0% { transform: rotate(0deg); }
-100% { transform: rotate(360deg); }
-}
-@media (max-width: 768px) {
-.admin-container { padding: 15px; }
-.admin-logo { height: 60px; }
-.admin-header { flex-direction: column; align-items: flex-start; }
-.admin-header h1 { font-size: 24px; }
-.admin-stats-row { grid-template-columns: 1fr; }
-.admin-toolbar { flex-direction: column; }
-.admin-search { width: 100%; }
-.admin-table-container { overflow-x: scroll; }
-.admin-table { min-width: 700px; }
-}
+
+<AdminLayout title="Partner Management" activeNav="partners">
+  <Fragment slot="actions">
+    <a href="/admin" class="btn btn-secondary">← Dashboard</a>
+  </Fragment>
+
+  <!-- Stats Row -->
+  <div class="stats-row" id="statsRow">
+    <div class="stat-card">
+      <div class="stat-value" id="totalPartners">-</div>
+      <div class="stat-label">Total Partners</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="totalArtists">-</div>
+      <div class="stat-label">Artists</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="totalMerch">-</div>
+      <div class="stat-label">Merch Suppliers</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="pendingApproval">-</div>
+      <div class="stat-label">Pending Approval</div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-body" style="padding: 1rem 1.5rem;">
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+        <input 
+          type="text" 
+          id="searchInput" 
+          class="form-input" 
+          placeholder="Search by name or email..." 
+          style="flex: 1; min-width: 250px;"
+        />
+        <select id="roleFilter" class="form-select" style="min-width: 150px;">
+          <option value="">All Partners</option>
+          <option value="artist">Artists</option>
+          <option value="merch">Merch Suppliers</option>
+          <option value="pending">Pending Approval</option>
+          <option value="approved">Approved</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loadingState" class="card">
+    <div class="card-body" style="text-align: center; padding: 3rem;">
+      <div class="spinner"></div>
+      <p>Loading partners...</p>
+    </div>
+  </div>
+
+  <!-- Partners Table -->
+  <div id="customersTable" class="card" style="display: none;">
+    <div class="card-header">
+      <h2>Partners</h2>
+      <span class="text-muted" id="userCount">0 partners</span>
+    </div>
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Partner</th>
+            <th>Roles</th>
+            <th>Approval</th>
+            <th>Source</th>
+            <th>Status</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="customersTableBody">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Edit User Modal -->
+  <div id="editModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Edit User Permissions</h2>
+        <button class="modal-close" onclick="closeEditModal()">×</button>
+      </div>
+      <div class="modal-body" id="editModalBody">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- View User Modal -->
+  <div id="viewModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>User Details</h2>
+        <button class="modal-close" onclick="closeViewModal()">×</button>
+      </div>
+      <div class="modal-body" id="viewModalBody">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<style is:global>
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .stat-card {
+    background: #fff;
+    border: 3px solid #000;
+    padding: 1.25rem;
+    text-align: center;
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 900;
+  }
+  
+  .stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+    margin-top: 0.25rem;
+  }
+  
+  .form-input,
+  .form-select {
+    padding: 0.75rem 1rem;
+    border: 2px solid #000;
+    font-size: 0.9rem;
+  }
+  
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e0e0e0;
+    border-top: 3px solid #000;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 1000;
+    padding: 2rem;
+    overflow-y: auto;
+  }
+  
+  .modal-overlay.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .modal {
+    background: #fff;
+    border: 3px solid #000;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .modal-header {
+    background: #000;
+    color: #fff;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  
+  .modal-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.75rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+  
+  .modal-body {
+    padding: 1.5rem;
+  }
+  
+  .permission-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .permission-group h3 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #eee;
+  }
+  
+  .permission-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .permission-item:last-child {
+    border-bottom: none;
+  }
+  
+  .permission-label {
+    font-weight: 600;
+  }
+  
+  .permission-desc {
+    font-size: 0.8rem;
+    color: #666;
+  }
+  
+  .toggle-switch {
+    position: relative;
+    width: 50px;
+    height: 26px;
+  }
+  
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: #ccc;
+    transition: 0.3s;
+    border-radius: 26px;
+  }
+  
+  .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    transition: 0.3s;
+    border-radius: 50%;
+  }
+  
+  input:checked + .toggle-slider {
+    background: #16a34a;
+  }
+  
+  input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+  }
+  
+  .role-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .role-admin { background: #dc2626; color: #fff; }
+  .role-customer { background: #e5e5e5; color: #000; }
+  .role-artist { background: #2563eb; color: #fff; }
+  .role-dj { background: #7c3aed; color: #fff; }
+  .role-supplier { background: #059669; color: #fff; }
+  
+  .status-active { color: #16a34a; }
+  .status-disabled { color: #dc2626; }
+  
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .detail-label {
+    font-weight: 600;
+    color: #666;
+  }
+  
+  .detail-value {
+    font-weight: 600;
+  }
+  
+  .btn-save {
+    background: #16a34a;
+    color: #fff;
+    border: 2px solid #16a34a;
+    padding: 0.75rem 1.5rem;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 1rem;
+  }
+  
+  .btn-save:hover {
+    background: #15803d;
+  }
 </style>
-</head>
-<body>
-<!-- Logo Header -->
-<div class="admin-logo-header">
-<img src="/logo.webp" alt="Fresh Wax" class="admin-logo">
-</div>
 
-<div class="admin-container">
-<!-- Header -->
-<div class="admin-header">
-<h1>👥 Customer Management</h1>
-<a href="/admin" class="admin-back-btn">← Back to Dashboard</a>
-</div>
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+  import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-<!-- Stats -->
-<div class="admin-stats-row">
-<div class="admin-stat-card">
-<div class="admin-stat-label">Total Customers</div>
-<div class="admin-stat-value" id="totalCustomers">0</div>
-</div>
-<div class="admin-stat-card">
-<div class="admin-stat-label">Total Orders</div>
-<div class="admin-stat-value" id="totalOrders">0</div>
-</div>
-<div class="admin-stat-card">
-<div class="admin-stat-label">Total Revenue</div>
-<div class="admin-stat-value" id="totalRevenue">£0</div>
-</div>
-</div>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store",
+    storageBucket: "freshwax-store.firebasestorage.app",
+    messagingSenderId: "675435782973",
+    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+  };
 
-<!-- Toolbar -->
-<div class="admin-toolbar">
-<input
-type="text"
-id="searchInput"
-class="admin-search"
-placeholder="Search customers by name or email..."
->
-</div>
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-<!-- Loading State -->
-<div id="loadingState" class="admin-loading">
-<div class="admin-spinner"></div>
-<p>Loading customers...</p>
-</div>
+  let allUsers = [];
+  let currentEditUser = null;
 
-<!-- Customers Table -->
-<div id="customersTable" class="admin-table-container" style="display: none;">
-<table class="admin-table">
-<thead>
-<tr>
-<th>Name</th>
-<th>Email</th>
-<th>Orders</th>
-<th>Total Spent</th>
-<th>Last Order</th>
-<th>Actions</th>
-</tr>
-</thead>
-<tbody id="customersTableBody">
-<!-- Populated by JavaScript -->
-</tbody>
-</table>
-</div>
-</div>
+  // Check authentication - admin check
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = '/login';
+      return;
+    }
 
-<!-- Customer Details Modal -->
-<div id="detailsModal" class="admin-modal-overlay">
-<div class="admin-modal">
-<div class="admin-modal-header">
-<h2>Customer Details</h2>
-<button class="admin-modal-close" onclick="closeDetailsModal()">×</button>
-</div>
-<div class="admin-modal-body">
-<div class="admin-detail-grid" id="customerDetails">
-<!-- Populated by JavaScript -->
-</div>
-</div>
-</div>
-</div>
+    // Check if admin
+    const isAdmin = await checkIsAdmin(user.uid);
+    if (!isAdmin) {
+      alert('Access denied. Admin privileges required.');
+      window.location.href = '/account/dashboard';
+      return;
+    }
 
-<script is:inline type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { getFirestore, collection, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+    loadUsersAndOrders();
+  });
 
-const firebaseConfig = {
-apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
-authDomain: "freshwax-store.firebaseapp.com",
-projectId: "freshwax-store",
-storageBucket: "freshwax-store.firebasestorage.app",
-messagingSenderId: "675435782973",
-appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-};
+  // Check if user is admin
+  async function checkIsAdmin(uid) {
+    try {
+      // Hardcoded admin UIDs (same as API)
+      const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33'];
+      if (ADMIN_UIDS.includes(uid)) {
+        console.log('[Admin Check] Admin by hardcoded UID');
+        return true;
+      }
+      
+      // Check admins collection first (legacy)
+      const adminDoc = await getDoc(doc(db, 'admins', uid));
+      if (adminDoc.exists()) {
+        console.log('[Admin Check] Admin found in admins collection');
+        return true;
+      }
+      
+      // Check users collection
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        if (data.isAdmin === true || data.role === 'admin' || data.roles?.admin === true) {
+          console.log('[Admin Check] Admin by users collection');
+          return true;
+        }
+      }
+      
+      // Check artists collection
+      const artistDoc = await getDoc(doc(db, 'artists', uid));
+      if (artistDoc.exists()) {
+        const data = artistDoc.data();
+        if (data.isAdmin === true || data.role === 'admin') {
+          console.log('[Admin Check] Admin by artists collection');
+          return true;
+        }
+      }
+      
+      console.log('[Admin Check] No admin privileges found for UID:', uid);
+      return false;
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      return false;
+    }
+  }
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+  // Load all partners via API (server-side to bypass security rules)
+  async function loadUsersAndOrders() {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('Not authenticated');
+      }
+      
+      // Use server-side API to fetch partners
+      const response = await fetch(`/api/admin/list-partners?uid=${encodeURIComponent(user.uid)}`);
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load partners');
+      }
+      
+      allUsers = data.partners || [];
+      
+      // Update stats from API response
+      document.getElementById('totalPartners').textContent = data.stats?.total || allUsers.length;
+      document.getElementById('totalArtists').textContent = data.stats?.artists || allUsers.filter(u => u.isArtist).length;
+      document.getElementById('totalMerch').textContent = data.stats?.merch || allUsers.filter(u => u.isMerchSupplier).length;
+      document.getElementById('pendingApproval').textContent = data.stats?.pending || allUsers.filter(u => !u.isApproved).length;
 
-let allCustomers = [];
-let allOrders = [];
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('customersTable').style.display = 'block';
 
-// Check authentication
-onAuthStateChanged(auth, async (user) => {
-if (!user) {
-window.location.href = '/admin/login';
-return;
-}
+      renderUsers();
+    } catch (error) {
+      console.error('Error loading partners:', error);
+      document.getElementById('loadingState').innerHTML = `
+        <div style="color: red; text-align: center; padding: 2rem;">
+          <h3>Error loading partners</h3>
+          <p>${error.message}</p>
+          <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 1rem;">Retry</button>
+        </div>
+      `;
+    }
+  }
 
-const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-if (!adminDoc.exists()) {
-window.location.href = '/admin/login';
-return;
-}
+  // Render partners table
+  function renderUsers() {
+    const tbody = document.getElementById('customersTableBody');
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const roleFilter = document.getElementById('roleFilter').value;
 
-loadCustomersAndOrders();
-});
+    let filtered = allUsers.filter(user => {
+      const matchesSearch = !search || 
+        user.name?.toLowerCase().includes(search) || 
+        user.email?.toLowerCase().includes(search);
+      
+      let matchesRole = true;
+      if (roleFilter === 'artist') matchesRole = user.isArtist;
+      else if (roleFilter === 'merch') matchesRole = user.isMerchSupplier;
+      else if (roleFilter === 'pending') matchesRole = !user.isApproved;
+      else if (roleFilter === 'approved') matchesRole = user.isApproved;
 
-// Load customers and orders
-async function loadCustomersAndOrders() {
-try {
+      return matchesSearch && matchesRole;
+    });
 
-// Load customers from the customers collection
-const customersSnapshot = await getDocs(collection(db, 'customers'));
-const customerMap = new Map();
+    document.getElementById('userCount').textContent = `${filtered.length} partners`;
 
-customersSnapshot.forEach((doc) => {
-const customerData = doc.data();
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">No partners found</td></tr>';
+      return;
+    }
 
-customerMap.set(doc.id, {
-id: doc.id,
-name: customerData.fullName || customerData.name || customerData.displayName || 'N/A',
-email: customerData.email || 'N/A',
-phone: customerData.phone || customerData.phoneNumber || 'N/A',
-orders: [],
-totalSpent: 0,
-lastOrder: null,
-createdAt: customerData.createdAt,
-registeredAt: customerData.registeredAt
-});
-});
+    tbody.innerHTML = filtered.map(user => `
+      <tr>
+        <td>
+          <div class="item-cell">
+            <div class="item-info">
+              <h4>${user.name || user.displayName || 'No name'}</h4>
+              <p class="cell-mono">${user.email || 'No email'}</p>
+            </div>
+          </div>
+        </td>
+        <td>
+          ${user.isAdmin ? '<span class="role-badge role-admin">Admin</span>' : ''}
+          ${(user.isCustomer || user.isDJ) ? '<span class="role-badge role-customer">Customer</span>' : ''}
+          ${user.isArtist ? '<span class="role-badge role-artist">Artist</span>' : ''}
+          ${(user.isDJ || user.isCustomer) ? '<span class="role-badge role-dj">DJ</span>' : ''}
+          ${user.isMerchSupplier ? '<span class="role-badge role-supplier">Supplier</span>' : ''}
+        </td>
+        <td>
+          <span class="badge ${user.isApproved ? 'badge-approved' : 'badge-pending'}">
+            ${user.isApproved ? '✓ Approved' : '⏳ Pending'}
+          </span>
+        </td>
+        <td>${user.source || '-'}</td>
+        <td>
+          <span class="${user.isDisabled ? 'status-disabled' : 'status-active'}">
+            ${user.isDisabled ? '⛔ Disabled' : '✓ Active'}
+          </span>
+        </td>
+        <td class="text-right">
+          <div class="flex gap-1 justify-end">
+            <button class="btn btn-ghost btn-sm" onclick="viewUser('${user.id}')" title="View">👁️</button>
+            <button class="btn btn-secondary btn-sm" onclick="editUser('${user.id}')" title="Edit">✏️</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
 
+  // View user details
+  window.viewUser = function(userId) {
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
 
-// Create email-to-customer lookup for fallback matching
-const emailToCustomerMap = new Map();
-customerMap.forEach((customer, id) => {
-if (customer.email && customer.email !== 'N/A') {
-emailToCustomerMap.set(customer.email.toLowerCase(), id);
-}
-});
+    document.getElementById('viewModalBody').innerHTML = `
+      <div class="detail-row">
+        <span class="detail-label">Name</span>
+        <span class="detail-value">${user.name || user.displayName || 'N/A'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Email</span>
+        <span class="detail-value">${user.email || 'N/A'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Phone</span>
+        <span class="detail-value">${user.phone || 'N/A'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">User ID</span>
+        <span class="detail-value" style="font-family: monospace; font-size: 0.8rem;">${user.id}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Roles</span>
+        <span class="detail-value">
+          ${user.isArtist ? '🎵 Artist' : ''}
+          ${user.isDJ ? '🎧 DJ' : ''}
+          ${user.isMerchSupplier ? '👕 Supplier' : ''}
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Approval</span>
+        <span class="detail-value">${user.isApproved ? '✓ Approved' : '⏳ Pending'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Status</span>
+        <span class="detail-value ${user.isDisabled ? 'status-disabled' : 'status-active'}">
+          ${user.isDisabled ? 'Disabled' : 'Active'}
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Source</span>
+        <span class="detail-value">${user.source || 'N/A'}</span>
+      </div>
+      <div style="margin-top: 1rem;">
+        <button class="btn btn-primary" onclick="closeViewModal(); editUser('${user.id}');">
+          Edit Partner
+        </button>
+      </div>
+    `;
 
-// Load orders
-const ordersSnapshot = await getDocs(collection(db, 'orders'));
-allOrders = [];
+    document.getElementById('viewModal').classList.add('active');
+  };
 
-ordersSnapshot.forEach((doc) => {
-const orderData = doc.data();
-allOrders.push({ id: doc.id, ...orderData });
-});
+  window.closeViewModal = function() {
+    document.getElementById('viewModal').classList.remove('active');
+  };
 
+  // Edit user permissions
+  window.editUser = function(userId) {
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
+    currentEditUser = user;
+    
+    // Default values for properties that might be undefined
+    const isDisabled = user.isDisabled || false;
+    const isAdmin = user.isAdmin || false;
+    const isCustomer = user.isCustomer ?? true;
+    const isArtist = user.isArtist || false;
+    const isDJ = user.isDJ || false;
+    const isMerchSupplier = user.isMerchSupplier || false;
+    const isApproved = user.isApproved || false;
+    const canBuy = user.canBuy ?? true;
+    const canComment = user.canComment ?? true;
+    const canRate = user.canRate ?? true;
 
-// Link orders to customers
-allOrders.forEach(order => {
-// Try to find customer by customerId field in order (check multiple locations)
-let customerId = order.customerId || order.userId || order.customer?.userId;
+    document.getElementById('editModalBody').innerHTML = `
+      <div style="margin-bottom: 1.5rem;">
+        <h3 style="margin: 0;">${user.name || user.displayName || 'No name'}</h3>
+        <p style="color: #666; margin: 0.25rem 0 0;">${user.email || 'No email on file'}</p>
+        <p style="color: #999; font-size: 0.75rem; margin: 0.25rem 0 0;">UID: ${user.id}</p>
+      </div>
 
-// Fallback: try to match by email
-if (!customerId || !customerMap.has(customerId)) {
-const orderEmail = (order.customer?.email || order.email || '').toLowerCase();
-if (orderEmail && emailToCustomerMap.has(orderEmail)) {
-customerId = emailToCustomerMap.get(orderEmail);
-}
-}
+      <div class="permission-group">
+        <h3>Contact Info</h3>
+        <div style="margin-bottom: 1rem;">
+          <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Phone Number</label>
+          <input type="tel" id="edit_phone" value="${user.phone || ''}" placeholder="Enter phone number" 
+            style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
+        </div>
+      </div>
 
-if (customerId && customerMap.has(customerId)) {
-const customer = customerMap.get(customerId);
-customer.orders.push(order);
-customer.totalSpent += parseFloat(order.total || order.amount || 0);
+      <div class="permission-group">
+        <h3>Address</h3>
+        <div style="margin-bottom: 0.75rem;">
+          <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Address Line 1</label>
+          <input type="text" id="edit_address1" value="${user.address?.line1 || user.address?.address1 || ''}" placeholder="Street address" 
+            style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
+        </div>
+        <div style="margin-bottom: 0.75rem;">
+          <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Address Line 2</label>
+          <input type="text" id="edit_address2" value="${user.address?.line2 || user.address?.address2 || ''}" placeholder="Flat, unit, etc. (optional)" 
+            style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
+          <div>
+            <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">City</label>
+            <input type="text" id="edit_city" value="${user.address?.city || ''}" placeholder="City" 
+              style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Postcode</label>
+            <input type="text" id="edit_postcode" value="${user.address?.postcode || user.address?.postalCode || ''}" placeholder="Postcode" 
+              style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
+          </div>
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Country</label>
+          <input type="text" id="edit_country" value="${user.address?.country || 'United Kingdom'}" placeholder="Country" 
+            style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
+        </div>
+      </div>
 
-// Handle Firebase Timestamp
-let orderDate;
-if (order.createdAt?.toDate) {
-orderDate = order.createdAt.toDate();
-} else if (order.createdAt) {
-orderDate = new Date(order.createdAt);
-} else {
-orderDate = new Date(0);
-}
+      <div class="permission-group">
+        <h3>Account Status</h3>
+        <div class="permission-item">
+          <div>
+            <div class="permission-label">Account Disabled</div>
+            <div class="permission-desc">Prevents user from logging in</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="perm_disabled" ${isDisabled ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
 
-if (!customer.lastOrder || orderDate > new Date(customer.lastOrder)) {
-customer.lastOrder = orderDate.toISOString();
-}
-} else {
-console.warn('Order has no matching customer:', order.id, 'customerId:', customerId, 'email:', order.customer?.email);
-}
-});
+      <div class="permission-group">
+        <h3>Roles</h3>
+        <div class="permission-item">
+          <div>
+            <div class="permission-label">Administrator</div>
+            <div class="permission-desc">Full access to admin dashboard</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="perm_admin" ${isAdmin ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="permission-item">
+          <div>
+            <div class="permission-label">Customer</div>
+            <div class="permission-desc">Can purchase items</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="perm_customer" ${isCustomer ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="permission-item">
+          <div>
+            <div class="permission-label">Artist</div>
+            <div class="permission-desc">Can upload releases</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="perm_artist" ${isArtist ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="permission-item">
+          <div>
+            <div class="permission-label">DJ</div>
+            <div class="permission-desc">Can go live and upload mixes</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="perm_dj" ${isDJ ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="permission-item">
+          <div>
+            <div class="permission-label">Merch Supplier</div>
+            <div class="permission-desc">Can supply merchandise</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="perm_supplier" ${isMerchSupplier ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="permission-item">
+          <div>
+            <div class="permission-label">Approved Partner</div>
+            <div class="permission-desc">Partner content is live</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="perm_approved" ${isApproved ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
 
-allCustomers = Array.from(customerMap.values());
-allCustomers.sort((a, b) => b.totalSpent - a.totalSpent);
+      <div class="permission-group">
+        <h3>Permissions</h3>
+        <div class="permission-item">
+          <div>
+            <div class="permission-label">Can Purchase</div>
+            <div class="permission-desc">Allowed to buy items</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="perm_buy" ${canBuy ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="permission-item">
+          <div>
+            <div class="permission-label">Can Comment</div>
+            <div class="permission-desc">Allowed to leave comments</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="perm_comment" ${canComment ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="permission-item">
+          <div>
+            <div class="permission-label">Can Rate</div>
+            <div class="permission-desc">Allowed to rate releases</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="perm_rate" ${canRate ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
 
+      <button class="btn-save" onclick="savePermissions()">
+        💾 Save Changes
+      </button>
+    `;
 
-// Update stats
-document.getElementById('totalCustomers').textContent = allCustomers.length;
-document.getElementById('totalOrders').textContent = allOrders.length;
-const totalRevenue = allOrders.reduce((sum, order) => sum + parseFloat(order.total || order.amount || 0), 0);
-document.getElementById('totalRevenue').textContent = '£' + totalRevenue.toFixed(2);
+    document.getElementById('editModal').classList.add('active');
+    
+    // Link DJ and Customer checkboxes - if one is checked, check the other
+    const djCheckbox = document.getElementById('perm_dj');
+    const customerCheckbox = document.getElementById('perm_customer');
+    
+    djCheckbox.addEventListener('change', function() {
+      if (this.checked) customerCheckbox.checked = true;
+    });
+    
+    customerCheckbox.addEventListener('change', function() {
+      if (this.checked) djCheckbox.checked = true;
+    });
+  };
 
-document.getElementById('loadingState').style.display = 'none';
-document.getElementById('customersTable').style.display = 'block';
+  window.closeEditModal = function() {
+    document.getElementById('editModal').classList.remove('active');
+    currentEditUser = null;
+  };
 
-renderCustomers();
-} catch (error) {
-console.error('Error loading customers:', error);
-document.getElementById('loadingState').innerHTML = `
-<div style="color: red;">
-<h3>Error loading customers</h3>
-<p>${error.message}</p>
-<button onclick="location.reload()" class="admin-back-btn" style="margin-top: 20px;">Retry</button>
-</div>
-`;
-}
-}
+  // Save permissions
+  window.savePermissions = async function() {
+    if (!currentEditUser) return;
 
-// Render customers table
-function renderCustomers() {
-const tbody = document.getElementById('customersTableBody');
-const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const phone = document.getElementById('edit_phone').value.trim();
+    const address = {
+      line1: document.getElementById('edit_address1').value.trim(),
+      line2: document.getElementById('edit_address2').value.trim(),
+      city: document.getElementById('edit_city').value.trim(),
+      postcode: document.getElementById('edit_postcode').value.trim(),
+      country: document.getElementById('edit_country').value.trim() || 'United Kingdom'
+    };
+    const permissions = {
+      phone: phone,
+      address: address,
+      disabled: document.getElementById('perm_disabled').checked,
+      isAdmin: document.getElementById('perm_admin').checked,
+      roles: {
+        customer: document.getElementById('perm_customer').checked,
+        artist: document.getElementById('perm_artist').checked,
+        dj: document.getElementById('perm_dj').checked,
+        merchSupplier: document.getElementById('perm_supplier').checked,
+        admin: document.getElementById('perm_admin').checked
+      },
+      partnerInfo: {
+        approved: document.getElementById('perm_approved').checked
+      },
+      permissions: {
+        canBuy: document.getElementById('perm_buy').checked,
+        canComment: document.getElementById('perm_comment').checked,
+        canRate: document.getElementById('perm_rate').checked
+      }
+    };
 
-let filtered = allCustomers.filter(customer => {
-return customer.name?.toLowerCase().includes(searchTerm) ||
-customer.email?.toLowerCase().includes(searchTerm);
-});
+    console.log('[savePermissions] Saving for partner:', currentEditUser.id);
+    console.log('[savePermissions] Permissions:', permissions);
 
-if (filtered.length === 0) {
-tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px;">No customers found</td></tr>';
-return;
-}
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('Not authenticated');
+      }
+      
+      // Use server-side API to update partner
+      const response = await fetch('/api/admin/update-partner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminUid: user.uid,
+          partnerId: currentEditUser.id,
+          permissions
+        })
+      });
+      
+      const result = await response.json();
+      console.log('[savePermissions] API response:', result);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save');
+      }
 
-tbody.innerHTML = filtered.map(customer => `
-<tr>
-<td><strong>${customer.name}</strong></td>
-<td>${customer.email}</td>
-<td>${customer.orders.length}</td>
-<td>£${customer.totalSpent.toFixed(2)}</td>
-<td>${customer.lastOrder ? new Date(customer.lastOrder).toLocaleDateString() : 'Never'}</td>
-<td>
-<div class="admin-action-btns">
-<button class="admin-btn-icon" onclick="viewCustomer('${customer.id}')" title="View Details">👁️</button>
-</div>
-</td>
-</tr>
-`).join('');
-}
+      // Update local data to match what was saved
+      currentEditUser.phone = permissions.phone;
+      currentEditUser.address = permissions.address;
+      currentEditUser.isDisabled = permissions.disabled;
+      currentEditUser.isAdmin = permissions.isAdmin;
+      currentEditUser.isCustomer = permissions.roles.customer;
+      currentEditUser.isArtist = permissions.roles.artist;
+      currentEditUser.isDJ = permissions.roles.dj;
+      currentEditUser.isMerchSupplier = permissions.roles.merchSupplier;
+      currentEditUser.isApproved = permissions.partnerInfo.approved;
+      currentEditUser.canBuy = permissions.permissions.canBuy;
+      currentEditUser.canComment = permissions.permissions.canComment;
+      currentEditUser.canRate = permissions.permissions.canRate;
 
-// View customer details
-window.viewCustomer = function(customerId) {
-const customer = allCustomers.find(c => c.id === customerId);
-if (!customer) return;
+      alert(`Partner updated!`);
+      closeEditModal();
+      renderUsers();
+    } catch (error) {
+      console.error('Error saving permissions:', error);
+      alert('Error saving: ' + error.message);
+    }
+  };
 
-const detailsHTML = `
-<div class="admin-detail-item">
-<div class="admin-detail-label">Name</div>
-<div class="admin-detail-value">${customer.name}</div>
-</div>
-<div class="admin-detail-item">
-<div class="admin-detail-label">Email</div>
-<div class="admin-detail-value">${customer.email}</div>
-</div>
-<div class="admin-detail-item">
-<div class="admin-detail-label">Phone</div>
-<div class="admin-detail-value">${customer.phone}</div>
-</div>
-<div class="admin-detail-item">
-<div class="admin-detail-label">Total Orders</div>
-<div class="admin-detail-value">${customer.orders.length}</div>
-</div>
-<div class="admin-detail-item">
-<div class="admin-detail-label">Total Spent</div>
-<div class="admin-detail-value">£${customer.totalSpent.toFixed(2)}</div>
-</div>
-<div class="admin-detail-item">
-<div class="admin-detail-label">Last Order</div>
-<div class="admin-detail-value">${customer.lastOrder ? new Date(customer.lastOrder).toLocaleString() : 'Never'}</div>
-</div>
-${customer.orders.length > 0 ? `
-<div class="admin-detail-item" style="border: none;">
-<div class="admin-detail-label">Order History</div>
-<div class="admin-orders-list">
-${customer.orders.slice(0, 10).map(order => `
-<div class="admin-order-item">
-<div><strong>Order #${order.id.substring(0, 8)}</strong></div>
-<div>Date: ${order.createdAt ? (order.createdAt.toDate ? order.createdAt.toDate().toLocaleDateString() : new Date(order.createdAt).toLocaleDateString()) : 'N/A'}</div>
-<div>Total: £${(order.total || order.amount || 0).toFixed(2)}</div>
-<div>Status: ${order.status || 'N/A'}</div>
-</div>
-`).join('')}
-${customer.orders.length > 10 ? `<p style="text-align: center; margin-top: 10px; color: #666;">+ ${customer.orders.length - 10} more orders</p>` : ''}
-</div>
-</div>
-` : ''}
-`;
+  // Search and filter listeners
+  document.getElementById('searchInput').addEventListener('input', renderUsers);
+  document.getElementById('roleFilter').addEventListener('change', renderUsers);
 
-document.getElementById('customerDetails').innerHTML = detailsHTML;
-document.getElementById('detailsModal').classList.add('active');
-};
-
-window.closeDetailsModal = function() {
-document.getElementById('detailsModal').classList.remove('active');
-};
-
-// Search
-document.getElementById('searchInput').addEventListener('input', renderCustomers);
-
-// Close modal on overlay click
-document.getElementById('detailsModal').addEventListener('click', (e) => {
-if (e.target.id === 'detailsModal') closeDetailsModal();
-});
+  // Close modals on overlay click
+  document.getElementById('editModal').addEventListener('click', (e) => {
+    if (e.target.id === 'editModal') closeEditModal();
+  });
+  document.getElementById('viewModal').addEventListener('click', (e) => {
+    if (e.target.id === 'viewModal') closeViewModal();
+  });
 </script>
-</body>
-</html>

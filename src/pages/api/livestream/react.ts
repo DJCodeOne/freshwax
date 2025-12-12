@@ -1,9 +1,11 @@
 // src/pages/api/livestream/react.ts
-// Live stream reactions - likes, ratings, viewer tracking
+// Live stream reactions - likes, ratings, viewer tracking, emoji broadcasts
+// Uses Pusher for real-time emoji delivery
 
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { createHmac, createHash } from 'crypto';
 
 if (!getApps().length) {
   initializeApp({
@@ -17,10 +19,59 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
+// Pusher configuration (from .env)
+const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
+const PUSHER_KEY = import.meta.env.PUBLIC_PUSHER_KEY;
+const PUSHER_SECRET = import.meta.env.PUSHER_SECRET;
+const PUSHER_CLUSTER = import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu';
+
+// Trigger Pusher event
+async function triggerPusher(channel: string, event: string, data: any): Promise<boolean> {
+  try {
+    const body = JSON.stringify({
+      name: event,
+      channel: channel,
+      data: JSON.stringify(data)
+    });
+    
+    const bodyMd5 = createHash('md5').update(body).digest('hex');
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    
+    const params = new URLSearchParams({
+      auth_key: PUSHER_KEY,
+      auth_timestamp: timestamp,
+      auth_version: '1.0',
+      body_md5: bodyMd5
+    });
+    params.sort();
+    
+    const stringToSign = `POST\n/apps/${PUSHER_APP_ID}/events\n${params.toString()}`;
+    const signature = createHmac('sha256', PUSHER_SECRET).update(stringToSign).digest('hex');
+    
+    const url = `https://api-${PUSHER_CLUSTER}.pusher.com/apps/${PUSHER_APP_ID}/events?${params.toString()}&auth_signature=${signature}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+    
+    if (!response.ok) {
+      console.error('[Pusher] Failed:', response.status, await response.text());
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('[Pusher] Error:', error);
+    return false;
+  }
+}
+
 export const POST: APIRoute = async ({ request }) => {
   try {
     const data = await request.json();
-    const { action, streamId, userId, rating, sessionId } = data;
+    const { action, streamId, userId, userName, rating, sessionId, emoji, emojiType } = data;
     
     if (!streamId) {
       return new Response(JSON.stringify({
@@ -33,6 +84,41 @@ export const POST: APIRoute = async ({ request }) => {
     const streamRef = db.collection('livestreams').doc(streamId);
     
     switch (action) {
+      case 'emoji': {
+        // Broadcast emoji reaction to all viewers via Pusher
+        // No database write needed - just broadcast for real-time display
+        await triggerPusher(`stream-${streamId}`, 'reaction', {
+          type: emojiType || 'emoji',
+          emoji: emoji || '❤️',
+          userName: userName || 'Someone',
+          userId: userId || null,
+          timestamp: now
+        });
+        
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Reaction broadcast'
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      
+      case 'star': {
+        // Broadcast star rating animation to all viewers
+        const starCount = rating || 1;
+        
+        await triggerPusher(`stream-${streamId}`, 'reaction', {
+          type: 'star',
+          count: starCount,
+          userName: userName || 'Someone',
+          userId: userId || null,
+          timestamp: now
+        });
+        
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Star reaction broadcast'
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      
       case 'like': {
         if (!userId) {
           return new Response(JSON.stringify({
@@ -216,6 +302,36 @@ export const POST: APIRoute = async ({ request }) => {
           success: true,
           currentViewers: streamData?.currentViewers || 0,
           totalLikes: streamData?.totalLikes || 0
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      
+      case 'shoutout': {
+        // Broadcast shoutout to all viewers via Pusher
+        const { message } = data;
+        
+        if (!userId) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Must be logged in to shoutout'
+          }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+        }
+        
+        if (!message || message.length > 30) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Shoutout must be 1-30 characters'
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+        
+        await triggerPusher(`stream-${streamId}`, 'shoutout', {
+          name: userName || 'Someone',
+          message: message,
+          timestamp: now
+        });
+        
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Shoutout broadcast'
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
       

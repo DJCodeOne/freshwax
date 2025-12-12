@@ -1,7 +1,7 @@
 // src/pages/api/get-release.ts
 // Uses Firebase REST API - works on Cloudflare Pages
 import type { APIRoute } from 'astro';
-import { getDocument } from '../../lib/firebase-rest';
+import { getDocument, clearCache } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -33,11 +33,14 @@ function normalizeRatings(data: any): { average: number; count: number; total: n
 function normalizeRelease(data: any, id: string): any {
   if (!data) return null;
   
+  const normalizedRatings = normalizeRatings(data);
+  
   return {
     id,
     ...data,
     label: getLabelFromRelease(data),
-    ratings: normalizeRatings(data),
+    ratings: normalizedRatings,
+    overallRating: normalizedRatings, // Also return as overallRating for backward compatibility
     tracks: (data.tracks || []).map((track: any, index: number) => ({
       ...track,
       trackNumber: track.trackNumber || track.displayTrackNumber || (index + 1),
@@ -56,6 +59,8 @@ function normalizeRelease(data: any, id: string): any {
 export const GET: APIRoute = async ({ request }) => {
   const url = new URL(request.url);
   const releaseId = url.searchParams.get('id');
+  const noCache = url.searchParams.get('nocache'); // Bypass cache if present
+  const isAdmin = url.searchParams.get('admin') === 'true'; // Allow viewing non-live releases
   
   if (!releaseId) {
     return new Response(JSON.stringify({ 
@@ -67,7 +72,12 @@ export const GET: APIRoute = async ({ request }) => {
     });
   }
   
-  log.info('[get-release] Fetching:', releaseId);
+  log.info('[get-release] Fetching:', releaseId, noCache ? '(nocache)' : '', isAdmin ? '(admin)' : '');
+  
+  // Clear cache for this release if nocache requested
+  if (noCache) {
+    clearCache(`doc:releases:${releaseId}`);
+  }
   
   try {
     const release = await getDocument('releases', releaseId);
@@ -83,7 +93,8 @@ export const GET: APIRoute = async ({ request }) => {
       });
     }
     
-    if (release.status !== 'live') {
+    // Only check status for public requests (non-admin)
+    if (!isAdmin && release.status !== 'live') {
       log.info('[get-release] Not live:', releaseId, release.status);
       return new Response(JSON.stringify({ 
         success: false,
@@ -106,7 +117,7 @@ export const GET: APIRoute = async ({ request }) => {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300, s-maxage=300'
+        'Cache-Control': 'private, max-age=60, must-revalidate'
       }
     });
     

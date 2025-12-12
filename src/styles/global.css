@@ -1660,3 +1660,46 @@ button,
     padding: 0.5rem 1rem !important;
   }
 }
+/* ================================================
+   FRESH WAX BRANDING
+   ================================================ */
+
+/* Primary brand colors:
+   - Fresh: White on dark backgrounds, Black on light backgrounds
+   - Wax: Red (#dc2626) always
+*/
+
+.brand-fresh {
+  color: #fff;
+  font-weight: 700;
+}
+
+.brand-wax {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+/* Use on light backgrounds */
+.brand-fresh.dark,
+.light-bg .brand-fresh {
+  color: #000;
+}
+
+/* Optional: Use Bebas Neue for logo-style text */
+.brand-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 1px;
+}
+
+.brand-logo .brand-fresh {
+  color: #fff;
+}
+
+.brand-logo .brand-wax {
+  color: #dc2626;
+}
+
+.brand-logo.dark .brand-fresh,
+.light-bg .brand-logo .brand-fresh {
+  color: #000;
+}

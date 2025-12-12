@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "dj-mixes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "livestream-chat",
       "queryScope": "COLLECTION",
       "fields": [
@@ -22,6 +30,13 @@
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "startTime", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "djDirectMessages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "participants", "arrayConfig": "CONTAINS" }
       ]
     }
   ],

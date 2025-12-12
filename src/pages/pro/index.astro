@@ -1,0 +1,353 @@
+---
+// Pro Dashboard Index
+// Redirects to appropriate section based on user's roles
+import ProDashboardLayout from '../../layouts/ProDashboardLayout.astro';
+---
+<ProDashboardLayout title="Dashboard" activeSection="/pro">
+  <div class="dashboard-home">
+    <div class="welcome-section">
+      <h2>Welcome to your Pro Dashboard</h2>
+      <p>Manage your releases, track sales, and monitor your analytics.</p>
+    </div>
+
+    <!-- Artist Quick Stats (shown if artist) -->
+    <div id="artistStats" class="stats-section" style="display: none;">
+      <h3>Artist Overview</h3>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="totalReleases">-</div>
+          <div class="stat-label">Total Releases</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="totalSales">-</div>
+          <div class="stat-label">Total Sales</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="monthRevenue">-</div>
+          <div class="stat-label">This Month</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="pendingReleases">-</div>
+          <div class="stat-label">Pending Approval</div>
+        </div>
+      </div>
+      <div class="quick-actions">
+        <a href="/pro/releases/new" class="action-card">
+          <div class="action-icon">+</div>
+          <div class="action-text">
+            <strong>New Release</strong>
+            <span>Upload a new track or album</span>
+          </div>
+        </a>
+        <a href="/pro/releases" class="action-card">
+          <div class="action-icon">📀</div>
+          <div class="action-text">
+            <strong>Manage Releases</strong>
+            <span>Edit, update, or remove releases</span>
+          </div>
+        </a>
+        <a href="/pro/analytics" class="action-card">
+          <div class="action-icon">📊</div>
+          <div class="action-text">
+            <strong>View Analytics</strong>
+            <span>Track plays, sales, and engagement</span>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- Merch Seller Quick Stats (shown if merch seller) -->
+    <div id="merchStats" class="stats-section" style="display: none;">
+      <h3>Merch Overview</h3>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="totalProducts">-</div>
+          <div class="stat-label">Products</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="lowStock">-</div>
+          <div class="stat-label">Low Stock</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="pendingOrders">-</div>
+          <div class="stat-label">Pending Orders</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="merchMonthRevenue">-</div>
+          <div class="stat-label">This Month</div>
+        </div>
+      </div>
+      <div class="quick-actions">
+        <a href="/pro/merch/stock" class="action-card">
+          <div class="action-icon">📦</div>
+          <div class="action-text">
+            <strong>Stock Levels</strong>
+            <span>View current inventory</span>
+          </div>
+        </a>
+        <a href="/pro/merch/orders" class="action-card">
+          <div class="action-icon">🛒</div>
+          <div class="action-text">
+            <strong>View Orders</strong>
+            <span>Recent orders and fulfillment</span>
+          </div>
+        </a>
+        <a href="/pro/merch/analytics" class="action-card">
+          <div class="action-icon">📈</div>
+          <div class="action-text">
+            <strong>Analytics</strong>
+            <span>Sales and performance data</span>
+          </div>
+        </a>
+      </div>
+      <div class="info-box">
+        <p><strong>Note:</strong> To make changes to your products or stock levels, please contact the Fresh Wax team.</p>
+        <a href="/contact" class="btn btn-small">Contact Us</a>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .dashboard-home {
+      max-width: 1200px;
+    }
+
+    .welcome-section {
+      margin-bottom: 2rem;
+    }
+
+    .welcome-section h2 {
+      color: var(--text-primary, #fff);
+      margin-bottom: 0.5rem;
+    }
+
+    .welcome-section p {
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .stats-section {
+      margin-bottom: 2.5rem;
+    }
+
+    .stats-section h3 {
+      color: var(--text-primary, #fff);
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-color, #262626);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text-primary, #fff);
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+
+    .action-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .action-card:hover {
+      border-color: var(--accent, #22c55e);
+      background: var(--bg-tertiary, #1a1a1a);
+    }
+
+    .action-icon {
+      font-size: 1.5rem;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-tertiary, #1a1a1a);
+      border-radius: 8px;
+    }
+
+    .action-text {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .action-text strong {
+      color: var(--text-primary, #fff);
+    }
+
+    .action-text span {
+      font-size: 0.8rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .info-box {
+      margin-top: 1.5rem;
+      padding: 1rem 1.25rem;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .info-box p {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0;
+      font-size: 0.9rem;
+    }
+
+    .btn-small {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      background: var(--bg-tertiary, #1a1a1a);
+      color: var(--text-primary, #fff);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 6px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-small:hover {
+      background: var(--bg-secondary, #141414);
+    }
+  </style>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getFirestore, doc, getDoc, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+    const firebaseConfig = window.FIREBASE_CONFIG || {};
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const artistStats = document.getElementById('artistStats');
+    const merchStats = document.getElementById('merchStats');
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (!userDoc.exists()) return;
+
+        const roles = userDoc.data().roles || {};
+
+        // Show artist stats if artist
+        if (roles.artist) {
+          artistStats.style.display = 'block';
+          loadArtistStats(user.uid);
+        }
+
+        // Show merch stats if merch seller
+        if (roles.merchSeller) {
+          merchStats.style.display = 'block';
+          loadMerchStats(user.uid);
+        }
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+      }
+    });
+
+    async function loadArtistStats(uid) {
+      try {
+        // Get releases count
+        const releasesQuery = query(collection(db, 'releases'), where('artistId', '==', uid));
+        const releasesSnap = await getDocs(releasesQuery);
+        document.getElementById('totalReleases').textContent = releasesSnap.size;
+
+        // Count pending
+        let pending = 0;
+        releasesSnap.forEach(doc => {
+          if (doc.data().status === 'pending') pending++;
+        });
+        document.getElementById('pendingReleases').textContent = pending;
+
+        // Get sales (simplified)
+        const salesQuery = query(collection(db, 'sales'), where('artistId', '==', uid));
+        const salesSnap = await getDocs(salesQuery);
+        document.getElementById('totalSales').textContent = salesSnap.size;
+
+        // Calculate this month revenue (simplified)
+        let monthTotal = 0;
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        salesSnap.forEach(doc => {
+          const data = doc.data();
+          const saleDate = data.createdAt?.toDate?.() || new Date(data.createdAt);
+          if (saleDate >= startOfMonth) {
+            monthTotal += data.amount || data.price || 0;
+          }
+        });
+        document.getElementById('monthRevenue').textContent = '£' + monthTotal.toFixed(2);
+
+      } catch (error) {
+        console.error('Error loading artist stats:', error);
+      }
+    }
+
+    async function loadMerchStats(uid) {
+      try {
+        // Get products count
+        const productsQuery = query(collection(db, 'merch'), where('sellerId', '==', uid));
+        const productsSnap = await getDocs(productsQuery);
+        document.getElementById('totalProducts').textContent = productsSnap.size;
+
+        // Count low stock (less than 5)
+        let lowStock = 0;
+        productsSnap.forEach(doc => {
+          const data = doc.data();
+          if ((data.stock || 0) < 5) lowStock++;
+        });
+        document.getElementById('lowStock').textContent = lowStock;
+
+        // Get pending orders
+        const ordersQuery = query(collection(db, 'orders'), where('sellerId', '==', uid), where('status', '==', 'pending'));
+        const ordersSnap = await getDocs(ordersQuery);
+        document.getElementById('pendingOrders').textContent = ordersSnap.size;
+
+        // Month revenue (simplified - would need proper aggregation)
+        document.getElementById('merchMonthRevenue').textContent = '£0.00';
+
+      } catch (error) {
+        console.error('Error loading merch stats:', error);
+      }
+    }
+  </script>
+</ProDashboardLayout>

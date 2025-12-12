@@ -1,0 +1,456 @@
+---
+// DJ Dashboard - My Bookings
+// Shows DJ's upcoming bookings with ability to cancel
+
+interface Props {
+  userId: string;
+}
+
+const { userId } = Astro.props;
+---
+<div class="my-bookings" id="myBookings">
+  <div class="bookings-header">
+    <h3>My Upcoming Slots</h3>
+    <a href="/dj-lobby/book" class="btn btn-small">+ Book New Slot</a>
+  </div>
+
+  <div id="bookingsList" class="bookings-list">
+    <div class="loading">Loading your bookings...</div>
+  </div>
+
+  <div id="noBookings" class="no-bookings" style="display: none;">
+    <p>You don't have any upcoming slots booked.</p>
+    <a href="/dj-lobby/book" class="btn btn-primary">Book a Slot</a>
+  </div>
+</div>
+
+<!-- Cancel Confirmation Modal -->
+<div id="cancelModal" class="modal" style="display: none;">
+  <div class="modal-backdrop" onclick="closeCancelModal()"></div>
+  <div class="modal-content">
+    <h3>Cancel Booking</h3>
+    <p>Are you sure you want to cancel this slot?</p>
+    <div class="booking-preview" id="cancelPreview"></div>
+    <p class="warning">This slot will become immediately available for other DJs to book.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeCancelModal()">Keep Booking</button>
+      <button class="btn btn-danger" id="confirmCancelBtn">Cancel Slot</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .my-bookings {
+    background: var(--bg-secondary, #141414);
+    border: 1px solid var(--border-color, #262626);
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+
+  .bookings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .bookings-header h3 {
+    color: var(--text-primary, #fff);
+    margin: 0;
+    font-size: 1.1rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-size: 0.85rem;
+  }
+
+  .btn-small {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .btn-primary {
+    background: var(--accent, #22c55e);
+    color: #000;
+  }
+
+  .btn-secondary {
+    background: var(--bg-tertiary, #1a1a1a);
+    color: var(--text-primary, #fff);
+    border: 1px solid var(--border-color, #262626);
+  }
+
+  .btn-danger {
+    background: #ef4444;
+    color: #fff;
+  }
+
+  .btn-danger:hover {
+    background: #dc2626;
+  }
+
+  .bookings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary, #a3a3a3);
+  }
+
+  .no-bookings {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary, #a3a3a3);
+  }
+
+  .no-bookings p {
+    margin-bottom: 1rem;
+  }
+
+  .booking-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--bg-tertiary, #1a1a1a);
+    border-radius: 8px;
+    gap: 1rem;
+  }
+
+  .booking-info {
+    flex: 1;
+  }
+
+  .booking-title {
+    font-weight: 600;
+    color: var(--text-primary, #fff);
+    margin-bottom: 0.25rem;
+  }
+
+  .booking-time {
+    font-size: 0.9rem;
+    color: var(--accent, #22c55e);
+    margin-bottom: 0.25rem;
+  }
+
+  .booking-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted, #666);
+  }
+
+  .booking-status {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-left: 0.5rem;
+  }
+
+  .status-confirmed {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+  }
+
+  .status-live {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .status-upcoming {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+
+  .booking-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .cancel-btn {
+    padding: 0.4rem 0.75rem;
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    border-radius: 6px;
+    color: #ef4444;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .cancel-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+  }
+
+  .cancel-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Modal */
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  .modal-content {
+    position: relative;
+    background: var(--bg-secondary, #141414);
+    border: 1px solid var(--border-color, #262626);
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 400px;
+    width: 90%;
+  }
+
+  .modal-content h3 {
+    color: var(--text-primary, #fff);
+    margin: 0 0 0.5rem;
+  }
+
+  .modal-content > p {
+    color: var(--text-secondary, #a3a3a3);
+    margin: 0 0 1rem;
+  }
+
+  .booking-preview {
+    padding: 1rem;
+    background: var(--bg-tertiary, #1a1a1a);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+
+  .booking-preview .preview-title {
+    font-weight: 600;
+    color: var(--text-primary, #fff);
+  }
+
+  .booking-preview .preview-time {
+    color: var(--accent, #22c55e);
+    font-size: 0.9rem;
+  }
+
+  .warning {
+    font-size: 0.85rem;
+    color: #fbbf24;
+    margin: 0 0 1rem;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+
+  /* Past booking styling */
+  .booking-card.past {
+    opacity: 0.5;
+  }
+</style>
+
+<script type="module" define:vars={{ userId }}>
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+  import { getFirestore, collection, query, where, getDocs, deleteDoc, doc, orderBy, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+  const firebaseConfig = window.FIREBASE_CONFIG || {};
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  let bookings = [];
+  let bookingToCancel = null;
+
+  const bookingsList = document.getElementById('bookingsList');
+  const noBookings = document.getElementById('noBookings');
+  const cancelModal = document.getElementById('cancelModal');
+  const cancelPreview = document.getElementById('cancelPreview');
+  const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+
+  async function loadBookings() {
+    const now = new Date();
+    // Get bookings from 2 hours ago (to show currently live) onwards
+    const startFrom = new Date(now);
+    startFrom.setHours(startFrom.getHours() - 2);
+
+    try {
+      const bookingsQuery = query(
+        collection(db, 'livestream-bookings'),
+        where('djId', '==', userId),
+        where('startTime', '>=', Timestamp.fromDate(startFrom)),
+        orderBy('startTime', 'asc')
+      );
+
+      const snapshot = await getDocs(bookingsQuery);
+      bookings = [];
+
+      snapshot.forEach(doc => {
+        bookings.push({ id: doc.id, ...doc.data() });
+      });
+
+      renderBookings();
+    } catch (error) {
+      console.error('Error loading bookings:', error);
+      bookingsList.innerHTML = '<div class="loading">Error loading bookings</div>';
+    }
+  }
+
+  function renderBookings() {
+    if (bookings.length === 0) {
+      bookingsList.style.display = 'none';
+      noBookings.style.display = 'block';
+      return;
+    }
+
+    noBookings.style.display = 'none';
+    bookingsList.style.display = 'flex';
+
+    const now = new Date();
+
+    bookingsList.innerHTML = bookings.map(booking => {
+      const startTime = booking.startTime.toDate();
+      const endTime = new Date(startTime);
+      endTime.setHours(endTime.getHours() + (booking.duration || 1));
+
+      const isLive = now >= startTime && now < endTime;
+      const isPast = now >= endTime;
+      const isUpcoming = now < startTime;
+
+      // Can only cancel if more than 30 mins before start
+      const thirtyMinsFromNow = new Date(now);
+      thirtyMinsFromNow.setMinutes(thirtyMinsFromNow.getMinutes() + 30);
+      const canCancel = startTime > thirtyMinsFromNow;
+
+      let statusClass = 'status-confirmed';
+      let statusText = 'Confirmed';
+      if (isLive) {
+        statusClass = 'status-live';
+        statusText = 'LIVE NOW';
+      } else if (isPast) {
+        statusClass = 'status-past';
+        statusText = 'Completed';
+      }
+
+      const dateStr = startTime.toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short'
+      });
+
+      const startHour = startTime.getHours();
+      const endHour = endTime.getHours();
+      const formatHour = (h) => {
+        const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
+        const ampm = h >= 12 && h < 24 ? 'PM' : 'AM';
+        return `${display}:00 ${ampm}`;
+      };
+
+      return `
+        <div class="booking-card ${isPast ? 'past' : ''}">
+          <div class="booking-info">
+            <div class="booking-title">
+              ${booking.streamTitle}
+              <span class="booking-status ${statusClass}">${statusText}</span>
+            </div>
+            <div class="booking-time">${dateStr} • ${formatHour(startHour)} - ${formatHour(endHour)}</div>
+            <div class="booking-meta">${booking.duration || 1} hour${(booking.duration || 1) > 1 ? 's' : ''}</div>
+          </div>
+          <div class="booking-actions">
+            ${!isPast && canCancel ? `
+              <button class="cancel-btn" onclick="openCancelModal('${booking.id}')">Cancel</button>
+            ` : ''}
+            ${isLive ? `
+              <a href="/dj-lobby/go-live" class="btn btn-primary">Go Live</a>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.openCancelModal = function(bookingId) {
+    bookingToCancel = bookings.find(b => b.id === bookingId);
+    if (!bookingToCancel) return;
+
+    const startTime = bookingToCancel.startTime.toDate();
+    const endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + (bookingToCancel.duration || 1));
+
+    const dateStr = startTime.toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short'
+    });
+
+    const formatHour = (h) => {
+      const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      const ampm = h >= 12 && h < 24 ? 'PM' : 'AM';
+      return `${display}:00 ${ampm}`;
+    };
+
+    cancelPreview.innerHTML = `
+      <div class="preview-title">${bookingToCancel.streamTitle}</div>
+      <div class="preview-time">${dateStr} • ${formatHour(startTime.getHours())} - ${formatHour(endTime.getHours())}</div>
+    `;
+
+    cancelModal.style.display = 'flex';
+  };
+
+  window.closeCancelModal = function() {
+    cancelModal.style.display = 'none';
+    bookingToCancel = null;
+  };
+
+  confirmCancelBtn.addEventListener('click', async () => {
+    if (!bookingToCancel) return;
+
+    confirmCancelBtn.disabled = true;
+    confirmCancelBtn.textContent = 'Cancelling...';
+
+    try {
+      await deleteDoc(doc(db, 'livestream-bookings', bookingToCancel.id));
+      
+      closeCancelModal();
+      await loadBookings();
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      alert('Error cancelling booking: ' + error.message);
+    }
+
+    confirmCancelBtn.disabled = false;
+    confirmCancelBtn.textContent = 'Cancel Slot';
+  });
+
+  // Initialize
+  loadBookings();
+
+  // Refresh every minute to update live status
+  setInterval(loadBookings, 60000);
+</script>

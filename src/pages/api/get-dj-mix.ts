@@ -1,7 +1,7 @@
 // src/pages/api/get-dj-mix.ts
 // Uses Firebase REST API - works on Cloudflare Pages
 import type { APIRoute } from 'astro';
-import { getDocument } from '../../lib/firebase-rest';
+import { getDocument, clearCache } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -14,6 +14,7 @@ export const prerender = false;
 export const GET: APIRoute = async ({ request }) => {
   const url = new URL(request.url);
   const mixId = url.searchParams.get('id');
+  const noCache = url.searchParams.get('nocache'); // Bypass cache if present
   
   if (!mixId) {
     return new Response(JSON.stringify({ 
@@ -25,7 +26,12 @@ export const GET: APIRoute = async ({ request }) => {
     });
   }
   
-  log.info('[get-dj-mix] Fetching mix:', mixId);
+  log.info('[get-dj-mix] Fetching mix:', mixId, noCache ? '(nocache)' : '');
+  
+  // Clear cache for this mix if nocache requested
+  if (noCache) {
+    clearCache(`doc:dj-mixes:${mixId}`);
+  }
   
   try {
     const mix = await getDocument('dj-mixes', mixId);
@@ -44,8 +50,8 @@ export const GET: APIRoute = async ({ request }) => {
     const normalized = {
       id: mix.id,
       title: mix.title || mix.name || 'Untitled Mix',
-      artist: mix.artist || mix.djName || 'Unknown DJ',
-      artwork: mix.artworkUrl || mix.coverUrl || mix.imageUrl || '/logo.webp',
+      artist: mix.displayName || mix.artist || mix.djName || mix.dj_name || 'Unknown DJ',
+      artwork: mix.artworkUrl || mix.coverUrl || mix.imageUrl || '/place-holder.webp',
       audioUrl: mix.audioUrl || mix.mp3Url || mix.streamUrl || null,
       duration: mix.duration || null,
       genre: mix.genre || mix.genres || [],
@@ -56,6 +62,9 @@ export const GET: APIRoute = async ({ request }) => {
       downloadCount: mix.downloadCount || mix.downloads || 0,
       uploadedAt: mix.uploadedAt || mix.createdAt || null,
       allowDownload: mix.allowDownload !== false,
+      // Include displayName and dj_name explicitly for the frontend
+      displayName: mix.displayName || mix.dj_name || mix.djName || 'Unknown DJ',
+      dj_name: mix.displayName || mix.dj_name || mix.djName || 'Unknown DJ',
       ...mix
     };
     
@@ -69,7 +78,7 @@ export const GET: APIRoute = async ({ request }) => {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300, s-maxage=300'
+        'Cache-Control': 'private, max-age=60, must-revalidate'
       }
     });
     

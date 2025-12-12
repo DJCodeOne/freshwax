@@ -31,43 +31,79 @@ if (partnerId) {
     if (partnerDoc.exists) {
       partner = { id: partnerDoc.id, ...partnerDoc.data() };
       
-      // Fetch merch linked to this supplier
-      const merchSnap = await db.collection('merch')
+      // Try multiple strategies to find products linked to this supplier
+      let merchDocs: any[] = [];
+      
+      // Strategy 1: Query by supplierId
+      const byIdSnap = await db.collection('merch')
         .where('supplierId', '==', partnerId)
         .get();
+      if (!byIdSnap.empty) {
+        merchDocs = byIdSnap.docs;
+      }
       
-      const productIds = merchSnap.docs.map(doc => doc.id);
-      products = merchSnap.docs.map(doc => ({
+      // Strategy 2: If no results, try by supplier name
+      if (merchDocs.length === 0 && partner.artistName) {
+        const byNameSnap = await db.collection('merch')
+          .where('supplierName', '==', partner.artistName)
+          .get();
+        if (!byNameSnap.empty) {
+          merchDocs = byNameSnap.docs;
+        }
+      }
+      
+      // Strategy 3: Check merch-suppliers collection for linked products
+      if (merchDocs.length === 0) {
+        try {
+          const supplierDoc = await db.collection('merch-suppliers').doc(partnerId).get();
+          if (supplierDoc.exists) {
+            const supplierData = supplierDoc.data();
+            if (supplierData?.products && supplierData.products.length > 0) {
+              const productPromises = supplierData.products.slice(0, 50).map((pid: string) => 
+                db.collection('merch').doc(pid).get()
+              );
+              const productDocs = await Promise.all(productPromises);
+              merchDocs = productDocs.filter(d => d.exists);
+            }
+          }
+        } catch (e) {
+          // Ignore errors from merch-suppliers lookup
+        }
+      }
+      
+      const productIds = merchDocs.map(doc => doc.id);
+      products = merchDocs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       
       // Fetch orders containing this supplier's products
-      // Note: This is simplified - in production you'd have a more efficient query structure
-      const ordersSnap = await db.collection('orders')
-        .where('status', '!=', 'cancelled')
-        .orderBy('status')
-        .orderBy('createdAt', 'desc')
-        .limit(100)
-        .get();
-      
-      // Filter orders to only include items from this supplier
-      ordersSnap.docs.forEach(doc => {
-        const order = doc.data();
-        const supplierItems = (order.items || []).filter(item => 
-          productIds.includes(item.productId) || item.supplierId === partnerId
-        );
+      if (productIds.length > 0) {
+        const ordersSnap = await db.collection('orders')
+          .where('status', '!=', 'cancelled')
+          .orderBy('status')
+          .orderBy('createdAt', 'desc')
+          .limit(100)
+          .get();
         
-        if (supplierItems.length > 0) {
-          sales.push({
-            id: doc.id,
-            orderDate: order.createdAt?.toDate?.() || new Date(),
-            status: order.status,
-            items: supplierItems,
-            total: supplierItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0)
-          });
-        }
-      });
+        // Filter orders to only include items from this supplier
+        ordersSnap.docs.forEach(doc => {
+          const order = doc.data();
+          const supplierItems = (order.items || []).filter((item: any) => 
+            productIds.includes(item.productId) || item.supplierId === partnerId
+          );
+          
+          if (supplierItems.length > 0) {
+            sales.push({
+              id: doc.id,
+              orderDate: order.createdAt?.toDate?.() || new Date(),
+              status: order.status,
+              items: supplierItems,
+              total: supplierItems.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0)
+            });
+          }
+        });
+      }
     }
   } catch (e) {
     console.error('Error fetching data:', e);
@@ -86,6 +122,25 @@ const pendingOrders = sales.filter(s => s.status === 'pending' || s.status === '
 
 // Format currency
 const formatCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+
+// Preprocess sales for template
+const processedSales = sales.map(sale => {
+  const yourCut = sale.total * (supplierCut / 100);
+  const statusClass = 'status-badge status-' + sale.status;
+  const statusLabel = sale.status.charAt(0).toUpperCase() + sale.status.slice(1);
+  const formattedDate = sale.orderDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const orderId = '#' + sale.id.slice(-8).toUpperCase();
+  return {
+    ...sale,
+    yourCut,
+    yourCutFormatted: formatCurrency(yourCut),
+    totalFormatted: formatCurrency(sale.total),
+    statusClass,
+    statusLabel,
+    formattedDate,
+    orderId
+  };
+});
 ---
 
 <html lang="en">
@@ -123,6 +178,17 @@ const formatCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'curr
     h1 {
       font-size: 1.75rem;
       font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    h1 .page-icon {
+      font-size: 1.5rem;
+    }
+    
+    h1 .page-title {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -137,19 +203,6 @@ const formatCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'curr
     }
     
     .back-link:hover { color: #667eea; }
-    
-    .readonly-banner {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 1rem;
-      background: rgba(139, 92, 246, 0.1);
-      border: 1px solid rgba(139, 92, 246, 0.3);
-      border-radius: 10px;
-      margin-bottom: 1.5rem;
-      font-size: 0.875rem;
-      color: #a78bfa;
-    }
     
     /* Stats */
     .stats-grid {
@@ -177,13 +230,13 @@ const formatCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'curr
     
     .stat-label {
       font-size: 0.75rem;
-      color: #888;
+      color: #9ca3af;
       margin-top: 0.25rem;
     }
     
     .stat-note {
       font-size: 0.7rem;
-      color: #666;
+      color: #9ca3af;
       margin-top: 0.25rem;
     }
     
@@ -203,7 +256,7 @@ const formatCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'curr
       font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: #888;
+      color: #9ca3af;
     }
     
     .sales-table td {
@@ -218,7 +271,7 @@ const formatCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'curr
     .order-id {
       font-family: monospace;
       font-size: 0.8rem;
-      color: #888;
+      color: #9ca3af;
     }
     
     .order-items {
@@ -232,7 +285,7 @@ const formatCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'curr
     }
     
     .item-name { color: #fff; }
-    .item-qty { color: #888; font-size: 0.8rem; }
+    .item-qty { color: #9ca3af; font-size: 0.8rem; }
     
     .order-total {
       font-weight: 600;
@@ -259,14 +312,14 @@ const formatCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'curr
     
     .order-date {
       font-size: 0.8rem;
-      color: #888;
+      color: #9ca3af;
     }
     
     /* Empty State */
     .empty-state {
       text-align: center;
       padding: 4rem 2rem;
-      color: #888;
+      color: #9ca3af;
     }
     
     /* Unauthorized */
@@ -302,15 +355,11 @@ const formatCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'curr
         <a href="/artist/dashboard" class="back-link" style="display: inline-block; margin-top: 1rem;">← Back to Dashboard</a>
       </div>
     ) : (
-      <>
+      <div class="content-wrapper">
         <header>
-          <h1>💰 My Sales</h1>
+          <h1><span class="page-icon">💰</span><span class="page-title">My Sales</span></h1>
           <a href="/artist/dashboard" class="back-link">← Back to Dashboard</a>
         </header>
-
-        <div class="readonly-banner">
-          👁️ <span>View Only — Sales are processed and paid out by Fresh Wax admin.</span>
-        </div>
 
         <div class="stats-grid">
           <div class="stat-card">
@@ -349,46 +398,39 @@ const formatCurrency = (amount) => new Intl.NumberFormat('en-GB', { style: 'curr
               </tr>
             </thead>
             <tbody>
-              {sales.map(sale => {
-                const yourCut = sale.total * (supplierCut / 100);
-                return (
-                  <tr>
-                    <td>
-                      <span class="order-id">#{sale.id.slice(-8).toUpperCase()}</span>
-                    </td>
-                    <td>
-                      <div class="order-items">
-                        {sale.items.map(item => (
-                          <div class="order-item">
-                            <span class="item-name">{item.name || item.title}</span>
-                            <span class="item-qty">×{item.quantity || 1}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td>
-                      <span class="order-total">{formatCurrency(sale.total)}</span>
-                    </td>
-                    <td>
-                      <span class="order-earnings">{formatCurrency(yourCut)}</span>
-                    </td>
-                    <td>
-                      <span class={`status-badge status-${sale.status}`}>
-                        {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
-                      </span>
-                    </td>
-                    <td>
-                      <span class="order-date">
-                        {sale.orderDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
+              {processedSales.map(sale => (
+                <tr>
+                  <td>
+                    <span class="order-id">{sale.orderId}</span>
+                  </td>
+                  <td>
+                    <div class="order-items">
+                      {sale.items.map(item => (
+                        <div class="order-item">
+                          <span class="item-name">{item.name || item.title}</span>
+                          <span class="item-qty">×{item.quantity || 1}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    <span class="order-total">{sale.totalFormatted}</span>
+                  </td>
+                  <td>
+                    <span class="order-earnings">{sale.yourCutFormatted}</span>
+                  </td>
+                  <td>
+                    <span class={sale.statusClass}>{sale.statusLabel}</span>
+                  </td>
+                  <td>
+                    <span class="order-date">{sale.formattedDate}</span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}
-      </>
+      </div>
     )}
   </div>
 </body>

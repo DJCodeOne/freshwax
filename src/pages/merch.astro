@@ -4,8 +4,10 @@
 
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
 import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
 import { queryCollection } from '../lib/firebase-rest';
+import '../styles/merch.css';
 
 export const prerender = false;
 
@@ -47,10 +49,41 @@ try {
       stockLabel = 'Low Stock';
     }
     
+    // Get images - images array contains objects with url property
+    let allImages: string[] = [];
+    if (doc.images && Array.isArray(doc.images)) {
+      allImages = doc.images
+        .map((img: any) => {
+          if (typeof img === 'string') return img;
+          if (img && typeof img === 'object' && img.url) return img.url;
+          return null;
+        })
+        .filter(Boolean);
+    }
+    
+    if (allImages.length === 0) {
+      if (doc.primaryImage) allImages = [doc.primaryImage];
+      else if (doc.imageUrl) allImages = [doc.imageUrl];
+    }
+    
+    const imageUrl = doc.primaryImage || allImages[0] || '';
+    
+    // Process colors - array of {hex, name} objects
+    let colorList: string[] = [];
+    let colorNames: string[] = [];
+    if (doc.colors && Array.isArray(doc.colors)) {
+      colorList = doc.colors.map((c: any) => c.hex || c).filter(Boolean);
+      colorNames = doc.colors.map((c: any) => c.name || c.hex || c).filter(Boolean);
+    }
+    
     return {
       ...doc,
       stockStatus,
       stockLabel,
+      images: allImages,
+      imageUrl,
+      colorList,
+      colorNames,
       retailPrice: parseFloat(doc.retailPrice) || 0,
       salePrice: doc.salePrice ? parseFloat(doc.salePrice) : null,
     };
@@ -60,292 +93,216 @@ try {
   products.sort((a, b) => {
     if (a.featured && !b.featured) return -1;
     if (!a.featured && b.featured) return 1;
-    const dateA = new Date(a.createdAt || 0).getTime();
-    const dateB = new Date(b.createdAt || 0).getTime();
-    return dateB - dateA;
+    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
   });
   
 } catch (e) {
   console.error('[Merch] Error fetching:', e);
 }
 
-// Stats
-const totalProducts = products.length;
-const inStockCount = products.filter(p => p.stockStatus !== 'out-of-stock').length;
 const onSaleCount = products.filter(p => p.onSale).length;
-
-// JSON for client filtering
-const productsJson = JSON.stringify(products.map(p => ({
-  id: p.id,
-  name: p.name,
-  category: p.category,
-  productType: p.productType,
-  stockStatus: p.stockStatus,
-  onSale: p.onSale,
-  featured: p.featured,
-  retailPrice: p.retailPrice,
-  salePrice: p.salePrice,
-})));
+const productsJson = JSON.stringify(products);
 ---
 
-<Layout title="Merch">
+<Layout title="Official Merch - Fresh Wax">
   <Header />
   
-  <!-- Full Width Layout with Sidebar -->
-  <div class="merch-layout">
-    <!-- Filters Sidebar - Full Height -->
-    <aside class="merch-sidebar">
-      <div class="sidebar-inner">
-        
-        <!-- Category Filter -->
-        <div class="filter-section">
-          <div class="filter-header">Category</div>
-          <div class="filter-options">
-            <label class="filter-option">
-              <input type="radio" name="category" value="" checked class="filter-radio" />
-              <span>All Categories</span>
-            </label>
-            {Object.entries(categories).map(([key, name]) => (
-              <label class="filter-option">
-                <input type="radio" name="category" value={key} class="filter-radio" />
-                <span>{name}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <!-- Product Type Filter -->
-        {Object.keys(productTypes).length > 0 && (
-          <div class="filter-section">
-            <div class="filter-header">Type</div>
-            <div class="filter-options">
-              <label class="filter-option">
-                <input type="radio" name="type" value="" checked class="filter-radio" />
-                <span>All Types</span>
-              </label>
-              {Object.entries(productTypes).map(([key, name]) => (
-                <label class="filter-option">
-                  <input type="radio" name="type" value={key} class="filter-radio" />
-                  <span>{name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <!-- Stock Filter -->
-        <div class="filter-section">
-          <div class="filter-header">Availability</div>
-          <div class="filter-options">
-            <label class="filter-option">
-              <input type="radio" name="stock" value="" checked class="filter-radio" />
-              <span>All</span>
-            </label>
-            <label class="filter-option">
-              <input type="radio" name="stock" value="in-stock" class="filter-radio" />
-              <span>In Stock Only</span>
-            </label>
-            {onSaleCount > 0 && (
-              <label class="filter-option">
-                <input type="radio" name="stock" value="on-sale" class="filter-radio" />
-                <span>On Sale</span>
-              </label>
-            )}
-          </div>
-        </div>
-
-        <button id="clearFilters" class="clear-filters-btn">
-          Clear Filters
-        </button>
+  <main class="merch-page">
+    <!-- Hero Section -->
+    <section class="merch-hero">
+      <div class="hero-container">
+        <h1 class="hero-title">OFFICIAL <span class="red">MERCH</span></h1>
+        <p class="hero-subtitle">Fresh Wax Clothing & Accessories</p>
       </div>
-    </aside>
+    </section>
 
-    <!-- Main Content Area -->
+    <!-- Content Section -->
     <div class="merch-content">
-      <!-- Hero -->
-      <section class="merch-hero">
-        <div class="hero-pattern"></div>
-        <div class="hero-inner">
-          <h1 class="merch-title">OFFICIAL <span class="text-red">MERCH</span></h1>
-          <p class="hero-subtitle">Support the underground. Wear the sound.</p>
+      <!-- Filters Bar - Full Width -->
+      <section class="filters-bar">
+        <div class="filters-row">
+          <div class="filter-item">
+            <label>Category</label>
+            <select id="categoryFilter">
+              <option value="">All</option>
+              {Object.entries(categories).map(([key, name]) => (
+                <option value={key}>{name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div class="filter-item">
+            <label>Type</label>
+            <select id="typeFilter">
+              <option value="">All</option>
+              {Object.entries(productTypes).map(([key, name]) => (
+                <option value={key}>{name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div class="filter-item">
+            <label>Availability</label>
+            <select id="stockFilter">
+              <option value="">All</option>
+              <option value="in-stock">In Stock</option>
+              {onSaleCount > 0 && <option value="on-sale">On Sale</option>}
+            </select>
+          </div>
+
+          <div class="filter-item">
+            <label>Sort By</label>
+            <select id="sortSelect">
+              <option value="featured">Featured</option>
+              <option value="newest">Newest</option>
+              <option value="price-low">Price ↑</option>
+              <option value="price-high">Price ↓</option>
+              <option value="name">A-Z</option>
+            </select>
+          </div>
+
+          <button id="clearFilters" class="clear-btn">Clear</button>
+          
+          <div class="products-count">
+            <span id="visibleCount">{products.length}</span> / {products.length}
+          </div>
         </div>
       </section>
 
-      <!-- Products Section -->
-      <main class="products-main">
-        <!-- Header -->
-        <div class="products-header">
-          <p class="products-count">
-            Showing <strong id="visibleCount">{products.length}</strong> of <strong>{products.length}</strong> products
-          </p>
-          <select id="sortSelect" class="sort-select">
-            <option value="featured">Featured</option>
-            <option value="newest">Newest</option>
-            <option value="price-low">Price: Low → High</option>
-            <option value="price-high">Price: High → Low</option>
-            <option value="name">Name A-Z</option>
-          </select>
-        </div>
-
-        <!-- Products Grid -->
-        <div id="productsGrid" class="products-grid">
-            {products.length === 0 ? (
-              <div class="col-span-full bg-white border-2 border-gray-200 p-12 text-center">
-                <div class="text-6xl mb-4">👕</div>
-                <h3 class="text-xl font-bold mb-2">No Products Yet</h3>
-                <p class="text-gray-600">Check back soon for official Fresh Wax merchandise!</p>
-              </div>
-            ) : (
-              products.map(product => (
-                <article 
-                  class="product-card bg-white border-2 border-gray-200 hover:border-black transition-all duration-200 hover:-translate-y-1 hover:shadow-xl group"
-                  data-id={product.id}
-                  data-category={product.category || ''}
-                  data-type={product.productType || ''}
-                  data-stock={product.stockStatus}
-                  data-sale={product.onSale ? 'true' : 'false'}
-                  data-featured={product.featured ? 'true' : 'false'}
-                  data-price={product.salePrice || product.retailPrice}
-                  data-name={product.name}
-                  data-created={product.createdAt || ''}
+      <!-- Products Grid - 2x2 -->
+      <section class="products-section">
+        {products.length === 0 ? (
+          <div class="empty-state">
+            <span>👕</span>
+            <h3>No merch available</h3>
+            <p>Check back soon!</p>
+          </div>
+        ) : (
+          <div id="productsGrid" class="products-grid">
+            {products.map((product) => (
+              <div 
+                class="product-card"
+                data-id={product.id}
+                data-category={product.category || ''}
+                data-type={product.productType || ''}
+                data-stock={product.stockStatus}
+                data-sale={product.onSale ? 'true' : 'false'}
+                data-featured={product.featured ? 'true' : 'false'}
+                data-price={product.salePrice || product.retailPrice}
+                data-name={product.name}
+                data-created={product.createdAt || ''}
+                data-product={JSON.stringify(product)}
+              >
+                <!-- Image -->
+                <div class="card-image card-clickable">
+                  {product.imageUrl ? (
+                    <img src={product.imageUrl} alt={product.name} loading="lazy" />
+                  ) : (
+                    <div class="placeholder">👕</div>
+                  )}
+                  
+                  <div class="badges">
+                    {product.onSale && <span class="badge sale">SALE</span>}
+                    {product.featured && <span class="badge featured">★</span>}
+                    {product.stockStatus === 'out-of-stock' && <span class="badge sold-out">SOLD OUT</span>}
+                  </div>
+                </div>
+                
+                <!-- Info -->
+                <div class="card-info card-clickable">
+                  <span class="product-name">{product.name}</span>
+                  <p class="product-meta">{product.categoryName}</p>
+                  
+                  {product.sizes && product.sizes.length > 0 && (
+                    <p class="product-sizes">{product.sizes.join(' • ')}</p>
+                  )}
+                  
+                  {product.colorList && product.colorList.length > 0 && (
+                    <div class="color-dots">
+                      {product.colorList.map((color: string) => (
+                        <span class="dot" style={`background:${color}`}></span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                <!-- Buy Button -->
+                <button 
+                  class="buy-btn" 
+                  disabled={product.stockStatus === 'out-of-stock'}
                 >
-                  <!-- Badges -->
-                  <div class="absolute top-3 left-3 z-10 flex flex-col gap-1">
-                    {product.featured && (
-                      <span class="px-2 py-1 bg-black text-white text-xs font-bold uppercase">Featured</span>
-                    )}
-                    {product.onSale && (
-                      <span class="px-2 py-1 bg-red-600 text-white text-xs font-bold uppercase">Sale</span>
-                    )}
-                    {product.stockStatus === 'low-stock' && (
-                      <span class="px-2 py-1 bg-amber-500 text-white text-xs font-bold uppercase">Low Stock</span>
-                    )}
-                    {product.stockStatus === 'out-of-stock' && (
-                      <span class="px-2 py-1 bg-gray-400 text-white text-xs font-bold uppercase">Sold Out</span>
-                    )}
-                  </div>
-
-                  <!-- Image -->
-                  <div class="p-4">
-                    <div class="relative aspect-square overflow-hidden bg-gray-100">
-                      <img 
-                        src={product.primaryImage || product.images?.[0]?.url || '/logo.webp'} 
-                        alt={product.name}
-                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                        onerror="this.src='/logo.webp'"
-                      />
-                      <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <button 
-                          class="quick-view-btn px-6 py-3 bg-white text-black font-bold text-base uppercase tracking-wide hover:bg-red-600 hover:text-white transition-colors"
-                          data-product={JSON.stringify(product)}
-                        >
-                          Quick View
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Info -->
-                  <div class="p-4 pt-0">
-                    <div class="text-lg text-gray-500 uppercase tracking-wide mb-1">
-                      {product.categoryName || 'Fresh Wax'}
-                    </div>
-                    <h3 class="font-bold text-2xl mb-1 line-clamp-1">{product.name}</h3>
-                    <div class="text-xl text-gray-600 mb-2">{product.productTypeName || product.productType}</div>
-                    
-                    <div class="flex items-baseline gap-2">
-                      {product.onSale && product.salePrice ? (
-                        <>
-                          <span class="text-2xl font-bold text-red-600">£{product.salePrice.toFixed(2)}</span>
-                          <span class="text-lg text-gray-400 line-through">£{product.retailPrice.toFixed(2)}</span>
-                        </>
-                      ) : (
-                        <span class="text-2xl font-bold">£{product.retailPrice.toFixed(2)}</span>
-                      )}
-                    </div>
-
-                    {product.colors && product.colors.length > 0 && (
-                      <div class="flex gap-1 mt-3">
-                        {product.colors.slice(0, 5).map((color: any) => (
-                          <div 
-                            class="w-6 h-6 border-2 border-gray-300 hover:border-black transition-colors" 
-                            style={`background-color: ${color.hex || '#ccc'}`}
-                            title={color.name}
-                          />
-                        ))}
-                        {product.colors.length > 5 && (
-                          <div class="w-6 h-6 border-2 border-gray-300 bg-gray-100 flex items-center justify-center text-xs text-gray-500">
-                            +{product.colors.length - 5}
-                          </div>
+                  {product.stockStatus === 'out-of-stock' ? (
+                    <span>Sold Out</span>
+                  ) : (
+                    <>
+                      <span class="buy-text">BUY</span>
+                      <span class="buy-price">
+                        {product.onSale && product.salePrice ? (
+                          <>£{product.salePrice.toFixed(2)}</>
+                        ) : (
+                          <>£{product.retailPrice.toFixed(2)}</>
                         )}
-                      </div>
-                    )}
-                  </div>
-                </article>
-              ))
-            )}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            ))}
           </div>
-        </main>
-      </div>
+        )}
+      </section>
     </div>
+  </main>
 
-  <!-- Quick View Modal -->
-  <div id="quickViewModal" class="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 opacity-0 invisible transition-all duration-300">
-    <div class="bg-white border-3 border-black max-w-5xl w-full max-h-[90vh] overflow-y-auto transform translate-y-5 transition-transform duration-300">
-      <div class="bg-black text-white px-6 py-5 flex justify-between items-center sticky top-0">
-        <h3 class="font-bold text-2xl uppercase tracking-wide">Quick View</h3>
-        <button id="closeModal" class="text-4xl hover:text-red-500 transition-colors">&times;</button>
-      </div>
-      <div class="md:grid md:grid-cols-2">
-        <!-- Images -->
-        <div class="bg-gray-100 p-6">
-          <img id="modalMainImage" src="/logo.webp" alt="Product image" class="w-full aspect-square object-cover" />
-          <div id="modalThumbnails" class="flex gap-3 pt-4"></div>
+  <!-- Quick View / Buy Modal -->
+  <div id="buyModal" class="modal-overlay">
+    <div class="modal-box">
+      <button class="modal-close">&times;</button>
+      
+      <div class="modal-grid">
+        <!-- Image -->
+        <div class="modal-image">
+          <img id="modalImg" src="" alt="" />
+          <div id="modalThumbs" class="modal-thumbs"></div>
         </div>
+        
         <!-- Details -->
-        <div class="p-8 flex flex-col">
-          <div id="modalCategory" class="text-xl text-gray-500 uppercase tracking-wide">Category</div>
-          <h2 id="modalName" class="text-4xl font-bold mt-2 mb-3">Product Name</h2>
-          <div id="modalPrice" class="text-4xl font-bold mb-6">£0.00</div>
-          <p id="modalDescription" class="text-gray-600 text-xl leading-relaxed mb-8">Description</p>
+        <div class="modal-info">
+          <h2 id="modalName"></h2>
+          <p id="modalCategory" class="modal-cat"></p>
+          <p id="modalDesc" class="modal-desc"></p>
           
-          <div id="modalSizes" class="mb-6 hidden">
-            <div class="text-xl font-bold uppercase mb-3">Size</div>
-            <div id="modalSizeGrid" class="flex flex-wrap gap-3"></div>
+          <div id="modalPriceBox" class="modal-price"></div>
+          
+          <!-- Size Selection -->
+          <div id="sizeSection" class="option-section">
+            <label>Select Size <span class="required">*</span></label>
+            <div id="sizeOptions" class="option-grid"></div>
           </div>
           
-          <div id="modalColors" class="mb-6 hidden">
-            <div class="text-xl font-bold uppercase mb-3">Colour</div>
-            <div id="modalColorGrid" class="flex flex-wrap gap-3"></div>
+          <!-- Color Selection -->
+          <div id="colorSection" class="option-section">
+            <label>Select Colour <span class="required">*</span></label>
+            <div id="colorOptions" class="option-grid"></div>
           </div>
           
-          <div id="modalStock" class="flex items-center gap-3 text-xl mb-8">
-            <span class="w-3 h-3 rounded-full bg-green-500"></span>
-            <span>In Stock</span>
-          </div>
+          <!-- Stock Status -->
+          <div id="modalStockStatus" class="stock-info"></div>
           
-          <button id="addToCartBtn" class="mt-auto w-full py-5 bg-black text-white text-xl font-bold uppercase tracking-wide hover:bg-red-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
-            Add to Cart
+          <!-- Add to Cart -->
+          <button id="addToCartBtn" class="add-to-cart-btn" disabled>
+            <span class="btn-text">Select Options</span>
+            <span class="btn-price"></span>
           </button>
+          
+          <a id="viewDetailsLink" href="" class="view-details-link">View Larger with Zoom →</a>
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Toast -->
-  <div id="toast" class="fixed bottom-6 right-6 px-6 py-4 bg-black text-white font-bold border-2 border-white z-[9999] transform translate-y-24 opacity-0 transition-all duration-300">
-    Added to cart!
   </div>
 
   <FloatingShuffleButton />
-
-  <!-- Simple Footer -->
-  <footer class="bg-gray-900 text-gray-400 py-6 text-center text-sm relative z-50">
-    <div class="container mx-auto px-4">
-      <p>&copy; {new Date().getFullYear()} Fresh Wax Records. All rights reserved.</p>
-    </div>
-  </footer>
+  <Footer />
 </Layout>
 
 <script define:vars={{ productsJson }}>
@@ -353,698 +310,344 @@ const productsJson = JSON.stringify(products.map(p => ({
 </script>
 
 <script>
-  // State
-  let currentProduct: any = null;
-  let selectedSize: string | null = null;
-  let selectedColor: string | null = null;
-  let userCanPurchase = true;
-
   function init() {
-    setupFilters();
-    setupQuickView();
-    setupModal();
-    checkUserPurchasePermission();
-  }
-
-  // Check if user is allowed to make purchases
-  async function checkUserPurchasePermission() {
-    try {
-      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
-      const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-      
-      const firebaseConfig = {
-        apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
-        authDomain: "freshwax-store.firebaseapp.com",
-        projectId: "freshwax-store",
-        storageBucket: "freshwax-store.firebasestorage.app",
-        messagingSenderId: "675435782973",
-        appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-      };
-      
-      const app = initializeApp(firebaseConfig);
-      const auth = getAuth(app);
-      
-      onAuthStateChanged(auth, async (user: any) => {
-        if (user) {
-          const response = await fetch('/api/get-user-type?uid=' + user.uid);
-          const data = await response.json();
-          
-          // Artists who are NOT also customers cannot buy
-          if (data.isArtist && !data.isCustomer) {
-            userCanPurchase = false;
-          }
-        }
-      });
-    } catch (e) {
-      console.error('Error checking user type:', e);
-    }
-  }
-
-  // Filters
-  function setupFilters() {
-    const filterInputs = document.querySelectorAll<HTMLInputElement>('.bg-white input[type="radio"]');
+    // Filters
+    const categoryFilter = document.getElementById('categoryFilter') as HTMLSelectElement;
+    const typeFilter = document.getElementById('typeFilter') as HTMLSelectElement;
+    const stockFilter = document.getElementById('stockFilter') as HTMLSelectElement;
     const sortSelect = document.getElementById('sortSelect') as HTMLSelectElement;
     const clearBtn = document.getElementById('clearFilters');
+    const grid = document.getElementById('productsGrid');
+    const countEl = document.getElementById('visibleCount');
 
-    filterInputs.forEach(input => {
-      input.addEventListener('change', applyFilters);
-    });
+    function applyFilters() {
+      const category = categoryFilter?.value || '';
+      const type = typeFilter?.value || '';
+      const stock = stockFilter?.value || '';
+      const sort = sortSelect?.value || 'featured';
 
-    sortSelect?.addEventListener('change', applyFilters);
+      const cards = Array.from(grid?.querySelectorAll('.product-card') || []) as HTMLElement[];
+      let visible = 0;
 
-    clearBtn?.addEventListener('click', () => {
-      filterInputs.forEach(input => {
-        if (input.value === '') input.checked = true;
+      cards.forEach(card => {
+        let show = true;
+        if (category && card.dataset.category !== category) show = false;
+        if (type && card.dataset.type !== type) show = false;
+        if (stock === 'in-stock' && card.dataset.stock === 'out-of-stock') show = false;
+        if (stock === 'on-sale' && card.dataset.sale !== 'true') show = false;
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
       });
+
+      const visibleCards = cards.filter(c => c.style.display !== 'none');
+      visibleCards.sort((a, b) => {
+        switch (sort) {
+          case 'featured':
+            if (a.dataset.featured === 'true' && b.dataset.featured !== 'true') return -1;
+            if (a.dataset.featured !== 'true' && b.dataset.featured === 'true') return 1;
+            return 0;
+          case 'newest':
+            return new Date(b.dataset.created || 0).getTime() - new Date(a.dataset.created || 0).getTime();
+          case 'price-low':
+            return parseFloat(a.dataset.price || '0') - parseFloat(b.dataset.price || '0');
+          case 'price-high':
+            return parseFloat(b.dataset.price || '0') - parseFloat(a.dataset.price || '0');
+          case 'name':
+            return (a.dataset.name || '').localeCompare(b.dataset.name || '');
+          default:
+            return 0;
+        }
+      });
+      visibleCards.forEach(card => grid?.appendChild(card));
+      if (countEl) countEl.textContent = String(visible);
+    }
+
+    categoryFilter?.addEventListener('change', applyFilters);
+    typeFilter?.addEventListener('change', applyFilters);
+    stockFilter?.addEventListener('change', applyFilters);
+    sortSelect?.addEventListener('change', applyFilters);
+    clearBtn?.addEventListener('click', () => {
+      if (categoryFilter) categoryFilter.value = '';
+      if (typeFilter) typeFilter.value = '';
+      if (stockFilter) stockFilter.value = '';
       if (sortSelect) sortSelect.value = 'featured';
       applyFilters();
     });
-  }
 
-  function applyFilters() {
-    const category = (document.querySelector('input[name="category"]:checked') as HTMLInputElement)?.value || '';
-    const type = (document.querySelector('input[name="type"]:checked') as HTMLInputElement)?.value || '';
-    const stock = (document.querySelector('input[name="stock"]:checked') as HTMLInputElement)?.value || '';
-    const sort = (document.getElementById('sortSelect') as HTMLSelectElement)?.value || 'featured';
+    // Modal
+    const modal = document.getElementById('buyModal');
+    const modalClose = document.querySelector('.modal-close');
+    let currentProduct: any = null;
+    let selectedSize: string | null = null;
+    let selectedColor: string | null = null;
 
-    const grid = document.getElementById('productsGrid');
-    const cards = Array.from(grid?.querySelectorAll('.product-card') || []) as HTMLElement[];
-    let visible = 0;
-
-    cards.forEach(card => {
-      let show = true;
-
-      if (category && card.dataset.category !== category) show = false;
-      if (type && card.dataset.type !== type) show = false;
-      if (stock === 'in-stock' && card.dataset.stock === 'out-of-stock') show = false;
-      if (stock === 'on-sale' && card.dataset.sale !== 'true') show = false;
-
-      card.classList.toggle('hidden', !show);
-      if (show) visible++;
-    });
-
-    // Sort visible cards
-    const visibleCards = cards.filter(c => !c.classList.contains('hidden'));
-    visibleCards.sort((a, b) => {
-      switch (sort) {
-        case 'featured':
-          if (a.dataset.featured === 'true' && b.dataset.featured !== 'true') return -1;
-          if (a.dataset.featured !== 'true' && b.dataset.featured === 'true') return 1;
-          return 0;
-        case 'newest':
-          return new Date(b.dataset.created || 0).getTime() - new Date(a.dataset.created || 0).getTime();
-        case 'price-low':
-          return parseFloat(a.dataset.price || '0') - parseFloat(b.dataset.price || '0');
-        case 'price-high':
-          return parseFloat(b.dataset.price || '0') - parseFloat(a.dataset.price || '0');
-        case 'name':
-          return (a.dataset.name || '').localeCompare(b.dataset.name || '');
-        default:
-          return 0;
-      }
-    });
-
-    visibleCards.forEach(card => grid?.appendChild(card));
-
-    const countEl = document.getElementById('visibleCount');
-    if (countEl) countEl.textContent = String(visible);
-  }
-
-  // Quick View
-  function setupQuickView() {
-    document.querySelectorAll('.quick-view-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const productData = JSON.parse((btn as HTMLElement).dataset.product || '{}');
-        openQuickView(productData);
-      });
-    });
-  }
-
-  function openQuickView(product: any) {
-    currentProduct = product;
-    selectedSize = null;
-    selectedColor = null;
-
-    const modal = document.getElementById('quickViewModal');
-    
-    // Populate modal
-    (document.getElementById('modalCategory') as HTMLElement).textContent = product.categoryName || 'Fresh Wax';
-    (document.getElementById('modalName') as HTMLElement).textContent = product.name;
-    (document.getElementById('modalDescription') as HTMLElement).textContent = product.description || 'No description available.';
-
-    // Price
-    const priceEl = document.getElementById('modalPrice') as HTMLElement;
-    if (product.onSale && product.salePrice) {
-      priceEl.innerHTML = `<span class="text-red-600">£${product.salePrice.toFixed(2)}</span> <span class="text-base text-gray-400 line-through">£${product.retailPrice.toFixed(2)}</span>`;
-    } else {
-      priceEl.textContent = `£${product.retailPrice.toFixed(2)}`;
-    }
-
-    // Images
-    const mainImg = document.getElementById('modalMainImage') as HTMLImageElement;
-    const thumbs = document.getElementById('modalThumbnails') as HTMLElement;
-    
-    // Set alt text for accessibility
-    mainImg.alt = product.name + ' - Fresh Wax merchandise';
-    
-    const images = product.images || [];
-    if (images.length === 0 && product.primaryImage) {
-      images.push({ url: product.primaryImage });
-    }
-
-    if (images.length > 0) {
-      mainImg.src = images[0].url || images[0];
+    // Open modal when clicking on card image, info, or buy button
+    document.querySelectorAll('.product-card').forEach(card => {
+      const product = JSON.parse((card as HTMLElement).dataset.product || '{}');
       
-      if (images.length > 1) {
-        thumbs.innerHTML = images.map((img: any, idx: number) => {
-          const url = img.url || img;
-          return `<img src="${url}" alt="${product.name} thumbnail ${idx + 1}" class="w-16 h-16 object-cover border-2 ${idx === 0 ? 'border-black' : 'border-transparent'} cursor-pointer hover:border-black transition-colors" data-idx="${idx}" />`;
-        }).join('');
-        thumbs.style.display = 'flex';
-
-        thumbs.querySelectorAll('img').forEach(thumb => {
-          thumb.addEventListener('click', () => {
-            mainImg.src = (thumb as HTMLImageElement).src;
-            thumbs.querySelectorAll('img').forEach(t => t.classList.replace('border-black', 'border-transparent'));
-            thumb.classList.replace('border-transparent', 'border-black');
-          });
-        });
-      } else {
-        thumbs.style.display = 'none';
-      }
-    } else {
-      mainImg.src = '/logo.webp';
-      thumbs.style.display = 'none';
-    }
-
-    // Sizes
-    const sizesContainer = document.getElementById('modalSizes') as HTMLElement;
-    const sizeGrid = document.getElementById('modalSizeGrid') as HTMLElement;
-
-    if (product.hasSizes && product.sizes?.length > 0) {
-      sizeGrid.innerHTML = product.sizes.map((size: string) => 
-        `<button class="size-btn px-4 py-2 border-2 border-gray-300 font-medium text-sm hover:border-black transition-colors" data-size="${size}">${size}</button>`
-      ).join('');
-      sizesContainer.classList.remove('hidden');
-
-      sizeGrid.querySelectorAll('.size-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          sizeGrid.querySelectorAll('.size-btn').forEach(b => b.classList.remove('bg-black', 'text-white', 'border-black'));
-          btn.classList.add('bg-black', 'text-white', 'border-black');
-          selectedSize = (btn as HTMLElement).dataset.size || null;
-          updateAddToCartBtn();
+      // Click on image or info opens modal
+      card.querySelectorAll('.card-clickable').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.preventDefault();
+          openModal(product);
         });
       });
-    } else {
-      sizesContainer.classList.add('hidden');
-    }
-
-    // Colors
-    const colorsContainer = document.getElementById('modalColors') as HTMLElement;
-    const colorGrid = document.getElementById('modalColorGrid') as HTMLElement;
-
-    if (product.hasColors && product.colors?.length > 0) {
-      colorGrid.innerHTML = product.colors.map((color: any) => 
-        `<button class="color-btn w-10 h-10 border-2 border-gray-300 hover:border-black transition-colors relative" data-color="${color.name}" style="background-color: ${color.hex || '#ccc'}" title="${color.name}"></button>`
-      ).join('');
-      colorsContainer.classList.remove('hidden');
-
-      colorGrid.querySelectorAll('.color-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          colorGrid.querySelectorAll('.color-btn').forEach(b => b.classList.remove('ring-2', 'ring-black', 'ring-offset-2'));
-          btn.classList.add('ring-2', 'ring-black', 'ring-offset-2');
-          selectedColor = (btn as HTMLElement).dataset.color || null;
-          updateAddToCartBtn();
-        });
+      
+      // Buy button also opens modal
+      const buyBtn = card.querySelector('.buy-btn');
+      buyBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        openModal(product);
       });
-    } else {
-      colorsContainer.classList.add('hidden');
-    }
+    });
 
-    // Stock
-    const stockEl = document.getElementById('modalStock') as HTMLElement;
-    const dotClass = product.stockStatus === 'out-of-stock' ? 'bg-gray-400' 
-                   : product.stockStatus === 'low-stock' ? 'bg-amber-500' 
-                   : 'bg-green-500';
-    stockEl.innerHTML = `<span class="w-2 h-2 rounded-full ${dotClass}"></span><span>${product.stockLabel}</span>`;
-
-    updateAddToCartBtn();
-
-    // Show modal
-    modal?.classList.remove('invisible', 'opacity-0');
-    modal?.querySelector('.bg-white')?.classList.remove('translate-y-5');
-    document.body.style.overflow = 'hidden';
-  }
-
-  function updateAddToCartBtn() {
-    const btn = document.getElementById('addToCartBtn') as HTMLButtonElement;
-    if (!currentProduct || !btn) return;
-
-    if (currentProduct.stockStatus === 'out-of-stock') {
-      btn.disabled = true;
-      btn.textContent = 'Out of Stock';
-      return;
-    }
-
-    const needsSize = currentProduct.hasSizes && currentProduct.sizes?.length > 0;
-    const needsColor = currentProduct.hasColors && currentProduct.colors?.length > 0;
-
-    if ((needsSize && !selectedSize) || (needsColor && !selectedColor)) {
-      btn.disabled = true;
-      btn.textContent = 'Select Options';
-    } else {
-      btn.disabled = false;
-      btn.textContent = 'Add to Cart';
-    }
-  }
-
-  // Modal controls
-  function setupModal() {
-    const modal = document.getElementById('quickViewModal');
-    const closeBtn = document.getElementById('closeModal');
-    const addBtn = document.getElementById('addToCartBtn');
-
-    closeBtn?.addEventListener('click', closeModal);
+    modalClose?.addEventListener('click', closeModal);
     modal?.addEventListener('click', (e) => {
       if (e.target === modal) closeModal();
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeModal();
     });
-    addBtn?.addEventListener('click', addToCart);
-  }
 
-  function closeModal() {
-    const modal = document.getElementById('quickViewModal');
-    modal?.classList.add('opacity-0');
-    modal?.querySelector('.bg-white')?.classList.add('translate-y-5');
-    setTimeout(() => {
-      modal?.classList.add('invisible');
-      document.body.style.overflow = '';
-    }, 300);
-    currentProduct = null;
-  }
+    function openModal(product: any, skipPushState = false) {
+      if (!modal) return;
+      currentProduct = product;
+      selectedSize = null;
+      selectedColor = null;
+      
+      // Add hash to URL for back navigation (unless coming from popstate)
+      if (!skipPushState) {
+        history.pushState({ productId: product.id }, '', `#quick-view-${product.id}`);
+      }
 
-  function addToCart() {
-    if (!currentProduct) return;
+      // Image
+      const mainImg = document.getElementById('modalImg') as HTMLImageElement;
+      if (mainImg) {
+        mainImg.src = product.imageUrl || '';
+        mainImg.alt = product.name;
+      }
 
-    // Check if user is allowed to make purchases
-    if (!userCanPurchase) {
-      alert('Artist accounts cannot make purchases. Please create a separate customer account to buy items from the store.');
-      return;
+      // Thumbnails
+      const thumbs = document.getElementById('modalThumbs');
+      if (thumbs && product.images?.length > 1) {
+        thumbs.innerHTML = product.images.map((img: string, i: number) => `
+          <button class="thumb ${i === 0 ? 'active' : ''}" data-src="${img}">
+            <img src="${img}" alt="" />
+          </button>
+        `).join('');
+        thumbs.querySelectorAll('.thumb').forEach(t => {
+          t.addEventListener('click', () => {
+            mainImg.src = (t as HTMLElement).dataset.src || '';
+            thumbs.querySelectorAll('.thumb').forEach(x => x.classList.remove('active'));
+            t.classList.add('active');
+          });
+        });
+      } else if (thumbs) {
+        thumbs.innerHTML = '';
+      }
+
+      // Details
+      const nameEl = document.getElementById('modalName');
+      const catEl = document.getElementById('modalCategory');
+      const descEl = document.getElementById('modalDesc');
+      const priceBox = document.getElementById('modalPriceBox');
+      const viewLink = document.getElementById('viewDetailsLink') as HTMLAnchorElement;
+
+      if (nameEl) nameEl.textContent = product.name || '';
+      if (catEl) catEl.textContent = product.categoryName || '';
+      if (descEl) descEl.textContent = product.description || '';
+      if (viewLink) viewLink.href = `/merch/${product.id}`;
+
+      if (priceBox) {
+        const price = product.onSale && product.salePrice ? product.salePrice : product.retailPrice;
+        if (product.onSale && product.salePrice) {
+          priceBox.innerHTML = `
+            <span class="current-price">£${product.salePrice.toFixed(2)}</span>
+            <span class="old-price">£${product.retailPrice.toFixed(2)}</span>
+            <span class="save-badge">SAVE £${(product.retailPrice - product.salePrice).toFixed(2)}</span>
+          `;
+        } else {
+          priceBox.innerHTML = `<span class="current-price">£${product.retailPrice.toFixed(2)}</span>`;
+        }
+      }
+
+      // Sizes
+      const sizeSection = document.getElementById('sizeSection');
+      const sizeOptions = document.getElementById('sizeOptions');
+      if (sizeSection && sizeOptions) {
+        if (product.sizes?.length > 0) {
+          sizeSection.style.display = 'block';
+          sizeOptions.innerHTML = product.sizes.map((s: string, i: number) => 
+            `<button class="opt-btn size-btn ${product.sizes.length === 1 ? 'selected' : ''}" data-size="${s}">${s}</button>`
+          ).join('');
+          
+          // Auto-select if only one size
+          if (product.sizes.length === 1) {
+            selectedSize = product.sizes[0];
+          }
+          
+          sizeOptions.querySelectorAll('.size-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              sizeOptions.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
+              btn.classList.add('selected');
+              selectedSize = (btn as HTMLElement).dataset.size || null;
+              updateCartButton();
+            });
+          });
+        } else {
+          sizeSection.style.display = 'none';
+          selectedSize = 'none';
+        }
+      }
+
+      // Colors
+      const colorSection = document.getElementById('colorSection');
+      const colorOptions = document.getElementById('colorOptions');
+      if (colorSection && colorOptions) {
+        if (product.colorList?.length > 0) {
+          colorSection.style.display = 'block';
+          colorOptions.innerHTML = product.colorList.map((hex: string, i: number) => {
+            const name = product.colorNames?.[i] || hex;
+            const isSelected = product.colorList.length === 1 ? 'selected' : '';
+            return `<button class="opt-btn color-opt ${isSelected}" data-color="${name}" data-hex="${hex}" style="background:${hex}" title="${name}"></button>`;
+          }).join('');
+          
+          // Auto-select if only one color
+          if (product.colorList.length === 1) {
+            selectedColor = product.colorNames?.[0] || product.colorList[0];
+          }
+          
+          colorOptions.querySelectorAll('.color-opt').forEach(btn => {
+            btn.addEventListener('click', () => {
+              colorOptions.querySelectorAll('.color-opt').forEach(b => b.classList.remove('selected'));
+              btn.classList.add('selected');
+              selectedColor = (btn as HTMLElement).dataset.color || null;
+              updateCartButton();
+            });
+          });
+        } else {
+          colorSection.style.display = 'none';
+          selectedColor = 'none';
+        }
+      }
+
+      // Stock status
+      const stockStatus = document.getElementById('modalStockStatus');
+      if (stockStatus) {
+        stockStatus.className = `stock-info ${product.stockStatus}`;
+        stockStatus.textContent = product.stockLabel;
+      }
+
+      updateCartButton();
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
     }
 
-    // Get customer ID from cookie
-    const cookies = document.cookie.split(';');
-    let customerId = null;
-    for (const cookie of cookies) {
-      const [name, value] = cookie.trim().split('=');
-      if (name === 'customerId' && value) {
-        customerId = value;
-        break;
+    function updateCartButton() {
+      const btn = document.getElementById('addToCartBtn') as HTMLButtonElement;
+      const btnText = btn?.querySelector('.btn-text');
+      const btnPrice = btn?.querySelector('.btn-price');
+      
+      if (!btn || !currentProduct) return;
+
+      const needsSize = currentProduct.sizes?.length > 0;
+      const needsColor = currentProduct.colorList?.length > 0;
+      const sizeOk = !needsSize || selectedSize;
+      const colorOk = !needsColor || selectedColor;
+
+      if (currentProduct.stockStatus === 'out-of-stock') {
+        btn.disabled = true;
+        if (btnText) btnText.textContent = 'Sold Out';
+        if (btnPrice) btnPrice.textContent = '';
+      } else if (!sizeOk || !colorOk) {
+        btn.disabled = true;
+        const missing = [];
+        if (!sizeOk) missing.push('size');
+        if (!colorOk) missing.push('colour');
+        if (btnText) btnText.textContent = `Select ${missing.join(' & ')}`;
+        if (btnPrice) btnPrice.textContent = '';
+      } else {
+        btn.disabled = false;
+        if (btnText) btnText.textContent = 'Add to Cart';
+        const price = currentProduct.onSale && currentProduct.salePrice 
+          ? currentProduct.salePrice 
+          : currentProduct.retailPrice;
+        if (btnPrice) btnPrice.textContent = `£${price.toFixed(2)}`;
       }
     }
 
-    if (!customerId) {
-      window.location.href = '/login?redirect=/merch';
-      return;
-    }
+    // Add to Cart
+    document.getElementById('addToCartBtn')?.addEventListener('click', () => {
+      if (!currentProduct) return;
+      
+      const item = {
+        id: currentProduct.id,
+        name: currentProduct.name,
+        type: 'merch',  // Important: identifies as physical merch not digital
+        price: currentProduct.onSale && currentProduct.salePrice 
+          ? currentProduct.salePrice 
+          : currentProduct.retailPrice,
+        image: currentProduct.imageUrl,
+        size: selectedSize !== 'none' ? selectedSize : undefined,
+        color: selectedColor !== 'none' ? selectedColor : undefined,
+        quantity: 1
+      };
 
-    // Use customer-specific cart key
-    const cartKey = 'freshwax_cart_' + customerId;
-    let cartData = { items: [] };
-    try {
-      const stored = localStorage.getItem(cartKey);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        cartData = parsed.items ? parsed : { items: parsed };
+      // Use global cart if available
+      if (typeof (window as any).FreshWaxCart !== 'undefined') {
+        (window as any).FreshWaxCart.add(item);
+      } else {
+        console.log('Added to cart:', item);
+        alert(`Added ${item.name} to cart!`);
       }
-    } catch (e) {
-      console.error('[Merch] Cart parse error:', e);
-    }
 
-    const cart = cartData.items || [];
-    const price = currentProduct.onSale && currentProduct.salePrice 
-      ? currentProduct.salePrice 
-      : currentProduct.retailPrice;
-
-    const cartItem = {
-      id: currentProduct.id,
-      productId: currentProduct.id,
-      type: 'merch',
-      format: 'merch',
-      name: currentProduct.name,
-      title: currentProduct.name,
-      price,
-      image: currentProduct.primaryImage || currentProduct.images?.[0]?.url || '/logo.webp',
-      artwork: currentProduct.primaryImage || currentProduct.images?.[0]?.url || '/logo.webp',
-      size: selectedSize,
-      color: selectedColor,
-      quantity: 1
-    };
-
-    const variantKey = `${cartItem.id}-${cartItem.size || 'onesize'}-${cartItem.color || 'default'}`;
-    const existingIdx = cart.findIndex((item: any) => {
-      const itemKey = `${item.id}-${item.size || 'onesize'}-${item.color || 'default'}`;
-      return itemKey === variantKey && item.type === 'merch';
+      closeModal();
     });
 
-    if (existingIdx >= 0) {
-      cart[existingIdx].quantity = (cart[existingIdx].quantity || 1) + 1;
-    } else {
-      cart.push(cartItem);
+    function closeModal() {
+      modal?.classList.remove('active');
+      document.body.style.overflow = '';
+      currentProduct = null;
+      selectedSize = null;
+      selectedColor = null;
+      
+      // Remove hash from URL
+      if (window.location.hash.startsWith('#quick-view-')) {
+        history.pushState(null, '', window.location.pathname + window.location.search);
+      }
     }
-
-    // Save to customer-specific cart
-    const newCartData = {
-      items: cart,
-      updatedAt: new Date().toISOString()
-    };
-    localStorage.setItem(cartKey, JSON.stringify(newCartData));
     
-    // Dispatch both event types for compatibility
-    window.dispatchEvent(new CustomEvent('cart-updated', { detail: newCartData }));
-    window.dispatchEvent(new CustomEvent('cartUpdated', { detail: newCartData }));
-
-    // Update cart badge
-    if (window.FreshWaxCart) {
-      window.FreshWaxCart.updateBadge();
+    // Handle browser back/forward navigation
+    window.addEventListener('popstate', () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#quick-view-')) {
+        const productId = hash.replace('#quick-view-', '');
+        const products = (window as any).PRODUCTS_DATA || [];
+        const product = products.find((p: any) => p.id === productId);
+        if (product) {
+          openModal(product, true); // skipPushState = true
+        }
+      } else {
+        // Close modal if hash is gone
+        modal?.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    });
+    
+    // Check for hash on page load
+    const initialHash = window.location.hash;
+    if (initialHash.startsWith('#quick-view-')) {
+      const productId = initialHash.replace('#quick-view-', '');
+      const products = (window as any).PRODUCTS_DATA || [];
+      const product = products.find((p: any) => p.id === productId);
+      if (product) {
+        // Small delay to ensure DOM is ready
+        setTimeout(() => openModal(product, true), 100);
+      }
     }
-
-    showToast('Added to cart!');
-    closeModal();
   }
 
-  function showToast(message: string) {
-    const toast = document.getElementById('toast');
-    if (!toast) return;
-    
-    toast.textContent = message;
-    toast.classList.remove('translate-y-24', 'opacity-0');
-    
-    setTimeout(() => {
-      toast.classList.add('translate-y-24', 'opacity-0');
-    }, 3000);
-  }
-
-  // Initialize
   document.addEventListener('DOMContentLoaded', init);
   document.addEventListener('astro:page-load', init);
 </script>
 
-<style>
-  /* Full Height Layout */
-  .merch-layout {
-    display: flex;
-    min-height: calc(100vh - 80px); /* Subtract header height */
-  }
-
-  /* Sidebar - Fixed Full Height */
-  .merch-sidebar {
-    width: 260px;
-    background: #000;
-    flex-shrink: 0;
-    position: fixed;
-    top: 80px; /* Header height */
-    left: 0;
-    height: calc(100vh - 80px);
-    overflow-y: auto;
-    z-index: 40;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-right: 2px solid #fff;
-  }
-
-  /* Add left margin to content to account for fixed sidebar */
-  .merch-content {
-    margin-left: 260px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .sidebar-inner {
-    padding: 3rem 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    width: 100%;
-  }
-
-  .filter-section {
-    background: #1a1a1a;
-    border: 2px solid #333;
-  }
-
-  .filter-header {
-    background: #dc2626;
-    color: white;
-    padding: 0.75rem 1rem;
-    font-weight: 700;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .filter-options {
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .filter-option {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    cursor: pointer;
-    color: #ccc;
-    font-size: 0.875rem;
-    transition: color 0.2s;
-  }
-
-  .filter-option:hover {
-    color: #dc2626;
-  }
-
-  .filter-radio {
-    width: 1rem;
-    height: 1rem;
-    accent-color: #dc2626;
-  }
-
-  .clear-filters-btn {
-    width: 100%;
-    padding: 0.75rem;
-    background: #333;
-    border: 2px solid #555;
-    color: white;
-    font-weight: 700;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .clear-filters-btn:hover {
-    background: #dc2626;
-    border-color: #dc2626;
-  }
-
-  /* Hero Section */
-  .merch-hero {
-    background: #000;
-    color: white;
-    padding: 3rem 0;
-    position: relative;
-    overflow: hidden;
-    text-align: center;
-  }
-
-  .hero-pattern {
-    position: absolute;
-    inset: 0;
-    opacity: 0.05;
-    background-image: url('/logo.webp');
-    background-size: 200px;
-    background-repeat: repeat;
-    filter: grayscale(1);
-  }
-
-  .hero-inner {
-    position: relative;
-    z-index: 10;
-    padding: 0 1.5rem;
-  }
-
-  .hero-subtitle {
-    color: #9ca3af;
-    font-size: 1.125rem;
-  }
-
-  /* Products Section */
-  .products-main {
-    background: #f9fafb;
-    flex: 1;
-    padding: 2rem;
-  }
-
-  .products-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .products-count {
-    font-size: 0.875rem;
-    color: #6b7280;
-  }
-
-  .products-count strong {
-    color: #000;
-  }
-
-  .sort-select {
-    padding: 0.5rem 1rem;
-    border: 2px solid #000;
-    background: white;
-    font-weight: 500;
-    font-size: 0.875rem;
-    cursor: pointer;
-  }
-
-  .sort-select:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px #000;
-  }
-
-  .products-grid {
-    display: grid;
-    grid-template-columns: repeat(1, 1fr);
-    gap: 1rem;
-  }
-
-  @media (min-width: 640px) {
-    .products-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .products-grid {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .products-grid {
-      grid-template-columns: repeat(4, 1fr);
-    }
-  }
-
-  .product-card {
-    max-width: 330px;
-    margin: 0 auto;
-  }
-
-  .product-card img {
-    aspect-ratio: 1;
-    object-fit: cover;
-  }
-
-  /* Title Styling */
-  .merch-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 5.75rem;
-    font-weight: 400;
-    margin-bottom: 1rem;
-    letter-spacing: 0.02em;
-    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 80px rgba(220, 38, 38, 0.2);
-    line-height: 0.95;
-    text-transform: uppercase;
-  }
-
-  .merch-title .text-red {
-    color: #dc2626;
-    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 60px rgba(220, 38, 38, 0.5);
-  }
-
-  @media (min-width: 768px) {
-    .merch-title {
-      font-size: 6.75rem;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .merch-title {
-      font-size: 7.25rem;
-    }
-  }
-
-  /* Mobile Responsive */
-  @media (max-width: 1023px) {
-    .merch-layout {
-      flex-direction: column;
-    }
-
-    .merch-sidebar {
-      width: 100%;
-      position: relative;
-      top: 0;
-      left: 0;
-      height: auto;
-      border-right: none;
-      border-bottom: 2px solid #fff;
-    }
-
-    .merch-content {
-      margin-left: 0;
-    }
-
-    .sidebar-inner {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-    }
-
-    .clear-filters-btn {
-      grid-column: 1 / -1;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .merch-title {
-      font-size: 3.25rem;
-    }
-
-    .sidebar-inner {
-      grid-template-columns: 1fr;
-    }
-
-    .products-main {
-      padding: 1rem;
-    }
-  }
-
-  .line-clamp-1 {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  
-  .product-card {
-    position: relative;
-  }
-  
-  .hidden {
-    display: none !important;
-  }
-</style>

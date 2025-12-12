@@ -1,0 +1,83 @@
+---
+// StreamInfoBar.astro
+// Shows DJ name and stream title underneath player controls
+
+interface Props {
+  djName?: string;
+  streamTitle?: string;
+}
+
+const { 
+  djName = '',
+  streamTitle = ''
+} = Astro.props;
+---
+
+<div class="stream-info-bar" id="stream-info-bar">
+  <span class="dj-label">DJ:</span>
+  <span class="dj-name" id="stream-dj-name">{djName || 'Unknown'}</span>
+  <span class="info-divider">•</span>
+  <span class="stream-title" id="stream-title">{streamTitle || 'Live Stream'}</span>
+</div>
+
+<style>
+  .stream-info-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.4);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .dj-label {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .dj-name {
+    color: #22c55e;
+    font-weight: 600;
+  }
+
+  .info-divider {
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  .stream-title {
+    color: rgba(255, 255, 255, 0.7);
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (max-width: 480px) {
+    .stream-info-bar {
+      flex-wrap: wrap;
+      gap: 0.25rem 0.5rem;
+    }
+    
+    .stream-title {
+      flex-basis: 100%;
+      margin-top: 0.25rem;
+    }
+    
+    .info-divider {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  window.updateStreamInfo = function(djName: string, title: string) {
+    const djEl = document.getElementById('stream-dj-name');
+    const titleEl = document.getElementById('stream-title');
+    if (djEl) djEl.textContent = djName || 'Unknown';
+    if (titleEl) titleEl.textContent = title || 'Live Stream';
+  };
+</script>

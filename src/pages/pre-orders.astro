@@ -1,0 +1,869 @@
+---
+// src/pages/pre-orders.astro
+// Pre-orders Page - Shows upcoming releases available for pre-order
+// Releases with future release dates
+
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
+
+const now = new Date();
+
+let preorders: any[] = [];
+
+try {
+  // Get all live releases
+  const releasesSnap = await db.collection('releases')
+    .where('status', '==', 'live')
+    .get();
+  
+  // Filter to releases with future release dates (pre-orders)
+  preorders = releasesSnap.docs
+    .map(doc => {
+      const data = { id: doc.id, ...doc.data() };
+      const releaseDate = new Date(data.releaseDate);
+      const daysUntil = Math.ceil((releaseDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      return {
+        ...data,
+        daysUntilRelease: daysUntil,
+        releaseDateObj: releaseDate
+      };
+    })
+    .filter(release => release.releaseDateObj > now)
+    .sort((a, b) => a.releaseDateObj.getTime() - b.releaseDateObj.getTime()); // Soonest first
+  
+} catch (e) {
+  console.error('Error fetching pre-orders:', e);
+}
+
+// Format release date
+const formatDate = (dateStr: string) => {
+  try {
+    return new Date(dateStr).toLocaleDateString('en-GB', { 
+      weekday: 'long',
+      day: 'numeric', 
+      month: 'long',
+      year: 'numeric'
+    });
+  } catch {
+    return '';
+  }
+};
+
+// Get label from release
+const getLabel = (release: any) => release.labelName || release.recordLabel || release.copyrightHolder || 'Unknown Label';
+
+// Get digital price
+const getPrice = (release: any) => release.pricePerSale || release.pricing?.digital || (release.trackPrice || 1) * (release.tracks?.length || 4);
+
+export const prerender = false;
+---
+
+<Layout title="Pre-Orders | Fresh Wax">
+  <Header />
+  
+  <main class="preorders-main">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-grid"></div>
+      <div class="hero-glow"></div>
+      <div class="hero-content">
+        <span class="hero-badge">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Coming Soon
+        </span>
+        <h1>PRE-<span class="red">ORDERS</span></h1>
+        <p class="subtitle">Be first to secure upcoming releases</p>
+      </div>
+    </section>
+
+    <div class="container">
+      {preorders.length === 0 ? (
+        <div class="empty-state">
+          <div class="empty-icon">📦</div>
+          <h2>No Pre-Orders Available</h2>
+          <p>All current releases are available now! Check back soon for upcoming drops.</p>
+          <a href="/releases" class="browse-btn">Browse Available Releases</a>
+        </div>
+      ) : (
+        <div class="preorders-grid">
+          {preorders.map((release, index) => (
+            <article class="preorder-card" data-release-id={release.id}>
+              <!-- Countdown Badge -->
+              <div class="countdown-badge" data-days={release.daysUntilRelease}>
+                {release.daysUntilRelease === 1 && (
+                  <span class="countdown-text tomorrow">🔥 Tomorrow!</span>
+                )}
+                {release.daysUntilRelease > 1 && release.daysUntilRelease <= 7 && (
+                  <span class="countdown-text soon">{release.daysUntilRelease} days</span>
+                )}
+                {release.daysUntilRelease > 7 && (
+                  <span class="countdown-text">{release.daysUntilRelease} days</span>
+                )}
+              </div>
+              
+              <!-- Artwork -->
+              <a href={`/item/${release.id}`} class="artwork-link">
+                <img 
+                  src={release.coverArtUrl || '/place-holder.webp'} 
+                  alt={`${release.releaseName} by ${release.artistName}`}
+                  class="artwork"
+                  loading="lazy"
+                />
+                <div class="artwork-overlay">
+                  <span class="view-text">View Details</span>
+                </div>
+              </a>
+              
+              <!-- Info -->
+              <div class="card-info">
+                <a href={`/item/${release.id}`} class="title-link">
+                  <h2>{release.releaseName}</h2>
+                </a>
+                <p class="artist">{release.artistName}</p>
+                <p class="label">{getLabel(release)}</p>
+                
+                <!-- Release Date -->
+                <div class="release-date">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span>{formatDate(release.releaseDate)}</span>
+                </div>
+                
+                <!-- Track Count & Genre -->
+                <div class="meta-row">
+                  <span class="tracks">{release.tracks?.length || 0} tracks</span>
+                  {release.genre && (
+                    <>
+                      <span class="dot">•</span>
+                      <span class="genre">{release.genre}</span>
+                    </>
+                  )}
+                </div>
+                
+                <!-- Formats Available -->
+                <div class="formats">
+                  <span class="format digital">Digital</span>
+                  {release.vinylRelease && (
+                    <span class="format vinyl">
+                      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                      </svg>
+                      Vinyl
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <!-- Price & Pre-order Button -->
+              <div class="card-footer">
+                <div class="price-display">
+                  <span class="price-label">Digital</span>
+                  <span class="price">£{getPrice(release).toFixed(2)}</span>
+                </div>
+                
+                <button 
+                  class="preorder-btn"
+                  data-release-id={release.id}
+                  data-title={release.releaseName}
+                  data-artist={release.artistName}
+                  data-artwork={release.coverArtUrl}
+                  data-price={getPrice(release)}
+                  data-release-date={release.releaseDate}
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Pre-order Now
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+      
+      <!-- Additional Info -->
+      {preorders.length > 0 && (
+        <div class="additional-info">
+          <h3>Pre-Order Benefits</h3>
+          <div class="benefits-grid">
+            <div class="benefit">
+              <div class="benefit-icon">🎯</div>
+              <div class="benefit-text">
+                <strong>Guaranteed Copy</strong>
+                <p>Never miss a release - secure your copy before it drops</p>
+              </div>
+            </div>
+            <div class="benefit">
+              <div class="benefit-icon">⚡</div>
+              <div class="benefit-text">
+                <strong>Instant Delivery</strong>
+                <p>Download links sent automatically on release day</p>
+              </div>
+            </div>
+            <div class="benefit">
+              <div class="benefit-icon">💰</div>
+              <div class="benefit-text">
+                <strong>Same Price</strong>
+                <p>No extra charges - pay the same as release day</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <!-- Info Banner -->
+      <div class="info-banner">
+        <div class="info-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+        </div>
+        <div class="info-content">
+          <span class="info-title">How Pre-Orders Work</span>
+          <span class="info-desc">Pay now and your download links will be sent automatically on the release date. You'll receive a confirmation email immediately after purchase.</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .preorders-main {
+    min-height: calc(100vh - 200px);
+    background: #0a0a0a;
+  }
+  
+  /* Hero Section */
+  .hero {
+    background: linear-gradient(135deg, #000 0%, #1a0a0a 50%, #0d0d0d 100%);
+    color: #fff;
+    padding: 4rem 1.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(rgba(220, 38, 38, 0.03) 1px, transparent 1px), 
+                      linear-gradient(90deg, rgba(220, 38, 38, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+  
+  .hero-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(220, 38, 38, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  
+  .hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    color: #fff;
+    padding: 0.5rem 1.25rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+    50% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+  }
+  
+  .hero-badge svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4rem;
+    margin: 0 0 0.5rem;
+    letter-spacing: 0.05em;
+    color: #fff;
+  }
+  
+  .hero h1 .red {
+    color: #dc2626;
+  }
+  
+  .hero .subtitle {
+    font-size: 1.125rem;
+    color: #9ca3af;
+    font-weight: 500;
+    margin: 0;
+  }
+  
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+  
+  /* Info Banner */
+  .info-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    background: linear-gradient(135deg, rgba(30, 58, 95, 0.5), rgba(30, 41, 59, 0.5));
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-top: 2rem;
+    backdrop-filter: blur(8px);
+  }
+  
+  .info-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(59, 130, 246, 0.15);
+    border-radius: 10px;
+    color: #60a5fa;
+    flex-shrink: 0;
+  }
+  
+  .info-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+  
+  .info-title {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    letter-spacing: 0.01em;
+  }
+  
+  .info-desc {
+    color: #94a3b8;
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
+  
+  .info-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+  
+  .info-text {
+    color: #e2e8f0;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+  
+  .info-text strong {
+    color: #fff;
+  }
+  
+  /* Empty State */
+  .empty-state {
+    background: linear-gradient(135deg, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 16px;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+  
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+  
+  .empty-state h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+  }
+  
+  .empty-state p {
+    color: #9ca3af;
+    margin-bottom: 1.5rem;
+  }
+  
+  .browse-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    color: #fff;
+    padding: 0.875rem 2rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  
+  .browse-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(220, 38, 38, 0.3);
+  }
+  
+  /* Pre-orders Grid */
+  .preorders-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  /* Pre-order Card */
+  .preorder-card {
+    background: linear-gradient(135deg, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    transition: all 0.3s;
+  }
+  
+  .preorder-card:hover {
+    border-color: #dc2626;
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(220, 38, 38, 0.15);
+  }
+  
+  /* Countdown Badge */
+  .countdown-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
+    padding: 0.5rem 0.875rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .countdown-text {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  
+  .countdown-text.tomorrow {
+    color: #f97316;
+  }
+  
+  .countdown-text.soon {
+    color: #fbbf24;
+  }
+  
+  /* Artwork */
+  .artwork-link {
+    display: block;
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+  }
+  
+  .artwork {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+  }
+  
+  .preorder-card:hover .artwork {
+    transform: scale(1.05);
+  }
+  
+  .artwork-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  
+  .preorder-card:hover .artwork-overlay {
+    opacity: 1;
+  }
+  
+  .view-text {
+    color: #fff;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border: 2px solid #fff;
+    border-radius: 8px;
+  }
+  
+  /* Card Info */
+  .card-info {
+    padding: 1.25rem;
+  }
+  
+  .title-link {
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  .card-info h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.375rem;
+    line-height: 1.3;
+  }
+  
+  .title-link:hover h2 {
+    color: #dc2626;
+  }
+  
+  .artist {
+    font-size: 1rem;
+    color: #dc2626;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+  
+  .label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0 0 1rem;
+  }
+  
+  /* Release Date */
+  .release-date {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(220, 38, 38, 0.1);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    border-radius: 8px;
+    padding: 0.625rem 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .release-date svg {
+    color: #dc2626;
+    flex-shrink: 0;
+  }
+  
+  .release-date span {
+    font-size: 0.875rem;
+    color: #f9fafb;
+    font-weight: 500;
+  }
+  
+  /* Meta Row */
+  .meta-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: #9ca3af;
+    margin-bottom: 0.75rem;
+  }
+  
+  .meta-row .dot {
+    color: #4b5563;
+  }
+  
+  /* Formats */
+  .formats {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .format {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 0.25rem 0.625rem;
+    border-radius: 4px;
+  }
+  
+  .format.digital {
+    background: #1e3a5f;
+    color: #60a5fa;
+  }
+  
+  .format.vinyl {
+    background: #3f1f1f;
+    color: #f87171;
+  }
+  
+  .format.vinyl svg {
+    width: 12px;
+    height: 12px;
+  }
+  
+  /* Card Footer */
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid #374151;
+  }
+  
+  .price-display {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .price-label {
+    font-size: 0.6875rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  .price {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: #fff;
+  }
+  
+  /* Pre-order Button */
+  .preorder-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #f97316, #dc2626);
+    color: #fff;
+    padding: 0.75rem 1.25rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .preorder-btn:hover {
+    background: linear-gradient(135deg, #ea580c, #b91c1c);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+  }
+  
+  .preorder-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  /* Additional Info */
+  .additional-info {
+    margin-top: 3rem;
+    background: linear-gradient(135deg, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 16px;
+    padding: 2rem;
+  }
+  
+  .additional-info h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: #fff;
+    margin: 0 0 1.5rem;
+    text-align: center;
+  }
+  
+  .benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  .benefit {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+  }
+  
+  .benefit-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+  }
+  
+  .benefit-text strong {
+    display: block;
+    color: #fff;
+    margin-bottom: 0.25rem;
+  }
+  
+  .benefit-text p {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    margin: 0;
+    line-height: 1.4;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .hero h1 {
+      font-size: 2.5rem;
+    }
+    
+    .preorders-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .info-banner {
+      flex-direction: column;
+      gap: 0.875rem;
+      align-items: flex-start;
+    }
+    
+    .info-icon-wrap {
+      width: 36px;
+      height: 36px;
+    }
+    
+    .benefits-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  // Pre-order button functionality
+  document.addEventListener('DOMContentLoaded', function() {
+    initPreorderButtons();
+  });
+  
+  document.addEventListener('astro:page-load', function() {
+    initPreorderButtons();
+  });
+  
+  function initPreorderButtons() {
+    const buttons = document.querySelectorAll('.preorder-btn');
+    
+    buttons.forEach(function(btn) {
+      btn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        
+        // Check for customer login
+        var customerId = localStorage.getItem('fw_customer_id') || localStorage.getItem('fw_user_id');
+        if (!customerId) {
+          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+          return;
+        }
+        
+        var releaseId = btn.getAttribute('data-release-id');
+        var title = btn.getAttribute('data-title');
+        var artist = btn.getAttribute('data-artist');
+        var artwork = btn.getAttribute('data-artwork');
+        var price = parseFloat(btn.getAttribute('data-price') || '0');
+        var releaseDate = btn.getAttribute('data-release-date');
+        
+        // Get cart
+        var cart = JSON.parse(localStorage.getItem('freshwax_cart') || '{"items":[]}');
+        var items = cart.items || [];
+        
+        // Check if already in cart
+        var existingIndex = items.findIndex(function(item) {
+          return item.id === releaseId && (item.type === 'digital' || item.type === 'preorder');
+        });
+        
+        if (existingIndex !== -1) {
+          // Already in cart
+          var originalHTML = btn.innerHTML;
+          btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Already in Cart';
+          setTimeout(function() {
+            btn.innerHTML = originalHTML;
+          }, 2000);
+          return;
+        }
+        
+        // Add to cart as pre-order
+        items.push({
+          id: releaseId,
+          releaseId: releaseId,
+          type: 'digital',
+          format: 'digital',
+          name: artist + ' - ' + title,
+          title: title,
+          artist: artist,
+          price: price,
+          image: artwork,
+          artwork: artwork,
+          quantity: 1,
+          isPreOrder: true,
+          releaseDate: releaseDate
+        });
+        
+        // Save cart
+        cart.items = items;
+        localStorage.setItem('freshwax_cart', JSON.stringify(cart));
+        
+        // Update cart count in header
+        var cartCountEl = document.querySelector('.cart-count');
+        if (cartCountEl) {
+          cartCountEl.textContent = items.length.toString();
+        }
+        
+        // Dispatch cart updated event
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { items: items } }));
+        
+        // Show success state
+        var originalHTML = btn.innerHTML;
+        btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Added to Cart!';
+        btn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+        
+        setTimeout(function() {
+          btn.innerHTML = originalHTML;
+          btn.style.background = '';
+        }, 2000);
+      });
+    });
+  }
+</script>

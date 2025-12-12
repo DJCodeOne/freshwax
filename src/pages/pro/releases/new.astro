@@ -1,0 +1,612 @@
+---
+// New Release - Pro Dashboard
+// Artists can upload new releases
+import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+---
+<ProDashboardLayout title="New Release" activeSection="/pro/releases/new">
+  <div class="new-release-page">
+    <div class="page-header">
+      <p class="subtitle">Upload a new track or album to Fresh Wax</p>
+    </div>
+
+    <form id="releaseForm" class="release-form">
+      <!-- Basic Info -->
+      <section class="form-section">
+        <h2>Basic Information</h2>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="title">Release Title *</label>
+            <input type="text" id="title" required placeholder="Enter release title">
+          </div>
+          <div class="form-group">
+            <label for="releaseType">Release Type *</label>
+            <select id="releaseType" required>
+              <option value="">Select type</option>
+              <option value="single">Single</option>
+              <option value="ep">EP</option>
+              <option value="album">Album</option>
+              <option value="compilation">Compilation</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="artistName">Artist Name *</label>
+            <input type="text" id="artistName" required placeholder="Primary artist name">
+          </div>
+          <div class="form-group">
+            <label for="genre">Genre *</label>
+            <select id="genre" required>
+              <option value="">Select genre</option>
+              <option value="jungle">Jungle</option>
+              <option value="drum-and-bass">Drum & Bass</option>
+              <option value="liquid">Liquid</option>
+              <option value="neurofunk">Neurofunk</option>
+              <option value="jump-up">Jump Up</option>
+              <option value="ragga-jungle">Ragga Jungle</option>
+              <option value="breakcore">Breakcore</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea id="description" rows="3" placeholder="Tell listeners about this release..."></textarea>
+        </div>
+      </section>
+
+      <!-- Artwork -->
+      <section class="form-section">
+        <h2>Artwork</h2>
+        
+        <div class="artwork-upload">
+          <div class="artwork-preview" id="artworkPreview">
+            <span class="placeholder">📀</span>
+          </div>
+          <div class="artwork-controls">
+            <input type="file" id="artwork" accept="image/*" style="display: none;">
+            <button type="button" class="btn btn-secondary" onclick="document.getElementById('artwork').click()">
+              Upload Artwork
+            </button>
+            <p class="help-text">Minimum 1400x1400px, JPG or PNG</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tracks -->
+      <section class="form-section">
+        <h2>Tracks</h2>
+        
+        <div id="tracksList" class="tracks-list">
+          <!-- Tracks will be added here -->
+        </div>
+
+        <div class="add-track-area">
+          <input type="file" id="trackUpload" accept="audio/*" multiple style="display: none;">
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('trackUpload').click()">
+            + Add Tracks
+          </button>
+          <p class="help-text">MP3 or WAV files. You can select multiple files.</p>
+        </div>
+      </section>
+
+      <!-- Pricing -->
+      <section class="form-section">
+        <h2>Pricing</h2>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="price">Digital Price (£) *</label>
+            <input type="number" id="price" required min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label for="previewLength">Preview Length (seconds)</label>
+            <input type="number" id="previewLength" value="90" min="30" max="180">
+          </div>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="allowStreaming" checked>
+            <span>Allow streaming preview</span>
+          </label>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="nameYourPrice">
+            <span>Allow "Name Your Price" (minimum price above)</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Release Date -->
+      <section class="form-section">
+        <h2>Release Date</h2>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="releaseDate">Release Date *</label>
+            <input type="date" id="releaseDate" required>
+          </div>
+          <div class="form-group">
+            <label for="releaseStatus">Status</label>
+            <select id="releaseStatus">
+              <option value="draft">Save as Draft</option>
+              <option value="pending">Submit for Review</option>
+            </select>
+          </div>
+        </div>
+
+        <p class="help-text">
+          All releases are reviewed before going live. This usually takes 1-2 business days.
+        </p>
+      </section>
+
+      <!-- Actions -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="saveDraft()">Save Draft</button>
+        <button type="submit" class="btn btn-primary">Submit for Review</button>
+      </div>
+
+      <div id="formMessage" class="form-message" style="display: none;"></div>
+    </form>
+  </div>
+
+  <style>
+    .new-release-page {
+      max-width: 800px;
+    }
+
+    .page-header {
+      margin-bottom: 2rem;
+    }
+
+    .subtitle {
+      color: var(--text-secondary, #a3a3a3);
+      margin: 0;
+    }
+
+    .release-form {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .form-section {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+
+    .form-section h2 {
+      color: var(--text-primary, #fff);
+      font-size: 1.1rem;
+      margin: 0 0 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border-color, #262626);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 640px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: var(--bg-tertiary, #1a1a1a);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 6px;
+      color: var(--text-primary, #fff);
+      font-size: 1rem;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent, #22c55e);
+    }
+
+    .help-text {
+      font-size: 0.8rem;
+      color: var(--text-muted, #666);
+      margin-top: 0.5rem;
+    }
+
+    .artwork-upload {
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-start;
+    }
+
+    .artwork-preview {
+      width: 150px;
+      height: 150px;
+      background: var(--bg-tertiary, #1a1a1a);
+      border: 2px dashed var(--border-color, #262626);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .artwork-preview .placeholder {
+      font-size: 3rem;
+      opacity: 0.3;
+    }
+
+    .artwork-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .artwork-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .tracks-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .track-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      gap: 1rem;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: var(--bg-tertiary, #1a1a1a);
+      border-radius: 6px;
+    }
+
+    .track-number {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-secondary, #141414);
+      border-radius: 4px;
+      font-size: 0.8rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .track-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .track-title-input {
+      background: transparent;
+      border: none;
+      color: var(--text-primary, #fff);
+      font-size: 0.9rem;
+      padding: 0;
+    }
+
+    .track-title-input:focus {
+      outline: none;
+    }
+
+    .track-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted, #666);
+    }
+
+    .track-duration {
+      color: var(--text-secondary, #a3a3a3);
+      font-size: 0.85rem;
+    }
+
+    .track-remove {
+      background: none;
+      border: none;
+      color: var(--text-muted, #666);
+      cursor: pointer;
+      padding: 0.25rem;
+      font-size: 1.25rem;
+    }
+
+    .track-remove:hover {
+      color: #ef4444;
+    }
+
+    .add-track-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem;
+      border: 2px dashed var(--border-color, #262626);
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .checkbox-group {
+      margin-bottom: 0.75rem;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      cursor: pointer;
+      color: var(--text-primary, #fff);
+    }
+
+    .checkbox-label input {
+      width: auto;
+      accent-color: var(--accent, #22c55e);
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--accent, #22c55e);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover, #16a34a);
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary, #1a1a1a);
+      color: var(--text-primary, #fff);
+      border: 1px solid var(--border-color, #262626);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .form-message {
+      padding: 1rem;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .form-message.success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #22c55e;
+    }
+
+    .form-message.error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+  </style>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+    const firebaseConfig = window.FIREBASE_CONFIG || {};
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let tracks = [];
+    let artworkFile = null;
+
+    // Set default release date to today
+    document.getElementById('releaseDate').valueAsDate = new Date();
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = '/login?redirect=/pro/releases/new';
+        return;
+      }
+      currentUser = user;
+    });
+
+    // Artwork upload
+    document.getElementById('artwork').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      artworkFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        document.getElementById('artworkPreview').innerHTML = `<img src="${e.target.result}" alt="Artwork preview">`;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Track upload
+    document.getElementById('trackUpload').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      files.forEach(file => {
+        const track = {
+          id: Date.now() + Math.random(),
+          file: file,
+          title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
+          duration: '0:00'
+        };
+
+        // Get duration
+        const audio = new Audio();
+        audio.onloadedmetadata = () => {
+          const minutes = Math.floor(audio.duration / 60);
+          const seconds = Math.floor(audio.duration % 60);
+          track.duration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+          renderTracks();
+        };
+        audio.src = URL.createObjectURL(file);
+
+        tracks.push(track);
+        renderTracks();
+      });
+    });
+
+    function renderTracks() {
+      const tracksList = document.getElementById('tracksList');
+      
+      if (tracks.length === 0) {
+        tracksList.innerHTML = '';
+        return;
+      }
+
+      tracksList.innerHTML = tracks.map((track, index) => `
+        <div class="track-item" data-id="${track.id}">
+          <span class="track-number">${index + 1}</span>
+          <div class="track-info">
+            <input type="text" class="track-title-input" value="${track.title}" onchange="updateTrackTitle('${track.id}', this.value)">
+            <span class="track-meta">${track.file.name} • ${(track.file.size / 1024 / 1024).toFixed(1)} MB</span>
+          </div>
+          <span class="track-duration">${track.duration}</span>
+          <button type="button" class="track-remove" onclick="removeTrack('${track.id}')">×</button>
+        </div>
+      `).join('');
+    }
+
+    window.updateTrackTitle = (id, title) => {
+      const track = tracks.find(t => t.id == id);
+      if (track) track.title = title;
+    };
+
+    window.removeTrack = (id) => {
+      tracks = tracks.filter(t => t.id != id);
+      renderTracks();
+    };
+
+    // Save draft
+    window.saveDraft = async () => {
+      await submitRelease('draft');
+    };
+
+    // Form submission
+    document.getElementById('releaseForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await submitRelease('pending');
+    });
+
+    async function submitRelease(status) {
+      const messageEl = document.getElementById('formMessage');
+      messageEl.style.display = 'none';
+
+      if (!currentUser) {
+        showMessage('Please sign in to continue', 'error');
+        return;
+      }
+
+      if (tracks.length === 0) {
+        showMessage('Please add at least one track', 'error');
+        return;
+      }
+
+      const submitBtn = document.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+
+      try {
+        // In a real implementation, you would upload files to storage here
+        // For now, we'll just create the document structure
+
+        const releaseData = {
+          title: document.getElementById('title').value,
+          releaseType: document.getElementById('releaseType').value,
+          artistName: document.getElementById('artistName').value,
+          artistId: currentUser.uid,
+          genre: document.getElementById('genre').value,
+          description: document.getElementById('description').value,
+          price: parseFloat(document.getElementById('price').value) || 0,
+          previewLength: parseInt(document.getElementById('previewLength').value) || 90,
+          allowStreaming: document.getElementById('allowStreaming').checked,
+          nameYourPrice: document.getElementById('nameYourPrice').checked,
+          releaseDate: document.getElementById('releaseDate').value,
+          status: status,
+          trackCount: tracks.length,
+          tracks: tracks.map((t, i) => ({
+            position: i + 1,
+            title: t.title,
+            duration: t.duration,
+            fileName: t.file.name
+          })),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+
+        const docRef = await addDoc(collection(db, 'releases'), releaseData);
+
+        if (status === 'pending') {
+          showMessage('Release submitted for review! We\'ll notify you once it\'s approved.', 'success');
+          setTimeout(() => {
+            window.location.href = '/pro/releases';
+          }, 2000);
+        } else {
+          showMessage('Draft saved successfully!', 'success');
+        }
+
+      } catch (error) {
+        console.error('Error saving release:', error);
+        showMessage('Error saving release: ' + error.message, 'error');
+      }
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit for Review';
+    }
+
+    function showMessage(text, type) {
+      const messageEl = document.getElementById('formMessage');
+      messageEl.textContent = text;
+      messageEl.className = `form-message ${type}`;
+      messageEl.style.display = 'block';
+      messageEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  </script>
+</ProDashboardLayout>

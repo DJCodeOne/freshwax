@@ -1,0 +1,144 @@
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f5f5f5; color: #000; min-height: 100vh; }
+    
+    .header { background: #000; color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.05em; }
+    .header h1 span { color: #dc2626; }
+    .header-nav { display: flex; gap: 1rem; }
+    .header-nav a { color: #fff; text-decoration: none; padding: 0.5rem 1rem; border: 2px solid #fff; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: all 0.2s; }
+    .header-nav a:hover { background: #fff; color: #000; }
+    
+    .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+    
+    .page-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; margin-bottom: 0.5rem; color: #dc2626; }
+    .page-subtitle { color: #666; margin-bottom: 2rem; }
+    
+    .form-layout { display: grid; grid-template-columns: 1fr 350px; gap: 2rem; }
+    
+    .form-card { background: #fff; border: 2px solid #000; margin-bottom: 1.5rem; }
+    .form-card-header { background: #000; color: #fff; padding: 1rem 1.5rem; }
+    .form-card-header h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 0.05em; }
+    .form-card-body { padding: 1.5rem; }
+    
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
+    
+    .form-group { margin-bottom: 1.25rem; }
+    .form-label { display: block; font-weight: 700; margin-bottom: 0.5rem; font-size: 0.75rem; text-transform: uppercase; }
+    .form-label .required { color: #dc2626; }
+    .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem; border: 2px solid #000; font-size: 1rem; font-family: inherit; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #dc2626; }
+    .form-textarea { min-height: 100px; resize: vertical; }
+    .form-hint { font-size: 0.75rem; color: #666; margin-top: 0.25rem; }
+    
+    /* Product Type Grid */
+    .type-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; }
+    .type-option { position: relative; }
+    .type-option input { position: absolute; opacity: 0; pointer-events: none; }
+    .type-option label { display: block; padding: 1rem 0.5rem; border: 2px solid #ddd; text-align: center; cursor: pointer; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; transition: all 0.2s; }
+    .type-option input:checked + label { background: #000; color: #fff; border-color: #000; }
+    .type-option label:hover { border-color: #000; }
+    .type-emoji { font-size: 1.5rem; display: block; margin-bottom: 0.25rem; }
+    
+    /* Image Upload */
+    .image-upload-area { border: 3px dashed #000; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s; background: #fafafa; }
+    .image-upload-area:hover { background: #f0f0f0; }
+    .image-upload-area.dragover { background: #e0e0e0; border-style: solid; }
+    .image-preview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem; }
+    .image-preview-item { position: relative; border: 2px solid #000; background: #fff; }
+    .image-preview-item .image-wrapper { position: relative; aspect-ratio: 1; }
+    .image-preview-item img { width: 100%; height: 100%; object-fit: cover; }
+    .image-preview-item .badge { position: absolute; top: 5px; left: 5px; background: #22c55e; color: #fff; padding: 2px 8px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+    .image-preview-item .remove-btn { position: absolute; top: 5px; right: 5px; background: #dc2626; color: #fff; border: none; width: 24px; height: 24px; cursor: pointer; font-weight: 900; font-size: 16px; line-height: 1; }
+    .image-preview-item .remove-btn:hover { background: #b91c1c; }
+    .image-color-select { padding: 0.5rem; border-top: 2px solid #000; background: #f5f5f5; }
+    .image-color-select label { display: block; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem; color: #666; }
+    .image-color-select select { width: 100%; padding: 0.5rem; border: 2px solid #ddd; font-size: 0.8rem; font-weight: 600; cursor: pointer; background: #fff; }
+    .image-color-select select:focus { outline: none; border-color: #000; }
+    .image-color-badge { display: flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.5rem; background: #000; color: #fff; font-size: 0.7rem; font-weight: 700; }
+    .image-color-badge .color-dot { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.3); }
+    
+    /* Colors */
+    .color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+    .color-option { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 2px solid #ddd; cursor: pointer; transition: all 0.2s; }
+    .color-option:hover { border-color: #000; }
+    .color-option.selected { border-color: #000; background: #f5f5f5; }
+    .color-option input { display: none; }
+    .color-swatch { width: 24px; height: 24px; border: 2px solid #000; flex-shrink: 0; }
+    .color-option span { font-size: 0.75rem; font-weight: 600; }
+    
+    .custom-color-row { display: flex; gap: 0.5rem; margin-top: 1rem; align-items: center; }
+    .custom-color-row input[type="color"] { width: 50px; height: 40px; border: 2px solid #000; cursor: pointer; padding: 0; }
+    
+    /* Sizes */
+    .size-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; }
+    .size-option { position: relative; }
+    .size-option input { position: absolute; opacity: 0; pointer-events: none; }
+    .size-option label { display: block; padding: 0.75rem; border: 2px solid #ddd; text-align: center; cursor: pointer; font-weight: 700; font-size: 0.875rem; transition: all 0.2s; }
+    .size-option input:checked + label { background: #000; color: #fff; border-color: #000; }
+    .size-option label:hover { border-color: #000; }
+    
+    /* Variant Stock - styles applied inline in JS */
+    
+    .set-all-row { display: flex; gap: 0.5rem; align-items: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #ddd; }
+    .set-all-row span { font-weight: 700; font-size: 0.75rem; text-transform: uppercase; }
+    
+    /* Supplier Section */
+    .supplier-toggle { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; }
+    .supplier-toggle label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 700; font-size: 0.875rem; }
+    .supplier-toggle input[type="radio"] { width: 20px; height: 20px; accent-color: #000; }
+    .supplier-fields { display: none; }
+    .supplier-fields.active { display: block; }
+    
+    /* Preview Panel */
+    .preview-panel { position: sticky; top: 80px; }
+    .preview-card { background: #fff; border: 2px solid #000; }
+    .preview-image { width: 100%; aspect-ratio: 1; background: #f5f5f5; display: flex; align-items: center; justify-content: center; color: #999; border-bottom: 2px solid #000; overflow: hidden; font-size: 3rem; }
+    .preview-image img { width: 100%; height: 100%; object-fit: cover; }
+    .preview-details { padding: 1.5rem; }
+    .preview-details .category { font-size: 0.75rem; color: #666; text-transform: uppercase; margin-bottom: 0.5rem; font-weight: 600; }
+    .preview-details h3 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .preview-details .sku { font-family: monospace; font-size: 0.75rem; color: #666; margin-bottom: 1rem; }
+    .preview-details .price { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; margin-bottom: 1rem; }
+    .preview-details .price .original { text-decoration: line-through; color: #999; font-size: 1.25rem; margin-left: 0.5rem; }
+    .preview-colors { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .preview-color { width: 28px; height: 28px; border: 2px solid #000; }
+    .preview-sizes { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .preview-size { padding: 0.5rem 0.75rem; border: 2px solid #000; font-weight: 700; font-size: 0.75rem; }
+    .preview-stock { font-size: 0.875rem; font-weight: 700; padding: 0.5rem 1rem; display: inline-block; }
+    .preview-stock.in-stock { background: #22c55e; color: #fff; }
+    .preview-stock.low-stock { background: #f59e0b; color: #fff; }
+    .preview-stock.out-of-stock { background: #dc2626; color: #fff; }
+    
+    /* Buttons */
+    .btn { padding: 1rem 2rem; border: 2px solid #000; font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 0.875rem; transition: all 0.2s; font-family: inherit; }
+    .btn-primary { background: #000; color: #fff; }
+    .btn-primary:hover { background: #dc2626; border-color: #dc2626; }
+    .btn-primary:disabled { background: #ccc; border-color: #ccc; cursor: not-allowed; }
+    .btn-secondary { background: #fff; color: #000; }
+    .btn-secondary:hover { background: #f5f5f5; }
+    .btn-sm { padding: 0.5rem 1rem; font-size: 0.75rem; }
+    
+    .submit-row { display: flex; gap: 1rem; margin-top: 1.5rem; }
+    .submit-row .btn { flex: 1; }
+    
+    /* Toast */
+    .toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; background: #000; color: #fff; font-weight: 700; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all 0.3s; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: #22c55e; }
+    .toast.error { background: #dc2626; }
+    
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .form-layout { grid-template-columns: 1fr; }
+      .preview-panel { position: static; }
+      .type-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    
+    @media (max-width: 768px) {
+      .form-row, .form-row-3 { grid-template-columns: 1fr; }
+      .type-grid { grid-template-columns: repeat(2, 1fr); }
+      .color-grid { grid-template-columns: repeat(2, 1fr); }
+      .size-grid { grid-template-columns: repeat(4, 1fr); }
+      .image-preview-grid { grid-template-columns: repeat(3, 1fr); }
+    }

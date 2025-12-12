@@ -1,0 +1,292 @@
+/* Analytics Page - Compact Layout Fix */
+/* Add this to your analytics page or global styles */
+
+/* ============================================
+   TOP STATS ROW (Revenue, Orders, etc.)
+   ============================================ */
+.analytics-stats,
+.top-stats-row,
+.stats-overview {
+  display: flex;
+  gap: 0;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.analytics-stats .stat-card,
+.top-stats-row .stat-item,
+.stats-overview .stat-box {
+  flex: 1;
+  padding: 1rem 1.25rem;
+  border-right: 1px solid #e5e5e5;
+  background: transparent;
+  min-width: 0;
+}
+
+.analytics-stats .stat-card:last-child,
+.top-stats-row .stat-item:last-child,
+.stats-overview .stat-box:last-child {
+  border-right: none;
+}
+
+/* Highlighted stat (Year to Date with green border) */
+.stat-card.highlighted,
+.stat-item.highlighted {
+  border: 2px solid #22c55e;
+  margin: -1px;
+}
+
+/* Stat label */
+.analytics-stats .stat-label,
+.top-stats-row .stat-label,
+.stats-overview .stat-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+/* Stat value */
+.analytics-stats .stat-value,
+.top-stats-row .stat-value,
+.stats-overview .stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #000;
+  line-height: 1.1;
+}
+
+/* Stat comparison text */
+.analytics-stats .stat-change,
+.top-stats-row .stat-change,
+.stats-overview .stat-change {
+  font-size: 0.7rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+/* ============================================
+   DJ MIXES PERFORMANCE
+   ============================================ */
+.dj-mixes-performance,
+.mixes-performance-section {
+  background: #1a1a1a;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  margin-top: 1.5rem;
+}
+
+.dj-mixes-performance .section-header,
+.mixes-performance-section .header {
+  background: #000;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.dj-mixes-performance .stats-grid,
+.dj-mixes-performance .stats-row,
+.mixes-performance-section .stats {
+  display: flex !important;
+  padding: 1rem 1.25rem;
+}
+
+.dj-mixes-performance .stat-box,
+.dj-mixes-performance .stat-card,
+.dj-mixes-performance .stat-item,
+.mixes-performance-section .stat {
+  flex: 1;
+  padding: 0.5rem 1.5rem;
+  border: none !important;
+  background: transparent !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.dj-mixes-performance .stat-box:first-child,
+.mixes-performance-section .stat:first-child {
+  padding-left: 0;
+}
+
+.dj-mixes-performance .stat-box:last-child,
+.mixes-performance-section .stat:last-child {
+  border-right: none !important;
+  padding-right: 0;
+}
+
+.dj-mixes-performance .stat-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 0.25rem;
+}
+
+.dj-mixes-performance .stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+/* ============================================
+   TOP SELLING TABLES
+   ============================================ */
+.top-selling-section,
+.top-releases-section,
+.top-merch-section {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.top-selling-section .section-header {
+  background: #000;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+/* Table styling */
+.top-selling-table,
+.analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.top-selling-table th,
+.analytics-table th {
+  background: #1a1a1a;
+  color: #9acd32;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.625rem 1rem;
+  text-align: left;
+}
+
+.top-selling-table th:nth-child(2),
+.top-selling-table th:nth-child(3) {
+  text-align: right;
+}
+
+.top-selling-table td,
+.analytics-table td {
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: #333;
+  border-bottom: 1px solid #eee;
+}
+
+.top-selling-table td:nth-child(2),
+.top-selling-table td:nth-child(3) {
+  text-align: right;
+}
+
+/* ============================================
+   PERIOD COMPARISON TABLE
+   ============================================ */
+.period-comparison {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  margin-top: 1.5rem;
+}
+
+.period-comparison .section-header {
+  background: #000;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.period-comparison table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.period-comparison th {
+  background: #1a1a1a;
+  color: #9acd32;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.625rem 1rem;
+  text-align: left;
+}
+
+.period-comparison th:not(:first-child) {
+  text-align: right;
+}
+
+.period-comparison td {
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: #333;
+  border-bottom: 1px solid #eee;
+}
+
+.period-comparison td:not(:first-child) {
+  text-align: right;
+}
+
+.period-comparison tr:last-child td {
+  border-bottom: none;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .analytics-stats,
+  .top-stats-row,
+  .stats-overview {
+    flex-wrap: wrap;
+  }
+  
+  .analytics-stats .stat-card,
+  .top-stats-row .stat-item,
+  .stats-overview .stat-box {
+    flex: 0 0 50%;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  
+  .analytics-stats .stat-card:nth-child(2n),
+  .top-stats-row .stat-item:nth-child(2n) {
+    border-right: none;
+  }
+  
+  .dj-mixes-performance .stats-grid,
+  .dj-mixes-performance .stats-row {
+    flex-wrap: wrap;
+  }
+  
+  .dj-mixes-performance .stat-box {
+    flex: 0 0 50%;
+    padding: 0.75rem 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .analytics-stats .stat-value,
+  .top-stats-row .stat-value {
+    font-size: 1.25rem;
+  }
+  
+  .dj-mixes-performance .stat-value {
+    font-size: 1.5rem;
+  }
+}

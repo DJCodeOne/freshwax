@@ -50,6 +50,19 @@ if (partnerId) {
     if (partnerDoc.exists) {
       partner = { id: partnerDoc.id, ...partnerDoc.data() };
       
+      // If no avatar in artists collection, try to get from customers collection
+      if (!partner.avatarUrl && !partner.imageUrl && !partner.photoURL) {
+        try {
+          const customerDoc = await db.collection('customers').doc(partnerId).get();
+          if (customerDoc.exists) {
+            const customerData = customerDoc.data();
+            partner.avatarUrl = customerData?.avatarUrl || customerData?.photoURL || null;
+          }
+        } catch (e) {
+          // Ignore errors fetching customer avatar
+        }
+      }
+      
       // Fetch orders for this partner
       const ordersSnap = await db.collection('orders')
         .where('artistId', '==', partnerId)
@@ -173,14 +186,15 @@ export const prerender = false;
           <section class="account-section">
             <div class="section-header">
               <h2>👤 Profile</h2>
-              <button class="edit-profile-btn" id="edit-profile-btn">✏️ Edit</button>
+              <button class="edit-profile-btn" id="edit-profile-btn">{partner.bio ? '✏️ Edit Bio' : '➕ Add Bio'}</button>
             </div>
             
             <div class="profile-card">
               <div class="profile-view" id="profile-view">
                 <div class="profile-avatar">
-                  {partner.avatarUrl ? (
-                    <img src={partner.avatarUrl} alt={partner.artistName} />
+                  {partner.avatarUrl || partner.imageUrl || partner.photoURL ? (
+                    <img src={partner.avatarUrl || partner.imageUrl || partner.photoURL} alt={partner.artistName} onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                    <span style="display:none;">{(partner.artistName || 'A')[0].toUpperCase()}</span>
                   ) : (
                     <span>{(partner.artistName || 'A')[0].toUpperCase()}</span>
                   )}
@@ -195,30 +209,24 @@ export const prerender = false;
                     </span>
                     <span class="meta-item">Joined {formatDate(partner.createdAt)}</span>
                   </div>
-                  {partner.bio && <p class="profile-bio">{partner.bio}</p>}
+                  {partner.bio ? (
+                    <p class="profile-bio">{partner.bio}</p>
+                  ) : (
+                    <p class="profile-bio empty">No bio added yet. Click "Add Bio" to tell people about yourself.</p>
+                  )}
                 </div>
               </div>
               
               <div class="profile-edit hidden" id="profile-edit">
                 <div class="edit-form">
-                  <div class="form-row">
-                    <div class="form-field">
-                      <label>Artist Name</label>
-                      <input type="text" id="edit-artistName" value={partner.artistName || ''} maxlength="30" />
-                    </div>
-                    <div class="form-field">
-                      <label>Email</label>
-                      <input type="email" id="edit-email" value={partner.email || ''} disabled />
-                    </div>
-                  </div>
                   <div class="form-field">
                     <label>Bio</label>
-                    <textarea id="edit-bio" rows="3" maxlength="200">{partner.bio || ''}</textarea>
+                    <textarea id="edit-bio" rows="4" maxlength="200" placeholder="Tell people about yourself, your music, or your label...">{partner.bio || ''}</textarea>
                     <span class="char-count"><span id="bio-count">{(partner.bio || '').length}</span>/200</span>
                   </div>
                   <div class="form-actions">
                     <button class="cancel-btn" id="cancel-profile">Cancel</button>
-                    <button class="save-btn" id="save-profile">Save Changes</button>
+                    <button class="save-btn" id="save-profile">Save Bio</button>
                   </div>
                 </div>
               </div>
@@ -392,7 +400,7 @@ export const prerender = false;
 <style>
   .account-main {
     min-height: calc(100vh - 200px);
-    background: #f5f5f5;
+    background: linear-gradient(to bottom, #000000, #111827);
     padding: 2rem 0;
   }
   
@@ -415,33 +423,33 @@ export const prerender = false;
   .header-left h1 {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 2.5rem;
-    color: #000;
+    color: #fff;
     margin: 0.5rem 0 0.25rem;
   }
   
   .header-left p {
-    color: #666;
+    color: #9ca3af;
     font-size: 1.0625rem;
   }
   
   .back-link {
-    color: #666;
+    color: #9ca3af;
     text-decoration: none;
     font-size: 0.9375rem;
     font-weight: 500;
   }
   
-  .back-link:hover { color: #000; }
+  .back-link:hover { color: #fff; }
   
   .print-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: #fff;
-    color: #333;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    color: #fff;
     padding: 0.875rem 1.5rem;
     border-radius: 10px;
-    border: 2px solid #e5e5e5;
+    border: 2px solid #374151;
     font-weight: 600;
     font-size: 1rem;
     cursor: pointer;
@@ -449,14 +457,14 @@ export const prerender = false;
   }
   
   .print-btn:hover {
-    background: #f5f5f5;
-    border-color: #ccc;
+    background: linear-gradient(to bottom, #374151, #1f2937);
+    border-color: #4b5563;
   }
   
   /* Login Prompt */
   .login-prompt {
-    background: #fff;
-    border: 2px solid #e5e5e5;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
     border-radius: 16px;
     padding: 4rem 2rem;
     text-align: center;
@@ -474,8 +482,8 @@ export const prerender = false;
   
   /* Account Sections */
   .account-section {
-    background: #fff;
-    border: 2px solid #e5e5e5;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
     border-radius: 16px;
     padding: 1.75rem;
     margin-bottom: 1.5rem;
@@ -493,13 +501,14 @@ export const prerender = false;
   .section-header h2 {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 1.5rem;
-    color: #000;
+    color: #fff;
     margin: 0;
   }
   
   .edit-profile-btn {
-    background: #f0f0f0;
-    border: none;
+    background: linear-gradient(to bottom, #374151, #1f2937);
+    border: 2px solid #4b5563;
+    color: #fff;
     padding: 0.5rem 1rem;
     border-radius: 8px;
     font-size: 0.9375rem;
@@ -508,7 +517,7 @@ export const prerender = false;
     transition: all 0.2s;
   }
   
-  .edit-profile-btn:hover { background: #e5e5e5; }
+  .edit-profile-btn:hover { background: linear-gradient(to bottom, #4b5563, #374151); border-color: #6b7280; }
   
   /* Profile Card */
   .profile-card {
@@ -551,10 +560,11 @@ export const prerender = false;
     font-size: 1.5rem;
     font-weight: 700;
     margin: 0 0 0.25rem;
+    color: #fff;
   }
   
   .profile-email {
-    color: #666;
+    color: #9ca3af;
     font-size: 1rem;
     margin: 0 0 0.75rem;
   }
@@ -568,12 +578,14 @@ export const prerender = false;
   }
   
   .meta-badge {
-    background: #f0f0f0;
+    background: linear-gradient(to bottom, #374151, #1f2937);
+    color: #fff;
     padding: 0.25rem 0.75rem;
     border-radius: 20px;
     font-size: 0.8125rem;
     font-weight: 600;
     text-transform: uppercase;
+    border: 1px solid #4b5563;
   }
   
   .status-badge {
@@ -583,19 +595,25 @@ export const prerender = false;
     font-weight: 600;
   }
   
-  .status-badge.approved { background: #dcfce7; color: #16a34a; }
-  .status-badge.pending { background: #fef3c7; color: #d97706; }
+  .status-badge.approved { background: rgba(22, 163, 74, 0.2); color: #22c55e; border: 1px solid #22c55e; }
+  .status-badge.pending { background: rgba(217, 119, 6, 0.2); color: #fbbf24; border: 1px solid #fbbf24; }
   
   .meta-item {
     font-size: 0.875rem;
-    color: #888;
+    color: #9ca3af;
   }
   
   .profile-bio {
-    color: #333;
+    color: #e5e7eb;
     font-size: 1rem;
     line-height: 1.5;
     margin: 0;
+  }
+  
+  .profile-bio.empty {
+    color: #6b7280;
+    font-style: italic;
+    font-size: 0.9rem;
   }
   
   /* Profile Edit */
@@ -622,33 +640,36 @@ export const prerender = false;
   .form-field label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #333;
+    color: #e5e7eb;
   }
   
   .form-field input,
   .form-field textarea {
     padding: 0.75rem 1rem;
-    border: 2px solid #e5e5e5;
+    border: 2px solid #374151;
     border-radius: 10px;
     font-size: 1rem;
     font-family: inherit;
     transition: border-color 0.2s;
+    background: #fff;
+    color: #111827;
   }
   
   .form-field input:focus,
   .form-field textarea:focus {
     outline: none;
-    border-color: #000;
+    border-color: #dc2626;
   }
   
   .form-field input:disabled {
-    background: #f5f5f5;
-    color: #888;
+    background: #1f2937;
+    color: #9ca3af;
+    border-color: #374151;
   }
   
   .char-count {
     font-size: 0.8125rem;
-    color: #888;
+    color: #9ca3af;
     text-align: right;
   }
   
@@ -661,16 +682,16 @@ export const prerender = false;
   
   .cancel-btn {
     padding: 0.75rem 1.5rem;
-    background: #f0f0f0;
-    border: 2px solid #e5e5e5;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
     border-radius: 10px;
     font-size: 1rem;
     font-weight: 600;
-    color: #666;
+    color: #9ca3af;
     cursor: pointer;
   }
   
-  .cancel-btn:hover { background: #e5e5e5; }
+  .cancel-btn:hover { background: linear-gradient(to bottom, #374151, #1f2937); border-color: #4b5563; color: #fff; }
   
   .save-btn {
     padding: 0.75rem 1.5rem;
@@ -693,8 +714,8 @@ export const prerender = false;
   }
   
   .stat-card {
-    background: #f8f8f8;
-    border: 2px solid #e5e5e5;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
     border-radius: 12px;
     padding: 1.25rem;
     text-align: center;
@@ -702,18 +723,18 @@ export const prerender = false;
   
   .stat-card.highlight {
     background: #000;
-    border-color: #000;
+    border-color: #4b5563;
   }
   
   .stat-card.highlight .stat-value,
   .stat-card.highlight .stat-label { color: #fff; }
   
   .stat-card.green {
-    background: #f0fdf4;
-    border-color: #86efac;
+    background: rgba(16, 185, 129, 0.1);
+    border-color: #10b981;
   }
   
-  .stat-card.green .stat-value { color: #16a34a; }
+  .stat-card.green .stat-value { color: #22c55e; }
   
   .stat-icon { font-size: 1.25rem; margin-bottom: 0.5rem; }
   
@@ -721,13 +742,13 @@ export const prerender = false;
     font-family: 'Bebas Neue', sans-serif;
     font-size: 2rem;
     line-height: 1;
-    color: #000;
+    color: #fff;
   }
   
   .stat-label {
     font-size: 0.75rem;
     font-weight: 600;
-    color: #888;
+    color: #9ca3af;
     text-transform: uppercase;
     margin-top: 0.25rem;
   }
@@ -746,10 +767,10 @@ export const prerender = false;
     font-weight: 700;
   }
   
-  .order-badge.pending { background: #fef3c7; color: #d97706; }
-  .order-badge.processed { background: #dbeafe; color: #2563eb; }
-  .order-badge.shipped { background: #e0e7ff; color: #4f46e5; }
-  .order-badge.delivered { background: #dcfce7; color: #16a34a; }
+  .order-badge.pending { background: rgba(217, 119, 6, 0.2); color: #fbbf24; border: 1px solid #fbbf24; }
+  .order-badge.processed { background: rgba(37, 99, 235, 0.2); color: #60a5fa; border: 1px solid #60a5fa; }
+  .order-badge.shipped { background: rgba(79, 70, 229, 0.2); color: #a5b4fc; border: 1px solid #a5b4fc; }
+  .order-badge.delivered { background: rgba(22, 163, 74, 0.2); color: #22c55e; border: 1px solid #22c55e; }
   
   /* Orders Table */
   .orders-table-wrap {
@@ -765,24 +786,25 @@ export const prerender = false;
   .orders-table th {
     text-align: left;
     padding: 0.875rem 1rem;
-    background: #f5f5f5;
+    background: linear-gradient(to bottom, #000000, #111827);
     font-weight: 700;
     font-size: 0.8125rem;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    color: #666;
-    border-bottom: 2px solid #e5e5e5;
+    color: #9ca3af;
+    border-bottom: 2px solid #374151;
   }
   
   .orders-table td {
     padding: 1rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #374151;
+    color: #e5e7eb;
   }
   
   .order-id {
     font-family: monospace;
     font-weight: 600;
-    color: #666;
+    color: #9ca3af;
   }
   
   .item-cell {
@@ -806,16 +828,17 @@ export const prerender = false;
     text-transform: capitalize;
   }
   
-  .status-pill.pending { background: #fef3c7; color: #d97706; }
-  .status-pill.processed { background: #dbeafe; color: #2563eb; }
-  .status-pill.shipped { background: #e0e7ff; color: #4f46e5; }
-  .status-pill.delivered { background: #dcfce7; color: #16a34a; }
-  .status-pill.cancelled { background: #fee2e2; color: #dc2626; }
+  .status-pill.pending { background: rgba(217, 119, 6, 0.2); color: #fbbf24; }
+  .status-pill.processed { background: rgba(37, 99, 235, 0.2); color: #60a5fa; }
+  .status-pill.shipped { background: rgba(79, 70, 229, 0.2); color: #a5b4fc; }
+  .status-pill.delivered { background: rgba(22, 163, 74, 0.2); color: #22c55e; }
+  .status-pill.cancelled { background: rgba(220, 38, 38, 0.2); color: #f87171; }
   
   .table-btn {
     padding: 0.375rem 0.875rem;
-    background: #f0f0f0;
-    border: none;
+    background: linear-gradient(to bottom, #374151, #1f2937);
+    border: 1px solid #4b5563;
+    color: #fff;
     border-radius: 6px;
     font-size: 0.8125rem;
     font-weight: 600;
@@ -824,15 +847,16 @@ export const prerender = false;
   }
   
   .table-btn:hover {
-    background: #000;
-    color: #fff;
+    background: linear-gradient(to bottom, #4b5563, #374151);
+    border-color: #6b7280;
   }
   
   .empty-box {
     text-align: center;
     padding: 2rem;
-    color: #888;
-    background: #f8f8f8;
+    color: #9ca3af;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
     border-radius: 10px;
   }
   
@@ -880,7 +904,8 @@ export const prerender = false;
   }
   
   .payout-info {
-    background: #f8f8f8;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
     border-radius: 10px;
     padding: 1rem 1.25rem;
   }
@@ -888,7 +913,7 @@ export const prerender = false;
   .payout-info p {
     margin: 0.5rem 0;
     font-size: 0.9375rem;
-    color: #666;
+    color: #9ca3af;
   }
   
   /* Activity List */
@@ -902,7 +927,8 @@ export const prerender = false;
     display: flex;
     gap: 1rem;
     padding: 1rem;
-    background: #f8f8f8;
+    background: linear-gradient(to bottom, #374151, #1f2937);
+    border: 1px solid #4b5563;
     border-radius: 10px;
     align-items: center;
   }
@@ -921,12 +947,12 @@ export const prerender = false;
   
   .activity-title {
     font-weight: 600;
-    color: #000;
+    color: #fff;
   }
   
   .activity-desc {
     font-size: 0.875rem;
-    color: #666;
+    color: #9ca3af;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -940,13 +966,13 @@ export const prerender = false;
   .activity-amount {
     display: block;
     font-weight: 700;
-    color: #16a34a;
+    color: #22c55e;
   }
   
   .activity-date {
     display: block;
     font-size: 0.8125rem;
-    color: #888;
+    color: #9ca3af;
   }
   
   /* Settings */
@@ -961,7 +987,8 @@ export const prerender = false;
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    background: #f8f8f8;
+    background: linear-gradient(to bottom, #374151, #1f2937);
+    border: 1px solid #4b5563;
     border-radius: 10px;
   }
   
@@ -973,7 +1000,7 @@ export const prerender = false;
   
   .setting-info p {
     font-size: 0.875rem;
-    color: #666;
+    color: #9ca3af;
     margin: 0;
   }
   
@@ -998,19 +1025,161 @@ export const prerender = false;
   
   /* Print Styles */
   @media print {
+    @page {
+      size: A4;
+      margin: 15mm 10mm;
+    }
+    
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    
+    body {
+      background: white !important;
+      color: black !important;
+      font-size: 10pt !important;
+    }
+    
+    /* Hide interactive elements */
     .header-actions,
     .edit-profile-btn,
     .form-actions,
     .table-btn,
     .download-data-btn,
-    .back-link {
+    .back-link,
+    .print-btn,
+    button,
+    nav,
+    footer,
+    .profile-edit {
       display: none !important;
     }
     
+    /* Main container */
+    .account-main {
+      background: white !important;
+      padding: 0 !important;
+    }
+    
+    .container {
+      max-width: 100% !important;
+      padding: 0 !important;
+    }
+    
+    /* Page header */
+    .page-header {
+      margin-bottom: 15px !important;
+      padding-bottom: 10px !important;
+      border-bottom: 2px solid #000 !important;
+    }
+    
+    .page-header h1 {
+      font-size: 18pt !important;
+      color: black !important;
+    }
+    
+    /* Sections */
     .account-section {
-      break-inside: avoid;
-      box-shadow: none;
-      border: 1px solid #ccc;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+      box-shadow: none !important;
+      border: 1px solid #ccc !important;
+      margin-bottom: 15px !important;
+      background: white !important;
+    }
+    
+    .section-header {
+      background: #f5f5f5 !important;
+      border-bottom: 1px solid #ccc !important;
+      padding: 8px 12px !important;
+    }
+    
+    .section-header h2 {
+      font-size: 12pt !important;
+      color: black !important;
+    }
+    
+    .section-content {
+      padding: 12px !important;
+    }
+    
+    /* Profile section */
+    .profile-view {
+      page-break-inside: avoid !important;
+    }
+    
+    .profile-avatar {
+      width: 60px !important;
+      height: 60px !important;
+    }
+    
+    .profile-name {
+      font-size: 14pt !important;
+      color: black !important;
+    }
+    
+    .profile-meta span {
+      font-size: 9pt !important;
+      color: #666 !important;
+    }
+    
+    /* Payout cards */
+    .payout-cards {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 10px !important;
+      page-break-inside: avoid !important;
+    }
+    
+    .payout-card {
+      border: 1px solid #ccc !important;
+      padding: 10px !important;
+      background: #f9f9f9 !important;
+    }
+    
+    .payout-label {
+      font-size: 8pt !important;
+      color: #666 !important;
+    }
+    
+    .payout-value {
+      font-size: 12pt !important;
+      color: black !important;
+    }
+    
+    /* Tables */
+    .orders-table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+      font-size: 9pt !important;
+    }
+    
+    .orders-table th {
+      background: #333 !important;
+      color: white !important;
+      padding: 6px 8px !important;
+      font-size: 8pt !important;
+      text-align: left !important;
+    }
+    
+    .orders-table td {
+      padding: 5px 8px !important;
+      border-bottom: 1px solid #ddd !important;
+    }
+    
+    .orders-table tr {
+      page-break-inside: avoid !important;
+    }
+    
+    /* Print header */
+    .account-main::before {
+      content: "Fresh Wax Partner Account Report";
+      display: block !important;
+      font-size: 10pt !important;
+      text-align: right !important;
+      color: #666 !important;
+      margin-bottom: 10px !important;
     }
   }
   
@@ -1091,7 +1260,6 @@ export const prerender = false;
   // Save Profile
   saveBtn?.addEventListener('click', async () => {
     const data = {
-      artistName: document.getElementById('edit-artistName')?.value,
       bio: document.getElementById('edit-bio')?.value
     };
     
@@ -1117,7 +1285,7 @@ export const prerender = false;
       alert('Failed to save. Please try again.');
     }
     
-    saveBtn.textContent = 'Save Changes';
+    saveBtn.textContent = 'Save Bio';
     saveBtn.disabled = false;
   });
   

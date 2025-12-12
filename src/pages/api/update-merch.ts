@@ -45,6 +45,59 @@ const s3Client = new S3Client({
 
 export const POST: APIRoute = async ({ request }) => {
   try {
+    const contentType = request.headers.get('content-type') || '';
+    
+    // Handle JSON body for image-only updates
+    if (contentType.includes('application/json')) {
+      const data = await request.json();
+      const { productId, images, primaryImage } = data;
+      
+      if (!productId) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Product ID is required'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+      
+      log.info('[update-merch] JSON update for product:', productId);
+      
+      const productRef = db.collection('merch').doc(productId);
+      const productDoc = await productRef.get();
+      
+      if (!productDoc.exists) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Product not found'
+        }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      }
+      
+      const updates: any = {
+        updatedAt: new Date().toISOString()
+      };
+      
+      if (images !== undefined) {
+        updates.images = images;
+      }
+      
+      if (primaryImage !== undefined) {
+        updates.primaryImage = primaryImage;
+        updates.imageUrl = primaryImage; // Keep legacy field in sync
+      }
+      
+      await productRef.update(updates);
+      
+      log.info('[update-merch] Images updated for:', productId);
+      
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Images updated successfully'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Handle FormData for full updates
     const formData = await request.formData();
     
     const productId = formData.get('productId') as string;

@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { clearCache } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -54,12 +55,18 @@ export const POST: APIRoute = async ({ request }) => {
 
     log.info('[track-mix-download] Mix', mixId, 'downloads:', mixData?.downloads || 0);
 
+    // Invalidate cache for this mix
+    clearCache(`doc:dj-mixes:${mixId}`);
+
     return new Response(JSON.stringify({
       success: true,
       downloads: mixData?.downloads || 0
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache'
+      }
     });
 
   } catch (error) {

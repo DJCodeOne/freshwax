@@ -278,6 +278,184 @@ export const POST: APIRoute = async ({ request }) => {
         });
       }
       
+      case 'dj_ready': {
+        // Mark DJ as ready in their slot
+        const { slotId } = data;
+        if (!slotId) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Slot ID is required'
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+        
+        const slotRef = db.collection('livestreamSlots').doc(slotId);
+        const slotDoc = await slotRef.get();
+        
+        if (!slotDoc.exists) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Slot not found'
+          }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        }
+        
+        const slotData = slotDoc.data()!;
+        
+        // Verify this is the DJ's slot
+        if (slotData.djId !== djId) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'This is not your slot'
+          }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+        }
+        
+        // Mark as ready
+        await slotRef.update({
+          djReady: true,
+          djReadyAt: nowISO,
+          updatedAt: nowISO
+        });
+        
+        console.log(`[manage] DJ ${djId} marked ready for slot ${slotId}`);
+        
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'DJ marked as ready'
+        }), { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json' } 
+        });
+      }
+      
+      case 'slot_expired': {
+        // Mark slot as expired/available for takeover
+        const { slotId } = data;
+        if (!slotId) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Slot ID is required'
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+        
+        const slotRef = db.collection('livestreamSlots').doc(slotId);
+        const slotDoc = await slotRef.get();
+        
+        if (!slotDoc.exists) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Slot not found'
+          }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        }
+        
+        const slotData = slotDoc.data()!;
+        
+        // Only the original DJ or an admin can mark their slot as expired
+        // (This gets called when the 3-minute grace period ends)
+        if (slotData.djId !== djId) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Cannot expire another DJ\'s slot'
+          }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+        }
+        
+        // Mark as available for takeover
+        await slotRef.update({
+          status: 'available',
+          expiredAt: nowISO,
+          originalDjId: slotData.djId,
+          originalDjName: slotData.djName,
+          djId: null, // Clear DJ assignment
+          djName: 'Available',
+          djReady: false,
+          updatedAt: nowISO
+        });
+        
+        console.log(`[manage] Slot ${slotId} marked as available for takeover`);
+        
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Slot marked as available'
+        }), { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json' } 
+        });
+      }
+      
+      case 'claim_slot': {
+        // Claim an available slot (first come first served)
+        
+        // Find available slots
+        const availableSlots = await db.collection('livestreamSlots')
+          .where('status', '==', 'available')
+          .limit(1)
+          .get();
+        
+        if (availableSlots.empty) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'No slots available'
+          }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        }
+        
+        const availableSlot = availableSlots.docs[0];
+        const slotRef = availableSlot.ref;
+        const slotData = availableSlot.data();
+        
+        // Check if DJ is approved
+        const artistDoc = await db.collection('artists').doc(djId).get();
+        if (!artistDoc.exists || !artistDoc.data()?.approved) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'You must be an approved DJ to claim slots'
+          }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+        }
+        
+        const artistData = artistDoc.data()!;
+        
+        // Use transaction to prevent race conditions
+        try {
+          await db.runTransaction(async (transaction) => {
+            const freshSlot = await transaction.get(slotRef);
+            
+            // Double-check still available
+            if (!freshSlot.exists || freshSlot.data()?.status !== 'available') {
+              throw new Error('Slot no longer available');
+            }
+            
+            // Claim the slot
+            transaction.update(slotRef, {
+              status: 'in_lobby',
+              djId: djId,
+              djName: artistData.artistName || artistData.displayName || 'DJ',
+              djAvatar: artistData.avatarUrl || null,
+              djReady: true, // Already ready since they're claiming
+              djReadyAt: nowISO,
+              claimedAt: nowISO,
+              claimedFromExpiry: true,
+              updatedAt: nowISO
+            });
+          });
+          
+          console.log(`[manage] DJ ${djId} claimed slot ${availableSlot.id}`);
+          
+          return new Response(JSON.stringify({
+            success: true,
+            slotId: availableSlot.id,
+            streamKey: slotData.streamKey,
+            message: 'Slot claimed successfully'
+          }), { 
+            status: 200, 
+            headers: { 'Content-Type': 'application/json' } 
+          });
+          
+        } catch (err) {
+          console.error('[manage] Failed to claim slot:', err);
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Slot was claimed by another DJ'
+          }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+        }
+      }
+      
       default:
         return new Response(JSON.stringify({
           success: false,

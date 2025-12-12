@@ -106,7 +106,7 @@ const {
   copyrightHolder = '',
   labelCode = '',
   genre = '',
-  coverArtUrl = '/logo.webp',
+  coverArtUrl = '/place-holder.webp',
   additionalArtwork = [],
   tracks = [],
   releaseDate = new Date().toISOString(),
@@ -150,22 +150,6 @@ const finalRating = {
 // Flag to indicate if ratings came from server (non-zero means server-provided)
 const hasServerRatings = finalRating.count > 0 || finalRating.average > 0;
 
-// Parse social links from notes - ONLY social links, no descriptions
-let socialLink = '';
-if (notes) {
-  try {
-    const parts = notes.split(/[\n\s]+/);
-    for (const part of parts) {
-      if (part && (part.startsWith('http://') || part.startsWith('https://'))) {
-        socialLink = part;
-        break;
-      }
-    }
-  } catch (e) {
-    // Silent fail for notes parsing
-  }
-}
-
 // Process tracks with IDs and sort by track number
 const tracksWithIds = tracks.map((track, index) => {
   const displayNum = track.displayTrackNumber || track.trackNumber || (index + 1);
@@ -196,6 +180,25 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
 
 const vinylAvailable = finalVinylAvailable && parseInt(finalVinylRecordCount) > 0;
 const digitalPrice = finalDigitalPrice;
+
+// Calculate total duration
+const totalDurationSeconds = tracksWithIds.reduce((acc, track) => {
+  if (track.duration) {
+    // Handle both "mm:ss" string format and seconds number
+    if (typeof track.duration === 'string' && track.duration.includes(':')) {
+      const [mins, secs] = track.duration.split(':').map(Number);
+      return acc + (mins * 60) + (secs || 0);
+    } else if (typeof track.duration === 'number') {
+      return acc + track.duration;
+    }
+  }
+  return acc;
+}, 0);
+const totalMinutes = Math.floor(totalDurationSeconds / 60);
+const totalSeconds = totalDurationSeconds % 60;
+const totalDurationFormatted = totalDurationSeconds > 0 
+  ? `${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}` 
+  : null;
 ---
 
 <article 
@@ -205,7 +208,7 @@ const digitalPrice = finalDigitalPrice;
 >
   <div class="content-wrapper flex flex-col md:flex-row gap-6">
     <!-- LEFT: ARTWORK + BUY BUTTONS -->
-    <div class="relative flex-shrink-0">
+    <div class="relative flex-shrink-0 flex flex-col">
       {isPreOrder && (
         <div class="pre-order-badge absolute top-2 left-2 z-10 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg uppercase tracking-wide">
           <span class="flex items-center gap-1">
@@ -214,13 +217,15 @@ const digitalPrice = finalDigitalPrice;
           </span>
         </div>
       )}
-      <img 
-        src={coverArtUrl} 
-        alt={`${releaseName} by ${artistName}`} 
-        class="w-64 h-64 object-cover rounded-md shadow-md mb-4"
-        loading="lazy"
-        onerror="this.src='/logo.webp'"
-      />
+      <div class="w-64 h-64 bg-white rounded-md shadow-md mb-4 overflow-hidden">
+        <img 
+          src={coverArtUrl} 
+          alt={`${releaseName} by ${artistName}`} 
+          class="w-full h-full object-cover"
+          loading="lazy"
+          onerror="this.src='/place-holder.webp'"
+        />
+      </div>
       
       <div class="flex gap-2 w-64">
         <button 
@@ -269,16 +274,56 @@ const digitalPrice = finalDigitalPrice;
           </span>
         </button>
       </div>
+      
+      <!-- Compact Info Row -->
+      <div class="flex items-center justify-between w-64 mt-auto pt-3 px-1 relative z-10">
+        <!-- Wishlist Button (always visible) -->
+        <button 
+          type="button"
+          class="wishlist-btn flex items-center gap-1 text-sm hover:opacity-70 transition-opacity font-body font-semibold cursor-pointer"
+          data-release-id={id}
+          data-title={releaseName}
+          data-artist={artistName}
+          data-artwork={coverArtUrl}
+          data-genre={genre}
+          data-label={displayLabel}
+          title="Add to wishlist"
+        >
+          <svg class="w-4 h-4 wishlist-icon-empty text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+          </svg>
+          <svg class="w-4 h-4 wishlist-icon-filled text-red-500 hidden" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+          </svg>
+          <span class="wishlist-text text-black text-xs">Wishlist</span>
+        </button>
+        
+        {isPreOrder && (
+          <!-- Pre-order Link (only for upcoming releases) -->
+          <a 
+            href={`/item/${id}`}
+            class="preorder-link flex items-center gap-1 text-xs font-body font-semibold text-orange-500 hover:text-orange-400 transition-colors"
+            title={`Pre-order - Available ${formattedDate}`}
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Pre-order</span>
+          </a>
+        )}
+        
+        <span class="text-xs font-body font-semibold text-black">{tracksWithIds.length} tracks</span>
+      </div>
     </div>
 
     <!-- MIDDLE: INFO SECTION -->
     <div class="flex-1 min-w-0 flex flex-col">
-      <div class="space-y-3 flex-1 flex flex-col">
-        <h3 class="release-title text-4xl text-red-600 leading-tight truncate" title={releaseName}>
+      <div class="flex flex-col h-full">
+        <h3 class="release-title text-4xl text-red-600 leading-tight truncate mb-3" title={releaseName}>
           {releaseName.length > 30 ? releaseName.substring(0, 27) + '...' : releaseName}
         </h3>
         
-        <div class="space-y-1">
+        <div class="space-y-1 mb-3">
           <p class="artist-name-font text-xl font-semibold text-white truncate" title={artistName}>
             {artistName.length > 30 ? artistName.substring(0, 27) + '...' : artistName}
           </p>
@@ -287,7 +332,7 @@ const digitalPrice = finalDigitalPrice;
           </p>
         </div>
         
-        <div class="flex items-center gap-2 text-base text-gray-300">
+        <div class="flex items-center gap-2 text-base text-gray-300 mb-4">
           {labelCode && (
             <span class="text-sm px-2 py-1 bg-gray-700 text-white rounded font-medium">{labelCode}</span>
           )}
@@ -300,7 +345,7 @@ const digitalPrice = finalDigitalPrice;
         </div>
 
         <!-- Rating, Comments & Share Section -->
-        <div class="flex items-center gap-4 pt-4 border-t border-gray-600 mt-6">
+        <div class="flex items-center gap-4 py-4 border-t border-gray-600">
           <!-- 5-Star Rating Display -->
           <div class="flex items-center gap-2">
             <div class="flex items-center gap-0.5">
@@ -347,22 +392,35 @@ const digitalPrice = finalDigitalPrice;
         </div>
 
         <!-- Release Details Box -->
-        <div class="pt-4 mt-auto">
-          <a href={`/item/${id}`} class="details-preview block p-3 bg-gradient-to-r from-gray-400 to-black border-l-4 border-gray-300 rounded-r text-base cursor-pointer hover:opacity-90 transition-all group">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex-1 min-w-0">
-                <div class="text-xs text-white uppercase tracking-wider mb-1.5 font-heading">Release Details</div>
-                <div class="space-y-1 text-sm text-gray-200 font-body">
-                  <div class="truncate">{formattedDate}</div>
-                  <div class="truncate">{finalVinylAvailable ? 'Vinyl + Digital' : 'Digital Only'}</div>
-                  <div class="truncate">{socialLink || 'Social Links'}</div>
+        <div class="mt-auto">
+          <a href={`/item/${id}`} class="details-preview block bg-gradient-to-r from-gray-800 via-gray-900 to-black border-2 border-gray-600 hover:border-red-500 rounded-lg overflow-hidden cursor-pointer transition-all group shadow-lg">
+            <div class="flex items-stretch">
+              <div class="flex-1 p-4">
+                <div class="text-xs text-white uppercase tracking-widest mb-2 font-heading font-bold flex items-center gap-2">
+                  <span>📋</span> Release Details
+                </div>
+                <div class="space-y-1.5 text-sm text-gray-300 font-body font-semibold">
+                  <div class="flex items-center gap-2">
+                    <span class="text-gray-500">📅</span>
+                    <span class="truncate">{formattedDate}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-gray-500">💿</span>
+                    <span class="truncate">{finalVinylAvailable ? 'Vinyl + Digital' : 'Digital Only'}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-gray-500">🔗</span>
+                    <span class="truncate">Social Links</span>
+                  </div>
                 </div>
               </div>
-              <div class="flex-shrink-0 flex items-center gap-2">
-                <span class="text-sm text-red-500 group-hover:text-red-400 transition-colors font-body">View Full Details</span>
-                <svg class="w-5 h-5 text-white group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
+              <div class="flex items-center justify-center px-5 bg-gradient-to-r from-red-600 to-red-700 group-hover:from-red-500 group-hover:to-red-600 transition-all">
+                <div class="flex flex-col items-center gap-1">
+                  <span class="text-xs text-white uppercase font-heading font-bold tracking-wide whitespace-nowrap">View</span>
+                  <svg class="w-5 h-5 text-white group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </div>
               </div>
             </div>
           </a>
@@ -371,8 +429,8 @@ const digitalPrice = finalDigitalPrice;
     </div>
 
     <!-- RIGHT: TRACKS SECTION -->
-    <div class="flex-1 bg-gradient-to-b from-gray-900 via-gray-800 to-black rounded-lg p-4 pb-3 min-w-0 max-w-full overflow-hidden border border-gray-700">
-      <div class="mb-3 flex items-center justify-between">
+    <div class="flex-1 flex flex-col bg-gradient-to-b from-gray-900 via-gray-800 to-black rounded-lg p-4 min-w-0 max-w-full overflow-hidden border border-gray-700">
+      <div class="mb-3 flex items-center justify-between pb-2 border-b border-gray-700">
         <h4 class="text-sm text-white uppercase tracking-wider font-heading">
           TRACKS ({tracksWithIds.length})
         </h4>
@@ -382,8 +440,8 @@ const digitalPrice = finalDigitalPrice;
       </div>
 
       {tracksWithIds.length > 0 ? (
-        <div class="flex flex-col">
-          <div class="track-list-container mb-4 relative" style="max-height: 140px; overflow-y: auto; overflow-x: hidden;">
+        <div class="flex flex-col flex-1">
+          <div class="track-list-container relative" style="max-height: 160px; overflow-y: auto; overflow-x: hidden;">
             {tracksWithIds.map((track) => (
               <div class="track-row flex items-center gap-2 py-2 px-2 hover:bg-white/10 rounded transition-colors border-b border-gray-700/50 last:border-b-0">
                 <button 
@@ -433,7 +491,7 @@ const digitalPrice = finalDigitalPrice;
             )}
           </div>
 
-          <div class="player-section pt-3 border-t border-gray-700 mb-4">
+          <div class="player-section pt-4 border-t border-gray-700 mt-auto">
             <div class="flex items-center justify-between mb-2 gap-2">
               <div class="flex-1 min-w-0">
                 <p class="text-sm text-white uppercase tracking-wide font-heading">NOW PLAYING</p>
@@ -460,7 +518,7 @@ const digitalPrice = finalDigitalPrice;
                 </svg>
               </div>
             </div>
-            <div class="waveform-wrapper px-2 pb-2" style="width: 100%; max-width: 100%; overflow: hidden;">
+            <div class="waveform-wrapper" style="width: 100%; max-width: 100%; overflow: hidden;">
               <canvas 
                 class="shared-waveform cursor-pointer rounded border-2 border-gray-700"
                 width="400"
@@ -553,6 +611,7 @@ const digitalPrice = finalDigitalPrice;
     position: relative;
     overflow: hidden;
     transition: all 0.2s ease;
+    min-height: 420px;
   }
   
   .release-plate-container:hover {
@@ -748,6 +807,7 @@ const digitalPrice = finalDigitalPrice;
     .release-plate-container {
       padding: 1rem !important;
       border-radius: 0.75rem !important;
+      min-height: auto;
     }
     
     .content-wrapper {
@@ -928,6 +988,18 @@ const digitalPrice = finalDigitalPrice;
   };
 
   // ============================================
+  // AUTH HELPER - Wait for auth to be ready
+  // ============================================
+  async function getAuthUser() {
+    // If authReady promise exists (from Header), wait for it
+    if (window.authReady) {
+      await window.authReady;
+    }
+    // Return the authenticated user
+    return window.firebaseAuth?.currentUser || window.authUser || null;
+  }
+
+  // ============================================
   // HELPER FUNCTIONS
   // ============================================
   function sanitizeComment(text) {
@@ -1072,7 +1144,7 @@ const digitalPrice = finalDigitalPrice;
       if (star.hasAttribute('data-rating-click-init')) return;
       star.setAttribute('data-rating-click-init', 'true');
       
-      star.onclick = function() {
+      star.onclick = async function() {
         var releaseId = star.getAttribute('data-release-id');
         var rating = parseInt(star.getAttribute('data-star'));
         
@@ -1081,15 +1153,15 @@ const digitalPrice = finalDigitalPrice;
         ratingDebounce[releaseId] = true;
         setTimeout(function() { delete ratingDebounce[releaseId]; }, 2000);
         
-        var auth = window.firebaseAuth;
-        if (!auth || !auth.currentUser) {
+        // Wait for auth to be ready
+        var user = await getAuthUser();
+        if (!user) {
           alert('Please log in to rate releases.');
           var currentPage = window.location.pathname;
           window.location.href = '/login?redirect=' + encodeURIComponent(currentPage);
           return;
         }
         
-        var user = auth.currentUser;
         var card = document.querySelector('[data-release="' + releaseId + '"]');
         
         // Optimistic UI update
@@ -1662,6 +1734,197 @@ const digitalPrice = finalDigitalPrice;
   }
 
   // ============================================
+  // WISHLIST SYSTEM
+  // ============================================
+  function initWishlistSystem() {
+    // Prevent duplicate initialization
+    if (window._wishlistInitialized) {
+      return;
+    }
+    window._wishlistInitialized = true;
+    
+    // Helper to get userId from cookie
+    function getUserId() {
+      var match = document.cookie.match(/(?:^|; )userId=([^;]*)/);
+      return match ? match[1] : null;
+    }
+    
+    var wishlistButtons = document.querySelectorAll('.wishlist-btn');
+    console.log('initWishlistSystem called, found buttons:', wishlistButtons.length);
+    
+    // Check initial wishlist state from server if logged in
+    var userId = getUserId();
+    if (userId && wishlistButtons.length > 0) {
+      // Fetch user's wishlist from server
+      fetch('/api/wishlist?userId=' + userId)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data.success && data.wishlist) {
+            var wishlistIds = data.wishlist.map(function(r) { return r.id; });
+            wishlistButtons.forEach(function(btn) {
+              var releaseId = btn.getAttribute('data-release-id');
+              if (wishlistIds.includes(releaseId)) {
+                setWishlistState(btn, true);
+              }
+            });
+          }
+        })
+        .catch(function(err) {
+          console.log('Failed to load wishlist state:', err);
+        });
+    }
+    
+    // Use event delegation - one listener on document
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('.wishlist-btn');
+      if (!btn) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
+      
+      var userId = getUserId();
+      var releaseId = btn.getAttribute('data-release-id');
+      
+      // Must be logged in to use wishlist
+      if (!userId) {
+        showToast('Please log in to add items to your wishlist');
+        return;
+      }
+      
+      // Disable button during request
+      btn.style.opacity = '0.5';
+      btn.style.pointerEvents = 'none';
+      
+      // Call API to toggle wishlist
+      fetch('/api/wishlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userId,
+          releaseId: releaseId,
+          action: 'toggle'
+        })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        
+        if (data.success) {
+          setWishlistState(btn, data.inWishlist);
+          showToast(data.inWishlist ? 'Added to wishlist!' : 'Removed from wishlist');
+        } else {
+          showToast('Failed to update wishlist');
+        }
+      })
+      .catch(function(err) {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+        console.error('Wishlist error:', err);
+        showToast('Failed to update wishlist');
+      });
+    });
+  }
+  
+  function setWishlistState(btn, inWishlist) {
+    var emptyIcon = btn.querySelector('.wishlist-icon-empty');
+    var filledIcon = btn.querySelector('.wishlist-icon-filled');
+    var textSpan = btn.querySelector('.wishlist-text');
+    
+    if (inWishlist) {
+      if (emptyIcon) emptyIcon.classList.add('hidden');
+      if (filledIcon) filledIcon.classList.remove('hidden');
+      if (textSpan) textSpan.textContent = 'Wishlisted';
+      btn.setAttribute('title', 'Remove from wishlist');
+    } else {
+      if (emptyIcon) emptyIcon.classList.remove('hidden');
+      if (filledIcon) filledIcon.classList.add('hidden');
+      if (textSpan) textSpan.textContent = 'Wishlist';
+      btn.setAttribute('title', 'Add to wishlist');
+    }
+  }
+
+  // ============================================
+  // PRE-ORDER SYSTEM
+  // ============================================
+  function initPreorderSystem() {
+    var preorderButtons = document.querySelectorAll('.preorder-btn');
+    
+    preorderButtons.forEach(function(btn) {
+      btn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        
+        // Check for customer login
+        var customerId = getCustomerId();
+        if (!customerId) {
+          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+          return;
+        }
+        
+        var releaseId = btn.getAttribute('data-release-id');
+        var title = btn.getAttribute('data-title');
+        var artist = btn.getAttribute('data-artist');
+        var artwork = btn.getAttribute('data-artwork');
+        var price = parseFloat(btn.getAttribute('data-price') || '0');
+        var releaseDate = btn.getAttribute('data-release-date');
+        
+        var cart = getCart();
+        var items = cart.items || [];
+        
+        // Check if already in cart
+        var existingIndex = -1;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].id === releaseId && (items[i].type === 'digital' || items[i].type === 'preorder')) {
+            existingIndex = i;
+            break;
+          }
+        }
+        
+        if (existingIndex !== -1) {
+          // Already in cart
+          var originalHTML = btn.innerHTML;
+          btn.innerHTML = '<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> In Cart</span>';
+          setTimeout(function() {
+            btn.innerHTML = originalHTML;
+          }, 1500);
+          return;
+        }
+        
+        // Add to cart as pre-order
+        items.push({
+          id: releaseId,
+          releaseId: releaseId,
+          type: 'digital',
+          format: 'digital',
+          name: artist + ' - ' + title,
+          title: title,
+          artist: artist,
+          price: price,
+          image: artwork,
+          artwork: artwork,
+          quantity: 1,
+          isPreOrder: true,
+          releaseDate: releaseDate
+        });
+        
+        saveCart(items);
+        
+        // Show success state
+        var originalHTML = btn.innerHTML;
+        btn.innerHTML = '<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Added!</span>';
+        btn.classList.remove('from-orange-500', 'to-red-500');
+        btn.classList.add('from-green-500', 'to-green-600');
+        
+        setTimeout(function() {
+          btn.innerHTML = originalHTML;
+          btn.classList.remove('from-green-500', 'to-green-600');
+          btn.classList.add('from-orange-500', 'to-red-500');
+        }, 1500);
+      });
+    });
+  }
+
+  // ============================================
   // INITIALIZE ALL SYSTEMS
   // ============================================
   function initAll() {
@@ -1669,6 +1932,8 @@ const digitalPrice = finalDigitalPrice;
     initReleasePlayer();
     initRatingSystem();
     initShareSystem();
+    initWishlistSystem();
+    initPreorderSystem();
   }
 
   if (document.readyState === 'loading') {

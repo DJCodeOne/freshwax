@@ -1,0 +1,56 @@
+---
+// src/components/live/LiveChat.astro
+// Live stream chat with emoji picker and GIF support
+---
+
+<div class="chat-section">
+  <div class="chat-header">
+    <h3>LIVE CHAT</h3>
+    <span class="chat-viewers" id="chatViewers">0 watching</span>
+  </div>
+  
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-welcome">
+      <p>Welcome to <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span> Live Stream!</p>
+      <p class="chat-hint">Chat is active during live streams.</p>
+    </div>
+  </div>
+  
+  <div id="chatInputSection" class="chat-input-section">
+    <div id="loginPrompt" class="login-prompt">
+      <p><a href="/login">Sign in</a> to chat</p>
+    </div>
+    
+    <div id="chatForm" class="chat-form hidden">
+      <div class="chat-tools">
+        <button type="button" id="emojiBtn" class="tool-btn" title="Emojis">:)</button>
+        <button type="button" id="giphyBtn" class="tool-btn" title="GIFs">GIF</button>
+      </div>
+      <div class="chat-input-wrapper">
+        <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
+        <button type="submit" id="sendBtn">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <div id="emojiPicker" class="emoji-picker hidden">
+    <div class="emoji-categories">
+      <button class="emoji-cat active" data-cat="music">Music</button>
+      <button class="emoji-cat" data-cat="reactions">Fire</button>
+      <button class="emoji-cat" data-cat="faces">Faces</button>
+      <button class="emoji-cat" data-cat="vibes">Vibes</button>
+    </div>
+    <div class="emoji-grid" id="emojiGrid"></div>
+  </div>
+  
+  <div id="giphyPicker" class="giphy-picker hidden">
+    <div class="giphy-search">
+      <input type="text" id="giphySearch" placeholder="Search GIFs..." />
+    </div>
+    <div class="giphy-grid" id="giphyGrid">
+      <p class="giphy-hint">Search for a GIF above</p>
+    </div>
+  </div>
+</div>

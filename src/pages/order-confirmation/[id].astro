@@ -45,6 +45,15 @@ const formatDate = (dateStr: string) => {
   });
 };
 
+// Extract short order number for customer display (e.g., "FW-ABC123" from "FW-241204-abc123")
+const getShortOrderNumber = (orderNumber: string) => {
+  if (!orderNumber) return '';
+  const orderParts = orderNumber.split('-');
+  return orderParts.length >= 3 
+    ? `${orderParts[0]}-${orderParts[orderParts.length - 1]}`.toUpperCase()
+    : orderNumber.toUpperCase();
+};
+
 // For digital items, fetch download URLs directly from releases if not in order
 const enrichedItems = await Promise.all((order?.items || []).map(async (item: any) => {
   
@@ -233,7 +242,7 @@ const physicalItems = enrichedItems.filter((item: any) =>
               </svg>
             </div>
             <h1>ORDER CONFIRMED</h1>
-            <p class="order-ref">Order: <span>{order.orderNumber}</span></p>
+            <p class="order-ref">Order: <span>{getShortOrderNumber(order.orderNumber)}</span></p>
             <p class="email-sent">Confirmation sent to {order.customer.email}</p>
           </div>
           
@@ -253,7 +262,7 @@ const physicalItems = enrichedItems.filter((item: any) =>
                 {groupedDigitalItems.map((item: any) => (
                   <div class="download-release">
                     <div class="release-header">
-                      <img src={item.image || item.downloads?.artworkUrl || '/logo.webp'} alt={item.downloads?.releaseName || item.name} class="release-art" />
+                      <img src={item.image || item.downloads?.artworkUrl || '/place-holder.webp'} alt={item.downloads?.releaseName || item.name} class="release-art" />
                       <div class="release-info">
                         <h3>{item.downloads?.artistName} - {item.downloads?.releaseName}</h3>
                         <p>
@@ -333,7 +342,7 @@ const physicalItems = enrichedItems.filter((item: any) =>
               <div class="card-body">
                 {physicalItems.map((item: any) => (
                   <div class="order-item">
-                    <img src={item.image || '/logo.webp'} alt={item.name} class="item-img" />
+                    <img src={item.image || '/place-holder.webp'} alt={item.name} class="item-img" />
                     <div class="item-details">
                       <h4>{item.name}</h4>
                       <span class="item-meta">
@@ -458,18 +467,19 @@ const physicalItems = enrichedItems.filter((item: any) =>
   }
   
   .order-ref {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     color: #22c55e;
   }
   
   .order-ref span {
-    color: #fff;
-    font-weight: 600;
+    color: #dc2626;
+    font-weight: 700;
+    font-size: 1.75rem;
   }
   
   .email-sent {
     margin-top: 1rem;
-    font-size: 1rem;
+    font-size: 1.1rem;
     color: #ef4444;
   }
   
@@ -857,7 +867,11 @@ const physicalItems = enrichedItems.filter((item: any) =>
     }
     
     .order-ref {
-      font-size: 1.125rem;
+      font-size: 1.35rem;
+    }
+    
+    .order-ref span {
+      font-size: 1.5rem;
     }
     
     .card-header {
@@ -957,11 +971,15 @@ const physicalItems = enrichedItems.filter((item: any) =>
     }
     
     .order-ref {
-      font-size: 1rem;
+      font-size: 1.25rem;
+    }
+    
+    .order-ref span {
+      font-size: 1.4rem;
     }
     
     .email-sent {
-      font-size: 0.9375rem;
+      font-size: 1rem;
     }
     
     .card {
@@ -1150,7 +1168,11 @@ const physicalItems = enrichedItems.filter((item: any) =>
     }
     
     .order-ref {
-      font-size: 0.9375rem;
+      font-size: 1.1rem;
+    }
+    
+    .order-ref span {
+      font-size: 1.25rem;
     }
     
     .card-header {

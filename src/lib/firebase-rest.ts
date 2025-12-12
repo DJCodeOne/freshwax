@@ -1,39 +1,99 @@
-// src/lib/firebase-rest.ts
-// Firebase REST API client - works on Cloudflare Pages (no Admin SDK needed)
-// WITH CACHING to reduce quota usage
+// src/lib/firebase-rest-optimized.ts
+// Firebase REST API client - OPTIMIZED for 50k read quota
+// Features: Extended caching, request deduplication, batch operations, smart invalidation
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env?.DEV ?? false;
 const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
+  info: (...args: any[]) => isDev && console.log('[firebase-rest]', ...args),
+  warn: (...args: any[]) => isDev && console.warn('[firebase-rest]', ...args),
+  error: (...args: any[]) => console.error('[firebase-rest]', ...args),
 };
 
 const PROJECT_ID = 'freshwax-store';
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
-// Simple in-memory cache
-const cache = new Map<string, { data: any; expires: number }>();
-const CACHE_TTL = 15 * 60 * 1000; // 15 minutes default (extended for quota optimization)
+// ==========================================
+// ENHANCED CACHING SYSTEM
+// ==========================================
+
+interface CacheEntry {
+  data: any;
+  expires: number;
+  fetchedAt: number;
+}
+
+// Multi-tier cache with different TTLs
+const cache = new Map<string, CacheEntry>();
+
+// Cache TTL configuration (in milliseconds)
+const CACHE_TTL = {
+  // Static/rarely changing data - 10 minutes
+  RELEASES_LIST: 10 * 60 * 1000,
+  RELEASE_DETAIL: 30 * 1000,  // 30 seconds for individual releases (comments/ratings change)
+  DJ_MIXES_LIST: 10 * 60 * 1000,
+  MERCH_LIST: 10 * 60 * 1000,
+  
+  // Semi-dynamic data - 3 minutes
+  USER_PROFILE: 3 * 60 * 1000,
+  RATINGS: 30 * 1000,  // 30 seconds for ratings
+  COMMENTS: 30 * 1000, // 30 seconds for comments
+  
+  // Dynamic data - 1 minute
+  ORDERS: 1 * 60 * 1000,
+  LIVESTREAM: 1 * 60 * 1000,
+  
+  // Default - 5 minutes
+  DEFAULT: 5 * 60 * 1000,
+};
+
+// Request deduplication - prevent duplicate in-flight requests
+const pendingRequests = new Map<string, Promise<any>>();
 
 function getCached(key: string): any | null {
   const entry = cache.get(key);
   if (entry && Date.now() < entry.expires) {
-    log.info(`[firebase-rest] Cache HIT: ${key}`);
+    log.info(`Cache HIT: ${key} (age: ${Math.round((Date.now() - entry.fetchedAt) / 1000)}s)`);
     return entry.data;
   }
   if (entry) {
     cache.delete(key);
+    log.info(`Cache EXPIRED: ${key}`);
   }
   return null;
 }
 
-function setCache(key: string, data: any, ttl: number = CACHE_TTL): void {
-  cache.set(key, { data, expires: Date.now() + ttl });
-  log.info(`[firebase-rest] Cache SET: ${key} (TTL: ${ttl / 1000}s)`);
+function setCache(key: string, data: any, ttl: number = CACHE_TTL.DEFAULT): void {
+  cache.set(key, { 
+    data, 
+    expires: Date.now() + ttl,
+    fetchedAt: Date.now()
+  });
+  log.info(`Cache SET: ${key} (TTL: ${ttl / 1000}s, size: ${cache.size})`);
+  
+  // Cleanup old entries if cache grows too large
+  if (cache.size > 200) {
+    pruneCache();
+  }
 }
 
-type FirestoreOp = 'EQUAL' | 'NOT_EQUAL' | 'LESS_THAN' | 'LESS_THAN_OR_EQUAL' | 'GREATER_THAN' | 'GREATER_THAN_OR_EQUAL' | 'ARRAY_CONTAINS';
+function pruneCache(): void {
+  const now = Date.now();
+  let pruned = 0;
+  for (const [key, entry] of cache) {
+    if (now >= entry.expires) {
+      cache.delete(key);
+      pruned++;
+    }
+  }
+  log.info(`Cache PRUNED: ${pruned} entries removed, ${cache.size} remaining`);
+}
+
+// ==========================================
+// TYPE DEFINITIONS
+// ==========================================
+
+type FirestoreOp = 'EQUAL' | 'NOT_EQUAL' | 'LESS_THAN' | 'LESS_THAN_OR_EQUAL' | 'GREATER_THAN' | 'GREATER_THAN_OR_EQUAL' | 'ARRAY_CONTAINS' | 'IN';
 
 interface QueryFilter {
   field: string;
@@ -47,9 +107,13 @@ interface QueryOptions {
   limit?: number;
   cacheKey?: string;
   cacheTTL?: number;
+  skipCache?: boolean;
 }
 
-// Convert JS values to Firestore REST format
+// ==========================================
+// VALUE CONVERSION
+// ==========================================
+
 function toFirestoreValue(value: any): any {
   if (value === null || value === undefined) return { nullValue: null };
   if (typeof value === 'string') return { stringValue: value };
@@ -58,6 +122,9 @@ function toFirestoreValue(value: any): any {
     return Number.isInteger(value) 
       ? { integerValue: String(value) }
       : { doubleValue: value };
+  }
+  if (value instanceof Date) {
+    return { timestampValue: value.toISOString() };
   }
   if (Array.isArray(value)) {
     return { arrayValue: { values: value.map(toFirestoreValue) } };
@@ -72,7 +139,6 @@ function toFirestoreValue(value: any): any {
   return { stringValue: String(value) };
 }
 
-// Convert Firestore REST format back to JS values
 function fromFirestoreValue(val: any): any {
   if (val === undefined || val === null) return null;
   if ('nullValue' in val) return null;
@@ -94,7 +160,6 @@ function fromFirestoreValue(val: any): any {
   return null;
 }
 
-// Parse a Firestore document into a plain object
 function parseDocument(doc: any): any {
   if (!doc || !doc.name) return null;
   
@@ -108,15 +173,28 @@ function parseDocument(doc: any): any {
   return parsed;
 }
 
-// Query a collection with filters
+// ==========================================
+// CORE QUERY FUNCTIONS
+// ==========================================
+
 export async function queryCollection(
   collection: string,
   options: QueryOptions = {}
 ): Promise<any[]> {
-  // Check cache first
+  // Generate cache key
   const cacheKey = options.cacheKey || `query:${collection}:${JSON.stringify(options)}`;
-  const cached = getCached(cacheKey);
-  if (cached) return cached;
+  
+  // Check cache first (unless skipped)
+  if (!options.skipCache) {
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
+  }
+
+  // Check for pending request (deduplication)
+  if (pendingRequests.has(cacheKey)) {
+    log.info(`Request DEDUPE: ${cacheKey}`);
+    return pendingRequests.get(cacheKey)!;
+  }
 
   const url = `${FIRESTORE_BASE}:runQuery`;
   
@@ -164,115 +242,182 @@ export async function queryCollection(
     structuredQuery.limit = options.limit;
   }
   
-  try {
-    log.info(`[firebase-rest] Querying ${collection}...`);
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ structuredQuery })
-    });
-    
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('[firebase-rest] Query failed:', error);
-      return [];
-    }
-    
-    const data = await response.json();
-    
-    const results = data
-      .filter((item: any) => item.document)
-      .map((item: any) => parseDocument(item.document));
-    
-    log.info(`[firebase-rest] Found ${results.length} documents in ${collection}`);
-    
-    // Cache the results
-    setCache(cacheKey, results, options.cacheTTL || CACHE_TTL);
-    
-    return results;
+  // Create the fetch promise
+  const fetchPromise = (async () => {
+    try {
+      log.info(`Querying ${collection}...`);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ structuredQuery })
+      });
       
-  } catch (error) {
-    console.error('[firebase-rest] Query error:', error);
-    return [];
-  }
+      if (!response.ok) {
+        const error = await response.text();
+        log.error('Query failed:', error);
+        return [];
+      }
+      
+      const data = await response.json();
+      
+      const results = data
+        .filter((item: any) => item.document)
+        .map((item: any) => parseDocument(item.document));
+      
+      log.info(`Found ${results.length} documents in ${collection}`);
+      
+      // Cache the results
+      setCache(cacheKey, results, options.cacheTTL || CACHE_TTL.DEFAULT);
+      
+      return results;
+        
+    } catch (error) {
+      log.error('Query error:', error);
+      return [];
+    } finally {
+      // Remove from pending requests
+      pendingRequests.delete(cacheKey);
+    }
+  })();
+  
+  // Store in pending requests for deduplication
+  pendingRequests.set(cacheKey, fetchPromise);
+  
+  return fetchPromise;
 }
 
-// Get a single document by ID
-export async function getDocument(collection: string, docId: string): Promise<any | null> {
+export async function getDocument(collection: string, docId: string, ttl?: number): Promise<any | null> {
   const cacheKey = `doc:${collection}:${docId}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
+  // Check for pending request
+  if (pendingRequests.has(cacheKey)) {
+    return pendingRequests.get(cacheKey)!;
+  }
+
   const url = `${FIRESTORE_BASE}/${collection}/${docId}`;
   
-  try {
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      if (response.status === 404) return null;
-      console.error('[firebase-rest] Get document failed:', response.status);
+  const fetchPromise = (async () => {
+    try {
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        log.error('Get document failed:', response.status);
+        return null;
+      }
+      
+      const doc = await response.json();
+      const parsed = parseDocument(doc);
+      
+      if (parsed) {
+        setCache(cacheKey, parsed, ttl || CACHE_TTL.DEFAULT);
+      }
+      
+      return parsed;
+      
+    } catch (error) {
+      log.error('Get document error:', error);
       return null;
+    } finally {
+      pendingRequests.delete(cacheKey);
     }
-    
-    const doc = await response.json();
-    const parsed = parseDocument(doc);
-    
-    if (parsed) {
-      setCache(cacheKey, parsed);
-    }
-    
-    return parsed;
-    
-  } catch (error) {
-    console.error('[firebase-rest] Get document error:', error);
-    return null;
-  }
+  })();
+  
+  pendingRequests.set(cacheKey, fetchPromise);
+  return fetchPromise;
 }
 
-// List all documents in a collection (paginated)
-export async function listCollection(
-  collection: string,
-  pageSize: number = 100,
-  pageToken?: string
-): Promise<{ documents: any[]; nextPageToken?: string }> {
-  let url = `${FIRESTORE_BASE}/${collection}?pageSize=${pageSize}`;
-  if (pageToken) {
-    url += `&pageToken=${pageToken}`;
+// ==========================================
+// BATCH OPERATIONS (Reduce reads)
+// ==========================================
+
+export async function getDocumentsBatch(
+  collection: string, 
+  docIds: string[],
+  ttl?: number
+): Promise<Map<string, any>> {
+  const results = new Map<string, any>();
+  const uncachedIds: string[] = [];
+  
+  // Check cache first
+  for (const docId of docIds) {
+    const cacheKey = `doc:${collection}:${docId}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      results.set(docId, cached);
+    } else {
+      uncachedIds.push(docId);
+    }
   }
   
-  try {
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      console.error('[firebase-rest] List collection failed:', response.status);
-      return { documents: [] };
-    }
-    
-    const data = await response.json();
-    
-    return {
-      documents: (data.documents || []).map(parseDocument).filter(Boolean),
-      nextPageToken: data.nextPageToken
-    };
-    
-  } catch (error) {
-    console.error('[firebase-rest] List collection error:', error);
-    return { documents: [] };
+  if (uncachedIds.length === 0) {
+    log.info(`Batch: All ${docIds.length} documents from cache`);
+    return results;
   }
+  
+  log.info(`Batch: ${results.size} from cache, ${uncachedIds.length} to fetch`);
+  
+  // Fetch uncached documents using batchGet
+  // Note: REST API has a limit of 100 documents per batch
+  const batches = [];
+  for (let i = 0; i < uncachedIds.length; i += 100) {
+    batches.push(uncachedIds.slice(i, i + 100));
+  }
+  
+  for (const batch of batches) {
+    try {
+      const documents = batch.map(id => 
+        `projects/${PROJECT_ID}/databases/(default)/documents/${collection}/${id}`
+      );
+      
+      const response = await fetch(`${FIRESTORE_BASE}:batchGet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documents })
+      });
+      
+      if (!response.ok) {
+        log.error('Batch get failed:', response.status);
+        continue;
+      }
+      
+      const data = await response.json();
+      
+      for (const item of data) {
+        if (item.found) {
+          const parsed = parseDocument(item.found);
+          if (parsed) {
+            results.set(parsed.id, parsed);
+            setCache(`doc:${collection}:${parsed.id}`, parsed, ttl || CACHE_TTL.DEFAULT);
+          }
+        }
+      }
+    } catch (error) {
+      log.error('Batch get error:', error);
+    }
+  }
+  
+  return results;
 }
 
-// Helper: Get releases with status='live' - WITH 10 MINUTE CACHE
+// ==========================================
+// OPTIMIZED HELPER FUNCTIONS
+// ==========================================
+
+// Get releases with extended cache for quota optimization
 export async function getLiveReleases(limit?: number): Promise<any[]> {
   const cacheKey = `live-releases:${limit || 'all'}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  // Try 'status' field first (your main pattern)
+  // Try 'status' field first
   let releases = await queryCollection('releases', {
     filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
     limit,
     cacheKey: `releases-status-live:${limit}`,
-    cacheTTL: 10 * 60 * 1000 // 10 minutes
+    cacheTTL: CACHE_TTL.RELEASES_LIST
   });
   
   // If no results, try 'published' field
@@ -281,22 +426,56 @@ export async function getLiveReleases(limit?: number): Promise<any[]> {
       filters: [{ field: 'published', op: 'EQUAL', value: true }],
       limit,
       cacheKey: `releases-published:${limit}`,
-      cacheTTL: 10 * 60 * 1000
+      cacheTTL: CACHE_TTL.RELEASES_LIST
     });
   }
   
-  // Sort by releaseDate client-side since we can't always use orderBy
+  // Sort by releaseDate client-side
   releases.sort((a, b) => {
     const dateA = new Date(a.releaseDate || 0).getTime();
     const dateB = new Date(b.releaseDate || 0).getTime();
     return dateB - dateA;
   });
   
-  setCache(cacheKey, releases, 10 * 60 * 1000);
+  setCache(cacheKey, releases, CACHE_TTL.RELEASES_LIST);
   return releases;
 }
 
-// Helper: Extract tracks with preview URLs from releases
+// Get DJ mixes with extended cache
+export async function getLiveDJMixes(limit?: number): Promise<any[]> {
+  const cacheKey = `live-mixes:${limit || 'all'}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  const mixes = await queryCollection('dj-mixes', {
+    filters: [{ field: 'published', op: 'EQUAL', value: true }],
+    limit,
+    cacheTTL: CACHE_TTL.DJ_MIXES_LIST
+  });
+  
+  setCache(cacheKey, mixes, CACHE_TTL.DJ_MIXES_LIST);
+  return mixes;
+}
+
+// Batch get ratings for multiple releases (reduces reads significantly)
+export async function getRatingsBatch(releaseIds: string[]): Promise<Map<string, any>> {
+  const results = new Map<string, any>();
+  
+  // Fetch all releases in batch
+  const releases = await getDocumentsBatch('releases', releaseIds, CACHE_TTL.RATINGS);
+  
+  for (const [id, release] of releases) {
+    results.set(id, {
+      average: release?.ratings?.average || 0,
+      count: release?.ratings?.count || 0,
+      fiveStarCount: release?.ratings?.fiveStarCount || 0
+    });
+  }
+  
+  return results;
+}
+
+// Extract tracks with preview URLs from releases
 export function extractTracksFromReleases(releases: any[]): any[] {
   const tracks: any[] = [];
   
@@ -313,7 +492,7 @@ export function extractTracksFromReleases(releases: any[]): any[] {
           releaseId: release.id,
           title: track.trackName || track.title || track.name || `Track ${i + 1}`,
           artist: release.artistName || release.artist || 'Unknown Artist',
-          artwork: release.coverArtUrl || release.artworkUrl || '/logo.webp',
+          artwork: release.coverArtUrl || release.artworkUrl || '/place-holder.webp',
           previewUrl: audioUrl,
           duration: track.duration || null
         });
@@ -334,8 +513,153 @@ export function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
-// Clear cache (useful for admin operations)
-export function clearCache(): void {
-  cache.clear();
-  log.info('[firebase-rest] Cache cleared');
+// ==========================================
+// CACHE MANAGEMENT
+// ==========================================
+
+export function clearCache(pattern?: string): void {
+  if (pattern) {
+    let cleared = 0;
+    for (const key of cache.keys()) {
+      if (key.includes(pattern)) {
+        cache.delete(key);
+        cleared++;
+      }
+    }
+    log.info(`Cache cleared: ${cleared} entries matching "${pattern}"`);
+  } else {
+    cache.clear();
+    log.info('Cache cleared: all entries');
+  }
 }
+
+export function invalidateReleasesCache(): void {
+  clearCache('releases');
+  clearCache('live-releases');
+}
+
+export function invalidateMixesCache(): void {
+  clearCache('mixes');
+  clearCache('dj-mixes');
+}
+
+export function getCacheStats(): { size: number; keys: string[] } {
+  return {
+    size: cache.size,
+    keys: Array.from(cache.keys())
+  };
+}
+
+// ==========================================
+// WRITE OPERATIONS (with cache invalidation)
+// ==========================================
+
+export async function setDocument(
+  collection: string,
+  docId: string,
+  data: Record<string, any>
+): Promise<{ success: boolean; id: string }> {
+  const projectId = import.meta.env.FIREBASE_PROJECT_ID || PROJECT_ID;
+  const apiKey = import.meta.env.FIREBASE_API_KEY;
+  
+  if (!projectId || !apiKey) {
+    throw new Error('Firebase configuration missing');
+  }
+
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?key=${apiKey}`;
+
+  const fields: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    fields[key] = toFirestoreValue(value);
+  }
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    log.error('setDocument error:', error);
+    throw new Error(`Failed to set document: ${response.status}`);
+  }
+
+  // Invalidate cache for this document
+  cache.delete(`doc:${collection}:${docId}`);
+  clearCache(`query:${collection}`);
+
+  return { success: true, id: docId };
+}
+
+export async function updateDocument(
+  collection: string,
+  docId: string,
+  data: Record<string, any>
+): Promise<{ success: boolean }> {
+  const projectId = import.meta.env.FIREBASE_PROJECT_ID || PROJECT_ID;
+  const apiKey = import.meta.env.FIREBASE_API_KEY;
+  
+  if (!projectId || !apiKey) {
+    throw new Error('Firebase configuration missing');
+  }
+
+  const updateMask = Object.keys(data).map(key => `updateMask.fieldPaths=${key}`).join('&');
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?${updateMask}&key=${apiKey}`;
+
+  const fields: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    fields[key] = toFirestoreValue(value);
+  }
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    log.error('updateDocument error:', error);
+    throw new Error(`Failed to update document: ${response.status}`);
+  }
+
+  // Invalidate cache
+  cache.delete(`doc:${collection}:${docId}`);
+
+  return { success: true };
+}
+
+export async function deleteDocument(
+  collection: string,
+  docId: string
+): Promise<{ success: boolean }> {
+  const projectId = import.meta.env.FIREBASE_PROJECT_ID || PROJECT_ID;
+  const apiKey = import.meta.env.FIREBASE_API_KEY;
+  
+  if (!projectId || !apiKey) {
+    throw new Error('Firebase configuration missing');
+  }
+
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!response.ok && response.status !== 404) {
+    const error = await response.text();
+    log.error('deleteDocument error:', error);
+    throw new Error(`Failed to delete document: ${response.status}`);
+  }
+
+  // Invalidate cache
+  cache.delete(`doc:${collection}:${docId}`);
+  clearCache(`query:${collection}`);
+
+  return { success: true };
+}
+
+// Export cache TTL config for external use
+export { CACHE_TTL };

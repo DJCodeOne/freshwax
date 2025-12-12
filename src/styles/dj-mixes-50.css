@@ -1,0 +1,51 @@
+/* DJ Mixes Performance - 50% smaller cards */
+
+.card .grid.grid-4 {
+  display: flex !important;
+  gap: 0;
+  max-width: 50%;
+}
+
+.card .grid.grid-4 .stat-card {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: none !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.card .grid.grid-4 .stat-card:first-child {
+  padding-left: 0;
+}
+
+.card .grid.grid-4 .stat-card:last-child {
+  border-right: none !important;
+  padding-right: 0;
+}
+
+.card .grid.grid-4 .stat-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 0.2rem;
+}
+
+.card .grid.grid-4 .stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .card .grid.grid-4 {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  
+  .card .grid.grid-4 .stat-card {
+    flex: 0 0 50%;
+  }
+}

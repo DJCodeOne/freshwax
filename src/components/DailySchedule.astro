@@ -1,0 +1,1651 @@
+---
+// src/components/DailySchedule.astro
+// Unified daily schedule calendar (9am - 8am)
+// Modes: 'public' (read-only), 'booking' (DJ selection), 'admin' (full control)
+
+interface Props {
+  mode: 'public' | 'booking' | 'admin';
+  id?: string;
+}
+
+const { mode, id = 'dailySchedule' } = Astro.props;
+---
+
+<div class={`daily-schedule mode-${mode}`} id={id} data-mode={mode}>
+  <!-- Header -->
+  <div class="schedule-header">
+    <div class="date-nav">
+      <button type="button" class="nav-btn prev-day">←</button>
+      <div class="date-display">
+        <h2 class="date-label">Loading...</h2>
+        <button type="button" class="today-btn">Today</button>
+      </div>
+      <button type="button" class="nav-btn next-day">→</button>
+    </div>
+    
+    <div class="header-right">
+      {mode === 'admin' && (
+        <div class="admin-controls">
+          <button type="button" class="add-dj-btn">+ Add DJ</button>
+          <button type="button" class="allowances-btn">⚙️ DJ Limits</button>
+          <label class="disable-toggle">
+            <input type="checkbox" class="disable-checkbox" />
+            <span>Disable Bookings</span>
+          </label>
+        </div>
+      )}
+      <button type="button" class="refresh-btn">↻</button>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="schedule-legend">
+    <span class="legend-item"><span class="legend-dot available"></span> Available</span>
+    <span class="legend-item"><span class="legend-dot booked"></span> Booked</span>
+    {mode === 'booking' && (
+      <>
+        <span class="legend-item"><span class="legend-dot my-booking"></span> Your Booking</span>
+        <span class="legend-item"><span class="legend-dot selected"></span> Your Selection</span>
+      </>
+    )}
+    {mode === 'admin' && (
+      <span class="legend-item"><span class="legend-dot live"></span> Live Now</span>
+    )}
+  </div>
+
+  <!-- Time Grid -->
+  <div class="schedule-grid-wrapper">
+    <div class="schedule-grid">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+
+  <!-- Footer (mode-specific) -->
+  {mode === 'booking' && (
+    <div class="booking-footer">
+      <div class="selection-info">
+        <span class="selection-count">No slots selected</span>
+        <span class="selection-hint">Click available slots to book (max 2 hours/day)</span>
+      </div>
+      <div class="booking-actions">
+        <button type="button" class="clear-btn">Clear</button>
+        <button type="button" class="cancel-btn">Cancel</button>
+        <button type="button" class="save-btn" disabled>Save Booking</button>
+      </div>
+    </div>
+  )}
+
+  {mode === 'admin' && (
+    <div class="admin-footer">
+      <div class="stats-info">
+        <span class="day-stats">Loading...</span>
+      </div>
+    </div>
+  )}
+</div>
+
+<!-- Admin: Add DJ Modal -->
+{mode === 'admin' && (
+  <div class="schedule-modal add-dj-modal hidden" data-modal="addDj">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add DJ to Schedule</h3>
+        <button type="button" class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>DJ Email or User ID *</label>
+          <input type="text" class="dj-email-input" placeholder="email@example.com or user ID" />
+          <p class="form-hint">Enter the DJ's registered email or Firebase User ID</p>
+        </div>
+        <div class="form-group">
+          <label>Display Name *</label>
+          <input type="text" class="dj-name-input" placeholder="DJ Name" />
+        </div>
+        <div class="form-group">
+          <label>Start Hour *</label>
+          <select class="start-hour-select">
+            <!-- Populated by JS -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Duration *</label>
+          <select class="duration-select">
+            <option value="60">1 hour</option>
+            <option value="120">2 hours</option>
+            <option value="180">3 hours</option>
+            <option value="240">4 hours</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary modal-cancel">Cancel</button>
+          <button type="button" class="btn-primary add-dj-confirm">Add to Schedule</button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+<!-- Admin: Edit Slot Modal -->
+{mode === 'admin' && (
+  <div class="schedule-modal edit-slot-modal hidden" data-modal="editSlot">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="edit-slot-title">Slot Details</h3>
+        <button type="button" class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="slot-details">
+          <!-- Populated by JS -->
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-danger delete-slot-btn">Remove from Schedule</button>
+          <button type="button" class="btn-secondary modal-cancel">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+<!-- Admin: DJ Allowances Modal -->
+{mode === 'admin' && (
+  <div class="schedule-modal allowances-modal hidden" data-modal="allowances">
+    <div class="modal-overlay"></div>
+    <div class="modal-content allowances-modal-content">
+      <div class="modal-header">
+        <h3>DJ Time Allowances</h3>
+        <button type="button" class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Set custom time limits for DJs. Default is 2 hours/day. Use higher limits for special events.</p>
+        
+        <div class="form-group">
+          <label>DJ Email or User ID *</label>
+          <input type="text" class="allowance-dj-input" placeholder="email@example.com or user ID" />
+        </div>
+        
+        <div class="form-group">
+          <label>Max Hours Per Day *</label>
+          <select class="allowance-hours-select">
+            <option value="2">2 hours (default)</option>
+            <option value="4">4 hours</option>
+            <option value="6">6 hours</option>
+            <option value="8">8 hours</option>
+            <option value="12">12 hours</option>
+            <option value="24">24 hours (full day - events)</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Weekly Slots Allowed</label>
+          <select class="allowance-slots-select">
+            <option value="2">2 slots/week (default)</option>
+            <option value="1">1 slot/week</option>
+            <option value="2">2 slots/week</option>
+            <option value="3">3 slots/week</option>
+            <option value="5">5 slots/week</option>
+            <option value="7">7 slots/week (daily)</option>
+            <option value="unlimited">Unlimited</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Reason / Event Name</label>
+          <input type="text" class="allowance-reason-input" placeholder="e.g., New Year's Eve Marathon" />
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary modal-cancel">Cancel</button>
+          <button type="button" class="btn-primary save-allowance-btn">Save Allowance</button>
+        </div>
+        
+        <div class="current-allowances">
+          <h4>Current Overrides</h4>
+          <div class="allowances-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+<style>
+  .daily-schedule {
+    background: var(--bg-secondary, #fff);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid var(--border-light, #e5e5e5);
+  }
+
+  /* Header */
+  .schedule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.25rem;
+    background: var(--bg-dark, #000);
+    color: #fff;
+    margin-top: 0.5rem;
+  }
+
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .nav-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 1.125rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .nav-btn:hover {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .date-display {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .date-label {
+    margin: 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+    letter-spacing: 0.02em;
+    min-width: 180px;
+  }
+
+  .today-btn {
+    background: var(--accent-red, #dc2626);
+    border: none;
+    color: #fff;
+    padding: 0.25rem 0.625rem;
+    border-radius: 4px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .admin-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .add-dj-btn {
+    background: var(--accent-green, #16a34a);
+    border: none;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    cursor: pointer;
+  }
+
+  .allowances-btn {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .allowances-btn:hover {
+    background: rgba(255,255,255,0.25);
+  }
+
+  .disable-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    cursor: pointer;
+  }
+
+  .disable-checkbox {
+    width: 16px;
+    height: 16px;
+  }
+
+  .refresh-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  /* Legend */
+  .schedule-legend {
+    display: flex;
+    gap: 1.25rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--bg-primary, #f5f5f5);
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+    font-size: 0.75rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--text-secondary, #666);
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  .legend-dot.available {
+    background: #e5e5e5;
+    border: 1px solid #ccc;
+  }
+
+  .legend-dot.booked {
+    background: #6366f1;
+  }
+
+  .legend-dot.selected {
+    background: var(--accent-green, #16a34a);
+  }
+
+  .legend-dot.my-booking {
+    background: #10b981;
+  }
+
+  .legend-dot.live {
+    background: var(--accent-red, #dc2626);
+  }
+
+  /* Grid */
+  .schedule-grid-wrapper {
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  .schedule-grid {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+  }
+
+  /* Grid cells - using :global for JS-generated content */
+  :global(.schedule-grid .time-label) {
+    padding: 0.875rem 0.625rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary, #666);
+    text-align: right;
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+    background: var(--bg-primary, #f5f5f5);
+  }
+
+  :global(.schedule-grid .time-label.past) {
+    color: #bbb;
+  }
+
+  :global(.schedule-grid .slot-cell) {
+    padding: 0.375rem;
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+    min-height: 56px;
+    transition: background 0.15s;
+  }
+
+  :global(.schedule-grid .slot-cell.past) {
+    background: #fafafa;
+    cursor: not-allowed;
+  }
+
+  :global(.schedule-grid .slot-cell.available) {
+    cursor: pointer;
+  }
+
+  :global(.schedule-grid .slot-cell.available:hover) {
+    background: rgba(22, 163, 74, 0.08);
+  }
+
+  :global(.mode-public .slot-cell.available) {
+    cursor: default;
+  }
+
+  :global(.mode-public .slot-cell.available:hover) {
+    background: transparent;
+  }
+
+  /* Slot blocks */
+  :global(.slot-block) {
+    padding: 0.625rem 0.75rem;
+    border-radius: 6px;
+    height: 100%;
+    min-height: 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  :global(.slot-block.booked) {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    color: #fff;
+  }
+
+  :global(.slot-block.selected) {
+    background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+    color: #fff;
+    cursor: pointer;
+  }
+
+  :global(.slot-block.live) {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+    color: #fff;
+    animation: pulse-live 2s infinite;
+  }
+
+  @keyframes pulse-live {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+  }
+
+  :global(.slot-block.in_lobby) {
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+    color: #fff;
+  }
+
+  :global(.slot-block.my-booking) {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    cursor: pointer;
+    position: relative;
+  }
+
+  :global(.slot-block.my-booking:hover) {
+    background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  }
+
+  :global(.slot-block .cancel-hint) {
+    font-size: 0.625rem;
+    opacity: 0.8;
+    margin-top: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  :global(.slot-block.past-slot) {
+    background: #f0f0f0;
+    border: 1px dashed #ccc;
+    color: #999;
+    justify-content: center;
+    align-items: center;
+  }
+
+  :global(.slot-block.past-slot .past-text) {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #aaa;
+  }
+
+  :global(.slot-block .dj-name) {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+  }
+
+  :global(.slot-block .slot-time) {
+    font-size: 0.6875rem;
+    opacity: 0.9;
+    margin-top: 0.125rem;
+  }
+
+  :global(.slot-block .status-badge) {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: 0.5rem;
+  }
+
+  :global(.mode-admin .slot-block) {
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+
+  :global(.mode-admin .slot-block:hover) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  /* Footer */
+  .booking-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: var(--bg-primary, #f5f5f5);
+    border-top: 2px solid var(--border-light, #e5e5e5);
+  }
+
+  .selection-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .selection-count {
+    font-weight: 700;
+    color: var(--text-primary, #000);
+  }
+
+  .selection-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted, #888);
+  }
+
+  .booking-actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .clear-btn {
+    padding: 0.625rem 1.25rem;
+    background: transparent;
+    border: 2px solid rgba(0,0,0,0.2);
+    border-radius: 8px;
+    font-weight: 600;
+    color: var(--text-secondary, #666);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .clear-btn:hover {
+    border-color: var(--accent-red, #dc2626);
+    color: var(--accent-red, #dc2626);
+    background: #fef2f2;
+  }
+
+  .cancel-btn {
+    padding: 0.625rem 1.25rem;
+    background: #fff;
+    border: 2px solid var(--border-light, #e5e5e5);
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .save-btn {
+    padding: 0.625rem 1.5rem;
+    background: var(--bg-dark, #000);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .save-btn:hover:not(:disabled) {
+    background: var(--accent-red, #dc2626);
+  }
+
+  .save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .admin-footer {
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-primary, #f5f5f5);
+    border-top: 1px solid var(--border-light, #e5e5e5);
+  }
+
+  .day-stats {
+    font-size: 0.8125rem;
+    color: var(--text-secondary, #666);
+  }
+
+  /* Modal styles */
+  .schedule-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .schedule-modal.hidden {
+    display: none;
+  }
+
+  .schedule-modal .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+  }
+
+  .schedule-modal .modal-content {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    width: 95%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+
+  .schedule-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+  }
+
+  .schedule-modal .modal-header h3 {
+    margin: 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+  }
+
+  .schedule-modal .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    line-height: 1;
+  }
+
+  .schedule-modal .modal-body {
+    padding: 1.25rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 0.625rem;
+    border: 2px solid var(--border-light, #e5e5e5);
+    border-radius: 6px;
+    font-size: 0.9375rem;
+  }
+
+  .form-hint {
+    margin: 0.25rem 0 0;
+    font-size: 0.75rem;
+    color: var(--text-muted, #888);
+  }
+
+  .slot-details {
+    margin-bottom: 1.25rem;
+  }
+
+  :global(.detail-row) {
+    display: flex;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-light, #e5e5e5);
+    font-size: 0.875rem;
+  }
+
+  :global(.detail-row:last-child) {
+    border-bottom: none;
+  }
+
+  :global(.detail-label) {
+    width: 90px;
+    color: var(--text-muted, #888);
+    flex-shrink: 0;
+  }
+
+  :global(.detail-value) {
+    flex: 1;
+    font-weight: 600;
+    word-break: break-all;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+
+  .btn-secondary {
+    padding: 0.625rem 1.25rem;
+    background: #fff;
+    border: 2px solid var(--border-light, #e5e5e5);
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    padding: 0.625rem 1.25rem;
+    background: var(--bg-dark, #000);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .btn-danger {
+    padding: 0.625rem 1.25rem;
+    background: #fee2e2;
+    color: #dc2626;
+    border: 2px solid #fecaca;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-danger:hover {
+    background: #dc2626;
+    color: #fff;
+    border-color: #dc2626;
+  }
+
+  /* Allowances Modal */
+  .allowances-modal-content {
+    max-width: 500px;
+  }
+
+  .modal-desc {
+    font-size: 0.875rem;
+    color: var(--text-secondary, #666);
+    margin: 0 0 1.25rem;
+    line-height: 1.5;
+  }
+
+  .current-allowances {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-light, #e5e5e5);
+  }
+
+  .current-allowances h4 {
+    margin: 0 0 0.75rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.02em;
+  }
+
+  :global(.allowances-list) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  :global(.allowance-item) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.625rem 0.75rem;
+    background: var(--bg-primary, #f5f5f5);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+  }
+
+  :global(.allowance-item .allowance-info) {
+    flex: 1;
+  }
+
+  :global(.allowance-item .allowance-dj) {
+    font-weight: 600;
+  }
+
+  :global(.allowance-item .allowance-details) {
+    color: var(--text-muted, #888);
+    font-size: 0.75rem;
+  }
+
+  :global(.allowance-item .remove-allowance) {
+    background: none;
+    border: none;
+    color: var(--accent-red, #dc2626);
+    cursor: pointer;
+    font-size: 1.25rem;
+    padding: 0 0.25rem;
+    line-height: 1;
+  }
+
+  :global(.no-allowances) {
+    color: var(--text-muted, #888);
+    font-size: 0.8125rem;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .schedule-header {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .header-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .booking-footer {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .booking-actions {
+      width: 100%;
+    }
+
+    .booking-actions button {
+      flex: 1;
+    }
+
+    .date-label {
+      font-size: 1rem;
+      min-width: auto;
+    }
+  }
+</style>
+
+<script define:vars={{ id, mode }}>
+  // DailySchedule Controller
+  (function() {
+    const container = document.getElementById(id);
+    if (!container) return;
+
+    const scheduleMode = mode;
+    const grid = container.querySelector('.schedule-grid');
+    const dateLabel = container.querySelector('.date-label');
+    
+    // State
+    let currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    let bookings = [];
+    let selectedSlots = [];
+    let currentUserId = null;
+    let userDisplayName = '';
+    let bookingsDisabled = false;
+    
+    const START_HOUR = 9;
+    const TOTAL_HOURS = 23;
+    const MAX_BOOKING_HOURS = 2;
+    const MAX_ADVANCE_DAYS = 30; // 1 month in advance
+
+    // Initialize
+    function init() {
+      setupNavigation();
+      setupModeSpecificHandlers();
+      loadAndRender();
+    }
+
+    function setupNavigation() {
+      container.querySelector('.prev-day')?.addEventListener('click', () => navigate(-1));
+      container.querySelector('.next-day')?.addEventListener('click', () => navigate(1));
+      container.querySelector('.today-btn')?.addEventListener('click', goToToday);
+      container.querySelector('.refresh-btn')?.addEventListener('click', loadAndRender);
+    }
+
+    function setupModeSpecificHandlers() {
+      if (scheduleMode === 'booking') {
+        container.querySelector('.cancel-btn')?.addEventListener('click', () => {
+          window.closeScheduleModal?.();
+        });
+        container.querySelector('.clear-btn')?.addEventListener('click', clearSelection);
+        container.querySelector('.save-btn')?.addEventListener('click', saveBooking);
+      }
+
+      if (scheduleMode === 'admin') {
+        setupAdminHandlers();
+      }
+    }
+
+    function clearSelection() {
+      selectedSlots = [];
+      renderGrid();
+      updateFooter();
+    }
+
+    function setupAdminHandlers() {
+      // Add DJ button
+      container.querySelector('.add-dj-btn')?.addEventListener('click', openAddDjModal);
+      
+      // Allowances button
+      container.querySelector('.allowances-btn')?.addEventListener('click', openAllowancesModal);
+      
+      // Disable toggle
+      const disableCheckbox = container.querySelector('.disable-checkbox');
+      disableCheckbox?.addEventListener('change', async (e) => {
+        bookingsDisabled = e.target.checked;
+        await updateBookingsDisabled(bookingsDisabled);
+      });
+
+      // Modal handlers
+      const addDjModal = document.querySelector('[data-modal="addDj"]');
+      const editSlotModal = document.querySelector('[data-modal="editSlot"]');
+      const allowancesModal = document.querySelector('[data-modal="allowances"]');
+
+      addDjModal?.querySelector('.modal-overlay')?.addEventListener('click', () => closeModal(addDjModal));
+      addDjModal?.querySelector('.modal-close')?.addEventListener('click', () => closeModal(addDjModal));
+      addDjModal?.querySelector('.modal-cancel')?.addEventListener('click', () => closeModal(addDjModal));
+      addDjModal?.querySelector('.add-dj-confirm')?.addEventListener('click', confirmAddDj);
+
+      editSlotModal?.querySelector('.modal-overlay')?.addEventListener('click', () => closeModal(editSlotModal));
+      editSlotModal?.querySelector('.modal-close')?.addEventListener('click', () => closeModal(editSlotModal));
+      editSlotModal?.querySelector('.modal-cancel')?.addEventListener('click', () => closeModal(editSlotModal));
+      editSlotModal?.querySelector('.delete-slot-btn')?.addEventListener('click', deleteSelectedSlot);
+
+      allowancesModal?.querySelector('.modal-overlay')?.addEventListener('click', () => closeModal(allowancesModal));
+      allowancesModal?.querySelector('.modal-close')?.addEventListener('click', () => closeModal(allowancesModal));
+      allowancesModal?.querySelector('.modal-cancel')?.addEventListener('click', () => closeModal(allowancesModal));
+      allowancesModal?.querySelector('.save-allowance-btn')?.addEventListener('click', saveAllowance);
+    }
+
+    function navigate(delta) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const maxDate = new Date(today);
+      maxDate.setDate(maxDate.getDate() + MAX_ADVANCE_DAYS);
+      
+      const newDate = new Date(currentDate);
+      newDate.setDate(newDate.getDate() + delta);
+      
+      // Don't allow going before today
+      if (newDate < today) return;
+      
+      // Don't allow going beyond max advance days
+      if (newDate > maxDate) return;
+      
+      currentDate = newDate;
+      selectedSlots = [];
+      loadAndRender();
+    }
+
+    function goToToday() {
+      currentDate = new Date();
+      currentDate.setHours(0, 0, 0, 0);
+      selectedSlots = [];
+      loadAndRender();
+    }
+
+    function updateNavButtons() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const maxDate = new Date(today);
+      maxDate.setDate(maxDate.getDate() + MAX_ADVANCE_DAYS);
+      
+      const prevBtn = container.querySelector('.prev-day');
+      const nextBtn = container.querySelector('.next-day');
+      const todayBtn = container.querySelector('.today-btn');
+      
+      // Disable prev if on today
+      if (prevBtn) {
+        const isAtStart = currentDate.getTime() <= today.getTime();
+        prevBtn.disabled = isAtStart;
+        prevBtn.style.opacity = isAtStart ? '0.3' : '1';
+        prevBtn.style.cursor = isAtStart ? 'not-allowed' : 'pointer';
+      }
+      
+      // Disable next if at max date
+      if (nextBtn) {
+        const isAtEnd = currentDate.getTime() >= maxDate.getTime();
+        nextBtn.disabled = isAtEnd;
+        nextBtn.style.opacity = isAtEnd ? '0.3' : '1';
+        nextBtn.style.cursor = isAtEnd ? 'not-allowed' : 'pointer';
+      }
+      
+      // Hide today button if already on today
+      if (todayBtn) {
+        const isToday = currentDate.getTime() === today.getTime();
+        todayBtn.style.display = isToday ? 'none' : 'inline-block';
+      }
+    }
+
+    async function loadAndRender() {
+      updateDateLabel();
+      await loadBookings();
+      renderGrid();
+      updateFooter();
+      updateNavButtons();
+    }
+
+    function updateDateLabel() {
+      if (dateLabel) {
+        dateLabel.textContent = currentDate.toLocaleDateString('en-GB', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        });
+      }
+    }
+
+    async function loadBookings() {
+      try {
+        const startDate = new Date(currentDate);
+        startDate.setHours(START_HOUR, 0, 0, 0);
+        
+        const endDate = new Date(currentDate);
+        endDate.setDate(endDate.getDate() + 1);
+        endDate.setHours(8, 0, 0, 0);
+
+        const response = await fetch(
+          `/api/livestream/slots?start=${startDate.toISOString()}&end=${endDate.toISOString()}&_t=${Date.now()}`
+        );
+        
+        const data = await response.json();
+        bookings = data.success ? (data.slots || []) : [];
+        
+        // Check if bookings are disabled (admin)
+        if (scheduleMode === 'admin' && data.bookingsDisabled !== undefined) {
+          bookingsDisabled = data.bookingsDisabled;
+          const checkbox = container.querySelector('.disable-checkbox');
+          if (checkbox) checkbox.checked = bookingsDisabled;
+        }
+      } catch (error) {
+        console.error('Failed to load bookings:', error);
+        bookings = [];
+      }
+    }
+
+    function renderGrid() {
+      if (!grid) return;
+      
+      const now = new Date();
+      grid.innerHTML = '';
+
+      for (let i = 0; i < TOTAL_HOURS; i++) {
+        const hour = (START_HOUR + i) % 24;
+        const isNextDay = START_HOUR + i >= 24;
+        
+        const slotDate = new Date(currentDate);
+        if (isNextDay) slotDate.setDate(slotDate.getDate() + 1);
+        slotDate.setHours(hour, 0, 0, 0);
+        
+        const dateStr = slotDate.toISOString().split('T')[0];
+        const isPast = slotDate < now;
+        const booking = findBookingForSlot(slotDate);
+        const isSelected = selectedSlots.some(s => s.hour === hour && s.date === dateStr);
+
+        // Time label
+        const timeLabel = document.createElement('div');
+        timeLabel.className = isPast ? 'time-label past' : 'time-label';
+        timeLabel.textContent = formatHour(hour);
+        grid.appendChild(timeLabel);
+
+        // Slot cell
+        const cell = document.createElement('div');
+        cell.className = 'slot-cell';
+        cell.dataset.hour = hour.toString();
+        cell.dataset.date = dateStr;
+        
+        if (isPast) cell.classList.add('past');
+        else if (!booking) cell.classList.add('available');
+
+        if (booking) {
+          const isMyBooking = currentUserId && booking.djId === currentUserId;
+          const block = createBookingBlock(booking, isSelected, isMyBooking);
+          cell.appendChild(block);
+          
+          if (scheduleMode === 'admin') {
+            block.addEventListener('click', () => openEditSlotModal(booking));
+          } else if (scheduleMode === 'booking' && isMyBooking && !isPast) {
+            // Allow user to cancel their own booking
+            block.addEventListener('click', () => confirmCancelBooking(booking));
+          }
+        } else if (isSelected) {
+          const block = document.createElement('div');
+          block.className = 'slot-block selected';
+          block.innerHTML = `
+            <span class="dj-name">${userDisplayName || 'Your Selection'}</span>
+            <span class="slot-time">${formatHour(hour)} - ${formatHour((hour + 1) % 24)}</span>
+          `;
+          cell.appendChild(block);
+          
+          if (scheduleMode === 'booking') {
+            block.addEventListener('click', () => toggleSlotSelection(hour, dateStr));
+          }
+        } else if (isPast) {
+          // Show greyed out past slot indicator
+          const pastBlock = document.createElement('div');
+          pastBlock.className = 'slot-block past-slot';
+          pastBlock.innerHTML = `<span class="past-text">Past</span>`;
+          cell.appendChild(pastBlock);
+        } else if (scheduleMode === 'booking' && !bookingsDisabled) {
+          cell.addEventListener('click', () => toggleSlotSelection(hour, dateStr));
+        }
+
+        grid.appendChild(cell);
+      }
+    }
+
+    function createBookingBlock(booking, isSelected, isMyBooking = false) {
+      const block = document.createElement('div');
+      const status = booking.status || 'scheduled';
+      block.className = `slot-block booked ${status}${isMyBooking ? ' my-booking' : ''}`;
+      
+      const startTime = new Date(booking.startTime);
+      const endTime = new Date(booking.endTime);
+      const isPastSlot = startTime < new Date();
+      
+      let statusBadge = '';
+      if (status === 'live') statusBadge = '<span class="status-badge">LIVE</span>';
+      else if (status === 'in_lobby') statusBadge = '<span class="status-badge">IN LOBBY</span>';
+      
+      // Show cancel hint for user's own future bookings in booking mode
+      const cancelHint = (isMyBooking && scheduleMode === 'booking' && !isPastSlot && status === 'scheduled') 
+        ? '<span class="cancel-hint">Click to cancel</span>' 
+        : '';
+      
+      block.innerHTML = `
+        <span class="dj-name">${booking.djName}${statusBadge}</span>
+        <span class="slot-time">${formatTime(startTime)} - ${formatTime(endTime)}</span>
+        ${cancelHint}
+      `;
+      
+      return block;
+    }
+
+    function findBookingForSlot(slotTime) {
+      const slotStart = slotTime.getTime();
+      const slotEnd = slotStart + 60 * 60 * 1000;
+      
+      return bookings.find(booking => {
+        if (booking.status === 'cancelled') return false;
+        const bookingStart = new Date(booking.startTime).getTime();
+        const bookingEnd = new Date(booking.endTime).getTime();
+        return slotStart >= bookingStart && slotStart < bookingEnd;
+      });
+    }
+
+    function toggleSlotSelection(hour, date) {
+      if (scheduleMode !== 'booking') return;
+      
+      const index = selectedSlots.findIndex(s => s.hour === hour && s.date === date);
+      
+      if (index >= 0) {
+        selectedSlots.splice(index, 1);
+      } else {
+        if (selectedSlots.length >= MAX_BOOKING_HOURS) {
+          alert(`You can only book up to ${MAX_BOOKING_HOURS} hours per day`);
+          return;
+        }
+        selectedSlots.push({ hour, date });
+      }
+      
+      renderGrid();
+      updateFooter();
+    }
+
+    function updateFooter() {
+      if (scheduleMode === 'booking') {
+        const countEl = container.querySelector('.selection-count');
+        const saveBtn = container.querySelector('.save-btn');
+        
+        if (countEl) {
+          if (selectedSlots.length === 0) {
+            countEl.textContent = 'No slots selected';
+          } else {
+            const slots = selectedSlots.map(s => formatHour(s.hour)).join(', ');
+            countEl.textContent = `${selectedSlots.length} hour${selectedSlots.length > 1 ? 's' : ''} selected: ${slots}`;
+          }
+        }
+        
+        if (saveBtn) {
+          saveBtn.disabled = selectedSlots.length === 0;
+        }
+      }
+
+      if (scheduleMode === 'admin') {
+        const statsEl = container.querySelector('.day-stats');
+        if (statsEl) {
+          const activeBookings = bookings.filter(b => 
+            ['scheduled', 'in_lobby', 'live'].includes(b.status)
+          );
+          const totalHours = activeBookings.reduce((sum, b) => sum + ((b.duration || 60) / 60), 0);
+          statsEl.textContent = `${activeBookings.length} slots booked • ${totalHours.toFixed(1)} hours total`;
+        }
+      }
+    }
+
+    async function saveBooking() {
+      if (selectedSlots.length === 0 || !currentUserId) return;
+      
+      const saveBtn = container.querySelector('.save-btn');
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+      }
+
+      try {
+        // Sort slots by time
+        const sortedSlots = [...selectedSlots].sort((a, b) => {
+          if (a.date !== b.date) return a.date.localeCompare(b.date);
+          return a.hour - b.hour;
+        });
+
+        // Create bookings
+        for (const slot of sortedSlots) {
+          const startTime = new Date(slot.date);
+          startTime.setHours(slot.hour, 0, 0, 0);
+
+          const response = await fetch('/api/livestream/slots', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'book',
+              djId: currentUserId,
+              djName: userDisplayName,
+              title: `${userDisplayName} Live`,
+              startTime: startTime.toISOString(),
+              duration: 60
+            })
+          });
+
+          const data = await response.json();
+          if (!data.success) {
+            throw new Error(data.error || 'Booking failed');
+          }
+        }
+
+        // Success - close modal and refresh
+        alert('Booking confirmed!');
+        window.closeScheduleModal?.();
+        
+        // Trigger refresh on other instances
+        window.dispatchEvent(new CustomEvent('schedule-updated'));
+
+      } catch (error) {
+        alert(error.message || 'Failed to save booking');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Booking';
+        }
+      }
+    }
+
+    async function confirmCancelBooking(booking) {
+      const startTime = new Date(booking.startTime);
+      const now = new Date();
+      const hoursUntilStart = (startTime - now) / (1000 * 60 * 60);
+      
+      // Check if within 1 hour of start
+      if (hoursUntilStart < 1) {
+        alert('Cannot cancel bookings less than 1 hour before start time.');
+        return;
+      }
+      
+      const timeStr = startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const dateStr = startTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+      
+      if (!confirm(`Cancel your booking?\n\n${booking.djName || booking.title}\n${dateStr} at ${timeStr}\n\nThis action cannot be undone.`)) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/livestream/slots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'cancel',
+            slotId: booking.id,
+            djId: currentUserId
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          alert('Booking cancelled successfully.');
+          
+          // Refresh the schedule
+          await loadAndRender();
+          
+          // Notify other instances
+          window.dispatchEvent(new CustomEvent('schedule-updated'));
+        } else {
+          alert(data.error || 'Failed to cancel booking');
+        }
+      } catch (error) {
+        console.error('Cancel booking error:', error);
+        alert('Failed to cancel booking. Please try again.');
+      }
+    }
+
+    // Admin functions
+    function openAddDjModal() {
+      const modal = document.querySelector('[data-modal="addDj"]');
+      const hourSelect = modal?.querySelector('.start-hour-select');
+      
+      if (hourSelect) {
+        hourSelect.innerHTML = '';
+        for (let i = 0; i < TOTAL_HOURS; i++) {
+          const hour = (START_HOUR + i) % 24;
+          const option = document.createElement('option');
+          option.value = hour.toString();
+          option.textContent = formatHour(hour);
+          hourSelect.appendChild(option);
+        }
+      }
+      
+      modal?.classList.remove('hidden');
+    }
+
+    async function confirmAddDj() {
+      const modal = document.querySelector('[data-modal="addDj"]');
+      const email = modal?.querySelector('.dj-email-input')?.value.trim();
+      const djName = modal?.querySelector('.dj-name-input')?.value.trim();
+      const startHour = parseInt(modal?.querySelector('.start-hour-select')?.value || '9');
+      const duration = parseInt(modal?.querySelector('.duration-select')?.value || '60');
+
+      if (!email || !djName) {
+        alert('Email/ID and DJ Name are required');
+        return;
+      }
+
+      const isNextDay = startHour < START_HOUR;
+      const startTime = new Date(currentDate);
+      if (isNextDay) startTime.setDate(startTime.getDate() + 1);
+      startTime.setHours(startHour, 0, 0, 0);
+
+      try {
+        const response = await fetch('/api/livestream/slots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'book',
+            djId: email,
+            djName,
+            title: `${djName} Live`,
+            startTime: startTime.toISOString(),
+            duration,
+            adminBook: true
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          closeModal(modal);
+          loadAndRender();
+          window.dispatchEvent(new CustomEvent('schedule-updated'));
+        } else {
+          alert(data.error || 'Failed to add DJ');
+        }
+      } catch (error) {
+        alert('Failed to add DJ');
+      }
+    }
+
+    let selectedSlotForEdit = null;
+
+    function openEditSlotModal(booking) {
+      selectedSlotForEdit = booking;
+      const modal = document.querySelector('[data-modal="editSlot"]');
+      const title = modal?.querySelector('.edit-slot-title');
+      const details = modal?.querySelector('.slot-details');
+
+      if (title) title.textContent = booking.djName;
+      
+      if (details) {
+        const startTime = new Date(booking.startTime);
+        const endTime = new Date(booking.endTime);
+        
+        details.innerHTML = `
+          <div class="detail-row">
+            <span class="detail-label">DJ Name</span>
+            <span class="detail-value">${booking.djName}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Date</span>
+            <span class="detail-value">${startTime.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Time</span>
+            <span class="detail-value">${formatTime(startTime)} - ${formatTime(endTime)}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Duration</span>
+            <span class="detail-value">${booking.duration || 60} min</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Status</span>
+            <span class="detail-value">${booking.status}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">DJ ID</span>
+            <span class="detail-value" style="font-size: 0.75rem; font-family: monospace;">${booking.djId || 'N/A'}</span>
+          </div>
+        `;
+      }
+
+      modal?.classList.remove('hidden');
+    }
+
+    async function deleteSelectedSlot() {
+      if (!selectedSlotForEdit) return;
+      
+      if (!confirm(`Remove ${selectedSlotForEdit.djName} from the schedule?`)) return;
+
+      try {
+        const response = await fetch('/api/livestream/slots', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slotId: selectedSlotForEdit.id,
+            adminCancel: true
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          closeModal(document.querySelector('[data-modal="editSlot"]'));
+          loadAndRender();
+          window.dispatchEvent(new CustomEvent('schedule-updated'));
+        } else {
+          alert(data.error || 'Failed to remove slot');
+        }
+      } catch (error) {
+        alert('Failed to remove slot');
+      }
+    }
+
+    async function updateBookingsDisabled(disabled) {
+      try {
+        await fetch('/api/admin/update-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            section: 'livestream',
+            updates: { bookingsDisabled: disabled }
+          })
+        });
+      } catch (error) {
+        console.error('Failed to update settings:', error);
+      }
+    }
+
+    // Allowances management
+    let currentAllowances = [];
+
+    async function openAllowancesModal() {
+      const modal = document.querySelector('[data-modal="allowances"]');
+      await loadAllowances();
+      modal?.classList.remove('hidden');
+    }
+
+    async function loadAllowances() {
+      try {
+        const response = await fetch('/api/livestream/allowances');
+        const data = await response.json();
+        currentAllowances = data.success ? (data.allowances || []) : [];
+        renderAllowancesList();
+      } catch (error) {
+        console.error('Failed to load allowances:', error);
+        currentAllowances = [];
+        renderAllowancesList();
+      }
+    }
+
+    function renderAllowancesList() {
+      const list = document.querySelector('[data-modal="allowances"] .allowances-list');
+      if (!list) return;
+
+      if (currentAllowances.length === 0) {
+        list.innerHTML = '<p class="no-allowances">No custom allowances set. All DJs using default limits.</p>';
+        return;
+      }
+
+      list.innerHTML = currentAllowances.map(a => `
+        <div class="allowance-item" data-dj-id="${a.djId}">
+          <div class="allowance-info">
+            <div class="allowance-dj">${a.djName || a.djId}</div>
+            <div class="allowance-details">${a.maxHoursPerDay || 2}h/day • ${a.weeklySlots || 1} slots/week${a.reason ? ` • ${a.reason}` : ''}</div>
+          </div>
+          <button type="button" class="remove-allowance" onclick="window.removeAllowance_${id}('${a.djId}')">×</button>
+        </div>
+      `).join('');
+    }
+
+    async function saveAllowance() {
+      const modal = document.querySelector('[data-modal="allowances"]');
+      const djInput = modal?.querySelector('.allowance-dj-input')?.value.trim();
+      const maxHours = parseInt(modal?.querySelector('.allowance-hours-select')?.value || '2');
+      const weeklySlots = modal?.querySelector('.allowance-slots-select')?.value;
+      const reason = modal?.querySelector('.allowance-reason-input')?.value.trim();
+
+      if (!djInput) {
+        alert('Please enter a DJ email or user ID');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/livestream/allowances', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            djId: djInput,
+            maxHoursPerDay: maxHours,
+            weeklySlots: weeklySlots === 'unlimited' ? 999 : parseInt(weeklySlots),
+            reason
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          // Clear form
+          modal.querySelector('.allowance-dj-input').value = '';
+          modal.querySelector('.allowance-reason-input').value = '';
+          modal.querySelector('.allowance-hours-select').value = '2';
+          modal.querySelector('.allowance-slots-select').value = '1';
+          
+          // Reload list
+          await loadAllowances();
+          alert('Allowance saved successfully');
+        } else {
+          alert(data.error || 'Failed to save allowance');
+        }
+      } catch (error) {
+        alert('Failed to save allowance');
+      }
+    }
+
+    // Expose removeAllowance globally for onclick handlers
+    window[`removeAllowance_${id}`] = async function(djId) {
+      if (!confirm('Remove this DJ\'s custom allowance?')) return;
+
+      try {
+        const response = await fetch('/api/livestream/allowances', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ djId })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          await loadAllowances();
+        } else {
+          alert(data.error || 'Failed to remove allowance');
+        }
+      } catch (error) {
+        alert('Failed to remove allowance');
+      }
+    };
+
+    function closeModal(modal) {
+      modal?.classList.add('hidden');
+    }
+
+    // Utility functions
+    function formatHour(hour) {
+      const period = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+      return `${displayHour}${period}`;
+    }
+
+    function formatTime(date) {
+      return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Public API
+    window[`schedule_${id}`] = {
+      setUser(userId, displayName) {
+        currentUserId = userId;
+        userDisplayName = displayName;
+      },
+      refresh: loadAndRender,
+      getSelectedSlots: () => [...selectedSlots]
+    };
+
+    // Listen for updates from other instances
+    window.addEventListener('schedule-updated', () => {
+      loadAndRender();
+    });
+
+    // Initialize
+    init();
+  })();
+</script>
