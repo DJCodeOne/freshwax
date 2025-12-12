@@ -299,11 +299,18 @@ export const prerender = false;
         const description = btn.getAttribute('data-description') || '';
         const artwork = btn.getAttribute('data-artwork') || '';
         
+        // Set the hidden input for form submission
+        document.getElementById('editMixId').value = currentMixId;
         document.getElementById('editTitle').value = title;
         document.getElementById('editDescription').value = description;
         if (artworkPreview && artwork) {
           artworkPreview.src = artwork;
         }
+        
+        // Reset artwork state
+        processedArtworkBlob = null;
+        changeArtworkBtn.textContent = '📷 Change Cover';
+        
         updateCharCount();
         updateTitleCharCount();
         editModal?.classList.remove('hidden');
