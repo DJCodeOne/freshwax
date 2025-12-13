@@ -404,6 +404,15 @@ const processedProducts = products.map(product => {
 </head>
 <body>
   <div class="container">
+    <!-- Global debug - always visible -->
+    <div style="background: rgba(255,100,0,0.3); border: 2px solid orange; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; font-size: 0.85rem; font-family: monospace; color: #fff;">
+      <strong>DEBUG:</strong><br/>
+      partnerId: "{partnerId}"<br/>
+      partnerFound: {String(!!partner)}<br/>
+      partnerName: "{partner?.artistName || 'N/A'}"<br/>
+      isMerchSupplier: {String(partner?.isMerchSupplier)}<br/>
+      productsFound: {products.length}
+    </div>
     {!isLoggedIn ? (
       <div class="auth-message">
         <h2>Sign In Required</h2>
@@ -422,11 +431,6 @@ const processedProducts = products.map(product => {
           <h1><span class="page-icon">📦</span><span class="page-title">My Stock</span></h1>
           <a href="/artist/dashboard" class="back-link">← Back to Dashboard</a>
         </header>
-
-        <!-- Debug info - remove after testing -->
-        <div style="background: rgba(255,100,0,0.2); border: 1px solid orange; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; font-size: 0.8rem; font-family: monospace;">
-          <strong>Debug:</strong> partnerId={partnerId}, found={String(!!partner)}, name={partner?.artistName || 'N/A'}, products={products.length}
-        </div>
 
         <div class="stats-grid">
           <div class="stat-card">
