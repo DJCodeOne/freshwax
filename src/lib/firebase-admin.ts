@@ -56,17 +56,24 @@ function ensureInitialized(): void {
   privateKey = privateKey.replace(/\\n/g, '\n');
 
   try {
-    _app = initializeApp({
-      credential: cert({
-        projectId,
-        clientEmail,
-        privateKey,
-      }),
+    console.log('[firebase-admin] Attempting initialization with cert...');
+    const credential = cert({
+      projectId,
+      clientEmail,
+      privateKey,
     });
+    console.log('[firebase-admin] Cert created, initializing app...');
+    _app = initializeApp({ credential });
+    console.log('[firebase-admin] App initialized, getting Firestore...');
     _db = getFirestore();
     console.log('[firebase-admin] Successfully initialized');
-  } catch (error) {
-    console.error('[firebase-admin] Failed to initialize:', error);
+  } catch (error: any) {
+    console.error('[firebase-admin] Failed to initialize:', {
+      message: error?.message,
+      code: error?.code,
+      name: error?.name,
+      stack: error?.stack?.substring(0, 500)
+    });
     // Don't re-throw - let the app continue with _db as null
     // The calling code should handle the null case gracefully
     _app = null;
