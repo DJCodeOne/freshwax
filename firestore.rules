@@ -55,13 +55,16 @@ service cloud.firestore {
     match /releases/{releaseId} {
       allow read: if true;
       // Allow writes from admin or server (API key without auth)
-      // Server writes have uploadSource field
-      allow write: if isAdmin() ||
-                      (request.resource.data.metadata.uploadSource == 'direct-r2-upload');
-      // Also allow updates with status changes
+      // Server writes have uploadSource field in metadata
+      allow create: if isAdmin() ||
+                       (request.resource.data.metadata != null &&
+                        request.resource.data.metadata.uploadSource == 'direct-r2-upload');
+      // Allow updates for status changes and admin operations
       allow update: if isAdmin() ||
                        request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['status', 'approved', 'published', 'updatedAt', 'processedAt']);
+                         .hasOnly(['status', 'approved', 'published', 'updatedAt', 'processedAt',
+                                   'approvedAt', 'rejectedAt', 'metadata']);
+      allow delete: if isAdmin();
     }
     
     // DJ Mixes collection (hyphenated) - public read
