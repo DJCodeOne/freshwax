@@ -4,31 +4,48 @@ export const prerender = false;
 ---
 <AdminLayout title="Upload Release" activeNav="releases">
 <div class="card"><div class="card-body">
-<h2>Direct R2 Upload</h2>
-<p style="color:#666;margin-bottom:1rem">Upload cover art and audio tracks directly to storage.</p>
+<h2>Upload Release</h2>
+<p style="color:#666;margin-bottom:1rem">Drop a ZIP file or select individual files.</p>
 
-<div style="margin-bottom:1rem">
-  <label style="display:block;margin-bottom:0.25rem;font-weight:500">Artist Name</label>
-  <input id="artist" placeholder="Artist" class="input-field" style="width:100%">
+<div id="dropZone" style="border:2px dashed #ccc;border-radius:8px;padding:2rem;text-align:center;margin-bottom:1rem;cursor:pointer;transition:all 0.2s">
+  <div style="font-size:2rem;margin-bottom:0.5rem">📦</div>
+  <div><strong>Drop ZIP file here</strong></div>
+  <div style="color:#666;font-size:0.9rem">or click to select</div>
+  <input type="file" id="zipInput" accept=".zip,application/zip,application/x-zip-compressed" style="display:none">
 </div>
 
-<div style="margin-bottom:1rem">
-  <label style="display:block;margin-bottom:0.25rem;font-weight:500">Release Name</label>
-  <input id="release" placeholder="Release" class="input-field" style="width:100%">
+<div id="manualSection" style="display:none;border-top:1px solid #eee;padding-top:1rem;margin-top:1rem">
+  <h4 style="margin-bottom:1rem">Or upload individual files:</h4>
+
+  <div style="margin-bottom:1rem">
+    <label style="display:block;margin-bottom:0.25rem;font-weight:500">Artist Name</label>
+    <input id="artist" placeholder="Artist" class="input-field" style="width:100%">
+  </div>
+
+  <div style="margin-bottom:1rem">
+    <label style="display:block;margin-bottom:0.25rem;font-weight:500">Release Name</label>
+    <input id="release" placeholder="Release" class="input-field" style="width:100%">
+  </div>
+
+  <div style="margin-bottom:1rem">
+    <label style="display:block;margin-bottom:0.25rem;font-weight:500">Cover Art</label>
+    <input type="file" id="cover" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" style="display:block">
+  </div>
+
+  <div style="margin-bottom:1rem">
+    <label style="display:block;margin-bottom:0.25rem;font-weight:500">Audio Tracks</label>
+    <input type="file" id="tracks" accept="audio/mpeg,audio/wav,audio/flac,audio/aiff,audio/mp4,.mp3,.wav,.flac,.aiff,.m4a" multiple style="display:block">
+    <small style="color:#666">Select multiple audio files (MP3, WAV, FLAC, AIFF, M4A)</small>
+  </div>
+
+  <button id="manualBtn" class="btn btn-primary" disabled>Upload Release</button>
 </div>
 
-<div style="margin-bottom:1rem">
-  <label style="display:block;margin-bottom:0.25rem;font-weight:500">Cover Art</label>
-  <input type="file" id="cover" accept="image/jpeg,image/png,image/webp" style="display:block">
+<div id="extractedSection" style="display:none;border:1px solid #4CAF50;border-radius:8px;padding:1rem;margin-top:1rem;background:#f8fff8">
+  <h4 style="margin:0 0 0.5rem 0;color:#2e7d32">📂 ZIP Contents</h4>
+  <div id="extractedInfo" style="font-size:0.9rem"></div>
+  <button id="uploadBtn" class="btn btn-primary" style="margin-top:1rem">Upload Release</button>
 </div>
-
-<div style="margin-bottom:1rem">
-  <label style="display:block;margin-bottom:0.25rem;font-weight:500">Audio Tracks</label>
-  <input type="file" id="tracks" accept="audio/mpeg,audio/wav,audio/flac,audio/aiff,audio/mp4,.mp3,.wav,.flac,.aiff,.m4a" multiple style="display:block">
-  <small style="color:#666">Select multiple audio files (MP3, WAV, FLAC, AIFF, M4A)</small>
-</div>
-
-<button id="btn" class="btn btn-primary" disabled>Upload Release</button>
 
 <div id="progress" style="margin-top:1rem;display:none">
   <div style="background:#e0e0e0;border-radius:4px;overflow:hidden;height:20px">
@@ -38,29 +55,226 @@ export const prerender = false;
 </div>
 
 <div id="status" style="margin-top:1rem"></div>
+
+<div style="margin-top:1rem;text-align:center">
+  <a href="#" id="toggleManual" style="color:#666;font-size:0.9rem">Show manual upload</a>
+</div>
 </div></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script is:inline>
-const btn = document.getElementById("btn");
-const status = document.getElementById("status");
+// Elements
+const dropZone = document.getElementById("dropZone");
+const zipInput = document.getElementById("zipInput");
+const manualSection = document.getElementById("manualSection");
+const extractedSection = document.getElementById("extractedSection");
+const extractedInfo = document.getElementById("extractedInfo");
+const uploadBtn = document.getElementById("uploadBtn");
+const manualBtn = document.getElementById("manualBtn");
 const progress = document.getElementById("progress");
 const progressBar = document.getElementById("progressBar");
 const progressText = document.getElementById("progressText");
-const coverInput = document.getElementById("cover");
-const tracksInput = document.getElementById("tracks");
+const status = document.getElementById("status");
+const toggleManual = document.getElementById("toggleManual");
 const artistInput = document.getElementById("artist");
 const releaseInput = document.getElementById("release");
+const coverInput = document.getElementById("cover");
+const tracksInput = document.getElementById("tracks");
 
-function checkReady() {
-  btn.disabled = !coverInput.files.length || !tracksInput.files.length ||
-                 !artistInput.value.trim() || !releaseInput.value.trim();
+// Extracted data
+let extractedData = null;
+
+// Toggle manual section
+toggleManual.onclick = (e) => {
+  e.preventDefault();
+  manualSection.style.display = manualSection.style.display === "none" ? "block" : "none";
+  toggleManual.textContent = manualSection.style.display === "none" ? "Show manual upload" : "Hide manual upload";
+};
+
+// Check manual form ready
+function checkManualReady() {
+  manualBtn.disabled = !coverInput.files.length || !tracksInput.files.length ||
+                       !artistInput.value.trim() || !releaseInput.value.trim();
+}
+artistInput.oninput = checkManualReady;
+releaseInput.oninput = checkManualReady;
+coverInput.onchange = checkManualReady;
+tracksInput.onchange = checkManualReady;
+
+// Drop zone styling
+dropZone.ondragover = (e) => {
+  e.preventDefault();
+  dropZone.style.borderColor = "#4CAF50";
+  dropZone.style.background = "#f8fff8";
+};
+dropZone.ondragleave = () => {
+  dropZone.style.borderColor = "#ccc";
+  dropZone.style.background = "";
+};
+dropZone.onclick = () => zipInput.click();
+
+// Handle ZIP drop
+dropZone.ondrop = async (e) => {
+  e.preventDefault();
+  dropZone.style.borderColor = "#ccc";
+  dropZone.style.background = "";
+
+  const file = e.dataTransfer.files[0];
+  if (file && (file.name.endsWith('.zip') || file.type.includes('zip'))) {
+    await processZip(file);
+  } else {
+    setStatus("Please drop a ZIP file", true);
+  }
+};
+
+zipInput.onchange = async () => {
+  if (zipInput.files[0]) {
+    await processZip(zipInput.files[0]);
+  }
+};
+
+// Process ZIP file
+async function processZip(file) {
+  setProgress(0, "Extracting ZIP...");
+  status.innerHTML = "";
+
+  try {
+    const zip = await JSZip.loadAsync(file);
+    const files = Object.keys(zip.files);
+
+    console.log("ZIP contents:", files);
+
+    // Find cover art
+    let coverFile = null;
+    let coverName = null;
+    const imageExts = ['.jpg', '.jpeg', '.png', '.webp'];
+    const coverPatterns = ['cover', 'artwork', 'folder', 'front'];
+
+    for (const name of files) {
+      const lower = name.toLowerCase();
+      if (imageExts.some(ext => lower.endsWith(ext))) {
+        // Prefer files with "cover" in name
+        if (coverPatterns.some(p => lower.includes(p)) || !coverFile) {
+          coverFile = zip.files[name];
+          coverName = name;
+        }
+      }
+    }
+
+    // Find audio tracks
+    const audioExts = ['.mp3', '.wav', '.flac', '.aiff', '.m4a'];
+    const trackFiles = [];
+
+    for (const name of files) {
+      const lower = name.toLowerCase();
+      if (audioExts.some(ext => lower.endsWith(ext)) && !zip.files[name].dir) {
+        trackFiles.push({ name, file: zip.files[name] });
+      }
+    }
+
+    // Sort tracks by name (usually numbered)
+    trackFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+    // Find manifest/metadata JSON
+    let metadata = {};
+    let artistName = "";
+    let releaseName = "";
+
+    for (const name of files) {
+      if (name.toLowerCase().endsWith('.json')) {
+        try {
+          const jsonContent = await zip.files[name].async("string");
+          const parsed = JSON.parse(jsonContent);
+          metadata = parsed;
+          artistName = parsed.artistName || parsed.artist || "";
+          releaseName = parsed.releaseName || parsed.title || parsed.album || "";
+          console.log("Found metadata:", parsed);
+        } catch (e) {
+          console.log("Could not parse JSON:", name, e);
+        }
+      }
+    }
+
+    // Try to extract from folder/file names if no metadata
+    if (!artistName || !releaseName) {
+      // Try folder name pattern: "Artist - Release"
+      const folderMatch = file.name.replace('.zip', '').match(/^(.+?)\s*-\s*(.+)$/);
+      if (folderMatch) {
+        artistName = artistName || folderMatch[1].trim();
+        releaseName = releaseName || folderMatch[2].trim();
+      }
+    }
+
+    if (!coverFile) {
+      setStatus("No cover art found in ZIP. Please include a JPG/PNG image.", true);
+      return;
+    }
+
+    if (trackFiles.length === 0) {
+      setStatus("No audio tracks found in ZIP. Please include MP3/WAV/FLAC files.", true);
+      return;
+    }
+
+    // Extract files to blobs
+    setProgress(20, "Processing files...");
+
+    const coverBlob = await coverFile.async("blob");
+    const coverExt = coverName.split('.').pop().toLowerCase();
+    const coverType = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[coverExt] || 'image/jpeg';
+
+    const tracks = [];
+    for (let i = 0; i < trackFiles.length; i++) {
+      setProgress(20 + (i / trackFiles.length) * 20, `Processing track ${i + 1}/${trackFiles.length}...`);
+      const trackBlob = await trackFiles[i].file.async("blob");
+      const trackName = trackFiles[i].name.split('/').pop(); // Get filename only
+      const trackExt = trackName.split('.').pop().toLowerCase();
+      const trackType = { mp3: 'audio/mpeg', wav: 'audio/wav', flac: 'audio/flac', aiff: 'audio/aiff', m4a: 'audio/mp4' }[trackExt] || 'audio/mpeg';
+
+      tracks.push({
+        name: trackName,
+        blob: trackBlob,
+        type: trackType,
+        title: trackName.replace(/^\d+[\s._-]*/, '').replace(/\.[^.]+$/, '') // Remove track number prefix and extension
+      });
+    }
+
+    extractedData = {
+      artistName,
+      releaseName,
+      cover: { blob: coverBlob, name: coverName.split('/').pop(), type: coverType },
+      tracks,
+      metadata
+    };
+
+    // Show extracted info
+    extractedSection.style.display = "block";
+    extractedInfo.innerHTML = `
+      <div><strong>Artist:</strong> ${artistName || '<em>Not detected - will prompt</em>'}</div>
+      <div><strong>Release:</strong> ${releaseName || '<em>Not detected - will prompt</em>'}</div>
+      <div><strong>Cover:</strong> ${coverName.split('/').pop()}</div>
+      <div><strong>Tracks:</strong> ${tracks.length} files</div>
+      <ul style="margin:0.5rem 0;padding-left:1.5rem">
+        ${tracks.map((t, i) => `<li>${i + 1}. ${t.title}</li>`).join('')}
+      </ul>
+    `;
+
+    progress.style.display = "none";
+
+    // Prompt for missing info
+    if (!artistName) {
+      extractedData.artistName = prompt("Enter artist name:") || "Unknown Artist";
+    }
+    if (!releaseName) {
+      extractedData.releaseName = prompt("Enter release name:") || "Unknown Release";
+    }
+
+  } catch (err) {
+    console.error("ZIP processing error:", err);
+    setStatus(`Failed to process ZIP: ${err.message}`, true);
+  }
 }
 
-artistInput.oninput = checkReady;
-releaseInput.oninput = checkReady;
-coverInput.onchange = checkReady;
-tracksInput.onchange = checkReady;
-
+// Progress helpers
 function setProgress(percent, text) {
   progress.style.display = "block";
   progressBar.style.width = percent + "%";
@@ -71,14 +285,15 @@ function setStatus(msg, isError = false) {
   status.innerHTML = `<div style="padding:0.75rem;border-radius:4px;background:${isError ? '#ffebee' : '#e8f5e9'};color:${isError ? '#c62828' : '#2e7d32'}">${msg}</div>`;
 }
 
-async function uploadFileWithProgress(url, file, contentType) {
+// Upload with XHR for progress
+async function uploadFileWithProgress(url, blob, contentType, fileName) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
         const percent = Math.round((e.loaded / e.total) * 100);
-        setProgress(percent, `Uploading ${file.name}: ${percent}%`);
+        setProgress(percent, `Uploading ${fileName}: ${percent}%`);
       }
     };
 
@@ -91,39 +306,34 @@ async function uploadFileWithProgress(url, file, contentType) {
     };
 
     xhr.onerror = () => {
-      reject(new Error(`Network error uploading ${file.name}. This may be a CORS issue - check R2 bucket CORS settings.`));
-    };
-
-    xhr.ontimeout = () => {
-      reject(new Error(`Upload timed out for ${file.name}`));
+      reject(new Error(`Network error uploading ${fileName}. Check R2 CORS settings.`));
     };
 
     xhr.open("PUT", url);
     xhr.setRequestHeader("Content-Type", contentType);
-    xhr.timeout = 600000; // 10 minute timeout
-    xhr.send(file);
+    xhr.timeout = 600000;
+    xhr.send(blob);
   });
 }
 
-btn.onclick = async () => {
-  const artistName = artistInput.value.trim();
-  const releaseName = releaseInput.value.trim();
+// Upload extracted files
+uploadBtn.onclick = async () => {
+  if (!extractedData) return;
 
-  btn.disabled = true;
+  uploadBtn.disabled = true;
   status.innerHTML = "";
-  setProgress(0, "Preparing upload...");
 
   try {
-    // Build file list
+    const { artistName, releaseName, cover, tracks } = extractedData;
+
+    // Build file list for presigned URLs
     const files = [
-      { filename: coverInput.files[0].name, contentType: coverInput.files[0].type, size: coverInput.files[0].size },
-      ...Array.from(tracksInput.files).map(f => ({ filename: f.name, contentType: f.type, size: f.size }))
+      { filename: cover.name, contentType: cover.type, size: cover.blob.size },
+      ...tracks.map(t => ({ filename: t.name, contentType: t.type, size: t.blob.size }))
     ];
 
-    console.log("Requesting presigned URLs for files:", files);
-
-    // Get presigned URLs
     setProgress(5, "Getting upload URLs...");
+
     const presignRes = await fetch("/api/releases/presigned-upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -137,37 +347,28 @@ btn.onclick = async () => {
       throw new Error(presignData.error || "Failed to get upload URLs");
     }
 
-    // Upload files
-    const allFiles = [coverInput.files[0], ...Array.from(tracksInput.files)];
-    let coverArtUrl = "";
-    const tracks = [];
+    // Upload cover
+    setProgress(10, `Uploading ${cover.name}...`);
+    await uploadFileWithProgress(presignData.uploads[0].uploadUrl, cover.blob, cover.type, cover.name);
+    const coverArtUrl = presignData.uploads[0].publicUrl;
 
-    for (let i = 0; i < allFiles.length; i++) {
-      const file = allFiles[i];
-      const upload = presignData.uploads[i];
+    // Upload tracks
+    const trackData = [];
+    for (let i = 0; i < tracks.length; i++) {
+      const track = tracks[i];
+      const upload = presignData.uploads[i + 1];
 
-      console.log(`Uploading file ${i + 1}/${allFiles.length}: ${file.name} to ${upload.uploadUrl}`);
-      setProgress(10 + (i / allFiles.length) * 80, `Uploading ${file.name}...`);
+      setProgress(10 + ((i + 1) / (tracks.length + 1)) * 80, `Uploading ${track.name}...`);
+      await uploadFileWithProgress(upload.uploadUrl, track.blob, track.type, track.name);
 
-      try {
-        await uploadFileWithProgress(upload.uploadUrl, file, upload.contentType);
-      } catch (uploadErr) {
-        console.error("Upload error:", uploadErr);
-        throw uploadErr;
-      }
-
-      if (i === 0) {
-        coverArtUrl = upload.publicUrl;
-      } else {
-        tracks.push({
-          trackNumber: i,
-          title: file.name.replace(/\.[^.]+$/, ""),
-          url: upload.publicUrl
-        });
-      }
+      trackData.push({
+        trackNumber: i + 1,
+        title: track.title,
+        url: upload.publicUrl
+      });
     }
 
-    // Create release document
+    // Create release record
     setProgress(95, "Creating release record...");
 
     const completeRes = await fetch("/api/releases/complete-upload", {
@@ -177,13 +378,97 @@ btn.onclick = async () => {
         releaseId: presignData.releaseId,
         artistName,
         releaseName,
-        tracks,
+        tracks: trackData,
+        coverArtUrl,
+        metadata: extractedData.metadata
+      })
+    });
+
+    const completeData = await completeRes.json();
+
+    if (!completeData.success) {
+      throw new Error(completeData.error || "Failed to create release");
+    }
+
+    setProgress(100, "Complete!");
+    setStatus(`Release uploaded successfully! <a href="/admin/releases/manage">View Releases</a>`);
+
+    // Reset
+    extractedData = null;
+    extractedSection.style.display = "none";
+
+  } catch (err) {
+    console.error("Upload error:", err);
+    setStatus(`Error: ${err.message}`, true);
+    uploadBtn.disabled = false;
+  }
+};
+
+// Manual upload handler
+manualBtn.onclick = async () => {
+  const artistName = artistInput.value.trim();
+  const releaseName = releaseInput.value.trim();
+
+  manualBtn.disabled = true;
+  status.innerHTML = "";
+
+  try {
+    const files = [
+      { filename: coverInput.files[0].name, contentType: coverInput.files[0].type, size: coverInput.files[0].size },
+      ...Array.from(tracksInput.files).map(f => ({ filename: f.name, contentType: f.type, size: f.size }))
+    ];
+
+    setProgress(5, "Getting upload URLs...");
+
+    const presignRes = await fetch("/api/releases/presigned-upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ artistName, releaseName, files })
+    });
+
+    const presignData = await presignRes.json();
+
+    if (!presignData.success) {
+      throw new Error(presignData.error || "Failed to get upload URLs");
+    }
+
+    const allFiles = [coverInput.files[0], ...Array.from(tracksInput.files)];
+    let coverArtUrl = "";
+    const trackData = [];
+
+    for (let i = 0; i < allFiles.length; i++) {
+      const file = allFiles[i];
+      const upload = presignData.uploads[i];
+
+      setProgress(10 + (i / allFiles.length) * 80, `Uploading ${file.name}...`);
+      await uploadFileWithProgress(upload.uploadUrl, file, upload.contentType, file.name);
+
+      if (i === 0) {
+        coverArtUrl = upload.publicUrl;
+      } else {
+        trackData.push({
+          trackNumber: i,
+          title: file.name.replace(/\.[^.]+$/, ""),
+          url: upload.publicUrl
+        });
+      }
+    }
+
+    setProgress(95, "Creating release record...");
+
+    const completeRes = await fetch("/api/releases/complete-upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        releaseId: presignData.releaseId,
+        artistName,
+        releaseName,
+        tracks: trackData,
         coverArtUrl
       })
     });
 
     const completeData = await completeRes.json();
-    console.log("Complete response:", completeData);
 
     if (!completeData.success) {
       throw new Error(completeData.error || "Failed to create release");
@@ -201,7 +486,7 @@ btn.onclick = async () => {
   } catch (err) {
     console.error("Upload error:", err);
     setStatus(`Error: ${err.message}`, true);
-    btn.disabled = false;
+    manualBtn.disabled = false;
   }
 };
 </script>
