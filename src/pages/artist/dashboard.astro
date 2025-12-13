@@ -39,25 +39,24 @@ let stats = {
 if (partnerId) {
   try {
     // Try artists collection first
-    const partnerDoc = await db.collection('artists').doc(partnerId).get();
-    console.log('[Partner Dashboard] artists doc exists:', partnerDoc.exists);
-    
-    if (partnerDoc.exists) {
-      partner = { id: partnerDoc.id, ...partnerDoc.data() };
+    const partnerDoc = await getDocument('artists', partnerId);
+    console.log('[Partner Dashboard] artists doc exists:', !!partnerDoc);
+
+    if (partnerDoc) {
+      partner = { id: partnerId, ...partnerDoc };
       console.log('[Partner Dashboard] Found in artists:', partner.artistName);
     } else {
       // Fallback: check users collection for partner info
-      const userDoc = await db.collection('users').doc(partnerId).get();
-      console.log('[Partner Dashboard] users doc exists:', userDoc.exists);
-      
-      if (userDoc.exists) {
-        const userData = userDoc.data();
+      const userData = await getDocument('users', partnerId);
+      console.log('[Partner Dashboard] users doc exists:', !!userData);
+
+      if (userData) {
         console.log('[Partner Dashboard] User roles:', JSON.stringify(userData?.roles));
-        
+
         // Check if they have partner roles
         if (userData.roles?.artist || userData.roles?.dj || userData.roles?.merchSupplier) {
           partner = {
-            id: userDoc.id,
+            id: partnerId,
             artistName: userData.partnerInfo?.displayName || userData.displayName || userData.fullName || userData.name || 'Partner',
             email: userData.email,
             isArtist: userData.roles?.artist || false,
@@ -70,13 +69,12 @@ if (partnerId) {
         }
       }
     }
-    
+
     if (partner) {
       // Fetch displayName and avatar from customers collection (user's preferred display name)
       try {
-        const customerDoc = await db.collection('customers').doc(partnerId).get();
-        if (customerDoc.exists) {
-          const customerData = customerDoc.data();
+        const customerData = await getDocument('customers', partnerId);
+        if (customerData) {
           // Use customer's displayName if available (this is what they set in their profile)
           if (customerData?.displayName) {
             partner.displayName = customerData.displayName;
@@ -89,111 +87,97 @@ if (partnerId) {
       } catch (e) {
         // Ignore errors fetching customer data
       }
-      
+
       const approved = partner.approved === true;
       const effectiveIsArtist = partner.isArtist !== false;
       const effectiveIsDJ = !!partner.isDJ || effectiveIsArtist;
       const effectiveIsMerchSupplier = !!partner.isMerchSupplier;
-      
+
       // Fetch artist/label stats (only if approved)
       if (effectiveIsArtist && approved) {
         // Query releases by email since uploads use email, not artistId
         const artistEmail = partner.email;
         if (artistEmail) {
-          const releasesSnap = await db.collection('releases')
-            .where('email', '==', artistEmail)
-            .get();
-          stats.releases = releasesSnap.size;
-          stats.liveReleases = releasesSnap.docs.filter(d => d.data().status === 'live').length;
-          stats.pendingReleases = releasesSnap.docs.filter(d => d.data().status === 'pending').length;
+          const releases = await queryCollection('releases', {
+            filters: [{ field: 'email', op: 'EQUAL', value: artistEmail }]
+          });
+          stats.releases = releases.length;
+          stats.liveReleases = releases.filter(r => r.status === 'live').length;
+          stats.pendingReleases = releases.filter(r => r.status === 'pending').length;
         }
       }
-      
+
       // Fetch merch stats (only if approved)
       if (effectiveIsMerchSupplier && approved) {
         // Try multiple strategies to find products linked to this supplier
-        let merchDocs: any[] = [];
-        
+        let merchProducts: any[] = [];
+
         // Strategy 1: Query by supplierId
-        const byIdSnap = await db.collection('merch')
-          .where('supplierId', '==', partnerId)
-          .get();
-        if (!byIdSnap.empty) {
-          merchDocs = byIdSnap.docs;
-        }
-        
+        merchProducts = await queryCollection('merch', {
+          filters: [{ field: 'supplierId', op: 'EQUAL', value: partnerId }]
+        });
+
         // Strategy 2: If no results, try by supplier name
-        if (merchDocs.length === 0 && partner.artistName) {
-          const byNameSnap = await db.collection('merch')
-            .where('supplierName', '==', partner.artistName)
-            .get();
-          if (!byNameSnap.empty) {
-            merchDocs = byNameSnap.docs;
-          }
+        if (merchProducts.length === 0 && partner.artistName) {
+          merchProducts = await queryCollection('merch', {
+            filters: [{ field: 'supplierName', op: 'EQUAL', value: partner.artistName }]
+          });
         }
-        
+
         // Strategy 3: Check merch-suppliers collection for linked products
-        if (merchDocs.length === 0) {
+        if (merchProducts.length === 0) {
           try {
-            const supplierDoc = await db.collection('merch-suppliers').doc(partnerId).get();
-            if (supplierDoc.exists) {
-              const supplierData = supplierDoc.data();
-              // If supplier has linked products, fetch them
-              if (supplierData?.products && supplierData.products.length > 0) {
-                const productPromises = supplierData.products.slice(0, 50).map((pid: string) => 
-                  db.collection('merch').doc(pid).get()
-                );
-                const productDocs = await Promise.all(productPromises);
-                merchDocs = productDocs.filter(d => d.exists);
-              }
+            const supplierData = await getDocument('merch-suppliers', partnerId);
+            if (supplierData?.products && supplierData.products.length > 0) {
+              const productPromises = supplierData.products.slice(0, 50).map((pid: string) =>
+                getDocument('merch', pid)
+              );
+              const productDocs = await Promise.all(productPromises);
+              merchProducts = productDocs.filter((d): d is NonNullable<typeof d> => d !== null);
             }
           } catch (e) {
             // Ignore errors from merch-suppliers lookup
           }
         }
-        
-        stats.merchProducts = merchDocs.length;
-        
+
+        stats.merchProducts = merchProducts.length;
+
         // Get product IDs for order matching
-        const productIds = merchDocs.map(doc => doc.id);
-        
+        const productIds = merchProducts.map(p => p.id);
+
         // Calculate total stock from products
-        const totalProductStock = merchDocs.reduce((sum, d) => {
-          const data = d.data();
-          return sum + (data.totalStock || data.stock || 0);
+        const totalProductStock = merchProducts.reduce((sum, p) => {
+          return sum + (p.totalStock || p.stock || 0);
         }, 0);
-        
+
         // Fetch orders containing this supplier's products
         if (productIds.length > 0) {
-          const ordersSnap = await db.collection('orders')
-            .where('status', '!=', 'cancelled')
-            .orderBy('status')
-            .orderBy('createdAt', 'desc')
-            .limit(100)
-            .get();
-          
+          // Query orders (REST API doesn't support != so we'll filter client-side)
+          const orders = await queryCollection('orders', {
+            orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+            limit: 100
+          });
+
           let unitsSold = 0;
           let orderCount = 0;
-          
-          ordersSnap.docs.forEach(doc => {
-            const order = doc.data();
-            const supplierItems = (order.items || []).filter((item: any) => 
+
+          orders.filter(o => o.status !== 'cancelled').forEach(order => {
+            const supplierItems = (order.items || []).filter((item: any) =>
               productIds.includes(item.productId) || item.supplierId === partnerId
             );
-            
+
             if (supplierItems.length > 0) {
               orderCount++;
               unitsSold += supplierItems.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
             }
           });
-          
+
           stats.merchSold = unitsSold;
           stats.totalOrders = orderCount;
         } else {
           // Fall back to totalSold/soldStock from product docs
-          stats.merchSold = merchDocs.reduce((sum, d) => {
-            const data = d.data();
-            return sum + (data.totalSold || data.soldStock || data.sales || 0);
+          stats.merchSold = merchProducts.reduce((sum, p) => {
+            return sum + (p.totalSold || p.soldStock || p.sales || 0);
           }, 0);
         }
       }
