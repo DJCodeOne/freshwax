@@ -1,26 +1,9 @@
 // src/pages/api/livestream/status.ts
-// Check if any stream is currently live and get stream details
-// OPTIMIZED: Server-side caching to reduce Firebase reads
-
+// Check if any stream is currently live - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { queryCollection, getDocument } from '../../../lib/firebase-rest';
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
-
-// ==========================================
-// SERVER-SIDE CACHE - Reduces Firebase reads
-// ==========================================
+// Server-side cache
 interface CacheEntry {
   data: any;
   timestamp: number;
@@ -28,14 +11,16 @@ interface CacheEntry {
 
 const statusCache = new Map<string, CacheEntry>();
 const CACHE_TTL = {
-  LIVE_STATUS: 10 * 1000,      // 10 seconds for general status (polled frequently)
-  SPECIFIC_STREAM: 15 * 1000,  // 15 seconds for specific stream lookups
-  OFFLINE_STATUS: 30 * 1000,   // 30 seconds when offline (less urgent)
+  LIVE_STATUS: 10 * 1000,
+  SPECIFIC_STREAM: 15 * 1000,
+  OFFLINE_STATUS: 30 * 1000,
 };
 
 function getCached(key: string): any | null {
   const entry = statusCache.get(key);
-  if (entry && Date.now() - entry.timestamp < getCacheTTL(key)) {
+  const ttl = key.startsWith('stream:') ? CACHE_TTL.SPECIFIC_STREAM :
+              key === 'status:offline' ? CACHE_TTL.OFFLINE_STATUS : CACHE_TTL.LIVE_STATUS;
+  if (entry && Date.now() - entry.timestamp < ttl) {
     return entry.data;
   }
   if (entry) statusCache.delete(key);
@@ -44,20 +29,12 @@ function getCached(key: string): any | null {
 
 function setCache(key: string, data: any): void {
   statusCache.set(key, { data, timestamp: Date.now() });
-  // Prune old entries if cache grows
   if (statusCache.size > 20) {
     const oldest = statusCache.keys().next().value;
     if (oldest) statusCache.delete(oldest);
   }
 }
 
-function getCacheTTL(key: string): number {
-  if (key.startsWith('stream:')) return CACHE_TTL.SPECIFIC_STREAM;
-  if (key === 'status:offline') return CACHE_TTL.OFFLINE_STATUS;
-  return CACHE_TTL.LIVE_STATUS;
-}
-
-// Helper to create response with proper cache headers
 function jsonResponse(data: any, status: number, maxAge: number = 10): Response {
   return new Response(JSON.stringify(data), {
     status,
@@ -73,43 +50,37 @@ export const GET: APIRoute = async ({ request }) => {
     const url = new URL(request.url);
     const streamId = url.searchParams.get('streamId');
     const skipCache = url.searchParams.get('fresh') === '1';
-    
-    // ==========================================
-    // SPECIFIC STREAM LOOKUP
-    // ==========================================
+
+    // Specific stream lookup
     if (streamId) {
       const cacheKey = `stream:${streamId}`;
-      
-      // Check cache first
+
       if (!skipCache) {
         const cached = getCached(cacheKey);
         if (cached) {
           return jsonResponse(cached, cached.success ? 200 : 404, 15);
         }
       }
-      
-      const streamDoc = await db.collection('livestreams').doc(streamId).get();
-      
-      if (!streamDoc.exists) {
+
+      const streamDoc = await getDocument('livestreams', streamId);
+
+      if (!streamDoc) {
         const result = { success: false, error: 'Stream not found' };
         setCache(cacheKey, result);
         return jsonResponse(result, 404, 15);
       }
-      
+
       const result = {
         success: true,
-        stream: { id: streamDoc.id, ...streamDoc.data() }
+        stream: streamDoc
       };
       setCache(cacheKey, result);
       return jsonResponse(result, 200, 15);
     }
-    
-    // ==========================================
-    // GENERAL LIVE STATUS CHECK
-    // ==========================================
+
+    // General live status check
     const statusCacheKey = 'status:general';
-    
-    // Check cache first
+
     if (!skipCache) {
       const cached = getCached(statusCacheKey);
       if (cached) {
@@ -117,60 +88,59 @@ export const GET: APIRoute = async ({ request }) => {
         return jsonResponse(cached, 200, maxAge);
       }
     }
-    
+
     // Check for any live stream
-    const liveStreams = await db.collection('livestreams')
-      .where('isLive', '==', true)
-      .orderBy('startedAt', 'desc')
-      .limit(5)
-      .get();
-    
-    if (liveStreams.empty) {
+    const liveStreams = await queryCollection('livestreams', {
+      filters: [{ field: 'isLive', op: 'EQUAL', value: true }],
+      limit: 5,
+      skipCache: true
+    });
+
+    if (liveStreams.length === 0) {
       // Check for scheduled streams
       const now = new Date().toISOString();
-      const scheduledStreams = await db.collection('livestreams')
-        .where('status', '==', 'scheduled')
-        .where('scheduledFor', '>', now)
-        .orderBy('scheduledFor', 'asc')
-        .limit(3)
-        .get();
-      
-      const scheduled = scheduledStreams.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
+      const allStreams = await queryCollection('livestreams', {
+        filters: [{ field: 'status', op: 'EQUAL', value: 'scheduled' }],
+        limit: 10,
+        skipCache: true
+      });
+
+      const scheduled = allStreams
+        .filter(s => s.scheduledFor && s.scheduledFor > now)
+        .sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime())
+        .slice(0, 3);
+
       const result = {
         success: true,
         isLive: false,
         streams: [],
         scheduled
       };
-      
-      // Cache offline status longer (30 seconds)
+
       statusCache.set('status:offline', { data: result, timestamp: Date.now() });
       setCache(statusCacheKey, result);
-      
+
       return jsonResponse(result, 200, 30);
     }
-    
-    const streams = liveStreams.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    
+
+    // Sort by startedAt desc
+    const streams = liveStreams.sort((a, b) => {
+      const dateA = a.startedAt ? new Date(a.startedAt).getTime() : 0;
+      const dateB = b.startedAt ? new Date(b.startedAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
     const result = {
       success: true,
       isLive: true,
       streams,
       primaryStream: streams[0]
     };
-    
+
     setCache(statusCacheKey, result);
-    
-    // Shorter cache when live (10 seconds) for responsiveness
+
     return jsonResponse(result, 200, 10);
-    
+
   } catch (error) {
     console.error('[livestream/status] Error:', error);
     return jsonResponse({
