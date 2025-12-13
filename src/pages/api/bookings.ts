@@ -1,30 +1,17 @@
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { getAdminDb, getFieldValue, getTimestamp } from '../../lib/firebase-admin';
 
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 const MAX_DAILY_HOURS = 2;
 
 // Helper to check DJ eligibility
-async function isDJEligible(uid: string): Promise<boolean> {
+async function isDJEligible(db: any, uid: string): Promise<boolean> {
   const userDoc = await db.collection('users').doc(uid).get();
   if (!userDoc.exists) return false;
   return userDoc.data()?.roles?.djEligible === true;
 }
 
 // Get user's booked hours for a specific day
-async function getUserDailyHours(uid: string, date: Date): Promise<number> {
+async function getUserDailyHours(db: any, Timestamp: any, uid: string, date: Date): Promise<number> {
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date(date);
@@ -37,7 +24,7 @@ async function getUserDailyHours(uid: string, date: Date): Promise<number> {
     .get();
 
   let totalHours = 0;
-  bookingsSnap.forEach(doc => {
+  bookingsSnap.forEach((doc: any) => {
     totalHours += doc.data().duration || 1;
   });
 
@@ -45,7 +32,7 @@ async function getUserDailyHours(uid: string, date: Date): Promise<number> {
 }
 
 // Check if slot is available
-async function isSlotAvailable(startTime: Date, duration: number): Promise<{ available: boolean; conflict?: string }> {
+async function isSlotAvailable(db: any, Timestamp: any, startTime: Date, duration: number): Promise<{ available: boolean; conflict?: string }> {
   const endTime = new Date(startTime);
   endTime.setHours(endTime.getHours() + duration);
 
@@ -84,17 +71,27 @@ export const GET: APIRoute = async ({ url }) => {
   const dateStr = url.searchParams.get('date');
 
   try {
+    const db = await getAdminDb();
+    const Timestamp = await getTimestamp();
+
+    if (!db || !Timestamp) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Firebase not initialized'
+      }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // Get user's daily bookings and allowance
     if (action === 'getDailyInfo' && uid && dateStr) {
       const date = new Date(dateStr);
-      const usedHours = await getUserDailyHours(uid, date);
+      const usedHours = await getUserDailyHours(db, Timestamp, uid, date);
 
       return new Response(JSON.stringify({
         success: true,
         usedHours,
         remainingHours: MAX_DAILY_HOURS - usedHours,
         maxHours: MAX_DAILY_HOURS
-      }));
+      }), { headers: { 'Content-Type': 'application/json' } });
     }
 
     // Get schedule for a day
@@ -112,7 +109,7 @@ export const GET: APIRoute = async ({ url }) => {
         .get();
 
       const bookings: any[] = [];
-      bookingsSnap.forEach(doc => {
+      bookingsSnap.forEach((doc: any) => {
         const data = doc.data();
         bookings.push({
           id: doc.id,
@@ -127,7 +124,7 @@ export const GET: APIRoute = async ({ url }) => {
       return new Response(JSON.stringify({
         success: true,
         bookings
-      }));
+      }), { headers: { 'Content-Type': 'application/json' } });
     }
 
     // Get user's upcoming bookings
@@ -142,7 +139,7 @@ export const GET: APIRoute = async ({ url }) => {
         .get();
 
       const bookings: any[] = [];
-      bookingsSnap.forEach(doc => {
+      bookingsSnap.forEach((doc: any) => {
         const data = doc.data();
         bookings.push({
           id: doc.id,
@@ -157,25 +154,36 @@ export const GET: APIRoute = async ({ url }) => {
       return new Response(JSON.stringify({
         success: true,
         bookings
-      }));
+      }), { headers: { 'Content-Type': 'application/json' } });
     }
 
     return new Response(JSON.stringify({
       success: false,
       error: 'Invalid action'
-    }), { status: 400 });
+    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: any) {
     console.error('Bookings API GET error:', error);
     return new Response(JSON.stringify({
       success: false,
       error: error.message
-    }), { status: 500 });
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
 
 export const POST: APIRoute = async ({ request }) => {
   try {
+    const db = await getAdminDb();
+    const FieldValue = await getFieldValue();
+    const Timestamp = await getTimestamp();
+
+    if (!db || !FieldValue || !Timestamp) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Firebase not initialized'
+      }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const body = await request.json();
     const { action, uid, djName, streamTitle, description, slots, durationType } = body;
 
@@ -185,15 +193,15 @@ export const POST: APIRoute = async ({ request }) => {
         return new Response(JSON.stringify({
           success: false,
           error: 'Missing required fields'
-        }), { status: 400 });
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
       // Verify DJ eligibility
-      if (!(await isDJEligible(uid))) {
+      if (!(await isDJEligible(db, uid))) {
         return new Response(JSON.stringify({
           success: false,
           error: 'You are not DJ eligible'
-        }), { status: 403 });
+        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
       }
 
       // Parse slots
@@ -201,26 +209,26 @@ export const POST: APIRoute = async ({ request }) => {
       const bookingDate = slotDates[0];
 
       // Check daily allowance
-      const usedHours = await getUserDailyHours(uid, bookingDate);
+      const usedHours = await getUserDailyHours(db, Timestamp, uid, bookingDate);
       const requestedHours = durationType === '2hr' ? 2 : slotDates.length;
 
       if (usedHours + requestedHours > MAX_DAILY_HOURS) {
         return new Response(JSON.stringify({
           success: false,
           error: `You only have ${MAX_DAILY_HOURS - usedHours} hours remaining today`
-        }), { status: 400 });
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
       // Validate slots are available
       for (const slotDate of slotDates) {
         const duration = durationType === '2hr' ? 2 : 1;
-        const availability = await isSlotAvailable(slotDate, duration);
-        
+        const availability = await isSlotAvailable(db, Timestamp, slotDate, duration);
+
         if (!availability.available) {
           return new Response(JSON.stringify({
             success: false,
             error: availability.conflict
-          }), { status: 400 });
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
       }
 
@@ -229,8 +237,8 @@ export const POST: APIRoute = async ({ request }) => {
 
       if (durationType === '2hr') {
         // Single 2-hour booking
-        const startTime = new Date(Math.min(...slotDates.map(d => d.getTime())));
-        
+        const startTime = new Date(Math.min(...slotDates.map((d: Date) => d.getTime())));
+
         const docRef = await db.collection('livestream-bookings').add({
           djId: uid,
           djName,
@@ -265,7 +273,7 @@ export const POST: APIRoute = async ({ request }) => {
         success: true,
         bookingIds: createdBookings,
         message: 'Booking confirmed!'
-      }));
+      }), { headers: { 'Content-Type': 'application/json' } });
     }
 
     // Cancel booking
@@ -276,17 +284,17 @@ export const POST: APIRoute = async ({ request }) => {
         return new Response(JSON.stringify({
           success: false,
           error: 'Missing required fields'
-        }), { status: 400 });
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
       // Get booking
       const bookingDoc = await db.collection('livestream-bookings').doc(bookingId).get();
-      
+
       if (!bookingDoc.exists) {
         return new Response(JSON.stringify({
           success: false,
           error: 'Booking not found'
-        }), { status: 404 });
+        }), { status: 404, headers: { 'Content-Type': 'application/json' } });
       }
 
       const booking = bookingDoc.data();
@@ -296,7 +304,7 @@ export const POST: APIRoute = async ({ request }) => {
         return new Response(JSON.stringify({
           success: false,
           error: 'You can only cancel your own bookings'
-        }), { status: 403 });
+        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
       }
 
       // Check if booking can be cancelled (at least 30 mins before)
@@ -308,7 +316,7 @@ export const POST: APIRoute = async ({ request }) => {
         return new Response(JSON.stringify({
           success: false,
           error: 'Cannot cancel within 30 minutes of start time'
-        }), { status: 400 });
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
       // Delete booking
@@ -317,19 +325,19 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(JSON.stringify({
         success: true,
         message: 'Booking cancelled. Slot is now available.'
-      }));
+      }), { headers: { 'Content-Type': 'application/json' } });
     }
 
     return new Response(JSON.stringify({
       success: false,
       error: 'Invalid action'
-    }), { status: 400 });
+    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: any) {
     console.error('Bookings API POST error:', error);
     return new Response(JSON.stringify({
       success: false,
       error: error.message
-    }), { status: 500 });
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

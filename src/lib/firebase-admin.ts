@@ -3,11 +3,12 @@
 // Uses dynamic imports and lazy initialization for Cloudflare Workers compatibility
 
 import type { App } from 'firebase-admin/app';
-import type { Firestore, FieldValue as FVType } from 'firebase-admin/firestore';
+import type { Firestore, FieldValue as FVType, Timestamp as TSType } from 'firebase-admin/firestore';
 
 let _app: App | null = null;
 let _db: Firestore | null = null;
 let _FieldValue: typeof FVType | null = null;
+let _Timestamp: typeof TSType | null = null;
 let _initialized = false;
 let _initError: string | null = null;
 
@@ -60,9 +61,10 @@ async function ensureInitializedAsync(): Promise<void> {
     console.log('[firebase-admin] Imports successful, checking existing apps...');
 
     const { initializeApp, getApps, cert } = appModule;
-    const { getFirestore, FieldValue } = firestoreModule;
+    const { getFirestore, FieldValue, Timestamp } = firestoreModule;
 
     _FieldValue = FieldValue;
+    _Timestamp = Timestamp;
 
     if (getApps().length) {
       console.log('[firebase-admin] Using existing app');
@@ -119,6 +121,12 @@ export async function getAdminDb(): Promise<Firestore | null> {
 export async function getFieldValue(): Promise<typeof FVType | null> {
   await ensureInitializedAsync();
   return _FieldValue;
+}
+
+// Get Timestamp (async)
+export async function getTimestamp(): Promise<typeof TSType | null> {
+  await ensureInitializedAsync();
+  return _Timestamp;
 }
 
 // Legacy proxy export for backward compatibility - but callers should migrate to async
