@@ -6,7 +6,8 @@
       "Bash(git push)",
       "Bash(git add:*)",
       "Bash(firebase deploy:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
