@@ -1,11 +1,13 @@
 // src/pages/api/upload-merch.ts
 // Comprehensive merch upload - Firebase for data, R2 for images
 // Images auto-processed to 800x800 WebP
+// Uses WASM-based image processing for Cloudflare Workers compatibility
 
+import '../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { setDocument, updateDocument, getDocument, addDocument, initFirebaseEnv } from '../../lib/firebase-rest';
-import sharp from 'sharp';
+import { processImageToSquareWebP } from '../../lib/image-processing';
 
 // Image processing settings
 const IMAGE_SIZE = 800;
@@ -28,22 +30,28 @@ function initFirebase(locals: any) {
   });
 }
 
-const R2_CONFIG = {
-  accountId: import.meta.env.R2_ACCOUNT_ID,
-  accessKeyId: import.meta.env.R2_ACCESS_KEY_ID,
-  secretAccessKey: import.meta.env.R2_SECRET_ACCESS_KEY,
-  bucketName: import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
-  publicDomain: import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
-};
+// Get R2 configuration from Cloudflare runtime env
+function getR2Config(env: any) {
+  return {
+    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
+    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
+    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
+    publicDomain: env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
+  };
+}
 
-const s3Client = new S3Client({
-  region: 'auto',
-  endpoint: 'https://' + R2_CONFIG.accountId + '.r2.cloudflarestorage.com',
-  credentials: {
-    accessKeyId: R2_CONFIG.accessKeyId,
-    secretAccessKey: R2_CONFIG.secretAccessKey,
-  },
-});
+// Create S3 client with runtime env
+function createS3Client(config: ReturnType<typeof getR2Config>) {
+  return new S3Client({
+    region: 'auto',
+    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+    },
+  });
+}
 
 const PRODUCT_TYPES: Record<string, { name: string; hasSizes: boolean; hasColors: boolean }> = {
   'tshirt': { name: 'T-Shirt', hasSizes: true, hasColors: true },
@@ -68,8 +76,11 @@ function sanitizeForPath(str: string): string {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
   initFirebase(locals);
+
+  const r2Config = getR2Config(env);
+  const s3Client = createS3Client(r2Config);
 
   try {
     log.info('[upload-merch] Started');
@@ -179,44 +190,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       log.info('[upload-merch] Processing image', i + 1);
 
-      const inputBuffer = Buffer.from(await imageFile.arrayBuffer());
+      const inputBuffer = await imageFile.arrayBuffer();
+      const originalSize = inputBuffer.byteLength;
 
-      // Get image metadata for square crop
-      const metadata = await sharp(inputBuffer).metadata();
-      const { width = 0, height = 0 } = metadata;
-
-      // Calculate center crop to square
-      const size = Math.min(width, height);
-      const left = Math.floor((width - size) / 2);
-      const top = Math.floor((height - size) / 2);
-
-      // Process: crop to square, resize, convert to WebP
-      const processedBuffer = await sharp(inputBuffer)
-        .extract({ left, top, width: size, height: size })
-        .resize(IMAGE_SIZE, IMAGE_SIZE, {
-          fit: 'cover',
-          position: 'center'
-        })
-        .webp({
-          quality: WEBP_QUALITY,
-          effort: 4
-        })
-        .toBuffer();
+      // Process image: crop to square, resize to 800x800, convert to WebP
+      const processed = await processImageToSquareWebP(inputBuffer, IMAGE_SIZE, WEBP_QUALITY);
 
       // Always save as .webp
       const imageKey = folderPath + '/image_' + i + '.webp';
 
       await s3Client.send(
         new PutObjectCommand({
-          Bucket: R2_CONFIG.bucketName,
+          Bucket: r2Config.bucketName,
           Key: imageKey,
-          Body: processedBuffer,
+          Body: processed.buffer,
           ContentType: 'image/webp',
           CacheControl: 'public, max-age=31536000',
         })
       );
 
-      const imageUrl = R2_CONFIG.publicDomain + '/' + imageKey;
+      const imageUrl = r2Config.publicDomain + '/' + imageKey;
 
       // Find color mapping for this image
       const colorMapping = imageColorMap.find(m => m.index === i);
@@ -231,7 +224,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
       log.info('[upload-merch] Image processed and uploaded:', imageUrl,
-        `(${(inputBuffer.length/1024).toFixed(1)}KB → ${(processedBuffer.length/1024).toFixed(1)}KB)`,
+        `(${(originalSize/1024).toFixed(1)}KB → ${(processed.buffer.length/1024).toFixed(1)}KB)`,
         colorMapping?.color ? `[Color: ${colorMapping.color}]` : '');
     }
 
