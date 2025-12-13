@@ -92,6 +92,9 @@ export const GET: APIRoute = async ({ request }) => {
         : (item.imageUrl ? [item.imageUrl] : []);
       
       return {
+        // Spread original item first
+        ...item,
+        // Then override with normalized values
         id: item.id,
         name: item.name || item.title || 'Untitled Item',
         description: item.description || '',
@@ -109,10 +112,6 @@ export const GET: APIRoute = async ({ request }) => {
         onSale: item.onSale ?? false,
         salePrice: item.salePrice || null,
         sku: item.sku || item.id,
-        ...item,
-        // Override with normalized values
-        images,
-        primaryImage: images[0] || item.primaryImage || null,
       };
     });
     
