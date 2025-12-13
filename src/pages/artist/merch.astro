@@ -14,54 +14,37 @@ let products: any[] = [];
 
 if (partnerId) {
   try {
-    const partnerDoc = await db.collection('artists').doc(partnerId).get();
-    if (partnerDoc.exists) {
-      partner = { id: partnerDoc.id, ...partnerDoc.data() };
-      
+    partner = await getDocument('artists', partnerId);
+    if (partner) {
       // Try multiple strategies to find products linked to this supplier
-      let merchDocs: any[] = [];
-      
+
       // Strategy 1: Query by supplierId
-      const byIdSnap = await db.collection('merch')
-        .where('supplierId', '==', partnerId)
-        .get();
-      if (!byIdSnap.empty) {
-        merchDocs = byIdSnap.docs;
-      }
-      
+      products = await queryCollection('merch', {
+        filters: [{ field: 'supplierId', op: 'EQUAL', value: partnerId }]
+      });
+
       // Strategy 2: If no results, try by supplier name
-      if (merchDocs.length === 0 && partner.artistName) {
-        const byNameSnap = await db.collection('merch')
-          .where('supplierName', '==', partner.artistName)
-          .get();
-        if (!byNameSnap.empty) {
-          merchDocs = byNameSnap.docs;
-        }
+      if (products.length === 0 && partner.artistName) {
+        products = await queryCollection('merch', {
+          filters: [{ field: 'supplierName', op: 'EQUAL', value: partner.artistName }]
+        });
       }
-      
+
       // Strategy 3: Check merch-suppliers collection for linked products
-      if (merchDocs.length === 0) {
+      if (products.length === 0) {
         try {
-          const supplierDoc = await db.collection('merch-suppliers').doc(partnerId).get();
-          if (supplierDoc.exists) {
-            const supplierData = supplierDoc.data();
-            if (supplierData?.products && supplierData.products.length > 0) {
-              const productPromises = supplierData.products.slice(0, 50).map((pid: string) => 
-                db.collection('merch').doc(pid).get()
-              );
-              const productDocs = await Promise.all(productPromises);
-              merchDocs = productDocs.filter(d => d.exists);
-            }
+          const supplierData = await getDocument('merch-suppliers', partnerId);
+          if (supplierData?.products && supplierData.products.length > 0) {
+            const productPromises = supplierData.products.slice(0, 50).map((pid: string) =>
+              getDocument('merch', pid)
+            );
+            const productDocs = await Promise.all(productPromises);
+            products = productDocs.filter((d): d is NonNullable<typeof d> => d !== null);
           }
         } catch (e) {
           // Ignore errors from merch-suppliers lookup
         }
       }
-      
-      products = merchDocs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
     }
   } catch (e) {
     console.error('Error fetching data:', e);
@@ -70,6 +53,17 @@ if (partnerId) {
 
 const isLoggedIn = !!partner;
 const isMerchSupplier = partner?.isMerchSupplier === true;
+
+// Debug info
+const debugInfo = {
+  partnerId,
+  partnerFound: !!partner,
+  partnerName: partner?.artistName || 'N/A',
+  isMerchSupplier: partner?.isMerchSupplier,
+  productsFound: products.length,
+  productIds: products.map(p => p.id).slice(0, 5)
+};
+console.log('[merch.astro] Debug:', JSON.stringify(debugInfo));
 
 // Calculate stats
 const totalProducts = products.length;
@@ -428,7 +422,12 @@ const processedProducts = products.map(product => {
           <h1><span class="page-icon">📦</span><span class="page-title">My Stock</span></h1>
           <a href="/artist/dashboard" class="back-link">← Back to Dashboard</a>
         </header>
-        
+
+        <!-- Debug info - remove after testing -->
+        <div style="background: rgba(255,100,0,0.2); border: 1px solid orange; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; font-size: 0.8rem; font-family: monospace;">
+          <strong>Debug:</strong> partnerId={partnerId}, found={String(!!partner)}, name={partner?.artistName || 'N/A'}, products={products.length}
+        </div>
+
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-value">{totalProducts}</div>
