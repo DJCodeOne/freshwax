@@ -7,16 +7,31 @@ export const GET: APIRoute = async () => {
     tests: {}
   };
 
-  // Test 1: Query releases
+  // Test 1: Query releases (no filter)
   try {
     const releases = await queryCollection('releases', { limit: 3 });
-    results.tests.releases = {
+    results.tests.releasesAll = {
       success: true,
       count: releases.length,
-      sample: releases[0] ? { id: releases[0].id, title: releases[0].title || releases[0].name } : null
+      sample: releases[0] ? { id: releases[0].id, status: releases[0].status } : null
     };
   } catch (error: any) {
-    results.tests.releases = { success: false, error: error.message };
+    results.tests.releasesAll = { success: false, error: error.message };
+  }
+
+  // Test 1b: Query releases with status=live filter
+  try {
+    const releases = await queryCollection('releases', {
+      filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
+      limit: 3
+    });
+    results.tests.releasesLive = {
+      success: true,
+      count: releases.length,
+      sample: releases[0] ? { id: releases[0].id, title: releases[0].title } : null
+    };
+  } catch (error: any) {
+    results.tests.releasesLive = { success: false, error: error.message };
   }
 
   // Test 2: Query orders
