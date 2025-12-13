@@ -3,7 +3,7 @@
 // Check if a customer already owns a release or track
 
 import type { APIRoute } from 'astro';
-import { db } from '../../firebase/server';
+import { adminDb as db } from '../../lib/firebase-admin';
 
 export const prerender = false;
 

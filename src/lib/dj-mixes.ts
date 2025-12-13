@@ -2,7 +2,7 @@
 // Server-side DJ mixes helper - uses Firebase Admin directly during SSR
 // OPTIMIZED: Server-side caching to reduce Firebase reads
 
-import { db } from '../firebase/server';
+import { adminDb as db } from './firebase-admin';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;

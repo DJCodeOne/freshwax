@@ -3,7 +3,7 @@
 // Check if cart items are duplicates of previous purchases
 
 import type { APIRoute } from 'astro';
-import { db } from '../../firebase/server';
+import { adminDb as db } from '../../lib/firebase-admin';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
