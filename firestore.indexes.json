@@ -9,6 +9,54 @@
       ]
     },
     {
+      "collectionGroup": "djModeration",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "bannedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "djModeration",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "holdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bypassRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "bypassRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "livestreams",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "djId", "order": "ASCENDING" },
+        { "fieldPath": "isLive", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "livestreams",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "startedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "livestream-chat",
       "queryScope": "COLLECTION",
       "fields": [
@@ -21,22 +69,8 @@
       "collectionGroup": "livestreamSlots",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "startTime", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "livestreamSlots",
-      "queryScope": "COLLECTION",
-      "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "startTime", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "djDirectMessages",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "participants", "arrayConfig": "CONTAINS" }
       ]
     }
   ],

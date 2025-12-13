@@ -601,7 +601,7 @@ export const prerender = false;
     const container = document.getElementById('liveStreams');
     
     try {
-      const response = await fetch('/api/stream/status');
+      const response = await fetch('/api/livestream/status');
       const result = await response.json();
       
       if (result.success && result.isLive && result.streams?.length > 0) {
