@@ -11,6 +11,25 @@ const log = {
 };
 
 const PROJECT_ID = 'freshwax-store';
+
+// ==========================================
+// CLOUDFLARE RUNTIME ENV SUPPORT
+// ==========================================
+// Cache for runtime env vars (set from request context)
+let runtimeEnvCache: Record<string, string> = {};
+
+// Initialize env from Cloudflare runtime (call from API routes/pages)
+export function initFirebaseEnv(env: Record<string, string>) {
+  if (env.FIREBASE_API_KEY) {
+    runtimeEnvCache = env;
+    log.info('Firebase env initialized from runtime');
+  }
+}
+
+// Get env var with fallback chain: runtime cache -> import.meta.env -> default
+function getEnvVar(name: string, defaultValue?: string): string | undefined {
+  return runtimeEnvCache[name] || (import.meta.env as any)?.[name] || defaultValue;
+}
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
 // ==========================================
@@ -559,11 +578,11 @@ export async function setDocument(
   docId: string,
   data: Record<string, any>
 ): Promise<{ success: boolean; id: string }> {
-  const projectId = import.meta.env.FIREBASE_PROJECT_ID || PROJECT_ID;
-  const apiKey = import.meta.env.FIREBASE_API_KEY;
-  
+  const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
+  const apiKey = getEnvVar('FIREBASE_API_KEY');
+
   if (!projectId || !apiKey) {
-    throw new Error('Firebase configuration missing');
+    throw new Error('Firebase configuration missing - ensure initFirebaseEnv() is called');
   }
 
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?key=${apiKey}`;
@@ -597,11 +616,11 @@ export async function updateDocument(
   docId: string,
   data: Record<string, any>
 ): Promise<{ success: boolean }> {
-  const projectId = import.meta.env.FIREBASE_PROJECT_ID || PROJECT_ID;
-  const apiKey = import.meta.env.FIREBASE_API_KEY;
-  
+  const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
+  const apiKey = getEnvVar('FIREBASE_API_KEY');
+
   if (!projectId || !apiKey) {
-    throw new Error('Firebase configuration missing');
+    throw new Error('Firebase configuration missing - ensure initFirebaseEnv() is called');
   }
 
   const updateMask = Object.keys(data).map(key => `updateMask.fieldPaths=${key}`).join('&');
@@ -634,11 +653,11 @@ export async function deleteDocument(
   collection: string,
   docId: string
 ): Promise<{ success: boolean }> {
-  const projectId = import.meta.env.FIREBASE_PROJECT_ID || PROJECT_ID;
-  const apiKey = import.meta.env.FIREBASE_API_KEY;
-  
+  const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
+  const apiKey = getEnvVar('FIREBASE_API_KEY');
+
   if (!projectId || !apiKey) {
-    throw new Error('Firebase configuration missing');
+    throw new Error('Firebase configuration missing - ensure initFirebaseEnv() is called');
   }
 
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?key=${apiKey}`;

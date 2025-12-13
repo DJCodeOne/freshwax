@@ -1,10 +1,13 @@
 // Quick test endpoint to verify Firebase REST API config
 import type { APIRoute } from 'astro';
+import { setDocument, getDocument } from '../../lib/firebase-rest';
 
 export const GET: APIRoute = async ({ locals }) => {
   // Try multiple ways to access env vars on Cloudflare
   const runtime = (locals as any).runtime;
   const cfEnv = runtime?.env || {};
+
+  // Note: middleware.ts now initializes firebase-rest with runtime env
 
   // Method 1: import.meta.env (build-time)
   const projectId1 = import.meta.env.FIREBASE_PROJECT_ID;
@@ -32,39 +35,25 @@ export const GET: APIRoute = async ({ locals }) => {
     'runtimeEnvKeys': Object.keys(cfEnv),
   };
 
-  // Try a simple read
+  // Try a simple read using firebase-rest
   let readTest = 'Not tested';
   try {
-    const res = await fetch(`https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/settings/admin`);
-    readTest = res.ok ? 'OK' : `Failed: ${res.status}`;
+    const doc = await getDocument('settings', 'admin');
+    readTest = doc ? 'OK' : 'Not found (but no error)';
   } catch (e: any) {
     readTest = `Error: ${e.message}`;
   }
 
-  // Try a write test (to a test collection)
+  // Try a write test using firebase-rest (to a test collection)
   let writeTest = 'Not tested';
-  if (apiKey) {
-    try {
-      const testDoc = {
-        fields: {
-          test: { stringValue: 'ping' },
-          timestamp: { stringValue: new Date().toISOString() }
-        }
-      };
-      const res = await fetch(
-        `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/_test/connection-check?key=${apiKey}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(testDoc)
-        }
-      );
-      writeTest = res.ok ? 'OK' : `Failed: ${res.status} - ${await res.text()}`;
-    } catch (e: any) {
-      writeTest = `Error: ${e.message}`;
-    }
-  } else {
-    writeTest = 'Skipped - no API key';
+  try {
+    await setDocument('_test', 'connection-check', {
+      test: 'ping',
+      timestamp: new Date().toISOString()
+    });
+    writeTest = 'OK';
+  } catch (e: any) {
+    writeTest = `Error: ${e.message}`;
   }
 
   return new Response(JSON.stringify({
