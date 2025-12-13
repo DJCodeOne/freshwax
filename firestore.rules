@@ -24,6 +24,11 @@ service cloud.firestore {
     match /customers/{customerId} {
       allow read, write: if isAdmin();
       allow read, create, update: if request.auth != null && request.auth.uid == customerId;
+      // Allow server-side avatar updates (API uses REST without user auth)
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['avatarUrl', 'avatarUpdatedAt']);
+      // Allow creating new customer with avatar
+      allow create: if request.resource.data.keys().hasOnly(['avatarUrl', 'avatarUpdatedAt']);
     }
     
     // Orders collection
