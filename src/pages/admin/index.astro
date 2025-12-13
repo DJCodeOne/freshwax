@@ -1,56 +1,41 @@
 ---
 // src/pages/admin/index.astro
 // Fresh Wax Admin Dashboard - Unified Design
-// Central hub for all admin operations
+// Central hub for all admin operations - Uses Firebase REST API
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { queryCollection } from '../../lib/firebase-rest';
 import '../../styles/admin/index.css';
 
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
-
-// Batch fetch all data we need
+// Fetch all data using REST API
 const [
-  ordersSnapshot,
-  releasesSnapshot,
-  artistsSnapshot,
-  customersSnapshot,
-  merchSnapshot,
-  mixesSnapshot,
-  livestreamsSnapshot,
-  bypassRequestsSnapshot
+  ordersData,
+  releasesData,
+  artistsData,
+  merchData,
+  mixesData,
+  livestreamsData,
+  bypassRequestsData
 ] = await Promise.all([
-  db.collection('orders').orderBy('createdAt', 'desc').limit(50).get(),
-  db.collection('releases').get(),
-  db.collection('artists').get(),
-  db.collection('customers').limit(1).get(), // Just need count
-  db.collection('merch').get(),
-  db.collection('dj-mixes').get(),
-  db.collection('livestreams').orderBy('startedAt', 'desc').limit(10).get(),
-  db.collection('bypassRequests').where('status', '==', 'pending').orderBy('createdAt', 'desc').limit(20).get().catch(() => ({ docs: [] }))
+  queryCollection('orders', { limit: 50 }),
+  queryCollection('releases'),
+  queryCollection('artists'),
+  queryCollection('merch'),
+  queryCollection('dj-mixes'),
+  queryCollection('livestreams', { limit: 10 }),
+  queryCollection('bypassRequests', {
+    filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }],
+    limit: 20
+  }).catch(() => [])
 ]);
 
-// Process orders
-const orders = ordersSnapshot.docs.map(doc => {
-  const data = doc.data();
-  return {
-    id: doc.id,
-    ...data,
-    createdAt: data.createdAt?.toDate?.() || new Date()
-  };
-});
+// Process orders - sort by createdAt desc
+const orders = ordersData
+  .map(order => ({
+    ...order,
+    createdAt: order.createdAt ? new Date(order.createdAt) : new Date()
+  }))
+  .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
 // Calculate stats
 const now = new Date();
@@ -64,18 +49,18 @@ const pendingOrders = orders.filter(o => o.status === 'pending');
 const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
 const monthRevenue = monthOrders.reduce((sum, o) => sum + (o.total || 0), 0);
 
-// Partner stats
-const artists = artistsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+// Partner stats (data already in array format from REST API)
+const artists = artistsData;
 const pendingPartners = artists.filter(a => a.approved === false);
 const approvedPartners = artists.filter(a => a.approved === true);
 
 // Release stats
-const releases = releasesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+const releases = releasesData;
 const liveReleases = releases.filter(r => r.status === 'live');
 const pendingReleases = releases.filter(r => r.status === 'pending');
 
 // Merch stats
-const merch = merchSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+const merch = merchData;
 const lowStockMerch = merch.filter(m => {
   if (m.variants) {
     return m.variants.some(v => (v.stock || 0) <= 5 && (v.stock || 0) > 0);
@@ -90,34 +75,24 @@ const outOfStockMerch = merch.filter(m => {
 });
 
 // DJ Mixes stats
-const mixes = mixesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+const mixes = mixesData;
 const publishedMixes = mixes.filter(m => m.published);
 const totalPlays = mixes.reduce((sum, m) => sum + (m.plays || 0), 0);
 
-// Livestream stats
-const livestreams = livestreamsSnapshot.docs.map(doc => {
-  const data = doc.data();
-  return {
-    id: doc.id,
-    ...data,
-    startedAt: data.startedAt?.toDate?.() || null,
-    endedAt: data.endedAt?.toDate?.() || null
-  };
-});
+// Livestream stats - sort by startedAt desc
+const livestreams = livestreamsData
+  .map(ls => ({
+    ...ls,
+    startedAt: ls.startedAt ? new Date(ls.startedAt) : null,
+    endedAt: ls.endedAt ? new Date(ls.endedAt) : null
+  }))
+  .sort((a, b) => (b.startedAt?.getTime() || 0) - (a.startedAt?.getTime() || 0));
 const activeLivestream = livestreams.find(ls => ls.status === 'live');
 const recentLivestreams = livestreams.slice(0, 5);
 
 // Bypass requests - filter out expired ones (15 minutes)
 const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
-const bypassRequests = bypassRequestsSnapshot.docs
-  .map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      ...data,
-      createdAt: data.createdAt || null
-    };
-  })
+const bypassRequests = bypassRequestsData
   .filter(req => {
     // Filter out requests older than 15 minutes
     if (!req.createdAt) return true;
