@@ -21,17 +21,27 @@ function initFirebase(locals: any) {
   });
 }
 
-// Initialize R2 client
-const r2Client = new S3Client({
-  region: 'auto',
-  endpoint: `https://${import.meta.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: import.meta.env.R2_ACCESS_KEY_ID || '',
-    secretAccessKey: import.meta.env.R2_SECRET_ACCESS_KEY || '',
-  },
-});
+// Get R2 configuration from Cloudflare runtime env
+function getR2Config(env: any) {
+  return {
+    accountId: env?.CLOUDFLARE_ACCOUNT_ID || env?.R2_ACCOUNT_ID || import.meta.env.CLOUDFLARE_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
+    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID || '',
+    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY || '',
+    bucketName: env?.R2_BUCKET || import.meta.env.R2_BUCKET || 'freshwax',
+  };
+}
 
-const R2_BUCKET = import.meta.env.R2_BUCKET || 'freshwax';
+// Create S3 client with runtime env
+function createR2Client(config: ReturnType<typeof getR2Config>) {
+  return new S3Client({
+    region: 'auto',
+    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+    },
+  });
+}
 
 // Helper to delete all documents in a collection
 async function deleteCollection(collectionName: string, excludeDocIds: string[] = []) {
@@ -50,13 +60,13 @@ async function deleteCollection(collectionName: string, excludeDocIds: string[] 
 }
 
 // Helper to clear R2 bucket
-async function clearR2Bucket() {
+async function clearR2Bucket(r2Client: S3Client, bucketName: string) {
   let deletedCount = 0;
   let continuationToken: string | undefined;
 
   do {
     const listCommand = new ListObjectsV2Command({
-      Bucket: R2_BUCKET,
+      Bucket: bucketName,
       ContinuationToken: continuationToken,
       MaxKeys: 1000,
     });
@@ -65,7 +75,7 @@ async function clearR2Bucket() {
 
     if (listResponse.Contents && listResponse.Contents.length > 0) {
       const deleteCommand = new DeleteObjectsCommand({
-        Bucket: R2_BUCKET,
+        Bucket: bucketName,
         Delete: {
           Objects: listResponse.Contents.map(obj => ({ Key: obj.Key })),
           Quiet: true,
@@ -83,7 +93,13 @@ async function clearR2Bucket() {
 }
 
 export const POST: APIRoute = async ({ request, cookies, locals }) => {
+  const env = (locals as any)?.runtime?.env;
   initFirebase(locals);
+
+  // Initialize R2 client for Cloudflare runtime
+  const r2Config = getR2Config(env);
+  const r2Client = createR2Client(r2Config);
+
   try {
     log.info('[reset-store] Starting store reset...');
 
@@ -164,7 +180,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     // Clear R2 storage
     log.info('[reset-store] Clearing R2 storage...');
     try {
-      results.r2Files = await clearR2Bucket();
+      results.r2Files = await clearR2Bucket(r2Client, r2Config.bucketName);
     } catch (r2Error: any) {
       console.error('[reset-store] R2 clear error:', r2Error);
       // Continue even if R2 fails
