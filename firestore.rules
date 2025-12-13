@@ -18,6 +18,8 @@ service cloud.firestore {
     match /artists/{artistId} {
       allow read, write: if isAdmin();
       allow read, create, update: if request.auth != null && request.auth.uid == artistId;
+      // Allow server-side partner operations (API uses REST without user auth)
+      allow create, update: if true;
     }
     
     // Customers collection

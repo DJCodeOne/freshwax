@@ -163,20 +163,23 @@ export const POST: APIRoute = async ({ request }) => {
     // Approve role (admin action)
     if (action === 'approveRole') {
       if (!adminUid || !(await isAdmin(adminUid))) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Unauthorized' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Unauthorized'
         }), { status: 403 });
       }
 
       if (!uid || !roleType) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Missing uid or roleType' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Missing uid or roleType'
         }), { status: 400 });
       }
 
       const roleKey = roleType === 'djBypass' ? 'djEligible' : roleType;
+
+      // Get user data first for artist record
+      const userData = await getDocument('users', uid);
 
       await updateDocument('users', uid, {
         [`roles.${roleKey}`]: true,
@@ -185,6 +188,57 @@ export const POST: APIRoute = async ({ request }) => {
         [`pendingRoles.${roleType}.approvedBy`]: adminUid,
         updatedAt: new Date()
       });
+
+      // Also update customers collection
+      try {
+        await updateDocument('customers', uid, {
+          [`roles.${roleKey}`]: true,
+          isArtist: roleType === 'artist' ? true : undefined,
+          isMerchSupplier: roleType === 'merchSeller' ? true : undefined,
+          approved: true,
+          updatedAt: new Date().toISOString()
+        });
+      } catch (e) {
+        // Customers doc may not exist
+      }
+
+      // For artist or merchSeller roles, create/update artists collection entry
+      if (roleType === 'artist' || roleType === 'merchSeller') {
+        const pendingData = userData?.pendingRoles?.[roleType] || {};
+        const existingArtist = await getDocument('artists', uid);
+
+        if (existingArtist) {
+          // Update existing artist record
+          await updateDocument('artists', uid, {
+            isArtist: roleType === 'artist' ? true : existingArtist.isArtist,
+            isMerchSupplier: roleType === 'merchSeller' ? true : existingArtist.isMerchSupplier,
+            approved: true,
+            approvedAt: new Date().toISOString(),
+            approvedBy: adminUid,
+            updatedAt: new Date().toISOString()
+          });
+        } else {
+          // Create new artist record
+          const { setDocument } = await import('../../../lib/firebase-rest');
+          await setDocument('artists', uid, {
+            artistName: pendingData.artistName || userData?.displayName || userData?.name || 'Partner',
+            name: userData?.fullName || userData?.name || userData?.displayName || '',
+            email: userData?.email || '',
+            phone: userData?.phone || '',
+            bio: pendingData.bio || '',
+            links: pendingData.links || '',
+            businessName: pendingData.businessName || '',
+            isArtist: roleType === 'artist',
+            isMerchSupplier: roleType === 'merchSeller',
+            approved: true,
+            suspended: false,
+            approvedAt: new Date().toISOString(),
+            approvedBy: adminUid,
+            registeredAt: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+          });
+        }
+      }
 
       // Create notification for user
       await addDocument('notifications', {
