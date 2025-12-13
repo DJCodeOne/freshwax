@@ -2,10 +2,17 @@
 // Generate a new gift card (admin/system use)
 
 import type { APIRoute } from 'astro';
-import { getDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, addDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { createWelcomeGiftCard, createPromotionalGiftCard } from '../../../lib/giftcard';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   try {
     const data = await request.json();
     const { type, value, description, createdFor, systemKey } = data;

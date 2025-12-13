@@ -2,9 +2,18 @@
 // Upload user avatar to R2 - compressed to small WebP for icon use
 
 import type { APIRoute } from 'astro';
-import { setDocument } from '../../lib/firebase-rest';
+import { setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 // R2 client
 const r2 = new S3Client({
@@ -22,7 +31,10 @@ const R2_PUBLIC_URL = import.meta.env.R2_PUBLIC_URL || 'https://cdn.freshwax.co.
 // Avatar size - small for icon use
 const AVATAR_SIZE = 128;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const formData = await request.formData();
     const file = formData.get('avatar') as File;
@@ -129,7 +141,10 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 // DELETE: Remove avatar
-export const DELETE: APIRoute = async ({ request }) => {
+export const DELETE: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const data = await request.json();
     const { userId } = data;

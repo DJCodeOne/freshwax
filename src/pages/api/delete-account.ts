@@ -1,10 +1,10 @@
 // src/pages/api/delete-account.ts
 // Delete user account and associated data
+// Note: Firebase Auth user deletion requires Admin SDK which doesn't work on Cloudflare
+// The Firestore documents will be deleted, but auth user may need manual cleanup
 
 import type { APIRoute } from 'astro';
-import { deleteDocument, queryCollection } from '../../lib/firebase-rest';
-import { getAuth } from 'firebase-admin/auth';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { deleteDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -12,22 +12,16 @@ const log = {
   error: (...args: any[]) => console.error(...args),
 };
 
-// Initialize Firebase Admin for Auth (still needed for deleteUser)
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const auth = getAuth();
-
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   try {
     const body = await request.json();
     const { userId } = body;
@@ -76,13 +70,10 @@ export const POST: APIRoute = async ({ request }) => {
       log.info('[delete-account] Error deleting orders:', e);
     }
     
-    // Delete Firebase Auth user
-    try {
-      await auth.deleteUser(userId);
-      log.info('[delete-account] Deleted Firebase Auth user');
-    } catch (e) {
-      log.info('[delete-account] Error deleting auth user:', e);
-    }
+    // Note: Firebase Auth user deletion requires Admin SDK
+    // On Cloudflare Workers, we can't use Admin SDK
+    // The auth user will need to be cleaned up separately or user can re-create account
+    log.info('[delete-account] Note: Auth user deletion skipped (requires Admin SDK)');
     
     return new Response(JSON.stringify({ 
       success: true,

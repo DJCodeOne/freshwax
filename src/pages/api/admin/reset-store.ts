@@ -2,7 +2,7 @@
 // DANGER: Reset store - delete all data except admin account
 
 import type { APIRoute } from 'astro';
-import { queryCollection, deleteDocument, setDocument } from '../../../lib/firebase-rest';
+import { queryCollection, deleteDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
 
 // Conditional logging - only logs in development
@@ -11,6 +11,15 @@ const log = {
   info: (...args: any[]) => isDev && console.log(...args),
   error: (...args: any[]) => console.error(...args),
 };
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 // Initialize R2 client
 const r2Client = new S3Client({
@@ -73,7 +82,8 @@ async function clearR2Bucket() {
   return deletedCount;
 }
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, locals }) => {
+  initFirebase(locals);
   try {
     log.info('[reset-store] Starting store reset...');
 

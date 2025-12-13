@@ -3,28 +3,25 @@
 // - Banned DJs cannot access DJ Lobby or Go Live
 // - DJs on hold cannot go live but can view lobby
 // - Kicked DJs have their stream ended but retain DJ role
+// NOTE: getUserByEmail requires Firebase Admin SDK which doesn't work on Cloudflare
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
-// NOTE: Firebase Admin Auth is still needed for getUserByEmail functionality
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
+const ADMIN_KEY = 'freshwax-admin-2024';
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
 }
 
-const auth = getAuth();
-const ADMIN_KEY = 'freshwax-admin-2024';
-
 // GET: List banned and on-hold DJs
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   const url = new URL(request.url);
   const action = url.searchParams.get('action');
 
@@ -77,10 +74,11 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST: Ban, unban, hold, release, or kick a DJ
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const data = await request.json();
-    const { action, email, userId, reason, adminKey } = data;
+    const { action, email, userId, reason, adminKey, targetUserId, targetUserName } = data;
 
     // Simple admin key check
     if (adminKey !== ADMIN_KEY) {
@@ -90,11 +88,28 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Helper to get userId from email
+    // Note: getUserByEmail requires Firebase Admin SDK which doesn't work on Cloudflare
+    // Instead, the admin interface should provide userId directly
+    // This is a simplified version that works with userId or looks up by email in Firestore
     async function getUserIdFromEmail(email: string): Promise<{ userId: string; name: string | null } | null> {
+      // Look up user by email in users collection
       try {
-        const userRecord = await auth.getUserByEmail(email);
-        return { userId: userRecord.uid, name: userRecord.displayName || null };
+        const users = await queryCollection('users', {
+          filters: [{ field: 'email', op: 'EQUAL', value: email }],
+          limit: 1
+        });
+        if (users.length > 0) {
+          return { userId: users[0].id, name: users[0].displayName || users[0].name || null };
+        }
+        // Also check customers collection
+        const customers = await queryCollection('customers', {
+          filters: [{ field: 'email', op: 'EQUAL', value: email }],
+          limit: 1
+        });
+        if (customers.length > 0) {
+          return { userId: customers[0].id, name: customers[0].displayName || customers[0].firstName || null };
+        }
+        return null;
       } catch (e) {
         return null;
       }

@@ -1,12 +1,22 @@
 // src/pages/api/livestream/chat-cleanup.ts
 // API to schedule and execute chat cleanup after DJ session ends
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
+
 // POST - Schedule chat cleanup for a stream
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const data = await request.json();
     const { streamId, action } = data;
@@ -84,7 +94,8 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 // GET - Check and execute pending cleanups (call this periodically)
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const url = new URL(request.url);
     const executeNow = url.searchParams.get('execute') === 'true';

@@ -1,6 +1,6 @@
 // src/pages/api/livestream/red5-webhook.ts
 // Red5 Pro Webhook Handler - receives stream events from Red5 server
-// 
+//
 // Configure Red5 to send webhooks to:
 // POST https://freshwax.co.uk/api/livestream/red5-webhook
 //
@@ -11,10 +11,20 @@
 // - viewer_leave: Viewer disconnected
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, addDocument, queryCollection, incrementField } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, addDocument, queryCollection, incrementField, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, verifyWebhookSignature, type Red5WebhookEvent } from '../../../lib/red5';
 
-export const POST: APIRoute = async ({ request }) => {
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
+
+export const POST: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   const now = new Date().toISOString();
   
   try {
@@ -244,7 +254,8 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 // GET endpoint for testing/health check
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ locals }) => {
+  initFirebase(locals);
   return new Response(JSON.stringify({
     status: 'ok',
     endpoint: 'Red5 Webhook Handler',

@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { setDocument, updateDocument, getDocument, addDocument } from '../../lib/firebase-rest';
+import { setDocument, updateDocument, getDocument, addDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import sharp from 'sharp';
 
 // Image processing settings
@@ -18,6 +18,15 @@ const log = {
 };
 
 export const prerender = false;
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 const R2_CONFIG = {
   accountId: import.meta.env.R2_ACCOUNT_ID,
@@ -58,7 +67,10 @@ function sanitizeForPath(str: string): string {
   return str.replace(/[^a-zA-Z0-9-_]/g, '_').toLowerCase();
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     log.info('[upload-merch] Started');
 

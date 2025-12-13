@@ -76,10 +76,14 @@ function setCachedOnlineDjs(djs: any[]): void {
 
 // GET: Get online DJs list (initial load and polling fallback)
 export const GET: APIRoute = async ({ request, locals }) => {
-  try {
-    // Initialize Firebase env
-    initFirebaseEnv(import.meta.env as any);
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
 
+  try {
     // Check cache first
     const cached = getCachedOnlineDjs();
     if (cached) {
@@ -133,10 +137,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Join/Leave/Heartbeat
 export const POST: APIRoute = async ({ request, locals }) => {
-  try {
-    // Initialize Firebase env
-    initFirebaseEnv(import.meta.env as any);
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
 
+  try {
     const data = await request.json();
     const { action, userId, name, avatar, avatarLetter, isReady } = data;
 
@@ -267,10 +275,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE: Cleanup stale presence entries (cron job endpoint)
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  try {
-    // Initialize Firebase env
-    initFirebaseEnv(import.meta.env as any);
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
 
+  try {
     const twoMinutesAgo = new Date(Date.now() - 120000);
 
     const staleDjs = await queryCollection('djLobbyPresence', {

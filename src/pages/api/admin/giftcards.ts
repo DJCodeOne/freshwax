@@ -2,9 +2,18 @@
 // Admin API for gift cards management - list, create, analytics
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, queryCollection, addDocument, arrayUnion } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, queryCollection, addDocument, arrayUnion, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 const FROM_EMAIL = 'Fresh Wax <noreply@freshwax.co.uk>';
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 // Send email via Resend API (using fetch for Cloudflare compatibility)
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
@@ -43,7 +52,8 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
 }
 
 // GET: Fetch gift cards, user balances, and analytics
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const url = new URL(request.url);
     const type = url.searchParams.get('type') || 'all';
@@ -206,7 +216,8 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST: Create gift card or adjust user balance
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const data = await request.json();
     const { action, adminKey } = data;

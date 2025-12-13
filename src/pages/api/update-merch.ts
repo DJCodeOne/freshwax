@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { getDocument, updateDocument } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -12,6 +12,15 @@ const log = {
 };
 
 export const prerender = false;
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 const R2_CONFIG = {
   accountId: import.meta.env.R2_ACCOUNT_ID,
@@ -30,7 +39,10 @@ const s3Client = new S3Client({
   },
 });
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const contentType = request.headers.get('content-type') || '';
 

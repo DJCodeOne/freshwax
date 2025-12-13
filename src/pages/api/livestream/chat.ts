@@ -3,8 +3,17 @@
 // Uses Pusher for real-time delivery (reduces Firebase reads)
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { createHmac, createHash } from 'crypto';
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 // Pusher configuration (from .env)
 const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
@@ -56,7 +65,10 @@ async function triggerPusher(channel: string, event: string, data: any): Promise
 }
 
 // Get recent chat messages (initial load only - no real-time)
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const url = new URL(request.url);
     const streamId = url.searchParams.get('streamId');
@@ -104,7 +116,10 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // Send a chat message
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const data = await request.json();
     const { streamId, userId, userName, userAvatar, message, type, giphyUrl, giphyId } = data;
@@ -203,7 +218,10 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 // Delete a message (for moderation)
-export const DELETE: APIRoute = async ({ request }) => {
+export const DELETE: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const url = new URL(request.url);
     const messageId = url.searchParams.get('messageId');

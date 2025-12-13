@@ -62,10 +62,14 @@ function getDmChannelId(uid1: string, uid2: string): string {
 
 // GET: Get DM conversation
 export const GET: APIRoute = async ({ request, locals }) => {
-  try {
-    // Initialize Firebase env
-    initFirebaseEnv(import.meta.env as any);
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
 
+  try {
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
     const targetId = url.searchParams.get('targetId');
@@ -140,10 +144,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Send a DM
 export const POST: APIRoute = async ({ request, locals }) => {
-  try {
-    // Initialize Firebase env
-    initFirebaseEnv(import.meta.env as any);
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
 
+  try {
     const data = await request.json();
     const { senderId, senderName, receiverId, receiverName, text, senderAvatar } = data;
 
@@ -222,10 +230,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE: Delete conversation or clear messages
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  try {
-    // Initialize Firebase env
-    initFirebaseEnv(import.meta.env as any);
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
 
+  try {
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
     const targetId = url.searchParams.get('targetId');

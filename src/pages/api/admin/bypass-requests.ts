@@ -1,9 +1,18 @@
 // src/pages/api/admin/bypass-requests.ts
 // Handle DJ bypass requests - DJs can request immediate access to go live
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 // Helper to generate a unique ID
 function generateId(): string {
@@ -11,7 +20,8 @@ function generateId(): string {
 }
 
 // GET - List all pending bypass requests (admin) OR check status for specific user
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const url = new URL(request.url);
     const action = url.searchParams.get('action');
@@ -165,7 +175,8 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST - Create a new bypass request OR approve/deny a request
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const body = await request.json();
     const { action, requestId, userId, userEmail, userName, email, djName, requestType, reason, mixCount, bestMixLikes } = body;
@@ -348,7 +359,8 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 // DELETE - Remove a bypass request
-export const DELETE: APIRoute = async ({ request }) => {
+export const DELETE: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const url = new URL(request.url);
     const requestId = url.searchParams.get('id');

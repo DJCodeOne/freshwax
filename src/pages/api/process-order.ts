@@ -1,13 +1,22 @@
 // src/pages/api/process-order.ts
 // Comprehensive order processing: payment splits, digital delivery, vinyl dropship
 import type { APIRoute } from 'astro';
-import { getDocument, addDocument, updateDocument, queryCollection } from '../../lib/firebase-rest';
+import { getDocument, addDocument, updateDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
   info: (...args: any[]) => isDev && console.log(...args),
   error: (...args: any[]) => console.error(...args),
 };
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 // Payment split configuration
 const PAYMENT_CONFIG = {
@@ -145,7 +154,10 @@ async function getStockistInfo(releaseId: string) {
   }
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const orderData = await request.json();
     log.info('[process-order] Processing order for:', orderData.customer?.email);

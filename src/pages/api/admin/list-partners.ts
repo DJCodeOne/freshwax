@@ -3,9 +3,18 @@
 // Uses firebase-rest.ts for Firestore access
 
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 // Hardcoded admin UIDs for verification
 const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33'];
@@ -34,7 +43,10 @@ async function isAdmin(uid: string): Promise<boolean> {
   return false;
 }
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   const url = new URL(request.url);
   const uid = url.searchParams.get('uid');
   

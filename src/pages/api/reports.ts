@@ -1,13 +1,25 @@
 // src/pages/api/reports.ts
 import type { APIRoute } from 'astro';
-import { queryCollection, addDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
+import { queryCollection, addDocument, updateDocument, deleteDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const prerender = false;
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 const REPORT_CATEGORIES = ['inappropriate_content', 'harassment', 'spam', 'copyright', 'hate_speech', 'impersonation', 'other'];
 const REPORT_TYPES = ['stream', 'artist', 'dj', 'user', 'release', 'mix', 'comment', 'chat', 'other'];
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const url = new URL(request.url);
     const status = url.searchParams.get('status') || 'pending';
@@ -67,7 +79,10 @@ export const GET: APIRoute = async ({ request }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const data = await request.json();
     const { type, targetId, targetName, targetUrl, category, description, reporterId, reporterName, reporterEmail } = data;
@@ -129,7 +144,10 @@ export const POST: APIRoute = async ({ request }) => {
   }
 };
 
-export const PUT: APIRoute = async ({ request }) => {
+export const PUT: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const data = await request.json();
     const { reportId, status, resolution, adminNotes, adminId } = data;
@@ -153,7 +171,10 @@ export const PUT: APIRoute = async ({ request }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ request }) => {
+export const DELETE: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const url = new URL(request.url);
     const reportId = url.searchParams.get('id');

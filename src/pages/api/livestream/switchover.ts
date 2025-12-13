@@ -2,10 +2,20 @@
 // Auto-switchover management - called periodically to handle DJ transitions
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 // POST: Check and perform auto-switchover
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const now = new Date();
     const nowISO = now.toISOString();
@@ -168,7 +178,8 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 // GET: Get current queue and live status
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ locals }) => {
+  initFirebase(locals);
   try {
     const now = new Date().toISOString();
 

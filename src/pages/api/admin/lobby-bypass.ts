@@ -1,28 +1,25 @@
 // src/pages/api/admin/lobby-bypass.ts
 // Admin API for managing DJ lobby access bypass
 // Allows admins to grant/revoke access to DJs who don't meet the 10 likes requirement
+// NOTE: getUserByEmail functionality replaced with Firestore lookup (Firebase Admin doesn't work on Cloudflare)
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
-// NOTE: Firebase Admin Auth is still needed for getUserByEmail functionality
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
+const ADMIN_KEY = 'freshwax-admin-2024';
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
 }
 
-const auth = getAuth();
-const ADMIN_KEY = 'freshwax-admin-2024';
-
 // GET: List all bypass approvals
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   const url = new URL(request.url);
   const action = url.searchParams.get('action');
 
@@ -60,7 +57,8 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST: Grant or revoke bypass
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const data = await request.json();
     const { action, email, userId, reason, adminKey } = data;
@@ -81,15 +79,31 @@ export const POST: APIRoute = async ({ request }) => {
         });
       }
 
-      // Find user by email using Firebase Auth
-      let targetUserId: string;
+      // Find user by email in Firestore (Firebase Auth Admin SDK doesn't work on Cloudflare)
+      let targetUserId: string | null = null;
       let userName: string | null = null;
 
-      try {
-        const userRecord = await auth.getUserByEmail(email);
-        targetUserId = userRecord.uid;
-        userName = userRecord.displayName || null;
-      } catch (e) {
+      // Try users collection first
+      const users = await queryCollection('users', {
+        filters: [{ field: 'email', op: 'EQUAL', value: email }],
+        limit: 1
+      });
+      if (users.length > 0) {
+        targetUserId = users[0].id;
+        userName = users[0].displayName || users[0].name || null;
+      } else {
+        // Try customers collection
+        const customers = await queryCollection('customers', {
+          filters: [{ field: 'email', op: 'EQUAL', value: email }],
+          limit: 1
+        });
+        if (customers.length > 0) {
+          targetUserId = customers[0].id;
+          userName = customers[0].displayName || customers[0].firstName || null;
+        }
+      }
+
+      if (!targetUserId) {
         return new Response(JSON.stringify({
           success: false,
           error: 'User not found with that email. They need to create an account first.'

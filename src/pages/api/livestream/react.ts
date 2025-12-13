@@ -3,8 +3,17 @@
 // Uses Pusher for real-time emoji delivery
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, incrementField } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, incrementField, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { createHmac, createHash } from 'crypto';
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 // Pusher configuration (from .env)
 const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
@@ -55,7 +64,8 @@ async function triggerPusher(channel: string, event: string, data: any): Promise
   }
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const data = await request.json();
     const { action, streamId, userId, userName, rating, sessionId, emoji, emojiType } = data;
@@ -344,7 +354,8 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 // Get user's reactions for a stream
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const url = new URL(request.url);
     const streamId = url.searchParams.get('streamId');

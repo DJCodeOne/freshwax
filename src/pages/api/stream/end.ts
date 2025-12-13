@@ -1,11 +1,18 @@
 // src/pages/api/stream/end.ts
 // Admin endpoint to forcefully end a stream
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   try {
     const data = await request.json();
     const { streamId, djId, reason } = data;

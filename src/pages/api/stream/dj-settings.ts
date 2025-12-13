@@ -1,13 +1,20 @@
 // src/pages/api/stream/dj-settings.ts
 // Admin endpoint to add/update DJ settings and grant streaming access
 import type { APIRoute } from 'astro';
-import { setDocument, updateDocument, deleteDocument } from '../../../lib/firebase-rest';
+import { setDocument, updateDocument, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
 const ADMIN_KEY = 'freshwax-admin-2024';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   try {
     const data = await request.json();
     const { userId, djName, twitchChannel, isApproved, adminKey } = data;

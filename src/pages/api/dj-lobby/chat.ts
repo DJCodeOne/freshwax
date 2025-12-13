@@ -73,10 +73,14 @@ function checkRateLimit(userId: string): boolean {
 
 // GET: Get recent chat messages (initial load only)
 export const GET: APIRoute = async ({ request, locals }) => {
-  try {
-    // Initialize Firebase env
-    initFirebaseEnv(import.meta.env as any);
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
 
+  try {
     const url = new URL(request.url);
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 50);
     const before = url.searchParams.get('before'); // For pagination
@@ -122,10 +126,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Send a chat message
 export const POST: APIRoute = async ({ request, locals }) => {
-  try {
-    // Initialize Firebase env
-    initFirebaseEnv(import.meta.env as any);
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
 
+  try {
     const data = await request.json();
     const { userId, name, text, avatar } = data;
 
@@ -197,10 +205,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE: Delete a message (admin/owner only)
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  try {
-    // Initialize Firebase env
-    initFirebaseEnv(import.meta.env as any);
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
 
+  try {
     const url = new URL(request.url);
     const messageId = url.searchParams.get('messageId');
     const userId = url.searchParams.get('userId');

@@ -2,13 +2,22 @@
 // Gift card management: create, validate, redeem, list
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, addDocument, queryCollection } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, addDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
   info: (...args: any[]) => isDev && console.log(...args),
   error: (...args: any[]) => console.error(...args),
 };
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 // Generate unique gift card code
 function generateGiftCardCode(): string {
@@ -24,7 +33,10 @@ function generateGiftCardCode(): string {
 }
 
 // GET: List gift cards (admin) or validate a code
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ url, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const params = new URL(url).searchParams;
     const action = params.get('action');
@@ -149,7 +161,10 @@ export const GET: APIRoute = async ({ url }) => {
 };
 
 // POST: Create or redeem gift card
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const body = await request.json();
     const { action } = body;

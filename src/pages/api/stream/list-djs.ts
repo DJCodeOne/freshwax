@@ -1,11 +1,18 @@
 // src/pages/api/stream/list-djs.ts
 // List approved DJs who can go live
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument } from '../../../lib/firebase-rest';
+import { queryCollection, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   const url = new URL(request.url);
   const approvedOnly = url.searchParams.get('approved') === 'true';
 

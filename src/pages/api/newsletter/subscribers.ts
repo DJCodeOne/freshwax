@@ -1,11 +1,21 @@
 // src/pages/api/newsletter/subscribers.ts
 // Get all subscribers for admin dashboard
 import type { APIRoute } from 'astro';
-import { queryCollection, deleteDocument, updateDocument } from '../../../lib/firebase-rest';
+import { queryCollection, deleteDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ cookies }) => {
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
+
+export const GET: APIRoute = async ({ cookies, locals }) => {
+  initFirebase(locals);
   try {
     // Check admin auth
     const adminId = cookies.get('adminId')?.value;
@@ -65,7 +75,8 @@ export const GET: APIRoute = async ({ cookies }) => {
 };
 
 // Delete subscriber
-export const DELETE: APIRoute = async ({ request, cookies }) => {
+export const DELETE: APIRoute = async ({ request, cookies, locals }) => {
+  initFirebase(locals);
   try {
     const adminId = cookies.get('adminId')?.value;
     if (!adminId) {
@@ -113,7 +124,8 @@ export const DELETE: APIRoute = async ({ request, cookies }) => {
 };
 
 // Update subscriber status (unsubscribe/resubscribe)
-export const PATCH: APIRoute = async ({ request, cookies }) => {
+export const PATCH: APIRoute = async ({ request, cookies, locals }) => {
+  initFirebase(locals);
   try {
     const adminId = cookies.get('adminId')?.value;
     if (!adminId) {

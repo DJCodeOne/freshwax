@@ -2,13 +2,22 @@
 // Stores comments as array within the dj-mix document (matching releases pattern)
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, clearCache } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
   info: (...args: any[]) => isDev && console.log(...args),
   error: (...args: any[]) => console.error(...args),
 };
+
+// Initialize Firebase helper
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 // Profanity filter - common profane words
 const PROFANITY_LIST = [
@@ -125,7 +134,10 @@ function validateContent(text: string): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     const { mixId, comment, userName, userId, gifUrl, avatarUrl } = await request.json();
 

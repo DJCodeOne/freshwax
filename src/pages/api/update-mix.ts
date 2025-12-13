@@ -1,9 +1,16 @@
 // src/pages/api/update-mix.ts
 // API endpoint to update mix description and backfill userId - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request, cookies, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   try {
     const { mixId, title, description, tracklist, artworkUrl, userId: userIdFromBody } = await request.json();
 

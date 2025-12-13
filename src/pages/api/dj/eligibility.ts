@@ -1,5 +1,14 @@
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, queryCollection, addDocument } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 // Default requirements (can be overridden by admin settings)
 const DEFAULT_REQUIREMENTS = {
@@ -25,7 +34,8 @@ async function getSettings() {
   return DEFAULT_REQUIREMENTS;
 }
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ url, locals }) => {
+  initFirebase(locals);
   const action = url.searchParams.get('action');
   const uid = url.searchParams.get('uid');
 
@@ -129,7 +139,8 @@ export const GET: APIRoute = async ({ url }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const body = await request.json();
     const { action, uid, reason } = body;

@@ -1,12 +1,22 @@
 // src/pages/api/livestream/relay-sources.ts
 // API for managing external radio relay sources
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
+
 // GET - List all relay sources or check specific one
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const url = new URL(request.url);
     const sourceId = url.searchParams.get('id');
@@ -43,7 +53,8 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST - Create new relay source
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const data = await request.json();
     
@@ -93,7 +104,8 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 // PUT - Update relay source
-export const PUT: APIRoute = async ({ request }) => {
+export const PUT: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const data = await request.json();
     const { id, ...updates } = data;
@@ -124,7 +136,8 @@ export const PUT: APIRoute = async ({ request }) => {
 };
 
 // DELETE - Remove relay source
-export const DELETE: APIRoute = async ({ request }) => {
+export const DELETE: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const url = new URL(request.url);
     const id = url.searchParams.get('id');

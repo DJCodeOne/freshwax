@@ -9,10 +9,20 @@
 // - 403 with { valid: false, reason: "..." } if stream is denied
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, validateStreamKeyTiming, buildHlsUrl } from '../../../lib/red5';
 
-export const GET: APIRoute = async ({ request }) => {
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
+
+export const GET: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   const url = new URL(request.url);
   const streamKey = url.searchParams.get('key') || url.searchParams.get('name') || '';
   

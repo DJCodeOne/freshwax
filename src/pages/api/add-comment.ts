@@ -1,7 +1,7 @@
 // src/pages/api/add-comment.ts
 // Add comments to releases with optional GIF support
 import type { APIRoute } from 'astro';
-import { getDocument, arrayUnion, clearCache } from '../../lib/firebase-rest';
+import { getDocument, arrayUnion, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -9,7 +9,14 @@ const log = {
   error: (...args: any[]) => console.error(...args),
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   try {
     const { releaseId, comment, userName, userId, gifUrl, avatarUrl } = await request.json();
 

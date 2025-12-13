@@ -2,7 +2,16 @@
 // Manage DJ weekly booking allowances (admin overrides)
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
 
 // Default limits
 export const DEFAULT_WEEKLY_SLOTS = 2;
@@ -10,7 +19,8 @@ export const DEFAULT_MAX_HOURS_PER_DAY = 4;
 export const MAX_BOOKING_DAYS_AHEAD = 30; // 1 month
 
 // GET: Fetch all allowances or check specific DJ's allowance
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const url = new URL(request.url);
     const djId = url.searchParams.get('djId');
@@ -73,7 +83,8 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST: Create/update DJ allowance
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const body = await request.json();
     const { djId, weeklySlots, maxHoursPerDay, reason, djName } = body;
@@ -152,7 +163,8 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 // DELETE: Remove DJ allowance (revert to defaults)
-export const DELETE: APIRoute = async ({ request }) => {
+export const DELETE: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
   try {
     const body = await request.json();
     const { djId } = body;
