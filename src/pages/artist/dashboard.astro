@@ -7,9 +7,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
-import { getAdminDb } from '../../lib/firebase-admin';
-
-const db = await getAdminDb();
+import { getDocument, queryCollection } from '../../lib/firebase-rest';
 
 // Check for partnerId cookie first, then fall back to userId or customerId
 let partnerId = Astro.cookies.get('partnerId')?.value || '';

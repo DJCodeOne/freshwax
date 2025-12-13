@@ -5,9 +5,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
-import { getAdminDb } from '../../lib/firebase-admin';
-
-const db = await getAdminDb();
+import { getDocument, queryCollection } from '../../lib/firebase-rest';
 
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
 let partner: any = null;

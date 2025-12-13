@@ -3,22 +3,17 @@
 // Fresh Wax Partner Approvals - Unified Admin Design
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { getAdminDb } from '../../../lib/firebase-admin';
+import { queryCollection } from '../../../lib/firebase-rest';
 
-const db = await getAdminDb();
+// Fetch pending partners via REST API
+const allPending = await queryCollection('artists', {
+  filters: [{ field: 'approved', op: 'EQUAL', value: false }]
+});
 
-// Fetch pending partners
-if (!db) throw new Error('Database not available');
-const pendingSnapshot = await db.collection('artists')
-  .where('approved', '==', false)
-  .orderBy('registeredAt', 'desc')
-  .get();
-
-const pendingPartners = pendingSnapshot.docs.map(doc => ({
-  id: doc.id,
-  ...doc.data(),
-  registeredAt: doc.data().registeredAt?.toDate?.() || new Date()
-}));
+const pendingPartners = allPending.map((data: any) => ({
+  ...data,
+  registeredAt: data.registeredAt instanceof Date ? data.registeredAt : new Date(data.registeredAt || Date.now())
+})).sort((a: any, b: any) => b.registeredAt.getTime() - a.registeredAt.getTime());
 
 // Count by role - DJs are now customer-level, not partners
 const counts = {

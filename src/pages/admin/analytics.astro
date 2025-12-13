@@ -3,9 +3,7 @@
 // Fresh Wax Analytics Dashboard - Unified Admin Design
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { getAdminDb } from '../../lib/firebase-admin';
-
-const db = await getAdminDb();
+import { queryCollection } from '../../lib/firebase-rest';
 
 // Get date ranges
 const now = new Date();
@@ -14,22 +12,18 @@ const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 const startOfYear = new Date(now.getFullYear(), 0, 1);
 
-// Fetch all orders for analytics - simple query to avoid index requirements
-let orders = [];
+// Fetch all orders for analytics via REST API
+let orders: any[] = [];
 try {
-  const ordersSnapshot = await db.collection('orders')
-    .orderBy('createdAt', 'desc')
-    .limit(500)
-    .get();
+  const allOrders = await queryCollection('orders', {
+    orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+    limit: 500
+  });
 
-  orders = ordersSnapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate?.() || new Date()
-    };
-  }).filter(o => o.status !== 'cancelled');
+  orders = allOrders.map((data: any) => ({
+    ...data,
+    createdAt: data.createdAt instanceof Date ? data.createdAt : new Date(data.createdAt || Date.now())
+  })).filter((o: any) => o.status !== 'cancelled');
 } catch (e) {
   console.error('Error fetching orders:', e);
 }

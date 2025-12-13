@@ -3,21 +3,17 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
-import { getAdminDb } from '../../lib/firebase-admin';
+import { getDocument } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
-const db = await getAdminDb();
 const { id } = Astro.params;
 let order = null;
 let error = null;
 
 try {
-  if (!db) throw new Error('Database not available');
-  const orderDoc = await db.collection('orders').doc(id).get();
-  if (orderDoc.exists) {
-    order = { id: orderDoc.id, ...orderDoc.data() };
-  } else {
+  order = await getDocument('orders', id as string);
+  if (!order) {
     error = 'Order not found';
   }
 } catch (e) {
@@ -64,10 +60,9 @@ const enrichedItems = await Promise.all((order?.items || []).map(async (item: an
   }
   
   try {
-    const releaseDoc = await db.collection('releases').doc(releaseId).get();
-    
-    if (releaseDoc.exists) {
-      const releaseData = releaseDoc.data();
+    const releaseData = await getDocument('releases', releaseId);
+
+    if (releaseData) {
       
       
       // If single track purchase, only include that track

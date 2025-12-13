@@ -4,36 +4,29 @@
 // Status flow: Digital = instant completed | Physical = pending → processing → shipped → delivered
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { getAdminDb } from '../../lib/firebase-admin';
+import { queryCollection, getDocument } from '../../lib/firebase-rest';
 
-const db = await getAdminDb();
+// Fetch orders via REST API
+const allOrders = await queryCollection('orders', {
+  orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+  limit: 100
+});
 
-// Fetch orders with customer info
-if (!db) throw new Error('Database not available');
-const ordersSnapshot = await db.collection('orders')
-  .orderBy('createdAt', 'desc')
-  .limit(100)
-  .get();
-
-const orders = await Promise.all(ordersSnapshot.docs.map(async doc => {
-  const data = doc.data();
-  
+const orders = await Promise.all(allOrders.map(async (data: any) => {
   // Get customer info if available
   let customerName = 'Guest';
   let customerEmail = data.email || '';
   let customerPhone = data.phone || '';
   let customerAddress = data.shippingAddress || data.address || null;
   let billingAddress = data.billingAddress || null;
-  
+
   if (data.customerId || data.userId) {
     try {
-      const customerDoc = await db.collection('customers').doc(data.customerId || data.userId).get();
-      if (customerDoc.exists) {
-        const customer = customerDoc.data();
+      const customer = await getDocument('customers', data.customerId || data.userId);
+      if (customer) {
         customerName = customer.fullName || customer.name || customer.displayName || 'Customer';
         customerEmail = customer.email || customerEmail;
         customerPhone = customer.phone || customerPhone;
-        // Use customer's saved address if order doesn't have one
         if (!customerAddress && customer.address) {
           customerAddress = customer.address;
         }
@@ -43,25 +36,20 @@ const orders = await Promise.all(ordersSnapshot.docs.map(async doc => {
       }
     } catch (e) {}
   }
-  
+
   // Auto-deliver check: if shipped more than 14 days ago
   let status = data.status || 'pending';
   if (status === 'shipped' && data.shippedAt) {
-    const shippedDate = data.shippedAt.toDate?.() || new Date(data.shippedAt);
+    const shippedDate = data.shippedAt instanceof Date ? data.shippedAt : new Date(data.shippedAt);
     const daysSinceShipped = (Date.now() - shippedDate.getTime()) / (1000 * 60 * 60 * 24);
     if (daysSinceShipped >= 14) {
       status = 'delivered';
-      // Update in background (fire and forget)
-      db.collection('orders').doc(doc.id).update({ 
-        status: 'delivered',
-        deliveredAt: new Date(),
-        autoDelivered: true
-      }).catch(() => {});
+      // Note: Auto-update disabled in REST mode - use API endpoint instead
     }
   }
-  
+
   return {
-    id: doc.id,
+    id: data.id,
     ...data,
     status,
     customerName,
@@ -73,9 +61,9 @@ const orders = await Promise.all(ordersSnapshot.docs.map(async doc => {
     paymentStatus: data.paymentStatus || data.payment?.status || 'Unknown',
     notes: data.notes || data.customerNotes || '',
     trackingNumber: data.trackingNumber || '',
-    createdAt: data.createdAt?.toDate?.() || new Date(),
-    shippedAt: data.shippedAt?.toDate?.() || null,
-    deliveredAt: data.deliveredAt?.toDate?.() || null
+    createdAt: data.createdAt instanceof Date ? data.createdAt : new Date(data.createdAt || Date.now()),
+    shippedAt: data.shippedAt ? (data.shippedAt instanceof Date ? data.shippedAt : new Date(data.shippedAt)) : null,
+    deliveredAt: data.deliveredAt ? (data.deliveredAt instanceof Date ? data.deliveredAt : new Date(data.deliveredAt)) : null
   };
 }));
 

@@ -5,9 +5,7 @@
 
 export const prerender = false;
 
-import { getAdminDb } from '../../lib/firebase-admin';
-
-const db = await getAdminDb();
+import { getDocument, queryCollection } from '../../lib/firebase-rest';
 
 // Get partner from session
 const partnerId = Astro.cookies.get('partnerId')?.value || '';

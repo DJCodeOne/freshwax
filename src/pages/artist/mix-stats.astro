@@ -5,9 +5,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
-import { getAdminDb } from '../../lib/firebase-admin';
-
-const db = await getAdminDb();
+import { getDocument, queryCollection } from '../../lib/firebase-rest';
 
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
 let partner = null;
@@ -32,34 +30,30 @@ const calculateRating = (mix: any): number => {
 
 if (partnerId) {
   try {
-    const partnerDoc = await db.collection('artists').doc(partnerId).get();
-    if (partnerDoc.exists) {
-      partner = { id: partnerDoc.id, ...partnerDoc.data() };
-      
+    partner = await getDocument('artists', partnerId);
+    if (partner) {
       // Get all mixes and filter
-      const allMixesSnap = await db.collection('dj-mixes').get();
+      const allMixes = await queryCollection('dj-mixes');
       const partnerName = partner.artistName?.toLowerCase().trim();
-      
+
       // Filter mixes belonging to this user
-      const userMixDocs = allMixesSnap.docs.filter(doc => {
-        const data = doc.data();
-        const matchesUserId = data.userId === partnerId;
+      const userMixes = allMixes.filter((mix: any) => {
+        const matchesUserId = mix.userId === partnerId;
         const matchesDjName = partnerName && (
-          data.djName?.toLowerCase().trim() === partnerName ||
-          data.dj_name?.toLowerCase().trim() === partnerName
+          mix.djName?.toLowerCase().trim() === partnerName ||
+          mix.dj_name?.toLowerCase().trim() === partnerName
         );
         return matchesUserId || matchesDjName;
       });
-      
+
       // Sort by engagement score descending (highest rated first)
-      userMixDocs.sort((a, b) => {
-        const scoreA = calculateRating(a.data());
-        const scoreB = calculateRating(b.data());
+      userMixes.sort((a: any, b: any) => {
+        const scoreA = calculateRating(a);
+        const scoreB = calculateRating(b);
         return scoreB - scoreA;
       });
-      
-      for (const mixDoc of userMixDocs) {
-        const mixData = { id: mixDoc.id, ...mixDoc.data() };
+
+      for (const mixData of userMixes) {
         mixData.engagementScore = calculateRating(mixData);
         mixes.push(mixData);
         

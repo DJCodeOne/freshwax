@@ -3,22 +3,17 @@
 // Fresh Wax DJ Mixes Management - Unified Admin Design
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { getAdminDb } from '../../../lib/firebase-admin';
+import { queryCollection } from '../../../lib/firebase-rest';
 
-const db = await getAdminDb();
-
-// Fetch all DJ mixes
-if (!db) throw new Error('Database not available');
-const mixesSnapshot = await db.collection('dj-mixes').orderBy('uploadedAt', 'desc').get();
-
-const mixes = mixesSnapshot.docs.map(doc => {
-  const data = doc.data();
-  return {
-    id: doc.id,
-    ...data,
-    uploadedAt: data.uploadedAt?.toDate?.() || new Date()
-  };
+// Fetch all DJ mixes via REST API
+const allMixes = await queryCollection('dj-mixes', {
+  orderBy: { field: 'uploadedAt', direction: 'DESCENDING' }
 });
+
+const mixes = allMixes.map((data: any) => ({
+  ...data,
+  uploadedAt: data.uploadedAt instanceof Date ? data.uploadedAt : new Date(data.uploadedAt || Date.now())
+}));
 
 // Stats
 const totalMixes = mixes.length;

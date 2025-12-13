@@ -5,9 +5,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
-import { getAdminDb } from '../../lib/firebase-admin';
-
-const db = await getAdminDb();
+import { getDocument, queryCollection } from '../../lib/firebase-rest';
 
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
 let partner = null;
@@ -23,21 +21,14 @@ let totals = {
 
 if (partnerId) {
   try {
-    const partnerDoc = await db.collection('artists').doc(partnerId).get();
-    if (partnerDoc.exists) {
-      partner = { id: partnerDoc.id, ...partnerDoc.data() };
-      
+    partner = await getDocument('artists', partnerId);
+    if (partner) {
       // Get releases for this artist by email (since uploads use email, not artistId)
       const artistEmail = partner.email;
       if (artistEmail) {
-        const releasesSnap = await db.collection('releases')
-          .where('email', '==', artistEmail)
-          .get();
-        
-        releases = releasesSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        releases = await queryCollection('releases', {
+          filters: [{ field: 'email', op: 'EQUAL', value: artistEmail }]
+        });
       }
       
       // Calculate totals
