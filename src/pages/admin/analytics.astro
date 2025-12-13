@@ -140,14 +140,13 @@ let totalLikes = 0;
 let totalMixes = 0;
 
 try {
-  const mixesSnapshot = await db.collection('dj-mixes').get();
-  totalMixes = mixesSnapshot.size;
-  
-  mixesSnapshot.forEach(doc => {
-    const data = doc.data();
-    totalPlays += data.plays || 0;
-    totalDownloads += data.downloads || 0;
-    totalLikes += data.likes || 0;
+  const mixes = await queryCollection('dj-mixes', { limit: 500 });
+  totalMixes = mixes.length;
+
+  mixes.forEach(mix => {
+    totalPlays += mix.plays || 0;
+    totalDownloads += mix.downloads || 0;
+    totalLikes += mix.likes || 0;
   });
 } catch (e) {
   console.error('Error fetching mixes:', e);

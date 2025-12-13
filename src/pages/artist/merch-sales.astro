@@ -13,76 +13,62 @@ let products = [];
 
 if (partnerId) {
   try {
-    const partnerDoc = await db.collection('artists').doc(partnerId).get();
-    if (partnerDoc.exists) {
-      partner = { id: partnerDoc.id, ...partnerDoc.data() };
-      
+    const partnerDoc = await getDocument('artists', partnerId);
+    if (partnerDoc) {
+      partner = { id: partnerId, ...partnerDoc };
+
       // Try multiple strategies to find products linked to this supplier
-      let merchDocs: any[] = [];
-      
+      let merchProducts: any[] = [];
+
       // Strategy 1: Query by supplierId
-      const byIdSnap = await db.collection('merch')
-        .where('supplierId', '==', partnerId)
-        .get();
-      if (!byIdSnap.empty) {
-        merchDocs = byIdSnap.docs;
-      }
-      
+      merchProducts = await queryCollection('merch', {
+        filters: [{ field: 'supplierId', op: 'EQUAL', value: partnerId }]
+      });
+
       // Strategy 2: If no results, try by supplier name
-      if (merchDocs.length === 0 && partner.artistName) {
-        const byNameSnap = await db.collection('merch')
-          .where('supplierName', '==', partner.artistName)
-          .get();
-        if (!byNameSnap.empty) {
-          merchDocs = byNameSnap.docs;
-        }
+      if (merchProducts.length === 0 && partner.artistName) {
+        merchProducts = await queryCollection('merch', {
+          filters: [{ field: 'supplierName', op: 'EQUAL', value: partner.artistName }]
+        });
       }
-      
+
       // Strategy 3: Check merch-suppliers collection for linked products
-      if (merchDocs.length === 0) {
+      if (merchProducts.length === 0) {
         try {
-          const supplierDoc = await db.collection('merch-suppliers').doc(partnerId).get();
-          if (supplierDoc.exists) {
-            const supplierData = supplierDoc.data();
-            if (supplierData?.products && supplierData.products.length > 0) {
-              const productPromises = supplierData.products.slice(0, 50).map((pid: string) => 
-                db.collection('merch').doc(pid).get()
-              );
-              const productDocs = await Promise.all(productPromises);
-              merchDocs = productDocs.filter(d => d.exists);
-            }
+          const supplierData = await getDocument('merch-suppliers', partnerId);
+          if (supplierData?.products && supplierData.products.length > 0) {
+            const productPromises = supplierData.products.slice(0, 50).map((pid: string) =>
+              getDocument('merch', pid)
+            );
+            const productDocs = await Promise.all(productPromises);
+            merchProducts = productDocs.filter((d): d is NonNullable<typeof d> => d !== null);
           }
         } catch (e) {
           // Ignore errors from merch-suppliers lookup
         }
       }
-      
-      const productIds = merchDocs.map(doc => doc.id);
-      products = merchDocs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
+
+      const productIds = merchProducts.map(p => p.id);
+      products = merchProducts;
+
       // Fetch orders containing this supplier's products
       if (productIds.length > 0) {
-        const ordersSnap = await db.collection('orders')
-          .where('status', '!=', 'cancelled')
-          .orderBy('status')
-          .orderBy('createdAt', 'desc')
-          .limit(100)
-          .get();
-        
+        // Query orders (REST API doesn't support != so we filter client-side)
+        const allOrders = await queryCollection('orders', {
+          orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+          limit: 100
+        });
+
         // Filter orders to only include items from this supplier
-        ordersSnap.docs.forEach(doc => {
-          const order = doc.data();
-          const supplierItems = (order.items || []).filter((item: any) => 
+        allOrders.filter(order => order.status !== 'cancelled').forEach(order => {
+          const supplierItems = (order.items || []).filter((item: any) =>
             productIds.includes(item.productId) || item.supplierId === partnerId
           );
-          
+
           if (supplierItems.length > 0) {
             sales.push({
-              id: doc.id,
-              orderDate: order.createdAt?.toDate?.() || new Date(),
+              id: order.id,
+              orderDate: order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt),
               status: order.status,
               items: supplierItems,
               total: supplierItems.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0)

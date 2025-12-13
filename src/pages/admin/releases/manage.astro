@@ -3,43 +3,23 @@
 // Fresh Wax Releases Management - Unified Admin Design
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { queryCollection } from '../../../lib/firebase-rest';
 
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
+export const prerender = false;
 
-const db = getFirestore();
-
-let releases = [];
+let releases: any[] = [];
 let errorMessage = '';
 
 try {
-  const releasesSnapshot = await db.collection('releases').get();
-  
-  releasesSnapshot.forEach(doc => {
-    const data = doc.data();
-    releases.push({
-      id: doc.id,
-      ...data
-    });
-  });
-  
+  releases = await queryCollection('releases', { limit: 500 });
+
   // Sort by processedAt or createdAt (newest first)
   releases.sort((a, b) => {
     const dateA = new Date(a.processedAt || a.createdAt || 0);
     const dateB = new Date(b.processedAt || b.createdAt || 0);
     return dateB.getTime() - dateA.getTime();
   });
-  
+
 } catch (error) {
   console.error('[MANAGE] Error loading releases:', error);
   errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -71,8 +51,6 @@ const formatDate = (dateStr) => {
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
 };
-
-export const prerender = false;
 ---
 
 <AdminLayout title="Releases" activeNav="releases" showStats={true} stats={stats}>

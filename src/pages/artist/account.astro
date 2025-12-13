@@ -32,35 +32,29 @@ let activity: any[] = [];
 
 if (partnerId) {
   try {
-    const partnerDoc = await db.collection('artists').doc(partnerId).get();
-    if (partnerDoc.exists) {
-      partner = { id: partnerDoc.id, ...partnerDoc.data() };
-      
+    const partnerDoc = await getDocument('artists', partnerId);
+    if (partnerDoc) {
+      partner = { id: partnerId, ...partnerDoc };
+
       // If no avatar in artists collection, try to get from customers collection
       if (!partner.avatarUrl && !partner.imageUrl && !partner.photoURL) {
         try {
-          const customerDoc = await db.collection('customers').doc(partnerId).get();
-          if (customerDoc.exists) {
-            const customerData = customerDoc.data();
+          const customerData = await getDocument('customers', partnerId);
+          if (customerData) {
             partner.avatarUrl = customerData?.avatarUrl || customerData?.photoURL || null;
           }
         } catch (e) {
           // Ignore errors fetching customer avatar
         }
       }
-      
+
       // Fetch orders for this partner
-      const ordersSnap = await db.collection('orders')
-        .where('artistId', '==', partnerId)
-        .orderBy('createdAt', 'desc')
-        .limit(50)
-        .get();
-      
-      orders = ordersSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
+      orders = await queryCollection('orders', {
+        filters: [{ field: 'artistId', op: 'EQUAL', value: partnerId }],
+        orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+        limit: 50
+      });
+
       // Calculate order stats
       orders.forEach(order => {
         orderStats.total++;
@@ -70,12 +64,12 @@ if (partnerId) {
         else if (status === 'shipped') orderStats.shipped++;
         else if (status === 'delivered') orderStats.delivered++;
         else if (status === 'cancelled') orderStats.cancelled++;
-        
+
         // Calculate sales
         const orderTotal = order.total || order.amount || 0;
         salesStats.totalRevenue += orderTotal;
         salesStats.totalSales++;
-        
+
         if (order.type === 'release' || order.type === 'music') {
           salesStats.releaseSales++;
           salesStats.releaseRevenue += orderTotal;
@@ -84,12 +78,12 @@ if (partnerId) {
           salesStats.merchRevenue += orderTotal;
         }
       });
-      
+
       // Calculate payouts - artists get paid at checkout
       // 70% goes to artist, 30% is fees (payment processing + Fresh Wax)
       salesStats.totalPaidOut = salesStats.totalRevenue * 0.7;
       salesStats.totalFeesPaid = salesStats.totalRevenue * 0.3;
-      
+
       // Recent activity (combine from various sources)
       activity = orders.slice(0, 10).map(order => ({
         type: 'order',

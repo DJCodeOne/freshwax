@@ -3,22 +3,11 @@
 // Merch item edit page - based on releases edit layout
 
 import AdminLayout from '../../../../layouts/AdminLayout.astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument, updateDocument } from '../../../../lib/firebase-rest';
 import '../../../../styles/admin/merch/edit.css';
 
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
+export const prerender = false;
 
-const db = getFirestore();
 const { id } = Astro.params;
 
 // Fetch product from Firebase
@@ -30,8 +19,8 @@ let successMessage = '';
 if (Astro.request.method === 'POST') {
   try {
     const formData = await Astro.request.formData();
-    
-    const updateData = {
+
+    const updateData: Record<string, any> = {
       name: formData.get('name') || '',
       sku: formData.get('sku') || '',
       description: formData.get('description') || '',
@@ -48,15 +37,15 @@ if (Astro.request.method === 'POST') {
       published: formData.get('published') === 'on',
       updatedAt: new Date().toISOString(),
     };
-    
+
     // Remove null values
     Object.keys(updateData).forEach(key => {
       if (updateData[key] === null) delete updateData[key];
     });
-    
-    await db.collection('merch').doc(id).update(updateData);
+
+    await updateDocument('merch', id as string, updateData);
     successMessage = 'Product updated successfully!';
-    
+
   } catch (error) {
     console.error('[MERCH EDIT] Error updating:', error);
     errorMessage = error instanceof Error ? error.message : 'Failed to update product';
@@ -65,10 +54,10 @@ if (Astro.request.method === 'POST') {
 
 // Fetch product data
 try {
-  const productDoc = await db.collection('merch').doc(id).get();
-  
-  if (productDoc.exists) {
-    product = { id: productDoc.id, ...productDoc.data() };
+  const productDoc = await getDocument('merch', id as string);
+
+  if (productDoc) {
+    product = { id, ...productDoc };
   } else {
     errorMessage = 'Product not found';
   }
@@ -92,8 +81,6 @@ const getStockBadgeClass = (stock) => {
   if (stock <= 5) return 'warning';
   return 'success';
 };
-
-export const prerender = false;
 ---
 
 <AdminLayout title={product ? `Edit: ${product.name}` : 'Edit Product'} activeNav="merch">
