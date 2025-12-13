@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, queryCollection, addDocument } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, queryCollection, addDocument } from '../../../lib/firebase-rest';
 const ADMIN_UID = 'Y3TGc171cHSWTqZDRSniyu7Jxc33';
 
 // Helper to check if user is admin

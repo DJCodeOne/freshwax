@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, queryCollection, addDocument } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, queryCollection, addDocument } from '../../../lib/firebase-rest';
 
 // Default requirements (can be overridden by admin settings)
 const DEFAULT_REQUIREMENTS = {
