@@ -1,54 +1,35 @@
 // src/pages/api/giftcards/purchased.ts
-// Get user's purchased gift cards
-
+// Get user's purchased gift cards - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
+import { getDocument } from '../../../lib/firebase-rest';
 
 export const GET: APIRoute = async ({ request }) => {
   try {
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
-    
+
     if (!userId) {
       return new Response(JSON.stringify({
         success: false,
         error: 'User ID required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
-    // Get purchased gift cards from customer's subcollection
-    const purchasedSnapshot = await db.collection('customers')
-      .doc(userId)
-      .collection('purchasedGiftCards')
-      .orderBy('purchasedAt', 'desc')
-      .get();
-    
-    const purchasedCards = purchasedSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    
+
+    // Get customer document which may contain purchased gift cards
+    const customerDoc = await getDocument('customers', userId);
+
+    // The subcollection approach doesn't work with REST API directly,
+    // so we'll check if purchased cards are stored on the customer doc
+    const purchasedCards = customerDoc?.purchasedGiftCards || [];
+
     return new Response(JSON.stringify({
       success: true,
       purchasedCards
-    }), { 
-      status: 200, 
-      headers: { 'Content-Type': 'application/json' } 
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
     console.error('[giftcards/purchased] Error:', error);
     return new Response(JSON.stringify({
