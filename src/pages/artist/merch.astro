@@ -54,17 +54,6 @@ if (partnerId) {
 const isLoggedIn = !!partner;
 const isMerchSupplier = partner?.isMerchSupplier === true;
 
-// Debug info
-const debugInfo = {
-  partnerId,
-  partnerFound: !!partner,
-  partnerName: partner?.artistName || 'N/A',
-  isMerchSupplier: partner?.isMerchSupplier,
-  productsFound: products.length,
-  productIds: products.map(p => p.id).slice(0, 5)
-};
-console.log('[merch.astro] Debug:', JSON.stringify(debugInfo));
-
 // Calculate stats
 const totalProducts = products.length;
 const totalStock = products.reduce((sum, p) => sum + (p.totalStock || p.stock || 0), 0);
@@ -404,15 +393,6 @@ const processedProducts = products.map(product => {
 </head>
 <body>
   <div class="container">
-    <!-- Global debug - always visible -->
-    <div style="background: rgba(255,100,0,0.3); border: 2px solid orange; padding: 1rem; margin-bottom: 1rem; border-radius: 8px; font-size: 0.85rem; font-family: monospace; color: #fff;">
-      <strong>DEBUG:</strong><br/>
-      partnerId: "{partnerId}"<br/>
-      partnerFound: {String(!!partner)}<br/>
-      partnerName: "{partner?.artistName || 'N/A'}"<br/>
-      isMerchSupplier: {String(partner?.isMerchSupplier)}<br/>
-      productsFound: {products.length}
-    </div>
     {!isLoggedIn ? (
       <div class="auth-message">
         <h2>Sign In Required</h2>
