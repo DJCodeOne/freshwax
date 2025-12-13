@@ -133,7 +133,7 @@ export const POST: APIRoute = async ({ request }) => {
 
       // Build request data based on role type
       const requestData: any = {
-        requestedAt: FieldValue.serverTimestamp(),
+        requestedAt: new Date().toISOString(),
         status: 'pending'
       };
 
