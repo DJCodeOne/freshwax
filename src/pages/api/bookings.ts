@@ -1,55 +1,57 @@
 import type { APIRoute } from 'astro';
-import { getAdminDb, getFieldValue, getTimestamp } from '../../lib/firebase-admin';
+import { queryCollection, getDocument, setDocument } from '../../lib/firebase-rest';
 
 const MAX_DAILY_HOURS = 2;
+const PROJECT_ID = 'freshwax-store';
 
 // Helper to check DJ eligibility
-async function isDJEligible(db: any, uid: string): Promise<boolean> {
-  const userDoc = await db.collection('users').doc(uid).get();
-  if (!userDoc.exists) return false;
-  return userDoc.data()?.roles?.djEligible === true;
+async function isDJEligible(uid: string): Promise<boolean> {
+  const user = await getDocument('users', uid);
+  if (!user) return false;
+  return user.roles?.djEligible === true;
 }
 
 // Get user's booked hours for a specific day
-async function getUserDailyHours(db: any, Timestamp: any, uid: string, date: Date): Promise<number> {
+async function getUserDailyHours(uid: string, date: Date): Promise<number> {
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date(date);
   endOfDay.setHours(23, 59, 59, 999);
 
-  const bookingsSnap = await db.collection('livestream-bookings')
-    .where('djId', '==', uid)
-    .where('startTime', '>=', Timestamp.fromDate(startOfDay))
-    .where('startTime', '<=', Timestamp.fromDate(endOfDay))
-    .get();
+  // Get all bookings for this user and filter by date locally
+  const bookings = await queryCollection('livestream-bookings', {
+    filters: [{ field: 'djId', op: 'EQUAL', value: uid }],
+    skipCache: true
+  });
 
   let totalHours = 0;
-  bookingsSnap.forEach((doc: any) => {
-    totalHours += doc.data().duration || 1;
-  });
+  for (const booking of bookings) {
+    const bookingDate = booking.startTime ? new Date(booking.startTime) : null;
+    if (bookingDate && bookingDate >= startOfDay && bookingDate <= endOfDay) {
+      totalHours += booking.duration || 1;
+    }
+  }
 
   return totalHours;
 }
 
 // Check if slot is available
-async function isSlotAvailable(db: any, Timestamp: any, startTime: Date, duration: number): Promise<{ available: boolean; conflict?: string }> {
+async function isSlotAvailable(startTime: Date, duration: number): Promise<{ available: boolean; conflict?: string }> {
   const endTime = new Date(startTime);
   endTime.setHours(endTime.getHours() + duration);
 
-  // Get bookings that might overlap
   const dayStart = new Date(startTime);
   dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(startTime);
   dayEnd.setHours(23, 59, 59, 999);
 
-  const bookingsSnap = await db.collection('livestream-bookings')
-    .where('startTime', '>=', Timestamp.fromDate(dayStart))
-    .where('startTime', '<=', Timestamp.fromDate(dayEnd))
-    .get();
+  // Get all bookings and filter by date locally
+  const bookings = await queryCollection('livestream-bookings', { skipCache: true });
 
-  for (const doc of bookingsSnap.docs) {
-    const booking = doc.data();
-    const bookingStart = booking.startTime.toDate();
+  for (const booking of bookings) {
+    const bookingStart = booking.startTime ? new Date(booking.startTime) : null;
+    if (!bookingStart || bookingStart < dayStart || bookingStart > dayEnd) continue;
+
     const bookingEnd = new Date(bookingStart);
     bookingEnd.setHours(bookingEnd.getHours() + (booking.duration || 1));
 
@@ -57,12 +59,17 @@ async function isSlotAvailable(db: any, Timestamp: any, startTime: Date, duratio
     if (startTime < bookingEnd && endTime > bookingStart) {
       return {
         available: false,
-        conflict: `Slot conflicts with ${booking.djName}'s booking`
+        conflict: `Slot conflicts with ${booking.djName || 'another DJ'}'s booking`
       };
     }
   }
 
   return { available: true };
+}
+
+// Generate a unique ID
+function generateId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 }
 
 export const GET: APIRoute = async ({ url }) => {
@@ -71,20 +78,10 @@ export const GET: APIRoute = async ({ url }) => {
   const dateStr = url.searchParams.get('date');
 
   try {
-    const db = await getAdminDb();
-    const Timestamp = await getTimestamp();
-
-    if (!db || !Timestamp) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Firebase not initialized'
-      }), { status: 503, headers: { 'Content-Type': 'application/json' } });
-    }
-
     // Get user's daily bookings and allowance
     if (action === 'getDailyInfo' && uid && dateStr) {
       const date = new Date(dateStr);
-      const usedHours = await getUserDailyHours(db, Timestamp, uid, date);
+      const usedHours = await getUserDailyHours(uid, date);
 
       return new Response(JSON.stringify({
         success: true,
@@ -102,24 +99,22 @@ export const GET: APIRoute = async ({ url }) => {
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const bookingsSnap = await db.collection('livestream-bookings')
-        .where('startTime', '>=', Timestamp.fromDate(startOfDay))
-        .where('startTime', '<=', Timestamp.fromDate(endOfDay))
-        .orderBy('startTime', 'asc')
-        .get();
+      const allBookings = await queryCollection('livestream-bookings', { skipCache: true });
 
-      const bookings: any[] = [];
-      bookingsSnap.forEach((doc: any) => {
-        const data = doc.data();
-        bookings.push({
-          id: doc.id,
-          djName: data.djName,
-          streamTitle: data.streamTitle,
-          startTime: data.startTime.toDate().toISOString(),
-          duration: data.duration || 1,
-          djId: data.djId
-        });
-      });
+      const bookings = allBookings
+        .filter(b => {
+          const bookingDate = b.startTime ? new Date(b.startTime) : null;
+          return bookingDate && bookingDate >= startOfDay && bookingDate <= endOfDay;
+        })
+        .map(b => ({
+          id: b.id,
+          djName: b.djName,
+          streamTitle: b.streamTitle,
+          startTime: b.startTime instanceof Date ? b.startTime.toISOString() : b.startTime,
+          duration: b.duration || 1,
+          djId: b.djId
+        }))
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
       return new Response(JSON.stringify({
         success: true,
@@ -132,24 +127,25 @@ export const GET: APIRoute = async ({ url }) => {
       const now = new Date();
       now.setHours(now.getHours() - 2); // Include currently live
 
-      const bookingsSnap = await db.collection('livestream-bookings')
-        .where('djId', '==', uid)
-        .where('startTime', '>=', Timestamp.fromDate(now))
-        .orderBy('startTime', 'asc')
-        .get();
-
-      const bookings: any[] = [];
-      bookingsSnap.forEach((doc: any) => {
-        const data = doc.data();
-        bookings.push({
-          id: doc.id,
-          djName: data.djName,
-          streamTitle: data.streamTitle,
-          description: data.description,
-          startTime: data.startTime.toDate().toISOString(),
-          duration: data.duration || 1
-        });
+      const allBookings = await queryCollection('livestream-bookings', {
+        filters: [{ field: 'djId', op: 'EQUAL', value: uid }],
+        skipCache: true
       });
+
+      const bookings = allBookings
+        .filter(b => {
+          const bookingDate = b.startTime ? new Date(b.startTime) : null;
+          return bookingDate && bookingDate >= now;
+        })
+        .map(b => ({
+          id: b.id,
+          djName: b.djName,
+          streamTitle: b.streamTitle,
+          description: b.description,
+          startTime: b.startTime instanceof Date ? b.startTime.toISOString() : b.startTime,
+          duration: b.duration || 1
+        }))
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
       return new Response(JSON.stringify({
         success: true,
@@ -166,24 +162,13 @@ export const GET: APIRoute = async ({ url }) => {
     console.error('Bookings API GET error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: error.message || 'Unknown error'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const db = await getAdminDb();
-    const FieldValue = await getFieldValue();
-    const Timestamp = await getTimestamp();
-
-    if (!db || !FieldValue || !Timestamp) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Firebase not initialized'
-      }), { status: 503, headers: { 'Content-Type': 'application/json' } });
-    }
-
     const body = await request.json();
     const { action, uid, djName, streamTitle, description, slots, durationType } = body;
 
@@ -197,7 +182,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       // Verify DJ eligibility
-      if (!(await isDJEligible(db, uid))) {
+      if (!(await isDJEligible(uid))) {
         return new Response(JSON.stringify({
           success: false,
           error: 'You are not DJ eligible'
@@ -209,7 +194,7 @@ export const POST: APIRoute = async ({ request }) => {
       const bookingDate = slotDates[0];
 
       // Check daily allowance
-      const usedHours = await getUserDailyHours(db, Timestamp, uid, bookingDate);
+      const usedHours = await getUserDailyHours(uid, bookingDate);
       const requestedHours = durationType === '2hr' ? 2 : slotDates.length;
 
       if (usedHours + requestedHours > MAX_DAILY_HOURS) {
@@ -222,7 +207,7 @@ export const POST: APIRoute = async ({ request }) => {
       // Validate slots are available
       for (const slotDate of slotDates) {
         const duration = durationType === '2hr' ? 2 : 1;
-        const availability = await isSlotAvailable(db, Timestamp, slotDate, duration);
+        const availability = await isSlotAvailable(slotDate, duration);
 
         if (!availability.available) {
           return new Response(JSON.stringify({
@@ -232,40 +217,43 @@ export const POST: APIRoute = async ({ request }) => {
         }
       }
 
-      // Create booking(s)
+      // Create booking(s) using REST API
       const createdBookings: string[] = [];
 
       if (durationType === '2hr') {
         // Single 2-hour booking
         const startTime = new Date(Math.min(...slotDates.map((d: Date) => d.getTime())));
+        const bookingId = generateId();
 
-        const docRef = await db.collection('livestream-bookings').add({
+        await setDocument('livestream-bookings', bookingId, {
           djId: uid,
           djName,
           streamTitle,
           description: description || '',
-          startTime: Timestamp.fromDate(startTime),
+          startTime: startTime.toISOString(),
           duration: 2,
           status: 'confirmed',
-          createdAt: FieldValue.serverTimestamp()
+          createdAt: new Date().toISOString()
         });
 
-        createdBookings.push(docRef.id);
+        createdBookings.push(bookingId);
       } else {
         // Separate 1-hour bookings
         for (const slotDate of slotDates) {
-          const docRef = await db.collection('livestream-bookings').add({
+          const bookingId = generateId();
+
+          await setDocument('livestream-bookings', bookingId, {
             djId: uid,
             djName,
             streamTitle,
             description: description || '',
-            startTime: Timestamp.fromDate(slotDate),
+            startTime: slotDate.toISOString(),
             duration: 1,
             status: 'confirmed',
-            createdAt: FieldValue.serverTimestamp()
+            createdAt: new Date().toISOString()
           });
 
-          createdBookings.push(docRef.id);
+          createdBookings.push(bookingId);
         }
       }
 
@@ -288,19 +276,17 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       // Get booking
-      const bookingDoc = await db.collection('livestream-bookings').doc(bookingId).get();
+      const booking = await getDocument('livestream-bookings', bookingId);
 
-      if (!bookingDoc.exists) {
+      if (!booking) {
         return new Response(JSON.stringify({
           success: false,
           error: 'Booking not found'
         }), { status: 404, headers: { 'Content-Type': 'application/json' } });
       }
 
-      const booking = bookingDoc.data();
-
       // Verify ownership
-      if (booking?.djId !== uid) {
+      if (booking.djId !== uid) {
         return new Response(JSON.stringify({
           success: false,
           error: 'You can only cancel your own bookings'
@@ -308,7 +294,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       // Check if booking can be cancelled (at least 30 mins before)
-      const startTime = booking?.startTime.toDate();
+      const startTime = booking.startTime ? new Date(booking.startTime) : new Date();
       const now = new Date();
       const thirtyMinsFromNow = new Date(now.getTime() + 30 * 60 * 1000);
 
@@ -319,8 +305,12 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
-      // Delete booking
-      await db.collection('livestream-bookings').doc(bookingId).delete();
+      // Mark as cancelled (or delete)
+      await setDocument('livestream-bookings', bookingId, {
+        ...booking,
+        status: 'cancelled',
+        cancelledAt: new Date().toISOString()
+      });
 
       return new Response(JSON.stringify({
         success: true,
@@ -337,7 +327,7 @@ export const POST: APIRoute = async ({ request }) => {
     console.error('Bookings API POST error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: error.message || 'Unknown error'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

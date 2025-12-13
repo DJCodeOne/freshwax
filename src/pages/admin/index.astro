@@ -7,27 +7,36 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import '../../styles/admin/index.css';
 
-// Fetch all data using REST API
-const [
-  ordersData,
-  releasesData,
-  artistsData,
-  merchData,
-  mixesData,
-  livestreamsData,
-  bypassRequestsData
-] = await Promise.all([
-  queryCollection('orders', { limit: 50 }),
-  queryCollection('releases'),
-  queryCollection('artists'),
-  queryCollection('merch'),
-  queryCollection('dj-mixes'),
-  queryCollection('livestreams', { limit: 10 }),
-  queryCollection('bypassRequests', {
-    filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }],
-    limit: 20
-  }).catch(() => [])
-]);
+// Fetch all data using REST API with error handling
+let ordersData: any[] = [];
+let releasesData: any[] = [];
+let artistsData: any[] = [];
+let merchData: any[] = [];
+let mixesData: any[] = [];
+let livestreamsData: any[] = [];
+let bypassRequestsData: any[] = [];
+
+try {
+  const results = await Promise.allSettled([
+    queryCollection('orders', { limit: 50 }),
+    queryCollection('releases'),
+    queryCollection('artists'),
+    queryCollection('merch'),
+    queryCollection('dj-mixes'),
+    queryCollection('livestreams', { limit: 10 }),
+    queryCollection('bypassRequests', { limit: 20 })
+  ]);
+
+  ordersData = results[0].status === 'fulfilled' ? results[0].value : [];
+  releasesData = results[1].status === 'fulfilled' ? results[1].value : [];
+  artistsData = results[2].status === 'fulfilled' ? results[2].value : [];
+  merchData = results[3].status === 'fulfilled' ? results[3].value : [];
+  mixesData = results[4].status === 'fulfilled' ? results[4].value : [];
+  livestreamsData = results[5].status === 'fulfilled' ? results[5].value : [];
+  bypassRequestsData = results[6].status === 'fulfilled' ? results[6].value.filter((r: any) => r.status === 'pending') : [];
+} catch (error) {
+  console.error('[Admin Dashboard] Error fetching data:', error);
+}
 
 // Process orders - sort by createdAt desc
 const orders = ordersData
