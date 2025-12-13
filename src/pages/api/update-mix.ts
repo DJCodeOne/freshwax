@@ -122,7 +122,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       updateData.userId = currentUserId;
     }
 
-    await updateDocument('dj-mixes', mixId, updateData);
+    try {
+      await updateDocument('dj-mixes', mixId, updateData);
+    } catch (updateError: any) {
+      console.error('[update-mix] updateDocument error:', updateError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Database update failed',
+        details: updateError?.message || 'Unknown error'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     return new Response(JSON.stringify({
       success: true,
@@ -132,11 +144,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating mix:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to update mix'
+      error: 'Failed to update mix',
+      details: error?.message || 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
