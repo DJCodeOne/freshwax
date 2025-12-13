@@ -51,10 +51,17 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
-    // Releases collection - public read
+    // Releases collection - public read, server can write
     match /releases/{releaseId} {
       allow read: if true;
-      allow write: if isAdmin();
+      // Allow writes from admin or server (API key without auth)
+      // Server writes have uploadSource field
+      allow write: if isAdmin() ||
+                      (request.resource.data.metadata.uploadSource == 'direct-r2-upload');
+      // Also allow updates with status changes
+      allow update: if isAdmin() ||
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'approved', 'published', 'updatedAt', 'processedAt']);
     }
     
     // DJ Mixes collection (hyphenated) - public read
