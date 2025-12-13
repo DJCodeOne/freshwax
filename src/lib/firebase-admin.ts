@@ -64,10 +64,20 @@ function ensureInitialized(): void {
       }),
     });
     _db = getFirestore();
+    console.log('[firebase-admin] Successfully initialized');
   } catch (error) {
     console.error('[firebase-admin] Failed to initialize:', error);
-    throw error;
+    // Don't re-throw - let the app continue with _db as null
+    // The calling code should handle the null case gracefully
+    _app = null;
+    _db = null;
   }
+}
+
+// Check if Firebase is properly initialized (call this before using adminDb)
+export function isFirebaseInitialized(): boolean {
+  ensureInitialized();
+  return _db !== null;
 }
 
 // Export a proxy that lazily initializes on first property access
@@ -75,7 +85,9 @@ export const adminDb = new Proxy({} as Firestore, {
   get(_, prop) {
     ensureInitialized();
     if (!_db) {
-      throw new Error('[firebase-admin] Firebase not initialized. Check environment variables and ensure you are not in build mode.');
+      // Return null instead of throwing - let calling code handle gracefully
+      console.warn('[firebase-admin] Firebase not initialized, returning null for property:', String(prop));
+      return null;
     }
     const value = (_db as any)[prop];
     if (typeof value === 'function') {

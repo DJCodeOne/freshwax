@@ -2,7 +2,7 @@
 // Uses Firebase Admin directly during SSR
 // OPTIMIZED: Server-side caching to reduce Firebase reads significantly
 
-import { adminDb as db } from './firebase-admin';
+import { adminDb as db, isFirebaseInitialized } from './firebase-admin';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env?.DEV ?? false;
@@ -132,7 +132,7 @@ function normalizeRelease(doc: FirebaseFirestore.DocumentSnapshot): any {
 }
 
 export async function getAllReleases(): Promise<any[]> {
-  if (!db) {
+  if (!isFirebaseInitialized()) {
     console.warn('[getAllReleases] Firebase not initialized');
     return [];
   }
@@ -178,7 +178,7 @@ export async function getAllReleases(): Promise<any[]> {
 }
 
 export async function getReleasesForPage(limit: number = 20): Promise<any[]> {
-  if (!db) {
+  if (!isFirebaseInitialized()) {
     console.warn('[getReleasesForPage] Firebase not initialized');
     return [];
   }
@@ -226,7 +226,7 @@ export async function getReleasesForPage(limit: number = 20): Promise<any[]> {
 }
 
 export async function getReleaseById(id: string): Promise<any | null> {
-  if (!db) {
+  if (!isFirebaseInitialized()) {
     console.warn('[getReleaseById] Firebase not initialized');
     return null;
   }
@@ -286,7 +286,7 @@ export async function getReleaseById(id: string): Promise<any | null> {
 }
 
 export async function getReleasesGroupedByLabel(): Promise<Record<string, any[]>> {
-  if (!db) {
+  if (!isFirebaseInitialized()) {
     console.warn('[getReleasesGroupedByLabel] Firebase not initialized');
     return {};
   }
@@ -335,7 +335,7 @@ export async function getReleasesGroupedByLabel(): Promise<Record<string, any[]>
 }
 
 export async function getReleasesByArtist(artistName: string): Promise<any[]> {
-  if (!db) return [];
+  if (!isFirebaseInitialized()) return [];
   
   // Check cache first
   const cacheKey = `releases-by-artist:${artistName.toLowerCase()}`;
@@ -385,7 +385,7 @@ export async function getReleasesByArtist(artistName: string): Promise<any[]> {
 }
 
 export async function getReleasesByLabel(labelName: string): Promise<any[]> {
-  if (!db) return [];
+  if (!isFirebaseInitialized()) return [];
   
   // Check cache first
   const cacheKey = `releases-by-label:${labelName.toLowerCase()}`;
