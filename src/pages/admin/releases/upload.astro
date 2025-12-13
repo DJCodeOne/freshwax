@@ -1,0 +1,33 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+export const prerender = false;
+---
+<AdminLayout title="Upload" activeNav="releases">
+<div class="card"><div class="card-body">
+<h2>Direct R2 Upload</h2>
+<input id="artist" placeholder="Artist" class="input-field" style="margin:0.5rem 0;display:block;width:100%">
+<input id="release" placeholder="Release" class="input-field" style="margin:0.5rem 0;display:block;width:100%">
+<input type="file" id="cover" accept="image/*" style="margin:0.5rem 0;display:block">
+<input type="file" id="tracks" accept="audio/*" multiple style="margin:0.5rem 0;display:block">
+<button id="btn" class="btn btn-primary" disabled>Upload</button>
+<div id="st" style="margin-top:1rem"></div>
+</div></div>
+<script is:inline>
+const b=document.getElementById("btn"),s=document.getElementById("st"),c=document.getElementById("cover"),t=document.getElementById("tracks");
+function chk(){b.disabled=!c.files.length||!t.files.length||!document.getElementById("artist").value||!document.getElementById("release").value}
+document.getElementById("artist").oninput=chk;document.getElementById("release").oninput=chk;c.onchange=chk;t.onchange=chk;
+b.onclick=async()=>{
+const a=document.getElementById("artist").value,r=document.getElementById("release").value;
+b.disabled=true;s.innerHTML="Getting URLs...";
+try{
+const f=[{filename:c.files[0].name,contentType:c.files[0].type,size:c.files[0].size},...Array.from(t.files).map(x=>({filename:x.name,contentType:x.type,size:x.size}))];
+const res=await fetch("/api/releases/presigned-upload",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({artistName:a,releaseName:r,files:f})});
+const d=await res.json();if(!d.success)throw new Error(d.error);
+s.innerHTML="Uploading...";const all=[c.files[0],...Array.from(t.files)];let cv="",tr=[];
+for(let i=0;i<all.length;i++){s.innerHTML="Uploading "+(i+1)+"/"+all.length;await fetch(d.uploads[i].uploadUrl,{method:"PUT",body:all[i],headers:{"Content-Type":d.uploads[i].contentType}});if(i===0)cv=d.uploads[i].publicUrl;else tr.push({trackNumber:i,title:all[i].name.replace(/\.[^.]+$/,""),url:d.uploads[i].publicUrl})}
+s.innerHTML="Creating...";const cr=await fetch("/api/releases/complete-upload",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({releaseId:d.releaseId,artistName:a,releaseName:r,tracks:tr,coverArtUrl:cv})});
+const rs=await cr.json();if(!rs.success)throw new Error(rs.error);s.innerHTML="Done! <a href=/admin/releases/manage>View</a>"
+}catch(e){s.innerHTML="Error: "+e.message;b.disabled=false}
+};
+</script>
+</AdminLayout>
