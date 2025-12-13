@@ -17,6 +17,7 @@
     "@aws-sdk/s3-request-presigner": "^3.948.0",
     "@stripe/stripe-js": "^8.0.0",
     "@tailwindcss/vite": "^4.1.14",
+    "@xmldom/xmldom": "^0.8.11",
     "adm-zip": "^0.5.16",
     "astro": "^5.14.4",
     "date-fns": "^4.1.0",

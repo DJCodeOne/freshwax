@@ -3,6 +3,12 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { DOMParser } from '@xmldom/xmldom';
+
+// Polyfill DOMParser for Cloudflare Workers (AWS SDK needs it for XML parsing)
+if (typeof globalThis.DOMParser === 'undefined') {
+  (globalThis as any).DOMParser = DOMParser;
+}
 import { getDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;

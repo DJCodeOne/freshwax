@@ -4,6 +4,12 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, deleteDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
+import { DOMParser } from '@xmldom/xmldom';
+
+// Polyfill DOMParser for Cloudflare Workers (AWS SDK needs it for XML parsing)
+if (typeof globalThis.DOMParser === 'undefined') {
+  (globalThis as any).DOMParser = DOMParser;
+}
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
