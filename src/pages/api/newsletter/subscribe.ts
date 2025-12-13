@@ -162,12 +162,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[Newsletter] Subscribe error:', error?.message || error);
+  } catch (error) {
+    console.error('[Newsletter] Subscribe error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to subscribe. Please try again.',
-      debug: error?.message || String(error)
+      error: 'Failed to subscribe. Please try again.'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

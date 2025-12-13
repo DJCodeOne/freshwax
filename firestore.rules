@@ -152,8 +152,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
-    // Newsletter subscriptions
+    // Newsletter subscriptions (legacy)
     match /newsletter/{emailId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Newsletter subscribers
+    match /subscribers/{subscriberId} {
       allow create: if true;
       allow read, update, delete: if isAdmin();
     }
