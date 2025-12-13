@@ -2,9 +2,23 @@
 // API endpoint for tracking and retrieving active listeners on a live stream
 
 import type { APIRoute } from 'astro';
-import { adminDb } from '../../../lib/firebase-admin';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 export const prerender = false;
+
+// Initialize Firebase Admin
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: import.meta.env.FIREBASE_PROJECT_ID,
+      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = getFirestore();
 
 // GET - Retrieve list of active listeners for a stream
 export const GET: APIRoute = async ({ request }) => {
@@ -23,7 +37,7 @@ export const GET: APIRoute = async ({ request }) => {
     // Listeners are stored with a TTL - only show those active in last 2 minutes
     const twoMinutesAgo = Date.now() - (2 * 60 * 1000);
     
-    const listenersRef = adminDb.collection('stream-listeners');
+    const listenersRef = db.collection('stream-listeners');
     const snapshot = await listenersRef
       .where('streamId', '==', streamId)
       .where('lastSeen', '>', twoMinutesAgo)
@@ -83,7 +97,7 @@ export const POST: APIRoute = async ({ request }) => {
       }), { status: 400 });
     }
     
-    const listenersRef = adminDb.collection('stream-listeners');
+    const listenersRef = db.collection('stream-listeners');
     const listenerId = `${streamId}_${userId}`;
     
     if (action === 'join') {
