@@ -205,17 +205,24 @@ async function processZip(file) {
     let metadata = {};
     let artistName = "";
     let releaseName = "";
+    let jsonFileName = null;
 
     for (const name of files) {
       if (name.toLowerCase().endsWith('.json')) {
+        debug(`Found JSON file: ${name}`);
+        jsonFileName = name;
         try {
           const jsonContent = await zip.files[name].async("string");
+          debug(`JSON content length: ${jsonContent.length} chars`);
           const parsed = JSON.parse(jsonContent);
           metadata = parsed;
           artistName = parsed.artistName || parsed.artist || "";
           releaseName = parsed.releaseName || parsed.title || parsed.album || "";
+          debug(`Parsed JSON - Artist: ${artistName}, Release: ${releaseName}`);
+          debug(`JSON keys: ${Object.keys(parsed).join(', ')}`);
           console.log("Found metadata:", parsed);
         } catch (e) {
+          debug(`ERROR parsing JSON: ${e.message}`);
           console.log("Could not parse JSON:", name, e);
         }
       }
@@ -288,10 +295,17 @@ async function processZip(file) {
       <div><strong>Artist:</strong> ${artistName || '<em>Not detected - will prompt</em>'}</div>
       <div><strong>Release:</strong> ${releaseName || '<em>Not detected - will prompt</em>'}</div>
       <div><strong>Cover:</strong> ${coverName.split('/').pop()}</div>
+      <div><strong>Metadata:</strong> ${jsonFileName ? jsonFileName.split('/').pop() + ' ✓' : '<em>No JSON found</em>'}</div>
       <div><strong>Tracks:</strong> ${tracks.length} files</div>
       <ul style="margin:0.5rem 0;padding-left:1.5rem">
         ${tracks.map((t, i) => `<li>${i + 1}. ${t.title}</li>`).join('')}
       </ul>
+      ${Object.keys(metadata).length > 0 ? `
+        <details style="margin-top:0.5rem">
+          <summary style="cursor:pointer;color:#666;font-size:0.85rem">View JSON metadata</summary>
+          <pre style="background:#f5f5f5;padding:0.5rem;font-size:0.75rem;overflow:auto;max-height:150px;margin-top:0.25rem">${JSON.stringify(metadata, null, 2)}</pre>
+        </details>
+      ` : ''}
     `;
 
     progress.style.display = "none";
