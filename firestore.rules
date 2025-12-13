@@ -14,6 +14,22 @@ service cloud.firestore {
       allow write: if false;
     }
     
+    // Users collection (for role management)
+    match /users/{userId} {
+      allow read, write: if isAdmin();
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      // Allow server-side user updates (role management API)
+      allow create, update: if true;
+    }
+
+    // System collection (master lists, settings)
+    match /system/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+      // Allow server-side updates to master lists
+      allow update: if true;
+    }
+
     // Artists collection
     match /artists/{artistId} {
       allow read, write: if isAdmin();
@@ -21,7 +37,7 @@ service cloud.firestore {
       // Allow server-side partner operations (API uses REST without user auth)
       allow create, update: if true;
     }
-    
+
     // Customers collection
     match /customers/{customerId} {
       allow read, write: if isAdmin();
@@ -74,6 +90,14 @@ service cloud.firestore {
       allow update: if true;
     }
 
+    // Tracks collection - linked to releases
+    match /tracks/{trackId} {
+      allow read: if true;
+      allow write: if isAdmin();
+      // Allow server-side operations
+      allow create, update, delete: if true;
+    }
+
     // Releases collection - public read, server can write
     match /releases/{releaseId} {
       allow read: if true;
@@ -82,12 +106,16 @@ service cloud.firestore {
       allow create: if isAdmin() ||
                        (request.resource.data.metadata != null &&
                         request.resource.data.metadata.uploadSource == 'direct-r2-upload');
-      // Allow updates for status changes and admin operations
+      // Allow updates for status changes, editing, and admin operations
       allow update: if isAdmin() ||
                        request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['status', 'approved', 'published', 'updatedAt', 'processedAt',
-                                   'approvedAt', 'rejectedAt', 'metadata']);
-      allow delete: if isAdmin();
+                                   'approvedAt', 'rejectedAt', 'metadata', 'title', 'releaseName',
+                                   'artist', 'artistName', 'description', 'genre', 'subgenre',
+                                   'releaseDate', 'price', 'coverUrl', 'coverArtUrl', 'artworkUrl',
+                                   'bpm', 'key', 'tracks', 'featured', 'stats', 'plays', 'sales']);
+      // Allow server-side delete
+      allow delete: if true;
     }
     
     // DJ Mixes collection (hyphenated) - public read
@@ -96,11 +124,14 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
       allow write: if isAdmin();
-      // Allow server-side tracking updates (plays, likes, downloads)
+      // Allow server-side operations (tracking, editing, deleting)
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
                        .hasOnly(['plays', 'likes', 'downloads', 'playCount', 'likeCount', 'downloadCount',
                                  'last_played_date', 'last_liked_date', 'last_unliked_date',
-                                 'last_download_date', 'last_downloaded_date', 'commentCount', 'ratings']);
+                                 'last_download_date', 'last_downloaded_date', 'commentCount', 'ratings',
+                                 'title', 'description', 'shoutOuts', 'tracklist', 'tracklistArray', 'trackCount',
+                                 'artwork_url', 'artworkUrl', 'imageUrl', 'updatedAt', 'userId', 'mixTitle']);
+      allow delete: if true;
     }
 
     // DJ Mixes collection (underscore) - public read
@@ -109,11 +140,14 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
       allow write: if isAdmin();
-      // Allow server-side tracking updates (plays, likes, downloads)
+      // Allow server-side operations (tracking, editing, deleting)
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
                        .hasOnly(['plays', 'likes', 'downloads', 'playCount', 'likeCount', 'downloadCount',
                                  'last_played_date', 'last_liked_date', 'last_unliked_date',
-                                 'last_download_date', 'last_downloaded_date', 'commentCount', 'ratings']);
+                                 'last_download_date', 'last_downloaded_date', 'commentCount', 'ratings',
+                                 'title', 'description', 'shoutOuts', 'tracklist', 'tracklistArray', 'trackCount',
+                                 'artwork_url', 'artworkUrl', 'imageUrl', 'updatedAt', 'userId', 'mixTitle']);
+      allow delete: if true;
     }
 
     // DJ Mixes Pending
