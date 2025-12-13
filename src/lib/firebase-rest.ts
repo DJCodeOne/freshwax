@@ -599,9 +599,17 @@ export async function setDocument(
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    log.error('setDocument error:', error);
-    throw new Error(`Failed to set document: ${response.status}`);
+    const errorText = await response.text();
+    log.error('setDocument error:', response.status, errorText);
+    let errorMessage = `Failed to set document: ${response.status}`;
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage = errorJson.error?.message || errorJson.error?.status || errorMessage;
+    } catch (e) {
+      // Use raw text if not JSON
+      if (errorText) errorMessage += ` - ${errorText.substring(0, 200)}`;
+    }
+    throw new Error(errorMessage);
   }
 
   // Invalidate cache for this document

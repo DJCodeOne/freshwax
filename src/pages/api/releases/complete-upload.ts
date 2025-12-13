@@ -117,8 +117,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
       },
     };
 
-    await setDocument('releases', releaseId, releaseDoc);
-    log.info(`Release document created/updated: ${releaseId}`);
+    try {
+      await setDocument('releases', releaseId, releaseDoc);
+      log.info(`Release document created/updated: ${releaseId}`);
+    } catch (setError: any) {
+      log.error('Firebase setDocument failed:', setError);
+      // Return more detailed error
+      return new Response(JSON.stringify({
+        success: false,
+        error: `Firebase write failed: ${setError.message}`,
+        details: {
+          releaseId,
+          collection: 'releases',
+          apiKeyPresent: !!(env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY),
+          projectId: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store'
+        }
+      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
 
     return new Response(JSON.stringify({
       success: true,
