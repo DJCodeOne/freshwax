@@ -6,19 +6,16 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { getAdminDb } from '../lib/firebase-admin';
-
-const db = await getAdminDb();
+import { getLiveReleases } from '../lib/firebase-rest';
 
 // Calculate date range (last 7 days)
 const now = new Date();
 const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-// Helper to convert Firestore Timestamp or string to Date
+// Helper to convert date value to Date object
 function toDate(value: any): Date | null {
   if (!value) return null;
-  if (value.toDate) return value.toDate(); // Firestore Timestamp
-  if (value._seconds) return new Date(value._seconds * 1000); // Serialized Timestamp
+  if (value instanceof Date) return value;
   if (typeof value === 'string' || typeof value === 'number') return new Date(value);
   return null;
 }
@@ -40,21 +37,11 @@ let chartWeekStart = oneWeekAgo.toLocaleDateString('en-GB', { day: 'numeric', mo
 let chartWeekEnd = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
 try {
-  if (!db) {
-    throw new Error('Database not available');
-  }
+  // Get all live releases via REST API
+  const allReleases = await getLiveReleases();
 
-  // Get all live releases
-  const releasesSnap = await db.collection('releases')
-    .where('status', '==', 'live')
-    .get();
-  
   // Filter to releases from the last 7 days and calculate scores
-  releases = releasesSnap.docs
-    .map(doc => {
-      const data = { id: doc.id, ...doc.data() };
-      return data;
-    })
+  releases = allReleases
     .filter(release => {
       const releaseDate = toDate(release.releaseDate) || toDate(release.publishedAt) || toDate(release.createdAt);
       if (!releaseDate) return false;
@@ -64,10 +51,10 @@ try {
       ...release,
       chartScore: calculateScore(release)
     }));
-  
+
   // Sort by chart score descending
   releases.sort((a, b) => b.chartScore - a.chartScore);
-  
+
 } catch (e) {
   console.error('Error fetching weekly releases:', e);
 }

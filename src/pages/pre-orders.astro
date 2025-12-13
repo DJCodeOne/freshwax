@@ -6,15 +6,12 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { getAdminDb } from '../lib/firebase-admin';
+import { getLiveReleases } from '../lib/firebase-rest';
 
-const db = await getAdminDb();
-
-// Helper to convert Firestore Timestamp or string to Date
+// Helper to convert date value to Date object
 function toDate(value: any): Date | null {
   if (!value) return null;
-  if (value.toDate) return value.toDate();
-  if (value._seconds) return new Date(value._seconds * 1000);
+  if (value instanceof Date) return value;
   if (typeof value === 'string' || typeof value === 'number') return new Date(value);
   return null;
 }
@@ -24,21 +21,16 @@ const now = new Date();
 let preorders: any[] = [];
 
 try {
-  if (!db) throw new Error('Database not available');
-
-  // Get all live releases
-  const releasesSnap = await db.collection('releases')
-    .where('status', '==', 'live')
-    .get();
+  // Get all live releases via REST API
+  const allReleases = await getLiveReleases();
 
   // Filter to releases with future release dates (pre-orders)
-  preorders = releasesSnap.docs
-    .map(doc => {
-      const data = { id: doc.id, ...doc.data() };
-      const releaseDate = toDate(data.releaseDate) || new Date(0);
+  preorders = allReleases
+    .map(release => {
+      const releaseDate = toDate(release.releaseDate) || new Date(0);
       const daysUntil = Math.ceil((releaseDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       return {
-        ...data,
+        ...release,
         daysUntilRelease: daysUntil,
         releaseDateObj: releaseDate
       };
