@@ -1,28 +1,13 @@
 // src/pages/api/admin/get-settings.ts
-// Get admin settings
-
+// Get admin settings - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
+import { getDocument } from '../../../lib/firebase-rest';
 
 export const GET: APIRoute = async () => {
   try {
-    const settingsDoc = await db.collection('settings').doc('admin').get();
-    
-    if (!settingsDoc.exists) {
+    const settingsData = await getDocument('settings', 'admin');
+
+    if (!settingsData) {
       // Return default settings
       return new Response(JSON.stringify({
         success: true,
@@ -37,7 +22,7 @@ export const GET: APIRoute = async () => {
 
     return new Response(JSON.stringify({
       success: true,
-      settings: settingsDoc.data()
+      settings: settingsData
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
