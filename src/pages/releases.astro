@@ -1,15 +1,34 @@
 ---
 // src/pages/releases.astro
-// OPTIMIZED: Uses server-side grouping to minimize API calls
+// OPTIMIZED: Uses Firebase REST API with local grouping
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import ReleasePlate from '../components/ReleasePlate.astro';
 import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
-import { getReleasesGroupedByLabel } from '../lib/releases';
+import { getLiveReleases } from '../lib/firebase-rest';
 
-// OPTIMIZED: Get releases already grouped by label from Firebase
-const releasesByLabel = await getReleasesGroupedByLabel();
+// Fetch all live releases via REST API
+const allReleases = await getLiveReleases();
+
+// Group releases by label locally
+const releasesByLabel: Record<string, any[]> = {};
+for (const release of allReleases) {
+  const label = release.labelName || release.recordLabel || release.copyrightHolder || 'Unknown Label';
+  if (!releasesByLabel[label]) {
+    releasesByLabel[label] = [];
+  }
+  releasesByLabel[label].push(release);
+}
+
+// Sort each label's releases by date
+for (const label of Object.keys(releasesByLabel)) {
+  releasesByLabel[label].sort((a, b) => {
+    const dateA = new Date(a.releaseDate || 0).getTime();
+    const dateB = new Date(b.releaseDate || 0).getTime();
+    return dateB - dateA;
+  });
+}
 
 // Sort labels alphabetically
 const sortedLabels = Object.keys(releasesByLabel).sort((a, b) => {
