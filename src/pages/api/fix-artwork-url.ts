@@ -1,13 +1,8 @@
 // src/pages/api/fix-artwork-url.ts
 // Checks R2 for actual artwork filename and updates Firestore
 
+import '../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Workers
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { DOMParser } from '@xmldom/xmldom';
-
-// Polyfill DOMParser for Cloudflare Workers (AWS SDK needs it for XML parsing)
-if (typeof globalThis.DOMParser === 'undefined') {
-  (globalThis as any).DOMParser = DOMParser;
-}
 import { updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const POST = async ({ request, locals }: any) => {

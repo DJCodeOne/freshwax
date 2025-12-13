@@ -1,13 +1,8 @@
 // src/pages/api/list-r2-files.ts
 // Lists files in R2 bucket for a specific release
 
+import '../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Workers
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { DOMParser } from '@xmldom/xmldom';
-
-// Polyfill DOMParser for Cloudflare Workers (AWS SDK needs it for XML parsing)
-if (typeof globalThis.DOMParser === 'undefined') {
-  (globalThis as any).DOMParser = DOMParser;
-}
 
 export const GET = async ({ url, locals }: any) => {
   try {
