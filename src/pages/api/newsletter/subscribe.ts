@@ -6,8 +6,6 @@ import { Resend } from 'resend';
 
 export const prerender = false;
 
-const resend = new Resend(import.meta.env.RESEND_API_KEY);
-
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
@@ -15,6 +13,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+
+  // Initialize Resend with Cloudflare runtime env
+  const resend = new Resend(env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY);
 
   try {
     const body = await request.json();
