@@ -17,13 +17,18 @@ let categories: Record<string, string> = {};
 let productTypes: Record<string, string> = {};
 
 try {
-  const merchData = await queryCollection('merch', {
-    filters: [
-      { field: 'published', op: 'EQUAL', value: true },
-      { field: 'status', op: 'EQUAL', value: 'active' }
-    ],
-    cacheKey: 'merch-active-published',
+  // Fetch all merch and filter locally (composite filters may not work without indexes)
+  let merchData = await queryCollection('merch', {
+    cacheKey: 'merch-all',
     cacheTTL: 10 * 60 * 1000 // 10 min cache
+  });
+
+  // Filter to only published/active items locally
+  merchData = merchData.filter(item => {
+    // Check for active/published items
+    const isPublished = item.published !== false;
+    const isActive = !item.status || item.status === 'active';
+    return isPublished && isActive;
   });
   
   products = merchData.map(doc => {

@@ -1,46 +1,28 @@
 ---
 // src/pages/dj-mixes.astro
-// OPTIMIZED: Direct Firebase import - no internal HTTP calls
-// - Extended cache TTLs (30 min for stats)
-// - Debounced interactions prevent duplicate API calls
-// - Lazy audio metadata loading
+// Uses Firebase REST API for Cloudflare compatibility
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
-import { getDJMixesForPage } from '../lib/dj-mixes';
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getLiveDJMixes, getDocument } from '../lib/firebase-rest';
 import '../styles/dj-mixes.css';
 
-// Initialize Firebase Admin for settings
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
-
-// Direct Firebase call - no HTTP overhead
+// Fetch data via REST API
 let mixes: any[] = [];
 let showMixCharts = false;
 
 try {
-  mixes = await getDJMixesForPage(50);
-  
+  // Get published mixes via REST API
+  mixes = await getLiveDJMixes(50);
+
   // Get settings for mix chart visibility
-  const settingsDoc = await db.collection('settings').doc('admin').get();
-  if (settingsDoc.exists) {
-    showMixCharts = settingsDoc.data()?.showMixCharts || false;
+  const settings = await getDocument('settings', 'admin');
+  if (settings) {
+    showMixCharts = settings.showMixCharts || false;
   }
 } catch (error) {
   console.error('[DJ-MIXES PAGE] Error loading mixes:', error);
-  // Silent fail - mixes will be empty array
 }
 
 // Calculate chart rankings if enabled
