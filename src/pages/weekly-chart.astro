@@ -14,6 +14,15 @@ const db = await getAdminDb();
 const now = new Date();
 const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
+// Helper to convert Firestore Timestamp or string to Date
+function toDate(value: any): Date | null {
+  if (!value) return null;
+  if (value.toDate) return value.toDate(); // Firestore Timestamp
+  if (value._seconds) return new Date(value._seconds * 1000); // Serialized Timestamp
+  if (typeof value === 'string' || typeof value === 'number') return new Date(value);
+  return null;
+}
+
 // Rating calculation function for releases
 function calculateScore(release: any): number {
   const sales = release.salesCount || release.sales || 0;
@@ -47,7 +56,8 @@ try {
       return data;
     })
     .filter(release => {
-      const releaseDate = new Date(release.releaseDate || release.publishedAt || release.createdAt);
+      const releaseDate = toDate(release.releaseDate) || toDate(release.publishedAt) || toDate(release.createdAt);
+      if (!releaseDate) return false;
       return releaseDate >= oneWeekAgo && releaseDate <= now;
     })
     .map(release => ({
@@ -65,9 +75,11 @@ try {
 const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num || 0);
 
 // Format release date
-const formatDate = (dateStr: string) => {
+const formatDate = (dateValue: any) => {
   try {
-    return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const date = toDate(dateValue);
+    if (!date) return '';
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   } catch {
     return '';
   }
