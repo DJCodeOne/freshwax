@@ -3,23 +3,12 @@
 // Fresh Wax DJ Mixes Management - Unified Admin Design
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getAdminDb } from '../../../lib/firebase-admin';
 
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
+const db = await getAdminDb();
 
 // Fetch all DJ mixes
+if (!db) throw new Error('Database not available');
 const mixesSnapshot = await db.collection('dj-mixes').orderBy('uploadedAt', 'desc').get();
 
 const mixes = mixesSnapshot.docs.map(doc => {

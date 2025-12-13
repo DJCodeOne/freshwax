@@ -6,37 +6,36 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getAdminDb } from '../lib/firebase-admin';
 
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
+const db = await getAdminDb();
+
+// Helper to convert Firestore Timestamp or string to Date
+function toDate(value: any): Date | null {
+  if (!value) return null;
+  if (value.toDate) return value.toDate();
+  if (value._seconds) return new Date(value._seconds * 1000);
+  if (typeof value === 'string' || typeof value === 'number') return new Date(value);
+  return null;
 }
-
-const db = getFirestore();
 
 const now = new Date();
 
 let preorders: any[] = [];
 
 try {
+  if (!db) throw new Error('Database not available');
+
   // Get all live releases
   const releasesSnap = await db.collection('releases')
     .where('status', '==', 'live')
     .get();
-  
+
   // Filter to releases with future release dates (pre-orders)
   preorders = releasesSnap.docs
     .map(doc => {
       const data = { id: doc.id, ...doc.data() };
-      const releaseDate = new Date(data.releaseDate);
+      const releaseDate = toDate(data.releaseDate) || new Date(0);
       const daysUntil = Math.ceil((releaseDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       return {
         ...data,
@@ -46,17 +45,19 @@ try {
     })
     .filter(release => release.releaseDateObj > now)
     .sort((a, b) => a.releaseDateObj.getTime() - b.releaseDateObj.getTime()); // Soonest first
-  
+
 } catch (e) {
   console.error('Error fetching pre-orders:', e);
 }
 
 // Format release date
-const formatDate = (dateStr: string) => {
+const formatDate = (dateValue: any) => {
   try {
-    return new Date(dateStr).toLocaleDateString('en-GB', { 
+    const date = toDate(dateValue);
+    if (!date) return '';
+    return date.toLocaleDateString('en-GB', {
       weekday: 'long',
-      day: 'numeric', 
+      day: 'numeric',
       month: 'long',
       year: 'numeric'
     });
