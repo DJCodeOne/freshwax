@@ -59,6 +59,13 @@ export const prerender = false;
 <div style="margin-top:1rem;text-align:center">
   <a href="#" id="toggleManual" style="color:#666;font-size:0.9rem">Show manual upload</a>
 </div>
+
+<div style="margin-top:1rem">
+  <details>
+    <summary style="cursor:pointer;color:#666">Debug Log</summary>
+    <pre id="debugLog" style="background:#1e1e1e;color:#0f0;padding:1rem;border-radius:4px;max-height:300px;overflow:auto;font-size:0.8rem;margin-top:0.5rem"></pre>
+  </details>
+</div>
 </div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -80,6 +87,18 @@ const artistInput = document.getElementById("artist");
 const releaseInput = document.getElementById("release");
 const coverInput = document.getElementById("cover");
 const tracksInput = document.getElementById("tracks");
+const debugLog = document.getElementById("debugLog");
+
+// Debug logging
+function debug(msg) {
+  const time = new Date().toISOString().split('T')[1].split('.')[0];
+  const line = `[${time}] ${msg}`;
+  console.log(line);
+  debugLog.textContent += line + "\n";
+  debugLog.scrollTop = debugLog.scrollHeight;
+}
+
+debug("Page loaded, JSZip available: " + (typeof JSZip !== 'undefined'));
 
 // Extracted data
 let extractedData = null;
@@ -116,10 +135,12 @@ dropZone.onclick = () => zipInput.click();
 // Handle ZIP drop
 dropZone.ondrop = async (e) => {
   e.preventDefault();
+  debug("ZIP dropped");
   dropZone.style.borderColor = "#ccc";
   dropZone.style.background = "";
 
   const file = e.dataTransfer.files[0];
+  debug(`File: ${file?.name}, type: ${file?.type}, size: ${file?.size}`);
   if (file && (file.name.endsWith('.zip') || file.type.includes('zip'))) {
     await processZip(file);
   } else {
@@ -128,6 +149,7 @@ dropZone.ondrop = async (e) => {
 };
 
 zipInput.onchange = async () => {
+  debug("ZIP selected via input");
   if (zipInput.files[0]) {
     await processZip(zipInput.files[0]);
   }
@@ -135,13 +157,17 @@ zipInput.onchange = async () => {
 
 // Process ZIP file
 async function processZip(file) {
+  debug(`Processing ZIP: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`);
   setProgress(0, "Extracting ZIP...");
   status.innerHTML = "";
 
   try {
+    debug("Loading ZIP with JSZip...");
     const zip = await JSZip.loadAsync(file);
+    debug("ZIP loaded successfully");
     const files = Object.keys(zip.files);
 
+    debug(`Found ${files.length} entries in ZIP`);
     console.log("ZIP contents:", files);
 
     // Find cover art
@@ -205,27 +231,36 @@ async function processZip(file) {
       }
     }
 
+    debug(`Cover found: ${coverName || 'NONE'}`);
+    debug(`Audio tracks found: ${trackFiles.length}`);
+
     if (!coverFile) {
+      debug("ERROR: No cover art found");
       setStatus("No cover art found in ZIP. Please include a JPG/PNG image.", true);
       return;
     }
 
     if (trackFiles.length === 0) {
+      debug("ERROR: No audio tracks found");
       setStatus("No audio tracks found in ZIP. Please include MP3/WAV/FLAC files.", true);
       return;
     }
 
     // Extract files to blobs
+    debug("Extracting cover art to blob...");
     setProgress(20, "Processing files...");
 
     const coverBlob = await coverFile.async("blob");
+    debug(`Cover blob size: ${(coverBlob.size/1024).toFixed(2)} KB`);
     const coverExt = coverName.split('.').pop().toLowerCase();
     const coverType = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[coverExt] || 'image/jpeg';
 
     const tracks = [];
     for (let i = 0; i < trackFiles.length; i++) {
+      debug(`Extracting track ${i + 1}/${trackFiles.length}: ${trackFiles[i].name}`);
       setProgress(20 + (i / trackFiles.length) * 20, `Processing track ${i + 1}/${trackFiles.length}...`);
       const trackBlob = await trackFiles[i].file.async("blob");
+      debug(`Track ${i + 1} blob size: ${(trackBlob.size/1024/1024).toFixed(2)} MB`);
       const trackName = trackFiles[i].name.split('/').pop(); // Get filename only
       const trackExt = trackName.split('.').pop().toLowerCase();
       const trackType = { mp3: 'audio/mpeg', wav: 'audio/wav', flac: 'audio/flac', aiff: 'audio/aiff', m4a: 'audio/mp4' }[trackExt] || 'audio/mpeg';
@@ -237,6 +272,7 @@ async function processZip(file) {
         title: trackName.replace(/^\d+[\s._-]*/, '').replace(/\.[^.]+$/, '') // Remove track number prefix and extension
       });
     }
+    debug(`All ${tracks.length} tracks extracted`);
 
     extractedData = {
       artistName,
@@ -287,6 +323,7 @@ function setStatus(msg, isError = false) {
 
 // Upload with XHR for progress
 async function uploadFileWithProgress(url, blob, contentType, fileName) {
+  debug(`XHR upload starting: ${fileName} (${(blob.size/1024/1024).toFixed(2)} MB)`);
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
@@ -294,37 +331,61 @@ async function uploadFileWithProgress(url, blob, contentType, fileName) {
       if (e.lengthComputable) {
         const percent = Math.round((e.loaded / e.total) * 100);
         setProgress(percent, `Uploading ${fileName}: ${percent}%`);
+        if (percent % 25 === 0) {
+          debug(`Upload progress: ${percent}%`);
+        }
       }
     };
 
     xhr.onload = () => {
+      debug(`XHR onload: status=${xhr.status} ${xhr.statusText}`);
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve();
       } else {
+        debug(`XHR error response: ${xhr.responseText?.substring(0, 200)}`);
         reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
       }
     };
 
     xhr.onerror = () => {
+      debug(`XHR onerror - network error or CORS issue`);
       reject(new Error(`Network error uploading ${fileName}. Check R2 CORS settings.`));
     };
 
+    xhr.ontimeout = () => {
+      debug(`XHR timeout after 600s`);
+      reject(new Error(`Upload timed out for ${fileName}`));
+    };
+
+    xhr.onreadystatechange = () => {
+      debug(`XHR readyState: ${xhr.readyState}`);
+    };
+
+    debug(`Opening PUT request to: ${url.substring(0, 80)}...`);
     xhr.open("PUT", url);
     xhr.setRequestHeader("Content-Type", contentType);
     xhr.timeout = 600000;
+    debug("Sending blob...");
     xhr.send(blob);
   });
 }
 
 // Upload extracted files
 uploadBtn.onclick = async () => {
-  if (!extractedData) return;
+  debug("Upload button clicked");
+  if (!extractedData) {
+    debug("ERROR: No extracted data");
+    return;
+  }
 
   uploadBtn.disabled = true;
   status.innerHTML = "";
 
   try {
     const { artistName, releaseName, cover, tracks } = extractedData;
+    debug(`Uploading: ${artistName} - ${releaseName}`);
+    debug(`Cover: ${cover.name} (${cover.type})`);
+    debug(`Tracks: ${tracks.length}`);
 
     // Build file list for presigned URLs
     const files = [
@@ -332,6 +393,7 @@ uploadBtn.onclick = async () => {
       ...tracks.map(t => ({ filename: t.name, contentType: t.type, size: t.blob.size }))
     ];
 
+    debug("Requesting presigned URLs...");
     setProgress(5, "Getting upload URLs...");
 
     const presignRes = await fetch("/api/releases/presigned-upload", {
@@ -340,16 +402,25 @@ uploadBtn.onclick = async () => {
       body: JSON.stringify({ artistName, releaseName, files })
     });
 
+    debug(`Presign response status: ${presignRes.status}`);
     const presignData = await presignRes.json();
+    debug(`Presign success: ${presignData.success}`);
     console.log("Presign response:", presignData);
 
     if (!presignData.success) {
+      debug(`Presign error: ${presignData.error}`);
       throw new Error(presignData.error || "Failed to get upload URLs");
     }
 
+    debug(`Got ${presignData.uploads.length} presigned URLs`);
+    debug(`Release ID: ${presignData.releaseId}`);
+
     // Upload cover
+    debug(`Uploading cover to R2...`);
+    debug(`URL: ${presignData.uploads[0].uploadUrl.substring(0, 100)}...`);
     setProgress(10, `Uploading ${cover.name}...`);
     await uploadFileWithProgress(presignData.uploads[0].uploadUrl, cover.blob, cover.type, cover.name);
+    debug("Cover uploaded successfully");
     const coverArtUrl = presignData.uploads[0].publicUrl;
 
     // Upload tracks
@@ -358,8 +429,10 @@ uploadBtn.onclick = async () => {
       const track = tracks[i];
       const upload = presignData.uploads[i + 1];
 
+      debug(`Uploading track ${i + 1}/${tracks.length}: ${track.name}`);
       setProgress(10 + ((i + 1) / (tracks.length + 1)) * 80, `Uploading ${track.name}...`);
       await uploadFileWithProgress(upload.uploadUrl, track.blob, track.type, track.name);
+      debug(`Track ${i + 1} uploaded successfully`);
 
       trackData.push({
         trackNumber: i + 1,
@@ -369,6 +442,7 @@ uploadBtn.onclick = async () => {
     }
 
     // Create release record
+    debug("Creating release record in Firebase...");
     setProgress(95, "Creating release record...");
 
     const completeRes = await fetch("/api/releases/complete-upload", {
@@ -384,12 +458,16 @@ uploadBtn.onclick = async () => {
       })
     });
 
+    debug(`Complete response status: ${completeRes.status}`);
     const completeData = await completeRes.json();
+    debug(`Complete success: ${completeData.success}`);
 
     if (!completeData.success) {
+      debug(`Complete error: ${completeData.error}`);
       throw new Error(completeData.error || "Failed to create release");
     }
 
+    debug("Upload complete!");
     setProgress(100, "Complete!");
     setStatus(`Release uploaded successfully! <a href="/admin/releases/manage">View Releases</a>`);
 
@@ -398,6 +476,7 @@ uploadBtn.onclick = async () => {
     extractedSection.style.display = "none";
 
   } catch (err) {
+    debug(`UPLOAD ERROR: ${err.message}`);
     console.error("Upload error:", err);
     setStatus(`Error: ${err.message}`, true);
     uploadBtn.disabled = false;
