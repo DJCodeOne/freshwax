@@ -94,16 +94,26 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
       allow write: if isAdmin();
+      // Allow server-side tracking updates (plays, likes, downloads)
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['plays', 'likes', 'downloads', 'playCount', 'likeCount', 'downloadCount',
+                                 'last_played_date', 'last_liked_date', 'last_unliked_date',
+                                 'last_download_date', 'last_downloaded_date', 'commentCount', 'ratings']);
     }
-    
+
     // DJ Mixes collection (underscore) - public read
     match /dj_mixes/{mixId} {
       allow read: if true;
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
       allow write: if isAdmin();
+      // Allow server-side tracking updates (plays, likes, downloads)
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['plays', 'likes', 'downloads', 'playCount', 'likeCount', 'downloadCount',
+                                 'last_played_date', 'last_liked_date', 'last_unliked_date',
+                                 'last_download_date', 'last_downloaded_date', 'commentCount', 'ratings']);
     }
-    
+
     // DJ Mixes Pending
     match /dj_mixes_pending/{mixId} {
       allow read: if true;
