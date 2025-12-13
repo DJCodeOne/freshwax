@@ -1,13 +1,35 @@
 // Quick test endpoint to verify Firebase REST API config
 import type { APIRoute } from 'astro';
 
-export const GET: APIRoute = async () => {
-  const projectId = import.meta.env.FIREBASE_PROJECT_ID;
-  const apiKey = import.meta.env.FIREBASE_API_KEY;
+export const GET: APIRoute = async ({ locals }) => {
+  // Try multiple ways to access env vars on Cloudflare
+  const runtime = (locals as any).runtime;
+  const cfEnv = runtime?.env || {};
+
+  // Method 1: import.meta.env (build-time)
+  const projectId1 = import.meta.env.FIREBASE_PROJECT_ID;
+  const apiKey1 = import.meta.env.FIREBASE_API_KEY;
+
+  // Method 2: Cloudflare runtime env
+  const projectId2 = cfEnv.FIREBASE_PROJECT_ID;
+  const apiKey2 = cfEnv.FIREBASE_API_KEY;
+
+  // Method 3: process.env (Node.js style)
+  const projectId3 = (globalThis as any).process?.env?.FIREBASE_PROJECT_ID;
+  const apiKey3 = (globalThis as any).process?.env?.FIREBASE_API_KEY;
+
+  const projectId = projectId1 || projectId2 || projectId3;
+  const apiKey = apiKey1 || apiKey2 || apiKey3;
 
   const checks = {
-    FIREBASE_PROJECT_ID: projectId ? `Set (${projectId})` : 'MISSING',
-    FIREBASE_API_KEY: apiKey ? `Set (${apiKey.slice(0, 10)}...)` : 'MISSING',
+    'import.meta.env.FIREBASE_PROJECT_ID': projectId1 || 'MISSING',
+    'import.meta.env.FIREBASE_API_KEY': apiKey1 ? `${apiKey1.slice(0,10)}...` : 'MISSING',
+    'runtime.env.FIREBASE_PROJECT_ID': projectId2 || 'MISSING',
+    'runtime.env.FIREBASE_API_KEY': apiKey2 ? `${apiKey2.slice(0,10)}...` : 'MISSING',
+    'process.env.FIREBASE_PROJECT_ID': projectId3 || 'MISSING',
+    'process.env.FIREBASE_API_KEY': apiKey3 ? `${apiKey3.slice(0,10)}...` : 'MISSING',
+    'hasRuntime': !!runtime,
+    'runtimeEnvKeys': Object.keys(cfEnv),
   };
 
   // Try a simple read
