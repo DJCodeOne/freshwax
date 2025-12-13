@@ -2,7 +2,7 @@
 // Uses Firebase Admin directly during SSR
 // OPTIMIZED: Server-side caching to reduce Firebase reads significantly
 
-import { adminDb as db, isFirebaseInitialized } from './firebase-admin';
+import { getAdminDb, ensureFirebaseInitialized } from './firebase-admin';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env?.DEV ?? false;
@@ -132,16 +132,17 @@ function normalizeRelease(doc: FirebaseFirestore.DocumentSnapshot): any {
 }
 
 export async function getAllReleases(): Promise<any[]> {
-  if (!isFirebaseInitialized()) {
-    console.warn('[getAllReleases] Firebase not initialized');
-    return [];
-  }
-  
-  // Check cache first
+  // Check cache first (before Firebase init to save resources)
   const cacheKey = 'all-releases';
   const cached = getCached(cacheKey);
   if (cached) return cached;
-  
+
+  const db = await getAdminDb();
+  if (!db) {
+    console.warn('[getAllReleases] Firebase not initialized');
+    return [];
+  }
+
   try {
     const snapshot = await db.collection('releases')
       .where('status', '==', 'live')
@@ -178,16 +179,17 @@ export async function getAllReleases(): Promise<any[]> {
 }
 
 export async function getReleasesForPage(limit: number = 20): Promise<any[]> {
-  if (!isFirebaseInitialized()) {
-    console.warn('[getReleasesForPage] Firebase not initialized');
-    return [];
-  }
-  
   // Check cache first - use limit-specific key
   const cacheKey = `releases-page:${limit}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
-  
+
+  const db = await getAdminDb();
+  if (!db) {
+    console.warn('[getReleasesForPage] Firebase not initialized');
+    return [];
+  }
+
   try {
     const snapshot = await db.collection('releases')
       .where('status', '==', 'live')
@@ -226,11 +228,6 @@ export async function getReleasesForPage(limit: number = 20): Promise<any[]> {
 }
 
 export async function getReleaseById(id: string): Promise<any | null> {
-  if (!isFirebaseInitialized()) {
-    console.warn('[getReleaseById] Firebase not initialized');
-    return null;
-  }
-  
   // Check cache first
   const cacheKey = `release:${id}`;
   const cached = getCached(cacheKey);
@@ -246,7 +243,13 @@ export async function getReleaseById(id: string): Promise<any | null> {
       return found;
     }
   }
-  
+
+  const db = await getAdminDb();
+  if (!db) {
+    console.warn('[getReleaseById] Firebase not initialized');
+    return null;
+  }
+
   try {
     log.info(`[getReleaseById] Fetching from Firebase: ${id}`);
     const doc = await db.collection('releases').doc(id).get();
@@ -286,15 +289,15 @@ export async function getReleaseById(id: string): Promise<any | null> {
 }
 
 export async function getReleasesGroupedByLabel(): Promise<Record<string, any[]>> {
-  if (!isFirebaseInitialized()) {
-    console.warn('[getReleasesGroupedByLabel] Firebase not initialized');
-    return {};
-  }
-  
   // Check cache first
   const cacheKey = 'releases-grouped-by-label';
   const cached = getCached(cacheKey);
   if (cached) return cached;
+
+  if (!(await ensureFirebaseInitialized())) {
+    console.warn('[getReleasesGroupedByLabel] Firebase not initialized');
+    return {};
+  }
   
   try {
     log.info('[getReleasesGroupedByLabel] Fetching and grouping releases');
@@ -335,26 +338,27 @@ export async function getReleasesGroupedByLabel(): Promise<Record<string, any[]>
 }
 
 export async function getReleasesByArtist(artistName: string): Promise<any[]> {
-  if (!isFirebaseInitialized()) return [];
-  
   // Check cache first
   const cacheKey = `releases-by-artist:${artistName.toLowerCase()}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
-  
+
+  // Try to use the all-releases cache first (avoids extra Firebase read)
+  const allCached = getCached('all-releases');
+  if (allCached) {
+    const filtered = allCached
+      .filter((r: any) => r.artistName?.toLowerCase() === artistName.toLowerCase())
+      .sort((a: any, b: any) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
+
+    log.info(`[getReleasesByArtist] Found ${filtered.length} releases for "${artistName}" from cache`);
+    setCache(cacheKey, filtered, CACHE_TTL.BY_ARTIST);
+    return filtered;
+  }
+
+  const db = await getAdminDb();
+  if (!db) return [];
+
   try {
-    // Try to use the all-releases cache first (avoids extra Firebase read)
-    const allCached = getCached('all-releases');
-    if (allCached) {
-      const filtered = allCached
-        .filter((r: any) => r.artistName?.toLowerCase() === artistName.toLowerCase())
-        .sort((a: any, b: any) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
-      
-      log.info(`[getReleasesByArtist] Found ${filtered.length} releases for "${artistName}" from cache`);
-      setCache(cacheKey, filtered, CACHE_TTL.BY_ARTIST);
-      return filtered;
-    }
-    
     // Fall back to Firebase query
     const snapshot = await db.collection('releases')
       .where('status', '==', 'live')
@@ -385,27 +389,28 @@ export async function getReleasesByArtist(artistName: string): Promise<any[]> {
 }
 
 export async function getReleasesByLabel(labelName: string): Promise<any[]> {
-  if (!isFirebaseInitialized()) return [];
-  
   // Check cache first
   const cacheKey = `releases-by-label:${labelName.toLowerCase()}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
-  
+
+  // OPTIMIZED: Use all-releases cache and filter locally instead of 3 Firebase queries
+  const allCached = getCached('all-releases');
+  if (allCached) {
+    const filtered = allCached.filter((release: any) => {
+      const releaseLabel = release.labelName || release.recordLabel || release.copyrightHolder || '';
+      return releaseLabel.toLowerCase() === labelName.toLowerCase();
+    }).sort((a: any, b: any) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
+
+    log.info(`[getReleasesByLabel] Found ${filtered.length} releases for "${labelName}" from cache`);
+    setCache(cacheKey, filtered, CACHE_TTL.BY_LABEL);
+    return filtered;
+  }
+
+  const db = await getAdminDb();
+  if (!db) return [];
+
   try {
-    // OPTIMIZED: Use all-releases cache and filter locally instead of 3 Firebase queries
-    const allCached = getCached('all-releases');
-    if (allCached) {
-      const filtered = allCached.filter((release: any) => {
-        const releaseLabel = release.labelName || release.recordLabel || release.copyrightHolder || '';
-        return releaseLabel.toLowerCase() === labelName.toLowerCase();
-      }).sort((a: any, b: any) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
-      
-      log.info(`[getReleasesByLabel] Found ${filtered.length} releases for "${labelName}" from cache`);
-      setCache(cacheKey, filtered, CACHE_TTL.BY_LABEL);
-      return filtered;
-    }
-    
     // Fall back to Firebase queries (3 parallel queries for different label fields)
     const queries = [
       db.collection('releases').where('status', '==', 'live').where('labelName', '==', labelName).get(),
