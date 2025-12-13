@@ -3,7 +3,7 @@
 // Check if cart items are duplicates of previous purchases
 
 import type { APIRoute } from 'astro';
-import { adminDb as db } from '../../lib/firebase-admin';
+import { queryCollection } from '../../lib/firebase-rest';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -30,14 +30,14 @@ async function getOwnershipData(userId: string): Promise<{
   }
   
   // Query orders for this customer
-  const ordersRef = db.collection('orders');
-  const ordersSnap = await ordersRef.where('customer.userId', '==', userId).get();
-  
+  const orders = await queryCollection('orders', {
+    filters: [{ field: 'customer.userId', op: 'EQUAL', value: userId }]
+  });
+
   const ownedReleases = new Set<string>();
   const ownedTracks = new Map<string, Set<string>>();
-  
-  ordersSnap.forEach(doc => {
-    const order = doc.data();
+
+  orders.forEach(order => {
     if (order.items && Array.isArray(order.items)) {
       order.items.forEach((item: any) => {
         const itemType = item.type || item.productType;

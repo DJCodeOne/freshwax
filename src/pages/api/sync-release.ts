@@ -1,7 +1,6 @@
 import { R2FirebaseSync } from '../../lib/r2-firebase-sync';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument, setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import AdmZip from 'adm-zip';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -103,11 +102,15 @@ export const POST = async ({ request, locals }: any) => {
     // Fetch release data from Firebase if not already available
     if (!release) {
       try {
-        const db = getFirebaseDb(config.firebase);
-        const releaseDoc = await db.collection('releases').doc(releaseId).get();
-        
-        if (releaseDoc.exists) {
-          release = { id: releaseDoc.id, ...releaseDoc.data() };
+        initFirebaseEnv({
+          FIREBASE_PROJECT_ID: config.firebase.projectId,
+          FIREBASE_API_KEY: config.firebase.apiKey || env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+        });
+
+        const releaseDoc = await getDocument('releases', releaseId);
+
+        if (releaseDoc) {
+          release = releaseDoc;
           log.info('[sync-release] Fetched release data:', release.releaseName, 'by', release.artistName);
         }
       } catch (fetchError) {
@@ -294,9 +297,13 @@ async function processRawZip(
     log.info(`[sync-release] Uploaded track ${trackNumber}: ${title}`);
   }
   
+  // Initialize Firebase environment
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: config.firebase.projectId,
+    FIREBASE_API_KEY: config.firebase.apiKey || import.meta.env.FIREBASE_API_KEY,
+  });
+
   // Create Firebase document
-  const db = getFirebaseDb(config.firebase);
-  
   const releaseDoc = {
     id: releaseId,
     artistName,
@@ -321,26 +328,13 @@ async function processRawZip(
       originalFilename: filename,
     },
   };
-  
-  await db.collection('releases').doc(releaseId).set(releaseDoc);
+
+  await setDocument('releases', releaseId, releaseDoc);
   log.info(`[sync-release] Created release document: ${releaseId}`);
-  
+
   return { releaseId, release: releaseDoc };
 }
 
 function sanitizeFilename(str: string): string {
   return str.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 50);
-}
-
-function getFirebaseDb(config: any) {
-  if (getApps().length === 0) {
-    initializeApp({
-      credential: cert({
-        projectId: config.projectId,
-        privateKey: config.privateKey?.replace(/\\n/g, '\n'),
-        clientEmail: config.clientEmail,
-      }),
-    });
-  }
-  return getFirestore();
 }

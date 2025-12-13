@@ -4,8 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { setDocument, updateDocument, getDocument, addDocument } from '../../lib/firebase-rest';
 import sharp from 'sharp';
 
 // Image processing settings
@@ -27,18 +26,6 @@ const R2_CONFIG = {
   bucketName: import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
   publicDomain: import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
 };
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-    }),
-  });
-}
-
-const db = getFirestore();
 
 const s3Client = new S3Client({
   region: 'auto',
@@ -74,36 +61,36 @@ function sanitizeForPath(str: string): string {
 export const POST: APIRoute = async ({ request }) => {
   try {
     log.info('[upload-merch] Started');
-    
+
     const formData = await request.formData();
-    
+
     const productName = (formData.get('productName') as string || '').trim();
     const productType = (formData.get('productType') as string || '').trim();
     const description = (formData.get('description') as string || '').trim();
     const sku = (formData.get('sku') as string || '').trim();
-    
+
     const costPrice = parseFloat(formData.get('costPrice') as string || '0');
     const retailPrice = parseFloat(formData.get('retailPrice') as string || '0');
     const salePrice = parseFloat(formData.get('salePrice') as string || '0') || null;
-    
+
     const supplierId = (formData.get('supplierId') as string || '').trim();
     const supplierName = (formData.get('supplierName') as string || '').trim();
     const supplierCode = (formData.get('supplierCode') as string || 'FW').trim().toUpperCase();
     const supplierCut = parseFloat(formData.get('supplierCut') as string || '0');
-    
+
     const category = (formData.get('category') as string || 'freshwax').trim();
     const categoryName = (formData.get('categoryName') as string || 'Fresh Wax').trim();
-    
+
     const lowStockThreshold = parseInt(formData.get('lowStockThreshold') as string || '5');
-    
+
     const sizesJson = formData.get('sizes') as string || '[]';
     const colorsJson = formData.get('colors') as string || '[]';
     const variantsJson = formData.get('variants') as string || '[]';
-    
+
     let sizes: string[] = [];
     let colors: Array<{name: string, hex: string}> = [];
     let variants: Array<{size?: string, color?: string, colorHex?: string, stock: number, sku?: string}> = [];
-    
+
     try {
       sizes = JSON.parse(sizesJson);
       colors = JSON.parse(colorsJson);
@@ -111,46 +98,46 @@ export const POST: APIRoute = async ({ request }) => {
     } catch (e) {
       log.error('Error parsing variants JSON');
     }
-    
+
     const imageCount = parseInt(formData.get('imageCount') as string || '0');
-    
+
     log.info('[upload-merch] Product:', productName, productType);
-    
+
     if (!productName) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Product name is required' 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Product name is required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     if (!productType || !PRODUCT_TYPES[productType]) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Valid product type is required' 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Valid product type is required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     if (retailPrice <= 0) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Retail price must be greater than 0' 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Retail price must be greater than 0'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     if (imageCount === 0) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'At least one product image is required' 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'At least one product image is required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     const timestamp = Date.now();
     const productId = 'merch_' + sanitizeForPath(productType) + '_' + timestamp;
     const generatedSKU = sku || generateSKU(productType, supplierCode);
     const folderPath = 'merch/' + category + '/' + productId;
-    
+
     log.info('[upload-merch] ID:', productId, 'SKU:', generatedSKU);
-    
+
     // Parse image-color mappings
     let imageColorMap: Array<{index: number; color: string | null; colorHex: string | null}> = [];
     try {
@@ -161,7 +148,7 @@ export const POST: APIRoute = async ({ request }) => {
     } catch (e) {
       log.info('[upload-merch] No image color map provided');
     }
-    
+
     const uploadedImages: Array<{
       url: string;
       key: string;
@@ -170,27 +157,27 @@ export const POST: APIRoute = async ({ request }) => {
       color: string | null;
       colorHex: string | null;
     }> = [];
-    
+
     for (let i = 0; i < imageCount; i++) {
       const imageFile = formData.get('image_' + i) as File;
-      
+
       if (!imageFile || imageFile.size === 0) {
         continue;
       }
-      
+
       log.info('[upload-merch] Processing image', i + 1);
-      
+
       const inputBuffer = Buffer.from(await imageFile.arrayBuffer());
-      
+
       // Get image metadata for square crop
       const metadata = await sharp(inputBuffer).metadata();
       const { width = 0, height = 0 } = metadata;
-      
+
       // Calculate center crop to square
       const size = Math.min(width, height);
       const left = Math.floor((width - size) / 2);
       const top = Math.floor((height - size) / 2);
-      
+
       // Process: crop to square, resize, convert to WebP
       const processedBuffer = await sharp(inputBuffer)
         .extract({ left, top, width: size, height: size })
@@ -198,15 +185,15 @@ export const POST: APIRoute = async ({ request }) => {
           fit: 'cover',
           position: 'center'
         })
-        .webp({ 
+        .webp({
           quality: WEBP_QUALITY,
           effort: 4
         })
         .toBuffer();
-      
+
       // Always save as .webp
       const imageKey = folderPath + '/image_' + i + '.webp';
-      
+
       await s3Client.send(
         new PutObjectCommand({
           Bucket: R2_CONFIG.bucketName,
@@ -216,12 +203,12 @@ export const POST: APIRoute = async ({ request }) => {
           CacheControl: 'public, max-age=31536000',
         })
       );
-      
+
       const imageUrl = R2_CONFIG.publicDomain + '/' + imageKey;
-      
+
       // Find color mapping for this image
       const colorMapping = imageColorMap.find(m => m.index === i);
-      
+
       uploadedImages.push({
         url: imageUrl,
         key: imageKey,
@@ -230,19 +217,19 @@ export const POST: APIRoute = async ({ request }) => {
         color: colorMapping?.color || null,
         colorHex: colorMapping?.colorHex || null
       });
-      
-      log.info('[upload-merch] Image processed and uploaded:', imageUrl, 
+
+      log.info('[upload-merch] Image processed and uploaded:', imageUrl,
         `(${(inputBuffer.length/1024).toFixed(1)}KB → ${(processedBuffer.length/1024).toFixed(1)}KB)`,
         colorMapping?.color ? `[Color: ${colorMapping.color}]` : '');
     }
-    
+
     if (uploadedImages.length === 0) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Failed to upload any images' 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Failed to upload any images'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     const variantStock: Record<string, {
       sku: string;
       size: string | null;
@@ -252,16 +239,16 @@ export const POST: APIRoute = async ({ request }) => {
       reserved: number;
       sold: number;
     }> = {};
-    
+
     let totalStock = 0;
-    
+
     const productTypeConfig = PRODUCT_TYPES[productType];
-    
+
     if (variants.length > 0) {
       variants.forEach((v) => {
         const variantKey = ((v.size || 'onesize') + '_' + (v.color || 'default')).toLowerCase().replace(/\s/g, '-');
         const variantSKU = v.sku || (generatedSKU + '-' + variantKey.toUpperCase());
-        
+
         variantStock[variantKey] = {
           sku: variantSKU,
           size: v.size || null,
@@ -271,7 +258,7 @@ export const POST: APIRoute = async ({ request }) => {
           reserved: 0,
           sold: 0
         };
-        
+
         totalStock += v.stock || 0;
       });
     } else if (productTypeConfig.hasSizes && sizes.length > 0) {
@@ -326,7 +313,7 @@ export const POST: APIRoute = async ({ request }) => {
         sold: 0
       };
     }
-    
+
     const productData = {
       id: productId,
       sku: generatedSKU,
@@ -369,16 +356,16 @@ export const POST: APIRoute = async ({ request }) => {
       sales: 0,
       revenue: 0,
     };
-    
+
     log.info('[upload-merch] Saving to Firebase');
-    
-    await db.collection('merch').doc(productId).set(productData);
-    
+
+    await setDocument('merch', productId, productData);
+
     log.info('[upload-merch] Product saved');
-    
+
     if (totalStock > 0) {
       const movementId = 'movement_' + timestamp;
-      await db.collection('merch-stock-movements').doc(movementId).set({
+      await setDocument('merch-stock-movements', movementId, {
         id: movementId,
         productId: productId,
         productName: productName,
@@ -393,25 +380,28 @@ export const POST: APIRoute = async ({ request }) => {
         createdAt: new Date().toISOString(),
         createdBy: 'admin'
       });
-      
+
       log.info('[upload-merch] Stock movement logged');
     }
-    
+
     if (supplierId) {
       try {
-        await db.collection('merch-suppliers').doc(supplierId).update({
-          totalProducts: FieldValue.increment(1),
-          totalStock: FieldValue.increment(totalStock),
-          updatedAt: new Date().toISOString()
-        });
-        log.info('[upload-merch] Supplier stats updated');
+        const supplierData = await getDocument('merch-suppliers', supplierId);
+        if (supplierData) {
+          await updateDocument('merch-suppliers', supplierId, {
+            totalProducts: (supplierData.totalProducts || 0) + 1,
+            totalStock: (supplierData.totalStock || 0) + totalStock,
+            updatedAt: new Date().toISOString()
+          });
+          log.info('[upload-merch] Supplier stats updated');
+        }
       } catch (e) {
         log.info('Note: Supplier document may not exist yet');
       }
     }
-    
+
     log.info('[upload-merch] Complete:', productId);
-    
+
     return new Response(JSON.stringify({
       success: true,
       message: 'Product uploaded successfully',
@@ -422,10 +412,10 @@ export const POST: APIRoute = async ({ request }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
     log.error('[upload-merch] Error:', error);
-    
+
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to upload product',

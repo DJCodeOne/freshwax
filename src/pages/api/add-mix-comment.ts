@@ -2,27 +2,13 @@
 // Stores comments as array within the dj-mix document (matching releases pattern)
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import { clearCache } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, clearCache } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
   info: (...args: any[]) => isDev && console.log(...args),
   error: (...args: any[]) => console.error(...args),
 };
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 // Profanity filter - common profane words
 const PROFANITY_LIST = [
@@ -218,20 +204,18 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const mixRef = db.collection('dj-mixes').doc(mixId);
-    const mixDoc = await mixRef.get();
-    
-    if (!mixDoc.exists) {
-      return new Response(JSON.stringify({ 
+    const mixData = await getDocument('dj-mixes', mixId);
+
+    if (!mixData) {
+      return new Response(JSON.stringify({
         success: false,
-        error: 'Mix not found' 
+        error: 'Mix not found'
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const mixData = mixDoc.data() || {};
     if (!mixData.comments) {
       mixData.comments = [];
     }
@@ -251,7 +235,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     mixData.comments.push(newComment);
 
-    await mixRef.update({
+    await updateDocument('dj-mixes', mixId, {
       comments: mixData.comments,
       commentCount: mixData.comments.length,
       updatedAt: new Date().toISOString()

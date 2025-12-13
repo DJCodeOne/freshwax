@@ -3,8 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument, updateDocument } from '../../lib/firebase-rest';
 
 // R2 Configuration
 const R2_CONFIG = {
@@ -14,19 +13,6 @@ const R2_CONFIG = {
   bucketName: import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
   publicDomain: import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
 };
-
-// Initialize Firebase
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-    }),
-  });
-}
-
-const db = getFirestore();
 
 // Initialize R2 Client
 const s3Client = new S3Client({
@@ -84,28 +70,25 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
     
     // Get the mix
-    const mixRef = db.collection('dj-mixes').doc(mixId);
-    const mixDoc = await mixRef.get();
-    
-    if (!mixDoc.exists) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Mix not found' 
+    const mixData = await getDocument('dj-mixes', mixId);
+
+    if (!mixData) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Mix not found'
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
     }
     
-    const mixData = mixDoc.data();
-    
     // Check ownership - allow if userId matches
     const isOwner = mixData?.userId === currentUserId;
     
     // Also check by artist name if partnerId is set
     if (!isOwner && partnerId) {
-      const partnerDoc = await db.collection('artists').doc(partnerId).get();
-      const partnerName = partnerDoc.exists ? partnerDoc.data()?.artistName?.toLowerCase().trim() : null;
+      const partnerData = await getDocument('artists', partnerId);
+      const partnerName = partnerData?.artistName?.toLowerCase().trim() || null;
       const mixDjName = (mixData?.djName || mixData?.dj_name || '').toLowerCase().trim();
       
       if (partnerName && mixDjName === partnerName) {
@@ -155,9 +138,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }));
     
     const artworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
-    
+
     // Update Firebase with new artwork URL
-    await mixRef.update({
+    await updateDocument('dj-mixes', mixId, {
       artwork_url: artworkUrl,
       artworkUrl: artworkUrl,
       imageUrl: artworkUrl,

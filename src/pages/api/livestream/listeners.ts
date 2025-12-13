@@ -2,23 +2,9 @@
 // API endpoint for tracking and retrieving active listeners on a live stream
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 
 export const prerender = false;
-
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 // GET - Retrieve list of active listeners for a stream
 export const GET: APIRoute = async ({ request }) => {
@@ -36,24 +22,22 @@ export const GET: APIRoute = async ({ request }) => {
     // Get active listeners from Firestore
     // Listeners are stored with a TTL - only show those active in last 2 minutes
     const twoMinutesAgo = Date.now() - (2 * 60 * 1000);
-    
-    const listenersRef = db.collection('stream-listeners');
-    const snapshot = await listenersRef
-      .where('streamId', '==', streamId)
-      .where('lastSeen', '>', twoMinutesAgo)
-      .orderBy('lastSeen', 'desc')
-      .limit(50)
-      .get();
-    
-    const listeners = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: data.userName || 'Anonymous',
-        avatarUrl: data.avatarUrl || null,
-        joinedAt: data.joinedAt || data.lastSeen
-      };
+
+    const results = await queryCollection('stream-listeners', {
+      filters: [
+        { field: 'streamId', op: 'EQUAL', value: streamId },
+        { field: 'lastSeen', op: 'GREATER_THAN', value: twoMinutesAgo }
+      ],
+      orderBy: { field: 'lastSeen', direction: 'DESCENDING' },
+      limit: 50
     });
+
+    const listeners = results.map(data => ({
+      id: data.id,
+      name: data.userName || 'Anonymous',
+      avatarUrl: data.avatarUrl || null,
+      joinedAt: data.joinedAt || data.lastSeen
+    }));
     
     return new Response(JSON.stringify({ 
       success: true, 
@@ -97,19 +81,18 @@ export const POST: APIRoute = async ({ request }) => {
       }), { status: 400 });
     }
     
-    const listenersRef = db.collection('stream-listeners');
     const listenerId = `${streamId}_${userId}`;
-    
+
     if (action === 'join') {
       // Add or update listener
-      await listenersRef.doc(listenerId).set({
+      await setDocument('stream-listeners', listenerId, {
         streamId,
         userId,
         userName: userName || 'Anonymous',
         avatarUrl: avatarUrl || null,
         joinedAt: Date.now(),
         lastSeen: Date.now()
-      }, { merge: true });
+      });
       
       return new Response(JSON.stringify({ 
         success: true, 
@@ -121,19 +104,19 @@ export const POST: APIRoute = async ({ request }) => {
       
     } else if (action === 'leave') {
       // Remove listener
-      await listenersRef.doc(listenerId).delete();
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'Left stream' 
-      }), { 
+      await deleteDocument('stream-listeners', listenerId);
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Left stream'
+      }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
-      
+
     } else if (action === 'heartbeat') {
       // Update last seen timestamp
-      await listenersRef.doc(listenerId).update({
+      await updateDocument('stream-listeners', listenerId, {
         lastSeen: Date.now()
       });
       

@@ -680,5 +680,106 @@ export async function deleteDocument(
   return { success: true };
 }
 
+// Increment a numeric field (read-modify-write)
+export async function incrementField(
+  collection: string,
+  docId: string,
+  fieldName: string,
+  incrementBy: number = 1
+): Promise<{ success: boolean; newValue: number }> {
+  const doc = await getDocument(collection, docId);
+  if (!doc) {
+    throw new Error(`Document ${collection}/${docId} not found`);
+  }
+
+  const currentValue = typeof doc[fieldName] === 'number' ? doc[fieldName] : 0;
+  const newValue = currentValue + incrementBy;
+
+  await updateDocument(collection, docId, { [fieldName]: newValue });
+
+  return { success: true, newValue };
+}
+
+// Append to an array field
+export async function arrayUnion(
+  collection: string,
+  docId: string,
+  fieldName: string,
+  values: any[]
+): Promise<{ success: boolean }> {
+  const doc = await getDocument(collection, docId);
+  if (!doc) {
+    throw new Error(`Document ${collection}/${docId} not found`);
+  }
+
+  const currentArray = Array.isArray(doc[fieldName]) ? doc[fieldName] : [];
+  const newArray = [...currentArray, ...values];
+
+  await updateDocument(collection, docId, { [fieldName]: newArray });
+
+  return { success: true };
+}
+
+// Remove from an array field
+export async function arrayRemove(
+  collection: string,
+  docId: string,
+  fieldName: string,
+  values: any[]
+): Promise<{ success: boolean }> {
+  const doc = await getDocument(collection, docId);
+  if (!doc) {
+    throw new Error(`Document ${collection}/${docId} not found`);
+  }
+
+  const currentArray = Array.isArray(doc[fieldName]) ? doc[fieldName] : [];
+  const newArray = currentArray.filter((item: any) => !values.includes(item));
+
+  await updateDocument(collection, docId, { [fieldName]: newArray });
+
+  return { success: true };
+}
+
+// Add a document with auto-generated ID
+export async function addDocument(
+  collection: string,
+  data: Record<string, any>
+): Promise<{ success: boolean; id: string }> {
+  const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
+  const apiKey = getEnvVar('FIREBASE_API_KEY');
+
+  if (!projectId || !apiKey) {
+    throw new Error('Firebase configuration missing');
+  }
+
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}?key=${apiKey}`;
+
+  const fields: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    fields[key] = toFirestoreValue(value);
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    log.error('addDocument error:', error);
+    throw new Error(`Failed to add document: ${response.status}`);
+  }
+
+  const result = await response.json();
+  // Extract ID from name path like "projects/.../documents/collection/docId"
+  const docId = result.name.split('/').pop();
+
+  // Clear collection query cache
+  clearCache(`query:${collection}`);
+
+  return { success: true, id: docId };
+}
+
 // Export cache TTL config for external use
 export { CACHE_TTL };

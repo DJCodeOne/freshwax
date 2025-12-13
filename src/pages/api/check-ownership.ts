@@ -3,7 +3,7 @@
 // Check if a customer already owns a release or track
 
 import type { APIRoute } from 'astro';
-import { adminDb as db } from '../../lib/firebase-admin';
+import { queryCollection } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -22,14 +22,14 @@ async function getOwnershipData(userId: string): Promise<{
   }
   
   // Fetch orders and build ownership map
-  const ordersRef = db.collection('orders');
-  const ordersSnap = await ordersRef.where('customer.userId', '==', userId).get();
-  
+  const orders = await queryCollection('orders', {
+    filters: [{ field: 'customer.userId', op: 'EQUAL', value: userId }]
+  });
+
   const ownedReleases = new Set<string>();
   const ownedTracks = new Map<string, string[]>(); // releaseId -> trackIds[]
-  
-  ordersSnap.forEach(doc => {
-    const order = doc.data();
+
+  orders.forEach(order => {
     if (order.items && Array.isArray(order.items)) {
       order.items.forEach((item: any) => {
         const itemReleaseId = item.releaseId || item.productId || item.id;

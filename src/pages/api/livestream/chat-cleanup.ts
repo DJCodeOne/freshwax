@@ -1,22 +1,9 @@
 // src/pages/api/livestream/chat-cleanup.ts
 // API to schedule and execute chat cleanup after DJ session ends
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 
 export const prerender = false;
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 // POST - Schedule chat cleanup for a stream
 export const POST: APIRoute = async ({ request }) => {
@@ -34,48 +21,48 @@ export const POST: APIRoute = async ({ request }) => {
     if (action === 'schedule') {
       // Schedule cleanup for 30 minutes from now
       const cleanupTime = new Date(Date.now() + 30 * 60 * 1000);
-      
-      await db.collection('chatCleanupSchedule').doc(streamId).set({
+
+      await setDocument('chatCleanupSchedule', streamId, {
         streamId,
-        scheduledAt: FieldValue.serverTimestamp(),
-        cleanupAt: cleanupTime,
+        scheduledAt: new Date().toISOString(),
+        cleanupAt: cleanupTime.toISOString(),
         status: 'pending'
       });
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
+
+      return new Response(JSON.stringify({
+        success: true,
         message: 'Chat cleanup scheduled',
         cleanupAt: cleanupTime.toISOString()
       }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     if (action === 'cancel') {
       // Cancel scheduled cleanup (if DJ comes back)
-      await db.collection('chatCleanupSchedule').doc(streamId).delete();
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
+      await deleteDocument('chatCleanupSchedule', streamId);
+
+      return new Response(JSON.stringify({
+        success: true,
         message: 'Chat cleanup cancelled'
       }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     if (action === 'execute') {
       // Execute cleanup now
       const deleted = await deleteStreamChat(streamId);
-      
+
       // Mark cleanup as complete
-      await db.collection('chatCleanupSchedule').doc(streamId).update({
+      await updateDocument('chatCleanupSchedule', streamId, {
         status: 'completed',
-        completedAt: FieldValue.serverTimestamp(),
+        completedAt: new Date().toISOString(),
         messagesDeleted: deleted
       });
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
+
+      return new Response(JSON.stringify({
+        success: true,
         message: 'Chat cleared',
         messagesDeleted: deleted
       }), {
@@ -104,49 +91,47 @@ export const GET: APIRoute = async ({ request }) => {
     
     // Find pending cleanups that are past their scheduled time
     const now = new Date();
-    const snapshot = await db.collection('chatCleanupSchedule')
-      .where('status', '==', 'pending')
-      .get();
-    
-    const pending = snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter((job: any) => {
-        const cleanupAt = job.cleanupAt?.toDate?.() || new Date(job.cleanupAt);
-        return cleanupAt <= now;
-      });
+    const allPending = await queryCollection('chatCleanupSchedule', {
+      filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }]
+    });
+
+    const pending = allPending.filter((job: any) => {
+      const cleanupAt = new Date(job.cleanupAt);
+      return cleanupAt <= now;
+    });
     
     if (!executeNow) {
-      return new Response(JSON.stringify({ 
-        success: true, 
+      return new Response(JSON.stringify({
+        success: true,
         pendingCleanups: pending.length,
         jobs: pending.map((j: any) => ({
           streamId: j.streamId,
-          cleanupAt: j.cleanupAt?.toDate?.()?.toISOString() || j.cleanupAt
+          cleanupAt: j.cleanupAt
         }))
       }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // Execute all pending cleanups
     const results = await Promise.all(
       pending.map(async (job: any) => {
         try {
           const deleted = await deleteStreamChat(job.streamId);
-          
-          await db.collection('chatCleanupSchedule').doc(job.id).update({
+
+          await updateDocument('chatCleanupSchedule', job.id, {
             status: 'completed',
-            completedAt: FieldValue.serverTimestamp(),
+            completedAt: new Date().toISOString(),
             messagesDeleted: deleted
           });
-          
+
           return { streamId: job.streamId, success: true, deleted };
         } catch (error: any) {
-          await db.collection('chatCleanupSchedule').doc(job.id).update({
+          await updateDocument('chatCleanupSchedule', job.id, {
             status: 'failed',
             error: error.message
           });
-          
+
           return { streamId: job.streamId, success: false, error: error.message };
         }
       })
@@ -170,35 +155,18 @@ export const GET: APIRoute = async ({ request }) => {
 
 // Delete all chat messages for a stream
 async function deleteStreamChat(streamId: string): Promise<number> {
-  let deleted = 0;
-  let batch = db.batch();
-  let batchCount = 0;
-  const BATCH_SIZE = 500;
-  
   // Get all chat messages for this stream
-  const chatSnapshot = await db.collection('livestream-chat')
-    .where('streamId', '==', streamId)
-    .get();
-  
-  for (const doc of chatSnapshot.docs) {
-    batch.delete(doc.ref);
-    batchCount++;
-    deleted++;
-    
-    // Firestore batches max 500 operations
-    if (batchCount >= BATCH_SIZE) {
-      await batch.commit();
-      batch = db.batch();
-      batchCount = 0;
-    }
-  }
-  
-  // Commit remaining
-  if (batchCount > 0) {
-    await batch.commit();
-  }
-  
+  const chatMessages = await queryCollection('livestream-chat', {
+    filters: [{ field: 'streamId', op: 'EQUAL', value: streamId }]
+  });
+
+  // Delete all messages (note: REST API doesn't support batch operations)
+  await Promise.all(chatMessages.map(msg =>
+    deleteDocument('livestream-chat', msg.id)
+  ));
+
+  const deleted = chatMessages.length;
   console.log(`[Chat Cleanup] Deleted ${deleted} messages for stream ${streamId}`);
-  
+
   return deleted;
 }

@@ -1,22 +1,9 @@
 // src/pages/api/stream/end.ts
 // Admin endpoint to forcefully end a stream
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 
 export const prerender = false;
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -34,10 +21,9 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const now = new Date().toISOString();
-    const streamRef = db.collection('livestreams').doc(streamId);
-    const streamDoc = await streamRef.get();
+    const streamDoc = await getDocument('livestreams', streamId);
 
-    if (!streamDoc.exists) {
+    if (!streamDoc) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Stream not found'
@@ -47,10 +33,10 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const streamData = streamDoc.data()!;
+    const streamData = streamDoc;
 
     // End the stream
-    await streamRef.update({
+    await updateDocument('livestreams', streamId, {
       status: 'offline',
       isLive: false,
       endedAt: now,
@@ -60,16 +46,22 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Mark all viewer sessions as ended
     try {
-      const sessions = await db.collection('livestream-viewers')
-        .where('streamId', '==', streamId)
-        .where('isActive', '==', true)
-        .get();
-
-      const batch = db.batch();
-      sessions.docs.forEach(doc => {
-        batch.update(doc.ref, { isActive: false, leftAt: now });
+      const sessions = await queryCollection('livestream-viewers', {
+        filters: [
+          { field: 'streamId', op: 'EQUAL', value: streamId },
+          { field: 'isActive', op: 'EQUAL', value: true }
+        ]
       });
-      await batch.commit();
+
+      // Update each session individually (no batch support in REST API)
+      await Promise.all(
+        sessions.map(session =>
+          updateDocument('livestream-viewers', session.id, {
+            isActive: false,
+            leftAt: now
+          })
+        )
+      );
     } catch (e) {
       // Viewers collection might not exist
       console.warn('[stream/end] Could not update viewer sessions:', e);

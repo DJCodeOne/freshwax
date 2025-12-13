@@ -3,21 +3,8 @@
 // Replaces client-side Firebase listener with server-mediated Pusher events
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { createHmac, createHash } from 'crypto';
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 // Pusher configuration (from .env)
 const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
@@ -88,8 +75,11 @@ function setCachedOnlineDjs(djs: any[]): void {
 }
 
 // GET: Get online DJs list (initial load and polling fallback)
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
   try {
+    // Initialize Firebase env
+    initFirebaseEnv(import.meta.env as any);
+
     // Check cache first
     const cached = getCachedOnlineDjs();
     if (cached) {
@@ -99,40 +89,39 @@ export const GET: APIRoute = async ({ request }) => {
         source: 'cache'
       }), {
         status: 200,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'public, max-age=10'
         }
       });
     }
-    
+
     // Query Firebase for DJs with recent activity (last 2 minutes)
     const twoMinutesAgo = new Date(Date.now() - 120000);
-    
-    const snapshot = await db.collection('djLobbyPresence')
-      .where('lastSeen', '>', twoMinutesAgo)
-      .get();
-    
-    const djs: any[] = [];
-    snapshot.forEach(doc => {
-      djs.push({ id: doc.id, odamiMa: doc.id, ...doc.data() });
+
+    const djs = await queryCollection('djLobbyPresence', {
+      filters: [{ field: 'lastSeen', op: 'GREATER_THAN', value: twoMinutesAgo }],
+      skipCache: true
     });
-    
+
+    // Add odamiMa field for compatibility
+    const djsWithOdamiMa = djs.map(dj => ({ ...dj, odamiMa: dj.id }));
+
     // Cache the result
-    setCachedOnlineDjs(djs);
-    
+    setCachedOnlineDjs(djsWithOdamiMa);
+
     return new Response(JSON.stringify({
       success: true,
-      djs,
+      djs: djsWithOdamiMa,
       source: 'firestore'
     }), {
       status: 200,
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'public, max-age=10'
       }
     });
-    
+
   } catch (error) {
     console.error('[dj-lobby/presence] GET Error:', error);
     return new Response(JSON.stringify({
@@ -143,25 +132,27 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST: Join/Leave/Heartbeat
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
+    // Initialize Firebase env
+    initFirebaseEnv(import.meta.env as any);
+
     const data = await request.json();
     const { action, userId, name, avatar, avatarLetter, isReady } = data;
-    
+
     if (!userId) {
       return new Response(JSON.stringify({
         success: false,
         error: 'User ID required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     const now = new Date();
-    const presenceRef = db.collection('djLobbyPresence').doc(userId);
-    
+
     switch (action) {
       case 'join': {
         // Update presence document
-        await presenceRef.set({
+        await setDocument('djLobbyPresence', userId, {
           odamiMa: userId,
           name: name || 'DJ',
           avatar: avatar || null,
@@ -169,11 +160,11 @@ export const POST: APIRoute = async ({ request }) => {
           isReady: isReady || false,
           lastSeen: now,
           joinedAt: now
-        }, { merge: true });
-        
+        });
+
         // Invalidate cache
         onlineDjsCache.delete('online-djs');
-        
+
         // Broadcast to all lobby members via Pusher
         await triggerPusher('dj-lobby', 'dj-joined', {
           id: userId,
@@ -184,39 +175,39 @@ export const POST: APIRoute = async ({ request }) => {
           isReady: isReady || false,
           timestamp: now.toISOString()
         });
-        
+
         return new Response(JSON.stringify({
           success: true,
           message: 'Joined lobby'
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
-      
+
       case 'leave': {
         // Delete presence document
-        await presenceRef.delete();
-        
+        await deleteDocument('djLobbyPresence', userId);
+
         // Invalidate cache
         onlineDjsCache.delete('online-djs');
-        
+
         // Broadcast leave event
         await triggerPusher('dj-lobby', 'dj-left', {
           id: userId,
           timestamp: now.toISOString()
         });
-        
+
         return new Response(JSON.stringify({
           success: true,
           message: 'Left lobby'
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
-      
+
       case 'heartbeat': {
         // Update last seen timestamp
-        await presenceRef.update({
+        await updateDocument('djLobbyPresence', userId, {
           lastSeen: now,
           isReady: isReady ?? false
         });
-        
+
         // Broadcast status update if ready state changed
         if (typeof isReady === 'boolean') {
           await triggerPusher('dj-lobby', 'dj-status', {
@@ -225,13 +216,13 @@ export const POST: APIRoute = async ({ request }) => {
             timestamp: now.toISOString()
           });
         }
-        
+
         return new Response(JSON.stringify({
           success: true,
           message: 'Heartbeat recorded'
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
-      
+
       case 'update': {
         // Update DJ info (name, avatar, ready state)
         const updateData: any = { lastSeen: now };
@@ -239,32 +230,32 @@ export const POST: APIRoute = async ({ request }) => {
         if (avatar !== undefined) updateData.avatar = avatar;
         if (avatarLetter) updateData.avatarLetter = avatarLetter;
         if (typeof isReady === 'boolean') updateData.isReady = isReady;
-        
-        await presenceRef.update(updateData);
-        
+
+        await updateDocument('djLobbyPresence', userId, updateData);
+
         // Invalidate cache
         onlineDjsCache.delete('online-djs');
-        
+
         // Broadcast update
         await triggerPusher('dj-lobby', 'dj-updated', {
           id: userId,
           ...updateData,
           timestamp: now.toISOString()
         });
-        
+
         return new Response(JSON.stringify({
           success: true,
           message: 'Updated'
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
-      
+
       default:
         return new Response(JSON.stringify({
           success: false,
           error: 'Invalid action'
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
   } catch (error) {
     console.error('[dj-lobby/presence] POST Error:', error);
     return new Response(JSON.stringify({
@@ -275,28 +266,27 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 // DELETE: Cleanup stale presence entries (cron job endpoint)
-export const DELETE: APIRoute = async ({ request }) => {
+export const DELETE: APIRoute = async ({ request, locals }) => {
   try {
+    // Initialize Firebase env
+    initFirebaseEnv(import.meta.env as any);
+
     const twoMinutesAgo = new Date(Date.now() - 120000);
-    
-    const staleSnapshot = await db.collection('djLobbyPresence')
-      .where('lastSeen', '<', twoMinutesAgo)
-      .get();
-    
-    const batch = db.batch();
-    const staleIds: string[] = [];
-    
-    staleSnapshot.forEach(doc => {
-      batch.delete(doc.ref);
-      staleIds.push(doc.id);
+
+    const staleDjs = await queryCollection('djLobbyPresence', {
+      filters: [{ field: 'lastSeen', op: 'LESS_THAN', value: twoMinutesAgo }],
+      skipCache: true
     });
-    
+
+    const staleIds: string[] = staleDjs.map(dj => dj.id);
+
     if (staleIds.length > 0) {
-      await batch.commit();
-      
+      // Delete each stale presence document
+      await Promise.all(staleIds.map(id => deleteDocument('djLobbyPresence', id)));
+
       // Invalidate cache
       onlineDjsCache.delete('online-djs');
-      
+
       // Broadcast cleanup
       for (const id of staleIds) {
         await triggerPusher('dj-lobby', 'dj-left', {
@@ -306,12 +296,12 @@ export const DELETE: APIRoute = async ({ request }) => {
         });
       }
     }
-    
+
     return new Response(JSON.stringify({
       success: true,
       cleaned: staleIds.length
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-    
+
   } catch (error) {
     console.error('[dj-lobby/presence] DELETE Error:', error);
     return new Response(JSON.stringify({

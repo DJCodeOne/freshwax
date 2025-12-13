@@ -2,27 +2,13 @@
 // Tracks DJ mix likes using atomic increments
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { clearCache } from '../../lib/firebase-rest';
+import { getDocument, incrementField, updateDocument, clearCache } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
   info: (...args: any[]) => isDev && console.log(...args),
   error: (...args: any[]) => console.error(...args),
 };
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -35,35 +21,24 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const mixRef = db.collection('dj-mixes').doc(mixId);
+    // Increment likes field and update last_liked_date
+    const { newValue: likes } = await incrementField('dj-mixes', mixId, 'likes', 1);
 
-    await mixRef.update({
-      likes: FieldValue.increment(1),
+    await updateDocument('dj-mixes', mixId, {
       last_liked_date: new Date().toISOString()
     });
 
-    const mixDoc = await mixRef.get();
-    
-    if (!mixDoc.exists) {
-      return new Response(JSON.stringify({ error: 'Mix not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    const mixData = mixDoc.data();
-
-    log.info('[track-mix-like] Mix', mixId, 'likes:', mixData?.likes || 0);
+    log.info('[track-mix-like] Mix', mixId, 'likes:', likes);
 
     // Invalidate cache for this mix
     clearCache(`doc:dj-mixes:${mixId}`);
 
     return new Response(JSON.stringify({
       success: true,
-      likes: mixData?.likes || 0
+      likes
     }), {
       status: 200,
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache'
       }

@@ -2,21 +2,7 @@
 // API endpoint to update partner/artist profile and settings
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-    }),
-  });
-}
-
-const db = getFirestore();
+import { getDocument, updateDocument } from '../../lib/firebase-rest';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
@@ -47,13 +33,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
     
     // Get partner document
-    const partnerRef = db.collection('artists').doc(partnerId);
-    const partnerDoc = await partnerRef.get();
-    
-    if (!partnerDoc.exists) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Partner not found' 
+    const partnerData = await getDocument('artists', partnerId);
+
+    if (!partnerData) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Partner not found'
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
@@ -84,8 +69,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (cleanData.artistName && cleanData.artistName.length > 50) {
       cleanData.artistName = cleanData.artistName.slice(0, 50);
     }
-    
-    await partnerRef.update(cleanData);
+
+    await updateDocument('artists', partnerId, cleanData);
     
     return new Response(JSON.stringify({ 
       success: true,

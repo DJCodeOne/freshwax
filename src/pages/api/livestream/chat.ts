@@ -3,21 +3,8 @@
 // Uses Pusher for real-time delivery (reduces Firebase reads)
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument } from '../../../lib/firebase-rest';
 import { createHmac, createHash } from 'crypto';
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 // Pusher configuration (from .env)
 const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
@@ -83,22 +70,18 @@ export const GET: APIRoute = async ({ request }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     
-    let query = db.collection('livestream-chat')
-      .where('streamId', '==', streamId)
-      .where('isModerated', '==', false)
-      .orderBy('createdAt', 'desc')
-      .limit(limit);
-    
-    if (after) {
-      query = query.startAfter(after);
-    }
-    
-    const messagesSnap = await query.get();
-    
-    const messages = messagesSnap.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })).reverse(); // Reverse to get chronological order
+    // Note: firebase-rest doesn't support startAfter, so we'll skip pagination for now
+    const messages = await queryCollection('livestream-chat', {
+      filters: [
+        { field: 'streamId', op: 'EQUAL', value: streamId },
+        { field: 'isModerated', op: 'EQUAL', value: false }
+      ],
+      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+      limit
+    });
+
+    // Reverse to get chronological order
+    messages.reverse();
     
     return new Response(JSON.stringify({
       success: true,
@@ -134,8 +117,8 @@ export const POST: APIRoute = async ({ request }) => {
     }
     
     // Verify stream exists and is live
-    const streamDoc = await db.collection('livestreams').doc(streamId).get();
-    if (!streamDoc.exists || !streamDoc.data()?.isLive) {
+    const streamDoc = await getDocument('livestreams', streamId);
+    if (!streamDoc || !streamDoc.isLive) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Stream is not live'
@@ -155,15 +138,17 @@ export const POST: APIRoute = async ({ request }) => {
     }
     
     // Rate limiting - max 1 message per second per user
-    const recentMessages = await db.collection('livestream-chat')
-      .where('streamId', '==', streamId)
-      .where('userId', '==', userId)
-      .orderBy('createdAt', 'desc')
-      .limit(1)
-      .get();
-    
-    if (!recentMessages.empty) {
-      const lastMessage = recentMessages.docs[0].data();
+    const recentMessages = await queryCollection('livestream-chat', {
+      filters: [
+        { field: 'streamId', op: 'EQUAL', value: streamId },
+        { field: 'userId', op: 'EQUAL', value: userId }
+      ],
+      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+      limit: 1
+    });
+
+    if (recentMessages.length > 0) {
+      const lastMessage = recentMessages[0];
       const timeSince = Date.now() - new Date(lastMessage.createdAt).getTime();
       if (timeSince < 1000) {
         return new Response(JSON.stringify({
@@ -188,19 +173,19 @@ export const POST: APIRoute = async ({ request }) => {
       createdAt: now
     };
     
-    const messageRef = await db.collection('livestream-chat').add(chatMessage);
+    const { id: messageId } = await addDocument('livestream-chat', chatMessage);
     
     // Trigger Pusher for real-time delivery to all connected clients
     // This replaces Firebase onSnapshot - no more reads per client!
     await triggerPusher(`stream-${streamId}`, 'new-message', {
-      id: messageRef.id,
+      id: messageId,
       ...chatMessage
     });
-    
+
     return new Response(JSON.stringify({
       success: true,
       message: {
-        id: messageRef.id,
+        id: messageId,
         ...chatMessage
       }
     }), { 
@@ -232,7 +217,7 @@ export const DELETE: APIRoute = async ({ request }) => {
     }
     
     // Mark as moderated rather than delete
-    await db.collection('livestream-chat').doc(messageId).update({
+    await updateDocument('livestream-chat', messageId, {
       isModerated: true,
       moderatedBy: moderatorId || 'system',
       moderatedAt: new Date().toISOString()

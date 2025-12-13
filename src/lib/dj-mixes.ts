@@ -1,8 +1,8 @@
 // src/lib/dj-mixes.ts
-// Server-side DJ mixes helper - uses Firebase Admin directly during SSR
+// Server-side DJ mixes helper - uses Firebase REST API
 // OPTIMIZED: Server-side caching to reduce Firebase reads
 
-import { adminDb as db } from './firebase-admin';
+import { getDocument, queryCollection } from './firebase-rest';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -74,12 +74,11 @@ export function invalidateMixesCache(pattern?: string): void {
 }
 
 // Helper function to normalize mix data
-function normalizeMix(doc: FirebaseFirestore.DocumentSnapshot): any {
-  const data = doc.data();
+function normalizeMix(data: any): any {
   if (!data) return null;
-  
+
   return {
-    id: doc.id,
+    ...data,
     title: data.title || data.name || 'Untitled Mix',
     // Prioritize displayName for public views, fall back to dj_name/djName
     dj_name: data.displayName || data.dj_name || data.djName || data.artist || 'Unknown DJ',
@@ -94,71 +93,64 @@ function normalizeMix(doc: FirebaseFirestore.DocumentSnapshot): any {
     downloads: data.downloadCount || data.downloads || 0,
     commentCount: data.commentCount || (data.comments?.length || 0),
     upload_date: data.upload_date || data.uploadedAt || data.createdAt || new Date().toISOString(),
-    published: data.published ?? data.status === 'live' ?? true,
-    // Include original data for any additional fields
-    ...data
+    published: data.published ?? data.status === 'live' ?? true
   };
 }
 
 // Get all published DJ mixes
 export async function getDJMixesForPage(limit: number = 50): Promise<any[]> {
-  if (!db) {
-    console.warn('[getDJMixesForPage] Firebase not initialized');
-    return [];
-  }
-  
   // Check cache first
   const cacheKey = `mixes-page:${limit}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
-  
+
   try {
     log.info(`[getDJMixesForPage] Fetching up to ${limit} mixes from Firebase...`);
-    
+
     // Try 'published' field first
-    let snapshot = await db.collection('dj-mixes')
-      .where('published', '==', true)
-      .limit(limit)
-      .get();
-    
+    let results = await queryCollection('dj-mixes', {
+      filters: [{ field: 'published', op: 'EQUAL', value: true }],
+      limit
+    });
+
     // If no results, try 'status' field
-    if (snapshot.empty) {
-      snapshot = await db.collection('dj-mixes')
-        .where('status', '==', 'live')
-        .limit(limit)
-        .get();
+    if (results.length === 0) {
+      results = await queryCollection('dj-mixes', {
+        filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
+        limit
+      });
     }
-    
+
     // If still no results, get all (for backwards compatibility)
-    if (snapshot.empty) {
-      snapshot = await db.collection('dj-mixes')
-        .limit(limit)
-        .get();
+    if (results.length === 0) {
+      results = await queryCollection('dj-mixes', {
+        limit
+      });
     }
-    
+
     const mixes: any[] = [];
-    
-    snapshot.forEach(doc => {
+
+    for (const doc of results) {
       const normalized = normalizeMix(doc);
       if (normalized) {
         mixes.push(normalized);
       }
-    });
-    
+    }
+
     // Sort by upload date (newest first)
     mixes.sort((a, b) => {
       const dateA = new Date(a.upload_date || 0).getTime();
       const dateB = new Date(b.upload_date || 0).getTime();
       return dateB - dateA;
     });
-    
+
     log.info(`[getDJMixesForPage] ✓ Fetched ${mixes.length} mixes`);
-    
+
     // Cache the results
     setCache(cacheKey, mixes, CACHE_TTL.ALL_MIXES);
-    
+
     return mixes;
-    
+
   } catch (error) {
     console.error('[getDJMixesForPage] Error:', error);
     return [];
@@ -167,16 +159,11 @@ export async function getDJMixesForPage(limit: number = 50): Promise<any[]> {
 
 // Get single DJ mix by ID
 export async function getDJMixById(mixId: string): Promise<any | null> {
-  if (!db) {
-    console.warn('[getDJMixById] Firebase not initialized');
-    return null;
-  }
-  
   // Check cache first
   const cacheKey = `mix:${mixId}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
-  
+
   // Also check if it's in the all-mixes cache
   const allCached = getCached('mixes-page:50');
   if (allCached) {
@@ -187,26 +174,26 @@ export async function getDJMixById(mixId: string): Promise<any | null> {
       return found;
     }
   }
-  
+
   try {
     log.info(`[getDJMixById] Fetching from Firebase: ${mixId}`);
-    const doc = await db.collection('dj-mixes').doc(mixId).get();
-    
-    if (!doc.exists) {
+    const data = await getDocument('dj-mixes', mixId);
+
+    if (!data) {
       log.info(`[getDJMixById] ✗ Not found: ${mixId}`);
       return null;
     }
-    
-    const normalized = normalizeMix(doc);
+
+    const normalized = normalizeMix(data);
     log.info(`[getDJMixById] ✓ Found: ${normalized?.title}`);
-    
+
     // Cache the result
     if (normalized) {
       setCache(cacheKey, normalized, CACHE_TTL.SINGLE_MIX);
     }
-    
+
     return normalized;
-    
+
   } catch (error) {
     console.error('[getDJMixById] Error:', error);
     return null;
@@ -215,19 +202,17 @@ export async function getDJMixById(mixId: string): Promise<any | null> {
 
 // Get mixes by DJ name
 export async function getDJMixesByDJ(djName: string, limit: number = 20): Promise<any[]> {
-  if (!db) return [];
-  
   // Check cache first
   const cacheKey = `mixes-by-dj:${djName.toLowerCase()}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
-  
+
   try {
     // Try to use the all-mixes cache first (avoids extra Firebase read)
     const allCached = getCached('mixes-page:50');
     if (allCached) {
       const filtered = allCached
-        .filter((m: any) => 
+        .filter((m: any) =>
           (m.dj_name?.toLowerCase() === djName.toLowerCase()) ||
           (m.djName?.toLowerCase() === djName.toLowerCase()) ||
           (m.artist?.toLowerCase() === djName.toLowerCase())
@@ -238,40 +223,40 @@ export async function getDJMixesByDJ(djName: string, limit: number = 20): Promis
           return dateB - dateA;
         })
         .slice(0, limit);
-      
+
       log.info(`[getDJMixesByDJ] Found ${filtered.length} mixes for "${djName}" from cache`);
       setCache(cacheKey, filtered, CACHE_TTL.BY_DJ);
       return filtered;
     }
-    
+
     // Fall back to Firebase query
-    const snapshot = await db.collection('dj-mixes')
-      .where('dj_name', '==', djName)
-      .limit(limit)
-      .get();
-    
+    const results = await queryCollection('dj-mixes', {
+      filters: [{ field: 'dj_name', op: 'EQUAL', value: djName }],
+      limit
+    });
+
     const mixes: any[] = [];
-    
-    snapshot.forEach(doc => {
+
+    for (const doc of results) {
       const normalized = normalizeMix(doc);
       if (normalized) {
         mixes.push(normalized);
       }
-    });
-    
+    }
+
     mixes.sort((a, b) => {
       const dateA = new Date(a.upload_date || 0).getTime();
       const dateB = new Date(b.upload_date || 0).getTime();
       return dateB - dateA;
     });
-    
+
     log.info(`[getDJMixesByDJ] Found ${mixes.length} mixes for "${djName}"`);
-    
+
     // Cache the results
     setCache(cacheKey, mixes, CACHE_TTL.BY_DJ);
-    
+
     return mixes;
-    
+
   } catch (error) {
     console.error('[getDJMixesByDJ] Error:', error);
     return [];

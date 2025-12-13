@@ -1,26 +1,12 @@
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
+import { getDocument, updateDocument, queryCollection, addDocument } from '../../lib/firebase-rest';
 const ADMIN_UID = 'Y3TGc171cHSWTqZDRSniyu7Jxc33';
 
 // Helper to check if user is admin
 async function isAdmin(uid: string): Promise<boolean> {
   if (uid === ADMIN_UID) return true;
-  const adminDoc = await db.collection('admins').doc(uid).get();
-  return adminDoc.exists;
+  const adminDoc = await getDocument('admins', uid);
+  return !!adminDoc;
 }
 
 export const GET: APIRoute = async ({ request, url }) => {
@@ -30,20 +16,18 @@ export const GET: APIRoute = async ({ request, url }) => {
   try {
     // Get user's roles
     if (action === 'getUserRoles' && uid) {
-      const userDoc = await db.collection('users').doc(uid).get();
-      
-      if (!userDoc.exists) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'User not found' 
+      const userData = await getDocument('users', uid);
+
+      if (!userData) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'User not found'
         }), { status: 404 });
       }
-
-      const userData = userDoc.data();
       return new Response(JSON.stringify({
         success: true,
-        roles: userData?.roles || {},
-        pendingRoles: userData?.pendingRoles || {}
+        roles: userData.roles || {},
+        pendingRoles: userData.pendingRoles || {}
       }));
     }
 
@@ -59,15 +43,14 @@ export const GET: APIRoute = async ({ request, url }) => {
         }), { status: 403 });
       }
 
-      const usersSnapshot = await db.collection('users').get();
+      const users = await queryCollection('users', {});
       const requests = {
         artist: [] as any[],
         merchSeller: [] as any[],
         djBypass: [] as any[]
       };
 
-      usersSnapshot.forEach(doc => {
-        const user = { uid: doc.id, ...doc.data() };
+      users.forEach(user => {
         const pending = user.pendingRoles || {};
 
         if (pending.artist?.status === 'pending') {
@@ -117,23 +100,20 @@ export const POST: APIRoute = async ({ request }) => {
 
       const validRoles = ['artist', 'merchSeller', 'djBypass'];
       if (!validRoles.includes(roleType)) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Invalid role type' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Invalid role type'
         }), { status: 400 });
       }
 
-      const userRef = db.collection('users').doc(uid);
-      const userDoc = await userRef.get();
+      const userData = await getDocument('users', uid);
 
-      if (!userDoc.exists) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'User not found' 
+      if (!userData) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'User not found'
         }), { status: 404 });
       }
-
-      const userData = userDoc.data();
       
       // Check if already has role
       if (userData?.roles?.[roleType === 'djBypass' ? 'djEligible' : roleType]) {
@@ -169,9 +149,9 @@ export const POST: APIRoute = async ({ request }) => {
         requestData.reason = reason || '';
       }
 
-      await userRef.update({
+      await updateDocument('users', uid, {
         [`pendingRoles.${roleType}`]: requestData,
-        updatedAt: FieldValue.serverTimestamp()
+        updatedAt: new Date()
       });
 
       return new Response(JSON.stringify({
@@ -196,25 +176,24 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 400 });
       }
 
-      const userRef = db.collection('users').doc(uid);
       const roleKey = roleType === 'djBypass' ? 'djEligible' : roleType;
 
-      await userRef.update({
+      await updateDocument('users', uid, {
         [`roles.${roleKey}`]: true,
         [`pendingRoles.${roleType}.status`]: 'approved',
-        [`pendingRoles.${roleType}.approvedAt`]: FieldValue.serverTimestamp(),
+        [`pendingRoles.${roleType}.approvedAt`]: new Date(),
         [`pendingRoles.${roleType}.approvedBy`]: adminUid,
-        updatedAt: FieldValue.serverTimestamp()
+        updatedAt: new Date()
       });
 
       // Create notification for user
-      await db.collection('notifications').add({
+      await addDocument('notifications', {
         userId: uid,
         type: 'role_approved',
         title: `${roleType === 'djBypass' ? 'DJ Bypass' : roleType === 'merchSeller' ? 'Merch Seller' : 'Artist'} Request Approved`,
         message: `Your ${roleType === 'djBypass' ? 'DJ bypass' : roleType} request has been approved!`,
         read: false,
-        createdAt: FieldValue.serverTimestamp()
+        createdAt: new Date()
       });
 
       return new Response(JSON.stringify({
@@ -239,24 +218,22 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 400 });
       }
 
-      const userRef = db.collection('users').doc(uid);
-
-      await userRef.update({
+      await updateDocument('users', uid, {
         [`pendingRoles.${roleType}.status`]: 'denied',
-        [`pendingRoles.${roleType}.deniedAt`]: FieldValue.serverTimestamp(),
+        [`pendingRoles.${roleType}.deniedAt`]: new Date(),
         [`pendingRoles.${roleType}.deniedBy`]: adminUid,
         [`pendingRoles.${roleType}.denialReason`]: reason || '',
-        updatedAt: FieldValue.serverTimestamp()
+        updatedAt: new Date()
       });
 
       // Create notification for user
-      await db.collection('notifications').add({
+      await addDocument('notifications', {
         userId: uid,
         type: 'role_denied',
         title: `${roleType === 'djBypass' ? 'DJ Bypass' : roleType === 'merchSeller' ? 'Merch Seller' : 'Artist'} Request Denied`,
         message: reason ? `Your request was denied: ${reason}` : 'Your request was denied.',
         read: false,
-        createdAt: FieldValue.serverTimestamp()
+        createdAt: new Date()
       });
 
       return new Response(JSON.stringify({
@@ -281,12 +258,11 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 400 });
       }
 
-      const userRef = db.collection('users').doc(uid);
       const roleKey = roleType === 'djBypass' ? 'djEligible' : roleType;
 
-      await userRef.update({
+      await updateDocument('users', uid, {
         [`roles.${roleKey}`]: false,
-        updatedAt: FieldValue.serverTimestamp()
+        updatedAt: new Date()
       });
 
       return new Response(JSON.stringify({

@@ -2,9 +2,9 @@
 // Delete user account and associated data
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { deleteDocument, queryCollection } from '../../lib/firebase-rest';
 import { getAuth } from 'firebase-admin/auth';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -12,6 +12,7 @@ const log = {
   error: (...args: any[]) => console.error(...args),
 };
 
+// Initialize Firebase Admin for Auth (still needed for deleteUser)
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -22,7 +23,6 @@ if (!getApps().length) {
   });
 }
 
-const db = getFirestore();
 const auth = getAuth();
 
 export const prerender = false;
@@ -43,35 +43,35 @@ export const POST: APIRoute = async ({ request }) => {
     }
     
     log.info('[delete-account] Deleting account for user:', userId);
-    
+
     // Delete customer document
     try {
-      await db.collection('customers').doc(userId).delete();
+      await deleteDocument('customers', userId);
       log.info('[delete-account] Deleted customers document');
     } catch (e) {
       log.info('[delete-account] No customers document to delete');
     }
-    
+
     // Delete user document (if exists)
     try {
-      await db.collection('users').doc(userId).delete();
+      await deleteDocument('users', userId);
       log.info('[delete-account] Deleted users document');
     } catch (e) {
       log.info('[delete-account] No users document to delete');
     }
-    
+
     // Delete orders associated with this user
     try {
-      const ordersSnapshot = await db.collection('orders')
-        .where('customer.userId', '==', userId)
-        .get();
-      
-      const batch = db.batch();
-      ordersSnapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-      await batch.commit();
-      log.info('[delete-account] Deleted', ordersSnapshot.size, 'orders');
+      const orders = await queryCollection('orders', [
+        { field: 'customer.userId', operator: '==', value: userId }
+      ]);
+
+      if (orders && orders.length > 0) {
+        for (const order of orders) {
+          await deleteDocument('orders', order.id);
+        }
+        log.info('[delete-account] Deleted', orders.length, 'orders');
+      }
     } catch (e) {
       log.info('[delete-account] Error deleting orders:', e);
     }

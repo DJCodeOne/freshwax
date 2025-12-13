@@ -1,8 +1,8 @@
 // src/lib/releases.ts
-// Uses Firebase Admin directly during SSR
+// Uses Firebase REST API
 // OPTIMIZED: Server-side caching to reduce Firebase reads significantly
 
-import { getAdminDb, ensureFirebaseInitialized } from './firebase-admin';
+import { getDocument, queryCollection } from './firebase-rest';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env?.DEV ?? false;
@@ -107,12 +107,10 @@ function normalizeRatings(data: any): { average: number; count: number; total: n
 }
 
 // Helper function to normalize a single release document
-function normalizeRelease(doc: FirebaseFirestore.DocumentSnapshot): any {
-  const data = doc.data();
+function normalizeRelease(data: any): any {
   if (!data) return null;
-  
+
   return {
-    id: doc.id,
     ...data,
     label: getLabelFromRelease(data),
     ratings: normalizeRatings(data),
@@ -137,28 +135,22 @@ export async function getAllReleases(): Promise<any[]> {
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  const db = await getAdminDb();
-  if (!db) {
-    console.warn('[getAllReleases] Firebase not initialized');
-    return [];
-  }
-
   try {
-    const snapshot = await db.collection('releases')
-      .where('status', '==', 'live')
-      .get();
-    
+    const results = await queryCollection('releases', {
+      filters: [{ field: 'status', op: 'EQUAL', value: 'live' }]
+    });
+
     const releases: any[] = [];
-    
-    snapshot.forEach(doc => {
+
+    for (const doc of results) {
       const normalized = normalizeRelease(doc);
       if (normalized) {
         releases.push(normalized);
       }
-    });
-    
+    }
+
     log.info(`[getAllReleases] Fetched ${releases.length} releases from Firebase`);
-    
+
     if (releases.length > 0) {
       log.info('[getAllReleases] First release:', {
         id: releases[0].id,
@@ -167,10 +159,10 @@ export async function getAllReleases(): Promise<any[]> {
         trackCount: releases[0].tracks?.length || 0
       });
     }
-    
+
     // Cache the results
     setCache(cacheKey, releases, CACHE_TTL.ALL_RELEASES);
-    
+
     return releases;
   } catch (error) {
     console.error('[getAllReleases] Error:', error);
@@ -184,45 +176,39 @@ export async function getReleasesForPage(limit: number = 20): Promise<any[]> {
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  const db = await getAdminDb();
-  if (!db) {
-    console.warn('[getReleasesForPage] Firebase not initialized');
-    return [];
-  }
-
   try {
-    const snapshot = await db.collection('releases')
-      .where('status', '==', 'live')
-      .orderBy('releaseDate', 'desc')
-      .limit(limit)
-      .get();
-    
+    const results = await queryCollection('releases', {
+      filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
+      orderBy: { field: 'releaseDate', direction: 'DESCENDING' },
+      limit
+    });
+
     const releases: any[] = [];
-    
-    snapshot.forEach(doc => {
+
+    for (const doc of results) {
       const normalized = normalizeRelease(doc);
       if (normalized) {
         releases.push(normalized);
       }
-    });
-    
+    }
+
     log.info(`[getReleasesForPage] Fetched ${releases.length} releases (limit: ${limit})`);
-    
+
     // Cache the results
     setCache(cacheKey, releases, CACHE_TTL.ALL_RELEASES);
-    
+
     return releases;
-    
+
   } catch (error) {
     console.warn('[getReleasesForPage] Indexed query failed, falling back to getAllReleases:', error);
     const all = await getAllReleases();
     const sorted = all
       .sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime())
       .slice(0, limit);
-    
+
     // Cache the fallback results too
     setCache(cacheKey, sorted, CACHE_TTL.ALL_RELEASES);
-    
+
     return sorted;
   }
 }
@@ -232,7 +218,7 @@ export async function getReleaseById(id: string): Promise<any | null> {
   const cacheKey = `release:${id}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
-  
+
   // Also check if it's in the all-releases cache
   const allCached = getCached('all-releases');
   if (allCached) {
@@ -244,31 +230,24 @@ export async function getReleaseById(id: string): Promise<any | null> {
     }
   }
 
-  const db = await getAdminDb();
-  if (!db) {
-    console.warn('[getReleaseById] Firebase not initialized');
-    return null;
-  }
-
   try {
     log.info(`[getReleaseById] Fetching from Firebase: ${id}`);
-    const doc = await db.collection('releases').doc(id).get();
-    
-    if (!doc.exists) {
+    const data = await getDocument('releases', id);
+
+    if (!data) {
       log.info(`[getReleaseById] ✗ Not found: ${id}`);
       return null;
     }
-    
-    const data = doc.data();
+
     log.info(`[getReleaseById] Found, status: ${data?.status}`);
-    
-    if (!data || data.status !== 'live') {
+
+    if (data.status !== 'live') {
       log.info(`[getReleaseById] ✗ Status not live: ${id}`);
       return null;
     }
-    
-    const result = normalizeRelease(doc);
-    
+
+    const result = normalizeRelease(data);
+
     log.info(`[getReleaseById] ✓ Returning:`, {
       id: result.id,
       artistName: result.artistName,
@@ -277,10 +256,10 @@ export async function getReleaseById(id: string): Promise<any | null> {
       ratings: result.ratings,
       coverArtUrl: result.coverArtUrl?.substring(0, 50)
     });
-    
+
     // Cache the result
     setCache(cacheKey, result, CACHE_TTL.SINGLE_RELEASE);
-    
+
     return result;
   } catch (error) {
     console.error(`[getReleaseById] Error:`, error);
@@ -294,25 +273,20 @@ export async function getReleasesGroupedByLabel(): Promise<Record<string, any[]>
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  if (!(await ensureFirebaseInitialized())) {
-    console.warn('[getReleasesGroupedByLabel] Firebase not initialized');
-    return {};
-  }
-  
   try {
     log.info('[getReleasesGroupedByLabel] Fetching and grouping releases');
     const releases = await getAllReleases(); // This now uses cache
     const releasesByLabel: Record<string, any[]> = {};
-    
+
     releases.forEach(release => {
       const label = release.label || getLabelFromRelease(release);
-      
+
       if (!releasesByLabel[label]) {
         releasesByLabel[label] = [];
       }
       releasesByLabel[label].push(release);
     });
-    
+
     Object.keys(releasesByLabel).forEach(label => {
       releasesByLabel[label].sort((a, b) => {
         const dateA = new Date(a.releaseDate || 0).getTime();
@@ -320,16 +294,16 @@ export async function getReleasesGroupedByLabel(): Promise<Record<string, any[]>
         return dateB - dateA;
       });
     });
-    
+
     log.info(`[getReleasesGroupedByLabel] ✓ Grouped ${releases.length} releases into ${Object.keys(releasesByLabel).length} labels`);
-    
+
     Object.keys(releasesByLabel).forEach(label => {
       log.info(`  - ${label}: ${releasesByLabel[label].length} releases`);
     });
-    
+
     // Cache the grouped result
     setCache(cacheKey, releasesByLabel, CACHE_TTL.GROUPED);
-    
+
     return releasesByLabel;
   } catch (error) {
     console.error('[getReleasesGroupedByLabel] Error:', error);
@@ -355,32 +329,31 @@ export async function getReleasesByArtist(artistName: string): Promise<any[]> {
     return filtered;
   }
 
-  const db = await getAdminDb();
-  if (!db) return [];
-
   try {
     // Fall back to Firebase query
-    const snapshot = await db.collection('releases')
-      .where('status', '==', 'live')
-      .where('artistName', '==', artistName)
-      .get();
-    
+    const results = await queryCollection('releases', {
+      filters: [
+        { field: 'status', op: 'EQUAL', value: 'live' },
+        { field: 'artistName', op: 'EQUAL', value: artistName }
+      ]
+    });
+
     const releases: any[] = [];
-    
-    snapshot.forEach(doc => {
+
+    for (const doc of results) {
       const normalized = normalizeRelease(doc);
       if (normalized) {
         releases.push(normalized);
       }
-    });
-    
+    }
+
     releases.sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
-    
+
     log.info(`[getReleasesByArtist] Found ${releases.length} releases for "${artistName}"`);
-    
+
     // Cache the results
     setCache(cacheKey, releases, CACHE_TTL.BY_ARTIST);
-    
+
     return releases;
   } catch (error) {
     console.error('[getReleasesByArtist] Error:', error);
@@ -407,39 +380,51 @@ export async function getReleasesByLabel(labelName: string): Promise<any[]> {
     return filtered;
   }
 
-  const db = await getAdminDb();
-  if (!db) return [];
-
   try {
     // Fall back to Firebase queries (3 parallel queries for different label fields)
     const queries = [
-      db.collection('releases').where('status', '==', 'live').where('labelName', '==', labelName).get(),
-      db.collection('releases').where('status', '==', 'live').where('recordLabel', '==', labelName).get(),
-      db.collection('releases').where('status', '==', 'live').where('copyrightHolder', '==', labelName).get()
+      queryCollection('releases', {
+        filters: [
+          { field: 'status', op: 'EQUAL', value: 'live' },
+          { field: 'labelName', op: 'EQUAL', value: labelName }
+        ]
+      }),
+      queryCollection('releases', {
+        filters: [
+          { field: 'status', op: 'EQUAL', value: 'live' },
+          { field: 'recordLabel', op: 'EQUAL', value: labelName }
+        ]
+      }),
+      queryCollection('releases', {
+        filters: [
+          { field: 'status', op: 'EQUAL', value: 'live' },
+          { field: 'copyrightHolder', op: 'EQUAL', value: labelName }
+        ]
+      })
     ];
-    
-    const snapshots = await Promise.all(queries);
+
+    const results = await Promise.all(queries);
     const releaseMap = new Map<string, any>();
-    
-    snapshots.forEach(snapshot => {
-      snapshot.forEach(doc => {
+
+    for (const resultSet of results) {
+      for (const doc of resultSet) {
         if (!releaseMap.has(doc.id)) {
           const normalized = normalizeRelease(doc);
           if (normalized) {
             releaseMap.set(doc.id, normalized);
           }
         }
-      });
-    });
-    
+      }
+    }
+
     const releases = Array.from(releaseMap.values());
     releases.sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
-    
+
     log.info(`[getReleasesByLabel] Found ${releases.length} releases for "${labelName}"`);
-    
+
     // Cache the results
     setCache(cacheKey, releases, CACHE_TTL.BY_LABEL);
-    
+
     return releases;
   } catch (error) {
     console.error('[getReleasesByLabel] Error:', error);

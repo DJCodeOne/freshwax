@@ -2,17 +2,16 @@
 // Checks R2 for actual artwork filename and updates Firestore
 
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const POST = async ({ request, locals }: any) => {
   try {
     const { releaseId } = await request.json();
-    
+
     if (!releaseId) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Missing releaseId' 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Missing releaseId'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -20,7 +19,7 @@ export const POST = async ({ request, locals }: any) => {
     }
 
     const env = locals?.runtime?.env || {};
-    
+
     // R2 config
     const accountId = env.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID;
     const accessKeyId = env.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID;
@@ -28,42 +27,21 @@ export const POST = async ({ request, locals }: any) => {
     const bucketName = env.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases';
     const publicDomain = env.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk';
 
-    // Firebase config
-    const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
-    const privateKey = env.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
-    const clientEmail = env.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
-
     if (!accountId || !accessKeyId || !secretAccessKey) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'R2 credentials not configured' 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'R2 credentials not configured'
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    if (!projectId || !privateKey || !clientEmail) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Firebase credentials not configured' 
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Initialize Firebase Admin
-    if (!getApps().length) {
-      initializeApp({
-        credential: cert({
-          projectId,
-          clientEmail,
-          privateKey: privateKey.replace(/\\n/g, '\n'),
-        }),
-      });
-    }
-    const db = getFirestore();
+    // Initialize Firebase environment
+    initFirebaseEnv({
+      FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+      FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    });
 
     // List files in R2
     const r2Client = new S3Client({
@@ -107,7 +85,7 @@ export const POST = async ({ request, locals }: any) => {
     const newCoverArtUrl = `${publicDomain}/releases/${releaseId}/artwork/${coverFilename}`;
 
     // Update Firestore
-    await db.collection('releases').doc(releaseId).update({
+    await updateDocument('releases', releaseId, {
       coverArtUrl: newCoverArtUrl,
       updatedAt: new Date().toISOString()
     });

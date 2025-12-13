@@ -2,27 +2,13 @@
 // Tracks DJ mix downloads using atomic increments
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { clearCache } from '../../lib/firebase-rest';
+import { incrementField, updateDocument, clearCache } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
   info: (...args: any[]) => isDev && console.log(...args),
   error: (...args: any[]) => console.error(...args),
 };
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -35,35 +21,24 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const mixRef = db.collection('dj-mixes').doc(mixId);
+    // Increment downloads field and update last_downloaded_date
+    const { newValue: downloads } = await incrementField('dj-mixes', mixId, 'downloads', 1);
 
-    await mixRef.update({
-      downloads: FieldValue.increment(1),
+    await updateDocument('dj-mixes', mixId, {
       last_downloaded_date: new Date().toISOString()
     });
 
-    const mixDoc = await mixRef.get();
-    
-    if (!mixDoc.exists) {
-      return new Response(JSON.stringify({ error: 'Mix not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    const mixData = mixDoc.data();
-
-    log.info('[track-mix-download] Mix', mixId, 'downloads:', mixData?.downloads || 0);
+    log.info('[track-mix-download] Mix', mixId, 'downloads:', downloads);
 
     // Invalidate cache for this mix
     clearCache(`doc:dj-mixes:${mixId}`);
 
     return new Response(JSON.stringify({
       success: true,
-      downloads: mixData?.downloads || 0
+      downloads
     }), {
       status: 200,
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache'
       }

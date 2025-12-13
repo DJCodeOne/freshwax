@@ -1,27 +1,13 @@
 // src/pages/api/add-comment.ts
 // Add comments to releases with optional GIF support
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { clearCache } from '../../lib/firebase-rest';
+import { getDocument, arrayUnion, clearCache } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
   info: (...args: any[]) => isDev && console.log(...args),
   error: (...args: any[]) => console.error(...args),
 };
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -43,10 +29,9 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(JSON.stringify({ success: false, error: 'Invalid GIF URL' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const releaseRef = db.collection('releases').doc(releaseId);
-    const releaseDoc = await releaseRef.get();
-    
-    if (!releaseDoc.exists) {
+    const release = await getDocument('releases', releaseId);
+
+    if (!release) {
       return new Response(JSON.stringify({ success: false, error: 'Release not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -61,8 +46,11 @@ export const POST: APIRoute = async ({ request }) => {
       approved: true
     };
 
-    await releaseRef.update({
-      comments: FieldValue.arrayUnion(newComment),
+    await arrayUnion('releases', releaseId, 'comments', [newComment]);
+
+    // Also update the updatedAt timestamp
+    const { updateDocument } = await import('../../lib/firebase-rest');
+    await updateDocument('releases', releaseId, {
       updatedAt: new Date().toISOString()
     });
 

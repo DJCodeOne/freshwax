@@ -2,21 +2,13 @@
 // Comprehensive admin settings API - handles artist permissions, livestream config, and system settings
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
+export const prerender = false;
 
-const db = getFirestore();
-const SETTINGS_DOC = 'system/admin-settings';
+// Settings document location
+const SETTINGS_COLLECTION = 'system';
+const SETTINGS_DOC_ID = 'admin-settings';
 
 // Default settings (used if not set in Firebase)
 const DEFAULT_SETTINGS = {
@@ -62,29 +54,31 @@ const DEFAULT_SETTINGS = {
 };
 
 // GET: Load settings
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase env from Cloudflare runtime
+  const env = (locals as any).runtime?.env;
+  if (env) initFirebaseEnv(env);
+
   try {
     const url = new URL(request.url);
     const action = url.searchParams.get('action');
     const section = url.searchParams.get('section'); // Optional: get specific section only
-    
+
     if (action === 'load' || !action) {
-      const docRef = db.doc(SETTINGS_DOC);
-      const docSnap = await docRef.get();
-      
+      const docData = await getDocument(SETTINGS_COLLECTION, SETTINGS_DOC_ID);
+
       let settings = DEFAULT_SETTINGS;
-      
-      if (docSnap.exists) {
-        const data = docSnap.data();
+
+      if (docData) {
         // Merge with defaults to ensure all fields exist
         settings = {
-          artistEditableFields: { ...DEFAULT_SETTINGS.artistEditableFields, ...(data?.artistEditableFields || {}) },
-          livestream: { ...DEFAULT_SETTINGS.livestream, ...(data?.livestream || {}) },
-          releaseDefaults: { ...DEFAULT_SETTINGS.releaseDefaults, ...(data?.releaseDefaults || {}) },
-          notifications: { ...DEFAULT_SETTINGS.notifications, ...(data?.notifications || {}) }
+          artistEditableFields: { ...DEFAULT_SETTINGS.artistEditableFields, ...(docData.artistEditableFields || {}) },
+          livestream: { ...DEFAULT_SETTINGS.livestream, ...(docData.livestream || {}) },
+          releaseDefaults: { ...DEFAULT_SETTINGS.releaseDefaults, ...(docData.releaseDefaults || {}) },
+          notifications: { ...DEFAULT_SETTINGS.notifications, ...(docData.notifications || {}) }
         };
       }
-      
+
       // If specific section requested, return just that
       if (section && settings[section as keyof typeof settings]) {
         return new Response(JSON.stringify({
@@ -95,7 +89,7 @@ export const GET: APIRoute = async ({ request }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
+
       return new Response(JSON.stringify({
         success: true,
         settings
@@ -104,7 +98,7 @@ export const GET: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     return new Response(JSON.stringify({
       success: false,
       error: 'Invalid action'
@@ -112,7 +106,7 @@ export const GET: APIRoute = async ({ request }) => {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
     console.error('[update-settings] GET Error:', error);
     return new Response(JSON.stringify({
@@ -126,11 +120,15 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST: Save settings
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase env from Cloudflare runtime
+  const env = (locals as any).runtime?.env;
+  if (env) initFirebaseEnv(env);
+
   try {
     const data = await request.json();
     const { action, settings, adminKey, section, sectionData } = data;
-    
+
     // Basic admin key validation
     if (adminKey !== 'fresh-wax-admin-2024') {
       return new Response(JSON.stringify({
@@ -141,17 +139,15 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     if (action === 'save') {
-      const docRef = db.doc(SETTINGS_DOC);
-      
       // If saving a specific section
       if (section && sectionData) {
-        await docRef.set({
+        await setDocument(SETTINGS_COLLECTION, SETTINGS_DOC_ID, {
           [section]: sectionData,
           updatedAt: new Date().toISOString()
-        }, { merge: true });
-        
+        });
+
         return new Response(JSON.stringify({
           success: true,
           message: `${section} settings saved`
@@ -160,14 +156,14 @@ export const POST: APIRoute = async ({ request }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
+
       // Save all settings
       if (settings) {
-        await docRef.set({
+        await setDocument(SETTINGS_COLLECTION, SETTINGS_DOC_ID, {
           ...settings,
           updatedAt: new Date().toISOString()
-        }, { merge: true });
-        
+        });
+
         return new Response(JSON.stringify({
           success: true,
           message: 'All settings saved successfully'
@@ -176,7 +172,7 @@ export const POST: APIRoute = async ({ request }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
+
       return new Response(JSON.stringify({
         success: false,
         error: 'No settings provided'
@@ -185,17 +181,15 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     if (action === 'reset') {
-      const docRef = db.doc(SETTINGS_DOC);
-      
       // If resetting a specific section
       if (section && DEFAULT_SETTINGS[section as keyof typeof DEFAULT_SETTINGS]) {
-        await docRef.set({
+        await setDocument(SETTINGS_COLLECTION, SETTINGS_DOC_ID, {
           [section]: DEFAULT_SETTINGS[section as keyof typeof DEFAULT_SETTINGS],
           updatedAt: new Date().toISOString()
-        }, { merge: true });
-        
+        });
+
         return new Response(JSON.stringify({
           success: true,
           message: `${section} reset to defaults`
@@ -204,13 +198,13 @@ export const POST: APIRoute = async ({ request }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
+
       // Reset all settings
-      await docRef.set({
+      await setDocument(SETTINGS_COLLECTION, SETTINGS_DOC_ID, {
         ...DEFAULT_SETTINGS,
         updatedAt: new Date().toISOString()
       });
-      
+
       return new Response(JSON.stringify({
         success: true,
         message: 'All settings reset to defaults'
@@ -219,7 +213,7 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     return new Response(JSON.stringify({
       success: false,
       error: 'Invalid action'
@@ -227,7 +221,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
     console.error('[update-settings] POST Error:', error);
     return new Response(JSON.stringify({

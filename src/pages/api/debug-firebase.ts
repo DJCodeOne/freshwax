@@ -1,5 +1,4 @@
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -8,35 +7,24 @@ const log = {
   error: (...args: any[]) => console.error(...args),
 };
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
-
-export const GET = async () => {
+export const GET = async ({ locals }: any) => {
   try {
+    // Initialize Firebase environment
+    const env = locals?.runtime?.env || {};
+    initFirebaseEnv({
+      FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+      FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    });
+
     log.info('🔍 Checking Firebase releases collection...');
-    
-    const releasesSnapshot = await db.collection('releases').get();
-    
-    log.info('📊 Total documents:', releasesSnapshot.size);
-    
-    const releases = [];
-    releasesSnapshot.forEach(doc => {
-      const data = doc.data();
-      releases.push({
-        id: doc.id,
-        ...data
-      });
-      log.info('📄 Document ID:', doc.id);
-      log.info('📄 Document data:', JSON.stringify(data, null, 2));
+
+    const releases = await queryCollection('releases', { skipCache: true });
+
+    log.info('📊 Total documents:', releases.length);
+
+    releases.forEach(release => {
+      log.info('📄 Document ID:', release.id);
+      log.info('📄 Document data:', JSON.stringify(release, null, 2));
     });
 
     return new Response(JSON.stringify({
@@ -49,7 +37,7 @@ export const GET = async () => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error:', error);
     return new Response(JSON.stringify({
       success: false,

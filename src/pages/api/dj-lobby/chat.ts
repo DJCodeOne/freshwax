@@ -3,21 +3,8 @@
 // Messages stored in Firebase, delivered via Pusher
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { createHmac, createHash } from 'crypto';
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 // Pusher configuration (from .env)
 const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
@@ -85,47 +72,45 @@ function checkRateLimit(userId: string): boolean {
 }
 
 // GET: Get recent chat messages (initial load only)
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
   try {
+    // Initialize Firebase env
+    initFirebaseEnv(import.meta.env as any);
+
     const url = new URL(request.url);
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 50);
     const before = url.searchParams.get('before'); // For pagination
-    
-    let query = db.collection('djLobbyChat')
-      .orderBy('createdAt', 'desc')
-      .limit(limit);
-    
+
+    const filters = [];
     if (before) {
       const beforeDate = new Date(before);
-      query = query.where('createdAt', '<', beforeDate);
+      filters.push({ field: 'createdAt', op: 'LESS_THAN' as const, value: beforeDate });
     }
-    
-    const snapshot = await query.get();
-    
-    const messages: any[] = [];
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      messages.push({
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
-      });
+
+    const messages = await queryCollection('djLobbyChat', {
+      filters: filters.length > 0 ? filters : undefined,
+      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+      limit,
+      skipCache: true
     });
-    
-    // Reverse to get chronological order
-    messages.reverse();
-    
+
+    // Ensure createdAt is ISO string format and reverse to get chronological order
+    const formattedMessages = messages.map(msg => ({
+      ...msg,
+      createdAt: msg.createdAt instanceof Date ? msg.createdAt.toISOString() : (msg.createdAt || new Date().toISOString())
+    })).reverse();
+
     return new Response(JSON.stringify({
       success: true,
-      messages
+      messages: formattedMessages
     }), {
       status: 200,
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache'
       }
     });
-    
+
   } catch (error) {
     console.error('[dj-lobby/chat] GET Error:', error);
     return new Response(JSON.stringify({
@@ -136,18 +121,21 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST: Send a chat message
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
+    // Initialize Firebase env
+    initFirebaseEnv(import.meta.env as any);
+
     const data = await request.json();
     const { userId, name, text, avatar } = data;
-    
+
     if (!userId || !text?.trim()) {
       return new Response(JSON.stringify({
         success: false,
         error: 'User ID and message text required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     // Rate limiting
     if (!checkRateLimit(userId)) {
       return new Response(JSON.stringify({
@@ -155,10 +143,10 @@ export const POST: APIRoute = async ({ request }) => {
         error: 'Slow down! Wait a moment before sending another message.'
       }), { status: 429, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     // Basic content validation
     const cleanText = text.trim().substring(0, 500); // Max 500 chars
-    
+
     // Check for spam patterns
     const lowerText = cleanText.toLowerCase();
     const spamPatterns = ['http://', 'https://', '.com/', '.co.uk/', 'discord.gg'];
@@ -168,9 +156,9 @@ export const POST: APIRoute = async ({ request }) => {
         error: 'Links are not allowed in chat'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     const now = new Date();
-    
+
     const chatMessage = {
       odamiMa: userId,
       name: name || 'DJ',
@@ -178,26 +166,26 @@ export const POST: APIRoute = async ({ request }) => {
       avatar: avatar || null,
       createdAt: now
     };
-    
+
     // Save to Firebase (for history)
-    const docRef = await db.collection('djLobbyChat').add(chatMessage);
-    
+    const docResult = await addDocument('djLobbyChat', chatMessage);
+
     // Broadcast via Pusher (real-time delivery)
     await triggerPusher('dj-lobby', 'chat-message', {
-      id: docRef.id,
+      id: docResult.id,
       ...chatMessage,
       createdAt: now.toISOString()
     });
-    
+
     return new Response(JSON.stringify({
       success: true,
       message: {
-        id: docRef.id,
+        id: docResult.id,
         ...chatMessage,
         createdAt: now.toISOString()
       }
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-    
+
   } catch (error) {
     console.error('[dj-lobby/chat] POST Error:', error);
     return new Response(JSON.stringify({
@@ -208,32 +196,33 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 // DELETE: Delete a message (admin/owner only)
-export const DELETE: APIRoute = async ({ request }) => {
+export const DELETE: APIRoute = async ({ request, locals }) => {
   try {
+    // Initialize Firebase env
+    initFirebaseEnv(import.meta.env as any);
+
     const url = new URL(request.url);
     const messageId = url.searchParams.get('messageId');
     const userId = url.searchParams.get('userId');
     const isAdmin = url.searchParams.get('isAdmin') === 'true';
-    
+
     if (!messageId) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Message ID required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     // Get the message to verify ownership
-    const messageDoc = await db.collection('djLobbyChat').doc(messageId).get();
-    
-    if (!messageDoc.exists) {
+    const messageData = await getDocument('djLobbyChat', messageId);
+
+    if (!messageData) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Message not found'
       }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
-    
-    const messageData = messageDoc.data();
-    
+
     // Check authorization
     if (!isAdmin && messageData?.odamiMa !== userId) {
       return new Response(JSON.stringify({
@@ -241,22 +230,22 @@ export const DELETE: APIRoute = async ({ request }) => {
         error: 'Not authorized to delete this message'
       }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     // Delete the message
-    await db.collection('djLobbyChat').doc(messageId).delete();
-    
+    await deleteDocument('djLobbyChat', messageId);
+
     // Broadcast deletion via Pusher
     await triggerPusher('dj-lobby', 'chat-deleted', {
       id: messageId,
       deletedBy: userId,
       timestamp: new Date().toISOString()
     });
-    
+
     return new Response(JSON.stringify({
       success: true,
       message: 'Message deleted'
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-    
+
   } catch (error) {
     console.error('[dj-lobby/chat] DELETE Error:', error);
     return new Response(JSON.stringify({

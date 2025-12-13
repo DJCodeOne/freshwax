@@ -2,22 +2,9 @@
 // Upload user avatar to R2 - compressed to small WebP for icon use
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { setDocument } from '../../lib/firebase-rest';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 // R2 client
 const r2 = new S3Client({
@@ -113,12 +100,12 @@ export const POST: APIRoute = async ({ request }) => {
     }));
     
     const avatarUrl = `${R2_PUBLIC_URL}/${filename}?t=${Date.now()}`;
-    
+
     // Update customer document
-    await db.collection('customers').doc(userId).set({
+    await setDocument('customers', userId, {
       avatarUrl,
       avatarUpdatedAt: new Date().toISOString()
-    }, { merge: true });
+    });
     
     console.log(`[upload-avatar] Avatar uploaded for user ${userId}: ${avatarUrl}`);
     
@@ -168,10 +155,10 @@ export const DELETE: APIRoute = async ({ request }) => {
     }
     
     // Remove avatar URL from customer document
-    await db.collection('customers').doc(userId).set({
+    await setDocument('customers', userId, {
       avatarUrl: null,
       avatarUpdatedAt: new Date().toISOString()
-    }, { merge: true });
+    });
     
     console.log(`[upload-avatar] Avatar removed for user ${userId}`);
     

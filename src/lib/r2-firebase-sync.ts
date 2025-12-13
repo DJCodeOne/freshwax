@@ -1,7 +1,6 @@
 // src/lib/r2-firebase-sync.ts
 import { S3Client, PutObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument, queryCollection, setDocument, updateDocument, deleteDocument } from './firebase-rest';
 import AdmZip from 'adm-zip';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -23,8 +22,7 @@ interface R2Config {
 
 interface FirebaseConfig {
   projectId: string;
-  privateKey: string;
-  clientEmail: string;
+  apiKey: string;
 }
 
 interface SyncConfig {
@@ -38,7 +36,6 @@ interface SyncConfig {
 
 export class R2FirebaseSync {
   private r2Client: S3Client;
-  private db: any;
   private config: SyncConfig;
 
   constructor(config: SyncConfig) {
@@ -54,18 +51,11 @@ export class R2FirebaseSync {
       },
     });
 
-    // Initialize Firebase Admin if not already initialized
-    if (!getApps().length) {
-      initializeApp({
-        credential: cert({
-          projectId: config.firebase.projectId,
-          clientEmail: config.firebase.clientEmail,
-          privateKey: config.firebase.privateKey.replace(/\\n/g, '\n'),
-        }),
-      });
+    // Initialize Firebase REST API env (for write operations)
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      (import.meta.env as any).FIREBASE_PROJECT_ID = config.firebase.projectId;
+      (import.meta.env as any).FIREBASE_API_KEY = config.firebase.apiKey;
     }
-
-    this.db = getFirestore();
   }
 
   /**
@@ -208,7 +198,7 @@ export class R2FirebaseSync {
   private async syncToFirebase(releaseId: string, metadata: any, coverFilename: string | null): Promise<void> {
     // Ensure URLs use the public domain
     const publicDomain = this.config.r2.publicDomain;
-    
+
     // Update cover art URL - use actual uploaded filename
     if (coverFilename) {
       metadata.coverArtUrl = `${publicDomain}/releases/${releaseId}/artwork/${coverFilename}`;
@@ -230,7 +220,7 @@ export class R2FirebaseSync {
       metadata.tracks = metadata.tracks.map((track: any) => {
         const trackNum = String(track.trackNumber + 1).padStart(2, '0');
         const trackName = track.trackName;
-        
+
         return {
           ...track,
           previewUrl: `${publicDomain}/releases/${releaseId}/previews/${trackNum}-${trackName}-preview.mp3`,
@@ -246,8 +236,8 @@ export class R2FirebaseSync {
     metadata.publishedAt = new Date().toISOString();
     metadata.syncedAt = new Date().toISOString();
 
-    // Write to Firebase
-    await this.db.collection(this.config.collections.releases).doc(releaseId).set(metadata, { merge: true });
+    // Write to Firebase using REST API
+    await setDocument(this.config.collections.releases, releaseId, metadata);
     log.info(`✅ Release ${releaseId} synced to Firebase with status: live`);
   }
 
@@ -255,34 +245,29 @@ export class R2FirebaseSync {
    * List releases from Firebase
    */
   async listReleases(options: any = {}): Promise<any[]> {
-    let query: any = this.db.collection(this.config.collections.releases);
+    const filters = [];
 
     if (options.status) {
-      query = query.where('status', '==', options.status);
+      filters.push({ field: 'status', op: 'EQUAL' as const, value: options.status });
     }
 
     if (options.featured !== undefined) {
-      query = query.where('featured', '==', options.featured);
+      filters.push({ field: 'featured', op: 'EQUAL' as const, value: options.featured });
     }
+
+    const queryOptions: any = {
+      filters: filters.length > 0 ? filters : undefined,
+      limit: options.limit
+    };
 
     if (options.orderBy) {
-      query = query.orderBy(options.orderBy, options.order || 'desc');
+      queryOptions.orderBy = {
+        field: options.orderBy,
+        direction: (options.order || 'desc').toUpperCase() === 'DESC' ? 'DESCENDING' : 'ASCENDING'
+      };
     }
 
-    if (options.limit) {
-      query = query.limit(options.limit);
-    }
-
-    const snapshot = await query.get();
-    const releases: any[] = [];
-
-    snapshot.forEach((doc: any) => {
-      releases.push({
-        id: doc.id,
-        ...doc.data(),
-      });
-    });
-
+    const releases = await queryCollection(this.config.collections.releases, queryOptions);
     return releases;
   }
 
@@ -290,23 +275,20 @@ export class R2FirebaseSync {
    * Get a single release by ID
    */
   async getRelease(releaseId: string): Promise<any | null> {
-    const doc = await this.db.collection(this.config.collections.releases).doc(releaseId).get();
-    
-    if (!doc.exists) {
+    const data = await getDocument(this.config.collections.releases, releaseId);
+
+    if (!data) {
       return null;
     }
 
-    return {
-      id: doc.id,
-      ...doc.data(),
-    };
+    return data;
   }
 
   /**
    * Update release status
    */
   async updateReleaseStatus(releaseId: string, status: string): Promise<void> {
-    await this.db.collection(this.config.collections.releases).doc(releaseId).update({
+    await updateDocument(this.config.collections.releases, releaseId, {
       status,
       updatedAt: new Date().toISOString(),
     });
@@ -316,7 +298,7 @@ export class R2FirebaseSync {
    * Delete release (from Firebase only, R2 cleanup should be manual)
    */
   async deleteRelease(releaseId: string): Promise<void> {
-    await this.db.collection(this.config.collections.releases).doc(releaseId).delete();
+    await deleteDocument(this.config.collections.releases, releaseId);
     log.info(`🗑️ Deleted release ${releaseId} from Firebase`);
   }
 

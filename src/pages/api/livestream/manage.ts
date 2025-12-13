@@ -2,21 +2,8 @@
 // Start, stop, and update live streams
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument } from '../../../lib/firebase-rest';
 import { generateStreamKey, buildRtmpUrl, buildHlsUrl, RED5_CONFIG } from '../../../lib/red5';
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -36,46 +23,48 @@ export const POST: APIRoute = async ({ request }) => {
     switch (action) {
       case 'start': {
         // Check if DJ is approved
-        const artistDoc = await db.collection('artists').doc(djId).get();
-        if (!artistDoc.exists) {
+        const artistDoc = await getDocument('artists', djId);
+        if (!artistDoc) {
           return new Response(JSON.stringify({
             success: false,
             error: 'DJ not found'
           }), { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
-        
-        const artistData = artistDoc.data()!;
+
+        const artistData = artistDoc;
         if (!artistData.approved) {
           return new Response(JSON.stringify({
             success: false,
             error: 'You must be an approved DJ to go live'
           }), { status: 403, headers: { 'Content-Type': 'application/json' } });
         }
-        
+
         // Check if DJ already has a live stream
-        const existingLive = await db.collection('livestreams')
-          .where('djId', '==', djId)
-          .where('isLive', '==', true)
-          .limit(1)
-          .get();
-        
-        if (!existingLive.empty) {
+        const existingLive = await queryCollection('livestreams', {
+          filters: [
+            { field: 'djId', op: 'EQUAL', value: djId },
+            { field: 'isLive', op: 'EQUAL', value: true }
+          ],
+          limit: 1
+        });
+
+        if (existingLive.length > 0) {
           return new Response(JSON.stringify({
             success: false,
             error: 'You already have a live stream running',
-            existingStreamId: existingLive.docs[0].id
+            existingStreamId: existingLive[0].id
           }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
-        
-        // Generate stream ID and key
-        const streamRef = db.collection('livestreams').doc();
+
+        // Generate stream ID - we'll create it manually
+        const streamId = `stream_${Date.now()}_${djId.substring(0, 8)}`;
         const defaultEndTime = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours default
         
         // Use provided stream key or generate new one
         const streamKey = streamData.streamKey || generateStreamKey(
-          djId, 
-          streamRef.id, 
-          now, 
+          djId,
+          streamId,
+          now,
           defaultEndTime
         );
         
@@ -121,18 +110,18 @@ export const POST: APIRoute = async ({ request }) => {
           updatedAt: nowISO
         };
         
-        await streamRef.set(newStream);
-        
-        console.log('[livestream/manage] Stream started:', streamRef.id, 'by DJ:', djId);
-        
+        await setDocument('livestreams', streamId, newStream);
+
+        console.log('[livestream/manage] Stream started:', streamId, 'by DJ:', djId);
+
         return new Response(JSON.stringify({
           success: true,
-          streamId: streamRef.id,
+          streamId: streamId,
           streamKey,
           rtmpUrl,
           hlsUrl,
           serverUrl: RED5_CONFIG.server.rtmpUrl,
-          stream: { id: streamRef.id, ...newStream }
+          stream: { id: streamId, ...newStream }
         }), { 
           status: 200, 
           headers: { 'Content-Type': 'application/json' } 
@@ -146,19 +135,16 @@ export const POST: APIRoute = async ({ request }) => {
             error: 'Stream ID is required'
           }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
-        
-        const streamRef = db.collection('livestreams').doc(streamId);
-        const streamDoc = await streamRef.get();
-        
-        if (!streamDoc.exists) {
+
+        const stream = await getDocument('livestreams', streamId);
+
+        if (!stream) {
           return new Response(JSON.stringify({
             success: false,
             error: 'Stream not found'
           }), { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
-        
-        const stream = streamDoc.data()!;
-        
+
         // Verify ownership
         if (stream.djId !== djId) {
           return new Response(JSON.stringify({
@@ -166,26 +152,27 @@ export const POST: APIRoute = async ({ request }) => {
             error: 'You can only stop your own stream'
           }), { status: 403, headers: { 'Content-Type': 'application/json' } });
         }
-        
+
         // End the stream
-        await streamRef.update({
+        await updateDocument('livestreams', streamId, {
           status: 'offline',
           isLive: false,
           endedAt: nowISO,
           updatedAt: nowISO
         });
-        
+
         // Mark all viewer sessions as ended
-        const sessions = await db.collection('livestream-viewers')
-          .where('streamId', '==', streamId)
-          .where('isActive', '==', true)
-          .get();
-        
-        const batch = db.batch();
-        sessions.docs.forEach(doc => {
-          batch.update(doc.ref, { isActive: false, leftAt: nowISO });
+        const sessions = await queryCollection('livestream-viewers', {
+          filters: [
+            { field: 'streamId', op: 'EQUAL', value: streamId },
+            { field: 'isActive', op: 'EQUAL', value: true }
+          ]
         });
-        await batch.commit();
+
+        // Update all sessions (note: batch operations not available in REST API)
+        await Promise.all(sessions.map(session =>
+          updateDocument('livestream-viewers', session.id, { isActive: false, leftAt: nowISO })
+        ));
         
         console.log('[livestream/manage] Stream stopped:', streamId);
         
@@ -205,20 +192,19 @@ export const POST: APIRoute = async ({ request }) => {
             error: 'Stream ID is required'
           }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
-        
-        const streamRef = db.collection('livestreams').doc(streamId);
-        const streamDoc = await streamRef.get();
-        
-        if (!streamDoc.exists) {
+
+        const stream = await getDocument('livestreams', streamId);
+
+        if (!stream) {
           return new Response(JSON.stringify({
             success: false,
             error: 'Stream not found'
           }), { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
-        
+
         // Update allowed fields
         const updates: any = { updatedAt: nowISO };
-        
+
         if (streamData.title) updates.title = streamData.title;
         if (streamData.description !== undefined) updates.description = streamData.description;
         if (streamData.genre) updates.genre = streamData.genre;
@@ -226,8 +212,8 @@ export const POST: APIRoute = async ({ request }) => {
         if (streamData.videoStreamUrl) updates.videoStreamUrl = streamData.videoStreamUrl;
         if (streamData.twitchChannel) updates.twitchChannel = streamData.twitchChannel;
         if (streamData.coverImage) updates.coverImage = streamData.coverImage;
-        
-        await streamRef.update(updates);
+
+        await updateDocument('livestreams', streamId, updates);
         
         return new Response(JSON.stringify({
           success: true,
@@ -266,11 +252,11 @@ export const POST: APIRoute = async ({ request }) => {
           updatedAt: nowISO
         };
         
-        const streamRef = await db.collection('livestreams').add(newStream);
-        
+        const { id: newStreamId } = await addDocument('livestreams', newStream);
+
         return new Response(JSON.stringify({
           success: true,
-          streamId: streamRef.id,
+          streamId: newStreamId,
           message: 'Stream scheduled'
         }), { 
           status: 200, 
@@ -288,18 +274,15 @@ export const POST: APIRoute = async ({ request }) => {
           }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
         
-        const slotRef = db.collection('livestreamSlots').doc(slotId);
-        const slotDoc = await slotRef.get();
-        
-        if (!slotDoc.exists) {
+        const slotData = await getDocument('livestreamSlots', slotId);
+
+        if (!slotData) {
           return new Response(JSON.stringify({
             success: false,
             error: 'Slot not found'
           }), { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
-        
-        const slotData = slotDoc.data()!;
-        
+
         // Verify this is the DJ's slot
         if (slotData.djId !== djId) {
           return new Response(JSON.stringify({
@@ -307,9 +290,9 @@ export const POST: APIRoute = async ({ request }) => {
             error: 'This is not your slot'
           }), { status: 403, headers: { 'Content-Type': 'application/json' } });
         }
-        
+
         // Mark as ready
-        await slotRef.update({
+        await updateDocument('livestreamSlots', slotId, {
           djReady: true,
           djReadyAt: nowISO,
           updatedAt: nowISO
@@ -336,18 +319,15 @@ export const POST: APIRoute = async ({ request }) => {
           }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
         
-        const slotRef = db.collection('livestreamSlots').doc(slotId);
-        const slotDoc = await slotRef.get();
-        
-        if (!slotDoc.exists) {
+        const slotData = await getDocument('livestreamSlots', slotId);
+
+        if (!slotData) {
           return new Response(JSON.stringify({
             success: false,
             error: 'Slot not found'
           }), { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
-        
-        const slotData = slotDoc.data()!;
-        
+
         // Only the original DJ or an admin can mark their slot as expired
         // (This gets called when the 3-minute grace period ends)
         if (slotData.djId !== djId) {
@@ -356,9 +336,9 @@ export const POST: APIRoute = async ({ request }) => {
             error: 'Cannot expire another DJ\'s slot'
           }), { status: 403, headers: { 'Content-Type': 'application/json' } });
         }
-        
+
         // Mark as available for takeover
-        await slotRef.update({
+        await updateDocument('livestreamSlots', slotId, {
           status: 'available',
           expiredAt: nowISO,
           originalDjId: slotData.djId,
@@ -382,78 +362,69 @@ export const POST: APIRoute = async ({ request }) => {
       
       case 'claim_slot': {
         // Claim an available slot (first come first served)
-        
+
         // Find available slots
-        const availableSlots = await db.collection('livestreamSlots')
-          .where('status', '==', 'available')
-          .limit(1)
-          .get();
-        
-        if (availableSlots.empty) {
+        const availableSlots = await queryCollection('livestreamSlots', {
+          filters: [{ field: 'status', op: 'EQUAL', value: 'available' }],
+          limit: 1
+        });
+
+        if (availableSlots.length === 0) {
           return new Response(JSON.stringify({
             success: false,
             error: 'No slots available'
           }), { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
-        
-        const availableSlot = availableSlots.docs[0];
-        const slotRef = availableSlot.ref;
-        const slotData = availableSlot.data();
-        
+
+        const availableSlot = availableSlots[0];
+        const slotId = availableSlot.id;
+        const slotData = availableSlot;
+
         // Check if DJ is approved
-        const artistDoc = await db.collection('artists').doc(djId).get();
-        if (!artistDoc.exists || !artistDoc.data()?.approved) {
+        const artistDoc = await getDocument('artists', djId);
+        if (!artistDoc || !artistDoc.approved) {
           return new Response(JSON.stringify({
             success: false,
             error: 'You must be an approved DJ to claim slots'
           }), { status: 403, headers: { 'Content-Type': 'application/json' } });
         }
-        
-        const artistData = artistDoc.data()!;
-        
-        // Use transaction to prevent race conditions
-        try {
-          await db.runTransaction(async (transaction) => {
-            const freshSlot = await transaction.get(slotRef);
-            
-            // Double-check still available
-            if (!freshSlot.exists || freshSlot.data()?.status !== 'available') {
-              throw new Error('Slot no longer available');
-            }
-            
-            // Claim the slot
-            transaction.update(slotRef, {
-              status: 'in_lobby',
-              djId: djId,
-              djName: artistData.artistName || artistData.displayName || 'DJ',
-              djAvatar: artistData.avatarUrl || null,
-              djReady: true, // Already ready since they're claiming
-              djReadyAt: nowISO,
-              claimedAt: nowISO,
-              claimedFromExpiry: true,
-              updatedAt: nowISO
-            });
-          });
-          
-          console.log(`[manage] DJ ${djId} claimed slot ${availableSlot.id}`);
-          
-          return new Response(JSON.stringify({
-            success: true,
-            slotId: availableSlot.id,
-            streamKey: slotData.streamKey,
-            message: 'Slot claimed successfully'
-          }), { 
-            status: 200, 
-            headers: { 'Content-Type': 'application/json' } 
-          });
-          
-        } catch (err) {
-          console.error('[manage] Failed to claim slot:', err);
+
+        const artistData = artistDoc;
+
+        // Note: REST API doesn't support transactions, so there's a small race condition risk
+        // Double-check still available
+        const freshSlot = await getDocument('livestreamSlots', slotId);
+        if (!freshSlot || freshSlot.status !== 'available') {
           return new Response(JSON.stringify({
             success: false,
-            error: 'Slot was claimed by another DJ'
+            error: 'Slot no longer available'
           }), { status: 409, headers: { 'Content-Type': 'application/json' } });
         }
+
+        // Claim the slot
+        await updateDocument('livestreamSlots', slotId, {
+          status: 'in_lobby',
+          djId: djId,
+          djName: artistData.artistName || artistData.displayName || 'DJ',
+          djAvatar: artistData.avatarUrl || null,
+          djReady: true, // Already ready since they're claiming
+          djReadyAt: nowISO,
+          claimedAt: nowISO,
+          claimedFromExpiry: true,
+          updatedAt: nowISO
+        });
+
+        console.log(`[manage] DJ ${djId} claimed slot ${slotId}`);
+
+        return new Response(JSON.stringify({
+          success: true,
+          slotId: slotId,
+          streamKey: slotData.streamKey,
+          message: 'Slot claimed successfully'
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
       
       default:

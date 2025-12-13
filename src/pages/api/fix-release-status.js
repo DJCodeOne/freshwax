@@ -1,50 +1,38 @@
 // src/pages/api/fix-release-status.js
 // One-time script to set all releases to status: 'live'
 
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { queryCollection, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest.js';
 
 export const prerender = false;
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
-
 export async function GET() {
+  // Initialize Firebase env for write operations
+  initFirebaseEnv(import.meta.env);
+
   try {
-    const snapshot = await db.collection('releases').get();
-    
+    const releases = await queryCollection('releases', {});
+
     const updates = [];
-    
-    for (const doc of snapshot.docs) {
-      const data = doc.data();
-      
+
+    for (const release of releases) {
       // Update if status is not 'live'
-      if (data.status !== 'live') {
-        await doc.ref.update({
+      if (release.status !== 'live') {
+        await updateDocument('releases', release.id, {
           status: 'live',
           published: true,
           approved: true,
           updatedAt: new Date().toISOString()
         });
-        
+
         updates.push({
-          id: doc.id,
-          oldStatus: data.status,
+          id: release.id,
+          oldStatus: release.status,
           newStatus: 'live'
         });
       }
     }
-    
-    return new Response(JSON.stringify({ 
+
+    return new Response(JSON.stringify({
       success: true,
       message: `Updated ${updates.length} releases to status: 'live'`,
       updates: updates
@@ -52,9 +40,9 @@ export async function GET() {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       success: false,
       error: error.message
     }), {

@@ -2,22 +2,9 @@
 // Get stock movement history
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { queryCollection } from '../../lib/firebase-rest';
 
 export const prerender = false;
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-    }),
-  });
-}
-
-const db = getFirestore();
 
 export const GET: APIRoute = async ({ url }) => {
   try {
@@ -26,33 +13,28 @@ export const GET: APIRoute = async ({ url }) => {
     const type = params.get('type');
     const limit = parseInt(params.get('limit') || '50');
     const supplierId = params.get('supplierId');
-    
-    let query: FirebaseFirestore.Query = db.collection('merch-stock-movements')
-      .orderBy('createdAt', 'desc')
-      .limit(Math.min(limit, 200));
-    
+
+    // Build filters
+    const filters: Array<{field: string, op: any, value: any}> = [];
+
     if (productId) {
-      query = query.where('productId', '==', productId);
+      filters.push({ field: 'productId', op: 'EQUAL', value: productId });
     }
-    
+
     if (type && type !== 'all') {
-      query = query.where('type', '==', type);
+      filters.push({ field: 'type', op: 'EQUAL', value: type });
     }
-    
+
     if (supplierId) {
-      query = query.where('supplierId', '==', supplierId);
+      filters.push({ field: 'supplierId', op: 'EQUAL', value: supplierId });
     }
-    
-    const snapshot = await query.get();
-    
-    const movements: any[] = [];
-    snapshot.forEach(doc => {
-      movements.push({
-        id: doc.id,
-        ...doc.data()
-      });
+
+    const movements = await queryCollection('merch-stock-movements', {
+      filters: filters.length > 0 ? filters : undefined,
+      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+      limit: Math.min(limit, 200)
     });
-    
+
     // Calculate summary stats
     const summary = {
       totalReceived: 0,
@@ -61,7 +43,7 @@ export const GET: APIRoute = async ({ url }) => {
       totalReturned: 0,
       totalAdjusted: 0
     };
-    
+
     movements.forEach(m => {
       switch (m.type) {
         case 'receive':
@@ -81,7 +63,7 @@ export const GET: APIRoute = async ({ url }) => {
           break;
       }
     });
-    
+
     return new Response(JSON.stringify({
       success: true,
       count: movements.length,
@@ -91,10 +73,10 @@ export const GET: APIRoute = async ({ url }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
     console.error('[get-stock-movements] Error:', error);
-    
+
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to fetch movements',

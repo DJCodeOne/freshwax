@@ -1,22 +1,9 @@
 // src/pages/api/livestream/relay-sources.ts
 // API for managing external radio relay sources
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument } from '../../../lib/firebase-rest';
 
 export const prerender = false;
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 // GET - List all relay sources or check specific one
 export const GET: APIRoute = async ({ request }) => {
@@ -26,27 +13,22 @@ export const GET: APIRoute = async ({ request }) => {
     
     if (sourceId) {
       // Get single source
-      const doc = await db.collection('relaySources').doc(sourceId).get();
-      if (!doc.exists) {
+      const doc = await getDocument('relaySources', sourceId);
+      if (!doc) {
         return new Response(JSON.stringify({ success: false, error: 'Source not found' }), {
           status: 404,
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      return new Response(JSON.stringify({ success: true, source: { id: doc.id, ...doc.data() } }), {
+      return new Response(JSON.stringify({ success: true, source: doc }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // List all sources
-    const snapshot = await db.collection('relaySources')
-      .orderBy('name')
-      .get();
-    
-    const sources = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const sources = await queryCollection('relaySources', {
+      orderBy: { field: 'name', direction: 'ASCENDING' }
+    });
     
     return new Response(JSON.stringify({ success: true, sources }), {
       headers: { 'Content-Type': 'application/json' }
@@ -74,6 +56,7 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
     
+    const now = new Date().toISOString();
     const sourceData = {
       name,
       streamUrl,
@@ -87,16 +70,16 @@ export const POST: APIRoute = async ({ request }) => {
       isCurrentlyLive: false,
       lastChecked: null,
       nowPlaying: '',
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp()
+      createdAt: now,
+      updatedAt: now
     };
-    
-    const docRef = await db.collection('relaySources').add(sourceData);
-    
-    return new Response(JSON.stringify({ 
-      success: true, 
-      id: docRef.id,
-      source: { id: docRef.id, ...sourceData }
+
+    const { id } = await addDocument('relaySources', sourceData);
+
+    return new Response(JSON.stringify({
+      success: true,
+      id,
+      source: { id, ...sourceData }
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -124,9 +107,9 @@ export const PUT: APIRoute = async ({ request }) => {
     
     // Remove fields that shouldn't be updated directly
     delete updates.createdAt;
-    updates.updatedAt = FieldValue.serverTimestamp();
-    
-    await db.collection('relaySources').doc(id).update(updates);
+    updates.updatedAt = new Date().toISOString();
+
+    await updateDocument('relaySources', id, updates);
     
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }
@@ -153,7 +136,7 @@ export const DELETE: APIRoute = async ({ request }) => {
       });
     }
     
-    await db.collection('relaySources').doc(id).delete();
+    await deleteDocument('relaySources', id);
     
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }

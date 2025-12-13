@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument, setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import AdmZip from 'adm-zip';
 
 //============================================================================
@@ -25,20 +24,6 @@ const R2_CONFIG = {
   bucketName: import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
   publicDomain: import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
 };
-
-// Initialize Firebase Admin (only once)
-function getFirebaseDb() {
-  if (!getApps().length) {
-    initializeApp({
-      credential: cert({
-        projectId: import.meta.env.FIREBASE_PROJECT_ID,
-        privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      }),
-    });
-  }
-  return getFirestore();
-}
 
 const s3Client = new S3Client({
   region: 'auto',
@@ -84,23 +69,28 @@ function createFolderName(metadata: any): string {
 // API HANDLER
 //============================================================================
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const db = getFirebaseDb();
-    
+    // Initialize Firebase environment
+    const env = locals?.runtime?.env || {};
+    initFirebaseEnv({
+      FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+      FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    });
+
     const formData = await request.formData();
     const packageFile = formData.get('package') as File;
     const releaseId = formData.get('releaseId') as string;
-    
+
     if (!packageFile || !releaseId) {
-      return new Response(JSON.stringify({ 
-        error: 'Missing package or release ID' 
+      return new Response(JSON.stringify({
+        error: 'Missing package or release ID'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     log.info(`[upload-final] Processing release: ${releaseId} (${(packageFile.size / 1024 / 1024).toFixed(2)} MB)`);
     
     const arrayBuffer = await packageFile.arrayBuffer();
@@ -208,18 +198,18 @@ export const POST: APIRoute = async ({ request }) => {
     
     // Sync to Firebase
     try {
-      await syncToFirebase(db, zipReleaseId, updatedMetadata);
-      
+      await syncToFirebase(zipReleaseId, updatedMetadata);
+
       // Verify the document exists
-      const verifyDoc = await db.collection('releases').doc(zipReleaseId).get();
-      
-      if (!verifyDoc.exists) {
+      const verifyDoc = await getDocument('releases', zipReleaseId);
+
+      if (!verifyDoc) {
         log.error('[upload-final] Document verification failed - not found in Firebase');
         throw new Error('Document not found after write');
       }
-      
+
       log.info(`[upload-final] Success: ${zipReleaseId} (${updatedMetadata.tracks?.length || 0} tracks)`);
-      
+
     } catch (fbError) {
       log.error('[upload-final] Firebase sync failed:', fbError);
       throw new Error(`Firebase sync failed: ${fbError instanceof Error ? fbError.message : 'Unknown error'}`);
@@ -430,23 +420,23 @@ function buildMetadataWithUrls(
   return updated;
 }
 
-async function syncToFirebase(db: FirebaseFirestore.Firestore, releaseId: string, metadata: any): Promise<void> {
+async function syncToFirebase(releaseId: string, metadata: any): Promise<void> {
   const releaseDoc = {
     id: releaseId,
     r2FolderName: metadata.r2FolderName,
-    
+
     artistName: metadata.artistName || 'Unknown',
     releaseName: metadata.releaseName || 'Untitled',
     labelName: metadata.labelName || null,
     labelCode: metadata.labelCode || null,
     genre: metadata.customGenre || metadata.genre || 'Electronic',
     releaseType: metadata.releaseType || 'EP',
-    
+
     releaseDate: metadata.releaseDate || new Date().toISOString().split('T')[0],
     officialReleaseDate: metadata.officialReleaseDate || null,
     uploadedAt: metadata.uploadedAt || new Date().toISOString(),
     processedAt: new Date().toISOString(),
-    
+
     pricing: {
       digital: parseFloat(metadata.pricePerSale || '0'),
       track: parseFloat(metadata.trackPrice || '1.00'),
@@ -455,7 +445,7 @@ async function syncToFirebase(db: FirebaseFirestore.Firestore, releaseId: string
     pricePerSale: parseFloat(metadata.pricePerSale || '0'),
     trackPrice: parseFloat(metadata.trackPrice || '1.00'),
     vinylPrice: metadata.vinylPrice ? parseFloat(metadata.vinylPrice) : null,
-    
+
     vinylRelease: metadata.vinylRelease || false,
     vinylRecordCount: metadata.vinylRecordCount || null,
     vinylRPM: metadata.vinylRPM || null,
@@ -480,42 +470,42 @@ async function syncToFirebase(db: FirebaseFirestore.Firestore, releaseId: string
         details: metadata.limitedEditionDetails || null,
       } : null,
     } : null,
-    
+
     masteredBy: metadata.masteredBy || null,
     recordingLocation: metadata.recordingLocation || null,
     recordingYear: metadata.recordingYear || null,
-    
+
     copyrightYear: metadata.copyrightYear || new Date().getFullYear(),
     copyrightHolder: metadata.copyrightHolder || null,
     publishingRights: metadata.publishingRights || null,
     publishingCompany: metadata.publishingCompany || null,
     upcEanCode: metadata.upcEanCode || null,
-    
+
     isPreviouslyReleased: metadata.isPreviouslyReleased || false,
     originalReleaseDate: metadata.originalReleaseDate || null,
     hasPreOrder: metadata.hasPreOrder || false,
     preOrderDate: metadata.preOrderDate || null,
     hasExplicitContent: metadata.hasExplicitContent || false,
     primaryLanguage: metadata.primaryLanguage || 'English',
-    
+
     releaseDescription: metadata.releaseDescription || null,
-    
+
     coverArtUrl: metadata.coverArtUrl || null,
     artworkUrl: metadata.coverArtUrl || null,
     artwork: metadata.artwork || { cover: null, additional: [] },
-    
+
     tracks: metadata.tracks || [],
     trackListing: metadata.trackListing || [],
-    
+
     submittedBy: metadata.submittedBy || null,
     email: metadata.email || null,
     socialLinks: metadata.socialLinks || {},
-    
+
     status: 'pending',
     approved: false,
     published: false,
     featured: false,
-    
+
     stats: metadata.stats || {
       totalTracks: metadata.tracks?.length || 0,
       totalPreviews: 0,
@@ -525,25 +515,24 @@ async function syncToFirebase(db: FirebaseFirestore.Firestore, releaseId: string
       downloads: 0,
       views: 0,
     },
-    
+
     metadata: {
       submittedBy: metadata.submittedBy || null,
       email: metadata.email || null,
       notes: metadata.notes || null,
       officialReleaseDate: metadata.officialReleaseDate || null,
     },
-    
+
     ratings: { average: 0, count: 0, total: 0, fiveStarCount: 0 },
     ratingsAverage: 0,
     ratingsCount: 0,
     fiveStarCount: 0,
     overallRating: { average: 0, count: 0, total: 0 },
     comments: [],
-    
+
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  
-  const releaseRef = db.collection('releases').doc(releaseId);
-  await releaseRef.set(releaseDoc);
+
+  await setDocument('releases', releaseId, releaseDoc);
 }

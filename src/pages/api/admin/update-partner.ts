@@ -1,23 +1,11 @@
 // src/pages/api/admin/update-partner.ts
 // Server-side endpoint to update partner permissions
-// Uses firebase-admin to bypass security rules
+// Uses firebase-rest.ts for Firestore access
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, setDocument } from '../../../lib/firebase-rest';
 
 export const prerender = false;
-
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
 
 // Hardcoded admin UIDs for verification
 const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33'];
@@ -25,21 +13,18 @@ const ADMIN_EMAILS = ['freshwaxonline@gmail.com'];
 
 async function isAdmin(uid: string): Promise<boolean> {
   if (ADMIN_UIDS.includes(uid)) return true;
-  
-  const db = getFirestore();
-  
+
   // Check admins collection
-  const adminDoc = await db.collection('admins').doc(uid).get();
-  if (adminDoc.exists) return true;
-  
+  const adminDoc = await getDocument('admins', uid);
+  if (adminDoc) return true;
+
   // Check users collection for admin role
-  const userDoc = await db.collection('users').doc(uid).get();
-  if (userDoc.exists) {
-    const data = userDoc.data();
-    if (data?.isAdmin || data?.role === 'admin' || data?.roles?.admin) return true;
-    if (data?.email && ADMIN_EMAILS.includes(data.email.toLowerCase())) return true;
+  const userDoc = await getDocument('users', uid);
+  if (userDoc) {
+    if (userDoc.isAdmin || userDoc.role === 'admin' || userDoc.roles?.admin) return true;
+    if (userDoc.email && ADMIN_EMAILS.includes(userDoc.email.toLowerCase())) return true;
   }
-  
+
   return false;
 }
 
@@ -69,21 +54,17 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
     
-    const db = getFirestore();
     const now = new Date().toISOString();
     const updates: string[] = [];
-    
+
     // Check which collections have this partner
-    const userRef = db.collection('users').doc(partnerId);
-    const artistRef = db.collection('artists').doc(partnerId);
-    
     const [userDoc, artistDoc] = await Promise.all([
-      userRef.get(),
-      artistRef.get()
+      getDocument('users', partnerId),
+      getDocument('artists', partnerId)
     ]);
-    
-    console.log('[update-partner] Docs exist - users:', userDoc.exists, 'artists:', artistDoc.exists);
-    
+
+    console.log('[update-partner] Docs exist - users:', !!userDoc, 'artists:', !!artistDoc);
+
     // Update users collection
     const userUpdate: any = {
       phone: permissions.phone || '',
@@ -113,24 +94,23 @@ export const POST: APIRoute = async ({ request }) => {
       },
       updatedAt: now
     };
-    
-    if (userDoc.exists) {
-      await userRef.update(userUpdate);
+
+    if (userDoc) {
+      await updateDocument('users', partnerId, userUpdate);
       updates.push('users:updated');
     } else {
       // Create user doc if it doesn't exist
-      const existingArtistData = artistDoc.exists ? artistDoc.data() : {};
-      await userRef.set({
+      await setDocument('users', partnerId, {
         ...userUpdate,
-        email: existingArtistData?.email || '',
-        fullName: existingArtistData?.artistName || existingArtistData?.name || '',
+        email: artistDoc?.email || '',
+        fullName: artistDoc?.artistName || artistDoc?.name || '',
         createdAt: now
       });
       updates.push('users:created');
     }
-    
+
     // Update artists collection
-    if (artistDoc.exists) {
+    if (artistDoc) {
       const artistUpdate = {
         phone: permissions.phone || '',
         address: {
@@ -147,11 +127,11 @@ export const POST: APIRoute = async ({ request }) => {
         disabled: permissions.disabled || false,
         updatedAt: now
       };
-      await artistRef.update(artistUpdate);
+      await updateDocument('artists', partnerId, artistUpdate);
       updates.push('artists:updated');
       console.log('[update-partner] Updated artists with:', artistUpdate);
     }
-    
+
     console.log('[update-partner] Updates completed:', updates);
     
     return new Response(JSON.stringify({

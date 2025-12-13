@@ -2,20 +2,8 @@
 // Admin API for gift cards management - list, create, analytics
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, setDocument, queryCollection, addDocument, arrayUnion } from '../../../lib/firebase-rest';
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 const FROM_EMAIL = 'Fresh Wax <noreply@freshwax.co.uk>';
 
 // Send email via Resend API (using fetch for Cloudflare compatibility)
@@ -25,7 +13,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
     console.error('[admin/giftcards] No Resend API key configured');
     return false;
   }
-  
+
   try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -40,13 +28,13 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
         html
       }),
     });
-    
+
     if (!response.ok) {
       const error = await response.text();
       console.error('[admin/giftcards] Resend error:', response.status, error);
       return false;
     }
-    
+
     return true;
   } catch (error) {
     console.error('[admin/giftcards] Email send error:', error);
@@ -59,60 +47,58 @@ export const GET: APIRoute = async ({ request }) => {
   try {
     const url = new URL(request.url);
     const type = url.searchParams.get('type') || 'all';
-    
+
     if (type === 'analytics') {
       // Get analytics data
-      const [giftCardsSnap, userCreditsSnap] = await Promise.all([
-        db.collection('giftCards').get(),
-        db.collection('userCredits').get()
+      const [giftCards, userCredits] = await Promise.all([
+        queryCollection('giftCards', { skipCache: true }),
+        queryCollection('userCredits', { skipCache: true })
       ]);
-      
+
       let totalIssued = 0;
       let totalRedeemed = 0;
       let totalUnredeemed = 0;
       let welcomeCardsIssued = 0;
       let promoCardsIssued = 0;
-      
-      giftCardsSnap.docs.forEach(doc => {
-        const card = doc.data();
+
+      giftCards.forEach(card => {
         totalIssued += card.originalValue || 0;
-        
+
         if (card.redeemedBy) {
           totalRedeemed += card.originalValue || 0;
         } else if (card.isActive) {
           totalUnredeemed += card.currentBalance || 0;
         }
-        
+
         if (card.type === 'welcome') welcomeCardsIssued++;
         if (card.type === 'promotional') promoCardsIssued++;
       });
-      
+
       let totalCreditBalance = 0;
       let totalSpent = 0;
       let usersWithCredit = 0;
-      
-      userCreditsSnap.docs.forEach(doc => {
-        const credit = doc.data();
+
+      userCredits.forEach(credit => {
         if (credit.balance > 0) {
           totalCreditBalance += credit.balance;
           usersWithCredit++;
         }
-        
+
         // Calculate total spent from transactions
         if (credit.transactions) {
-          credit.transactions.forEach(txn => {
+          credit.transactions.forEach((txn: any) => {
             if (txn.type === 'purchase' && txn.amount < 0) {
               totalSpent += Math.abs(txn.amount);
             }
           });
         }
       });
-      
+
       return new Response(JSON.stringify({
         success: true,
         analytics: {
           giftCards: {
-            totalCards: giftCardsSnap.size,
+            totalCards: giftCards.length,
             totalValueIssued: totalIssued,
             totalValueRedeemed: totalRedeemed,
             totalValueUnredeemed: totalUnredeemed,
@@ -125,88 +111,91 @@ export const GET: APIRoute = async ({ request }) => {
             totalCreditSpent: totalSpent
           }
         }
-      }), { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json' } 
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     if (type === 'cards') {
       // Get all gift cards
-      const cardsSnap = await db.collection('giftCards')
-        .orderBy('createdAt', 'desc')
-        .limit(100)
-        .get();
-      
-      const cards = cardsSnap.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
+      const cards = await queryCollection('giftCards', {
+        orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+        limit: 100,
+        skipCache: true
+      });
+
       return new Response(JSON.stringify({
         success: true,
         cards
-      }), { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json' } 
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     if (type === 'balances') {
       // Get all user credit balances
-      const creditsSnap = await db.collection('userCredits')
-        .orderBy('balance', 'desc')
-        .get();
-      
+      const credits = await queryCollection('userCredits', {
+        orderBy: { field: 'balance', direction: 'DESCENDING' },
+        skipCache: true
+      });
+
       // Get customer info for each
-      const balances = await Promise.all(creditsSnap.docs.map(async doc => {
-        const creditData = doc.data();
+      const balances = await Promise.all(credits.map(async (credit) => {
         let customerInfo = { email: 'Unknown', name: 'Unknown' };
-        
+
         try {
-          const customerDoc = await db.collection('customers').doc(doc.id).get();
-          if (customerDoc.exists) {
-            const customer = customerDoc.data();
+          const customer = await getDocument('customers', credit.id);
+          if (customer) {
             customerInfo = {
               email: customer.email || 'Unknown',
               name: customer.displayName || customer.firstName || 'Unknown'
             };
           }
         } catch (e) {}
-        
+
         return {
-          userId: doc.id,
-          balance: creditData.balance || 0,
-          lastUpdated: creditData.lastUpdated,
-          transactionCount: creditData.transactions?.length || 0,
+          userId: credit.id,
+          balance: credit.balance || 0,
+          lastUpdated: credit.lastUpdated,
+          transactionCount: credit.transactions?.length || 0,
           ...customerInfo
         };
       }));
-      
+
       return new Response(JSON.stringify({
         success: true,
         balances: balances.filter(b => b.balance > 0 || b.transactionCount > 0)
-      }), { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json' } 
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // Default: return everything
-    const [cardsSnap, creditsSnap] = await Promise.all([
-      db.collection('giftCards').orderBy('createdAt', 'desc').limit(50).get(),
-      db.collection('userCredits').orderBy('balance', 'desc').limit(50).get()
+    const [cards, credits] = await Promise.all([
+      queryCollection('giftCards', {
+        orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+        limit: 50,
+        skipCache: true
+      }),
+      queryCollection('userCredits', {
+        orderBy: { field: 'balance', direction: 'DESCENDING' },
+        limit: 50,
+        skipCache: true
+      })
     ]);
-    
+
     return new Response(JSON.stringify({
       success: true,
-      cards: cardsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
-      balances: creditsSnap.docs.map(doc => ({ userId: doc.id, ...doc.data() }))
-    }), { 
-      status: 200, 
-      headers: { 'Content-Type': 'application/json' } 
+      cards,
+      balances: credits
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
     console.error('[admin/giftcards] GET Error:', error);
     return new Response(JSON.stringify({
@@ -221,7 +210,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const data = await request.json();
     const { action, adminKey } = data;
-    
+
     // Validate admin key
     if (adminKey !== 'freshwax-admin-2024') {
       return new Response(JSON.stringify({
@@ -229,20 +218,20 @@ export const POST: APIRoute = async ({ request }) => {
         error: 'Unauthorized'
       }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     const now = new Date().toISOString();
-    
+
     if (action === 'createCard') {
       // Create a new gift card
       const { value, type, description, expiresInDays } = data;
-      
+
       if (!value || value <= 0) {
         return new Response(JSON.stringify({
           success: false,
           error: 'Invalid value'
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
-      
+
       // Generate code
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
       let code = 'FWGC-';
@@ -250,11 +239,11 @@ export const POST: APIRoute = async ({ request }) => {
         if (i > 0 && i % 4 === 0) code += '-';
         code += chars[Math.floor(Math.random() * chars.length)];
       }
-      
-      const expiresAt = expiresInDays 
+
+      const expiresAt = expiresInDays
         ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
         : null;
-      
+
       const newCard = {
         code,
         originalValue: parseFloat(value),
@@ -268,55 +257,56 @@ export const POST: APIRoute = async ({ request }) => {
         redeemedAt: null,
         createdByAdmin: true
       };
-      
-      await db.collection('giftCards').add(newCard);
-      
+
+      const result = await addDocument('giftCards', newCard);
+
       return new Response(JSON.stringify({
         success: true,
-        giftCard: newCard
-      }), { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json' } 
+        giftCard: { ...newCard, id: result.id }
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     if (action === 'adjustBalance') {
       // Adjust a user's credit balance
       const { userId, amount, reason } = data;
-      
+
       if (!userId || amount === undefined) {
         return new Response(JSON.stringify({
           success: false,
           error: 'User ID and amount required'
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
-      
+
       const adjustAmount = parseFloat(amount);
-      const creditRef = db.collection('userCredits').doc(userId);
-      const creditDoc = await creditRef.get();
-      
+      const creditDoc = await getDocument('userCredits', userId);
+
       let newBalance: number;
       const transactionId = `txn_admin_${Date.now()}`;
-      
-      if (creditDoc.exists) {
-        const currentBalance = creditDoc.data()?.balance || 0;
+
+      if (creditDoc) {
+        const currentBalance = creditDoc.balance || 0;
         newBalance = Math.max(0, currentBalance + adjustAmount);
-        
-        await creditRef.update({
+
+        await updateDocument('userCredits', userId, {
           balance: newBalance,
-          lastUpdated: now,
-          transactions: FieldValue.arrayUnion({
-            id: transactionId,
-            type: 'admin_adjustment',
-            amount: adjustAmount,
-            description: reason || `Admin adjustment: ${adjustAmount >= 0 ? '+' : ''}£${adjustAmount.toFixed(2)}`,
-            createdAt: now,
-            balanceAfter: newBalance
-          })
+          lastUpdated: now
         });
+
+        // Add transaction using arrayUnion helper
+        await arrayUnion('userCredits', userId, 'transactions', [{
+          id: transactionId,
+          type: 'admin_adjustment',
+          amount: adjustAmount,
+          description: reason || `Admin adjustment: ${adjustAmount >= 0 ? '+' : ''}£${adjustAmount.toFixed(2)}`,
+          createdAt: now,
+          balanceAfter: newBalance
+        }]);
       } else {
         newBalance = Math.max(0, adjustAmount);
-        await creditRef.set({
+        await setDocument('userCredits', userId, {
           userId,
           balance: newBalance,
           lastUpdated: now,
@@ -330,118 +320,118 @@ export const POST: APIRoute = async ({ request }) => {
           }]
         });
       }
-      
-      // Update customer doc
-      await db.collection('customers').doc(userId).update({
-        creditBalance: newBalance,
-        creditUpdatedAt: now
-      }).catch(() => {});
-      
+
+      // Update customer doc (ignore errors if doesn't exist)
+      try {
+        await updateDocument('customers', userId, {
+          creditBalance: newBalance,
+          creditUpdatedAt: now
+        });
+      } catch (e) {}
+
       return new Response(JSON.stringify({
         success: true,
         newBalance,
         adjustment: adjustAmount
-      }), { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json' } 
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     if (action === 'deactivateCard') {
       // Deactivate a gift card
       const { cardId } = data;
-      
+
       if (!cardId) {
         return new Response(JSON.stringify({
           success: false,
           error: 'Card ID required'
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
-      
-      await db.collection('giftCards').doc(cardId).update({
+
+      await updateDocument('giftCards', cardId, {
         isActive: false,
         deactivatedAt: now,
         deactivatedByAdmin: true
       });
-      
+
       return new Response(JSON.stringify({
         success: true,
         message: 'Card deactivated'
-      }), { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json' } 
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     if (action === 'reactivateCard') {
       // Reactivate a cancelled gift card (for lost codes recovery)
       const { cardId } = data;
-      
+
       if (!cardId) {
         return new Response(JSON.stringify({
           success: false,
           error: 'Card ID required'
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
-      
+
       // Get the card to check it hasn't been redeemed
-      const cardDoc = await db.collection('giftCards').doc(cardId).get();
-      if (!cardDoc.exists) {
+      const cardDoc = await getDocument('giftCards', cardId);
+      if (!cardDoc) {
         return new Response(JSON.stringify({
           success: false,
           error: 'Card not found'
         }), { status: 404, headers: { 'Content-Type': 'application/json' } });
       }
-      
-      const cardData = cardDoc.data();
-      if (cardData?.redeemedBy) {
+
+      if (cardDoc.redeemedBy) {
         return new Response(JSON.stringify({
           success: false,
           error: 'Cannot reactivate a redeemed card'
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
-      
-      await db.collection('giftCards').doc(cardId).update({
+
+      await updateDocument('giftCards', cardId, {
         isActive: true,
         reactivatedAt: now,
         reactivatedByAdmin: true,
         deactivatedAt: null,
         deactivatedByAdmin: null
       });
-      
+
       return new Response(JSON.stringify({
         success: true,
         message: 'Card reactivated'
-      }), { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json' } 
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     if (action === 'resendEmail') {
       // Resend gift card email to a different/same recipient
       const { cardId, code, recipientEmail, recipientName } = data;
-      
+
       if (!cardId || !recipientEmail) {
         return new Response(JSON.stringify({
           success: false,
           error: 'Card ID and recipient email required'
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
-      
+
       // Get the card details
-      const cardDoc = await db.collection('giftCards').doc(cardId).get();
-      if (!cardDoc.exists) {
+      const cardDoc = await getDocument('giftCards', cardId);
+      if (!cardDoc) {
         return new Response(JSON.stringify({
           success: false,
           error: 'Card not found'
         }), { status: 404, headers: { 'Content-Type': 'application/json' } });
       }
-      
-      const cardData = cardDoc.data();
-      const amount = cardData?.originalValue || 0;
-      const cardCode = code || cardData?.code;
-      
+
+      const amount = cardDoc.originalValue || 0;
+      const cardCode = code || cardDoc.code;
+
       // Send email
       try {
         const html = `
@@ -465,7 +455,7 @@ export const POST: APIRoute = async ({ request }) => {
               <p style="margin: 10px 0 0 0; color: #888; font-size: 14px;">Underground Music Store</p>
             </td>
           </tr>
-          
+
           <!-- Content -->
           <tr>
             <td style="padding: 40px 30px;">
@@ -516,26 +506,26 @@ export const POST: APIRoute = async ({ request }) => {
                   </tr>
                 </table>
               </div>
-              
+
               <h2 style="font-size: 28px; color: #111; text-align: center; margin: 0 0 20px 0;">
                 Your Gift Card Code
               </h2>
-              
+
               <p style="color: #666; text-align: center; margin-bottom: 30px;">
                 ${recipientName ? `Hi ${recipientName},` : ''} Here's your <span style="color: #000;">Fresh</span> <span style="color: #dc2626;">Wax</span> gift card code.
               </p>
-              
+
               <!-- Gift Card Box -->
               <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-radius: 16px; padding: 30px; text-align: center; margin: 30px 0;">
                 <p style="color: #888; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 10px 0;">Gift Card Value</p>
                 <p style="font-size: 48px; color: #dc2626; font-weight: 700; margin: 0 0 20px 0;">£${amount}</p>
-                
+
                 <p style="color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 10px 0;">Your Redemption Code</p>
                 <div style="background: #111; border: 2px solid #dc2626; border-radius: 10px; padding: 15px 25px; display: inline-block;">
                   <code style="font-size: 24px; color: #fff; letter-spacing: 3px; font-family: 'Monaco', 'Consolas', monospace;">${cardCode}</code>
                 </div>
               </div>
-              
+
               <!-- How to Use -->
               <div style="background: #f9f9f9; border-radius: 12px; padding: 25px; margin: 30px 0;">
                 <h3 style="font-size: 18px; color: #111; margin: 0 0 15px 0;">How to Redeem</h3>
@@ -546,7 +536,7 @@ export const POST: APIRoute = async ({ request }) => {
                   <li>Start shopping!</li>
                 </ol>
               </div>
-              
+
               <!-- CTA Button -->
               <div style="text-align: center; margin: 30px 0;">
                 <a href="https://freshwax.co.uk/giftcards" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-size: 16px; font-weight: 600;">
@@ -555,7 +545,7 @@ export const POST: APIRoute = async ({ request }) => {
               </div>
             </td>
           </tr>
-          
+
           <!-- Footer -->
           <tr>
             <td style="background: #f5f5f5; padding: 25px 30px; text-align: center; border-top: 1px solid #eee;">
@@ -572,32 +562,33 @@ export const POST: APIRoute = async ({ request }) => {
 </body>
 </html>
         `;
-        
+
         await sendEmail(
           recipientEmail,
           `🎁 Your £${amount} Fresh Wax Gift Card Code`,
           html
         );
-        
-        // Update card with email record
-        await db.collection('giftCards').doc(cardId).update({
-          emailsSent: FieldValue.arrayUnion({
-            email: recipientEmail,
-            sentAt: now,
-            type: 'admin_resend'
-          }),
+
+        // Update card with email record using arrayUnion
+        await arrayUnion('giftCards', cardId, 'emailsSent', [{
+          email: recipientEmail,
+          sentAt: now,
+          type: 'admin_resend'
+        }]);
+
+        await updateDocument('giftCards', cardId, {
           recipientEmail: recipientEmail,
-          recipientName: recipientName || cardData?.recipientName || null
+          recipientName: recipientName || cardDoc.recipientName || null
         });
-        
+
         return new Response(JSON.stringify({
           success: true,
           message: `Email sent to ${recipientEmail}`
-        }), { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json' } 
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
         });
-        
+
       } catch (emailError) {
         console.error('[admin/giftcards] Email error:', emailError);
         return new Response(JSON.stringify({
@@ -606,12 +597,12 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 500, headers: { 'Content-Type': 'application/json' } });
       }
     }
-    
+
     return new Response(JSON.stringify({
       success: false,
       error: 'Invalid action'
     }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    
+
   } catch (error) {
     console.error('[admin/giftcards] POST Error:', error);
     return new Response(JSON.stringify({

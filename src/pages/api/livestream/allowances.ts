@@ -2,20 +2,7 @@
 // Manage DJ weekly booking allowances (admin overrides)
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 
 // Default limits
 export const DEFAULT_WEEKLY_SLOTS = 2;
@@ -30,12 +17,12 @@ export const GET: APIRoute = async ({ request }) => {
 
     if (djId) {
       // Get specific DJ's allowance
-      const doc = await db.collection('djAllowances').doc(djId).get();
-      
-      if (doc.exists) {
+      const doc = await getDocument('djAllowances', djId);
+
+      if (doc) {
         return new Response(JSON.stringify({
           success: true,
-          allowance: { djId, ...doc.data() }
+          allowance: { djId, ...doc }
         }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
@@ -58,11 +45,7 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     // Get all allowances (admin view)
-    const snapshot = await db.collection('djAllowances').get();
-    const allowances = snapshot.docs.map(doc => ({
-      djId: doc.id,
-      ...doc.data()
-    }));
+    const allowances = await queryCollection('djAllowances');
 
     return new Response(JSON.stringify({
       success: true,
@@ -115,21 +98,20 @@ export const POST: APIRoute = async ({ request }) => {
       // Check if djId is an email
       if (djId.includes('@')) {
         // Look up artist by email
-        const artistSnapshot = await db.collection('artists')
-          .where('email', '==', djId)
-          .limit(1)
-          .get();
-        
-        if (!artistSnapshot.empty) {
-          const artistData = artistSnapshot.docs[0].data();
+        const artists = await queryCollection('artists', {
+          filters: [{ field: 'email', op: 'EQUAL', value: djId }],
+          limit: 1
+        });
+
+        if (artists.length > 0) {
+          const artistData = artists[0];
           finalDjName = artistData.djName || artistData.name || djId;
         }
       } else {
         // Look up by ID
-        const artistDoc = await db.collection('artists').doc(djId).get();
-        if (artistDoc.exists) {
-          const artistData = artistDoc.data();
-          finalDjName = artistData?.djName || artistData?.name || djId;
+        const artistDoc = await getDocument('artists', djId);
+        if (artistDoc) {
+          finalDjName = artistDoc.djName || artistDoc.name || djId;
         }
       }
     }
@@ -145,8 +127,8 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Use email or ID as document ID
     const docId = djId.includes('@') ? djId.replace(/[.@]/g, '_') : djId;
-    
-    await db.collection('djAllowances').doc(docId).set(allowanceData, { merge: true });
+
+    await setDocument('djAllowances', docId, allowanceData);
 
     return new Response(JSON.stringify({
       success: true,
@@ -186,7 +168,7 @@ export const DELETE: APIRoute = async ({ request }) => {
     }
 
     const docId = djId.includes('@') ? djId.replace(/[.@]/g, '_') : djId;
-    await db.collection('djAllowances').doc(docId).delete();
+    await deleteDocument('djAllowances', docId);
 
     return new Response(JSON.stringify({
       success: true,
@@ -219,21 +201,22 @@ export async function checkDJBookingEligibility(djId: string) {
   weekEnd.setDate(weekEnd.getDate() + 7);
 
   // Get DJ's allowance
-  const allowanceDoc = await db.collection('djAllowances').doc(djId).get();
-  const allowance = allowanceDoc.exists ? allowanceDoc.data() : null;
-  
+  const allowance = await getDocument('djAllowances', djId);
+
   const weeklySlots = allowance?.weeklySlots || DEFAULT_WEEKLY_SLOTS;
   const maxHoursPerDay = allowance?.maxHoursPerDay || DEFAULT_MAX_HOURS_PER_DAY;
 
   // Count DJ's bookings this week
-  const weekBookings = await db.collection('livestreamSlots')
-    .where('djId', '==', djId)
-    .where('status', 'in', ['scheduled', 'in_lobby', 'live', 'completed'])
-    .where('startTime', '>=', weekStart.toISOString())
-    .where('startTime', '<', weekEnd.toISOString())
-    .get();
+  const weekBookings = await queryCollection('livestreamSlots', {
+    filters: [
+      { field: 'djId', op: 'EQUAL', value: djId },
+      { field: 'status', op: 'IN', value: ['scheduled', 'in_lobby', 'live', 'completed'] },
+      { field: 'startTime', op: 'GREATER_THAN_OR_EQUAL', value: weekStart.toISOString() },
+      { field: 'startTime', op: 'LESS_THAN', value: weekEnd.toISOString() }
+    ]
+  });
 
-  const slotsUsedThisWeek = weekBookings.size;
+  const slotsUsedThisWeek = weekBookings.length;
   const canBookMoreThisWeek = slotsUsedThisWeek < weeklySlots;
 
   return {

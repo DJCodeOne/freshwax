@@ -3,21 +3,8 @@
 // Uses Pusher for real-time emoji delivery
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, incrementField } from '../../../lib/firebase-rest';
 import { createHmac, createHash } from 'crypto';
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 // Pusher configuration (from .env)
 const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
@@ -81,8 +68,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
     
     const now = new Date().toISOString();
-    const streamRef = db.collection('livestreams').doc(streamId);
-    
+
     switch (action) {
       case 'emoji': {
         // Broadcast emoji reaction to all viewers via Pusher
@@ -128,21 +114,15 @@ export const POST: APIRoute = async ({ request }) => {
         }
         
         // Always add a like (no toggle - reactions accumulate)
-        await db.collection('livestream-reactions').add({
+        await addDocument('livestream-reactions', {
           streamId,
           userId,
           type: 'like',
           createdAt: now
         });
-        
+
         // Increment total likes
-        await streamRef.update({
-          totalLikes: FieldValue.increment(1)
-        });
-        
-        // Get updated total
-        const streamDoc = await streamRef.get();
-        const totalLikes = streamDoc.data()?.totalLikes || 1;
+        const { newValue: totalLikes } = await incrementField('livestreams', streamId, 'totalLikes', 1);
         
         return new Response(JSON.stringify({
           success: true,
@@ -168,44 +148,53 @@ export const POST: APIRoute = async ({ request }) => {
         }
         
         // Check for existing rating
-        const existingRating = await db.collection('livestream-reactions')
-          .where('streamId', '==', streamId)
-          .where('userId', '==', userId)
-          .where('type', '==', 'rating')
-          .limit(1)
-          .get();
-        
-        const streamDoc = await streamRef.get();
-        const streamData = streamDoc.data()!;
+        const existingRatings = await queryCollection('livestream-reactions', {
+          filters: [
+            { field: 'streamId', op: 'EQUAL', value: streamId },
+            { field: 'userId', op: 'EQUAL', value: userId },
+            { field: 'type', op: 'EQUAL', value: 'rating' }
+          ],
+          limit: 1
+        });
+
+        const streamData = await getDocument('livestreams', streamId);
+        if (!streamData) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Stream not found'
+          }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        }
+
         let newAverage: number;
         let newCount: number;
-        
-        if (!existingRating.empty) {
+
+        if (existingRatings.length > 0) {
           // Update existing rating
-          const oldRating = existingRating.docs[0].data().rating;
-          await existingRating.docs[0].ref.update({ rating, updatedAt: now });
-          
+          const existingRating = existingRatings[0];
+          const oldRating = existingRating.rating;
+          await updateDocument('livestream-reactions', existingRating.id, { rating, updatedAt: now });
+
           // Recalculate average
           const totalRating = (streamData.averageRating * streamData.ratingCount) - oldRating + rating;
           newCount = streamData.ratingCount;
           newAverage = totalRating / newCount;
         } else {
           // Add new rating
-          await db.collection('livestream-reactions').add({
+          await addDocument('livestream-reactions', {
             streamId,
             userId,
             type: 'rating',
             rating,
             createdAt: now
           });
-          
+
           // Calculate new average
           const totalRating = (streamData.averageRating * streamData.ratingCount) + rating;
           newCount = streamData.ratingCount + 1;
           newAverage = totalRating / newCount;
         }
-        
-        await streamRef.update({
+
+        await updateDocument('livestreams', streamId, {
           averageRating: newAverage,
           ratingCount: newCount
         });
@@ -228,19 +217,21 @@ export const POST: APIRoute = async ({ request }) => {
           leftAt: null,
           isActive: true
         };
-        
-        await db.collection('livestream-viewers').add(viewerSession);
-        
+
+        await addDocument('livestream-viewers', viewerSession);
+
         // Update viewer counts
-        const streamDoc = await streamRef.get();
-        const currentViewers = (streamDoc.data()?.currentViewers || 0) + 1;
-        const peakViewers = Math.max(streamDoc.data()?.peakViewers || 0, currentViewers);
-        
-        await streamRef.update({
+        const streamDoc = await getDocument('livestreams', streamId);
+        const currentViewers = (streamDoc?.currentViewers || 0) + 1;
+        const peakViewers = Math.max(streamDoc?.peakViewers || 0, currentViewers);
+
+        await updateDocument('livestreams', streamId, {
           currentViewers,
-          peakViewers,
-          totalViews: FieldValue.increment(1)
+          peakViewers
         });
+
+        // Increment total views
+        await incrementField('livestreams', streamId, 'totalViews', 1);
         
         return new Response(JSON.stringify({
           success: true,
@@ -253,22 +244,22 @@ export const POST: APIRoute = async ({ request }) => {
       case 'leave': {
         // Track viewer leaving
         if (sessionId) {
-          const sessions = await db.collection('livestream-viewers')
-            .where('streamId', '==', streamId)
-            .where('sessionId', '==', sessionId)
-            .where('isActive', '==', true)
-            .limit(1)
-            .get();
-          
-          if (!sessions.empty) {
-            await sessions.docs[0].ref.update({
+          const sessions = await queryCollection('livestream-viewers', {
+            filters: [
+              { field: 'streamId', op: 'EQUAL', value: streamId },
+              { field: 'sessionId', op: 'EQUAL', value: sessionId },
+              { field: 'isActive', op: 'EQUAL', value: true }
+            ],
+            limit: 1
+          });
+
+          if (sessions.length > 0) {
+            await updateDocument('livestream-viewers', sessions[0].id, {
               isActive: false,
               leftAt: now
             });
-            
-            await streamRef.update({
-              currentViewers: FieldValue.increment(-1)
-            });
+
+            await incrementField('livestreams', streamId, 'currentViewers', -1);
           }
         }
         
@@ -280,23 +271,24 @@ export const POST: APIRoute = async ({ request }) => {
       case 'heartbeat': {
         // Keep viewer session alive
         if (sessionId) {
-          const sessions = await db.collection('livestream-viewers')
-            .where('streamId', '==', streamId)
-            .where('sessionId', '==', sessionId)
-            .where('isActive', '==', true)
-            .limit(1)
-            .get();
-          
-          if (!sessions.empty) {
-            await sessions.docs[0].ref.update({
+          const sessions = await queryCollection('livestream-viewers', {
+            filters: [
+              { field: 'streamId', op: 'EQUAL', value: streamId },
+              { field: 'sessionId', op: 'EQUAL', value: sessionId },
+              { field: 'isActive', op: 'EQUAL', value: true }
+            ],
+            limit: 1
+          });
+
+          if (sessions.length > 0) {
+            await updateDocument('livestream-viewers', sessions[0].id, {
               lastHeartbeat: now
             });
           }
         }
-        
+
         // Return current stats
-        const streamDoc = await streamRef.get();
-        const streamData = streamDoc.data();
+        const streamData = await getDocument('livestreams', streamId);
         
         return new Response(JSON.stringify({
           success: true,
@@ -365,16 +357,17 @@ export const GET: APIRoute = async ({ request }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     
-    const reactions = await db.collection('livestream-reactions')
-      .where('streamId', '==', streamId)
-      .where('userId', '==', userId)
-      .get();
-    
+    const reactions = await queryCollection('livestream-reactions', {
+      filters: [
+        { field: 'streamId', op: 'EQUAL', value: streamId },
+        { field: 'userId', op: 'EQUAL', value: userId }
+      ]
+    });
+
     let hasLiked = false;
     let userRating = null;
-    
-    reactions.docs.forEach(doc => {
-      const data = doc.data();
+
+    reactions.forEach(data => {
       if (data.type === 'like') hasLiked = true;
       if (data.type === 'rating') userRating = data.rating;
     });

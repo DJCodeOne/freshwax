@@ -2,20 +2,7 @@
 // Purchase a gift card and email the code to recipient
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
+import { getDocument, updateDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 
 // Send email via Resend API (using fetch for Cloudflare compatibility)
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
@@ -24,7 +11,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
     console.error('[giftcards/purchase] No Resend API key configured');
     return false;
   }
-  
+
   try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -39,13 +26,13 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
         html
       }),
     });
-    
+
     if (!response.ok) {
       const error = await response.text();
       console.error('[giftcards/purchase] Resend error:', response.status, error);
       return false;
     }
-    
+
     return true;
   } catch (error) {
     console.error('[giftcards/purchase] Email send error:', error);
@@ -77,10 +64,10 @@ async function sendGiftCardEmail(
   message: string
 ): Promise<boolean> {
   try {
-    const subject = isGift 
+    const subject = isGift
       ? `🎁 You've received a £${amount} Fresh Wax Gift Card!`
       : `🎁 Your £${amount} Fresh Wax Gift Card`;
-    
+
     const giftSection = isGift && senderName ? `
       <p style="font-size: 16px; color: #666;">
         <strong>${senderName}</strong> has sent you a gift!
@@ -91,7 +78,7 @@ async function sendGiftCardEmail(
       </div>
       ` : ''}
     ` : '';
-    
+
     const html = `
 <!DOCTYPE html>
 <html>
@@ -113,7 +100,7 @@ async function sendGiftCardEmail(
               <p style="margin: 10px 0 0 0; color: #888; font-size: 14px;">Underground Music Store</p>
             </td>
           </tr>
-          
+
           <!-- Content -->
           <tr>
             <td style="padding: 40px 30px;">
@@ -164,24 +151,24 @@ async function sendGiftCardEmail(
                   </tr>
                 </table>
               </div>
-              
+
               <h2 style="font-size: 28px; color: #111; text-align: center; margin: 0 0 20px 0;">
                 ${isGift ? 'You\'ve Received a Gift Card!' : 'Your Gift Card is Ready!'}
               </h2>
-              
+
               ${giftSection}
-              
+
               <!-- Gift Card Box -->
               <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-radius: 16px; padding: 30px; text-align: center; margin: 30px 0;">
                 <p style="color: #888; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 10px 0;">Gift Card Value</p>
                 <p style="font-size: 48px; color: #dc2626; font-weight: 700; margin: 0 0 20px 0;">£${amount}</p>
-                
+
                 <p style="color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 10px 0;">Your Redemption Code</p>
                 <div style="background: #111; border: 2px solid #dc2626; border-radius: 10px; padding: 15px 25px; display: inline-block;">
                   <code style="font-size: 24px; color: #fff; letter-spacing: 3px; font-family: 'Monaco', 'Consolas', monospace;">${code}</code>
                 </div>
               </div>
-              
+
               <!-- How to Use -->
               <div style="background: #f9f9f9; border-radius: 12px; padding: 25px; margin: 30px 0;">
                 <h3 style="font-size: 18px; color: #111; margin: 0 0 15px 0;">How to Redeem</h3>
@@ -192,20 +179,20 @@ async function sendGiftCardEmail(
                   <li>Start shopping!</li>
                 </ol>
               </div>
-              
+
               <!-- CTA Button -->
               <div style="text-align: center; margin: 30px 0;">
                 <a href="https://freshwax.co.uk/giftcards" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-size: 16px; font-weight: 600;">
                   Redeem Your Gift Card →
                 </a>
               </div>
-              
+
               <p style="color: #888; font-size: 13px; text-align: center; margin: 30px 0 0 0;">
                 Your gift card credit expires 1 year from redemption. Use it to buy digital releases, vinyl records, and merchandise.
               </p>
             </td>
           </tr>
-          
+
           <!-- Footer -->
           <tr>
             <td style="background: #f5f5f5; padding: 25px 30px; text-align: center; border-top: 1px solid #eee;">
@@ -222,9 +209,9 @@ async function sendGiftCardEmail(
 </body>
 </html>
     `;
-    
+
     const sent = await sendEmail(toEmail, subject, html);
-    
+
     if (sent) {
       console.log(`[giftcards/purchase] Email sent to ${toEmail}`);
     }
@@ -247,7 +234,7 @@ export const POST: APIRoute = async ({ request }) => {
       recipientEmail,
       message
     } = data;
-    
+
     // Validate amount
     const numAmount = parseInt(amount);
     if (!numAmount || numAmount < 5 || numAmount > 500) {
@@ -256,7 +243,7 @@ export const POST: APIRoute = async ({ request }) => {
         error: 'Invalid amount. Must be between £5 and £500.'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     // Validate buyer
     if (!buyerUserId || !buyerEmail) {
       return new Response(JSON.stringify({
@@ -264,7 +251,7 @@ export const POST: APIRoute = async ({ request }) => {
         error: 'Must be logged in to purchase'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     // Validate recipient email
     const targetEmail = recipientType === 'gift' ? recipientEmail : buyerEmail;
     if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
@@ -273,57 +260,57 @@ export const POST: APIRoute = async ({ request }) => {
         error: 'Invalid recipient email address'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     // Generate unique code
     let code = generateGiftCardCode();
-    
+
     // Ensure code is unique
     let attempts = 0;
     while (attempts < 10) {
-      const existing = await db.collection('giftCards')
-        .where('code', '==', code)
-        .get();
-      
-      if (existing.empty) break;
+      const existing = await queryCollection('giftCards', {
+        filters: [{ field: 'code', op: 'EQUAL', value: code }],
+        limit: 1
+      });
+
+      if (existing.length === 0) break;
       code = generateGiftCardCode();
       attempts++;
     }
-    
+
     // Get buyer name
     let buyerName = '';
     try {
-      const buyerDoc = await db.collection('customers').doc(buyerUserId).get();
-      if (buyerDoc.exists) {
-        const buyerData = buyerDoc.data();
-        buyerName = buyerData?.displayName || buyerData?.fullName || buyerData?.firstName || '';
+      const buyerDoc = await getDocument('customers', buyerUserId);
+      if (buyerDoc) {
+        buyerName = buyerDoc.displayName || buyerDoc.fullName || buyerDoc.firstName || '';
       }
     } catch (e) {
       // Ignore
     }
-    
+
     const now = new Date();
     const purchasedAt = now.toISOString();
-    
+
     // Calculate expiry (1 year from purchase for display, but actually expires 1 year from redemption)
     const displayExpiryDate = new Date(now);
     displayExpiryDate.setFullYear(displayExpiryDate.getFullYear() + 1);
     const displayExpiresAt = displayExpiryDate.toISOString();
-    
+
     // Create gift card document
     const giftCard = {
       code,
       originalValue: numAmount,
       currentBalance: numAmount,
       type: recipientType === 'gift' ? 'gift' : 'purchased',
-      description: recipientType === 'gift' 
-        ? `Gift card from ${buyerName || buyerEmail}` 
+      description: recipientType === 'gift'
+        ? `Gift card from ${buyerName || buyerEmail}`
         : 'Purchased gift card',
       createdAt: purchasedAt,
       expiresAt: null, // Actual expiry set on redemption
       isActive: true,
       redeemedBy: null,
       redeemedAt: null,
-      
+
       // Purchase info
       purchasedBy: buyerUserId,
       purchasedByEmail: buyerEmail,
@@ -331,17 +318,17 @@ export const POST: APIRoute = async ({ request }) => {
       recipientEmail: targetEmail,
       recipientName: recipientName || '',
       giftMessage: message || '',
-      
+
       // Email tracking
       emailsSent: []
     };
-    
-    const giftCardRef = await db.collection('giftCards').add(giftCard);
+
+    const giftCardResult = await addDocument('giftCards', giftCard);
     console.log(`[giftcards/purchase] Created gift card ${code} for £${numAmount}`);
-    
+
     // Store purchase record in customer's account
     const purchaseRecord = {
-      giftCardId: giftCardRef.id,
+      giftCardId: giftCardResult.id,
       amount: numAmount,
       recipientEmail: targetEmail,
       recipientName: recipientName || '',
@@ -350,10 +337,31 @@ export const POST: APIRoute = async ({ request }) => {
       displayExpiresAt,
       status: 'sent'
     };
-    
-    await db.collection('customers').doc(buyerUserId).collection('purchasedGiftCards').add(purchaseRecord);
+
+    // Note: Firebase REST API doesn't support subcollections directly via addDocument
+    // We'll use a workaround by creating a document with a generated ID
+    const purchaseRecordId = `purchase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    await fetch(
+      `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/customers/${buyerUserId}/purchasedGiftCards?documentId=${purchaseRecordId}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: {
+            giftCardId: { stringValue: giftCardResult.id },
+            amount: { integerValue: String(numAmount) },
+            recipientEmail: { stringValue: targetEmail },
+            recipientName: { stringValue: recipientName || '' },
+            recipientType: { stringValue: recipientType },
+            purchasedAt: { stringValue: purchasedAt },
+            displayExpiresAt: { stringValue: displayExpiresAt },
+            status: { stringValue: 'sent' }
+          }
+        })
+      }
+    );
     console.log(`[giftcards/purchase] Added purchase record to customer ${buyerUserId}`);
-    
+
     // Send email to recipient
     const isGift = recipientType === 'gift';
     const recipientEmailSent = await sendGiftCardEmail(
@@ -365,16 +373,16 @@ export const POST: APIRoute = async ({ request }) => {
       buyerName,
       message || ''
     );
-    
+
     // Update email tracking
     if (recipientEmailSent) {
-      await giftCardRef.update({
+      await updateDocument('giftCards', giftCardResult.id, {
         emailsSent: [
           { email: targetEmail, sentAt: new Date().toISOString(), type: 'recipient' }
         ]
       });
     }
-    
+
     return new Response(JSON.stringify({
       success: true,
       giftCard: {
@@ -385,11 +393,11 @@ export const POST: APIRoute = async ({ request }) => {
         expiresAt: displayExpiresAt
       },
       emailSent: recipientEmailSent
-    }), { 
-      status: 200, 
-      headers: { 'Content-Type': 'application/json' } 
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
     console.error('[giftcards/purchase] Error:', error);
     return new Response(JSON.stringify({

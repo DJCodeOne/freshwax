@@ -5,8 +5,9 @@
 // - Kicked DJs have their stream ended but retain DJ role
 
 import type { APIRoute } from 'astro';
+import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
+// NOTE: Firebase Admin Auth is still needed for getUserByEmail functionality
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 
 if (!getApps().length) {
@@ -19,43 +20,49 @@ if (!getApps().length) {
   });
 }
 
-const db = getFirestore();
 const auth = getAuth();
-
 const ADMIN_KEY = 'freshwax-admin-2024';
 
 // GET: List banned and on-hold DJs
 export const GET: APIRoute = async ({ request }) => {
   const url = new URL(request.url);
   const action = url.searchParams.get('action');
-  
+
   if (action !== 'list') {
     return new Response(JSON.stringify({ success: false, error: 'Invalid action' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
   }
-  
+
   try {
     const [bannedSnap, onholdSnap] = await Promise.all([
-      db.collection('djModeration').where('status', '==', 'banned').orderBy('bannedAt', 'desc').get(),
-      db.collection('djModeration').where('status', '==', 'hold').orderBy('holdAt', 'desc').get()
+      queryCollection('djModeration', {
+        filters: [{ field: 'status', op: 'EQUAL', value: 'banned' }],
+        orderBy: { field: 'bannedAt', direction: 'DESCENDING' },
+        skipCache: true
+      }),
+      queryCollection('djModeration', {
+        filters: [{ field: 'status', op: 'EQUAL', value: 'hold' }],
+        orderBy: { field: 'holdAt', direction: 'DESCENDING' },
+        skipCache: true
+      })
     ]);
-    
-    const banned = bannedSnap.docs.map(doc => ({
+
+    const banned = bannedSnap.map((doc: any) => ({
       id: doc.id,
-      oduserId: doc.id,
-      ...doc.data(),
-      bannedAt: doc.data().bannedAt?.toDate?.().toISOString() || null
+      userId: doc.id,
+      ...doc,
+      bannedAt: doc.bannedAt instanceof Date ? doc.bannedAt.toISOString() : doc.bannedAt
     }));
-    
-    const onhold = onholdSnap.docs.map(doc => ({
+
+    const onhold = onholdSnap.map((doc: any) => ({
       id: doc.id,
-      oduserId: doc.id,
-      ...doc.data(),
-      holdAt: doc.data().holdAt?.toDate?.().toISOString() || null
+      userId: doc.id,
+      ...doc,
+      holdAt: doc.holdAt instanceof Date ? doc.holdAt.toISOString() : doc.holdAt
     }));
-    
+
     return new Response(JSON.stringify({ success: true, banned, onhold }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -74,7 +81,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const data = await request.json();
     const { action, email, userId, reason, adminKey } = data;
-    
+
     // Simple admin key check
     if (adminKey !== ADMIN_KEY) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
@@ -82,7 +89,7 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // Helper to get userId from email
     async function getUserIdFromEmail(email: string): Promise<{ userId: string; name: string | null } | null> {
       try {
@@ -92,7 +99,9 @@ export const POST: APIRoute = async ({ request }) => {
         return null;
       }
     }
-    
+
+    const now = new Date().toISOString();
+
     if (action === 'ban') {
       if (!email) {
         return new Response(JSON.stringify({ success: false, error: 'Email required' }), {
@@ -100,52 +109,55 @@ export const POST: APIRoute = async ({ request }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
+
       const user = await getUserIdFromEmail(email);
       if (!user) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'User not found with that email' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'User not found with that email'
         }), {
           status: 404,
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
+
       // Add to moderation collection
-      await db.collection('djModeration').doc(user.userId).set({
+      await setDocument('djModeration', user.userId, {
         email,
         name: user.name,
         status: 'banned',
         reason: reason || null,
-        bannedAt: FieldValue.serverTimestamp(),
+        bannedAt: new Date(),
         bannedBy: 'admin'
       });
-      
+
       // Also end any active stream they have
-      const activeStreams = await db.collection('streams')
-        .where('djId', '==', user.userId)
-        .where('status', '==', 'live')
-        .get();
-      
-      for (const streamDoc of activeStreams.docs) {
-        await streamDoc.ref.update({
+      const activeStreams = await queryCollection('streams', {
+        filters: [
+          { field: 'djId', op: 'EQUAL', value: user.userId },
+          { field: 'status', op: 'EQUAL', value: 'live' }
+        ],
+        skipCache: true
+      });
+
+      for (const stream of activeStreams) {
+        await updateDocument('streams', stream.id, {
           status: 'ended',
-          endedAt: FieldValue.serverTimestamp(),
+          endedAt: now,
           endReason: 'banned'
         });
       }
-      
+
       console.log(`[dj-moderation] Banned ${email} (${user.userId})`);
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
+
+      return new Response(JSON.stringify({
+        success: true,
         message: `${email} has been banned`
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
-      
+
     } else if (action === 'unban') {
       if (!userId) {
         return new Response(JSON.stringify({ success: false, error: 'User ID required' }), {
@@ -153,19 +165,19 @@ export const POST: APIRoute = async ({ request }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
-      await db.collection('djModeration').doc(userId).delete();
-      
+
+      await deleteDocument('djModeration', userId);
+
       console.log(`[dj-moderation] Unbanned ${userId}`);
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
+
+      return new Response(JSON.stringify({
+        success: true,
         message: 'DJ has been unbanned'
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
-      
+
     } else if (action === 'hold') {
       if (!email) {
         return new Response(JSON.stringify({ success: false, error: 'Email required' }), {
@@ -173,52 +185,55 @@ export const POST: APIRoute = async ({ request }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
+
       const user = await getUserIdFromEmail(email);
       if (!user) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'User not found with that email' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'User not found with that email'
         }), {
           status: 404,
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
+
       // Add to moderation collection with hold status
-      await db.collection('djModeration').doc(user.userId).set({
+      await setDocument('djModeration', user.userId, {
         email,
         name: user.name,
         status: 'hold',
         reason: reason || null,
-        holdAt: FieldValue.serverTimestamp(),
+        holdAt: new Date(),
         holdBy: 'admin'
       });
-      
+
       // End any active stream
-      const activeStreams = await db.collection('streams')
-        .where('djId', '==', user.userId)
-        .where('status', '==', 'live')
-        .get();
-      
-      for (const streamDoc of activeStreams.docs) {
-        await streamDoc.ref.update({
+      const activeStreams = await queryCollection('streams', {
+        filters: [
+          { field: 'djId', op: 'EQUAL', value: user.userId },
+          { field: 'status', op: 'EQUAL', value: 'live' }
+        ],
+        skipCache: true
+      });
+
+      for (const stream of activeStreams) {
+        await updateDocument('streams', stream.id, {
           status: 'ended',
-          endedAt: FieldValue.serverTimestamp(),
+          endedAt: now,
           endReason: 'hold'
         });
       }
-      
+
       console.log(`[dj-moderation] Put ${email} on hold (${user.userId})`);
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
+
+      return new Response(JSON.stringify({
+        success: true,
         message: `${email} has been put on hold`
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
-      
+
     } else if (action === 'release') {
       if (!userId) {
         return new Response(JSON.stringify({ success: false, error: 'User ID required' }), {
@@ -226,19 +241,19 @@ export const POST: APIRoute = async ({ request }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
-      await db.collection('djModeration').doc(userId).delete();
-      
+
+      await deleteDocument('djModeration', userId);
+
       console.log(`[dj-moderation] Released ${userId} from hold`);
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
+
+      return new Response(JSON.stringify({
+        success: true,
         message: 'DJ has been released from hold'
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
-      
+
     } else if (action === 'kick') {
       if (!userId) {
         return new Response(JSON.stringify({ success: false, error: 'User ID required' }), {
@@ -246,58 +261,61 @@ export const POST: APIRoute = async ({ request }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
+
       // End any active stream but don't ban
-      const activeStreams = await db.collection('streams')
-        .where('djId', '==', userId)
-        .where('status', '==', 'live')
-        .get();
-      
-      if (activeStreams.empty) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'DJ is not currently streaming' 
+      const activeStreams = await queryCollection('streams', {
+        filters: [
+          { field: 'djId', op: 'EQUAL', value: userId },
+          { field: 'status', op: 'EQUAL', value: 'live' }
+        ],
+        skipCache: true
+      });
+
+      if (activeStreams.length === 0) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'DJ is not currently streaming'
         }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
-      for (const streamDoc of activeStreams.docs) {
-        await streamDoc.ref.update({
+
+      for (const stream of activeStreams) {
+        await updateDocument('streams', stream.id, {
           status: 'ended',
-          endedAt: FieldValue.serverTimestamp(),
+          endedAt: now,
           endReason: 'kicked'
         });
       }
-      
+
       // Update currentStream document if exists
       try {
-        await db.collection('livestream').doc('currentStream').update({
+        await updateDocument('livestream', 'currentStream', {
           isLive: false,
-          endedAt: FieldValue.serverTimestamp()
+          endedAt: now
         });
       } catch (e) {
         // May not exist
       }
-      
+
       console.log(`[dj-moderation] Kicked ${userId} from stream`);
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
+
+      return new Response(JSON.stringify({
+        success: true,
         message: 'DJ has been kicked from the stream'
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
-      
+
     } else {
       return new Response(JSON.stringify({ success: false, error: 'Invalid action' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
   } catch (error: any) {
     console.error('[dj-moderation] Error:', error);
     return new Response(JSON.stringify({ success: false, error: error.message }), {

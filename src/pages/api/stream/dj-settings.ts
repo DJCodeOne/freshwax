@@ -1,24 +1,9 @@
 // src/pages/api/stream/dj-settings.ts
 // Admin endpoint to add/update DJ settings and grant streaming access
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import { getAuth } from 'firebase-admin/auth';
+import { setDocument, updateDocument, deleteDocument } from '../../../lib/firebase-rest';
 
 export const prerender = false;
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
-const auth = getAuth();
 
 const ADMIN_KEY = 'freshwax-admin-2024';
 
@@ -42,48 +27,40 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Try to get user info from Firebase Auth
+    // Note: Firebase Auth operations (auth.getUser) are not available in REST API
+    // We'll use the provided data directly
     let email = '';
-    let displayName = djName || '';
-
-    try {
-      const userRecord = await auth.getUser(userId);
-      email = userRecord.email || '';
-      displayName = djName || userRecord.displayName || email.split('@')[0] || 'DJ';
-    } catch (e) {
-      // User might not exist in Auth, that's ok
-      console.warn(`[dj-settings] User ${userId} not found in Auth`);
-    }
+    let displayName = djName || 'DJ';
 
     // Generate mount point based on user ID
     const mountPoint = `/live/${userId.substring(0, 8)}`;
 
     if (isApproved) {
       // Grant access - add to djLobbyBypass collection
-      await db.collection('djLobbyBypass').doc(userId).set({
+      await setDocument('djLobbyBypass', userId, {
         email,
         name: displayName,
         twitchChannel: twitchChannel || null,
         mountPoint,
-        grantedAt: FieldValue.serverTimestamp(),
+        grantedAt: new Date().toISOString(),
         grantedBy: 'admin'
       });
 
       // Also set user's bypass flag
-      await db.collection('users').doc(userId).set({
+      await setDocument('users', userId, {
         'go-liveBypassed': true,
         bypassedAt: new Date().toISOString(),
         bypassedBy: 'admin'
-      }, { merge: true });
+      });
 
       console.log(`[dj-settings] Granted streaming access to ${displayName} (${userId})`);
     } else {
       // Revoke access
-      await db.collection('djLobbyBypass').doc(userId).delete();
+      await deleteDocument('djLobbyBypass', userId);
 
       // Remove bypass flag
       try {
-        await db.collection('users').doc(userId).update({
+        await updateDocument('users', userId, {
           'go-liveBypassed': false,
           bypassRevokedAt: new Date().toISOString()
         });

@@ -1,21 +1,8 @@
 // src/pages/api/reports.ts
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { queryCollection, addDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
 
 export const prerender = false;
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 const REPORT_CATEGORIES = ['inappropriate_content', 'harassment', 'spam', 'copyright', 'hate_speech', 'impersonation', 'other'];
 const REPORT_TYPES = ['stream', 'artist', 'dj', 'user', 'release', 'mix', 'comment', 'chat', 'other'];
@@ -27,32 +14,51 @@ export const GET: APIRoute = async ({ request }) => {
     const type = url.searchParams.get('type');
     const limit = parseInt(url.searchParams.get('limit') || '50');
     const alertsOnly = url.searchParams.get('alertsOnly') === 'true';
-    
+
     if (alertsOnly) {
-      const pendingCount = await db.collection('reports').where('status', '==', 'pending').count().get();
-      return new Response(JSON.stringify({ success: true, pendingCount: pendingCount.data().count }), {
+      const pendingReports = await queryCollection('reports', {
+        filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }]
+      });
+      return new Response(JSON.stringify({ success: true, pendingCount: pendingReports.length }), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
-    let query: any = db.collection('reports');
-    if (status !== 'all') query = query.where('status', '==', status);
-    if (type) query = query.where('type', '==', type);
-    
-    const snapshot = await query.orderBy('createdAt', 'desc').limit(limit).get();
-    const reports = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || doc.data().createdAt
-    }));
-    
-    const pendingCount = await db.collection('reports').where('status', '==', 'pending').count().get();
-    const reviewingCount = await db.collection('reports').where('status', '==', 'reviewing').count().get();
-    
+
+    // Build filters
+    const filters: any[] = [];
+    if (status !== 'all') filters.push({ field: 'status', op: 'EQUAL', value: status });
+    if (type) filters.push({ field: 'type', op: 'EQUAL', value: type });
+
+    const allReports = await queryCollection('reports', {
+      filters: filters.length > 0 ? filters : undefined,
+      limit
+    });
+
+    // Sort by createdAt client-side (descending)
+    const reports = allReports
+      .map(doc => ({
+        ...doc,
+        createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : doc.createdAt
+      }))
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      })
+      .slice(0, limit);
+
+    // Get counts
+    const pendingReports = await queryCollection('reports', {
+      filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }]
+    });
+    const reviewingReports = await queryCollection('reports', {
+      filters: [{ field: 'status', op: 'EQUAL', value: 'reviewing' }]
+    });
+
     return new Response(JSON.stringify({
       success: true,
       reports,
-      counts: { pending: pendingCount.data().count, reviewing: reviewingCount.data().count }
+      counts: { pending: pendingReports.length, reviewing: reviewingReports.length }
     }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error: any) {
     return new Response(JSON.stringify({ success: false, error: error.message }), {
@@ -65,7 +71,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const data = await request.json();
     const { type, targetId, targetName, targetUrl, category, description, reporterId, reporterName, reporterEmail } = data;
-    
+
     if (!type || !REPORT_TYPES.includes(type)) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid report type' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
@@ -75,35 +81,47 @@ export const POST: APIRoute = async ({ request }) => {
     if (!description || description.trim().length < 10) {
       return new Response(JSON.stringify({ success: false, error: 'Please provide a description (at least 10 characters)' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     if (reporterId && targetId) {
-      const existing = await db.collection('reports')
-        .where('reporterId', '==', reporterId)
-        .where('targetId', '==', targetId)
-        .where('status', 'in', ['pending', 'reviewing'])
-        .limit(1).get();
-      if (!existing.empty) {
+      // Check for existing reports - need to check for pending or reviewing separately since REST API doesn't support 'in' operator
+      const pendingReports = await queryCollection('reports', {
+        filters: [
+          { field: 'reporterId', op: 'EQUAL', value: reporterId },
+          { field: 'targetId', op: 'EQUAL', value: targetId },
+          { field: 'status', op: 'EQUAL', value: 'pending' }
+        ],
+        limit: 1
+      });
+      const reviewingReports = await queryCollection('reports', {
+        filters: [
+          { field: 'reporterId', op: 'EQUAL', value: reporterId },
+          { field: 'targetId', op: 'EQUAL', value: targetId },
+          { field: 'status', op: 'EQUAL', value: 'reviewing' }
+        ],
+        limit: 1
+      });
+      if (pendingReports.length > 0 || reviewingReports.length > 0) {
         return new Response(JSON.stringify({ success: false, error: 'You have already reported this content' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
     }
-    
+
     const priority = ['hate_speech', 'harassment'].includes(category) ? 'urgent' :
       ['stream', 'chat'].includes(type) ? 'high' :
       ['inappropriate_content', 'impersonation'].includes(category) ? 'high' :
       ['copyright', 'spam'].includes(category) ? 'medium' : 'low';
-    
+
     const report = {
       type, targetId: targetId || null, targetName: targetName || 'Unknown', targetUrl: targetUrl || null,
       category, description: description.trim(), reporterId: reporterId || null,
       reporterName: reporterName || 'Anonymous', reporterEmail: reporterEmail || null,
       status: 'pending', priority, resolution: null, resolvedBy: null, resolvedAt: null, adminNotes: null,
-      createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp()
+      createdAt: new Date(), updatedAt: new Date()
     };
-    
-    const docRef = await db.collection('reports').add(report);
-    console.log('[Reports] New report:', docRef.id, type, category);
-    
-    return new Response(JSON.stringify({ success: true, reportId: docRef.id, message: 'Report submitted. Our team will review it shortly.' }), {
+
+    const result = await addDocument('reports', report);
+    console.log('[Reports] New report:', result.id, type, category);
+
+    return new Response(JSON.stringify({ success: true, reportId: result.id, message: 'Report submitted. Our team will review it shortly.' }), {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: any) {
@@ -116,19 +134,19 @@ export const PUT: APIRoute = async ({ request }) => {
     const data = await request.json();
     const { reportId, status, resolution, adminNotes, adminId } = data;
     if (!reportId) return new Response(JSON.stringify({ success: false, error: 'Report ID required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    
-    const updates: any = { updatedAt: FieldValue.serverTimestamp() };
+
+    const updates: any = { updatedAt: new Date() };
     if (status) {
       updates.status = status;
       if (status === 'resolved' || status === 'dismissed') {
-        updates.resolvedAt = FieldValue.serverTimestamp();
+        updates.resolvedAt = new Date();
         updates.resolvedBy = adminId || null;
       }
     }
     if (resolution) updates.resolution = resolution;
     if (adminNotes !== undefined) updates.adminNotes = adminNotes;
-    
-    await db.collection('reports').doc(reportId).update(updates);
+
+    await updateDocument('reports', reportId, updates);
     return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error: any) {
     return new Response(JSON.stringify({ success: false, error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
@@ -140,7 +158,7 @@ export const DELETE: APIRoute = async ({ request }) => {
     const url = new URL(request.url);
     const reportId = url.searchParams.get('id');
     if (!reportId) return new Response(JSON.stringify({ success: false, error: 'Report ID required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    await db.collection('reports').doc(reportId).delete();
+    await deleteDocument('reports', reportId);
     return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error: any) {
     return new Response(JSON.stringify({ success: false, error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });

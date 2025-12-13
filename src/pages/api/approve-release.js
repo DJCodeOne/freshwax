@@ -1,7 +1,6 @@
 // src/pages/api/approve-release.js
 // Approves or rejects pending releases in Firebase
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest.js';
 
 export const prerender = false;
 
@@ -11,29 +10,19 @@ const log = {
   error: (...args) => console.error(...args),
 };
 
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
-
 export async function POST({ request }) {
+  // Initialize Firebase env for write operations
+  initFirebaseEnv(import.meta.env);
+
   try {
     const body = await request.json();
     const { releaseId, action } = body;
-    
+
     // Validate input
     if (!releaseId || !action) {
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         success: false,
-        error: 'releaseId and action are required' 
+        error: 'releaseId and action are required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -41,9 +30,9 @@ export async function POST({ request }) {
     }
 
     if (!['approve', 'reject'].includes(action)) {
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         success: false,
-        error: 'action must be "approve" or "reject"' 
+        error: 'action must be "approve" or "reject"'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -53,11 +42,10 @@ export async function POST({ request }) {
     log.info(`[approve-release] ${action} release ${releaseId}`);
 
     // Get release from Firestore
-    const releaseRef = db.collection('releases').doc(releaseId);
-    const releaseDoc = await releaseRef.get();
-    
-    if (!releaseDoc.exists) {
-      return new Response(JSON.stringify({ 
+    const releaseData = await getDocument('releases', releaseId);
+
+    if (!releaseData) {
+      return new Response(JSON.stringify({
         success: false,
         error: 'Release not found',
         releaseId: releaseId
@@ -66,8 +54,6 @@ export async function POST({ request }) {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    const releaseData = releaseDoc.data();
 
     // Update release status
     const updateData = {
@@ -78,17 +64,15 @@ export async function POST({ request }) {
       updatedAt: new Date().toISOString()
     };
 
-    await releaseRef.update(updateData);
+    await updateDocument('releases', releaseId, updateData);
 
     // Update master list
     try {
-      const masterListRef = db.collection('system').doc('releases-master');
-      const masterListDoc = await masterListRef.get();
-      
-      if (masterListDoc.exists) {
-        const masterData = masterListDoc.data();
-        const releasesList = masterData.releases || [];
-        
+      const masterListDoc = await getDocument('system', 'releases-master');
+
+      if (masterListDoc) {
+        const releasesList = masterListDoc.releases || [];
+
         const releaseIndex = releasesList.findIndex(r => r.id === releaseId);
         if (releaseIndex >= 0) {
           releasesList[releaseIndex] = {
@@ -97,8 +81,8 @@ export async function POST({ request }) {
             published: updateData.published,
             updatedAt: updateData.updatedAt
           };
-          
-          await masterListRef.update({
+
+          await updateDocument('system', 'releases-master', {
             releases: releasesList,
             lastUpdated: new Date().toISOString()
           });
@@ -110,7 +94,7 @@ export async function POST({ request }) {
 
     log.info(`[approve-release] ${action}d: ${releaseData.artistName} - ${releaseData.releaseName}`);
 
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       success: true,
       message: `Release ${action}d successfully`,
       releaseId: releaseId,
@@ -124,8 +108,8 @@ export async function POST({ request }) {
 
   } catch (error) {
     log.error('[approve-release] Error:', error.message);
-    
-    return new Response(JSON.stringify({ 
+
+    return new Response(JSON.stringify({
       success: false,
       error: 'Internal server error',
       message: error.message

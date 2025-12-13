@@ -1,22 +1,10 @@
 // src/pages/api/newsletter/send.ts
 // Send newsletter to selected subscribers via Resend
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { queryCollection, addDocument, updateDocument, incrementField } from '../../../lib/firebase-rest';
 import { Resend } from 'resend';
 
 export const prerender = false;
-
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
 
 const resend = new Resend(import.meta.env.RESEND_API_KEY);
 
@@ -25,89 +13,79 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Check admin auth
     const adminId = cookies.get('adminId')?.value;
     if (!adminId) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Unauthorized' 
-      }), { 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Unauthorized'
+      }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     const body = await request.json();
-    const { 
-      subject, 
-      content, 
+    const {
+      subject,
+      content,
       subscriberIds, // Array of subscriber IDs, or 'all' for everyone
       previewEmail // Optional: send preview to this email first
     } = body;
-    
+
     if (!subject || !content) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Subject and content are required' 
-      }), { 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Subject and content are required'
+      }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
-    const db = getFirestore();
-    
+
     // Get subscribers
     let subscribers: any[] = [];
-    
+
     if (subscriberIds === 'all') {
       // Get all active subscribers
-      const snapshot = await db.collection('subscribers')
-        .where('status', '==', 'active')
-        .get();
-      
-      subscribers = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      subscribers = await queryCollection('subscribers', {
+        filters: [{ field: 'status', op: 'EQUAL', value: 'active' }]
+      });
     } else if (Array.isArray(subscriberIds) && subscriberIds.length > 0) {
       // Get specific subscribers
-      // Firestore 'in' queries limited to 30 items, so batch if needed
+      // Note: Firebase REST API 'IN' queries limited to 30 items, so batch if needed
       const batches = [];
       for (let i = 0; i < subscriberIds.length; i += 30) {
         batches.push(subscriberIds.slice(i, i + 30));
       }
-      
+
       for (const batch of batches) {
-        const snapshot = await db.collection('subscribers')
-          .where('__name__', 'in', batch)
-          .where('status', '==', 'active')
-          .get();
-        
-        snapshot.docs.forEach(doc => {
-          subscribers.push({
-            id: doc.id,
-            ...doc.data()
-          });
+        const batchResults = await queryCollection('subscribers', {
+          filters: [
+            { field: '__name__', op: 'IN', value: batch },
+            { field: 'status', op: 'EQUAL', value: 'active' }
+          ]
         });
+
+        subscribers.push(...batchResults);
       }
     } else {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'No subscribers selected' 
-      }), { 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'No subscribers selected'
+      }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     if (subscribers.length === 0) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'No active subscribers found' 
-      }), { 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'No active subscribers found'
+      }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // If preview email, send only to that
     if (previewEmail) {
       try {
@@ -117,51 +95,51 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           subject: `[PREVIEW] ${subject}`,
           html: generateNewsletterHTML(subject, content, previewEmail)
         });
-        
-        return new Response(JSON.stringify({ 
-          success: true, 
+
+        return new Response(JSON.stringify({
+          success: true,
           message: `Preview sent to ${previewEmail}`,
           previewSent: true
-        }), { 
+        }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
       } catch (emailError) {
         console.error('[Newsletter] Preview email failed:', emailError);
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Failed to send preview email' 
-        }), { 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Failed to send preview email'
+        }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' }
         });
       }
     }
-    
+
     // Save newsletter to database
-    const newsletterRef = await db.collection('newsletters').add({
+    const newsletterResult = await addDocument('newsletters', {
       subject,
       content,
-      sentAt: FieldValue.serverTimestamp(),
+      sentAt: new Date(),
       sentBy: adminId,
       recipientCount: subscribers.length,
       status: 'sending'
     });
-    
+
     // Send emails in batches (Resend has rate limits)
     const results = {
       sent: 0,
       failed: 0,
       errors: [] as string[]
     };
-    
+
     // Process in batches of 10 to avoid rate limits
     const BATCH_SIZE = 10;
     const DELAY_BETWEEN_BATCHES = 1000; // 1 second
-    
+
     for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
       const batch = subscribers.slice(i, i + BATCH_SIZE);
-      
+
       await Promise.all(batch.map(async (subscriber) => {
         try {
           await resend.emails.send({
@@ -170,13 +148,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
             subject: subject,
             html: generateNewsletterHTML(subject, content, subscriber.email)
           });
-          
-          // Update subscriber stats
-          await db.collection('subscribers').doc(subscriber.id).update({
-            emailsSent: FieldValue.increment(1),
-            lastEmailSentAt: FieldValue.serverTimestamp()
-          });
-          
+
+          // Update subscriber stats using incrementField
+          try {
+            await incrementField('subscribers', subscriber.id, 'emailsSent', 1);
+            await updateDocument('subscribers', subscriber.id, {
+              lastEmailSentAt: new Date()
+            });
+          } catch (updateError) {
+            console.error(`[Newsletter] Failed to update stats for ${subscriber.email}:`, updateError);
+            // Don't fail the send if stats update fails
+          }
+
           results.sent++;
         } catch (err: any) {
           results.failed++;
@@ -184,41 +167,41 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           console.error(`[Newsletter] Failed to send to ${subscriber.email}:`, err);
         }
       }));
-      
+
       // Delay between batches
       if (i + BATCH_SIZE < subscribers.length) {
         await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
       }
     }
-    
+
     // Update newsletter status
-    await newsletterRef.update({
+    await updateDocument('newsletters', newsletterResult.id, {
       status: results.failed === 0 ? 'sent' : 'partial',
       sentCount: results.sent,
       failedCount: results.failed,
-      completedAt: FieldValue.serverTimestamp()
+      completedAt: new Date()
     });
-    
-    return new Response(JSON.stringify({ 
-      success: true, 
+
+    return new Response(JSON.stringify({
+      success: true,
       message: `Newsletter sent to ${results.sent} subscribers`,
       results: {
         sent: results.sent,
         failed: results.failed,
         total: subscribers.length
       },
-      newsletterId: newsletterRef.id
-    }), { 
+      newsletterId: newsletterResult.id
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
     console.error('[Newsletter] Send error:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Failed to send newsletter' 
-    }), { 
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Failed to send newsletter'
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -241,10 +224,10 @@ function generateNewsletterHTML(subject: string, content: string, email: string)
     // Line breaks
     .replace(/\n\n/g, '</p><p style="color: #ccc; line-height: 1.7; margin-bottom: 15px;">')
     .replace(/\n/g, '<br>');
-  
+
   // Wrap in paragraph tags
   htmlContent = `<p style="color: #ccc; line-height: 1.7; margin-bottom: 15px;">${htmlContent}</p>`;
-  
+
   return `
     <!DOCTYPE html>
     <html>
@@ -259,17 +242,17 @@ function generateNewsletterHTML(subject: string, content: string, email: string)
             <img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" style="height: 60px; background: white; padding: 10px; border-radius: 8px;">
           </a>
         </div>
-        
+
         <div style="background: #1a1a1a; border-radius: 12px; padding: 30px; color: #fff;">
           <h1 style="margin: 0 0 25px; font-size: 26px; color: #fff; border-bottom: 2px solid #dc2626; padding-bottom: 15px;">${subject}</h1>
-          
+
           ${htmlContent}
-          
+
           <div style="text-align: center; margin: 35px 0 20px;">
             <a href="https://freshwax.co.uk" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 14px 30px; border-radius: 8px; font-weight: bold;">Visit Fresh Wax</a>
           </div>
         </div>
-        
+
         <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
           <p>© ${new Date().getFullYear()} Fresh Wax. All rights reserved.</p>
           <p style="margin-top: 10px;">

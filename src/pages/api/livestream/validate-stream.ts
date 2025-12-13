@@ -9,21 +9,8 @@
 // - 403 with { valid: false, reason: "..." } if stream is denied
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, validateStreamKeyTiming, buildHlsUrl } from '../../../lib/red5';
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 export const GET: APIRoute = async ({ request }) => {
   const url = new URL(request.url);
@@ -58,23 +45,23 @@ export const GET: APIRoute = async ({ request }) => {
     }
     
     // Find the slot with this stream key
-    const slotsQuery = await db.collection('livestreamSlots')
-      .where('streamKey', '==', streamKey)
-      .limit(1)
-      .get();
-    
-    if (slotsQuery.empty) {
+    const slots = await queryCollection('livestreamSlots', {
+      filters: [{ field: 'streamKey', op: 'EQUAL', value: streamKey }],
+      limit: 1
+    });
+
+    if (slots.length === 0) {
       return new Response(JSON.stringify({
         valid: false,
         reason: 'Stream key not found. Please book a slot first.',
-      }), { 
-        status: 403, 
-        headers: { 'Content-Type': 'application/json' } 
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
-    
-    const slotDoc = slotsQuery.docs[0];
-    const slot = slotDoc.data();
+
+    const slot = slots[0];
+    const slotId = slot.id;
     
     // Check slot status - must be scheduled, in_lobby, or live (for reconnection)
     const allowedStatuses = ['scheduled', 'in_lobby', 'live', 'queued'];
@@ -121,33 +108,30 @@ export const GET: APIRoute = async ({ request }) => {
     
     // Check if DJ is banned/suspended (optional)
     if (slot.djId) {
-      const artistDoc = await db.collection('artists').doc(slot.djId).get();
-      if (artistDoc.exists) {
-        const artist = artistDoc.data();
-        if (artist?.suspended || artist?.banned) {
-          return new Response(JSON.stringify({
-            valid: false,
-            reason: 'Your DJ account is suspended',
-          }), { 
-            status: 403, 
-            headers: { 'Content-Type': 'application/json' } 
-          });
-        }
+      const artist = await getDocument('artists', slot.djId);
+      if (artist && (artist.suspended || artist.banned)) {
+        return new Response(JSON.stringify({
+          valid: false,
+          reason: 'Your DJ account is suspended',
+        }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
     }
-    
+
     // All checks passed - allow the stream
-    console.log('[validate-stream] Stream approved for:', slot.djName, 'slot:', slotDoc.id);
-    
+    console.log('[validate-stream] Stream approved for:', slot.djName, 'slot:', slotId);
+
     // Update slot to show connecting
-    await slotDoc.ref.update({
+    await updateDocument('livestreamSlots', slotId, {
       status: slot.status === 'live' ? 'live' : 'connecting',
       lastValidation: new Date().toISOString(),
     });
     
     return new Response(JSON.stringify({
       valid: true,
-      slotId: slotDoc.id,
+      slotId: slotId,
       djId: slot.djId,
       djName: slot.djName,
       title: slot.title,

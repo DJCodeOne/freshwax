@@ -1,19 +1,5 @@
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
+import { getDocument, updateDocument, queryCollection, addDocument } from '../../lib/firebase-rest';
 
 // Default requirements (can be overridden by admin settings)
 const DEFAULT_REQUIREMENTS = {
@@ -25,9 +11,8 @@ const DEFAULT_REQUIREMENTS = {
 // Get admin settings
 async function getSettings() {
   try {
-    const settingsDoc = await db.collection('system').doc('admin-settings').get();
-    if (settingsDoc.exists) {
-      const settings = settingsDoc.data();
+    const settings = await getDocument('system', 'admin-settings');
+    if (settings) {
       return {
         requiredMixes: settings?.livestream?.requiredMixes ?? DEFAULT_REQUIREMENTS.requiredMixes,
         requiredLikes: settings?.livestream?.requiredLikes ?? DEFAULT_REQUIREMENTS.requiredLikes,
@@ -48,10 +33,9 @@ export const GET: APIRoute = async ({ url }) => {
     // Check DJ eligibility
     if (action === 'checkEligibility' && uid) {
       const settings = await getSettings();
-      
+
       // Get user document
-      const userDoc = await db.collection('users').doc(uid).get();
-      const userData = userDoc.exists ? userDoc.data() : null;
+      const userData = await getDocument('users', uid);
       
       // If already eligible, return true
       if (userData?.roles?.djEligible) {
@@ -66,17 +50,16 @@ export const GET: APIRoute = async ({ url }) => {
       }
 
       // Check mix count and likes
-      const mixesQuery = await db.collection('dj-mixes')
-        .where('userId', '==', uid)
-        .get();
+      const mixes = await queryCollection('dj-mixes', {
+        filters: [{ field: 'userId', op: 'EQUAL', value: uid }]
+      });
 
       let totalMixes = 0;
       let mixesWithEnoughLikes = 0;
       let highestLikes = 0;
       let mixProgress: any[] = [];
 
-      mixesQuery.forEach(doc => {
-        const mix = doc.data();
+      mixes.forEach(mix => {
         totalMixes++;
         const likes = mix.likes || 0;
         highestLikes = Math.max(highestLikes, likes);
@@ -86,7 +69,7 @@ export const GET: APIRoute = async ({ url }) => {
         }
 
         mixProgress.push({
-          id: doc.id,
+          id: mix.id,
           title: mix.title,
           likes: likes,
           meetsThreshold: likes >= settings.requiredLikes
@@ -161,19 +144,16 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       const settings = await getSettings();
-      
+
       // Get user document
-      const userRef = db.collection('users').doc(uid);
-      const userDoc = await userRef.get();
-      
-      if (!userDoc.exists) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'User not found' 
+      const userData = await getDocument('users', uid);
+
+      if (!userData) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'User not found'
         }), { status: 404 });
       }
-
-      const userData = userDoc.data();
       
       // If already eligible, no action needed
       if (userData?.roles?.djEligible) {
@@ -186,36 +166,35 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       // Check mix count and likes
-      const mixesQuery = await db.collection('dj-mixes')
-        .where('userId', '==', uid)
-        .get();
+      const mixes = await queryCollection('dj-mixes', {
+        filters: [{ field: 'userId', op: 'EQUAL', value: uid }]
+      });
 
       let mixesWithEnoughLikes = 0;
 
-      mixesQuery.forEach(doc => {
-        const mix = doc.data();
+      mixes.forEach(mix => {
         if ((mix.likes || 0) >= settings.requiredLikes) {
           mixesWithEnoughLikes++;
         }
       });
 
-      const meetsRequirements = mixesQuery.size >= settings.requiredMixes && mixesWithEnoughLikes >= settings.requiredMixes;
+      const meetsRequirements = mixes.length >= settings.requiredMixes && mixesWithEnoughLikes >= settings.requiredMixes;
 
       if (meetsRequirements) {
         // Auto-grant DJ eligibility
-        await userRef.update({
+        await updateDocument('users', uid, {
           'roles.djEligible': true,
-          updatedAt: FieldValue.serverTimestamp()
+          updatedAt: new Date()
         });
 
         // Create notification
-        await db.collection('notifications').add({
+        await addDocument('notifications', {
           userId: uid,
           type: 'dj_eligible',
           title: 'DJ Status Unlocked! 🎧',
           message: 'Congratulations! You now have access to the DJ Lobby and can book livestream slots.',
           read: false,
-          createdAt: FieldValue.serverTimestamp()
+          createdAt: new Date()
         });
 
         return new Response(JSON.stringify({
@@ -247,25 +226,22 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       const settings = await getSettings();
-      
+
       if (!settings.allowBypassRequests) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Bypass requests are currently disabled' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Bypass requests are currently disabled'
         }), { status: 400 });
       }
 
-      const userRef = db.collection('users').doc(uid);
-      const userDoc = await userRef.get();
+      const userData = await getDocument('users', uid);
 
-      if (!userDoc.exists) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'User not found' 
+      if (!userData) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'User not found'
         }), { status: 404 });
       }
-
-      const userData = userDoc.data();
 
       // Check if already eligible
       if (userData?.roles?.djEligible) {
@@ -284,13 +260,13 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       // Submit bypass request
-      await userRef.update({
+      await updateDocument('users', uid, {
         'pendingRoles.djBypass': {
-          requestedAt: FieldValue.serverTimestamp(),
+          requestedAt: new Date(),
           status: 'pending',
           reason: reason || ''
         },
-        updatedAt: FieldValue.serverTimestamp()
+        updatedAt: new Date()
       });
 
       return new Response(JSON.stringify({

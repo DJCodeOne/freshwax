@@ -2,28 +2,13 @@
 // Uses Firebase as source of truth
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import { clearCache } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, clearCache } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
   info: (...args: any[]) => isDev && console.log(...args),
   error: (...args: any[]) => console.error(...args),
 };
-
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -57,21 +42,18 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Get release from Firebase
-    const releaseRef = db.collection('releases').doc(releaseId);
-    const releaseDoc = await releaseRef.get();
-    
-    if (!releaseDoc.exists) {
+    const releaseData: any = await getDocument('releases', releaseId);
+
+    if (!releaseData) {
       log.info('[rate-release] Release not found:', releaseId);
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         success: false,
-        error: 'Release not found' 
+        error: 'Release not found'
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    const releaseData: any = releaseDoc.data();
 
     // Initialize ratings structure if needed
     if (!releaseData.ratings) {
@@ -133,7 +115,7 @@ export const POST: APIRoute = async ({ request }) => {
     log.info('[rate-release] Updated:', releaseData.ratings.average, 'avg,', releaseData.ratings.count, 'count');
 
     // Save to Firebase - update both ratings and overallRating for backward compatibility
-    await releaseRef.update({
+    await updateDocument('releases', releaseId, {
       ratings: releaseData.ratings,
       overallRating: {
         average: releaseData.ratings.average,

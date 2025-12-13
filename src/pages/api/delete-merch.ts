@@ -3,8 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getDocument, deleteDocument, updateDocument, addDocument } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -21,18 +20,6 @@ const R2_CONFIG = {
   bucketName: import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
 };
 
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-    }),
-  });
-}
-
-const db = getFirestore();
-
 const s3Client = new S3Client({
   region: 'auto',
   endpoint: 'https://' + R2_CONFIG.accountId + '.r2.cloudflarestorage.com',
@@ -45,32 +32,29 @@ const s3Client = new S3Client({
 export const POST: APIRoute = async ({ request }) => {
   try {
     const { productId } = await request.json();
-    
+
     if (!productId) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Product ID is required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     log.info('[delete-merch] Deleting product:', productId);
-    
-    const productRef = db.collection('merch').doc(productId);
-    const productDoc = await productRef.get();
-    
-    if (!productDoc.exists) {
+
+    const product = await getDocument('merch', productId);
+
+    if (!product) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Product not found'
       }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
-    
-    const product = productDoc.data()!;
-    
+
     // Delete images from R2
     if (product.r2FolderPath) {
       log.info('[delete-merch] Deleting R2 folder:', product.r2FolderPath);
-      
+
       try {
         const listResult = await s3Client.send(
           new ListObjectsV2Command({
@@ -78,7 +62,7 @@ export const POST: APIRoute = async ({ request }) => {
             Prefix: product.r2FolderPath + '/'
           })
         );
-        
+
         if (listResult.Contents && listResult.Contents.length > 0) {
           await s3Client.send(
             new DeleteObjectsCommand({
@@ -94,23 +78,26 @@ export const POST: APIRoute = async ({ request }) => {
         log.error('[delete-merch] R2 deletion error:', r2Error);
       }
     }
-    
+
     // Update supplier stats if applicable
     if (product.supplierId) {
       try {
-        await db.collection('merch-suppliers').doc(product.supplierId).update({
-          totalProducts: FieldValue.increment(-1),
-          totalStock: FieldValue.increment(-(product.totalStock || 0)),
-          updatedAt: new Date().toISOString()
-        });
-        log.info('[delete-merch] Updated supplier stats');
+        const supplierData = await getDocument('merch-suppliers', product.supplierId);
+        if (supplierData) {
+          await updateDocument('merch-suppliers', product.supplierId, {
+            totalProducts: (supplierData.totalProducts || 0) - 1,
+            totalStock: (supplierData.totalStock || 0) - (product.totalStock || 0),
+            updatedAt: new Date().toISOString()
+          });
+          log.info('[delete-merch] Updated supplier stats');
+        }
       } catch (e) {
         log.info('[delete-merch] Could not update supplier stats');
       }
     }
-    
+
     // Log the deletion
-    await db.collection('merch-stock-movements').add({
+    await addDocument('merch-stock-movements', {
       productId: productId,
       productName: product.name,
       sku: product.sku,
@@ -124,11 +111,11 @@ export const POST: APIRoute = async ({ request }) => {
       createdAt: new Date().toISOString(),
       createdBy: 'admin'
     });
-    
-    await productRef.delete();
-    
+
+    await deleteDocument('merch', productId);
+
     log.info('[delete-merch] Product deleted:', productId);
-    
+
     return new Response(JSON.stringify({
       success: true,
       message: 'Product deleted successfully',
@@ -138,10 +125,10 @@ export const POST: APIRoute = async ({ request }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
     log.error('[delete-merch] Error:', error);
-    
+
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to delete product',

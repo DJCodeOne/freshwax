@@ -1,26 +1,13 @@
 // src/pages/api/process-order.ts
 // Comprehensive order processing: payment splits, digital delivery, vinyl dropship
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument, addDocument, updateDocument, queryCollection } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
   info: (...args: any[]) => isDev && console.log(...args),
   error: (...args: any[]) => console.error(...args),
 };
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 // Payment split configuration
 const PAYMENT_CONFIG = {
@@ -41,16 +28,16 @@ function generateOrderNumber(): string {
 // Calculate payment splits for an item
 function calculatePaymentSplit(itemPrice: number, quantity: number = 1) {
   const totalPrice = itemPrice * quantity;
-  
+
   // Stripe fees (2.9% + 30p)
   const stripeFee = (totalPrice * PAYMENT_CONFIG.stripeFeePercent / 100) + PAYMENT_CONFIG.stripeFeeFixed;
-  
+
   // Fresh Wax platform fee (15% of item price)
   const platformFee = totalPrice * PAYMENT_CONFIG.platformFeePercent / 100;
-  
+
   // Artist/Label/Producer gets the rest
   const artistShare = totalPrice - stripeFee - platformFee;
-  
+
   return {
     totalPrice: Math.round(totalPrice * 100) / 100,
     stripeFee: Math.round(stripeFee * 100) / 100,
@@ -62,19 +49,18 @@ function calculatePaymentSplit(itemPrice: number, quantity: number = 1) {
 // Get digital downloads for a release (used for both digital and vinyl purchases)
 async function getDigitalDownloads(releaseId: string, itemType: string, trackId?: string) {
   try {
-    const releaseDoc = await db.collection('releases').doc(releaseId).get();
-    if (!releaseDoc.exists) return null;
-    
-    const releaseData = releaseDoc.data();
+    const releaseData = await getDocument('releases', releaseId);
+    if (!releaseData) return null;
+
     const artistName = releaseData?.artistName || 'Unknown Artist';
     const releaseName = releaseData?.releaseName || releaseData?.title || 'Release';
     const artistId = releaseData?.artistId || releaseData?.userId || null;
     const artistEmail = releaseData?.artistEmail || null;
     const labelName = releaseData?.labelName || releaseData?.label || null;
-    
+
     // If buying individual track
     if (itemType === 'track' && trackId) {
-      const track = (releaseData?.tracks || []).find((t: any) => 
+      const track = (releaseData?.tracks || []).find((t: any) =>
         t.id === trackId || t.trackId === trackId || String(t.trackNumber) === String(trackId)
       );
       if (track) {
@@ -93,7 +79,7 @@ async function getDigitalDownloads(releaseId: string, itemType: string, trackId?
         };
       }
     }
-    
+
     // Full release (digital or vinyl - vinyl includes digital)
     return {
       artistId,
@@ -117,24 +103,25 @@ async function getDigitalDownloads(releaseId: string, itemType: string, trackId?
 // Get stockist info for vinyl
 async function getStockistInfo(releaseId: string) {
   try {
-    const releaseDoc = await db.collection('releases').doc(releaseId).get();
-    if (!releaseDoc.exists) return null;
-    
-    const releaseData = releaseDoc.data();
+    const releaseData = await getDocument('releases', releaseId);
+    if (!releaseData) return null;
+
     const stockistId = releaseData?.stockistId || releaseData?.supplierId;
-    
+
     if (!stockistId) {
       // Check suppliers collection for default vinyl supplier
-      const suppliersSnap = await db.collection('suppliers')
-        .where('type', '==', 'vinyl')
-        .where('isDefault', '==', true)
-        .limit(1)
-        .get();
-      
-      if (!suppliersSnap.empty) {
-        const supplier = suppliersSnap.docs[0].data();
+      const suppliers = await queryCollection('suppliers', {
+        filters: [
+          { field: 'type', op: 'EQUAL', value: 'vinyl' },
+          { field: 'isDefault', op: 'EQUAL', value: true }
+        ],
+        limit: 1
+      });
+
+      if (suppliers.length > 0) {
+        const supplier = suppliers[0];
         return {
-          stockistId: suppliersSnap.docs[0].id,
+          stockistId: supplier.id,
           stockistName: supplier.name,
           stockistEmail: supplier.email,
           stockistPhone: supplier.phone || null,
@@ -142,11 +129,10 @@ async function getStockistInfo(releaseId: string) {
       }
       return null;
     }
-    
-    const stockistDoc = await db.collection('suppliers').doc(stockistId).get();
-    if (!stockistDoc.exists) return null;
-    
-    const stockist = stockistDoc.data();
+
+    const stockist = await getDocument('suppliers', stockistId);
+    if (!stockist) return null;
+
     return {
       stockistId,
       stockistName: stockist?.name,
@@ -163,7 +149,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const orderData = await request.json();
     log.info('[process-order] Processing order for:', orderData.customer?.email);
-    
+
     // Validation
     if (!orderData.customer?.email || !orderData.customer?.firstName || !orderData.customer?.lastName) {
       return new Response(JSON.stringify({ success: false, error: 'Missing required customer information' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
@@ -171,23 +157,23 @@ export const POST: APIRoute = async ({ request }) => {
     if (!orderData.items || orderData.items.length === 0) {
       return new Response(JSON.stringify({ success: false, error: 'No items in order' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
-    const hasPhysicalItems = orderData.items.some((item: any) => 
+
+    const hasPhysicalItems = orderData.items.some((item: any) =>
       item.type === 'vinyl' || item.type === 'merch' || item.productType === 'vinyl' || item.productType === 'merch'
     );
-    
+
     if (hasPhysicalItems && !orderData.shipping?.address1) {
       return new Response(JSON.stringify({ success: false, error: 'Shipping address required for physical items' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
     const orderNumber = generateOrderNumber();
     const now = new Date().toISOString();
-    
+
     // Process each item
     const processedItems = [];
     const artistPayments: Record<string, any> = {};
     const stockistOrders: Record<string, any> = {};
-    
+
     for (const item of orderData.items) {
       const releaseId = item.releaseId || item.productId || item.id;
       const itemType = item.type || item.productType || 'digital';
@@ -195,23 +181,23 @@ export const POST: APIRoute = async ({ request }) => {
       const isDigital = itemType === 'digital' || itemType === 'release' || itemType === 'track';
       const isMerch = itemType === 'merch';
       const isGiftCard = itemType === 'giftcard';
-      
+
       // Calculate payment split
       const paymentSplit = calculatePaymentSplit(item.price, item.quantity);
-      
+
       const processedItem: any = {
         ...item,
         releaseId,
         paymentSplit,
       };
-      
+
       // Digital downloads (for digital purchases AND vinyl purchases)
       if ((isDigital || isVinyl) && releaseId) {
         const downloads = await getDigitalDownloads(releaseId, itemType, item.trackId);
         if (downloads) {
           processedItem.downloads = downloads;
           processedItem.includesDigital = true;
-          
+
           // Track artist payment
           if (downloads.artistId) {
             if (!artistPayments[downloads.artistId]) {
@@ -235,14 +221,14 @@ export const POST: APIRoute = async ({ request }) => {
           }
         }
       }
-      
+
       // Vinyl - get stockist for dropship
       if (isVinyl && releaseId) {
         const stockist = await getStockistInfo(releaseId);
         if (stockist) {
           processedItem.stockist = stockist;
           processedItem.requiresDropship = true;
-          
+
           // Track stockist order
           if (!stockistOrders[stockist.stockistId]) {
             stockistOrders[stockist.stockistId] = {
@@ -262,26 +248,26 @@ export const POST: APIRoute = async ({ request }) => {
           stockistOrders[stockist.stockistId].totalAmount += stockistCost;
         }
       }
-      
+
       // Merch handling
       if (isMerch) {
         processedItem.requiresShipping = true;
         // Merch supplier notification would go here
       }
-      
+
       // Gift card - no physical delivery
       if (isGiftCard) {
         processedItem.isDigitalDelivery = true;
       }
-      
+
       processedItems.push(processedItem);
     }
-    
+
     // Calculate order totals with all splits
     const totalStripeFees = processedItems.reduce((sum, item) => sum + item.paymentSplit.stripeFee, 0);
     const totalPlatformFees = processedItems.reduce((sum, item) => sum + item.paymentSplit.platformFee, 0);
     const totalArtistPayments = Object.values(artistPayments).reduce((sum: number, ap: any) => sum + ap.totalArtistShare, 0);
-    
+
     // Create order document
     const order = {
       orderNumber,
@@ -313,11 +299,11 @@ export const POST: APIRoute = async ({ request }) => {
       createdAt: now,
       updatedAt: now,
     };
-    
+
     // Save order to Firestore
-    const orderRef = await db.collection('orders').add(order);
+    const orderRef = await addDocument('orders', order);
     log.info('[process-order] Created order:', orderNumber, orderRef.id);
-    
+
     // Send customer confirmation email with download links
     try {
       await fetch(new URL('/api/send-order-emails', request.url).toString(), {
@@ -331,7 +317,7 @@ export const POST: APIRoute = async ({ request }) => {
         })
       });
     } catch (e) { log.error('[process-order] Customer email failed:', e); }
-    
+
     // Send artist payment notifications
     for (const artistPayment of Object.values(artistPayments)) {
       try {
@@ -347,7 +333,7 @@ export const POST: APIRoute = async ({ request }) => {
         });
       } catch (e) { log.error('[process-order] Artist email failed:', e); }
     }
-    
+
     // Send stockist fulfillment emails for vinyl dropship
     for (const stockistOrder of Object.values(stockistOrders)) {
       try {
@@ -365,21 +351,20 @@ export const POST: APIRoute = async ({ request }) => {
         });
       } catch (e) { log.error('[process-order] Stockist email failed:', e); }
     }
-    
+
     // Update customer order count
     if (orderData.customer.userId) {
       try {
-        const customerRef = db.collection('customers').doc(orderData.customer.userId);
-        const customerDoc = await customerRef.get();
-        if (customerDoc.exists) {
-          await customerRef.update({
-            orderCount: (customerDoc.data()?.orderCount || 0) + 1,
+        const customerDoc = await getDocument('customers', orderData.customer.userId);
+        if (customerDoc) {
+          await updateDocument('customers', orderData.customer.userId, {
+            orderCount: (customerDoc.orderCount || 0) + 1,
             lastOrderAt: now,
           });
         }
       } catch (e) { log.error('[process-order] Error updating customer:', e); }
     }
-    
+
     return new Response(JSON.stringify({
       success: true,
       orderId: orderRef.id,
@@ -395,7 +380,7 @@ export const POST: APIRoute = async ({ request }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
     log.error('[process-order] Error:', error);
     return new Response(JSON.stringify({

@@ -1,22 +1,10 @@
 // src/pages/api/newsletter/subscribe.ts
 // Newsletter subscription endpoint - saves to Firebase and sends welcome email via Resend
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { queryCollection, addDocument, updateDocument } from '../../../lib/firebase-rest';
 import { Resend } from 'resend';
 
 export const prerender = false;
-
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
 
 const resend = new Resend(import.meta.env.RESEND_API_KEY);
 
@@ -24,82 +12,80 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
     const { email, source = 'footer' } = body;
-    
+
     if (!email) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Email is required' 
-      }), { 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Email is required'
+      }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Invalid email format' 
-      }), { 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid email format'
+      }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
-    const db = getFirestore();
+
     const normalizedEmail = email.toLowerCase().trim();
-    
+
     // Check if already subscribed
-    const existingQuery = await db.collection('subscribers')
-      .where('email', '==', normalizedEmail)
-      .limit(1)
-      .get();
-    
-    if (!existingQuery.empty) {
-      const existingDoc = existingQuery.docs[0];
-      const existingData = existingDoc.data();
-      
+    const existingSubscribers = await queryCollection('subscribers', {
+      filters: [{ field: 'email', op: 'EQUAL', value: normalizedEmail }],
+      limit: 1
+    });
+
+    if (existingSubscribers.length > 0) {
+      const existingDoc = existingSubscribers[0];
+
       // If unsubscribed, resubscribe them
-      if (existingData.status === 'unsubscribed') {
-        await existingDoc.ref.update({
+      if (existingDoc.status === 'unsubscribed') {
+        await updateDocument('subscribers', existingDoc.id, {
           status: 'active',
-          resubscribedAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp()
+          resubscribedAt: new Date(),
+          updatedAt: new Date()
         });
-        
-        return new Response(JSON.stringify({ 
-          success: true, 
-          message: 'Welcome back! You have been resubscribed.' 
-        }), { 
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: 'Welcome back! You have been resubscribed.'
+        }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'You are already subscribed!' 
-      }), { 
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'You are already subscribed!'
+      }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // Create new subscriber
     const subscriberData = {
       email: normalizedEmail,
       status: 'active',
       source: source,
-      subscribedAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
+      subscribedAt: new Date(),
+      updatedAt: new Date(),
       emailsSent: 0,
       emailsOpened: 0,
       lastEmailSentAt: null
     };
-    
-    const docRef = await db.collection('subscribers').add(subscriberData);
-    
+
+    const result = await addDocument('subscribers', subscriberData);
+
     // Send welcome email via Resend
     try {
       await resend.emails.send({
@@ -118,14 +104,14 @@ export const POST: APIRoute = async ({ request }) => {
               <div style="text-align: center; margin-bottom: 30px;">
                 <img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" style="height: 60px; background: white; padding: 10px; border-radius: 8px;">
               </div>
-              
+
               <div style="background: #1a1a1a; border-radius: 12px; padding: 30px; color: #fff;">
                 <h1 style="margin: 0 0 20px; font-size: 24px; color: #fff;">Welcome to the Fresh Wax family! 🎧</h1>
-                
+
                 <p style="color: #ccc; line-height: 1.6; margin-bottom: 20px;">
                   Thanks for subscribing to our newsletter. You'll be the first to know about:
                 </p>
-                
+
                 <ul style="color: #ccc; line-height: 1.8; margin-bottom: 25px; padding-left: 20px;">
                   <li>New jungle & drum and bass releases</li>
                   <li>Exclusive DJ mixes</li>
@@ -133,16 +119,16 @@ export const POST: APIRoute = async ({ request }) => {
                   <li>Fresh merch drops</li>
                   <li>Live stream announcements</li>
                 </ul>
-                
+
                 <div style="text-align: center; margin: 30px 0;">
                   <a href="https://freshwax.co.uk/releases" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 14px 30px; border-radius: 8px; font-weight: bold;">Browse Latest Releases</a>
                 </div>
-                
+
                 <p style="color: #888; font-size: 14px; margin-top: 30px; text-align: center;">
                   Stay fresh! 🔊
                 </p>
               </div>
-              
+
               <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
                 <p>© ${new Date().getFullYear()} Fresh Wax. All rights reserved.</p>
                 <p style="margin-top: 10px;">
@@ -158,22 +144,22 @@ export const POST: APIRoute = async ({ request }) => {
       console.error('[Newsletter] Welcome email failed:', emailError);
       // Don't fail the subscription if email fails
     }
-    
-    return new Response(JSON.stringify({ 
-      success: true, 
+
+    return new Response(JSON.stringify({
+      success: true,
       message: 'Successfully subscribed! Check your inbox for a welcome email.',
-      subscriberId: docRef.id
-    }), { 
+      subscriberId: result.id
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
     console.error('[Newsletter] Subscribe error:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Failed to subscribe. Please try again.' 
-    }), { 
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Failed to subscribe. Please try again.'
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

@@ -1,7 +1,6 @@
 // src/pages/api/update-release.ts
 // Firebase-based release update API
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -11,32 +10,26 @@ const log = {
   error: (...args: any[]) => console.error(...args),
 };
 
-// Initialize Firebase Admin
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
-
-export async function POST({ request }: any) {
+export async function POST({ request, locals }: any) {
   log.info('[update-release] POST request received');
-  
+
   try {
+    // Initialize Firebase environment
+    const env = locals?.runtime?.env || {};
+    initFirebaseEnv({
+      FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+      FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    });
+
     const updates = await request.json();
     log.info('[update-release] Request body:', JSON.stringify(updates, null, 2));
-    
+
     const { id, ...updateData } = updates;
-    
+
     if (!id) {
       log.error('[update-release] No release ID provided');
-      return new Response(JSON.stringify({ 
-        error: 'Release ID is required' 
+      return new Response(JSON.stringify({
+        error: 'Release ID is required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -46,12 +39,11 @@ export async function POST({ request }: any) {
     log.info('[update-release] Updating release:', id);
 
     // Get release from Firestore
-    const releaseRef = db.collection('releases').doc(id);
-    const releaseDoc = await releaseRef.get();
-    
-    if (!releaseDoc.exists) {
+    const releaseDoc = await getDocument('releases', id);
+
+    if (!releaseDoc) {
       log.error('[update-release] Release not found:', id);
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: 'Release not found',
         id: id
       }), {
@@ -74,18 +66,16 @@ export async function POST({ request }: any) {
     log.info('[update-release] Cleaned data:', JSON.stringify(cleanedData, null, 2));
 
     // Update in Firestore
-    await releaseRef.update(cleanedData);
+    await updateDocument('releases', id, cleanedData);
     log.info('[update-release] Updated in Firestore');
 
     // Also update the master list
     try {
-      const masterListRef = db.collection('system').doc('releases-master');
-      const masterListDoc = await masterListRef.get();
-      
-      if (masterListDoc.exists) {
-        const masterData = masterListDoc.data();
-        const releasesList = masterData?.releases || [];
-        
+      const masterListDoc = await getDocument('system', 'releases-master');
+
+      if (masterListDoc) {
+        const releasesList = masterListDoc.releases || [];
+
         // Find and update the release in master list
         const releaseIndex = releasesList.findIndex((r: any) => r.id === id);
         if (releaseIndex >= 0) {
@@ -99,12 +89,12 @@ export async function POST({ request }: any) {
             releaseDate: cleanedData.releaseDate || releasesList[releaseIndex].releaseDate,
             updatedAt: cleanedData.updatedAt
           };
-          
-          await masterListRef.update({
+
+          await updateDocument('system', 'releases-master', {
             releases: releasesList,
             lastUpdated: new Date().toISOString()
           });
-          
+
           log.info('[update-release] Updated master list');
         }
       }
@@ -115,7 +105,7 @@ export async function POST({ request }: any) {
 
     log.info('[update-release] Success - Update complete');
 
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       success: true,
       message: 'Release updated successfully',
       id: id
@@ -126,8 +116,8 @@ export async function POST({ request }: any) {
 
   } catch (error: any) {
     log.error('[update-release] Critical error:', error.message);
-    
-    return new Response(JSON.stringify({ 
+
+    return new Response(JSON.stringify({
       error: 'Internal server error',
       message: error.message
     }), {

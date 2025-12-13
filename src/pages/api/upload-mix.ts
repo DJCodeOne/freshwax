@@ -3,8 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getDocument, setDocument } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -20,19 +19,6 @@ const R2_CONFIG = {
   bucketName: import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
   publicDomain: import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
 };
-
-// Initialize Firebase
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-    }),
-  });
-}
-
-const db = getFirestore();
 
 // Initialize R2 Client
 const s3Client = new S3Client({
@@ -90,16 +76,15 @@ export const POST: APIRoute = async ({ request }) => {
     if (userId) {
       try {
         // Check customers collection first (preferred display name)
-        let userDoc = await db.collection('customers').doc(userId).get();
-        if (userDoc.exists && userDoc.data()?.displayName) {
-          displayName = userDoc.data()?.displayName;
+        let userData = await getDocument('customers', userId);
+        if (userData?.displayName) {
+          displayName = userData.displayName;
           log.info(`[upload-mix] Using displayName from customers: ${displayName}`);
         } else {
           // Fallback to users collection
-          userDoc = await db.collection('users').doc(userId).get();
-          if (userDoc.exists) {
-            const userData = userDoc.data();
-            displayName = userData?.displayName || userData?.partnerInfo?.displayName || djNameFromForm;
+          userData = await getDocument('users', userId);
+          if (userData) {
+            displayName = userData.displayName || userData.partnerInfo?.displayName || djNameFromForm;
             log.info(`[upload-mix] Using displayName from users: ${displayName}`);
           }
         }
@@ -211,8 +196,8 @@ export const POST: APIRoute = async ({ request }) => {
       updatedAt: new Date().toISOString(),
     };
 
-    await db.collection('dj-mixes').doc(mixId).set(mixData);
-    
+    await setDocument('dj-mixes', mixId, mixData);
+
     log.info(`[upload-mix] Success: ${mixId} (${genre}, ${formatDuration(durationSeconds)}, ${tracklistArray.length} tracks)`);
 
     return new Response(JSON.stringify({

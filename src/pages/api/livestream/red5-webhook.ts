@@ -11,21 +11,8 @@
 // - viewer_leave: Viewer disconnected
 
 import type { APIRoute } from 'astro';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getDocument, updateDocument, setDocument, addDocument, queryCollection, incrementField } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, verifyWebhookSignature, type Red5WebhookEvent } from '../../../lib/red5';
-
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: import.meta.env.FIREBASE_PROJECT_ID,
-      clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
-}
-
-const db = getFirestore();
 
 export const POST: APIRoute = async ({ request }) => {
   const now = new Date().toISOString();
@@ -67,30 +54,29 @@ export const POST: APIRoute = async ({ request }) => {
     }
     
     // Find the slot by stream key
-    const slotsQuery = await db.collection('livestreamSlots')
-      .where('streamKey', '==', event.streamKey)
-      .limit(1)
-      .get();
-    
-    if (slotsQuery.empty) {
+    const slots = await queryCollection('livestreamSlots', {
+      filters: [{ field: 'streamKey', op: 'EQUAL', value: event.streamKey }],
+      limit: 1
+    });
+
+    if (slots.length === 0) {
       console.warn('[red5-webhook] No slot found for stream key:', event.streamKey);
       return new Response(JSON.stringify({
         success: true,
         message: 'Acknowledged (slot not found)'
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    
-    const slotDoc = slotsQuery.docs[0];
-    const slotRef = slotDoc.ref;
-    const slotData = slotDoc.data();
+
+    const slotData = slots[0];
+    const slotId = slotData.id;
     
     // Handle different event types
     switch (event.event) {
       case 'publish': {
         // Stream has started - update slot to live
-        console.log('[red5-webhook] Stream published:', slotData.djName, slotDoc.id);
-        
-        await slotRef.update({
+        console.log('[red5-webhook] Stream published:', slotData.djName, slotId);
+
+        await updateDocument('livestreamSlots', slotId, {
           status: 'live',
           isLive: true,
           streamStartedAt: now,
@@ -102,15 +88,15 @@ export const POST: APIRoute = async ({ request }) => {
           },
           updatedAt: now,
         });
-        
+
         // Also update the livestreams collection for the status API
-        const livestreamQuery = await db.collection('livestreams')
-          .where('streamKey', '==', event.streamKey)
-          .limit(1)
-          .get();
-        
-        if (!livestreamQuery.empty) {
-          await livestreamQuery.docs[0].ref.update({
+        const livestreams = await queryCollection('livestreams', {
+          filters: [{ field: 'streamKey', op: 'EQUAL', value: event.streamKey }],
+          limit: 1
+        });
+
+        if (livestreams.length > 0) {
+          await updateDocument('livestreams', livestreams[0].id, {
             status: 'live',
             isLive: true,
             startedAt: now,
@@ -118,8 +104,8 @@ export const POST: APIRoute = async ({ request }) => {
           });
         } else {
           // Create a new livestream record
-          await db.collection('livestreams').add({
-            slotId: slotDoc.id,
+          await addDocument('livestreams', {
+            slotId: slotId,
             djId: slotData.djId,
             djName: slotData.djName,
             djAvatar: slotData.djAvatar,
@@ -141,74 +127,76 @@ export const POST: APIRoute = async ({ request }) => {
             updatedAt: now,
           });
         }
-        
+
         break;
       }
       
       case 'unpublish': {
         // Stream has ended
-        console.log('[red5-webhook] Stream unpublished:', slotData.djName, slotDoc.id);
-        
+        console.log('[red5-webhook] Stream unpublished:', slotData.djName, slotId);
+
         const slotEndTime = new Date(slotData.endTime);
         const nowDate = new Date();
-        
+
         // Determine if this was a normal end or early disconnect
         const isEarlyEnd = nowDate < slotEndTime;
         const finalStatus = isEarlyEnd ? 'failed' : 'completed';
-        
-        await slotRef.update({
+
+        await updateDocument('livestreamSlots', slotId, {
           status: finalStatus,
           isLive: false,
           streamEndedAt: now,
           endReason: isEarlyEnd ? 'disconnected' : 'scheduled_end',
           updatedAt: now,
         });
-        
+
         // Update livestreams collection
-        const livestreamQuery = await db.collection('livestreams')
-          .where('streamKey', '==', event.streamKey)
-          .where('isLive', '==', true)
-          .limit(1)
-          .get();
-        
-        if (!livestreamQuery.empty) {
-          await livestreamQuery.docs[0].ref.update({
+        const livestreams = await queryCollection('livestreams', {
+          filters: [
+            { field: 'streamKey', op: 'EQUAL', value: event.streamKey },
+            { field: 'isLive', op: 'EQUAL', value: true }
+          ],
+          limit: 1
+        });
+
+        if (livestreams.length > 0) {
+          await updateDocument('livestreams', livestreams[0].id, {
             status: 'offline',
             isLive: false,
             endedAt: now,
             updatedAt: now,
           });
         }
-        
+
         break;
       }
       
       case 'viewer_join': {
         // Increment viewer count
-        await slotRef.update({
-          currentViewers: FieldValue.increment(1),
-          totalViews: FieldValue.increment(1),
+        await incrementField('livestreamSlots', slotId, 'currentViewers', 1);
+        await incrementField('livestreamSlots', slotId, 'totalViews', 1);
+        await updateDocument('livestreamSlots', slotId, {
           lastHeartbeat: now,
           updatedAt: now,
         });
-        
+
         // Update peak if current > peak
-        const currentData = (await slotRef.get()).data();
+        const currentData = await getDocument('livestreamSlots', slotId);
         if (currentData && currentData.currentViewers > (currentData.viewerPeak || 0)) {
-          await slotRef.update({
+          await updateDocument('livestreamSlots', slotId, {
             viewerPeak: currentData.currentViewers,
           });
         }
-        
+
         break;
       }
-      
+
       case 'viewer_leave': {
         // Decrement viewer count (minimum 0)
-        const currentSlot = (await slotRef.get()).data();
+        const currentSlot = await getDocument('livestreamSlots', slotId);
         if (currentSlot && currentSlot.currentViewers > 0) {
-          await slotRef.update({
-            currentViewers: FieldValue.increment(-1),
+          await incrementField('livestreamSlots', slotId, 'currentViewers', -1);
+          await updateDocument('livestreamSlots', slotId, {
             lastHeartbeat: now,
             updatedAt: now,
           });
@@ -219,8 +207,8 @@ export const POST: APIRoute = async ({ request }) => {
       case 'record_start':
       case 'record_stop': {
         // Log recording events but no action needed
-        console.log('[red5-webhook] Recording event:', event.event, slotDoc.id);
-        await slotRef.update({
+        console.log('[red5-webhook] Recording event:', event.event, slotId);
+        await updateDocument('livestreamSlots', slotId, {
           [`recordingEvents.${event.event}`]: now,
           updatedAt: now,
         });
@@ -235,7 +223,7 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify({
       success: true,
       event: event.event,
-      slotId: slotDoc.id,
+      slotId: slotId,
       processed: true,
     }), { 
       status: 200, 
