@@ -1,0 +1,512 @@
+---
+// src/pages/admin/dj-mixes/edit/[id].astro
+// Admin page to edit DJ mix metadata
+
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import { getDocument } from '../../../../lib/firebase-rest';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+
+let mix: any = null;
+let errorMessage = '';
+
+try {
+  const mixDoc = await getDocument('dj-mixes', id as string);
+
+  if (mixDoc) {
+    mix = { id, ...mixDoc };
+  } else {
+    errorMessage = 'Mix not found';
+  }
+} catch (error) {
+  console.error('[EDIT MIX] Error loading mix:', error);
+  errorMessage = error instanceof Error ? error.message : 'Unknown error';
+}
+
+if (!mix) {
+  return Astro.redirect('/admin/dj-mixes/manage');
+}
+
+// Format duration
+const formatDuration = (seconds: number) => {
+  if (!seconds) return '';
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+// Format date for input
+const formatDateForInput = (dateStr: string) => {
+  if (!dateStr) return '';
+  try {
+    return new Date(dateStr).toISOString().split('T')[0];
+  } catch {
+    return '';
+  }
+};
+---
+
+<AdminLayout title={`Edit: ${mix.title || 'Untitled Mix'}`} activeNav="mixes">
+  <div class="edit-header">
+    <div class="edit-header-left">
+      <a href="/admin/dj-mixes/manage" class="back-link">&larr; Back to Mixes</a>
+      <h1>Edit DJ Mix</h1>
+    </div>
+    <div class="edit-header-right">
+      <span class={`badge badge-${mix.published ? 'live' : 'draft'}`}>
+        {mix.published ? 'Published' : 'Unpublished'}
+      </span>
+    </div>
+  </div>
+
+  <form id="editForm" class="edit-form">
+    <div class="form-grid">
+      <!-- Left Column -->
+      <div class="form-column">
+        <!-- Basic Info -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Basic Information</h2>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Mix Title *</label>
+              <input type="text" name="title" class="form-input" value={mix.title || ''} required maxlength="80" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">DJ Name *</label>
+              <input type="text" name="djName" class="form-input" value={mix.djName || mix.dj_name || mix.displayName || ''} required maxlength="50" />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Genre</label>
+                <input type="text" name="genre" class="form-input" value={mix.genre || ''} maxlength="30" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Duration</label>
+                <input type="text" name="durationDisplay" class="form-input" value={formatDuration(mix.duration)} readonly />
+                <input type="hidden" name="duration" value={mix.duration || 0} />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Description / Shout Outs</label>
+              <textarea name="description" class="form-textarea" maxlength="500" rows="3">{mix.description || mix.shoutOuts || ''}</textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Tracklist</label>
+              <textarea name="tracklist" class="form-textarea" rows="8" placeholder="One track per line...">{mix.tracklist || (mix.tracklistArray || []).join('\n')}</textarea>
+              <span class="form-hint">Enter one track per line. Track numbers will be added automatically.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Settings</h2>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" name="published" checked={mix.published} />
+                <span>Published (visible on site)</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" name="allowDownload" checked={mix.allowDownload !== false} />
+                <span>Allow Downloads</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input type="checkbox" name="featured" checked={mix.featured} />
+                <span>Featured Mix</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="form-column">
+        <!-- Artwork -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Artwork</h2>
+          </div>
+          <div class="card-body">
+            <div class="artwork-preview">
+              {mix.artworkUrl || mix.imageUrl ? (
+                <img src={mix.artworkUrl || mix.imageUrl} alt="Mix artwork" />
+              ) : (
+                <div class="artwork-placeholder">No artwork</div>
+              )}
+            </div>
+            <div class="form-group">
+              <label class="form-label">Artwork URL</label>
+              <input type="text" name="artworkUrl" class="form-input" value={mix.artworkUrl || mix.imageUrl || ''} placeholder="https://..." />
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Audio File</h2>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Audio URL (Read-Only)</label>
+              <input type="text" class="form-input" value={mix.audioUrl || mix.mp3Url || ''} readonly />
+              <span class="form-hint">Audio files cannot be changed. Upload a new mix to replace.</span>
+            </div>
+            {mix.audioUrl || mix.mp3Url ? (
+              <audio controls class="audio-preview">
+                <source src={mix.audioUrl || mix.mp3Url} type="audio/mpeg" />
+              </audio>
+            ) : null}
+          </div>
+        </div>
+
+        <!-- Stats (Read-Only) -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Statistics</h2>
+          </div>
+          <div class="card-body">
+            <div class="stats-grid">
+              <div class="stat-item">
+                <span class="stat-label">Plays</span>
+                <span class="stat-value">{(mix.plays || mix.playCount || 0).toLocaleString()}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Downloads</span>
+                <span class="stat-value">{(mix.downloads || mix.downloadCount || 0).toLocaleString()}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Likes</span>
+                <span class="stat-value">{(mix.likes || mix.likeCount || 0).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metadata -->
+        <div class="card">
+          <div class="card-header">
+            <h2>Metadata</h2>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Mix ID</label>
+              <input type="text" class="form-input" value={mix.id} readonly />
+            </div>
+            <div class="form-group">
+              <label class="form-label">User ID</label>
+              <input type="text" name="userId" class="form-input" value={mix.userId || ''} />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Uploaded</label>
+              <input type="text" class="form-input" value={mix.uploadedAt ? new Date(mix.uploadedAt).toLocaleString() : '-'} readonly />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Last Updated</label>
+              <input type="text" class="form-input" value={mix.updatedAt ? new Date(mix.updatedAt).toLocaleString() : '-'} readonly />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="form-actions">
+      <a href="/admin/dj-mixes/manage" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary" id="saveBtn">Save Changes</button>
+    </div>
+  </form>
+</AdminLayout>
+
+<style>
+  .edit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+  }
+
+  .edit-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .back-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+
+  .back-link:hover {
+    color: var(--text-primary);
+  }
+
+  .edit-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 1024px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .card-body {
+    padding: 1.25rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .form-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .form-input,
+  .form-textarea {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 2px solid #e5e5e5;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.15s;
+  }
+
+  .form-input:focus,
+  .form-textarea:focus {
+    outline: none;
+    border-color: #000;
+  }
+
+  .form-input[readonly] {
+    background: #f5f5f5;
+    color: #666;
+  }
+
+  .form-textarea {
+    resize: vertical;
+    min-height: 100px;
+  }
+
+  .form-hint {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+
+  .checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .artwork-preview {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #f5f5f5;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .artwork-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .artwork-placeholder {
+    color: #999;
+    font-size: 1rem;
+  }
+
+  .audio-preview {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: #f5f5f5;
+    border-radius: 8px;
+  }
+
+  .stat-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+  }
+
+  .stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e5e5;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: #000;
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: #333;
+  }
+
+  .btn-primary:disabled {
+    background: #999;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: #fff;
+    color: #000;
+    border-color: #e5e5e5;
+    text-decoration: none;
+  }
+
+  .btn-secondary:hover {
+    border-color: #000;
+  }
+</style>
+
+<script define:vars={{ mixId: mix.id }}>
+  const form = document.getElementById('editForm');
+  const saveBtn = document.getElementById('saveBtn');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+
+    const updates = {
+      mixId: mixId,
+      title: formData.get('title'),
+      djName: formData.get('djName'),
+      genre: formData.get('genre'),
+      description: formData.get('description'),
+      tracklist: formData.get('tracklist'),
+      artworkUrl: formData.get('artworkUrl'),
+      published: formData.get('published') === 'on',
+      allowDownload: formData.get('allowDownload') === 'on',
+      featured: formData.get('featured') === 'on',
+      userId: formData.get('userId'),
+    };
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+      const response = await fetch('/api/admin/update-mix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        showToast('Mix updated successfully!');
+        saveBtn.textContent = 'Saved!';
+        setTimeout(() => {
+          saveBtn.textContent = 'Save Changes';
+          saveBtn.disabled = false;
+        }, 2000);
+      } else {
+        throw new Error(result.error || 'Failed to update');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      showToast('Failed to update mix: ' + error.message, 'error');
+      saveBtn.textContent = 'Save Changes';
+      saveBtn.disabled = false;
+    }
+  });
+</script>

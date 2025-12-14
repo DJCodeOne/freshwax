@@ -148,7 +148,7 @@ export const prerender = false;
                 <td class="cell-secondary" style="font-size: 0.9rem;">{formatDate(mix.uploadedAt)}</td>
                 <td class="text-right">
                   <div class="flex gap-1 justify-end">
-                    <a 
+                    <a
                       href={`/dj-mix/${mix.id}`}
                       target="_blank"
                       class="btn btn-ghost btn-sm"
@@ -157,7 +157,15 @@ export const prerender = false;
                     >
                       👁️
                     </a>
-                    <button 
+                    <a
+                      href={`/admin/dj-mixes/edit/${mix.id}`}
+                      class="btn btn-outline btn-sm"
+                      title="Edit"
+                      style="font-size: 1.25rem; padding: 0.5rem;"
+                    >
+                      ✏️
+                    </a>
+                    <button
                       class="btn btn-outline btn-sm toggle-btn"
                       data-id={mix.id}
                       data-published={mix.published ? 'true' : 'false'}
