@@ -117,7 +117,7 @@ export const GET: APIRoute = async ({ request }) => {
 
     // Check for admin email
     let userEmail = userDoc?.email || customerDoc?.email || artistDoc?.email || '';
-    const ADMIN_EMAILS = ['freshwaxonline@gmail.com'];
+    const ADMIN_EMAILS = ['freshwaxonline@gmail.com', 'davidhagon@gmail.com'];
     if (userEmail && ADMIN_EMAILS.includes(userEmail.toLowerCase())) {
       isAdmin = true;
     }

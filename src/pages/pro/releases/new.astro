@@ -1,19 +1,22 @@
 ---
 // New Release - Pro Dashboard
-// Artists can upload new releases
+// Artists can upload new releases to R2 for processing
 import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+
+export const prerender = false;
 ---
 <ProDashboardLayout title="New Release" activeSection="/pro/releases/new">
   <div class="new-release-page">
     <div class="page-header">
-      <p class="subtitle">Upload a new track or album to Fresh Wax</p>
+      <h1>Upload New Release</h1>
+      <p class="subtitle">Upload your tracks and artwork for review</p>
     </div>
 
     <form id="releaseForm" class="release-form">
       <!-- Basic Info -->
       <section class="form-section">
         <h2>Basic Information</h2>
-        
+
         <div class="form-row">
           <div class="form-group">
             <label for="title">Release Title *</label>
@@ -26,7 +29,6 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
               <option value="single">Single</option>
               <option value="ep">EP</option>
               <option value="album">Album</option>
-              <option value="compilation">Compilation</option>
             </select>
           </div>
         </div>
@@ -46,7 +48,8 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
               <option value="neurofunk">Neurofunk</option>
               <option value="jump-up">Jump Up</option>
               <option value="ragga-jungle">Ragga Jungle</option>
-              <option value="breakcore">Breakcore</option>
+              <option value="house">House</option>
+              <option value="techno">Techno</option>
               <option value="other">Other</option>
             </select>
           </div>
@@ -60,14 +63,14 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
       <!-- Artwork -->
       <section class="form-section">
-        <h2>Artwork</h2>
-        
+        <h2>Artwork *</h2>
+
         <div class="artwork-upload">
           <div class="artwork-preview" id="artworkPreview">
             <span class="placeholder">📀</span>
           </div>
           <div class="artwork-controls">
-            <input type="file" id="artwork" accept="image/*" style="display: none;">
+            <input type="file" id="artwork" accept="image/jpeg,image/png,image/webp" required style="display: none;">
             <button type="button" class="btn btn-secondary" onclick="document.getElementById('artwork').click()">
               Upload Artwork
             </button>
@@ -78,14 +81,14 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
       <!-- Tracks -->
       <section class="form-section">
-        <h2>Tracks</h2>
-        
+        <h2>Tracks *</h2>
+
         <div id="tracksList" class="tracks-list">
-          <!-- Tracks will be added here -->
+          <p class="empty-tracks">No tracks added yet</p>
         </div>
 
         <div class="add-track-area">
-          <input type="file" id="trackUpload" accept="audio/*" multiple style="display: none;">
+          <input type="file" id="trackUpload" accept="audio/mpeg,audio/wav,audio/flac" multiple style="display: none;">
           <button type="button" class="btn btn-secondary" onclick="document.getElementById('trackUpload').click()">
             + Add Tracks
           </button>
@@ -96,60 +99,45 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
       <!-- Pricing -->
       <section class="form-section">
         <h2>Pricing</h2>
-        
+
         <div class="form-row">
           <div class="form-group">
             <label for="price">Digital Price (£) *</label>
-            <input type="number" id="price" required min="0" step="0.01" placeholder="0.00">
+            <input type="number" id="price" required min="0" step="0.01" value="7.99" placeholder="0.00">
           </div>
           <div class="form-group">
-            <label for="previewLength">Preview Length (seconds)</label>
-            <input type="number" id="previewLength" value="90" min="30" max="180">
+            <label for="trackPrice">Per Track Price (£)</label>
+            <input type="number" id="trackPrice" min="0" step="0.01" value="1.99" placeholder="0.00">
           </div>
-        </div>
-
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="allowStreaming" checked>
-            <span>Allow streaming preview</span>
-          </label>
-        </div>
-
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="nameYourPrice">
-            <span>Allow "Name Your Price" (minimum price above)</span>
-          </label>
         </div>
       </section>
 
       <!-- Release Date -->
       <section class="form-section">
         <h2>Release Date</h2>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label for="releaseDate">Release Date *</label>
-            <input type="date" id="releaseDate" required>
-          </div>
-          <div class="form-group">
-            <label for="releaseStatus">Status</label>
-            <select id="releaseStatus">
-              <option value="draft">Save as Draft</option>
-              <option value="pending">Submit for Review</option>
-            </select>
-          </div>
+
+        <div class="form-group">
+          <label for="releaseDate">Release Date *</label>
+          <input type="date" id="releaseDate" required>
         </div>
 
         <p class="help-text">
-          All releases are reviewed before going live. This usually takes 1-2 business days.
+          All releases are reviewed before going live. You'll receive an email when your release is approved.
         </p>
       </section>
 
+      <!-- Progress -->
+      <div id="uploadProgress" class="upload-progress" style="display: none;">
+        <h3>Uploading...</h3>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <p id="progressText">Preparing upload...</p>
+      </div>
+
       <!-- Actions -->
       <div class="form-actions">
-        <button type="button" class="btn btn-secondary" onclick="saveDraft()">Save Draft</button>
-        <button type="submit" class="btn btn-primary">Submit for Review</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Submit for Review</button>
       </div>
 
       <div id="formMessage" class="form-message" style="display: none;"></div>
@@ -163,6 +151,10 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
     .page-header {
       margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+      margin: 0 0 0.5rem;
     }
 
     .subtitle {
@@ -285,6 +277,12 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
       margin-bottom: 1rem;
     }
 
+    .empty-tracks {
+      color: var(--text-muted, #666);
+      text-align: center;
+      padding: 1rem;
+    }
+
     .track-item {
       display: grid;
       grid-template-columns: auto 1fr auto auto;
@@ -319,6 +317,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
       color: var(--text-primary, #fff);
       font-size: 0.9rem;
       padding: 0;
+      width: 100%;
     }
 
     .track-title-input:focus {
@@ -358,21 +357,39 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
       text-align: center;
     }
 
-    .checkbox-group {
-      margin-bottom: 0.75rem;
+    .upload-progress {
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 8px;
+      padding: 1.5rem;
+      text-align: center;
     }
 
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      cursor: pointer;
+    .upload-progress h3 {
+      margin: 0 0 1rem;
       color: var(--text-primary, #fff);
     }
 
-    .checkbox-label input {
-      width: auto;
-      accent-color: var(--accent, #22c55e);
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--bg-tertiary, #1a1a1a);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent, #22c55e);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    #progressText {
+      color: var(--text-secondary, #a3a3a3);
+      font-size: 0.875rem;
+      margin: 0;
     }
 
     .form-actions {
@@ -432,12 +449,15 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
-    import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 
-    const firebaseConfig = window.FIREBASE_CONFIG || {};
+    const firebaseConfig = window.FIREBASE_CONFIG || {
+      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      authDomain: "freshwax-store.firebaseapp.com",
+      projectId: "freshwax-store"
+    };
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
     let currentUser = null;
     let tracks = [];
@@ -452,6 +472,11 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
         return;
       }
       currentUser = user;
+
+      // Pre-fill artist name if available
+      if (user.displayName) {
+        document.getElementById('artistName').value = user.displayName;
+      }
     });
 
     // Artwork upload
@@ -474,13 +499,15 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
         const track = {
           id: Date.now() + Math.random(),
           file: file,
-          title: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
-          duration: '0:00'
+          title: file.name.replace(/\.[^/.]+$/, '').replace(/^\d+[-_.\s]*/, ''), // Remove extension and leading numbers
+          duration: '0:00',
+          durationSeconds: 0
         };
 
         // Get duration
         const audio = new Audio();
         audio.onloadedmetadata = () => {
+          track.durationSeconds = Math.floor(audio.duration);
           const minutes = Math.floor(audio.duration / 60);
           const seconds = Math.floor(audio.duration % 60);
           track.duration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -495,9 +522,9 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
     function renderTracks() {
       const tracksList = document.getElementById('tracksList');
-      
+
       if (tracks.length === 0) {
-        tracksList.innerHTML = '';
+        tracksList.innerHTML = '<p class="empty-tracks">No tracks added yet</p>';
         return;
       }
 
@@ -505,42 +532,52 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
         <div class="track-item" data-id="${track.id}">
           <span class="track-number">${index + 1}</span>
           <div class="track-info">
-            <input type="text" class="track-title-input" value="${track.title}" onchange="updateTrackTitle('${track.id}', this.value)">
+            <input type="text" class="track-title-input" value="${track.title}" data-track-id="${track.id}">
             <span class="track-meta">${track.file.name} • ${(track.file.size / 1024 / 1024).toFixed(1)} MB</span>
           </div>
           <span class="track-duration">${track.duration}</span>
-          <button type="button" class="track-remove" onclick="removeTrack('${track.id}')">×</button>
+          <button type="button" class="track-remove" data-track-id="${track.id}">×</button>
         </div>
       `).join('');
+
+      // Re-attach event listeners
+      tracksList.querySelectorAll('.track-title-input').forEach(input => {
+        input.addEventListener('change', (e) => {
+          const track = tracks.find(t => t.id == e.target.dataset.trackId);
+          if (track) track.title = e.target.value;
+        });
+      });
+
+      tracksList.querySelectorAll('.track-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          tracks = tracks.filter(t => t.id != e.target.dataset.trackId);
+          renderTracks();
+        });
+      });
     }
-
-    window.updateTrackTitle = (id, title) => {
-      const track = tracks.find(t => t.id == id);
-      if (track) track.title = title;
-    };
-
-    window.removeTrack = (id) => {
-      tracks = tracks.filter(t => t.id != id);
-      renderTracks();
-    };
-
-    // Save draft
-    window.saveDraft = async () => {
-      await submitRelease('draft');
-    };
 
     // Form submission
     document.getElementById('releaseForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      await submitRelease('pending');
+      await submitRelease();
     });
 
-    async function submitRelease(status) {
+    async function submitRelease() {
       const messageEl = document.getElementById('formMessage');
+      const progressEl = document.getElementById('uploadProgress');
+      const progressFill = document.getElementById('progressFill');
+      const progressText = document.getElementById('progressText');
+      const submitBtn = document.getElementById('submitBtn');
+
       messageEl.style.display = 'none';
 
       if (!currentUser) {
         showMessage('Please sign in to continue', 'error');
+        return;
+      }
+
+      if (!artworkFile) {
+        showMessage('Please upload artwork', 'error');
         return;
       }
 
@@ -549,56 +586,120 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
         return;
       }
 
-      const submitBtn = document.querySelector('button[type="submit"]');
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Saving...';
+      submitBtn.textContent = 'Uploading...';
+      progressEl.style.display = 'block';
 
       try {
-        // In a real implementation, you would upload files to storage here
-        // For now, we'll just create the document structure
+        // Generate submission ID
+        const artistName = document.getElementById('artistName').value;
+        const sanitizedArtist = artistName.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30);
+        const timestamp = Date.now();
+        const submissionId = `${sanitizedArtist}_${timestamp}`;
 
-        const releaseData = {
-          title: document.getElementById('title').value,
+        // Create metadata
+        const metadata = {
+          artistName: artistName,
+          releaseName: document.getElementById('title').value,
           releaseType: document.getElementById('releaseType').value,
-          artistName: document.getElementById('artistName').value,
-          artistId: currentUser.uid,
           genre: document.getElementById('genre').value,
           description: document.getElementById('description').value,
-          price: parseFloat(document.getElementById('price').value) || 0,
-          previewLength: parseInt(document.getElementById('previewLength').value) || 90,
-          allowStreaming: document.getElementById('allowStreaming').checked,
-          nameYourPrice: document.getElementById('nameYourPrice').checked,
+          pricePerSale: parseFloat(document.getElementById('price').value) || 7.99,
+          trackPrice: parseFloat(document.getElementById('trackPrice').value) || 1.99,
           releaseDate: document.getElementById('releaseDate').value,
-          status: status,
-          trackCount: tracks.length,
           tracks: tracks.map((t, i) => ({
-            position: i + 1,
+            trackNumber: i + 1,
             title: t.title,
-            duration: t.duration,
-            fileName: t.file.name
+            duration: t.durationSeconds,
+            bpm: null,
+            key: null
           })),
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
+          submittedAt: new Date().toISOString(),
+          email: currentUser.email,
+          userId: currentUser.uid
         };
 
-        const docRef = await addDoc(collection(db, 'releases'), releaseData);
+        // Total files to upload: metadata + artwork + tracks
+        const totalFiles = 2 + tracks.length;
+        let uploadedFiles = 0;
 
-        if (status === 'pending') {
-          showMessage('Release submitted for review! We\'ll notify you once it\'s approved.', 'success');
-          setTimeout(() => {
-            window.location.href = '/pro/releases';
-          }, 2000);
-        } else {
-          showMessage('Draft saved successfully!', 'success');
+        const updateProgress = (text) => {
+          uploadedFiles++;
+          const percent = Math.round((uploadedFiles / totalFiles) * 100);
+          progressFill.style.width = `${percent}%`;
+          progressText.textContent = text;
+        };
+
+        // Upload metadata.json
+        progressText.textContent = 'Uploading metadata...';
+        await uploadToR2(`${submissionId}/metadata.json`, JSON.stringify(metadata, null, 2), 'application/json');
+        updateProgress('Metadata uploaded');
+
+        // Upload artwork
+        progressText.textContent = 'Uploading artwork...';
+        const artworkExt = artworkFile.name.split('.').pop().toLowerCase();
+        await uploadToR2(`${submissionId}/cover.${artworkExt}`, artworkFile, artworkFile.type);
+        updateProgress('Artwork uploaded');
+
+        // Upload tracks
+        for (let i = 0; i < tracks.length; i++) {
+          const track = tracks[i];
+          const trackNum = String(i + 1).padStart(2, '0');
+          const trackExt = track.file.name.split('.').pop().toLowerCase();
+          const safeTitle = track.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50);
+
+          progressText.textContent = `Uploading track ${i + 1}/${tracks.length}...`;
+          await uploadToR2(`${submissionId}/tracks/${trackNum}-${safeTitle}.${trackExt}`, track.file, track.file.type);
+          updateProgress(`Track ${i + 1} uploaded`);
         }
 
+        progressFill.style.width = '100%';
+        progressText.textContent = 'Upload complete!';
+
+        showMessage('Release submitted successfully! You\'ll receive an email when it\'s been processed and approved.', 'success');
+
+        // Redirect after delay
+        setTimeout(() => {
+          window.location.href = '/pro/releases';
+        }, 3000);
+
       } catch (error) {
-        console.error('Error saving release:', error);
-        showMessage('Error saving release: ' + error.message, 'error');
+        console.error('Error uploading release:', error);
+        showMessage('Error uploading release: ' + error.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit for Review';
+        progressEl.style.display = 'none';
+      }
+    }
+
+    async function uploadToR2(key, data, contentType) {
+      // Get presigned URL from API
+      const presignResponse = await fetch('/api/releases/presign-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: key,
+          contentType: contentType,
+          bucket: 'uploads' // Use uploads bucket
+        })
+      });
+
+      if (!presignResponse.ok) {
+        throw new Error('Failed to get upload URL');
       }
 
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit for Review';
+      const { uploadUrl } = await presignResponse.json();
+
+      // Upload to R2
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': contentType },
+        body: data
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload file');
+      }
     }
 
     function showMessage(text, type) {
