@@ -830,9 +830,9 @@
     .schedule-help { font-size: 0.8rem; color: var(--text-secondary, #a3a3a3); margin: 0; }
     .daily-schedule { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; padding: 1rem; background: var(--bg-secondary, #141414); border: 1px solid var(--border-color, #262626); border-radius: 8px; }
     @media (max-width: 400px) { .daily-schedule { grid-template-columns: repeat(3, 1fr); } }
-    .slot { padding: 0.75rem 0.5rem; text-align: center; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
-    .slot-time { font-weight: 600; color: var(--text-primary, #fff); display: block; margin-bottom: 0.25rem; }
-    .slot-status { font-size: 0.7rem; text-transform: uppercase; }
+    .slot { padding: 0.75rem 0.5rem; text-align: center; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .slot-time { font-weight: 600; color: var(--text-primary, #fff); display: block; margin-bottom: 0.25rem; text-align: center; width: 100%; }
+    .slot-status { font-size: 0.7rem; text-transform: uppercase; text-align: center; width: 100%; }
     .slot.available { background: var(--bg-tertiary, #1a1a1a); border-color: var(--border-color, #262626); }
     .slot.available:hover { border-color: var(--accent, #22c55e); background: rgba(34, 197, 94, 0.1); }
     .slot.available .slot-status { color: var(--accent, #22c55e); }
@@ -840,7 +840,7 @@
     .slot.selected .slot-time, .slot.selected .slot-status { color: #000; }
     .slot.booked { background: var(--bg-tertiary, #1a1a1a); opacity: 0.5; cursor: not-allowed; }
     .slot.booked .slot-status { color: var(--text-muted, #666); }
-    .slot.booked .booked-by { font-size: 0.65rem; color: var(--text-muted, #666); display: block; margin-top: 0.25rem; }
+    .slot.booked .booked-by { font-size: 0.65rem; color: var(--text-muted, #666); display: block; margin-top: 0.25rem; text-align: center; width: 100%; }
     .slot.yours { background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; cursor: not-allowed; }
     .slot.yours .slot-status { color: #60a5fa; }
     .slot.past { opacity: 0.3; cursor: not-allowed; }
