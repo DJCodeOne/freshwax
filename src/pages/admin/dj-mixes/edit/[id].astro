@@ -29,9 +29,14 @@ if (!mix) {
   return Astro.redirect('/admin/dj-mixes/manage');
 }
 
-// Format duration
+// Format duration - check multiple possible field names
+const getDuration = (mix: any) => {
+  const seconds = mix.duration || mix.durationSeconds || mix.length || mix.durationMs / 1000 || 0;
+  return Math.floor(seconds);
+};
+
 const formatDuration = (seconds: number) => {
-  if (!seconds) return '';
+  if (!seconds || seconds <= 0) return '0:00';
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
@@ -41,191 +46,198 @@ const formatDuration = (seconds: number) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-// Format date for input
-const formatDateForInput = (dateStr: string) => {
-  if (!dateStr) return '';
-  try {
-    return new Date(dateStr).toISOString().split('T')[0];
-  } catch {
-    return '';
-  }
-};
+const mixDuration = getDuration(mix);
 ---
 
 <AdminLayout title={`Edit: ${mix.title || 'Untitled Mix'}`} activeNav="mixes">
   <div class="edit-header">
-    <div class="edit-header-left">
-      <a href="/admin/dj-mixes/manage" class="back-link">&larr; Back to Mixes</a>
-      <h1>Edit DJ Mix</h1>
-    </div>
-    <div class="edit-header-right">
+    <a href="/admin/dj-mixes/manage" class="back-link">← Back to Mixes</a>
+    <div class="header-row">
+      <h1>✏️ Edit DJ Mix</h1>
       <span class={`badge badge-${mix.published ? 'live' : 'draft'}`}>
-        {mix.published ? 'Published' : 'Unpublished'}
+        {mix.published ? '🟢 Published' : '⚪ Unpublished'}
       </span>
     </div>
   </div>
 
   <form id="editForm" class="edit-form">
-    <div class="form-grid">
-      <!-- Left Column -->
-      <div class="form-column">
-        <!-- Basic Info -->
-        <div class="card">
-          <div class="card-header">
-            <h2>Basic Information</h2>
-          </div>
-          <div class="card-body">
-            <div class="form-group">
-              <label class="form-label">Mix Title *</label>
-              <input type="text" name="title" class="form-input" value={mix.title || ''} required maxlength="80" />
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">DJ Name *</label>
-              <input type="text" name="djName" class="form-input" value={mix.djName || mix.dj_name || mix.displayName || ''} required maxlength="50" />
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Genre</label>
-                <input type="text" name="genre" class="form-input" value={mix.genre || ''} maxlength="30" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Duration</label>
-                <input type="text" name="durationDisplay" class="form-input" value={formatDuration(mix.duration)} readonly />
-                <input type="hidden" name="duration" value={mix.duration || 0} />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Description / Shout Outs</label>
-              <textarea name="description" class="form-textarea" maxlength="500" rows="3">{mix.description || mix.shoutOuts || ''}</textarea>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Tracklist</label>
-              <textarea name="tracklist" class="form-textarea" rows="8" placeholder="One track per line...">{mix.tracklist || (mix.tracklistArray || []).join('\n')}</textarea>
-              <span class="form-hint">Enter one track per line. Track numbers will be added automatically.</span>
-            </div>
-          </div>
+    <!-- Top Section: Artwork + Basic Info side by side -->
+    <div class="top-section">
+      <!-- Artwork Card -->
+      <div class="card artwork-card">
+        <div class="card-header">
+          <h2>🖼️ Artwork</h2>
         </div>
-
-        <!-- Settings -->
-        <div class="card">
-          <div class="card-header">
-            <h2>Settings</h2>
+        <div class="card-body">
+          <div class="artwork-preview" id="artworkPreview">
+            {mix.artworkUrl || mix.imageUrl ? (
+              <img src={mix.artworkUrl || mix.imageUrl} alt="Mix artwork" id="previewImg" />
+            ) : (
+              <div class="artwork-placeholder">🎧 No artwork</div>
+            )}
           </div>
-          <div class="card-body">
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input type="checkbox" name="published" checked={mix.published} />
-                <span>Published (visible on site)</span>
-              </label>
-            </div>
-
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input type="checkbox" name="allowDownload" checked={mix.allowDownload !== false} />
-                <span>Allow Downloads</span>
-              </label>
-            </div>
-
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input type="checkbox" name="featured" checked={mix.featured} />
-                <span>Featured Mix</span>
-              </label>
-            </div>
+          <div class="artwork-actions">
+            <label class="btn btn-outline btn-sm upload-btn">
+              📁 Upload New
+              <input type="file" id="artworkFile" accept="image/*" hidden />
+            </label>
+            <button type="button" class="btn btn-outline btn-sm" id="clearArtwork">🗑️ Clear</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Or enter URL</label>
+            <input type="text" name="artworkUrl" id="artworkUrlInput" class="form-input" value={mix.artworkUrl || mix.imageUrl || ''} placeholder="https://..." />
           </div>
         </div>
       </div>
 
-      <!-- Right Column -->
-      <div class="form-column">
-        <!-- Artwork -->
-        <div class="card">
-          <div class="card-header">
-            <h2>Artwork</h2>
-          </div>
-          <div class="card-body">
-            <div class="artwork-preview">
-              {mix.artworkUrl || mix.imageUrl ? (
-                <img src={mix.artworkUrl || mix.imageUrl} alt="Mix artwork" />
-              ) : (
-                <div class="artwork-placeholder">No artwork</div>
-              )}
+      <!-- Basic Info Card -->
+      <div class="card info-card">
+        <div class="card-header">
+          <h2>📝 Basic Information</h2>
+        </div>
+        <div class="card-body">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">Mix Title *</label>
+              <input type="text" name="title" class="form-input" value={mix.title || ''} required maxlength="80" />
             </div>
             <div class="form-group">
-              <label class="form-label">Artwork URL</label>
-              <input type="text" name="artworkUrl" class="form-input" value={mix.artworkUrl || mix.imageUrl || ''} placeholder="https://..." />
+              <label class="form-label">DJ Name *</label>
+              <input type="text" name="djName" class="form-input" value={mix.djName || mix.dj_name || mix.displayName || ''} required maxlength="50" />
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label">🎵 Genre</label>
+              <input type="text" name="genre" class="form-input" value={mix.genre || ''} maxlength="30" placeholder="e.g. Jungle, DnB" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">⏱️ Duration</label>
+              <input type="text" class="form-input duration-display" value={formatDuration(mixDuration)} readonly />
+              <input type="hidden" name="duration" value={mixDuration} />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">📢 Description / Shout Outs</label>
+            <div class="emoji-toolbar">
+              <button type="button" class="emoji-btn" data-emoji="🔥">🔥</button>
+              <button type="button" class="emoji-btn" data-emoji="🎧">🎧</button>
+              <button type="button" class="emoji-btn" data-emoji="🎵">🎵</button>
+              <button type="button" class="emoji-btn" data-emoji="💯">💯</button>
+              <button type="button" class="emoji-btn" data-emoji="🙌">🙌</button>
+              <button type="button" class="emoji-btn" data-emoji="❤️">❤️</button>
+              <button type="button" class="emoji-btn" data-emoji="⭐">⭐</button>
+              <button type="button" class="emoji-btn" data-emoji="🎤">🎤</button>
+              <button type="button" class="emoji-btn" data-emoji="🎉">🎉</button>
+              <button type="button" class="emoji-btn" data-emoji="👊">👊</button>
+              <button type="button" class="emoji-btn" data-emoji="✨">✨</button>
+              <button type="button" class="emoji-btn" data-emoji="🚀">🚀</button>
+            </div>
+            <textarea name="description" id="descriptionField" class="form-textarea" maxlength="500" rows="3" placeholder="Shout outs, track info, etc...">{mix.description || mix.shoutOuts || ''}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Middle Section: Tracklist + Settings -->
+    <div class="middle-section">
+      <div class="card">
+        <div class="card-header">
+          <h2>🎶 Tracklist</h2>
+        </div>
+        <div class="card-body">
+          <textarea name="tracklist" class="form-textarea" rows="6" placeholder="One track per line...">{mix.tracklist || (mix.tracklistArray || []).join('\n')}</textarea>
+          <span class="form-hint">Enter one track per line. Track numbers will be added automatically.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>⚙️ Settings</h2>
+        </div>
+        <div class="card-body settings-body">
+          <label class="checkbox-label">
+            <input type="checkbox" name="published" checked={mix.published} />
+            <span>🌐 Published (visible on site)</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="allowDownload" checked={mix.allowDownload !== false} />
+            <span>⬇️ Allow Downloads</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="featured" checked={mix.featured} />
+            <span>⭐ Featured Mix</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>📊 Statistics</h2>
+        </div>
+        <div class="card-body">
+          <div class="stats-row">
+            <div class="stat-item">
+              <span class="stat-icon">▶️</span>
+              <span class="stat-value">{(mix.plays || mix.playCount || 0).toLocaleString()}</span>
+              <span class="stat-label">Plays</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-icon">⬇️</span>
+              <span class="stat-value">{(mix.downloads || mix.downloadCount || 0).toLocaleString()}</span>
+              <span class="stat-label">Downloads</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-icon">❤️</span>
+              <span class="stat-value">{(mix.likes || mix.likeCount || 0).toLocaleString()}</span>
+              <span class="stat-label">Likes</span>
             </div>
           </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Audio -->
-        <div class="card">
-          <div class="card-header">
-            <h2>Audio File</h2>
-          </div>
-          <div class="card-body">
-            <div class="form-group">
-              <label class="form-label">Audio URL (Read-Only)</label>
-              <input type="text" class="form-input" value={mix.audioUrl || mix.mp3Url || ''} readonly />
-              <span class="form-hint">Audio files cannot be changed. Upload a new mix to replace.</span>
-            </div>
-            {mix.audioUrl || mix.mp3Url ? (
-              <audio controls class="audio-preview">
-                <source src={mix.audioUrl || mix.mp3Url} type="audio/mpeg" />
-              </audio>
-            ) : null}
-          </div>
+    <!-- Bottom Section: Audio + Metadata -->
+    <div class="bottom-section">
+      <div class="card">
+        <div class="card-header">
+          <h2>🔊 Audio File</h2>
         </div>
-
-        <!-- Stats (Read-Only) -->
-        <div class="card">
-          <div class="card-header">
-            <h2>Statistics</h2>
+        <div class="card-body">
+          <div class="audio-info">
+            <input type="text" class="form-input" value={mix.audioUrl || mix.mp3Url || ''} readonly />
+            <span class="form-hint">Audio files cannot be changed. Upload a new mix to replace.</span>
           </div>
-          <div class="card-body">
-            <div class="stats-grid">
-              <div class="stat-item">
-                <span class="stat-label">Plays</span>
-                <span class="stat-value">{(mix.plays || mix.playCount || 0).toLocaleString()}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Downloads</span>
-                <span class="stat-value">{(mix.downloads || mix.downloadCount || 0).toLocaleString()}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Likes</span>
-                <span class="stat-value">{(mix.likes || mix.likeCount || 0).toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
+          {mix.audioUrl || mix.mp3Url ? (
+            <audio controls class="audio-preview">
+              <source src={mix.audioUrl || mix.mp3Url} type="audio/mpeg" />
+            </audio>
+          ) : null}
         </div>
+      </div>
 
-        <!-- Metadata -->
-        <div class="card">
-          <div class="card-header">
-            <h2>Metadata</h2>
+      <div class="card">
+        <div class="card-header">
+          <h2>🔖 Metadata</h2>
+        </div>
+        <div class="card-body metadata-grid">
+          <div class="meta-item">
+            <span class="meta-label">Mix ID</span>
+            <code>{mix.id}</code>
           </div>
-          <div class="card-body">
-            <div class="form-group">
-              <label class="form-label">Mix ID</label>
-              <input type="text" class="form-input" value={mix.id} readonly />
-            </div>
-            <div class="form-group">
-              <label class="form-label">User ID</label>
-              <input type="text" name="userId" class="form-input" value={mix.userId || ''} />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Uploaded</label>
-              <input type="text" class="form-input" value={mix.uploadedAt ? new Date(mix.uploadedAt).toLocaleString() : '-'} readonly />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Last Updated</label>
-              <input type="text" class="form-input" value={mix.updatedAt ? new Date(mix.updatedAt).toLocaleString() : '-'} readonly />
-            </div>
+          <div class="meta-item">
+            <span class="meta-label">User ID</span>
+            <input type="text" name="userId" class="form-input form-input-sm" value={mix.userId || ''} />
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Uploaded</span>
+            <span>{mix.uploadedAt ? new Date(mix.uploadedAt).toLocaleString() : '-'}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Updated</span>
+            <span>{mix.updatedAt ? new Date(mix.updatedAt).toLocaleString() : '-'}</span>
           </div>
         </div>
       </div>
@@ -234,64 +246,215 @@ const formatDateForInput = (dateStr: string) => {
     <!-- Actions -->
     <div class="form-actions">
       <a href="/admin/dj-mixes/manage" class="btn btn-secondary">Cancel</a>
-      <button type="submit" class="btn btn-primary" id="saveBtn">Save Changes</button>
+      <button type="submit" class="btn btn-primary" id="saveBtn">💾 Save Changes</button>
     </div>
   </form>
 </AdminLayout>
 
 <style>
   .edit-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
     margin-bottom: 1.5rem;
-  }
-
-  .edit-header-left {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
   }
 
   .back-link {
     color: var(--text-secondary);
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    display: inline-block;
+    margin-bottom: 0.5rem;
   }
 
   .back-link:hover {
     color: var(--text-primary);
   }
 
-  .edit-header h1 {
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .header-row h1 {
     margin: 0;
-    font-size: 1.75rem;
+    font-size: 1.5rem;
   }
 
-  .form-grid {
+  /* Top Section - Artwork + Basic Info */
+  .top-section {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
+    grid-template-columns: 200px 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
   }
 
-  @media (max-width: 1024px) {
-    .form-grid {
+  @media (max-width: 768px) {
+    .top-section {
       grid-template-columns: 1fr;
     }
   }
 
-  .form-column {
+  .artwork-card {
+    height: fit-content;
+  }
+
+  .artwork-preview {
+    width: 100%;
+    max-width: 160px;
+    aspect-ratio: 1;
+    background: #f5f5f5;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 0 auto 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #e5e5e5;
+  }
+
+  .artwork-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .artwork-placeholder {
+    color: #999;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .artwork-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .upload-btn {
+    cursor: pointer;
+  }
+
+  .info-card {
+    flex: 1;
+  }
+
+  /* Middle Section - 3 columns */
+  .middle-section {
+    display: grid;
+    grid-template-columns: 1fr 200px 200px;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 900px) {
+    .middle-section {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .settings-body {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 0.75rem;
+  }
+
+  .stats-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: #f9f9f9;
+    border-radius: 6px;
+  }
+
+  .stat-icon {
+    font-size: 1rem;
+  }
+
+  .stat-value {
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  /* Bottom Section */
+  .bottom-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .bottom-section {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .audio-preview {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .metadata-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .meta-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .meta-item code {
+    font-size: 0.75rem;
+    background: #f5f5f5;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    word-break: break-all;
+  }
+
+  .meta-item span:not(.meta-label) {
+    font-size: 0.85rem;
+  }
+
+  /* Form Elements */
+  .card-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .card-header h2 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
   }
 
   .card-body {
-    padding: 1.25rem;
+    padding: 1rem;
   }
 
   .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
 
   .form-group:last-child {
@@ -301,18 +464,23 @@ const formatDateForInput = (dateStr: string) => {
   .form-label {
     display: block;
     font-weight: 600;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.85rem;
   }
 
   .form-input,
   .form-textarea {
     width: 100%;
-    padding: 0.625rem 0.875rem;
+    padding: 0.5rem 0.75rem;
     border: 2px solid #e5e5e5;
     border-radius: 6px;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     transition: border-color 0.15s;
+  }
+
+  .form-input-sm {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
   }
 
   .form-input:focus,
@@ -326,30 +494,70 @@ const formatDateForInput = (dateStr: string) => {
     color: #666;
   }
 
+  .duration-display {
+    font-family: monospace;
+    font-weight: 600;
+  }
+
   .form-textarea {
     resize: vertical;
-    min-height: 100px;
+    min-height: 80px;
   }
 
   .form-hint {
     display: block;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--text-secondary);
     margin-top: 0.25rem;
   }
 
-  .form-row {
+  .form-row-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
+  @media (max-width: 500px) {
+    .form-row-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Emoji Toolbar */
+  .emoji-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: #f9f9f9;
+    border-radius: 6px;
+    border: 1px solid #e5e5e5;
+  }
+
+  .emoji-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: #fff;
+    border-radius: 4px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .emoji-btn:hover {
+    background: #e5e5e5;
+    transform: scale(1.1);
+  }
+
+  /* Checkboxes */
   .checkbox-label {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     cursor: pointer;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
   }
 
   .checkbox-label input[type="checkbox"] {
@@ -358,77 +566,28 @@ const formatDateForInput = (dateStr: string) => {
     cursor: pointer;
   }
 
-  .artwork-preview {
-    width: 100%;
-    aspect-ratio: 1;
-    background: #f5f5f5;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .artwork-preview img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .artwork-placeholder {
-    color: #999;
-    font-size: 1rem;
-  }
-
-  .audio-preview {
-    width: 100%;
-    margin-top: 0.5rem;
-  }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-
-  .stat-item {
-    text-align: center;
-    padding: 1rem;
-    background: #f5f5f5;
-    border-radius: 8px;
-  }
-
-  .stat-label {
-    display: block;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.25rem;
-  }
-
-  .stat-value {
-    display: block;
-    font-size: 1.5rem;
-    font-weight: 700;
-  }
-
+  /* Actions */
   .form-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
+    gap: 0.75rem;
+    padding-top: 1rem;
     border-top: 1px solid #e5e5e5;
   }
 
   .btn {
-    padding: 0.75rem 1.5rem;
+    padding: 0.6rem 1.25rem;
     border-radius: 6px;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     cursor: pointer;
     border: 2px solid transparent;
     transition: all 0.15s;
+  }
+
+  .btn-sm {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
   }
 
   .btn-primary {
@@ -455,16 +614,85 @@ const formatDateForInput = (dateStr: string) => {
   .btn-secondary:hover {
     border-color: #000;
   }
+
+  .btn-outline {
+    background: #fff;
+    color: #333;
+    border-color: #ddd;
+  }
+
+  .btn-outline:hover {
+    border-color: #999;
+    background: #f9f9f9;
+  }
 </style>
 
 <script define:vars={{ mixId: mix.id }}>
   const form = document.getElementById('editForm');
   const saveBtn = document.getElementById('saveBtn');
+  const descriptionField = document.getElementById('descriptionField');
+  const artworkFile = document.getElementById('artworkFile');
+  const artworkUrlInput = document.getElementById('artworkUrlInput');
+  const artworkPreview = document.getElementById('artworkPreview');
+  const clearArtworkBtn = document.getElementById('clearArtwork');
 
+  // Emoji buttons
+  document.querySelectorAll('.emoji-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const emoji = btn.dataset.emoji;
+      const start = descriptionField.selectionStart;
+      const end = descriptionField.selectionEnd;
+      const text = descriptionField.value;
+      descriptionField.value = text.substring(0, start) + emoji + text.substring(end);
+      descriptionField.selectionStart = descriptionField.selectionEnd = start + emoji.length;
+      descriptionField.focus();
+    });
+  });
+
+  // Artwork file upload preview
+  artworkFile.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        artworkPreview.innerHTML = `<img src="${e.target.result}" alt="Preview" id="previewImg" />`;
+        // Store base64 for upload (in a real implementation, you'd upload to R2)
+        artworkUrlInput.dataset.pendingUpload = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  // Artwork URL input preview
+  artworkUrlInput.addEventListener('change', () => {
+    const url = artworkUrlInput.value.trim();
+    if (url) {
+      artworkPreview.innerHTML = `<img src="${url}" alt="Preview" id="previewImg" onerror="this.parentElement.innerHTML='<div class=artwork-placeholder>Invalid URL</div>'" />`;
+    }
+  });
+
+  // Clear artwork
+  clearArtworkBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    artworkPreview.innerHTML = '<div class="artwork-placeholder">🎧 No artwork</div>';
+    artworkUrlInput.value = '';
+    artworkFile.value = '';
+    delete artworkUrlInput.dataset.pendingUpload;
+  });
+
+  // Form submit
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const formData = new FormData(form);
+
+    // Check if there's a pending file upload
+    let artworkUrl = formData.get('artworkUrl');
+    if (artworkUrlInput.dataset.pendingUpload) {
+      // For now, use the base64 data URL (in production, upload to R2 first)
+      artworkUrl = artworkUrlInput.dataset.pendingUpload;
+    }
 
     const updates = {
       mixId: mixId,
@@ -473,7 +701,7 @@ const formatDateForInput = (dateStr: string) => {
       genre: formData.get('genre'),
       description: formData.get('description'),
       tracklist: formData.get('tracklist'),
-      artworkUrl: formData.get('artworkUrl'),
+      artworkUrl: artworkUrl,
       published: formData.get('published') === 'on',
       allowDownload: formData.get('allowDownload') === 'on',
       featured: formData.get('featured') === 'on',
@@ -494,9 +722,9 @@ const formatDateForInput = (dateStr: string) => {
 
       if (response.ok && result.success) {
         showToast('Mix updated successfully!');
-        saveBtn.textContent = 'Saved!';
+        saveBtn.textContent = '✅ Saved!';
         setTimeout(() => {
-          saveBtn.textContent = 'Save Changes';
+          saveBtn.textContent = '💾 Save Changes';
           saveBtn.disabled = false;
         }, 2000);
       } else {
@@ -505,7 +733,7 @@ const formatDateForInput = (dateStr: string) => {
     } catch (error) {
       console.error('Error:', error);
       showToast('Failed to update mix: ' + error.message, 'error');
-      saveBtn.textContent = 'Save Changes';
+      saveBtn.textContent = '💾 Save Changes';
       saveBtn.disabled = false;
     }
   });
