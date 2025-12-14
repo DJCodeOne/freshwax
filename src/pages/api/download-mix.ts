@@ -20,25 +20,32 @@ export const GET: APIRoute = async ({ request }) => {
 
   try {
     log.info('[download-mix] Proxying download for:', audioUrl);
-    
+
     const response = await fetch(audioUrl);
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch: ' + response.status);
     }
 
-    const audioData = await response.arrayBuffer();
-    
-    log.info('[download-mix] Fetched', audioData.byteLength, 'bytes');
+    // Stream the response instead of buffering to handle large files
+    const contentLength = response.headers.get('content-length');
 
-    return new Response(audioData, {
+    log.info('[download-mix] Streaming file, size:', contentLength || 'unknown');
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'audio/mpeg',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Cache-Control': 'no-cache'
+    };
+
+    if (contentLength) {
+      headers['Content-Length'] = contentLength;
+    }
+
+    // Pass through the body stream directly
+    return new Response(response.body, {
       status: 200,
-      headers: {
-        'Content-Type': 'audio/mpeg',
-        'Content-Disposition': 'attachment; filename="' + filename + '"',
-        'Content-Length': audioData.byteLength.toString(),
-        'Cache-Control': 'no-cache'
-      }
+      headers
     });
 
   } catch (error) {

@@ -50,22 +50,22 @@ export const GET: APIRoute = async ({ url }) => {
   
   try {
     log.info('[download] Fetching:', fileUrl);
-    
+
     const response = await fetch(fileUrl);
-    
+
     if (!response.ok) {
       log.error('[download] Fetch failed:', response.status);
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: 'Failed to fetch file',
-        status: response.status 
+        status: response.status
       }), {
         status: response.status,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     let contentType = response.headers.get('content-type') || 'application/octet-stream';
-    
+
     if (filename.endsWith('.mp3')) {
       contentType = 'audio/mpeg';
     } else if (filename.endsWith('.wav')) {
@@ -77,24 +77,31 @@ export const GET: APIRoute = async ({ url }) => {
     } else if (filename.endsWith('.webp')) {
       contentType = 'image/webp';
     }
-    
-    const data = await response.arrayBuffer();
-    
-    log.info('[download] Success, size:', data.byteLength, 'bytes');
-    
-    return new Response(data, {
+
+    // Stream the response instead of buffering to handle large files
+    const contentLength = response.headers.get('content-length');
+
+    log.info('[download] Streaming file, size:', contentLength || 'unknown');
+
+    const headers: Record<string, string> = {
+      'Content-Type': contentType,
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}"`,
+      'Cache-Control': 'private, max-age=3600'
+    };
+
+    if (contentLength) {
+      headers['Content-Length'] = contentLength;
+    }
+
+    // Pass through the body stream directly
+    return new Response(response.body, {
       status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Content-Disposition': 'attachment; filename="' + encodeURIComponent(filename) + '"',
-        'Content-Length': data.byteLength.toString(),
-        'Cache-Control': 'private, max-age=3600'
-      }
+      headers
     });
-    
+
   } catch (error) {
     log.error('[download] Error:', error);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'Download failed',
       details: error instanceof Error ? error.message : 'Unknown error'
     }), {
