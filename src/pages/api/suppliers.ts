@@ -1,7 +1,7 @@
 // src/pages/api/suppliers.ts
 // Manage merch suppliers/consignment partners - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
+import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument , initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const prerender = false;
 

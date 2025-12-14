@@ -1,7 +1,7 @@
 // src/pages/api/livestream/slots.ts
 // DJ livestream schedule - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument, setDocument, updateDocument } from '../../../lib/firebase-rest';
+import { queryCollection, getDocument, setDocument, updateDocument , initFirebaseEnv } from '../../../lib/firebase-rest';
 
 const SLOT_DURATIONS = [30, 45, 60, 120, 180, 240];
 const MAX_BOOKING_DAYS = 30;

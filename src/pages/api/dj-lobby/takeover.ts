@@ -1,7 +1,7 @@
 // src/pages/api/dj-lobby/takeover.ts
 // DJ Takeover request system - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, updateDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, setDocument, updateDocument, deleteDocument, queryCollection , initFirebaseEnv } from '../../../lib/firebase-rest';
 
 // Pusher configuration
 const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
@@ -276,6 +276,12 @@ export const POST: APIRoute = async ({ request }) => {
 
 // DELETE: Cleanup expired requests
 export const DELETE: APIRoute = async () => {
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   try {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 

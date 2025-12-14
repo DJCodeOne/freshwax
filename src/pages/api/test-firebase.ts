@@ -1,6 +1,6 @@
 // Quick test endpoint to verify Firebase REST API config
 import type { APIRoute } from 'astro';
-import { setDocument, getDocument } from '../../lib/firebase-rest';
+import { setDocument, getDocument , initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const GET: APIRoute = async ({ locals }) => {
   // Try multiple ways to access env vars on Cloudflare

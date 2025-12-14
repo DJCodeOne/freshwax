@@ -1,7 +1,7 @@
 // src/pages/api/follow-artist.ts
 // Follow/unfollow artists API - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, updateDocument, queryCollection } from '../../lib/firebase-rest';
+import { getDocument, setDocument, updateDocument, queryCollection , initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const GET: APIRoute = async ({ request, url }) => {
   try {

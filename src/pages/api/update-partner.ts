@@ -2,7 +2,7 @@
 // API endpoint to update partner/artist profile and settings
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument } from '../../lib/firebase-rest';
+import { getDocument, updateDocument , initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {

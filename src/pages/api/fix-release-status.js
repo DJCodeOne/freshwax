@@ -5,9 +5,13 @@ import { queryCollection, updateDocument, initFirebaseEnv } from '../../lib/fire
 
 export const prerender = false;
 
-export async function GET() {
+export async function GET({ locals }) {
+  const env = locals?.runtime?.env;
   // Initialize Firebase env for write operations
-  initFirebaseEnv(import.meta.env);
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
 
   try {
     const releases = await queryCollection('releases', {});

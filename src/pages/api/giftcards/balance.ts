@@ -1,7 +1,7 @@
 // src/pages/api/giftcards/balance.ts
 // Get user's credit balance and transaction history - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument , initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const GET: APIRoute = async ({ request }) => {
   try {

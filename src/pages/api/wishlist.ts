@@ -1,7 +1,7 @@
 // src/pages/api/wishlist.ts
 // Wishlist management API - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, updateDocument } from '../../lib/firebase-rest';
+import { getDocument, setDocument, updateDocument , initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const GET: APIRoute = async ({ request, url }) => {
   try {

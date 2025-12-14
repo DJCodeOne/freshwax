@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument, setDocument } from '../../lib/firebase-rest';
+import { queryCollection, getDocument, setDocument , initFirebaseEnv } from '../../lib/firebase-rest';
 
 const MAX_DAILY_HOURS = 2;
 const PROJECT_ID = 'freshwax-store';

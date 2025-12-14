@@ -13,7 +13,11 @@ export const prerender = false;
 
 export async function POST({ request, locals }) {
   // Initialize Firebase env for write operations
-  initFirebaseEnv(import.meta.env);
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
 
   try {
     const { release } = await request.json();
