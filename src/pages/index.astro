@@ -33,16 +33,16 @@ const featuredReleases = await getLiveReleases(20);
           <p style="font-size: 1.25rem; color: #f9fafb; font-weight: 300; letter-spacing: 0.3em; margin-bottom: 2.5rem; text-transform: uppercase; opacity: 0.9;">
             Jungle & Drum and Bass
           </p>
-          <div class="glass-panel" style="display: inline-flex; align-items: center; gap: 1.5rem; padding: 16px 40px; background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 100px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 0 80px rgba(220, 38, 38, 0.1); margin-bottom: 3rem;">
-            <span style="font-size: 0.95rem; color: #ffffff; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">Vinyl</span>
-            <span style="color: rgba(220, 38, 38, 1); font-size: 0.75rem;">●</span>
-            <span style="font-size: 0.95rem; color: #ffffff; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">Digital</span>
-            <span style="color: rgba(220, 38, 38, 1); font-size: 0.75rem;">●</span>
-            <span style="font-size: 0.95rem; color: #ffffff; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">DJ Mixes</span>
-            <span style="color: rgba(220, 38, 38, 1); font-size: 0.75rem;">●</span>
-            <span style="font-size: 0.95rem; color: #ffffff; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">Merch</span>
-            <span style="color: rgba(220, 38, 38, 1); font-size: 0.75rem;">●</span>
-            <a href="/live" style="font-size: 0.95rem; color: #ffffff; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none;">Live</a>
+          <div class="glass-panel">
+            <span class="nav-item">Vinyl</span>
+            <span class="dot-separator">●</span>
+            <span class="nav-item">Digital</span>
+            <span class="dot-separator">●</span>
+            <span class="nav-item">DJ Mixes</span>
+            <span class="dot-separator">●</span>
+            <span class="nav-item">Merch</span>
+            <span class="dot-separator">●</span>
+            <a href="/live" class="nav-item">Live</a>
           </div>
           <div style="display: flex; align-items: center; justify-content: center; gap: 1rem;">
             <div style="height: 2px; width: 3rem; background: linear-gradient(to right, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
@@ -56,8 +56,8 @@ const featuredReleases = await getLiveReleases(20);
     </section>
 
     <!-- Quick Links Section -->
-    <section style="max-width: 72rem; margin: 0 auto; padding: 2rem 1.5rem 0;">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+    <section class="quick-links-section">
+      <div class="quick-links-grid">
         
         <!-- Weekly Chart Card -->
         <a href="/weekly-chart" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.borderColor='#dc2626'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#374151'; this.style.transform='none'">
@@ -156,9 +156,16 @@ const featuredReleases = await getLiveReleases(20);
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@700;900&display=swap');
 
+  /* ===========================================
+     MOBILE-FIRST DESIGN
+     Base styles = Mobile (smallest screens)
+     min-width queries = Scale up for larger screens
+     =========================================== */
+
+  /* Main Title - Mobile Base */
   .main-title {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 5.75rem;
+    font-size: 3rem;
     font-weight: 900;
     margin-bottom: 0.5rem;
     letter-spacing: -0.02em;
@@ -172,18 +179,141 @@ const featuredReleases = await getLiveReleases(20);
     text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 60px rgba(220, 38, 38, 0.5);
   }
 
+  /* Glass Panel - Mobile Base (stacked) */
+  .glass-panel {
+    display: inline-flex;
+    align-items: center;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 0 80px rgba(220, 38, 38, 0.1);
+    margin-bottom: 2rem;
+  }
+
+  .glass-panel .nav-item {
+    font-size: 0.9rem;
+    color: #ffffff;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+  }
+
+  .glass-panel .dot-separator {
+    display: none;
+    color: #dc2626;
+    font-size: 0.75rem;
+  }
+
+  /* CTA Button - Mobile Base (touch-friendly) */
+  .cta-button {
+    min-height: 48px;
+    padding: 1rem 2rem;
+  }
+
+  .cta-button:hover {
+    background: linear-gradient(to right, #991b1b, #7f1d1d);
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Quick Links - Mobile Base (single column) */
+  .quick-links-section {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem 0;
+  }
+
+  .quick-links-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .quick-links-grid > a {
+    padding: 1rem 1.25rem;
+  }
+
+  /* Release items animation */
+  .release-item {
+    animation: fadeInUp 0.6s ease-out backwards;
+  }
+
+  .release-item:nth-child(1) { animation-delay: 0.05s; }
+  .release-item:nth-child(2) { animation-delay: 0.1s; }
+  .release-item:nth-child(3) { animation-delay: 0.15s; }
+  .release-item:nth-child(4) { animation-delay: 0.2s; }
+  .release-item:nth-child(5) { animation-delay: 0.25s; }
+
+  /* ===========================================
+     TABLET (640px+)
+     =========================================== */
+  @media (min-width: 640px) {
+    .main-title {
+      font-size: 4rem;
+    }
+
+    .glass-panel {
+      flex-direction: row;
+      gap: 1.5rem;
+      padding: 16px 40px;
+      border-radius: 100px;
+      margin-bottom: 3rem;
+    }
+
+    .glass-panel .nav-item {
+      font-size: 0.95rem;
+    }
+
+    .glass-panel .dot-separator {
+      display: inline;
+    }
+
+    .quick-links-section {
+      padding: 2rem 1.5rem 0;
+    }
+
+    .quick-links-grid {
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+  }
+
+  /* ===========================================
+     TABLET LANDSCAPE (768px+)
+     =========================================== */
   @media (min-width: 768px) {
     .main-title {
-      font-size: 6.75rem;
+      font-size: 5rem;
     }
   }
 
+  /* ===========================================
+     DESKTOP (1024px+)
+     =========================================== */
   @media (min-width: 1024px) {
     .main-title {
-      font-size: 7.25rem;
+      font-size: 6rem;
     }
   }
 
+  /* ===========================================
+     LARGE DESKTOP (1280px+)
+     =========================================== */
+  @media (min-width: 1280px) {
+    .main-title {
+      font-size: 7rem;
+    }
+  }
+
+  /* ===========================================
+     ANIMATIONS
+     =========================================== */
   @keyframes kittScanner {
     0% { left: -100%; opacity: 0; }
     5% { opacity: 1; }
@@ -218,51 +348,10 @@ const featuredReleases = await getLiveReleases(20);
     }
   }
 
-  .cta-button:hover {
-    background: linear-gradient(to right, #991b1b, #7f1d1d);
-    transform: translateY(-2px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
-  }
+  /* ===========================================
+     ACCESSIBILITY & DEVICE FEATURES
+     =========================================== */
 
-  .release-item {
-    animation: fadeInUp 0.6s ease-out backwards;
-  }
-
-  .release-item:nth-child(1) { animation-delay: 0.05s; }
-  .release-item:nth-child(2) { animation-delay: 0.1s; }
-  .release-item:nth-child(3) { animation-delay: 0.15s; }
-  .release-item:nth-child(4) { animation-delay: 0.2s; }
-  .release-item:nth-child(5) { animation-delay: 0.25s; }
-
-  @media (max-width: 640px) {
-    .main-title {
-      font-size: 3.25rem !important;
-    }
-    .glass-panel {
-      padding: 10px 20px !important;
-      flex-direction: column !important;
-      gap: 0.5rem !important;
-    }
-    .glass-panel span[style*="color: rgba(220, 38, 38"] {
-      display: none !important;
-    }
-  }
-  
-  /* Tablet optimizations */
-  @media (max-width: 768px) {
-    .main-title {
-      font-size: 4rem !important;
-    }
-  }
-  
-  /* Touch-friendly CTA button */
-  @media (hover: none) and (pointer: coarse) {
-    .cta-button {
-      min-height: 48px;
-      padding: 1rem 2rem;
-    }
-  }
-  
   /* Safe area for notched devices */
   @supports (padding-bottom: env(safe-area-inset-bottom)) {
     main {

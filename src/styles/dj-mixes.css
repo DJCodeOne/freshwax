@@ -63,11 +63,17 @@
     }
   }
 
-  /* Hero Section */
+  /* ===========================================
+     MOBILE-FIRST DESIGN
+     Base styles = Mobile (smallest screens)
+     min-width queries = Scale up for larger screens
+     =========================================== */
+
+  /* Hero Section - Mobile Base */
   .hero-section {
     background: linear-gradient(to bottom, #000000 0%, #1a1a1a 50%, #2d2d2d 100%);
     color: white;
-    padding: 5.5rem 0;
+    padding: 3rem 0;
     position: relative;
     overflow: hidden;
     z-index: 10;
@@ -83,7 +89,7 @@
   .hero-container {
     max-width: 110rem;
     margin: 0 auto;
-    padding: 0 1.65rem;
+    padding: 0 1rem;
     text-align: center;
     position: relative;
     z-index: 10;
@@ -93,29 +99,73 @@
     animation: fadeInUp 1.2s ease-out;
   }
 
+  /* Hero Title - Mobile Base (3rem) */
   .hero-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 6.05rem;
+    font-size: 3rem;
     font-weight: 400;
-    margin-bottom: 0.55rem;
+    margin-bottom: 0.5rem;
     letter-spacing: 0.02em;
     text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7);
     line-height: 0.95;
     text-transform: uppercase;
   }
-  
+
   .hero-title .red {
     color: #dc2626;
   }
 
   .hero-subtitle {
-    font-size: 1.375rem;
+    font-size: 0.9rem;
     color: #f9fafb;
     font-weight: 300;
-    letter-spacing: 0.3em;
-    margin-bottom: 2.75rem;
+    letter-spacing: 0.2em;
+    margin-bottom: 1.5rem;
     text-transform: uppercase;
     opacity: 0.9;
+  }
+
+  /* Hero - Tablet (640px+) */
+  @media (min-width: 640px) {
+    .hero-section {
+      padding: 4rem 0;
+    }
+
+    .hero-container {
+      padding: 0 1.5rem;
+    }
+
+    .hero-title {
+      font-size: 4.5rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.1rem;
+      letter-spacing: 0.25em;
+      margin-bottom: 2rem;
+    }
+  }
+
+  /* Hero - Desktop (1024px+) */
+  @media (min-width: 1024px) {
+    .hero-section {
+      padding: 5.5rem 0;
+    }
+
+    .hero-container {
+      padding: 0 1.65rem;
+    }
+
+    .hero-title {
+      font-size: 6.05rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.375rem;
+      letter-spacing: 0.3em;
+      margin-bottom: 2.75rem;
+    }
   }
 
   /* Mixes Section */
@@ -483,20 +533,24 @@
     gap: 1.375rem;
   }
 
-  /* Mix Card */
+  /* ===========================================
+     MIX CARD - MOBILE FIRST
+     =========================================== */
+
+  /* Mix Card - Mobile Base (stacked layout) */
   .mix-card {
     background: linear-gradient(to bottom, #000000 0%, #111827 40%, #374151 80%, #4b5563 100%);
-    border-radius: 1.1rem;
+    border-radius: 0.75rem;
     overflow: hidden;
     border: 2px solid rgba(255, 255, 255, 0.15);
     transition: all 0.3s ease;
     animation: fadeInUp 0.6s ease-out backwards;
     position: relative;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: stretch;
-    padding: 1.25rem;
-    gap: 2rem;
+    padding: 0.66rem;
+    gap: 1rem;
   }
 
   .mix-card:hover {
@@ -512,15 +566,16 @@
   .mix-card:nth-child(5) { animation-delay: 0.25s; }
   .mix-card:nth-child(6) { animation-delay: 0.3s; }
 
-  /* Artwork Container */
+  /* Artwork Container - Mobile Base (full width, square) */
   .mix-artwork-container {
     position: relative;
-    width: 260px;
-    min-width: 260px;
-    height: 260px;
+    width: 100%;
+    min-width: 100%;
+    height: auto;
+    aspect-ratio: 1;
     overflow: hidden;
     flex-shrink: 0;
-    border-radius: 0.55rem;
+    border-radius: 0.5rem;
     border: 2px solid rgba(255, 255, 255, 0.1);
   }
 
@@ -535,39 +590,41 @@
     transform: scale(1.05);
   }
 
-  /* Mix Info */
+  /* Mix Info - Mobile Base */
   .mix-info {
     flex: 1;
-    padding: 0.5rem 0;
+    padding: 0.25rem 0;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    gap: 0.9rem;
+    gap: 0.5rem;
     min-width: 0;
   }
 
   .mix-header {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
   }
 
+  /* Mix Title - Mobile Base */
   .mix-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 3rem;
+    font-size: 1.75rem;
     font-weight: 400;
     color: #dc2626;
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 0.25rem 0;
     text-transform: uppercase;
     line-height: 1.1;
-    white-space: nowrap;
+    white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     letter-spacing: 0.02em;
   }
 
+  /* Mix DJ - Mobile Base */
   .mix-dj {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 2rem;
+    font-size: 1.25rem;
     font-weight: 400;
     color: #ffffff;
     margin: 0;
@@ -576,55 +633,156 @@
     letter-spacing: 0.02em;
   }
 
-  /* Meta Row */
+  /* Meta Row - Mobile Base */
   .mix-meta-row {
     display: flex;
     align-items: center;
-    gap: 2.5rem;
+    gap: 0.75rem;
     flex-wrap: wrap;
   }
 
   .meta-item {
     display: flex;
     align-items: center;
-    gap: 0.55rem;
-    font-size: 1.25rem;
+    gap: 0.4rem;
+    font-size: 0.9rem;
     color: #d1d5db;
     font-weight: 600;
   }
 
   .meta-icon {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     color: #d1d5db;
   }
 
-  /* Stats */
+  /* Stats - Mobile Base */
   .mix-stats {
     display: flex;
-    gap: 2.5rem;
+    gap: 1rem;
     flex-wrap: wrap;
   }
 
   .stat {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 1.15rem;
+    gap: 0.4rem;
+    font-size: 0.9rem;
     color: #9ca3af;
     font-weight: 600;
   }
 
   .stat-icon {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     color: #9ca3af;
   }
 
-  /* Action Buttons */
+  /* Mix Card - Tablet (640px+) */
+  @media (min-width: 640px) {
+    .mix-card {
+      padding: 0.825rem;
+      gap: 1.1rem;
+    }
+
+    .mix-title {
+      font-size: 2rem;
+    }
+
+    .mix-dj {
+      font-size: 1.5rem;
+    }
+
+    .mix-meta-row {
+      gap: 1.25rem;
+    }
+
+    .meta-item {
+      font-size: 0.95rem;
+    }
+
+    .mix-stats {
+      gap: 1.1rem;
+    }
+
+    .stat {
+      font-size: 0.95rem;
+    }
+  }
+
+  /* Mix Card - Desktop (1024px+) - Row layout */
+  @media (min-width: 1024px) {
+    .mix-card {
+      flex-direction: row;
+      padding: 1.25rem;
+      gap: 2rem;
+      border-radius: 1.1rem;
+    }
+
+    .mix-artwork-container {
+      width: 260px;
+      min-width: 260px;
+      height: 260px;
+      aspect-ratio: auto;
+      border-radius: 0.55rem;
+    }
+
+    .mix-info {
+      padding: 0.5rem 0;
+      gap: 0.9rem;
+    }
+
+    .mix-header {
+      margin-bottom: 0.5rem;
+    }
+
+    .mix-title {
+      font-size: 3rem;
+      margin: 0 0 0.5rem 0;
+      white-space: nowrap;
+    }
+
+    .mix-dj {
+      font-size: 2rem;
+    }
+
+    .mix-meta-row {
+      gap: 2.5rem;
+    }
+
+    .meta-item {
+      font-size: 1.25rem;
+      gap: 0.55rem;
+    }
+
+    .meta-icon {
+      width: 22px;
+      height: 22px;
+    }
+
+    .mix-stats {
+      gap: 2.5rem;
+    }
+
+    .stat {
+      font-size: 1.15rem;
+      gap: 0.5rem;
+    }
+
+    .stat-icon {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  /* ===========================================
+     ACTION BUTTONS - MOBILE FIRST
+     =========================================== */
+
+  /* Action Buttons - Mobile Base (icons only) */
   .mix-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.25rem;
     flex-wrap: nowrap;
     width: 100%;
   }
@@ -634,9 +792,9 @@
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
-    padding: 0.6rem 0.65rem;
+    padding: 0.35rem 0.4rem;
     border-radius: 0.4rem;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
     transition: all 0.2s ease;
@@ -646,6 +804,7 @@
     background: #374151;
     color: #ffffff;
     flex: 1;
+    min-width: 0;
     white-space: nowrap;
   }
 
@@ -692,6 +851,7 @@
     border-color: #b91c1c;
   }
 
+  /* Mobile: Icons only, no text */
   .action-btn .btn-icon {
     width: 14px;
     height: 14px;
@@ -702,29 +862,29 @@
     display: none;
   }
 
-  /* Show text labels on larger screens */
+  /* Action Buttons - Tablet (768px+) - Show text labels */
   @media (min-width: 768px) {
+    .mix-actions {
+      gap: 0.5rem;
+    }
+
     .action-btn {
       padding: 0.45rem 0.6rem;
       font-size: 0.7rem;
     }
-    
+
     .action-btn .btn-text {
       display: inline;
     }
-    
-    .action-btn .btn-icon {
-      width: 14px;
-      height: 14px;
-    }
   }
-  
+
+  /* Action Buttons - Desktop (1024px+) */
   @media (min-width: 1024px) {
     .action-btn {
       padding: 0.5rem 0.75rem;
       font-size: 0.75rem;
     }
-    
+
     .action-btn .btn-icon {
       width: 15px;
       height: 15px;
@@ -861,116 +1021,16 @@
     min-height: 1.1rem;
   }
 
-  /* Responsive */
-  @media (max-width: 768px) {
-    .hero-title {
-      font-size: 3.3rem !important;
-    }
-
-    .mix-card {
-      flex-direction: column;
-      padding: 0.825rem;
-      gap: 1.1rem;
-    }
-
-    .mix-artwork-container {
-      width: 100%;
-      min-width: 100%;
-      height: auto;
-      aspect-ratio: 1;
-    }
-
-    .mix-info {
-      padding: 0.55rem 0.275rem;
-    }
-
-    .mix-title {
-      font-size: 2rem;
-      white-space: normal;
-    }
-
-    .mix-dj {
-      font-size: 1.5rem;
-    }
-
-    .mix-meta-row {
-      gap: 1.375rem;
-    }
-
-    .meta-item {
-      font-size: 0.99rem;
-    }
-
-    .mix-stats {
-      gap: 1.1rem;
-    }
-
-    .stat {
-      font-size: 0.935rem;
-    }
-
-    .action-btn .btn-text {
-      display: none;
-    }
-
-    .action-btn {
-      padding: 0.4rem 0.5rem;
-    }
-    
-    .action-btn .btn-icon {
-      width: 14px;
-      height: 14px;
-    }
+  /* Upload Button - Mobile Base (full width) */
+  .upload-mix-btn {
+    width: 100%;
+    text-align: center;
   }
 
-  @media (max-width: 640px) {
+  /* Upload Button - Tablet+ (auto width) */
+  @media (min-width: 640px) {
     .upload-mix-btn {
-      width: 100%;
-      text-align: center;
-    }
-
-    .mix-card {
-      padding: 0.66rem;
-    }
-
-    .mix-info {
-      padding: 0.275rem 0;
-      gap: 0.55rem;
-    }
-
-    .mix-title {
-      font-size: 1.75rem;
-    }
-
-    .mix-dj {
-      font-size: 1.25rem;
-    }
-
-    .mix-meta-row {
-      gap: 0.825rem;
-    }
-
-    .meta-item {
-      font-size: 0.935rem;
-    }
-
-    .mix-actions {
-      gap: 0.25rem;
-    }
-
-    .action-btn {
-      padding: 0.35rem 0.4rem;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .action-btn .btn-text {
-      display: none !important;
-    }
-
-    .action-btn .btn-icon {
-      width: 14px;
-      height: 14px;
+      width: auto;
     }
   }
 
@@ -1136,46 +1196,76 @@
     display: none;
   }
 
-  @media (max-width: 640px) {
-    .floating-chart {
-      width: calc(100% - 40px);
-      right: 20px;
-      left: 20px;
-    }
-    
-    .chart-toggle-btn {
-      top: auto;
-      bottom: 100px;
-      right: 16px;
-      width: 44px;
-      height: 44px;
-      font-size: 1.25rem;
-    }
-  }
-  
-  /* Floating Mix Chart */
+  /* ===========================================
+     FLOATING MIX CHART - MOBILE FIRST
+     =========================================== */
+
+  /* Floating Chart - Mobile Base */
   .floating-chart {
     position: fixed;
-    top: 50%;
-    right: 20px;
-    transform: translateY(-50%);
+    top: auto;
+    bottom: 180px;
+    right: 0;
+    left: auto;
+    transform: none;
     z-index: 100;
     display: flex;
     align-items: center;
     gap: 0;
+    width: auto;
+  }
+
+  /* Floating Chart - Desktop (768px+) */
+  @media (min-width: 768px) {
+    .floating-chart {
+      top: 50%;
+      bottom: auto;
+      right: 20px;
+      transform: translateY(-50%);
+    }
+  }
+
+  /* Chart Toggle Button - Mobile Base */
+  .chart-toggle-btn {
+    position: fixed;
+    top: auto;
+    bottom: 100px;
+    right: 16px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border: 2px solid white;
+    font-size: 1.25rem;
+    cursor: pointer;
+    z-index: 999;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+  }
+
+  /* Chart Toggle Button - Desktop (768px+) */
+  @media (min-width: 768px) {
+    .chart-toggle-btn {
+      top: 100px;
+      bottom: auto;
+      width: 50px;
+      height: 50px;
+      font-size: 1.5rem;
+    }
   }
   
+  /* Chart Toggle - Mobile Base */
   .chart-toggle {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
     background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
     color: white;
     border: 3px solid white;
     border-radius: 2rem 0 0 2rem;
     font-weight: 700;
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     letter-spacing: 0.05em;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -1184,24 +1274,33 @@
     text-orientation: mixed;
     transform: rotate(180deg);
   }
-  
+
+  /* Chart Toggle - Desktop (768px+) */
+  @media (min-width: 768px) {
+    .chart-toggle {
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+    }
+  }
+
   .chart-toggle:hover {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     transform: rotate(180deg) scale(1.05);
   }
-  
+
   .chart-toggle svg {
     transform: rotate(90deg);
   }
-  
+
+  /* Chart Panel - Mobile Base */
   .chart-panel {
     background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
     border: 3px solid white;
     border-left: none;
     border-radius: 0 1rem 1rem 0;
     padding: 1rem;
-    width: 280px;
-    max-height: 70vh;
+    width: 260px;
+    max-height: 50vh;
     overflow-y: auto;
     box-shadow: -5px 0 30px rgba(0, 0, 0, 0.5);
     transform: translateX(100%);
@@ -1329,21 +1428,11 @@
     font-weight: 600;
     color: #fbbf24;
   }
-  
-  @media (max-width: 768px) {
-    .floating-chart {
-      top: auto;
-      bottom: 180px;
-      right: 0;
-    }
-    
+
+  /* Chart Panel - Desktop (768px+) */
+  @media (min-width: 768px) {
     .chart-panel {
-      width: 260px;
-      max-height: 50vh;
-    }
-    
-    .chart-toggle {
-      padding: 0.5rem 0.75rem;
-      font-size: 0.65rem;
+      width: 280px;
+      max-height: 70vh;
     }
   }

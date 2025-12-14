@@ -838,7 +838,15 @@
     max-height: 24rem;
     overflow-y: auto;
     z-index: 99999;
-    min-width: 350px;
+    min-width: 280px;
+  }
+
+  /* Mobile: search results full width */
+  @media (max-width: 640px) {
+    #freshwax-header .fwx-search-results {
+      min-width: unset;
+      width: 100%;
+    }
   }
   
   #freshwax-header .fwx-search-content {
