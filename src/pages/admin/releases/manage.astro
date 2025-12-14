@@ -264,7 +264,7 @@ const formatCurrency = (amount) => {
             const response = await fetch('/api/approve-release', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ releaseId: id })
+              body: JSON.stringify({ releaseId: id, action: 'approve' })
             });
             
             if (!response.ok) throw new Error('Failed to publish');
