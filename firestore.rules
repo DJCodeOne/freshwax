@@ -124,13 +124,14 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
       allow write: if isAdmin();
-      // Allow server-side operations (tracking, editing, deleting)
+      // Allow server-side operations (tracking, editing, admin updates, deleting)
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
                        .hasOnly(['plays', 'likes', 'downloads', 'playCount', 'likeCount', 'downloadCount',
                                  'last_played_date', 'last_liked_date', 'last_unliked_date',
                                  'last_download_date', 'last_downloaded_date', 'commentCount', 'ratings',
-                                 'title', 'description', 'shoutOuts', 'tracklist', 'tracklistArray', 'trackCount',
-                                 'artwork_url', 'artworkUrl', 'imageUrl', 'updatedAt', 'userId', 'mixTitle']);
+                                 'title', 'name', 'description', 'shoutOuts', 'tracklist', 'tracklistArray', 'trackCount',
+                                 'artwork_url', 'artworkUrl', 'imageUrl', 'updatedAt', 'userId', 'mixTitle',
+                                 'djName', 'dj_name', 'displayName', 'genre', 'published', 'allowDownload', 'featured']);
       allow delete: if true;
     }
 
@@ -140,13 +141,14 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
       allow write: if isAdmin();
-      // Allow server-side operations (tracking, editing, deleting)
+      // Allow server-side operations (tracking, editing, admin updates, deleting)
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
                        .hasOnly(['plays', 'likes', 'downloads', 'playCount', 'likeCount', 'downloadCount',
                                  'last_played_date', 'last_liked_date', 'last_unliked_date',
                                  'last_download_date', 'last_downloaded_date', 'commentCount', 'ratings',
-                                 'title', 'description', 'shoutOuts', 'tracklist', 'tracklistArray', 'trackCount',
-                                 'artwork_url', 'artworkUrl', 'imageUrl', 'updatedAt', 'userId', 'mixTitle']);
+                                 'title', 'name', 'description', 'shoutOuts', 'tracklist', 'tracklistArray', 'trackCount',
+                                 'artwork_url', 'artworkUrl', 'imageUrl', 'updatedAt', 'userId', 'mixTitle',
+                                 'djName', 'dj_name', 'displayName', 'genre', 'published', 'allowDownload', 'featured']);
       allow delete: if true;
     }
 

@@ -33,39 +33,42 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     // Title
-    if (body.title !== undefined) {
-      updateData.title = body.title.slice(0, 80);
-      updateData.name = body.title.slice(0, 80);
+    if (body.title !== undefined && body.title !== null) {
+      const title = String(body.title || '').slice(0, 80);
+      updateData.title = title;
+      updateData.name = title;
     }
 
     // DJ Name
-    if (body.djName !== undefined) {
-      updateData.djName = body.djName.slice(0, 50);
-      updateData.dj_name = body.djName.slice(0, 50);
-      updateData.displayName = body.djName.slice(0, 50);
+    if (body.djName !== undefined && body.djName !== null) {
+      const djName = String(body.djName || '').slice(0, 50);
+      updateData.djName = djName;
+      updateData.dj_name = djName;
+      updateData.displayName = djName;
     }
 
     // Genre
-    if (body.genre !== undefined) {
-      updateData.genre = body.genre.slice(0, 30);
+    if (body.genre !== undefined && body.genre !== null) {
+      updateData.genre = String(body.genre || '').slice(0, 30);
     }
 
     // Description / Shout Outs
-    if (body.description !== undefined) {
-      updateData.description = body.description.slice(0, 500);
-      updateData.shoutOuts = body.description.slice(0, 500);
+    if (body.description !== undefined && body.description !== null) {
+      const desc = String(body.description || '').slice(0, 500);
+      updateData.description = desc;
+      updateData.shoutOuts = desc;
     }
 
     // Artwork URL
-    if (body.artworkUrl !== undefined) {
-      updateData.artworkUrl = body.artworkUrl;
-      updateData.imageUrl = body.artworkUrl;
-      updateData.artwork_url = body.artworkUrl;
+    if (body.artworkUrl !== undefined && body.artworkUrl !== null) {
+      updateData.artworkUrl = body.artworkUrl || '';
+      updateData.imageUrl = body.artworkUrl || '';
+      updateData.artwork_url = body.artworkUrl || '';
     }
 
     // Tracklist
-    if (body.tracklist !== undefined) {
-      const tracklistRaw = body.tracklist.slice(0, 2000);
+    if (body.tracklist !== undefined && body.tracklist !== null) {
+      const tracklistRaw = String(body.tracklist || '').slice(0, 2000);
       const tracklistArray = tracklistRaw.split('\n')
         .map((line: string) => line.trim())
         .filter((line: string) => line.length > 0)
