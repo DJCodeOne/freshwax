@@ -1,0 +1,294 @@
+---
+// src/pages/admin/releases/process.astro
+// Process pending release submissions from R2 uploads bucket
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+export const prerender = false;
+
+const WORKER_URL = 'https://release-processor.davidhagon.workers.dev';
+---
+
+<AdminLayout title="Process Submissions" activeNav="releases">
+  <Fragment slot="actions">
+    <button id="refreshBtn" class="btn btn-outline">Refresh</button>
+    <a href="/admin/releases/manage" class="btn btn-primary">View Releases</a>
+  </Fragment>
+
+  <!-- Status Card -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="flex items-center gap-2">
+        <span id="workerStatus" class="badge badge-pending">Checking...</span>
+        <span id="workerUrl" class="text-muted" style="font-size: 0.85rem;">{WORKER_URL}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submissions List -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Pending Submissions</h2>
+      <span id="submissionCount" class="text-muted">Loading...</span>
+    </div>
+    <div class="card-body" id="submissionsContainer">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading submissions...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Processing Log -->
+  <div class="card mt-3" id="logCard" style="display: none;">
+    <div class="card-header">
+      <h2>Processing Log</h2>
+      <button id="clearLogBtn" class="btn btn-ghost btn-sm">Clear</button>
+    </div>
+    <div class="card-body">
+      <pre id="processingLog" style="background: #1f2937; color: #f9fafb; padding: 1rem; border-radius: 8px; max-height: 300px; overflow-y: auto; font-size: 0.85rem; margin: 0;"></pre>
+    </div>
+  </div>
+
+  <Fragment slot="scripts">
+    <script is:inline define:vars={{ WORKER_URL }}>
+      const workerStatus = document.getElementById('workerStatus');
+      const submissionCount = document.getElementById('submissionCount');
+      const submissionsContainer = document.getElementById('submissionsContainer');
+      const logCard = document.getElementById('logCard');
+      const processingLog = document.getElementById('processingLog');
+      const refreshBtn = document.getElementById('refreshBtn');
+      const clearLogBtn = document.getElementById('clearLogBtn');
+
+      // Log helper
+      function log(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        processingLog.textContent += `[${timestamp}] ${message}\n`;
+        processingLog.scrollTop = processingLog.scrollHeight;
+        logCard.style.display = 'block';
+      }
+
+      // Check worker health
+      async function checkWorkerHealth() {
+        try {
+          const response = await fetch(`${WORKER_URL}/health`);
+          const data = await response.json();
+
+          if (data.status === 'ok') {
+            workerStatus.textContent = 'Online';
+            workerStatus.className = 'badge badge-live';
+          } else {
+            throw new Error('Worker not healthy');
+          }
+        } catch (error) {
+          workerStatus.textContent = 'Offline';
+          workerStatus.className = 'badge badge-draft';
+        }
+      }
+
+      // Load submissions
+      async function loadSubmissions() {
+        try {
+          const response = await fetch(`${WORKER_URL}/submissions`);
+          const data = await response.json();
+
+          const submissions = data.submissions || [];
+          submissionCount.textContent = `${submissions.length} pending`;
+
+          if (submissions.length === 0) {
+            submissionsContainer.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-state-icon">📦</div>
+                <div class="empty-state-title">No pending submissions</div>
+                <p class="empty-state-text">Upload files to the freshwax-uploads R2 bucket to see them here.</p>
+              </div>
+            `;
+            return;
+          }
+
+          submissionsContainer.innerHTML = `
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Submission ID</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${submissions.map(id => `
+                    <tr data-id="${id}">
+                      <td>
+                        <div class="item-cell">
+                          <div style="width: 48px; height: 48px; background: #e5e5e5; display: flex; align-items: center; justify-content: center; border-radius: 8px;">📁</div>
+                          <div class="item-info">
+                            <h4>${id}</h4>
+                            <p class="cell-secondary">Pending processing</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="text-right">
+                        <button class="btn btn-primary btn-sm process-btn" data-id="${id}">
+                          Process
+                        </button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+
+          // Attach click handlers
+          document.querySelectorAll('.process-btn').forEach(btn => {
+            btn.addEventListener('click', () => processSubmission(btn.dataset.id, btn));
+          });
+
+        } catch (error) {
+          console.error('Failed to load submissions:', error);
+          submissionsContainer.innerHTML = `
+            <div class="empty-state" style="color: var(--accent-red);">
+              <div class="empty-state-icon">⚠️</div>
+              <div class="empty-state-title">Failed to load</div>
+              <p class="empty-state-text">${error.message}</p>
+            </div>
+          `;
+        }
+      }
+
+      // Process a submission
+      async function processSubmission(submissionId, btn) {
+        const row = btn.closest('tr');
+        const originalText = btn.textContent;
+
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
+        btn.className = 'btn btn-outline btn-sm';
+
+        log(`Starting processing: ${submissionId}`);
+
+        try {
+          const response = await fetch(`${WORKER_URL}/process`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ submissionId })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            log(`SUCCESS: ${data.artist} - ${data.title}`);
+            log(`Release ID: ${data.releaseId}`);
+            log(`Tracks: ${data.tracks}`);
+            log(`Cover: ${data.coverUrl}`);
+
+            showToast('Release processed successfully!');
+
+            // Remove row with animation
+            row.style.opacity = '0';
+            row.style.transition = 'opacity 0.3s';
+            setTimeout(() => {
+              row.remove();
+              updateCount();
+            }, 300);
+
+          } else {
+            throw new Error(data.error || 'Processing failed');
+          }
+
+        } catch (error) {
+          console.error('Processing failed:', error);
+          log(`ERROR: ${error.message}`);
+          showToast('Processing failed: ' + error.message, 'error');
+
+          btn.disabled = false;
+          btn.textContent = 'Retry';
+          btn.className = 'btn btn-danger btn-sm';
+        }
+      }
+
+      // Update submission count
+      function updateCount() {
+        const rows = document.querySelectorAll('.process-btn').length;
+        submissionCount.textContent = `${rows} pending`;
+
+        if (rows === 0) {
+          submissionsContainer.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">✅</div>
+              <div class="empty-state-title">All done!</div>
+              <p class="empty-state-text">All submissions have been processed.</p>
+            </div>
+          `;
+        }
+      }
+
+      // Event listeners
+      refreshBtn.addEventListener('click', () => {
+        loadSubmissions();
+        checkWorkerHealth();
+      });
+
+      clearLogBtn.addEventListener('click', () => {
+        processingLog.textContent = '';
+        logCard.style.display = 'none';
+      });
+
+      // Initial load
+      checkWorkerHealth();
+      loadSubmissions();
+    </script>
+  </Fragment>
+</AdminLayout>
+
+<style>
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    gap: 1rem;
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e5e5;
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+  }
+
+  .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state-text {
+    color: var(--text-secondary);
+  }
+
+  .mb-3 {
+    margin-bottom: 1rem;
+  }
+
+  .mt-3 {
+    margin-top: 1rem;
+  }
+</style>
