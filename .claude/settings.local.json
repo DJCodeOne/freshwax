@@ -7,7 +7,16 @@
       "Bash(git add:*)",
       "Bash(firebase deploy:*)",
       "Bash(cat:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(grep:*)",
+      "Bash(curl:*)",
+      "Bash(npx wrangler:*)",
+      "Bash(xargs cat:*)",
+      "Bash(npx firebase deploy:*)",
+      "Bash(done)",
+      "Bash(node -e:*)",
+      "Bash(ls:*)",
+      "Bash(node scripts/fix-firebase-init.js:*)"
     ]
   }
 }

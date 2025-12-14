@@ -2,6 +2,7 @@
 // DJ livestream schedule - uses Firebase REST API
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, setDocument, updateDocument , initFirebaseEnv } from '../../../lib/firebase-rest';
+import { generateStreamKey as generateSecureStreamKey, buildRtmpUrl, buildHlsUrl } from '../../../lib/red5';
 
 const SLOT_DURATIONS = [30, 45, 60, 120, 180, 240];
 const MAX_BOOKING_DAYS = 30;
@@ -17,18 +18,9 @@ const DEFAULT_SETTINGS = {
   allowTakeover: true
 };
 
-// Stream key generation
-function generateStreamKey(djId: string, slotId: string, startTime: Date): string {
-  const hash = `${djId}-${slotId}-${startTime.getTime()}`.replace(/[^a-zA-Z0-9]/g, '').slice(0, 16);
-  return `fw_${hash}_${Date.now().toString(36)}`;
-}
-
-function buildRtmpUrl(streamKey: string): string {
-  return `rtmp://stream.freshwax.co.uk/live/${streamKey}`;
-}
-
-function buildHlsUrl(streamKey: string): string {
-  return `https://stream.freshwax.co.uk/hls/${streamKey}/index.m3u8`;
+// Use secure stream key generation from red5.ts
+function generateStreamKey(djId: string, slotId: string, startTime: Date, endTime: Date): string {
+  return generateSecureStreamKey(djId, slotId, startTime, endTime);
 }
 
 // Server cache
@@ -274,7 +266,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       const slotId = generateId();
-      const streamKey = generateStreamKey(djId, slotId, slotStart);
+      const streamKey = generateStreamKey(djId, slotId, slotStart, slotEnd);
 
       const newSlot = {
         djId,
@@ -343,7 +335,7 @@ export const POST: APIRoute = async ({ request }) => {
       if (now.getMinutes() >= 55) endTime.setHours(endTime.getHours() + 1);
 
       const slotId = generateId();
-      const streamKey = generateStreamKey(djId, slotId, now);
+      const streamKey = generateStreamKey(djId, slotId, now, endTime);
 
       const newSlot = {
         djId,
