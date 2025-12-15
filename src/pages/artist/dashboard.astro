@@ -22,9 +22,13 @@ if (!partnerId) {
 
 // Debug logging
 console.log('[Partner Dashboard] partnerId:', partnerId || 'NOT SET');
-console.log('[Partner Dashboard] Cookies - partnerId:', Astro.cookies.get('partnerId')?.value || 'none', 
+console.log('[Partner Dashboard] Cookies - partnerId:', Astro.cookies.get('partnerId')?.value || 'none',
             'userId:', Astro.cookies.get('userId')?.value || 'none',
             'customerId:', Astro.cookies.get('customerId')?.value || 'none');
+
+// Admin UIDs that always get full access
+const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
+const isAdminUser = ADMIN_UIDS.includes(partnerId);
 
 let partner = null;
 let stats = {
@@ -68,6 +72,21 @@ if (partnerId) {
           console.log('[Partner Dashboard] Created partner from users:', partner.artistName, 'approved:', partner.approved);
         }
       }
+    }
+
+    // Admin fallback - if document lookup failed but user is admin, create default partner
+    if (!partner && isAdminUser) {
+      console.log('[Partner Dashboard] Admin fallback - creating default partner for:', partnerId);
+      partner = {
+        id: partnerId,
+        artistName: 'Admin',
+        email: 'admin@freshwax.co.uk',
+        isArtist: true,
+        isDJ: true,
+        isMerchSupplier: true,
+        approved: true,
+        avatarUrl: null
+      };
     }
 
     if (partner) {
