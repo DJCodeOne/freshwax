@@ -39,7 +39,7 @@ export const GET: APIRoute = async ({ request }) => {
     let avatarUrl = '';
 
     // Hardcoded admin UIDs
-    const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33'];
+    const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
     if (ADMIN_UIDS.includes(uid)) {
       isAdmin = true;
     }
