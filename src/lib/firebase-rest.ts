@@ -215,8 +215,12 @@ export async function queryCollection(
     return pendingRequests.get(cacheKey)!;
   }
 
-  const url = `${FIRESTORE_BASE}:runQuery`;
-  
+  // Include API key for authenticated reads
+  const apiKey = getEnvVar('FIREBASE_API_KEY') || getEnvVar('PUBLIC_FIREBASE_API_KEY');
+  const url = apiKey
+    ? `${FIRESTORE_BASE}:runQuery?key=${apiKey}`
+    : `${FIRESTORE_BASE}:runQuery`;
+
   const structuredQuery: any = {
     from: [{ collectionId: collection }],
   };
@@ -315,7 +319,11 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
     return pendingRequests.get(cacheKey)!;
   }
 
-  const url = `${FIRESTORE_BASE}/${collection}/${docId}`;
+  // Include API key for authenticated reads
+  const apiKey = getEnvVar('FIREBASE_API_KEY') || getEnvVar('PUBLIC_FIREBASE_API_KEY');
+  const url = apiKey
+    ? `${FIRESTORE_BASE}/${collection}/${docId}?key=${apiKey}`
+    : `${FIRESTORE_BASE}/${collection}/${docId}`;
   
   const fetchPromise = (async () => {
     try {
