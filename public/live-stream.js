@@ -13,26 +13,35 @@ let chatChannel = null;
 // Early stub functions for emoji/gif pickers (will be replaced by setupEmojiPicker/setupGiphyPicker)
 // This ensures buttons work even before chat is fully initialized
 window.toggleEmojiPicker = function() {
-  console.log('[EmojiPicker] Button clicked - picker not ready yet');
+  console.log('[EmojiPicker] Stub toggle called');
   const emojiPicker = document.getElementById('emojiPicker');
   const giphyModal = document.getElementById('giphyModal');
+  const emojiBtn = document.getElementById('emojiBtn');
+  console.log('[EmojiPicker] Elements:', { emojiPicker: !!emojiPicker, giphyModal: !!giphyModal });
   if (emojiPicker) {
     emojiPicker.classList.toggle('hidden');
     giphyModal?.classList.add('hidden');
+    emojiBtn?.classList.toggle('active');
+    document.getElementById('giphyBtn')?.classList.remove('active');
   }
 };
 
 window.toggleGiphyPicker = function() {
-  console.log('[GiphyPicker] Button clicked - picker not ready yet');
+  console.log('[GiphyPicker] Stub toggle called');
   const giphyModal = document.getElementById('giphyModal');
   const emojiPicker = document.getElementById('emojiPicker');
+  const giphyBtn = document.getElementById('giphyBtn');
+  console.log('[GiphyPicker] Elements:', { giphyModal: !!giphyModal, emojiPicker: !!emojiPicker });
   if (giphyModal) {
     if (giphyModal.classList.contains('hidden')) {
       giphyModal.classList.remove('hidden');
       emojiPicker?.classList.add('hidden');
+      giphyBtn?.classList.add('active');
+      document.getElementById('emojiBtn')?.classList.remove('active');
       document.body.style.overflow = 'hidden';
     } else {
       giphyModal.classList.add('hidden');
+      giphyBtn?.classList.remove('active');
       document.body.style.overflow = '';
     }
   }
@@ -49,6 +58,37 @@ window.switchGifCategory = function(category) {
 window.searchGiphyDebounced = function(query) {
   console.log('[GiphyPicker] Search - waiting for full init');
 };
+
+// Attach click handlers to emoji/gif buttons
+function attachPickerButtons() {
+  const emojiBtn = document.getElementById('emojiBtn');
+  const giphyBtn = document.getElementById('giphyBtn');
+  console.log('[Pickers] Attaching handlers:', { emojiBtn: !!emojiBtn, giphyBtn: !!giphyBtn });
+  if (emojiBtn && !emojiBtn._hasClickHandler) {
+    emojiBtn._hasClickHandler = true;
+    emojiBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('[EmojiBtn] Click event fired');
+      window.toggleEmojiPicker();
+    });
+  }
+  if (giphyBtn && !giphyBtn._hasClickHandler) {
+    giphyBtn._hasClickHandler = true;
+    giphyBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('[GiphyBtn] Click event fired');
+      window.toggleGiphyPicker();
+    });
+  }
+}
+
+// Attach on DOM ready
+document.addEventListener('DOMContentLoaded', attachPickerButtons);
+
+// Attach on View Transitions navigation
+document.addEventListener('astro:page-load', attachPickerButtons);
 
 // Get Pusher config at runtime (not module load time) to ensure window.PUSHER_CONFIG is set
 function getPusherConfig() {
@@ -1566,11 +1606,11 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
   const container = document.getElementById('chatMessages');
   if (!container) return;
 
-  // Sort messages by createdAt to ensure correct order (oldest first, newest last)
+  // Sort messages by createdAt - ascending (oldest first at top, newest last at bottom)
   const sortedMessages = [...messages].sort((a, b) => {
     const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
     const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
-    return dateA - dateB;
+    return dateA.getTime() - dateB.getTime();
   });
 
   const wasAtBottom = forceScrollToBottom || container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
