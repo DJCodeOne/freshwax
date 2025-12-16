@@ -4,7 +4,7 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
+// FloatingShuffleButton is already included in Layout.astro
 import { getLiveDJMixes, getDocument } from '../lib/firebase-rest';
 import '../styles/dj-mixes.css';
 
@@ -213,21 +213,21 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
       ) : (
         <div class="mixes-list" id="mixes-list">
           {mixes.map((mix, index) => (
-            <article 
+            <article
               class="mix-card"
               data-mix-id={mix.id}
               data-genre={mix.genre || 'Jungle & D&B'}
-              data-upload-date={mix.upload_date}
-              data-audio-url={mix.audio_url}
+              data-upload-date={mix.upload_date || mix.uploadDate}
+              data-audio-url={mix.audio_url || mix.audioUrl || mix.mp3Url}
               data-title={mix.title}
-              data-dj={mix.dj_name}
-              data-artwork={mix.artwork_url}
+              data-dj={mix.dj_name || mix.djName}
+              data-artwork={mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}
               data-duration={getMixDuration(mix)}
             >
               <!-- Artwork -->
               <div class="mix-artwork-container">
-                <img 
-                  src={mix.artwork_url} 
+                <img
+                  src={mix.artwork_url || mix.artworkUrl || '/place-holder.webp'} 
                   alt={mix.title}
                   class="mix-artwork"
                   loading="lazy"
@@ -239,7 +239,7 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
               <div class="mix-info">
                 <div class="mix-header">
                   <h3 class="mix-title">{mix.title}</h3>
-                  <p class="mix-dj">{mix.dj_name}</p>
+                  <p class="mix-dj">{mix.dj_name || mix.djName}</p>
                 </div>
                 
                 <!-- Meta Row -->
@@ -248,7 +248,7 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
                     <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span class="duration-display" data-duration={getMixDuration(mix)} data-audio-url={mix.audio_url}>{formatDuration(getMixDuration(mix))}</span>
+                    <span class="duration-display" data-duration={getMixDuration(mix)} data-audio-url={mix.audio_url || mix.audioUrl || mix.mp3Url}>{formatDuration(getMixDuration(mix))}</span>
                   </span>
                   <span class="meta-item">
                     <svg class="meta-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -336,15 +336,15 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
                     <span class="btn-text like-text-btn">Like</span>
-                    <span class="btn-text liked-text-btn hidden">Liked</span>
+                    <span class="btn-text liked-text-btn" style="display: none;">Liked</span>
                   </button>
 
                   <!-- Share Button -->
-                  <button 
+                  <button
                     class="action-btn share-btn"
                     data-mix-id={mix.id}
                     data-title={mix.title}
-                    data-dj={mix.dj_name}
+                    data-dj={mix.dj_name || mix.djName}
                     title="Share"
                   >
                     <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -354,12 +354,12 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
                   </button>
 
                   <!-- Download Button -->
-                  <button 
+                  <button
                     class="action-btn primary download-btn"
                     data-mix-id={mix.id}
-                    data-audio-url={mix.audio_url}
+                    data-audio-url={mix.audio_url || mix.audioUrl || mix.mp3Url}
                     data-title={mix.title}
-                    data-dj={mix.dj_name}
+                    data-dj={mix.dj_name || mix.djName}
                   >
                     <svg class="btn-icon download-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
@@ -454,7 +454,7 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
     </div>
   </div>
 
-  <FloatingShuffleButton />
+  <!-- FloatingShuffleButton is included via Layout -->
   <Footer />
 
   <!-- Floating All-Time Chart Panel (Hidden by default) -->
@@ -521,10 +521,10 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
           chartList.innerHTML = data.chart.slice(0, 10).map((mix, index) => `
             <a href="/dj-mix/${mix.id}" class="chart-item">
               <span class="chart-position">${index + 1}</span>
-              <img src="${mix.artwork_url || '/place-holder.webp'}" alt="${mix.title}" class="chart-artwork" />
+              <img src="${mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}" alt="${mix.title}" class="chart-artwork" />
               <div class="chart-info">
                 <span class="chart-title">${mix.title || 'Untitled'}</span>
-                <span class="chart-dj">${mix.dj_name || 'Unknown DJ'}</span>
+                <span class="chart-dj">${mix.dj_name || mix.djName || 'Unknown DJ'}</span>
               </div>
               <span class="chart-score">${mix.score || 0}</span>
             </a>

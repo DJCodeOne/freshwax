@@ -26,8 +26,8 @@ import DailySchedule from './DailySchedule.astro';
   <div class="schedule-modal-overlay"></div>
   <div class="schedule-modal-container booking-mode">
     <div class="schedule-modal-header">
-      <h2>🎧 Book Your Slot</h2>
-      <p class="modal-subtitle">Select your preferred time slots (max 2 hours/day)</p>
+      <h2>Book Your Live Stream Slot</h2>
+      <p class="modal-subtitle">Click on available slots to select your time. You can book up to 2 hours per day.</p>
       <button type="button" class="schedule-modal-close" id="closeBookingSchedule">×</button>
     </div>
     <div class="schedule-modal-body">
@@ -61,35 +61,38 @@ import DailySchedule from './DailySchedule.astro';
   .schedule-modal-container {
     position: relative;
     background: var(--bg-secondary, #fff);
-    border-radius: 16px;
+    border-radius: 0;
     width: 100%;
-    max-width: 700px;
-    max-height: 90vh;
+    max-width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+    box-shadow: none;
     overflow: hidden;
   }
 
   .schedule-modal-header {
     position: relative;
-    padding: 1.75rem 1.5rem 1.25rem;
+    padding: 1.5rem 1.5rem 1.25rem;
     background: linear-gradient(135deg, #000 0%, #1a1a1a 100%);
     color: #fff;
     text-align: center;
   }
 
   .schedule-modal-header h2 {
-    margin: 0 0 0.25rem;
+    margin: 0 0 0.5rem;
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.75rem;
-    letter-spacing: 0.03em;
+    font-size: 2rem;
+    letter-spacing: 0.05em;
   }
 
   .modal-subtitle {
     margin: 0;
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.85);
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.4;
   }
 
   .schedule-modal-close {
@@ -117,13 +120,18 @@ import DailySchedule from './DailySchedule.astro';
 
   .schedule-modal-body {
     flex: 1;
-    overflow: hidden;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
   }
 
   /* Remove duplicate border/radius since modal provides it */
   .schedule-modal-body :global(.daily-schedule) {
     border: none;
     border-radius: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
   }
 
   /* Booking mode styling */
@@ -163,8 +171,22 @@ import DailySchedule from './DailySchedule.astro';
 
     // Open Booking Schedule
     window.openBookingSchedule = function(userId, displayName) {
+      console.log('[ScheduleModal] openBookingSchedule called:', { userId, displayName });
+
+      if (!userId) {
+        console.error('[ScheduleModal] No userId provided!');
+        alert('You must be logged in to book a slot.');
+        return;
+      }
+
       // Set user info on the schedule component
-      window.schedule_bookingSchedule?.setUser(userId, displayName);
+      if (window.schedule_bookingSchedule) {
+        window.schedule_bookingSchedule.setUser(userId, displayName);
+        console.log('[ScheduleModal] User set on schedule component');
+      } else {
+        console.error('[ScheduleModal] schedule_bookingSchedule not found!');
+      }
+
       bookingModal?.classList.remove('hidden');
       window.schedule_bookingSchedule?.refresh();
     };

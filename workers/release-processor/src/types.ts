@@ -18,37 +18,139 @@ export interface Env {
 export interface TrackMetadata {
   trackNumber: number;
   title: string;
+  trackName?: string;
   bpm?: number;
   key?: string;
   genre?: string;
-  duration?: number;
+  duration?: number | string;
+  trackISRC?: string;
+  featured?: string;
+  remixer?: string;
+  explicit?: boolean;
+}
+
+export interface SocialLinks {
+  instagram?: string;
+  soundcloud?: string;
+  spotify?: string;
+  bandcamp?: string;
+  youtube?: string;
+  other?: string;
+}
+
+export interface VinylDetails {
+  recordCount?: number | string;
+  rpm?: string;
+  size?: string;
+  weight?: string;
+  pressingPlant?: string;
+  expectedShippingDate?: string;
+}
+
+export interface LimitedEdition {
+  enabled?: boolean;
+  type?: string;
+  details?: string;
 }
 
 export interface SubmissionMetadata {
+  // Artist Info
   artistName: string;
+  email: string;
+  userId?: string;
+
+  // Release Details
   releaseName: string;
+  releaseType?: string;
+  labelCode?: string;
+  masteredBy?: string;
   genre?: string;
-  catalogNumber?: string;
+  customGenre?: string;
   releaseDate?: string;
+  catalogNumber?: string;
   description?: string;
+  releaseDescription?: string;
+
+  // Pre-order
+  hasPreOrder?: boolean;
+  preOrderDate?: string;
+
+  // Content flags
+  hasExplicitContent?: boolean;
+
+  // Previous release info
+  isPreviouslyReleased?: boolean;
+  originalReleaseDate?: string;
+  recordingLocation?: string;
+  recordingYear?: string;
+
+  // Copyright & Publishing
+  copyrightYear?: string;
+  copyrightHolder?: string;
+  publishingRights?: string;
+  publishingCompany?: string;
+  primaryLanguage?: string;
+
+  // Pricing
   pricePerSale?: number;
   trackPrice?: number;
-  vinylPrice?: number;
+
+  // Vinyl
   vinylRelease?: boolean;
+  vinylPrice?: number;
+  vinylRecordCount?: string;
+  vinylRPM?: string;
+  vinylSize?: string;
+  vinylWeight?: string;
+  pressingPlant?: string;
+  expectedShippingDate?: string;
+  vinyl?: VinylDetails;
+
+  // Limited Edition
+  hasLimitedEdition?: boolean;
+  limitedEditionType?: string;
+  limitedEditionDetails?: string;
+  limitedEdition?: LimitedEdition;
+
+  // Social Links
+  instagramLink?: string;
+  soundcloudLink?: string;
+  spotifyLink?: string;
+  bandcampLink?: string;
+  youtubeLink?: string;
+  otherLinks?: string;
+  socialLinks?: SocialLinks;
+
+  // Barcode
+  upcEanCode?: string;
+
+  // Notes
+  notes?: string;
+
+  // Tracks
   tracks: TrackMetadata[];
+  trackListingJSON?: string;
+
+  // Metadata
   submittedAt: string;
-  email: string;
+  uploadedAt?: string;
 }
 
 export interface ProcessedTrack {
   trackNumber: number;
+  displayTrackNumber?: number;
   title: string;
+  trackName?: string;
   mp3Url: string;
   wavUrl: string;
   previewUrl: string;
-  duration?: number;
+  duration?: number | string;
   bpm?: number;
   key?: string;
+  trackISRC?: string;
+  featured?: string;
+  remixer?: string;
+  explicit?: boolean;
 }
 
 export interface ProcessedRelease {
@@ -60,14 +162,66 @@ export interface ProcessedRelease {
   coverUrl: string;
   thumbUrl: string;
   tracks: ProcessedTrack[];
+
+  // Release Details
+  releaseType?: string;
+  labelCode?: string;
+  masteredBy?: string;
   genre?: string;
   catalogNumber?: string;
   releaseDate?: string;
   description?: string;
+  releaseDescription?: string;
+
+  // Pre-order
+  hasPreOrder?: boolean;
+  preOrderDate?: string;
+
+  // Content flags
+  hasExplicitContent?: boolean;
+
+  // Previous release info
+  isPreviouslyReleased?: boolean;
+  originalReleaseDate?: string;
+  recordingLocation?: string;
+  recordingYear?: string;
+
+  // Copyright & Publishing
+  copyrightYear?: string;
+  copyrightHolder?: string;
+  publishingRights?: string;
+  publishingCompany?: string;
+  primaryLanguage?: string;
+
+  // Pricing
   pricePerSale?: number;
   trackPrice?: number;
-  vinylPrice?: number;
+
+  // Vinyl
   vinylRelease?: boolean;
+  vinylPrice?: number;
+  vinylRecordCount?: string;
+  vinylRPM?: string;
+  vinylSize?: string;
+  vinylWeight?: string;
+  pressingPlant?: string;
+  expectedShippingDate?: string;
+
+  // Limited Edition
+  hasLimitedEdition?: boolean;
+  limitedEditionType?: string;
+  limitedEditionDetails?: string;
+
+  // Social Links
+  socialLinks?: SocialLinks;
+
+  // Barcode
+  upcEanCode?: string;
+
+  // Notes
+  notes?: string;
+
+  // Status
   status: 'pending';
   published: false;
   approved: false;
@@ -75,6 +229,10 @@ export interface ProcessedRelease {
   createdAt: string;
   updatedAt: string;
   processedAt: string;
+
+  // Email for notifications
+  email?: string;
+  userId?: string;
 }
 
 export interface ProcessingResult {

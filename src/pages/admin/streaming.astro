@@ -93,11 +93,50 @@ export const prerender = false;
     margin-top: 0.75rem; 
   }
   
-  .bypass-request-reason strong { 
+  .bypass-request-reason strong {
     color: var(--text-muted, #666);
     font-weight: 600;
   }
-  
+
+  .bypass-request-relay {
+    font-size: 0.875rem;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border: 1px solid #10b981;
+    padding: 0.75rem;
+    border-radius: var(--radius-md, 8px);
+    margin-top: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .bypass-request-relay strong {
+    color: #065f46;
+    font-weight: 600;
+  }
+
+  .relay-station {
+    display: inline-block;
+    background: #10b981;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.8125rem;
+  }
+
+  .relay-url {
+    display: block;
+    background: rgba(0,0,0,0.05);
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: #374151;
+    word-break: break-all;
+    margin-top: 0.25rem;
+  }
+
   .bypass-request-stats { 
     display: flex; 
     align-items: center;
@@ -401,6 +440,18 @@ export const prerender = false;
       </div>
     </div>
 
+    <!-- Event Hour Requests -->
+    <div class="section">
+      <div class="section-header">
+        <h2>📅 Event Hour Requests</h2>
+        <button id="refreshEventRequests" class="refresh-btn">↻ Refresh</button>
+      </div>
+      <p class="section-desc">Pro DJs requesting extended streaming hours for special events (beyond the standard 2 hours).</p>
+      <div id="eventRequests" class="bypass-requests-list">
+        <p class="loading">Loading...</p>
+      </div>
+    </div>
+
     <!-- Recent Streams -->
     <div class="section">
       <h2>📼 Recent Streams</h2>
@@ -591,9 +642,10 @@ export const prerender = false;
       loadRecentStreams(),
       loadBypassList(),
       loadModerationList(),
-      loadBypassRequests()
+      loadBypassRequests(),
+      loadEventRequests()
     ]);
-    
+
     setupEventListeners();
   }
   
@@ -1206,6 +1258,13 @@ export const prerender = false;
                     <strong>Reason:</strong> ${req.reason}
                   </div>
                 ` : ''}
+                ${req.stationName || req.relayUrl ? `
+                  <div class="bypass-request-relay">
+                    <strong>📡 Relay Request:</strong>
+                    ${req.stationName ? `<span class="relay-station">${req.stationName}</span>` : ''}
+                    ${req.relayUrl ? `<code class="relay-url">${req.relayUrl}</code>` : ''}
+                  </div>
+                ` : ''}
                 <div class="bypass-request-stats">
                   <div class="bypass-stat">
                     <span>🎵 Mixes:</span>
@@ -1336,6 +1395,130 @@ export const prerender = false;
   document.getElementById('refreshBypassRequests')?.addEventListener('click', () => {
     loadBypassRequests();
   });
-  
+
+  document.getElementById('refreshEventRequests')?.addEventListener('click', () => {
+    loadEventRequests();
+  });
+
+  // ==========================================
+  // EVENT HOUR REQUEST FUNCTIONS
+  // ==========================================
+
+  async function loadEventRequests() {
+    const container = document.getElementById('eventRequests');
+
+    try {
+      const response = await fetch('/api/livestream/event-requests?admin=true&status=pending');
+      const result = await response.json();
+
+      if (result.success && result.requests?.length > 0) {
+        container.innerHTML = result.requests.map(req => {
+          const requestDate = req.createdAt ? new Date(req.createdAt) : null;
+          const timeAgo = requestDate ? getTimeAgo(requestDate) : 'Unknown';
+          const eventDate = req.eventDate ? new Date(req.eventDate + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Unknown';
+
+          return `
+            <div class="bypass-request-card" data-request-id="${req.id}">
+              <div class="bypass-request-info">
+                <h4>
+                  ${req.userName || 'Unknown DJ'}
+                  <span class="pending-badge">⏳ ${req.hoursRequested}h requested</span>
+                </h4>
+                <div class="bypass-request-meta">
+                  <span>📧 ${req.userEmail || 'No email'}</span>
+                  <span>📅 Event: ${eventDate}</span>
+                  <span>🕐 Requested ${timeAgo}</span>
+                </div>
+                <div class="bypass-request-reason">
+                  <strong>Event:</strong> ${req.eventName || 'Untitled Event'}
+                  ${req.eventDescription ? `<br><strong>Details:</strong> ${req.eventDescription}` : ''}
+                </div>
+              </div>
+              <div class="bypass-request-actions">
+                <button class="approve-bypass-btn" onclick="approveEventRequest('${req.id}', '${(req.userName || '').replace(/'/g, "\\'")}', ${req.hoursRequested})">✓ Approve ${req.hoursRequested}h</button>
+                <button class="deny-bypass-btn" onclick="rejectEventRequest('${req.id}', '${(req.userName || '').replace(/'/g, "\\'")}')">✗ Reject</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } else {
+        container.innerHTML = `
+          <div class="empty-bypass">
+            <div class="empty-icon">📅</div>
+            <p>No pending event hour requests</p>
+          </div>
+        `;
+      }
+    } catch (error) {
+      console.error('Error loading event requests:', error);
+      container.innerHTML = '<p class="empty-state">Failed to load event requests</p>';
+    }
+  }
+
+  window.approveEventRequest = async function(requestId, djName, hours) {
+    if (!confirm(`Approve ${hours} hours for ${djName || 'this DJ'}?`)) return;
+
+    try {
+      const response = await fetch('/api/livestream/event-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'approve',
+          requestId,
+          adminId: currentAdminEmail || 'admin'
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const card = document.querySelector(`.bypass-request-card[data-request-id="${requestId}"]`);
+        if (card) {
+          card.innerHTML = `
+            <div style="padding: 1rem; text-align: center; color: #22c55e; width: 100%;">
+              <span style="font-size: 2rem;">✅</span>
+              <p style="margin: 0.5rem 0 0 0;">Approved! ${djName || 'DJ'} can now book up to ${hours} extra hours.</p>
+            </div>
+          `;
+          setTimeout(() => loadEventRequests(), 2000);
+        }
+      } else {
+        alert('Error: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error approving event request:', error);
+      alert('Failed to approve request');
+    }
+  };
+
+  window.rejectEventRequest = async function(requestId, djName) {
+    const reason = prompt(`Reason for rejecting ${djName || 'this DJ'}'s event request (optional):`);
+    if (reason === null) return; // Cancelled
+
+    try {
+      const response = await fetch('/api/livestream/event-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reject',
+          requestId,
+          adminId: currentAdminEmail || 'admin',
+          reason: reason || 'Request declined'
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        loadEventRequests();
+      } else {
+        alert('Error: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error rejecting event request:', error);
+      alert('Failed to reject request');
+    }
+  };
+
   init();
 </script>

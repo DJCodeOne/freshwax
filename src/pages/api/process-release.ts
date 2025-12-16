@@ -1,0 +1,306 @@
+// src/pages/api/process-release.ts
+// Process a release submission from R2 - creates Firebase entry
+// Similar to upload-mix.ts but for releases
+
+import type { APIRoute } from 'astro';
+import { AwsClient } from 'aws4fetch';
+import { setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+
+// Get R2 configuration
+function getR2Config(env: any) {
+  return {
+    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
+    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
+    bucketName: 'freshwax-releases',
+    publicDomain: env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
+  };
+}
+
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
+  try {
+    const { submissionId } = await request.json();
+
+    if (!submissionId) {
+      return new Response(JSON.stringify({ error: 'submissionId required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log(`[process-release] Processing: ${submissionId}`);
+
+    // Initialize R2 client
+    const R2_CONFIG = getR2Config(env);
+
+    if (!R2_CONFIG.accessKeyId || !R2_CONFIG.secretAccessKey) {
+      return new Response(JSON.stringify({ error: 'R2 not configured' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const awsClient = new AwsClient({
+      accessKeyId: R2_CONFIG.accessKeyId,
+      secretAccessKey: R2_CONFIG.secretAccessKey,
+      service: 's3',
+      region: 'auto',
+    });
+
+    const endpoint = `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`;
+    const bucketUrl = `${endpoint}/${R2_CONFIG.bucketName}`;
+
+    // Get metadata.json from submission
+    const metadataKey = `submissions/${submissionId}/metadata.json`;
+    const metadataUrl = `${bucketUrl}/${encodeURIComponent(metadataKey)}`;
+
+    const metadataResponse = await awsClient.fetch(metadataUrl);
+    if (!metadataResponse.ok) {
+      return new Response(JSON.stringify({ error: 'Metadata not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const metadata = await metadataResponse.json() as any;
+    console.log(`[process-release] Loaded metadata: ${metadata.artistName} - ${metadata.releaseName}`);
+
+    // List all files in submission folder
+    const listUrl = `${bucketUrl}?list-type=2&prefix=submissions/${submissionId}/`;
+    const listResponse = await awsClient.fetch(listUrl);
+    const listXml = await listResponse.text();
+
+    const keyMatches = listXml.matchAll(/<Key>([^<]+)<\/Key>/g);
+    const files: string[] = [];
+    for (const match of keyMatches) {
+      files.push(match[1]);
+    }
+
+    // Find artwork and audio files
+    let artworkKey: string | null = null;
+    let audioFiles: string[] = [];
+
+    console.log(`[process-release] Files in submission:`, files);
+
+    for (const file of files) {
+      const lower = file.toLowerCase();
+      const filename = file.split('/').pop() || '';
+
+      // Skip metadata.json
+      if (filename === 'metadata.json') continue;
+
+      if (lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.webp')) {
+        artworkKey = file;
+        console.log(`[process-release] Found artwork: ${file}`);
+      } else if (lower.endsWith('.wav') || lower.endsWith('.mp3') || lower.endsWith('.flac')) {
+        audioFiles.push(file);
+        console.log(`[process-release] Found audio: ${file}`);
+      }
+    }
+
+    console.log(`[process-release] Found ${audioFiles.length} audio files, artwork: ${artworkKey || 'none'}`);
+
+    // Generate release ID
+    const timestamp = Date.now();
+    const sanitizedArtist = metadata.artistName.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30);
+    const releaseId = `${sanitizedArtist}_FW-${timestamp}`;
+
+    // Build artwork URL (URL-encode path for spaces/special chars)
+    const artworkUrl = artworkKey
+      ? `${R2_CONFIG.publicDomain}/${encodeURIComponent(artworkKey).replace(/%2F/g, '/')}`
+      : `${R2_CONFIG.publicDomain}/place-holder.webp`;
+
+    // Build tracks - match metadata tracks to audio files by name
+    const tracks: any[] = [];
+    const metadataTracks = metadata.tracks || [];
+
+    console.log(`[process-release] Metadata tracks:`, metadataTracks);
+    console.log(`[process-release] Audio files:`, audioFiles);
+
+    // Helper to normalize names for matching (lowercase, remove special chars)
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    // For each metadata track, find the matching audio file
+    for (let i = 0; i < metadataTracks.length; i++) {
+      const metaTrack = metadataTracks[i];
+      const trackName = metaTrack.title || metaTrack.trackName || '';
+      const normalizedTrackName = normalize(trackName);
+
+      console.log(`[process-release] Looking for audio file matching: "${trackName}"`);
+
+      // Find audio file that contains this track name
+      let matchedAudioFile = audioFiles.find(audioFile => {
+        const filename = audioFile.split('/').pop() || '';
+        const normalizedFilename = normalize(filename);
+        return normalizedFilename.includes(normalizedTrackName) && normalizedTrackName.length > 2;
+      });
+
+      // If no match found, use first remaining audio file as fallback
+      if (!matchedAudioFile && audioFiles.length > 0) {
+        matchedAudioFile = audioFiles[0];
+        console.log(`[process-release] No name match, using first remaining file: ${matchedAudioFile}`);
+      }
+
+      if (!matchedAudioFile) {
+        console.log(`[process-release] No audio file found for track ${i + 1}: ${trackName}`);
+        continue;
+      }
+
+      // URL-encode the path (but not the slashes)
+      const audioUrl = `${R2_CONFIG.publicDomain}/${encodeURIComponent(matchedAudioFile).replace(/%2F/g, '/')}`;
+
+      console.log(`[process-release] Track ${i + 1}: "${trackName}" -> ${matchedAudioFile}`);
+
+      tracks.push({
+        trackNumber: metaTrack.trackNumber || i + 1,
+        title: trackName || `Track ${i + 1}`,
+        trackName: trackName || `Track ${i + 1}`,
+        mp3Url: audioUrl,
+        wavUrl: audioUrl,
+        previewUrl: audioUrl,
+        bpm: metaTrack.bpm || '',
+        key: metaTrack.key || '',
+        duration: metaTrack.duration || '',
+        trackISRC: metaTrack.trackISRC || '',
+        featured: metaTrack.featured || '',
+        remixer: metaTrack.remixer || '',
+        storage: 'r2'
+      });
+
+      // Remove matched file from list to prevent duplicates
+      audioFiles = audioFiles.filter(f => f !== matchedAudioFile);
+    }
+
+    // Add any remaining unmatched audio files
+    for (let i = 0; i < audioFiles.length; i++) {
+      const audioFile = audioFiles[i];
+      const filename = audioFile.split('/').pop() || '';
+      const trackNameFromFile = filename
+        .replace(/\.(wav|mp3|flac)$/i, '')
+        .replace(/^\d+[\s._-]+/, '')
+        .trim();
+
+      const audioUrl = `${R2_CONFIG.publicDomain}/${encodeURIComponent(audioFile).replace(/%2F/g, '/')}`;
+
+      console.log(`[process-release] Unmatched track: "${trackNameFromFile}" -> ${filename}`);
+
+      tracks.push({
+        trackNumber: tracks.length + 1,
+        title: trackNameFromFile || `Track ${tracks.length + 1}`,
+        trackName: trackNameFromFile || `Track ${tracks.length + 1}`,
+        mp3Url: audioUrl,
+        wavUrl: audioUrl,
+        previewUrl: audioUrl,
+        bpm: '',
+        key: '',
+        duration: '',
+        trackISRC: '',
+        featured: '',
+        remixer: '',
+        storage: 'r2'
+      });
+    }
+
+    console.log(`[process-release] Built ${tracks.length} tracks`);
+
+    const now = new Date().toISOString();
+
+    // Build release document
+    const releaseData = {
+      id: releaseId,
+      title: metadata.releaseName,
+      artist: metadata.artistName,
+      artistName: metadata.artistName,
+      releaseName: metadata.releaseName,
+      // Include all artwork field variations used by different pages
+      coverUrl: artworkUrl,
+      coverArtUrl: artworkUrl,
+      artworkUrl: artworkUrl,
+      thumbUrl: artworkUrl,
+      imageUrl: artworkUrl,
+      genre: metadata.genre || 'Drum and Bass',
+      catalogNumber: metadata.labelCode || '',
+      labelCode: metadata.labelCode || '',
+      releaseDate: metadata.releaseDate || now,
+      description: metadata.releaseDescription || metadata.notes || '',
+      releaseDescription: metadata.releaseDescription || '',
+      masteredBy: metadata.masteredBy || '',
+
+      // Pricing
+      pricePerSale: parseFloat(metadata.pricePerSale) || 7.99,
+      trackPrice: parseFloat(metadata.trackPrice) || 1.99,
+
+      // Copyright
+      copyrightYear: metadata.copyrightYear || new Date().getFullYear().toString(),
+      copyrightHolder: metadata.copyrightHolder || metadata.artistName,
+      publishingRights: metadata.publishingRights || '',
+      publishingCompany: metadata.publishingCompany || '',
+
+      // Vinyl
+      vinylRelease: metadata.vinylRelease || false,
+      vinylPrice: parseFloat(metadata.vinylPrice) || 0,
+
+      // Status
+      status: 'pending',
+      published: false,
+      approved: false,
+      storage: 'r2',
+
+      // Tracks
+      tracks: tracks,
+
+      // Stats
+      plays: 0,
+      downloads: 0,
+      views: 0,
+      likes: 0,
+      ratings: { average: 0, count: 0, total: 0 },
+
+      // Timestamps
+      createdAt: now,
+      updatedAt: now,
+      processedAt: now,
+
+      // Original submission
+      submissionId: submissionId,
+      email: metadata.email || '',
+      submittedBy: metadata.submittedBy || ''
+    };
+
+    // Save to Firebase
+    await setDocument('releases', releaseId, releaseData);
+
+    console.log(`[process-release] Created release: ${releaseId}`);
+
+    // Optionally delete submission files (or keep for review)
+    // For now, keep them
+
+    return new Response(JSON.stringify({
+      success: true,
+      releaseId,
+      artist: metadata.artistName,
+      title: metadata.releaseName,
+      tracks: tracks.length,
+      coverUrl: artworkUrl
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('[process-release] Error:', error);
+    return new Response(JSON.stringify({
+      error: error instanceof Error ? error.message : 'Processing failed'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};

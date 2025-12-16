@@ -322,8 +322,8 @@ export const prerender = false;
     <script type="module">
       import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
       import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-      import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy, setDoc, getDoc, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-      
+      import { getFirestore, doc, updateDoc, deleteDoc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
       const firebaseConfig = {
         apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
         authDomain: "freshwax-store.firebaseapp.com",
@@ -332,189 +332,58 @@ export const prerender = false;
         messagingSenderId: "675435782973",
         appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
       };
-      
+
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
       const db = getFirestore(app);
-      
+
       let allUsers = [];
       let currentFilter = 'all';
       let currentUserId = null;
       let currentUserCollection = null;
-      
+      let currentAdminUid = null;
+
       onAuthStateChanged(auth, (user) => {
         if (!user) {
           window.location.href = '/admin/login';
           return;
         }
+        currentAdminUid = user.uid;
         loadUsers();
       });
-      
+
       async function loadUsers() {
         try {
-          const usersMap = new Map();
-          const INITIAL_LIMIT = 50; // Load 50 per collection initially
-          let hasMoreData = false;
-          
-          // Load from customers collection (limited)
-          const customersSnapshot = await getDocs(query(collection(db, 'customers'), orderBy('createdAt', 'desc'), limit(INITIAL_LIMIT)));
-          if (customersSnapshot.size >= INITIAL_LIMIT) hasMoreData = true;
-          
-          customersSnapshot.forEach(doc => {
-            const data = doc.data();
-            usersMap.set(doc.id, {
-              id: doc.id,
-              collection: 'customers',
-              displayName: data.displayName || data.name || data.fullName || 'Unknown',
-              fullName: data.fullName || data.name || '',
-              email: data.email || '',
-              phone: data.phone || '',
-              address: data.address || data.shippingAddress || null,
-              avatarUrl: data.avatarUrl || data.photoURL || null,
-              roles: {
-                customer: true,
-                dj: data.isDJ === true || data.roles?.dj === true,
-                artist: data.isArtist === true || data.roles?.artist === true,
-                merch: data.isMerchSupplier === true || data.roles?.merchSupplier === true
-              },
-              isAdmin: data.isAdmin === true || data.roles?.admin === true,
-              permissions: data.permissions || { canBuy: true, canComment: true, canRate: true },
-              approved: data.approved === true,
-              suspended: data.suspended === true,
-              notes: data.adminNotes || '',
-              registeredAt: data.createdAt?.toDate?.() || data.registeredAt?.toDate?.() || null,
-              orderCount: 0,
-              totalSpent: 0,
-              source: 'customers'
-            });
+          // Use server-side API to load users (bypasses Firestore rules)
+          const response = await fetch('/api/admin/list-users', {
+            headers: {
+              'x-admin-uid': currentAdminUid
+            }
           });
-          
-          // Load from users collection (merge with existing, limited)
-          try {
-            const usersSnapshot = await getDocs(query(collection(db, 'users'), limit(INITIAL_LIMIT)));
-            if (usersSnapshot.size >= INITIAL_LIMIT) hasMoreData = true;
-            
-            usersSnapshot.forEach(doc => {
-              const data = doc.data();
-              if (usersMap.has(doc.id)) {
-                // Merge data - fill in missing fields
-                const existing = usersMap.get(doc.id);
-                existing.roles.dj = existing.roles.dj || data.isDJ === true || data.roles?.dj === true;
-                existing.roles.artist = existing.roles.artist || data.isArtist === true || data.roles?.artist === true;
-                existing.roles.merch = existing.roles.merch || data.isMerchSupplier === true || data.roles?.merchSupplier === true;
-                existing.approved = existing.approved || data.approved === true;
-                existing.isAdmin = existing.isAdmin || data.isAdmin === true || data.roles?.admin === true;
-                if (!existing.email && data.email) existing.email = data.email;
-                if (!existing.phone && data.phone) existing.phone = data.phone;
-                if (!existing.avatarUrl && (data.avatarUrl || data.photoURL)) existing.avatarUrl = data.avatarUrl || data.photoURL;
-                if (data.address) existing.address = data.address;
-                if (data.permissions) existing.permissions = { ...existing.permissions, ...data.permissions };
-              } else {
-                usersMap.set(doc.id, {
-                  id: doc.id,
-                  collection: 'users',
-                  displayName: data.displayName || data.name || 'Unknown',
-                  fullName: data.fullName || data.name || '',
-                  email: data.email || '',
-                  phone: data.phone || '',
-                  address: data.address || null,
-                  avatarUrl: data.avatarUrl || data.photoURL || null,
-                  roles: {
-                    customer: true,
-                    dj: data.isDJ === true || data.roles?.dj === true,
-                    artist: data.isArtist === true || data.roles?.artist === true,
-                    merch: data.isMerchSupplier === true || data.roles?.merchSupplier === true
-                  },
-                  isAdmin: data.isAdmin === true || data.roles?.admin === true,
-                  permissions: data.permissions || { canBuy: true, canComment: true, canRate: true },
-                  approved: data.approved === true,
-                  suspended: data.suspended === true,
-                  notes: data.adminNotes || '',
-                  registeredAt: data.createdAt?.toDate?.() || null,
-                  orderCount: 0,
-                  totalSpent: 0,
-                  source: 'users'
-                });
-              }
-            });
-          } catch (e) { /* Collection may not exist */ }
-          
-          // Load from artists collection (for pro accounts, limited)
-          try {
-            const artistsSnapshot = await getDocs(query(collection(db, 'artists'), limit(INITIAL_LIMIT)));
-            if (artistsSnapshot.size >= INITIAL_LIMIT) hasMoreData = true;
-            
-            artistsSnapshot.forEach(doc => {
-              const data = doc.data();
-              if (usersMap.has(doc.id)) {
-                // Merge artist data - fill in missing fields
-                const existing = usersMap.get(doc.id);
-                existing.roles.artist = existing.roles.artist || data.isArtist === true;
-                existing.roles.merch = existing.roles.merch || data.isMerchSupplier === true;
-                existing.approved = existing.approved || data.approved === true;
-                existing.suspended = existing.suspended || data.suspended === true;
-                existing.notes = existing.notes || data.adminNotes || '';
-                existing.hasArtistRecord = true;
-                if (!existing.email && data.email) existing.email = data.email;
-                if (!existing.phone && (data.phone || data.whatsapp)) existing.phone = data.phone || data.whatsapp;
-                if (!existing.avatarUrl && (data.avatarUrl || data.photoURL || data.imageUrl)) {
-                  existing.avatarUrl = data.avatarUrl || data.photoURL || data.imageUrl;
-                }
-              } else {
-                usersMap.set(doc.id, {
-                  id: doc.id,
-                  collection: 'artists',
-                  displayName: data.artistName || data.name || 'Unknown',
-                  fullName: data.name || data.fullName || '',
-                  email: data.email || '',
-                  phone: data.phone || data.whatsapp || '',
-                  address: null,
-                  avatarUrl: data.avatarUrl || data.photoURL || data.imageUrl || null,
-                  roles: {
-                    customer: false,
-                    dj: false,
-                    artist: data.isArtist === true,
-                    merch: data.isMerchSupplier === true
-                  },
-                  isAdmin: false,
-                  permissions: { canBuy: true, canComment: true, canRate: true },
-                  approved: data.approved === true,
-                  suspended: data.suspended === true,
-                  notes: data.adminNotes || '',
-                  registeredAt: data.registeredAt?.toDate?.() || data.createdAt?.toDate?.() || null,
-                  orderCount: 0,
-                  totalSpent: 0,
-                  source: 'artists',
-                  hasArtistRecord: true
-                });
-              }
-            });
-          } catch (e) { /* Collection may not exist */ }
-          
-          allUsers = Array.from(usersMap.values());
-          window.allUsersLoaded = !hasMoreData; // Track if all data loaded
-          
-          // Sort by registration date (newest first)
-          allUsers.sort((a, b) => {
-            const dateA = a.registeredAt || new Date(0);
-            const dateB = b.registeredAt || new Date(0);
-            return dateB - dateA;
-          });
-          
-          updateStats();
+
+          const data = await response.json();
+
+          if (!data.success) {
+            throw new Error(data.error || 'Failed to load users');
+          }
+
+          // Convert date strings back to Date objects for sorting/display
+          allUsers = data.users.map(u => ({
+            ...u,
+            registeredAt: u.registeredAt ? new Date(u.registeredAt) : null
+          }));
+
+          // Update stats from API response
+          document.getElementById('totalCount').textContent = data.stats.totalCount;
+          document.getElementById('customerCount').textContent = data.stats.customerCount;
+          document.getElementById('djCount').textContent = data.stats.djCount;
+          document.getElementById('totalRevenue').textContent = '£' + data.stats.totalRevenue.toFixed(0);
+
           renderUsers();
-          
+
           document.getElementById('loadingState').style.display = 'none';
           document.getElementById('usersTable').style.display = 'block';
-          
-          // Load order data in background
-          loadOrderData();
-          
-          // Show "Load All" button if there's more data
-          if (hasMoreData) {
-            showLoadAllButton();
-          }
-          
+
         } catch (error) {
           console.error('Error loading users:', error);
           document.getElementById('loadingState').innerHTML = `
@@ -527,183 +396,7 @@ export const prerender = false;
           `;
         }
       }
-      
-      function showLoadAllButton() {
-        const toolbar = document.querySelector('.toolbar');
-        if (toolbar && !document.getElementById('loadAllBtn')) {
-          const loadAllBtn = document.createElement('button');
-          loadAllBtn.id = 'loadAllBtn';
-          loadAllBtn.className = 'btn btn-outline';
-          loadAllBtn.innerHTML = '<span>📥</span> Load All Users';
-          loadAllBtn.onclick = loadAllUsers;
-          loadAllBtn.style.marginLeft = 'auto';
-          toolbar.appendChild(loadAllBtn);
-        }
-      }
-      
-      async function loadAllUsers() {
-        const btn = document.getElementById('loadAllBtn');
-        if (btn) {
-          btn.disabled = true;
-          btn.innerHTML = '<span>⏳</span> Loading...';
-        }
-        
-        try {
-          const usersMap = new Map();
-          
-          // Load ALL from customers collection (no limit)
-          const customersSnapshot = await getDocs(query(collection(db, 'customers'), orderBy('createdAt', 'desc')));
-          customersSnapshot.forEach(doc => {
-            const data = doc.data();
-            usersMap.set(doc.id, {
-              id: doc.id,
-              collection: 'customers',
-              displayName: data.displayName || data.name || data.fullName || 'Unknown',
-              fullName: data.fullName || data.name || '',
-              email: data.email || '',
-              phone: data.phone || '',
-              address: data.address || data.shippingAddress || null,
-              avatarUrl: data.avatarUrl || data.photoURL || null,
-              roles: {
-                customer: true,
-                dj: data.isDJ === true || data.roles?.dj === true,
-                artist: data.isArtist === true || data.roles?.artist === true,
-                merch: data.isMerchSupplier === true || data.roles?.merchSupplier === true
-              },
-              isAdmin: data.isAdmin === true || data.roles?.admin === true,
-              permissions: data.permissions || { canBuy: true, canComment: true, canRate: true },
-              approved: data.approved === true,
-              suspended: data.suspended === true,
-              notes: data.adminNotes || '',
-              registeredAt: data.createdAt?.toDate?.() || data.registeredAt?.toDate?.() || null,
-              orderCount: 0,
-              totalSpent: 0,
-              source: 'customers'
-            });
-          });
-          
-          // Load ALL from users collection
-          try {
-            const usersSnapshot = await getDocs(query(collection(db, 'users')));
-            usersSnapshot.forEach(doc => {
-              const data = doc.data();
-              if (usersMap.has(doc.id)) {
-                // Merge data - fill in missing fields
-                const existing = usersMap.get(doc.id);
-                existing.roles.dj = existing.roles.dj || data.isDJ === true || data.roles?.dj === true;
-                existing.roles.artist = existing.roles.artist || data.isArtist === true || data.roles?.artist === true;
-                existing.roles.merch = existing.roles.merch || data.isMerchSupplier === true || data.roles?.merchSupplier === true;
-                existing.approved = existing.approved || data.approved === true;
-                existing.isAdmin = existing.isAdmin || data.isAdmin === true || data.roles?.admin === true;
-                if (!existing.email && data.email) existing.email = data.email;
-                if (!existing.phone && data.phone) existing.phone = data.phone;
-                if (!existing.avatarUrl && (data.avatarUrl || data.photoURL)) existing.avatarUrl = data.avatarUrl || data.photoURL;
-                if (data.address) existing.address = data.address;
-                if (data.permissions) existing.permissions = { ...existing.permissions, ...data.permissions };
-              } else {
-                usersMap.set(doc.id, {
-                  id: doc.id,
-                  collection: 'users',
-                  displayName: data.displayName || data.name || 'Unknown',
-                  fullName: data.fullName || data.name || '',
-                  email: data.email || '',
-                  phone: data.phone || '',
-                  address: data.address || null,
-                  avatarUrl: data.avatarUrl || data.photoURL || null,
-                  roles: {
-                    customer: true,
-                    dj: data.isDJ === true || data.roles?.dj === true,
-                    artist: data.isArtist === true || data.roles?.artist === true,
-                    merch: data.isMerchSupplier === true || data.roles?.merchSupplier === true
-                  },
-                  isAdmin: data.isAdmin === true || data.roles?.admin === true,
-                  permissions: data.permissions || { canBuy: true, canComment: true, canRate: true },
-                  approved: data.approved === true,
-                  suspended: data.suspended === true,
-                  notes: data.adminNotes || '',
-                  registeredAt: data.createdAt?.toDate?.() || null,
-                  orderCount: 0,
-                  totalSpent: 0,
-                  source: 'users'
-                });
-              }
-            });
-          } catch (e) { }
-          
-          // Load ALL from artists collection
-          try {
-            const artistsSnapshot = await getDocs(query(collection(db, 'artists')));
-            artistsSnapshot.forEach(doc => {
-              const data = doc.data();
-              if (usersMap.has(doc.id)) {
-                // Merge data - fill in missing fields
-                const existing = usersMap.get(doc.id);
-                existing.roles.artist = existing.roles.artist || data.isArtist === true;
-                existing.roles.merch = existing.roles.merch || data.isMerchSupplier === true;
-                existing.approved = existing.approved || data.approved === true;
-                existing.suspended = existing.suspended || data.suspended === true;
-                existing.notes = existing.notes || data.adminNotes || '';
-                existing.hasArtistRecord = true;
-                if (!existing.email && data.email) existing.email = data.email;
-                if (!existing.phone && (data.phone || data.whatsapp)) existing.phone = data.phone || data.whatsapp;
-                if (!existing.avatarUrl && (data.avatarUrl || data.photoURL || data.imageUrl)) {
-                  existing.avatarUrl = data.avatarUrl || data.photoURL || data.imageUrl;
-                }
-              } else {
-                usersMap.set(doc.id, {
-                  id: doc.id,
-                  collection: 'artists',
-                  displayName: data.artistName || data.name || 'Unknown',
-                  fullName: data.name || data.fullName || '',
-                  email: data.email || '',
-                  phone: data.phone || data.whatsapp || '',
-                  address: null,
-                  avatarUrl: data.avatarUrl || data.photoURL || data.imageUrl || null,
-                  roles: {
-                    customer: false,
-                    dj: false,
-                    artist: data.isArtist === true,
-                    merch: data.isMerchSupplier === true
-                  },
-                  isAdmin: false,
-                  permissions: { canBuy: true, canComment: true, canRate: true },
-                  approved: data.approved === true,
-                  suspended: data.suspended === true,
-                  notes: data.adminNotes || '',
-                  registeredAt: data.registeredAt?.toDate?.() || data.createdAt?.toDate?.() || null,
-                  orderCount: 0,
-                  totalSpent: 0,
-                  source: 'artists',
-                  hasArtistRecord: true
-                });
-              }
-            });
-          } catch (e) { }
-          
-          allUsers = Array.from(usersMap.values());
-          window.allUsersLoaded = true;
-          
-          allUsers.sort((a, b) => {
-            const dateA = a.registeredAt || new Date(0);
-            const dateB = b.registeredAt || new Date(0);
-            return dateB - dateA;
-          });
-          
-          updateStats();
-          renderUsers();
-          
-          // Remove the Load All button
-          if (btn) btn.remove();
-          
-        } catch (error) {
-          console.error('Error loading all users:', error);
-          if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<span>📥</span> Load All Users';
-          }
-        }
-      }
-      
+
       function updateStats() {
         // Filter to only show customers and DJs - EXCLUDE users with artist or merch roles
         // Those users belong exclusively in Partner Management
@@ -711,45 +404,10 @@ export const prerender = false;
         document.getElementById('totalCount').textContent = usersToShow.length;
         document.getElementById('customerCount').textContent = usersToShow.filter(u => u.roles.customer && !u.roles.dj).length;
         document.getElementById('djCount').textContent = usersToShow.filter(u => u.roles.dj).length;
-        
+
         // Calculate total revenue
         const totalRevenue = usersToShow.reduce((sum, u) => sum + (u.totalSpent || 0), 0);
         document.getElementById('totalRevenue').textContent = '£' + totalRevenue.toFixed(0);
-      }
-      
-      // Load order data for users (called after initial load)
-      async function loadOrderData() {
-        try {
-          const ordersSnapshot = await getDocs(collection(db, 'orders'));
-          const ordersByUser = new Map();
-          
-          ordersSnapshot.forEach(doc => {
-            const data = doc.data();
-            const userId = data.userId || data.customerId;
-            if (!userId) return;
-            
-            if (!ordersByUser.has(userId)) {
-              ordersByUser.set(userId, { count: 0, total: 0 });
-            }
-            const userOrders = ordersByUser.get(userId);
-            userOrders.count++;
-            userOrders.total += data.total || data.totalAmount || 0;
-          });
-          
-          // Merge order data into users
-          allUsers.forEach(user => {
-            const orders = ordersByUser.get(user.id);
-            if (orders) {
-              user.orderCount = orders.count;
-              user.totalSpent = orders.total;
-            }
-          });
-          
-          updateStats();
-          renderUsers();
-        } catch (e) {
-          console.log('Could not load order data:', e.message);
-        }
       }
       
       function renderUsers() {

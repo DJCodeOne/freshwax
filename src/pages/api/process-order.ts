@@ -1,7 +1,7 @@
 // src/pages/api/process-order.ts
 // Comprehensive order processing: payment splits, digital delivery, vinyl dropship
 import type { APIRoute } from 'astro';
-import { getDocument, addDocument, updateDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, getDocumentsBatch, addDocument, updateDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -56,9 +56,10 @@ function calculatePaymentSplit(itemPrice: number, quantity: number = 1) {
 }
 
 // Get digital downloads for a release (used for both digital and vinyl purchases)
-async function getDigitalDownloads(releaseId: string, itemType: string, trackId?: string) {
+// Accepts optional cached release data to avoid duplicate fetches
+async function getDigitalDownloads(releaseId: string, itemType: string, trackId?: string, cachedRelease?: any) {
   try {
-    const releaseData = await getDocument('releases', releaseId);
+    const releaseData = cachedRelease || await getDocument('releases', releaseId);
     if (!releaseData) return null;
 
     const artistName = releaseData?.artistName || 'Unknown Artist';
@@ -110,9 +111,10 @@ async function getDigitalDownloads(releaseId: string, itemType: string, trackId?
 }
 
 // Get stockist info for vinyl
-async function getStockistInfo(releaseId: string) {
+// Accepts optional cached release data to avoid duplicate fetches
+async function getStockistInfo(releaseId: string, cachedRelease?: any) {
   try {
-    const releaseData = await getDocument('releases', releaseId);
+    const releaseData = cachedRelease || await getDocument('releases', releaseId);
     if (!releaseData) return null;
 
     const stockistId = releaseData?.stockistId || releaseData?.supplierId;
@@ -181,6 +183,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const orderNumber = generateOrderNumber();
     const now = new Date().toISOString();
 
+    // OPTIMIZATION: Batch fetch all releases in a single API call (avoids N+1 queries)
+    const uniqueReleaseIds = [...new Set(orderData.items
+      .map((item: any) => item.releaseId || item.productId || item.id)
+      .filter(Boolean)
+    )] as string[];
+    const releaseCache = uniqueReleaseIds.length > 0
+      ? await getDocumentsBatch('releases', uniqueReleaseIds)
+      : new Map<string, any>();
+
+    log.info('[process-order] Batch fetched', releaseCache.size, 'releases for', orderData.items.length, 'items');
+
     // Process each item
     const processedItems = [];
     const artistPayments: Record<string, any> = {};
@@ -205,7 +218,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Digital downloads (for digital purchases AND vinyl purchases)
       if ((isDigital || isVinyl) && releaseId) {
-        const downloads = await getDigitalDownloads(releaseId, itemType, item.trackId);
+        const cachedRelease = releaseCache.get(releaseId);
+        const downloads = await getDigitalDownloads(releaseId, itemType, item.trackId, cachedRelease);
         if (downloads) {
           processedItem.downloads = downloads;
           processedItem.includesDigital = true;
@@ -236,7 +250,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Vinyl - get stockist for dropship
       if (isVinyl && releaseId) {
-        const stockist = await getStockistInfo(releaseId);
+        const cachedReleaseForStockist = releaseCache.get(releaseId);
+        const stockist = await getStockistInfo(releaseId, cachedReleaseForStockist);
         if (stockist) {
           processedItem.stockist = stockist;
           processedItem.requiresDropship = true;
@@ -316,53 +331,46 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const orderRef = await addDocument('orders', order);
     log.info('[process-order] Created order:', orderNumber, orderRef.id);
 
-    // Send customer confirmation email with download links
-    try {
-      await fetch(new URL('/api/send-order-emails', request.url).toString(), {
+    // Send all notification emails in parallel for better performance
+    const emailPromises: Promise<void>[] = [];
+    const emailUrl = new URL('/api/send-order-emails', request.url).toString();
+
+    // Customer confirmation email
+    emailPromises.push(
+      fetch(emailUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'customer',
-          orderId: orderRef.id,
-          orderNumber,
-          order,
-        })
-      });
-    } catch (e) { log.error('[process-order] Customer email failed:', e); }
+        body: JSON.stringify({ type: 'customer', orderId: orderRef.id, orderNumber, order })
+      }).then(() => {}).catch(e => log.error('[process-order] Customer email failed:', e))
+    );
 
-    // Send artist payment notifications
+    // Artist payment notifications
     for (const artistPayment of Object.values(artistPayments)) {
-      try {
-        await fetch(new URL('/api/send-order-emails', request.url).toString(), {
+      emailPromises.push(
+        fetch(emailUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'artist',
-            orderId: orderRef.id,
-            orderNumber,
-            artistPayment,
-          })
-        });
-      } catch (e) { log.error('[process-order] Artist email failed:', e); }
+          body: JSON.stringify({ type: 'artist', orderId: orderRef.id, orderNumber, artistPayment })
+        }).then(() => {}).catch(e => log.error('[process-order] Artist email failed:', e))
+      );
     }
 
-    // Send stockist fulfillment emails for vinyl dropship
+    // Stockist fulfillment emails
     for (const stockistOrder of Object.values(stockistOrders)) {
-      try {
-        await fetch(new URL('/api/send-order-emails', request.url).toString(), {
+      emailPromises.push(
+        fetch(emailUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            type: 'stockist',
-            orderId: orderRef.id,
-            orderNumber,
-            stockistOrder,
-            customer: order.customer,
-            shipping: order.shipping,
+            type: 'stockist', orderId: orderRef.id, orderNumber, stockistOrder,
+            customer: order.customer, shipping: order.shipping
           })
-        });
-      } catch (e) { log.error('[process-order] Stockist email failed:', e); }
+        }).then(() => {}).catch(e => log.error('[process-order] Stockist email failed:', e))
+      );
     }
+
+    // Wait for all emails to be sent
+    await Promise.all(emailPromises);
 
     // Update customer order count
     if (orderData.customer.userId) {

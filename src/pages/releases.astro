@@ -116,15 +116,38 @@ const totalReleases = Object.values(releasesByLabel).reduce((sum, releases) => s
               >
                 <!-- Label Header -->
                 <div class="mb-6">
-                  <div class="inline-flex items-center bg-black border-l-4 border-red-600 pl-4 pr-6 py-3 shadow-lg">
-                    <div>
-                      <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase drop-shadow-md font-heading">
-                        {label}
-                      </h2>
-                      <p class="text-sm text-gray-400 mt-0.5">
-                        {releasesByLabel[label].length} release{releasesByLabel[label].length !== 1 ? 's' : ''}
-                      </p>
+                  <div class="flex flex-wrap items-center gap-4">
+                    <div class="inline-flex items-center bg-black border-l-4 border-red-600 pl-4 pr-6 py-3 shadow-lg">
+                      <div>
+                        <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase drop-shadow-md font-heading">
+                          {label}
+                        </h2>
+                        <p class="text-sm text-gray-400 mt-0.5">
+                          {releasesByLabel[label].length} release{releasesByLabel[label].length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
                     </div>
+
+                    {/* Buy All Discography Button */}
+                    {releasesByLabel[label].length > 1 && (
+                      <button
+                        class="buy-discography-btn flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-bold rounded-lg shadow-lg transition-all text-sm"
+                        data-label={label}
+                        data-releases={JSON.stringify(releasesByLabel[label].map(r => ({
+                          id: r.id,
+                          title: r.releaseName || 'Untitled',
+                          artist: r.artistName || 'Unknown Artist',
+                          price: r.pricing?.digital || r.pricePerSale || 0,
+                          artwork: r.coverArtUrl || '/place-holder.webp'
+                        })))}
+                        data-total-price={releasesByLabel[label].reduce((sum, r) => sum + (r.pricing?.digital || r.pricePerSale || 0), 0).toFixed(2)}
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                        <span>Buy All ({releasesByLabel[label].length}) - £{releasesByLabel[label].reduce((sum, r) => sum + (r.pricing?.digital || r.pricePerSale || 0), 0).toFixed(2)}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -197,6 +220,157 @@ const totalReleases = Object.values(releasesByLabel).reduce((sum, releases) => s
     document.querySelectorAll('.label-section').forEach(section => {
       observer.observe(section);
     });
+
+    // Buy All Discography functionality
+    function getCustomerId() {
+      const cookies = document.cookie.split(';');
+      for (const cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'customerId' && value) {
+          return value;
+        }
+      }
+      return null;
+    }
+
+    function getCart() {
+      const customerId = getCustomerId();
+      if (!customerId) return { items: [] };
+
+      try {
+        const stored = localStorage.getItem('freshwax_cart_' + customerId);
+        if (stored) {
+          const data = JSON.parse(stored);
+          return data.items ? data : { items: data };
+        }
+      } catch (e) {}
+
+      return { items: [] };
+    }
+
+    function saveCart(items) {
+      const customerId = getCustomerId();
+      if (!customerId) return;
+
+      const cartData = {
+        items: items,
+        updatedAt: new Date().toISOString()
+      };
+      localStorage.setItem('freshwax_cart_' + customerId, JSON.stringify(cartData));
+      window.dispatchEvent(new CustomEvent('cart-updated', { detail: cartData }));
+      window.dispatchEvent(new CustomEvent('cartUpdated', { detail: cartData }));
+
+      if (window.FreshWaxCart) {
+        window.FreshWaxCart.updateBadge();
+      }
+    }
+
+    function showToast(message) {
+      const existing = document.getElementById('discography-toast');
+      if (existing) existing.remove();
+
+      const toast = document.createElement('div');
+      toast.id = 'discography-toast';
+      toast.textContent = message;
+      toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:16px 28px;border-radius:12px;font-size:15px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.4);';
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    document.querySelectorAll('.buy-discography-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+
+        const customerId = getCustomerId();
+        if (!customerId) {
+          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+          return;
+        }
+
+        const label = btn.getAttribute('data-label');
+        const releasesData = JSON.parse(btn.getAttribute('data-releases') || '[]');
+        const totalPrice = parseFloat(btn.getAttribute('data-total-price') || '0');
+
+        if (releasesData.length === 0) {
+          alert('No releases found for this label');
+          return;
+        }
+
+        // Confirm purchase
+        const confirmed = confirm(`Add all ${releasesData.length} releases from "${label}" to your cart?\n\nTotal: £${totalPrice.toFixed(2)}\n\nThis includes:\n${releasesData.slice(0, 5).map(r => '• ' + r.artist + ' - ' + r.title).join('\n')}${releasesData.length > 5 ? '\n... and ' + (releasesData.length - 5) + ' more' : ''}`);
+
+        if (!confirmed) return;
+
+        // Disable button during operation
+        btn.disabled = true;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Adding...</span>';
+
+        const cart = getCart();
+        let items = cart.items || [];
+        let addedCount = 0;
+        let skippedCount = 0;
+
+        for (const release of releasesData) {
+          // Check if already in cart
+          const existingIndex = items.findIndex(item =>
+            item.id === release.id && (item.type === 'digital' || item.type === 'vinyl')
+          );
+
+          if (existingIndex !== -1) {
+            skippedCount++;
+            continue;
+          }
+
+          // Remove any single tracks from this release
+          items = items.filter(item => !(item.id === release.id && item.type === 'track'));
+
+          // Add the digital release
+          items.push({
+            id: release.id,
+            releaseId: release.id,
+            type: 'digital',
+            format: 'digital',
+            name: release.artist + ' - ' + release.title,
+            title: release.title,
+            artist: release.artist,
+            price: release.price,
+            image: release.artwork,
+            artwork: release.artwork,
+            quantity: 1,
+            fromDiscography: true,
+            label: label
+          });
+
+          addedCount++;
+        }
+
+        saveCart(items);
+
+        // Show success state
+        btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Added!</span>';
+        btn.classList.remove('from-green-600', 'to-green-700');
+        btn.classList.add('from-green-500', 'to-green-600');
+
+        let message = `Added ${addedCount} release${addedCount !== 1 ? 's' : ''} from ${label} to cart!`;
+        if (skippedCount > 0) {
+          message += ` (${skippedCount} already in cart)`;
+        }
+        showToast(message);
+
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.innerHTML = originalHTML;
+          btn.classList.remove('from-green-500', 'to-green-600');
+          btn.classList.add('from-green-600', 'to-green-700');
+        }, 2000);
+      });
+    });
   </script>
 
   <style>
@@ -265,6 +439,42 @@ const totalReleases = Object.values(releasesByLabel).reduce((sum, releases) => s
     @media (max-width: 1024px) {
       aside {
         display: none;
+      }
+    }
+
+    /* Buy All Discography Button */
+    .buy-discography-btn {
+      transition: all 0.3s ease;
+    }
+
+    .buy-discography-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4);
+    }
+
+    .buy-discography-btn:active {
+      transform: translateY(0);
+    }
+
+    .buy-discography-btn:disabled {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+
+    @media (max-width: 640px) {
+      .buy-discography-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 0.875rem 1rem;
       }
     }
   </style>

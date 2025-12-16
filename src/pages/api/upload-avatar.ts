@@ -26,8 +26,8 @@ function getR2Config(env: any) {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID || '',
     secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY || '',
-    bucketName: env?.R2_BUCKET_NAME || import.meta.env.R2_BUCKET_NAME || 'freshwax',
-    publicUrl: env?.R2_PUBLIC_URL || import.meta.env.R2_PUBLIC_URL || 'https://cdn.freshwax.co.uk',
+    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
+    publicUrl: env?.R2_PUBLIC_URL || import.meta.env.R2_PUBLIC_URL || 'https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev',
   };
 }
 
@@ -50,10 +50,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const r2Config = getR2Config(env);
   const r2 = createR2Client(r2Config);
 
+  // Get idToken from Authorization header
+  const authHeader = request.headers.get('Authorization');
+  const idToken = authHeader?.replace('Bearer ', '') || undefined;
+
   try {
     const formData = await request.formData();
     const file = formData.get('avatar') as File;
     const userId = formData.get('userId') as string;
+    // Also check for idToken in form data as fallback
+    const formIdToken = formData.get('idToken') as string;
+    const finalIdToken = idToken || formIdToken || undefined;
 
     if (!file || !userId) {
       return new Response(JSON.stringify({
@@ -82,9 +89,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
+    console.log(`[upload-avatar] Processing file: ${file.name}, type: ${file.type}, size: ${file.size}`);
 
     // Process image: resize to 128x128 square, convert to WebP
-    const processed = await processImageToSquareWebP(arrayBuffer, AVATAR_SIZE, 60);
+    let processed;
+    try {
+      processed = await processImageToSquareWebP(arrayBuffer, AVATAR_SIZE, 60);
+    } catch (processError) {
+      console.error('[upload-avatar] Image processing failed:', processError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Failed to process image. Try a different image format (JPG or PNG recommended).',
+        details: processError instanceof Error ? processError.message : 'Processing error'
+      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
 
     const originalSize = file.size;
     const compressedSize = processed.buffer.length;
@@ -107,21 +125,46 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Upload compressed WebP to R2
-    await r2.send(new PutObjectCommand({
-      Bucket: r2Config.bucketName,
-      Key: filename,
-      Body: processed.buffer,
-      ContentType: 'image/webp',
-      CacheControl: 'public, max-age=86400', // 1 day cache
-    }));
+    console.log(`[upload-avatar] Uploading to R2: bucket=${r2Config.bucketName}, key=${filename}`);
+    try {
+      await r2.send(new PutObjectCommand({
+        Bucket: r2Config.bucketName,
+        Key: filename,
+        Body: processed.buffer,
+        ContentType: 'image/webp',
+        CacheControl: 'public, max-age=86400', // 1 day cache
+      }));
+      console.log(`[upload-avatar] R2 upload successful`);
+    } catch (r2Error) {
+      console.error('[upload-avatar] R2 upload failed:', r2Error);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Failed to upload to storage',
+        details: r2Error instanceof Error ? r2Error.message : 'R2 error'
+      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
 
     const avatarUrl = `${r2Config.publicUrl}/${filename}?t=${Date.now()}`;
 
-    // Update customer document
-    await setDocument('customers', userId, {
-      avatarUrl,
-      avatarUpdatedAt: new Date().toISOString()
-    });
+    // Update customer document with idToken for authentication
+    console.log(`[upload-avatar] Updating Firestore for user ${userId}, hasToken: ${!!finalIdToken}`);
+    try {
+      await setDocument('customers', userId, {
+        avatarUrl,
+        avatarUpdatedAt: new Date().toISOString()
+      }, finalIdToken);
+      console.log(`[upload-avatar] Firestore update successful`);
+    } catch (firestoreError) {
+      console.error('[upload-avatar] Firestore update failed:', firestoreError);
+      // Avatar was uploaded to R2, so return partial success
+      return new Response(JSON.stringify({
+        success: true,
+        avatarUrl,
+        warning: 'Avatar uploaded but profile update failed. Please try again.',
+        originalSize,
+        compressedSize: processed.buffer.length
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
 
     console.log(`[upload-avatar] Avatar uploaded for user ${userId}: ${avatarUrl}`);
 
@@ -153,6 +196,10 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   const r2Config = getR2Config(env);
   const r2 = createR2Client(r2Config);
 
+  // Get idToken from Authorization header
+  const authHeader = request.headers.get('Authorization');
+  const idToken = authHeader?.replace('Bearer ', '') || undefined;
+
   try {
     const data = await request.json();
     const { userId } = data;
@@ -181,7 +228,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     await setDocument('customers', userId, {
       avatarUrl: null,
       avatarUpdatedAt: new Date().toISOString()
-    });
+    }, idToken);
 
     console.log(`[upload-avatar] Avatar removed for user ${userId}`);
 

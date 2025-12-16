@@ -29,7 +29,14 @@
     to { transform: rotate(360deg); }
   }
   
-  .hidden { display: none !important; }
+  /* Dashboard-scoped hidden class - won't affect Tailwind responsive utilities like 'hidden lg:flex' */
+  .dashboard-main .hidden,
+  #loadingScreen.hidden,
+  #mainContent.hidden,
+  .tab-panel.hidden,
+  .modal-overlay.hidden {
+    display: none !important;
+  }
   
   #mainContent {
     max-width: 1000px;

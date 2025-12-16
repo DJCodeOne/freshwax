@@ -33,9 +33,9 @@ export const prerender = false;
           </div>
         </div>
         <div class="dashboard-header-right">
-          <a href="/artist/dashboard" id="proDashboardBtn" class="pro-dashboard-btn disabled" title="Available for approved artists & merch sellers">
+          <a href="/artist/dashboard" id="proDashboardBtn" class="pro-dashboard-btn disabled" title="Available for approved partners">
             <span class="pro-icon">⚡</span>
-            <span class="pro-text">Pro Dashboard</span>
+            <span class="pro-text">Partner Dashboard</span>
           </a>
           <button id="logoutBtn" class="logout-btn">Sign Out</button>
         </div>
@@ -84,7 +84,70 @@ export const prerender = false;
               <div class="stat-label">Spent</div>
             </div>
           </div>
-          
+
+          <!-- Subscription Status Card -->
+          <div class="subscription-card" id="subscriptionCard">
+            <div class="subscription-header">
+              <div class="subscription-tier" id="subscriptionTier">
+                <span class="tier-badge free">Standard</span>
+                <span class="tier-name">Account</span>
+              </div>
+              <div class="subscription-status" id="subscriptionStatus"></div>
+            </div>
+
+            <div class="subscription-usage" id="subscriptionUsage">
+              <div class="usage-item">
+                <span class="usage-label">DJ Mix Uploads</span>
+                <span class="usage-value"><span id="mixUploadsUsed">0</span> / <span id="mixUploadsLimit">1</span> this week</span>
+              </div>
+              <div class="usage-item">
+                <span class="usage-label">Live Streaming</span>
+                <span class="usage-value"><span id="streamTimeUsed">0</span> / <span id="streamTimeLimit">1</span> hours today</span>
+              </div>
+            </div>
+
+            <div class="subscription-upgrade" id="subscriptionUpgrade">
+              <div class="upgrade-benefits">
+                <h4>Upgrade to Pro - £10/year</h4>
+                <ul>
+                  <li>Unlimited DJ mix uploads</li>
+                  <li>4 hours live streaming per day</li>
+                  <li>Multiple concurrent stream slots</li>
+                  <li>Pro badge on profile</li>
+                </ul>
+              </div>
+              <button class="upgrade-btn" id="upgradeBtn">Upgrade to Pro</button>
+            </div>
+
+            <div class="subscription-pro hidden" id="subscriptionPro">
+              <div class="pro-active">
+                <span class="pro-icon-large">⚡</span>
+                <span class="pro-message">You're a Pro member!</span>
+              </div>
+              <p class="pro-expires" id="proExpires"></p>
+
+              <!-- Referral Code Section -->
+              <div class="referral-section" id="referralSection">
+                <div class="referral-header">
+                  <span class="referral-icon">🎁</span>
+                  <span class="referral-title">Invite a Friend - 50% Off!</span>
+                </div>
+                <p class="referral-desc">Share your code with a friend and they'll get 50% off their Pro upgrade (just £5 instead of £10)!</p>
+                <div class="referral-code-box">
+                  <code id="referralCodeDisplay" class="referral-code">Loading...</code>
+                  <button class="copy-referral-btn" id="copyReferralBtn" title="Copy code">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                </div>
+                <p class="referral-note" id="referralNote">One-time use code. Expires in 1 year.</p>
+                <p class="referral-used hidden" id="referralUsed">✓ Your referral code has been used!</p>
+              </div>
+            </div>
+          </div>
+
           <div class="section">
             <div class="section-header">
               <h2>Recent Orders</h2>
@@ -562,16 +625,24 @@ export const prerender = false;
 
   // Fetch mixes via API
   let mixesLoaded = false;
-  async function fetchMixes(userId) {
-    if (mixesLoaded) return;
-    
+
+  // Reset mixesLoaded when page becomes visible again (user returns from editing)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      mixesLoaded = false; // Force refetch on next tab click
+    }
+  });
+
+  async function fetchMixes(userId, forceRefresh = false) {
+    if (mixesLoaded && !forceRefresh) return;
+
     const container = document.getElementById('mixesContainer');
     if (!container) return;
-    
+
     try {
       const response = await fetch(`/api/get-dj-mixes?userId=${encodeURIComponent(userId)}`);
       const data = await response.json();
-      
+
       if (data.success && data.mixes) {
         const mixes = data.mixes;
         mixesLoaded = true;
@@ -611,7 +682,10 @@ export const prerender = false;
             
             // Handle various field name formats from API
             const djName = mix.dj_name || mix.djName || mix.artist || 'Unknown DJ';
-            const artworkUrl = mix.artwork_url || mix.artworkUrl || mix.artwork || mix.imageUrl || mix.coverUrl || '';
+            const rawArtworkUrl = mix.artwork_url || mix.artworkUrl || mix.artwork || mix.imageUrl || mix.coverUrl || '';
+            // Add cache-busting parameter using updatedAt timestamp to show fresh artwork after edits
+            const cacheBuster = mix.updatedAt ? new Date(mix.updatedAt).getTime() : Date.now();
+            const artworkUrl = rawArtworkUrl ? `${rawArtworkUrl}${rawArtworkUrl.includes('?') ? '&' : '?'}v=${cacheBuster}` : '';
             const mixTitle = mix.title || mix.name || 'Untitled Mix';
             const genre = mix.genre || 'Jungle & D&B';
             
@@ -1030,41 +1104,39 @@ export const prerender = false;
     }
   }
 
-  // Check if user is an approved partner and enable Pro Dashboard button
+  // Check if user is an approved partner and enable Partner Dashboard button
+  // Partner Dashboard is ONLY for artists and merch sellers, NOT for DJs or customers
   async function checkPartnerStatus(userId) {
     const proDashboardBtn = document.getElementById('proDashboardBtn');
     if (!proDashboardBtn) return;
-    
+
     try {
       const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(userId)}`);
       const data = await response.json();
-      
+
       console.log('[Dashboard] Partner status check:', data);
-      
+
       if (data.success) {
-        // Check if they're an approved partner OR a DJ (DJs can access for mixes)
-        const hasPartnerRole = data.roles?.artist || data.roles?.merchSupplier || data.roles?.dj;
-        const isApprovedPartner = data.isApproved && hasPartnerRole;
-        
-        console.log('[Dashboard] hasPartnerRole:', hasPartnerRole, 'isApproved:', data.isApproved, 'isApprovedPartner:', isApprovedPartner);
-        
-        if (isApprovedPartner || data.isPro) {
-          // Enable the Pro Dashboard button
+        // Partner Dashboard is only for artists and merch sellers (NOT DJs)
+        const isArtistOrMerchSeller = data.roles?.artist || data.roles?.merchSupplier;
+        const isApprovedPartner = data.isApproved && isArtistOrMerchSeller;
+
+        console.log('[Dashboard] isArtistOrMerchSeller:', isArtistOrMerchSeller, 'isApproved:', data.isApproved, 'isApprovedPartner:', isApprovedPartner);
+
+        if (isApprovedPartner) {
+          // Enable the Partner Dashboard button for approved artists/merch sellers
           proDashboardBtn.classList.remove('disabled');
-          proDashboardBtn.title = 'Access your releases, mixes and merch';
-          
-          // Set partnerId cookie for pro dashboard (30 days)
+          proDashboardBtn.title = 'Access your releases and merch';
+
+          // Set partnerId cookie for partner dashboard (30 days)
           document.cookie = `partnerId=${userId}; path=/; max-age=2592000; SameSite=Lax`;
           console.log('[Dashboard] partnerId cookie set for:', userId);
-        } else if (hasPartnerRole) {
-          // They have roles but not approved yet - still let them access for DJ mixes
-          proDashboardBtn.classList.remove('disabled');
-          proDashboardBtn.title = 'Access DJ mixes (other features pending approval)';
-          document.cookie = `partnerId=${userId}; path=/; max-age=2592000; SameSite=Lax`;
-          console.log('[Dashboard] partnerId cookie set for pending partner:', userId);
+        } else if (isArtistOrMerchSeller) {
+          // They have artist/merch roles but not approved yet
+          proDashboardBtn.title = 'Pending approval - available for artists & merch sellers';
         } else {
-          // Just a customer
-          proDashboardBtn.title = 'Available for artists, DJs & merch sellers';
+          // DJs or customers - no access to Partner Dashboard
+          proDashboardBtn.title = 'Available for artists & merch sellers only';
         }
       }
     } catch (error) {
@@ -1665,13 +1737,19 @@ export const prerender = false;
         avatarStatus.className = 'avatar-status uploading';
         
         try {
-          // Upload to API
+          // Upload to API with authentication
           const formData = new FormData();
           formData.append('avatar', file);
           formData.append('userId', currentUser.uid);
-          
+
+          // Get idToken for Firestore write authentication
+          const idToken = await currentUser.getIdToken();
+
           const response = await fetch('/api/upload-avatar', {
             method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${idToken}`
+            },
             body: formData
           });
           
@@ -1765,9 +1843,15 @@ export const prerender = false;
         avatarStatus.className = 'avatar-status uploading';
         
         try {
+          // Get idToken for Firestore write authentication
+          const idToken = await currentUser.getIdToken();
+
           const response = await fetch('/api/upload-avatar', {
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            },
             body: JSON.stringify({ userId: currentUser.uid })
           });
           
@@ -2373,7 +2457,187 @@ export const prerender = false;
       console.error('Error loading credit balance:', error);
     }
   }
-  
+
+  // Load subscription status and update UI
+  async function loadSubscriptionStatus(userId) {
+    try {
+      const response = await fetch(`/api/subscription?userId=${userId}`);
+      const result = await response.json();
+
+      if (!result.success) return;
+
+      const tierBadge = document.querySelector('#subscriptionTier .tier-badge');
+      const tierName = document.querySelector('#subscriptionTier .tier-name');
+      const upgradeSection = document.getElementById('subscriptionUpgrade');
+      const proSection = document.getElementById('subscriptionPro');
+      const proExpires = document.getElementById('proExpires');
+
+      // Update tier badge
+      if (result.subscription.isPro) {
+        tierBadge.textContent = 'Pro';
+        tierBadge.classList.remove('free');
+        tierBadge.classList.add('pro');
+        tierName.textContent = 'Member';
+
+        // Show pro section, hide upgrade
+        if (upgradeSection) upgradeSection.classList.add('hidden');
+        if (proSection) proSection.classList.remove('hidden');
+
+        // Show expiry date
+        if (proExpires && result.subscription.expiresAt) {
+          const expDate = new Date(result.subscription.expiresAt);
+          proExpires.textContent = `Your Pro membership expires on ${expDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+        }
+
+        // Load referral code
+        loadReferralCode(userId);
+      } else {
+        tierBadge.textContent = 'Standard';
+        tierBadge.classList.add('free');
+        tierBadge.classList.remove('pro');
+        tierName.textContent = 'Account';
+
+        // Show upgrade section, hide pro
+        if (upgradeSection) upgradeSection.classList.remove('hidden');
+        if (proSection) proSection.classList.add('hidden');
+      }
+
+      // Update usage stats
+      const mixUploadsUsed = document.getElementById('mixUploadsUsed');
+      const mixUploadsLimit = document.getElementById('mixUploadsLimit');
+      const streamTimeUsed = document.getElementById('streamTimeUsed');
+      const streamTimeLimit = document.getElementById('streamTimeLimit');
+
+      if (mixUploadsUsed) mixUploadsUsed.textContent = result.usage.mixUploadsThisWeek;
+      if (mixUploadsLimit) mixUploadsLimit.textContent = result.limits.mixUploadsPerWeek === 'unlimited' ? '∞' : result.limits.mixUploadsPerWeek;
+      if (streamTimeUsed) streamTimeUsed.textContent = Math.floor(result.usage.streamMinutesToday / 60);
+      if (streamTimeLimit) streamTimeLimit.textContent = result.limits.streamHoursPerDay;
+
+      // Set up upgrade button
+      const upgradeBtn = document.getElementById('upgradeBtn');
+      if (upgradeBtn) {
+        upgradeBtn.addEventListener('click', handleUpgradeClick);
+      }
+
+    } catch (error) {
+      console.error('Error loading subscription:', error);
+    }
+  }
+
+  // Load and display referral code for Pro users
+  async function loadReferralCode(userId) {
+    try {
+      // Fetch user document to get referral code
+      const response = await fetch(`/api/get-user-type?uid=${userId}`);
+      const data = await response.json();
+
+      const referralCodeDisplay = document.getElementById('referralCodeDisplay');
+      const copyReferralBtn = document.getElementById('copyReferralBtn');
+      const referralNote = document.getElementById('referralNote');
+      const referralUsed = document.getElementById('referralUsed');
+      const referralSection = document.getElementById('referralSection');
+
+      if (!referralSection) return;
+
+      if (data.referralCode) {
+        referralCodeDisplay.textContent = data.referralCode;
+
+        // Check if referral code has been used
+        const codeCheckResponse = await fetch(`/api/giftcards/apply-referral?code=${data.referralCode}`);
+        const codeCheck = await codeCheckResponse.json();
+
+        if (!codeCheck.success && codeCheck.error?.includes('already been used')) {
+          // Code was used
+          referralNote.classList.add('hidden');
+          referralUsed.classList.remove('hidden');
+          copyReferralBtn.style.display = 'none';
+        } else {
+          // Code is still active
+          referralNote.classList.remove('hidden');
+          referralUsed.classList.add('hidden');
+
+          // Set up copy button
+          copyReferralBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(data.referralCode).then(() => {
+              copyReferralBtn.classList.add('copied');
+              copyReferralBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
+              setTimeout(() => {
+                copyReferralBtn.classList.remove('copied');
+                copyReferralBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+              }, 2000);
+            });
+          });
+        }
+      } else {
+        // No referral code yet - might be legacy Pro user
+        referralCodeDisplay.textContent = 'Not available';
+        referralNote.textContent = 'Contact support to get your referral code';
+        copyReferralBtn.style.display = 'none';
+      }
+    } catch (error) {
+      console.error('Error loading referral code:', error);
+      const referralCodeDisplay = document.getElementById('referralCodeDisplay');
+      if (referralCodeDisplay) referralCodeDisplay.textContent = 'Error loading';
+    }
+  }
+
+  // Handle upgrade button click - redirect to Stripe checkout
+  async function handleUpgradeClick() {
+    if (!currentUser) {
+      alert('Please sign in to upgrade');
+      return;
+    }
+
+    const upgradeBtn = document.getElementById('upgradeBtn');
+    if (upgradeBtn) {
+      upgradeBtn.disabled = true;
+      upgradeBtn.textContent = 'Processing...';
+    }
+
+    try {
+      // Create Stripe checkout session for Pro subscription
+      const response = await fetch('/api/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'subscription',
+          priceId: 'pro_annual', // This will be mapped to actual Stripe price ID
+          userId: currentUser.uid,
+          email: currentUser.email,
+          successUrl: `${window.location.origin}/account/dashboard?upgraded=true`,
+          cancelUrl: `${window.location.origin}/account/dashboard`,
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+      } else {
+        throw new Error(result.error || 'Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Upgrade error:', error);
+      alert('Failed to start upgrade process. Please try again.');
+
+      if (upgradeBtn) {
+        upgradeBtn.disabled = false;
+        upgradeBtn.textContent = 'Upgrade to Pro';
+      }
+    }
+  }
+
+  // Check URL params for successful upgrade
+  function checkUpgradeSuccess() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('upgraded') === 'true') {
+      // Show success message
+      alert('Welcome to Pro! Your subscription is now active.');
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }
+
   function renderTransactions(transactions) {
     const container = document.getElementById('transactionsList');
     if (!container) return;
@@ -2574,7 +2838,7 @@ export const prerender = false;
           // Load following count for badge
           loadFollowingCount(user.uid);
           
-          // Check if user is approved partner and enable Pro Dashboard button
+          // Check if user is approved partner and enable Partner Dashboard button
           checkPartnerStatus(user.uid);
           
           // Load credit balance
@@ -2585,7 +2849,13 @@ export const prerender = false;
           initLogout();
           initProfileForm();
           initCreditTab();
-          
+
+          // Load subscription status
+          loadSubscriptionStatus(user.uid);
+
+          // Check for successful upgrade redirect
+          checkUpgradeSuccess();
+
         } catch (error) {
           console.error('[Dashboard] Error loading dashboard:', error);
           // Still show dashboard even on error
@@ -2610,3 +2880,275 @@ export const prerender = false;
   initDashboard();
   document.addEventListener('astro:page-load', initDashboard);
 </script>
+
+<style>
+  /* Subscription Card Styles */
+  .subscription-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+  }
+
+  .subscription-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .subscription-tier {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .tier-badge {
+    padding: 0.375rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .tier-badge.free {
+    background: #374151;
+    color: #9ca3af;
+  }
+
+  .tier-badge.pro {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #000;
+  }
+
+  .tier-name {
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  .subscription-usage {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+  }
+
+  .usage-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .usage-label {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .usage-value {
+    font-size: 1rem;
+    color: #fff;
+    font-weight: 500;
+  }
+
+  .subscription-upgrade {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+  }
+
+  .upgrade-benefits h4 {
+    margin: 0 0 0.5rem;
+    color: #ef4444;
+    font-size: 1rem;
+  }
+
+  .upgrade-benefits ul {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: #ccc;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  .upgrade-btn {
+    flex-shrink: 0;
+    padding: 0.875rem 1.5rem;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: #fff;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+  }
+
+  .upgrade-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+  }
+
+  .subscription-pro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 8px;
+  }
+
+  .pro-active {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .pro-icon-large {
+    font-size: 2rem;
+  }
+
+  .pro-message {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #f59e0b;
+  }
+
+  .pro-expires {
+    margin: 0;
+    color: #888;
+    font-size: 0.85rem;
+  }
+
+  /* Referral Code Section */
+  .referral-section {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(22, 163, 74, 0.1) 100%);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 12px;
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .referral-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .referral-icon {
+    font-size: 1.5rem;
+  }
+
+  .referral-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #22c55e;
+  }
+
+  .referral-desc {
+    margin: 0 0 1rem 0;
+    color: #ccc;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .referral-code-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px dashed rgba(34, 197, 94, 0.5);
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+  }
+
+  .referral-code {
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #22c55e;
+    letter-spacing: 0.05em;
+  }
+
+  .copy-referral-btn {
+    padding: 0.5rem;
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .copy-referral-btn svg {
+    color: #22c55e;
+  }
+
+  .copy-referral-btn:hover {
+    background: rgba(34, 197, 94, 0.3);
+    transform: scale(1.05);
+  }
+
+  .copy-referral-btn.copied {
+    background: #22c55e;
+  }
+
+  .copy-referral-btn.copied svg {
+    color: #fff;
+  }
+
+  .referral-note {
+    margin: 0;
+    color: #888;
+    font-size: 0.75rem;
+  }
+
+  .referral-used {
+    margin: 0.5rem 0 0 0;
+    color: #888;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  @media (max-width: 640px) {
+    .subscription-usage {
+      grid-template-columns: 1fr;
+    }
+
+    .subscription-upgrade {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .upgrade-benefits ul {
+      text-align: left;
+    }
+
+    .referral-section {
+      max-width: 100%;
+    }
+  }
+</style>

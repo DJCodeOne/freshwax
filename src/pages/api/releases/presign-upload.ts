@@ -1,6 +1,9 @@
 // src/pages/api/releases/presign-upload.ts
-// Generate presigned URLs for uploading to R2 uploads bucket
+// Generate presigned URLs for SINGLE file uploads to R2
+// Used by: ReleaseUploadForm.jsx (partner/pro uploads)
+// For BATCH uploads with validation, use: presigned-upload.ts
 
+import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -15,7 +18,7 @@ function getR2Config(env: any) {
   };
 }
 
-export async function POST({ request, locals }: { request: Request; locals: any }) {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const { key, contentType, bucket } = await request.json();
 
@@ -29,6 +32,9 @@ export async function POST({ request, locals }: { request: Request; locals: any 
     const env = locals?.runtime?.env;
     const config = getR2Config(env);
 
+    console.log('[Presign] Request bucket param:', bucket);
+    console.log('[Presign] Config uploadsBucket:', config.uploadsBucket);
+
     if (!config.accountId || !config.accessKeyId || !config.secretAccessKey) {
       console.error('[Presign] Missing R2 credentials');
       return new Response(JSON.stringify({ error: 'R2 configuration missing' }), {
@@ -37,8 +43,8 @@ export async function POST({ request, locals }: { request: Request; locals: any 
       });
     }
 
-    // Use uploads bucket for partner submissions
-    const bucketName = bucket === 'uploads' ? config.uploadsBucket : 'freshwax-releases';
+    // Use releases bucket for everything (submissions go to submissions/ folder)
+    const bucketName = 'freshwax-releases';
 
     const s3Client = new S3Client({
       region: 'auto',
@@ -74,4 +80,4 @@ export async function POST({ request, locals }: { request: Request; locals: any 
       headers: { 'Content-Type': 'application/json' }
     });
   }
-}
+};

@@ -24,13 +24,27 @@ function generateOrderNumber(): string {
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
+  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
+  const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
+
+  console.log('[create-order] Firebase config:', {
+    hasProjectId: !!projectId,
+    hasApiKey: !!apiKey,
+    projectId: projectId || 'MISSING'
+  });
+
   initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    FIREBASE_PROJECT_ID: projectId,
+    FIREBASE_API_KEY: apiKey,
   });
 
   try {
     const orderData = await request.json();
+    console.log('[create-order] Order data received:', JSON.stringify(orderData).substring(0, 500));
+
+    // Extract idToken for authenticated Firebase writes
+    const idToken = orderData.idToken;
+    console.log('[create-order] Has idToken:', !!idToken);
 
     log.info('[create-order] Processing order:', orderData.customer?.email);
 
@@ -264,8 +278,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updatedAt: now
     };
 
-    // Save to Firebase
-    const orderRef = await addDocument('orders', order);
+    // Save to Firebase (with idToken for authenticated write)
+    console.log('[create-order] Saving order to Firebase:', orderNumber);
+    console.log('[create-order] Order items count:', order.items?.length);
+    const orderRef = await addDocument('orders', order, idToken);
+    console.log('[create-order] ✓ Order saved successfully:', orderRef.id);
 
     log.info('[create-order] ✓ Order created:', orderNumber, orderRef.id);
 
@@ -344,7 +361,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 notes: 'Order ' + orderNumber,
                 createdAt: now,
                 createdBy: 'system'
-              });
+              }, idToken);
 
               log.info('[create-order] ✓ Stock updated:', item.name, variantKey, previousStock, '->', newStock);
 
@@ -388,7 +405,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Send confirmation email directly
     try {
-      const RESEND_API_KEY = import.meta.env.RESEND_API_KEY;
+      const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
       if (RESEND_API_KEY && order.customer?.email) {
         log.info('[create-order] Sending email to:', order.customer.email);
@@ -434,8 +451,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const vinylItems = order.items.filter((item: any) => item.type === 'vinyl');
     if (vinylItems.length > 0) {
       try {
-        const RESEND_API_KEY = import.meta.env.RESEND_API_KEY;
-        const STOCKIST_EMAIL = import.meta.env.VINYL_STOCKIST_EMAIL || 'stockist@freshwax.co.uk';
+        const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
+        const STOCKIST_EMAIL = env?.VINYL_STOCKIST_EMAIL || import.meta.env.VINYL_STOCKIST_EMAIL || 'stockist@freshwax.co.uk';
 
         if (RESEND_API_KEY && STOCKIST_EMAIL) {
           log.info('[create-order] Sending vinyl fulfillment email to stockist:', STOCKIST_EMAIL);
@@ -495,11 +512,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error) {
-    console.error('[create-order] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : '';
+    console.error('[create-order] Error:', errorMessage);
+    console.error('[create-order] Stack:', errorStack);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to create order',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: errorMessage,
+      details: errorStack?.split('\n').slice(0, 3).join(' -> ') || 'No stack trace'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

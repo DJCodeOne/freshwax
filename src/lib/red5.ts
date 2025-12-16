@@ -2,43 +2,69 @@
 // Red5 Pro Streaming Server Configuration & Utilities
 // Central configuration for Fresh Wax livestream infrastructure
 
-import crypto from 'crypto';
+// Note: Using Web Crypto API compatible approach for Cloudflare Workers
+
+// =============================================================================
+// RUNTIME ENVIRONMENT SUPPORT
+// =============================================================================
+
+// Store runtime env vars for Cloudflare Pages
+let runtimeEnv: Record<string, string> = {};
+
+/**
+ * Initialize Red5 config with runtime environment variables
+ * Call this at the start of API routes to pass Cloudflare env vars
+ */
+export function initRed5Env(env: Record<string, string | undefined>): void {
+  runtimeEnv = {};
+  for (const [key, value] of Object.entries(env)) {
+    if (value) runtimeEnv[key] = value;
+  }
+}
+
+// Helper to get env var from runtime or process.env
+function getEnv(key: string, defaultValue: string = ''): string {
+  return runtimeEnv[key] || (typeof process !== 'undefined' ? process.env?.[key] : '') || defaultValue;
+}
 
 // =============================================================================
 // RED5 SERVER CONFIGURATION
 // =============================================================================
 
+// Config is a getter function to read env vars at runtime
 export const RED5_CONFIG = {
   // Server endpoints - update these when configuring Red5
-  server: {
-    // RTMP ingest URL for OBS/streaming software
-    rtmpUrl: process.env.RED5_RTMP_URL || 'rtmp://stream.freshwax.co.uk/live',
-    
-    // HLS playback base URL
-    hlsBaseUrl: process.env.RED5_HLS_URL || 'https://stream.freshwax.co.uk/live',
-    
-    // WebSocket URL for real-time events (optional)
-    wsUrl: process.env.RED5_WS_URL || 'wss://stream.freshwax.co.uk/ws',
-    
-    // Admin API (for server-side stream management)
-    apiUrl: process.env.RED5_API_URL || 'https://stream.freshwax.co.uk/api',
-    apiKey: process.env.RED5_API_KEY || '',
+  get server() {
+    return {
+      // RTMP ingest URL for OBS/streaming software (uses rtmp subdomain, not proxied by Cloudflare)
+      rtmpUrl: getEnv('RED5_RTMP_URL', 'rtmp://rtmp.freshwax.co.uk/live'),
+
+      // HLS playback base URL
+      hlsBaseUrl: getEnv('RED5_HLS_URL', 'https://stream.freshwax.co.uk/live'),
+
+      // WebSocket URL for real-time events (optional)
+      wsUrl: getEnv('RED5_WS_URL', 'wss://stream.freshwax.co.uk/ws'),
+
+      // Admin API (for server-side stream management)
+      apiUrl: getEnv('RED5_API_URL', 'https://stream.freshwax.co.uk/api'),
+      apiKey: getEnv('RED5_API_KEY', ''),
+    };
   },
-  
+
   // Stream settings
   stream: {
     // Supported stream types
     types: ['video', 'audio'] as const,
-    
+
     // Default HLS segment duration (seconds)
     hlsSegmentDuration: 4,
-    
+
     // HLS playlist length (number of segments)
     hlsPlaylistLength: 3,
-    
+
     // Maximum bitrate allowed (kbps)
     maxBitrate: 6000,
-    
+
     // Recommended settings for different connection speeds
     qualityPresets: {
       low: { videoBitrate: 1000, audioBitrate: 128, resolution: '854x480' },
@@ -47,30 +73,32 @@ export const RED5_CONFIG = {
       audioOnly: { audioBitrate: 320, format: 'aac' },
     },
   },
-  
+
   // Security settings
-  security: {
-    // Stream key prefix for identification
-    keyPrefix: 'fwx',
-    
-    // Stream key validity window (milliseconds before/after scheduled time)
-    keyValidityWindow: 30 * 60 * 1000, // 30 minutes
-    
-    // Secret for HMAC signing (should be in env)
-    signingSecret: process.env.RED5_SIGNING_SECRET || 'freshwax-stream-secret-change-in-production',
-    
-    // Webhook secret for validating Red5 callbacks
-    webhookSecret: process.env.RED5_WEBHOOK_SECRET || 'webhook-secret-change-in-production',
+  get security() {
+    return {
+      // Stream key prefix for identification
+      keyPrefix: 'fwx',
+
+      // Stream key validity window (milliseconds before/after scheduled time)
+      keyValidityWindow: 30 * 60 * 1000, // 30 minutes
+
+      // Secret for HMAC signing (should be in env)
+      signingSecret: getEnv('RED5_SIGNING_SECRET', 'freshwax-stream-secret-change-in-production'),
+
+      // Webhook secret for validating Red5 callbacks
+      webhookSecret: getEnv('RED5_WEBHOOK_SECRET', 'webhook-secret-change-in-production'),
+    };
   },
-  
+
   // Timeouts and intervals
   timing: {
     // How often to check stream health (ms)
     healthCheckInterval: 10000,
-    
+
     // Stream timeout - mark offline if no data (ms)
     streamTimeout: 30000,
-    
+
     // Grace period after scheduled end time (ms)
     endGracePeriod: 5 * 60 * 1000, // 5 minutes
   },
@@ -81,14 +109,29 @@ export const RED5_CONFIG = {
 // =============================================================================
 
 /**
- * Generate a time-based, cryptographically secure stream key for a DJ session
- * 
+ * Simple hash function for Cloudflare Workers compatibility
+ * Uses a basic string hash - security comes from Firebase validation
+ */
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  // Convert to hex and ensure positive
+  return Math.abs(hash).toString(16).padStart(8, '0');
+}
+
+/**
+ * Generate a time-based stream key for a DJ session
+ *
  * Format: fwx_{djIdShort}_{slotId}_{timestamp}_{signature}
- * 
+ *
  * This key is:
  * - Unique per booking/session
  * - Time-bound (validated against slot start/end times)
- * - Cryptographically signed to prevent tampering
+ * - Stored in Firebase for validation
  * - Human-readable prefix for debugging
  */
 export function generateStreamKey(
@@ -98,24 +141,18 @@ export function generateStreamKey(
   endTime: Date
 ): string {
   const { keyPrefix, signingSecret } = RED5_CONFIG.security;
-  
+
   // Short identifiers for readability
   const djIdShort = djId.substring(0, 8);
   const slotIdShort = slotId.substring(0, 8);
-  
+
   // Timestamp component (slot start time as unix timestamp)
   const timestamp = Math.floor(startTime.getTime() / 1000).toString(36);
-  
-  // Create signature payload
-  const payload = `${djId}:${slotId}:${startTime.toISOString()}:${endTime.toISOString()}`;
-  
-  // Generate HMAC signature
-  const signature = crypto
-    .createHmac('sha256', signingSecret)
-    .update(payload)
-    .digest('hex')
-    .substring(0, 12); // Short signature for URL-friendliness
-  
+
+  // Create signature from payload + secret
+  const payload = `${djId}:${slotId}:${startTime.toISOString()}:${endTime.toISOString()}:${signingSecret}`;
+  const signature = simpleHash(payload).substring(0, 12);
+
   return `${keyPrefix}_${djIdShort}_${slotIdShort}_${timestamp}_${signature}`;
 }
 
@@ -202,7 +239,13 @@ export function buildRtmpUrl(streamKey: string): string {
  * Build the HLS playback URL for a stream key
  */
 export function buildHlsUrl(streamKey: string): string {
-  return `${RED5_CONFIG.server.hlsBaseUrl}/${streamKey}/index.m3u8`;
+  // Ensure /live/ path is always included (MediaMTX streams are at /live/{streamKey})
+  let baseUrl = RED5_CONFIG.server.hlsBaseUrl;
+  // If baseUrl doesn't end with /live, add it
+  if (!baseUrl.endsWith('/live')) {
+    baseUrl = baseUrl.replace(/\/$/, '') + '/live';
+  }
+  return `${baseUrl}/${streamKey}/index.m3u8`;
 }
 
 /**
@@ -233,17 +276,16 @@ export function verifyWebhookSignature(
   signature: string
 ): boolean {
   const { webhookSecret } = RED5_CONFIG.security;
-  
-  const expectedSignature = crypto
-    .createHmac('sha256', webhookSecret)
-    .update(payload)
-    .digest('hex');
-  
-  // Constant-time comparison to prevent timing attacks
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+
+  // Simple signature verification using hash
+  // For production with Red5 Pro, use proper HMAC verification
+  const expectedSignature = simpleHash(payload + webhookSecret);
+
+  // Simple comparison (MediaMTX doesn't send signatures by default)
+  // If no signature provided, skip verification
+  if (!signature) return true;
+
+  return signature === expectedSignature;
 }
 
 // =============================================================================

@@ -177,7 +177,7 @@ if (!release) {
             <div class="form-row-3">
               <div class="form-group">
                 <label class="form-label">Digital Album (£) <span class="hint">pricePerSale</span></label>
-                <input type="number" name="pricePerSale" class="form-input" step="0.01" min="0" value={Number(release.pricePerSale ?? release.pricing?.digital ?? 0).toFixed(2)} />
+                <input type="number" name="pricePerSale" id="pricePerSale" class="form-input" step="0.01" min="0" value={Number(release.pricePerSale ?? release.pricing?.digital ?? 0).toFixed(2)} />
               </div>
 
               <div class="form-group">
@@ -188,6 +188,28 @@ if (!release) {
               <div class="form-group">
                 <label class="form-label">Vinyl (£) <span class="hint">vinylPrice</span></label>
                 <input type="number" name="vinylPrice" class="form-input" step="0.01" min="0" value={Number(release.vinylPrice ?? release.pricing?.vinyl ?? release.vinyl?.price ?? 0).toFixed(2)} />
+              </div>
+            </div>
+
+            <!-- Special Pricing Options -->
+            <div class="form-row-2" style="margin-top: 1rem;">
+              <div class="form-group">
+                <label class="checkbox-group">
+                  <input type="checkbox" name="freeDownload" id="freeDownload" checked={release.freeDownload || false} />
+                  <span class="checkbox-label">Free Download</span>
+                </label>
+                <p class="field-hint">Enable to offer this release for free (digital price set to £0)</p>
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-group">
+                  <input type="checkbox" name="specialOffer" id="specialOffer" checked={release.specialOffer || false} />
+                  <span class="checkbox-label">Special Offer</span>
+                </label>
+                <div id="specialOfferPrice" style={release.specialOffer ? '' : 'display: none'}>
+                  <label class="form-label" style="margin-top: 0.5rem;">Offer Price (£)</label>
+                  <input type="number" name="offerPrice" class="form-input" step="0.01" min="0" value={Number(release.offerPrice ?? 0).toFixed(2)} />
+                </div>
               </div>
             </div>
           </div>
@@ -746,9 +768,10 @@ if (!release) {
     var toggles = [
       { checkbox: 'vinylRelease', target: 'vinylOptions' },
       { checkbox: 'hasLimitedEdition', target: 'limitedEditionOptions' },
-      { checkbox: 'hasPreOrder', target: 'preOrderOptions' }
+      { checkbox: 'hasPreOrder', target: 'preOrderOptions' },
+      { checkbox: 'specialOffer', target: 'specialOfferPrice' }
     ];
-    
+
     toggles.forEach(function(config) {
       var el = document.getElementById(config.checkbox);
       var targetEl = document.getElementById(config.target);
@@ -758,6 +781,25 @@ if (!release) {
         });
       }
     });
+
+    // Free Download toggles price to 0
+    var freeDownloadCheckbox = document.getElementById('freeDownload');
+    var priceInput = document.getElementById('pricePerSale');
+    if (freeDownloadCheckbox && priceInput) {
+      freeDownloadCheckbox.addEventListener('change', function(e) {
+        if (e.target.checked) {
+          priceInput.value = '0.00';
+          priceInput.disabled = true;
+        } else {
+          priceInput.disabled = false;
+        }
+      });
+      // Initialize state
+      if (freeDownloadCheckbox.checked) {
+        priceInput.value = '0.00';
+        priceInput.disabled = true;
+      }
+    }
 
     // Track drag and drop
     var draggedTrack = null;
@@ -899,10 +941,16 @@ if (!release) {
         pricePerSale: parseFloat(formData.get('pricePerSale')) || 0,
         trackPrice: parseFloat(formData.get('trackPrice')) || 1.00,
         vinylPrice: parseFloat(formData.get('vinylPrice')) || 0,
+        freeDownload: formData.get('freeDownload') === 'on',
+        specialOffer: formData.get('specialOffer') === 'on',
+        offerPrice: parseFloat(formData.get('offerPrice')) || 0,
         pricing: {
           digital: parseFloat(formData.get('pricePerSale')) || 0,
           track: parseFloat(formData.get('trackPrice')) || 1.00,
-          vinyl: parseFloat(formData.get('vinylPrice')) || null
+          vinyl: parseFloat(formData.get('vinylPrice')) || null,
+          freeDownload: formData.get('freeDownload') === 'on',
+          specialOffer: formData.get('specialOffer') === 'on',
+          offerPrice: parseFloat(formData.get('offerPrice')) || 0
         },
         
         // Vinyl (both flat and nested)

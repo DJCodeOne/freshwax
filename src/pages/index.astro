@@ -16,21 +16,21 @@ const featuredReleases = await getLiveReleases(20);
 
 <Layout title="Fresh Wax - Jungle & Drum and Bass">
   <Header />
-  
-  <main style="min-height: 100vh; background: #000000; position: relative;">
+
+  <main class="index-main">
 
     <!-- Welcome Hero Section -->
-    <section style="background: radial-gradient(ellipse at center, #000000 0%, #1a1a1a 50%, #2d2d2d 100%); color: white; padding: 5rem 0; position: relative; overflow: hidden; box-shadow: inset 0 -2px 40px rgba(220, 38, 38, 0.1);">
-      
+    <section class="hero-section">
+
       <!-- Grid overlay -->
-      <div style="position: absolute; inset: 0; background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px); background-size: 50px 50px;"></div>
-      
-      <div style="max-width: 80rem; margin: 0 auto; padding: 0 1.5rem; text-align: center; position: relative; z-index: 10;">
-        <div class="hero-content" style="animation: fadeInUp 1.2s ease-out;">
+      <div class="hero-grid-overlay"></div>
+
+      <div class="hero-container">
+        <div class="hero-content">
           <h1 class="main-title">
             FRESH <span class="text-red">WAX</span>
           </h1>
-          <p style="font-size: 1.25rem; color: #f9fafb; font-weight: 300; letter-spacing: 0.3em; margin-bottom: 2.5rem; text-transform: uppercase; opacity: 0.9;">
+          <p class="hero-subtitle">
             Jungle & Drum and Bass
           </p>
           <div class="glass-panel">
@@ -99,20 +99,16 @@ const featuredReleases = await getLiveReleases(20);
     </section>
 
     <!-- Featured Releases Section -->
-    <section style="max-width: 72rem; margin: 0 auto; padding: 3rem 1.5rem;">
+    <section class="releases-section">
       <!-- Header Container -->
-      <div style="background: linear-gradient(to bottom, #1f2937 0%, #374151 100%); backdrop-filter: blur(20px); border-radius: 1rem; padding: 2.5rem 2rem; margin-bottom: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); border: 2px solid rgba(255, 255, 255, 0.1); position: relative; overflow: hidden;">
-        
+      <div class="releases-header">
+
         <!-- Background Pattern -->
-        <div style="position: absolute; inset: 0; opacity: 0.15; pointer-events: none;">
-          <div style="position: absolute; inset: 0; background-image: linear-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px); background-size: 40px 40px;"></div>
-        </div>
-        
-        <div style="text-align: center; position: relative; z-index: 1;">
-          <h2 style="font-family: 'Space Grotesk', sans-serif; font-size: 2.25rem; font-weight: 900; color: #ffffff; letter-spacing: 0.05em; text-transform: uppercase; text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5); margin: 0 0 0.75rem 0;">
-            Latest Releases
-          </h2>
-          <p style="color: #cbd5e1; font-size: 1rem; margin: 0; font-weight: 500; letter-spacing: 0.02em;">
+        <div class="releases-header-pattern"></div>
+
+        <div class="releases-header-content">
+          <h2 class="releases-title">Latest Releases</h2>
+          <p class="releases-subtitle">
             Freshly pressed and ready to drop • {featuredReleases.length} most recent
           </p>
         </div>
@@ -162,16 +158,96 @@ const featuredReleases = await getLiveReleases(20);
      min-width queries = Scale up for larger screens
      =========================================== */
 
+  /* Main container - prevent horizontal overflow */
+  .index-main {
+    min-height: 100vh;
+    background: #000000;
+    position: relative;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  /* Hero Section */
+  .hero-section {
+    background: radial-gradient(ellipse at center, #000000 0%, #1a1a1a 50%, #2d2d2d 100%);
+    color: white;
+    padding: 3rem 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 -2px 40px rgba(220, 38, 38, 0.1);
+  }
+
+  .hero-grid-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .hero-container {
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 0 1rem;
+    text-align: center;
+    position: relative;
+    z-index: 10;
+  }
+
+  .hero-subtitle {
+    font-size: 0.875rem;
+    color: #f9fafb;
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+    opacity: 0.9;
+  }
+
+  @media (min-width: 375px) {
+    .hero-section {
+      padding: 4rem 0;
+    }
+
+    .hero-container {
+      padding: 0 1.25rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1rem;
+      letter-spacing: 0.25em;
+      margin-bottom: 2rem;
+    }
+  }
+
+  @media (min-width: 640px) {
+    .hero-section {
+      padding: 5rem 0;
+    }
+
+    .hero-container {
+      padding: 0 1.5rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.125rem;
+      letter-spacing: 0.3em;
+      margin-bottom: 2.5rem;
+    }
+  }
+
   /* Main Title - Mobile Base */
   .main-title {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 3rem;
+    font-size: 2.5rem;
     font-weight: 900;
     margin-bottom: 0.5rem;
     letter-spacing: -0.02em;
     text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 80px rgba(220, 38, 38, 0.2);
     line-height: 0.95;
     text-transform: uppercase;
+    word-break: break-word;
   }
 
   .main-title .text-red {
@@ -179,41 +255,50 @@ const featuredReleases = await getLiveReleases(20);
     text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 60px rgba(220, 38, 38, 0.5);
   }
 
+  /* Hero Content - prevent overflow */
+  .hero-content {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
   /* Glass Panel - Mobile Base (stacked) */
   .glass-panel {
     display: inline-flex;
     align-items: center;
     flex-direction: column;
-    gap: 0.5rem;
-    padding: 12px 20px;
+    gap: 0.35rem;
+    padding: 10px 16px;
     background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 24px;
+    border-radius: 20px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 0 80px rgba(220, 38, 38, 0.1);
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
+    max-width: calc(100vw - 3rem);
   }
 
   .glass-panel .nav-item {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: #ffffff;
     font-weight: 600;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     text-decoration: none;
+    white-space: nowrap;
   }
 
   .glass-panel .dot-separator {
     display: none;
     color: #dc2626;
-    font-size: 0.75rem;
+    font-size: 0.6rem;
   }
 
   /* CTA Button - Mobile Base (touch-friendly) */
   .cta-button {
     min-height: 48px;
-    padding: 1rem 2rem;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
   }
 
   .cta-button:hover {
@@ -226,17 +311,34 @@ const featuredReleases = await getLiveReleases(20);
   .quick-links-section {
     max-width: 72rem;
     margin: 0 auto;
-    padding: 1.5rem 1rem 0;
+    padding: 1rem 0.75rem 0;
+    overflow: hidden;
   }
 
   .quick-links-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 0.75rem;
+    gap: 0.625rem;
   }
 
   .quick-links-grid > a {
-    padding: 1rem 1.25rem;
+    padding: 0.875rem 1rem;
+    min-width: 0; /* Allow shrinking */
+    overflow: hidden;
+  }
+
+  .quick-links-grid > a h3 {
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .quick-links-grid > a p {
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* Release items animation */
@@ -251,6 +353,24 @@ const featuredReleases = await getLiveReleases(20);
   .release-item:nth-child(5) { animation-delay: 0.25s; }
 
   /* ===========================================
+     SMALL MOBILE (375px+)
+     =========================================== */
+  @media (min-width: 375px) {
+    .main-title {
+      font-size: 3rem;
+    }
+
+    .glass-panel {
+      padding: 12px 20px;
+      border-radius: 24px;
+    }
+
+    .glass-panel .nav-item {
+      font-size: 0.85rem;
+    }
+  }
+
+  /* ===========================================
      TABLET (640px+)
      =========================================== */
   @media (min-width: 640px) {
@@ -260,14 +380,15 @@ const featuredReleases = await getLiveReleases(20);
 
     .glass-panel {
       flex-direction: row;
-      gap: 1.5rem;
-      padding: 16px 40px;
+      gap: 1.25rem;
+      padding: 14px 32px;
       border-radius: 100px;
-      margin-bottom: 3rem;
+      margin-bottom: 2.5rem;
+      max-width: none;
     }
 
     .glass-panel .nav-item {
-      font-size: 0.95rem;
+      font-size: 0.9rem;
     }
 
     .glass-panel .dot-separator {
@@ -275,12 +396,21 @@ const featuredReleases = await getLiveReleases(20);
     }
 
     .quick-links-section {
-      padding: 2rem 1.5rem 0;
+      padding: 1.5rem 1.25rem 0;
     }
 
     .quick-links-grid {
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 0.875rem;
+    }
+
+    .quick-links-grid > a h3 {
+      font-size: 1.125rem;
+    }
+
+    .quick-links-grid > a p {
+      font-size: 0.8rem;
+      white-space: normal;
     }
   }
 
@@ -290,6 +420,24 @@ const featuredReleases = await getLiveReleases(20);
   @media (min-width: 768px) {
     .main-title {
       font-size: 5rem;
+    }
+
+    .glass-panel {
+      gap: 1.5rem;
+      padding: 16px 40px;
+    }
+
+    .glass-panel .nav-item {
+      font-size: 0.95rem;
+    }
+
+    .quick-links-section {
+      padding: 2rem 1.5rem 0;
+    }
+
+    .quick-links-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
     }
   }
 
@@ -349,13 +497,150 @@ const featuredReleases = await getLiveReleases(20);
   }
 
   /* ===========================================
+     RELEASES SECTION
+     =========================================== */
+  .releases-section {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 1.5rem 0.75rem;
+    overflow: hidden;
+  }
+
+  .releases-header {
+    background: linear-gradient(to bottom, #1f2937 0%, #374151 100%);
+    backdrop-filter: blur(20px);
+    border-radius: 0.75rem;
+    padding: 1.5rem 1rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .releases-header-pattern {
+    position: absolute;
+    inset: 0;
+    opacity: 0.15;
+    pointer-events: none;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .releases-header-content {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .releases-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .releases-subtitle {
+    color: #cbd5e1;
+    font-size: 0.8rem;
+    margin: 0;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  @media (min-width: 640px) {
+    .releases-section {
+      padding: 2rem 1.25rem;
+    }
+
+    .releases-header {
+      border-radius: 1rem;
+      padding: 2rem 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .releases-title {
+      font-size: 1.875rem;
+    }
+
+    .releases-subtitle {
+      font-size: 0.9rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .releases-section {
+      padding: 3rem 1.5rem;
+    }
+
+    .releases-header {
+      padding: 2.5rem 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .releases-title {
+      font-size: 2.25rem;
+      margin: 0 0 0.75rem 0;
+    }
+
+    .releases-subtitle {
+      font-size: 1rem;
+    }
+  }
+
+  /* ===========================================
+     LANDSCAPE ORIENTATION
+     =========================================== */
+  @media (max-height: 500px) and (orientation: landscape) {
+    .hero-section {
+      padding: 2rem 0 !important;
+    }
+
+    .main-title {
+      font-size: 2.5rem !important;
+      margin-bottom: 0.25rem;
+    }
+
+    .glass-panel {
+      margin-bottom: 1rem;
+      padding: 8px 20px;
+    }
+
+    .hero-subtitle {
+      font-size: 0.75rem !important;
+      margin-bottom: 1rem !important;
+    }
+
+    .releases-section {
+      padding: 1rem 0.75rem;
+    }
+
+    .releases-header {
+      padding: 1rem;
+    }
+  }
+
+  /* ===========================================
      ACCESSIBILITY & DEVICE FEATURES
      =========================================== */
 
   /* Safe area for notched devices */
   @supports (padding-bottom: env(safe-area-inset-bottom)) {
-    main {
-      padding-bottom: env(safe-area-inset-bottom);
+    .index-main {
+      padding-bottom: calc(70px + env(safe-area-inset-bottom));
+    }
+  }
+
+  /* Reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    .release-item,
+    .hero-content {
+      animation: none;
     }
   }
 </style>

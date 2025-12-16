@@ -182,27 +182,30 @@ export const prerender = false;
   
   const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  
+
   // Elements
   const loadingState = document.getElementById('loadingState');
   const loginPrompt = document.getElementById('loginPrompt');
   const mainContent = document.getElementById('mainContent');
   const mixesContainer = document.getElementById('mixesContainer');
-  
+
   // Store current user ID for use in form submissions
   let currentUserId = null;
-  
+  let mixesInitialized = false;
+
   // Format numbers
   const formatNumber = (num) => (num || 0).toLocaleString();
-  
-  // Check auth state and load mixes
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      console.log('[mixes.astro] User logged in:', user.uid);
-      currentUserId = user.uid;
-      
-      try {
-        const response = await fetch(`/api/get-dj-mixes?userId=${encodeURIComponent(user.uid)}`);
+
+  // Initialize mixes for a user
+  async function initMixes(user) {
+    if (mixesInitialized) return;
+    mixesInitialized = true;
+
+    console.log('[mixes.astro] User logged in:', user.uid);
+    currentUserId = user.uid;
+
+    try {
+      const response = await fetch(`/api/get-dj-mixes?userId=${encodeURIComponent(user.uid)}`);
         const data = await response.json();
         
         // Hide loading, show main content
@@ -282,14 +285,29 @@ export const prerender = false;
         mainContent?.classList.remove('hidden');
         mixesContainer.innerHTML = '<div class="empty-state"><p>Error loading mixes</p></div>';
       }
+  }
+
+  // Handle not logged in
+  function showLoginPrompt() {
+    console.log('[mixes.astro] User not logged in');
+    loadingState?.classList.add('hidden');
+    loginPrompt?.classList.remove('hidden');
+  }
+
+  // Check auth state changes
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      initMixes(user);
     } else {
-      // Not logged in
-      console.log('[mixes.astro] User not logged in');
-      loadingState?.classList.add('hidden');
-      loginPrompt?.classList.remove('hidden');
+      showLoginPrompt();
     }
   });
-  
+
+  // Also check current user immediately (for View Transitions navigation)
+  if (auth.currentUser) {
+    initMixes(auth.currentUser);
+  }
+
   function attachMixEventListeners() {
     // Edit buttons
     document.querySelectorAll('.btn-edit').forEach(btn => {

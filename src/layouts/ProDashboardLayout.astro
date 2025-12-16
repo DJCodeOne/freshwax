@@ -2,6 +2,7 @@
 // Pro Dashboard Layout
 // Only accessible to users with approved Artist or Merch Seller roles
 // Shows sections based on approved roles
+import '../styles/global.css';
 
 interface Props {
   title: string;
@@ -15,9 +16,8 @@ const { title, activeSection } = Astro.props;
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{title} | Pro Dashboard | Fresh Wax</title>
-  <link rel="stylesheet" href="/styles/global.css">
 </head>
-<body>
+<body data-active-section={activeSection || ''}>
   <div class="pro-dashboard" id="proDashboard">
     <!-- Loading state -->
     <div id="loadingState" class="loading-state">
@@ -43,7 +43,7 @@ const { title, activeSection } = Astro.props;
       <!-- Sidebar -->
       <aside class="sidebar">
         <div class="sidebar-header">
-          <a href="/" class="logo">Fresh Wax</a>
+          <a href="/" class="logo"><span class="fresh">Fresh</span> <span class="wax">Wax</span></a>
           <span class="badge">PRO</span>
         </div>
 
@@ -94,10 +94,17 @@ const { title, activeSection } = Astro.props;
     </div>
   </div>
 
-  <style>
+  <style is:global>
+    /* Fresh Wax Pro Dashboard - Red accent theme */
     .pro-dashboard {
       min-height: 100vh;
-      background: var(--bg-primary, #0a0a0a);
+      background: #0a0a0a;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .pro-dashboard h1, .pro-dashboard h2, .pro-dashboard h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
     }
 
     .loading-state {
@@ -106,14 +113,14 @@ const { title, activeSection } = Astro.props;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      color: var(--text-secondary, #a3a3a3);
+      color: #b8b8b8;
     }
 
     .spinner {
       width: 40px;
       height: 40px;
-      border: 3px solid var(--border-color, #262626);
-      border-top-color: var(--accent, #22c55e);
+      border: 3px solid #262626;
+      border-top-color: #dc2626;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin-bottom: 1rem;
@@ -168,8 +175,12 @@ const { title, activeSection } = Astro.props;
     }
 
     .btn-primary {
-      background: var(--accent, #22c55e);
-      color: #000;
+      background: #dc2626;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #b91c1c;
     }
 
     .btn-secondary {
@@ -211,6 +222,18 @@ const { title, activeSection } = Astro.props;
       height: 100vh;
       position: sticky;
       top: 0;
+      overflow: hidden;
+    }
+
+    /* Ensure all SVGs in sidebar are properly sized */
+    .sidebar svg {
+      width: 18px !important;
+      height: 18px !important;
+      min-width: 18px !important;
+      min-height: 18px !important;
+      max-width: 18px !important;
+      max-height: 18px !important;
+      flex-shrink: 0;
     }
 
     .sidebar-header {
@@ -224,17 +247,27 @@ const { title, activeSection } = Astro.props;
     .sidebar-header .logo {
       font-size: 1.25rem;
       font-weight: 700;
-      color: var(--accent, #22c55e);
+      font-family: 'Bebas Neue', 'Space Grotesk', sans-serif;
       text-decoration: none;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar-header .logo .fresh {
+      color: #fff;
+    }
+
+    .sidebar-header .logo .wax {
+      color: #dc2626;
     }
 
     .sidebar-header .badge {
-      background: var(--accent, #22c55e);
-      color: #000;
+      background: #dc2626;
+      color: #fff;
       font-size: 0.65rem;
       font-weight: 700;
       padding: 0.2rem 0.5rem;
       border-radius: 4px;
+      font-family: 'Space Grotesk', sans-serif;
     }
 
     .sidebar-nav {
@@ -251,9 +284,10 @@ const { title, activeSection } = Astro.props;
       padding: 0.5rem 1.5rem;
       font-size: 0.7rem;
       font-weight: 600;
+      font-family: 'Space Grotesk', sans-serif;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      color: var(--text-muted, #666);
+      color: #666;
     }
 
     .nav-link {
@@ -261,26 +295,38 @@ const { title, activeSection } = Astro.props;
       align-items: center;
       gap: 0.75rem;
       padding: 0.75rem 1.5rem;
-      color: var(--text-secondary, #a3a3a3);
+      color: #b8b8b8;
       text-decoration: none;
       transition: all 0.2s;
       font-size: 0.9rem;
+      font-family: 'Inter', sans-serif;
     }
 
     .nav-link:hover {
-      color: var(--text-primary, #fff);
-      background: var(--bg-tertiary, #1a1a1a);
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .nav-link.active {
-      color: var(--accent, #22c55e);
-      background: rgba(34, 197, 94, 0.1);
-      border-right: 2px solid var(--accent, #22c55e);
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+      border-right: 2px solid #fff;
     }
 
     .nav-link .icon {
       width: 18px;
       height: 18px;
+      min-width: 18px;
+      min-height: 18px;
+      flex-shrink: 0;
+    }
+
+    .nav-link svg {
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      min-height: 18px;
+      flex-shrink: 0;
     }
 
     .sidebar-footer {
@@ -293,7 +339,7 @@ const { title, activeSection } = Astro.props;
       align-items: center;
       gap: 0.75rem;
       padding: 0.625rem 0.75rem;
-      color: var(--text-secondary, #a3a3a3);
+      color: #b8b8b8;
       text-decoration: none;
       font-size: 0.85rem;
       border-radius: 6px;
@@ -306,17 +352,21 @@ const { title, activeSection } = Astro.props;
     }
 
     .sidebar-link:hover {
-      color: var(--text-primary, #fff);
-      background: var(--bg-tertiary, #1a1a1a);
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .sidebar-link.logout:hover {
       color: #ef4444;
     }
 
-    .sidebar-link .icon {
+    .sidebar-link .icon,
+    .sidebar-link svg {
       width: 16px;
       height: 16px;
+      min-width: 16px;
+      min-height: 16px;
+      flex-shrink: 0;
     }
 
     .main-content {
@@ -336,6 +386,8 @@ const { title, activeSection } = Astro.props;
 
     .content-header h1 {
       font-size: 1.5rem;
+      font-family: 'Bebas Neue', 'Space Grotesk', sans-serif;
+      letter-spacing: 0.05em;
       color: var(--text-primary, #fff);
       margin: 0;
     }
@@ -358,20 +410,21 @@ const { title, activeSection } = Astro.props;
 
     .role-badge {
       font-size: 0.7rem;
+      font-family: 'Space Grotesk', sans-serif;
       padding: 0.2rem 0.5rem;
       border-radius: 4px;
-      background: var(--bg-tertiary, #1a1a1a);
-      color: var(--text-secondary, #a3a3a3);
+      background: #1a1a1a;
+      color: #b8b8b8;
     }
 
     .role-badge.artist {
-      background: rgba(139, 92, 246, 0.2);
-      color: #a78bfa;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
     }
 
     .role-badge.merch {
-      background: rgba(59, 130, 246, 0.2);
-      color: #60a5fa;
+      background: rgba(255, 255, 255, 0.08);
+      color: #d4d4d4;
     }
 
     .content-body {
@@ -380,18 +433,18 @@ const { title, activeSection } = Astro.props;
     }
   </style>
 
-  <script type="module" define:vars={{ activeSection }}>
+  <script type="module" is:inline>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
     import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
     import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 
+    const activeSection = document.body.dataset.activeSection || '';
+    console.log('[ProDashboard] Script loaded, activeSection:', activeSection);
+
     const firebaseConfig = window.FIREBASE_CONFIG || {
-      apiKey: import.meta.env?.PUBLIC_FIREBASE_API_KEY,
-      authDomain: import.meta.env?.PUBLIC_FIREBASE_AUTH_DOMAIN,
-      projectId: import.meta.env?.PUBLIC_FIREBASE_PROJECT_ID,
-      storageBucket: import.meta.env?.PUBLIC_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: import.meta.env?.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      appId: import.meta.env?.PUBLIC_FIREBASE_APP_ID
+      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      authDomain: "freshwax-store.firebaseapp.com",
+      projectId: "freshwax-store"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -410,11 +463,9 @@ const { title, activeSection } = Astro.props;
       artist: {
         title: 'Artist / Label',
         items: [
-          { href: '/pro/releases', label: 'My Releases', icon: 'disc' },
+          { href: '/artist/releases', label: 'My Releases', icon: 'disc' },
           { href: '/pro/releases/new', label: 'New Release', icon: 'plus' },
-          { href: '/pro/sales', label: 'Sales', icon: 'chart' },
-          { href: '/pro/analytics', label: 'Analytics', icon: 'analytics' },
-          { href: '/pro/payouts', label: 'Payouts', icon: 'wallet' }
+          { href: '/artist/release-stats', label: 'Analytics', icon: 'chart' }
         ]
       },
       merchSeller: {
@@ -483,8 +534,13 @@ const { title, activeSection } = Astro.props;
       userRoles.innerHTML = badges;
     }
 
+    // Admin UIDs that always get full access
+    const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
+
     // Auth state listener
+    console.log('[ProDashboard] Setting up auth listener...');
     onAuthStateChanged(auth, async (user) => {
+      console.log('[ProDashboard] Auth state changed:', user ? user.uid : 'no user');
       if (!user) {
         // Not logged in, redirect to login
         window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
@@ -492,35 +548,59 @@ const { title, activeSection } = Astro.props;
       }
 
       try {
-        // Get user document
+        let roles = {};
+        const isAdmin = ADMIN_UIDS.includes(user.uid);
+        console.log('[ProDashboard] User UID:', user.uid, 'isAdmin:', isAdmin);
+
+        // Try to get user document from users collection
+        console.log('[ProDashboard] Fetching user doc...');
         const userDoc = await getDoc(doc(db, 'users', user.uid));
-        
-        if (!userDoc.exists()) {
-          // User document doesn't exist, show access denied
-          loadingState.style.display = 'none';
-          accessDenied.style.display = 'flex';
-          return;
+        console.log('[ProDashboard] User doc exists:', userDoc.exists());
+
+        if (userDoc.exists()) {
+          roles = userDoc.data().roles || {};
         }
 
-        const userData = userDoc.data();
-        const roles = userData.roles || {};
+        // If no roles found, try artists collection
+        if (!roles.artist && !roles.merchSeller) {
+          console.log('[ProDashboard] No roles in users doc, trying artists collection...');
+          const artistDoc = await getDoc(doc(db, 'artists', user.uid));
+          console.log('[ProDashboard] Artist doc exists:', artistDoc.exists());
+          if (artistDoc.exists()) {
+            const artistData = artistDoc.data();
+            roles = {
+              artist: artistData.isArtist !== false,
+              merchSeller: artistData.isMerchSupplier || false
+            };
+          }
+        }
+
+        // Admin override - give full access
+        if (isAdmin && !roles.artist && !roles.merchSeller) {
+          console.log('[ProDashboard] Admin override applied');
+          roles = { artist: true, merchSeller: true };
+        }
+
+        console.log('[ProDashboard] Final roles:', roles);
 
         // Check if user has any pro roles
         if (!roles.artist && !roles.merchSeller) {
+          console.log('[ProDashboard] No roles, showing access denied');
           loadingState.style.display = 'none';
           accessDenied.style.display = 'flex';
           return;
         }
 
         // User has access, show dashboard
+        console.log('[ProDashboard] User has access, showing dashboard');
         buildNavigation(roles);
         showUserInfo(user, roles);
-        
+
         loadingState.style.display = 'none';
         dashboardContent.style.display = 'grid';
 
       } catch (error) {
-        console.error('Error loading user data:', error);
+        console.error('[ProDashboard] Error loading user data:', error);
         loadingState.style.display = 'none';
         accessDenied.style.display = 'flex';
       }

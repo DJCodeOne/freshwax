@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
+import { containsProfanity } from '../../lib/validation';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -17,55 +18,6 @@ function initFirebase(locals: any) {
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
-}
-
-// Profanity filter - common profane words
-const PROFANITY_LIST = [
-  'fuck', 'fucking', 'fucker', 'fucked', 'fucks', 'fuk', 'fck',
-  'shit', 'shite', 'shitting', 'bullshit',
-  'cunt', 'cunts',
-  'cock', 'cocks', 'cocksucker',
-  'dick', 'dicks', 'dickhead',
-  'ass', 'arse', 'asshole', 'arsehole',
-  'bitch', 'bitches', 'bitching',
-  'bastard', 'bastards',
-  'wanker', 'wankers', 'wank',
-  'twat', 'twats',
-  'piss', 'pissed', 'pissing',
-  'slut', 'sluts', 'whore', 'whores',
-  'nigger', 'nigga', 'negro',
-  'faggot', 'fag', 'fags',
-  'retard', 'retarded',
-  'spastic', 'spaz',
-  'bollocks', 'bellend',
-  'tosser', 'tossers',
-  'prick', 'pricks',
-  'pussy', 'pussies'
-];
-
-function containsProfanity(text: string): { found: boolean; word?: string } {
-  const normalizedText = text
-    .toLowerCase()
-    .replace(/[*@#$%!.]/g, '')
-    .replace(/0/g, 'o')
-    .replace(/1/g, 'i')
-    .replace(/3/g, 'e')
-    .replace(/4/g, 'a')
-    .replace(/5/g, 's')
-    .replace(/\s+/g, ' ');
-  
-  for (const word of PROFANITY_LIST) {
-    const regex = new RegExp(`\\b${word}\\b`, 'i');
-    if (regex.test(normalizedText)) {
-      return { found: true, word };
-    }
-    const spacedWord = word.split('').join('\\s*');
-    const spacedRegex = new RegExp(spacedWord, 'i');
-    if (spacedRegex.test(normalizedText)) {
-      return { found: true, word };
-    }
-  }
-  return { found: false };
 }
 
 function containsLinks(text: string): boolean {

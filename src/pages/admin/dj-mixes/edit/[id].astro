@@ -29,10 +29,30 @@ if (!mix) {
   return Astro.redirect('/admin/dj-mixes/manage');
 }
 
-// Format duration - check multiple possible field names
-const getDuration = (mix: any) => {
-  const seconds = mix.duration || mix.durationSeconds || mix.length || mix.durationMs / 1000 || 0;
-  return Math.floor(seconds);
+// Format duration - check multiple possible field names and formats
+const getDuration = (mix: any): number => {
+  // Check durationSeconds first (number)
+  if (mix.durationSeconds && typeof mix.durationSeconds === 'number') {
+    return Math.floor(mix.durationSeconds);
+  }
+
+  // Check if duration is a string in format "H:MM:SS" or "MM:SS"
+  if (mix.duration && typeof mix.duration === 'string' && mix.duration.includes(':')) {
+    const parts = mix.duration.split(':').map(Number);
+    if (parts.length === 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2]; // H:MM:SS
+    } else if (parts.length === 2) {
+      return parts[0] * 60 + parts[1]; // MM:SS
+    }
+  }
+
+  // Check duration as number
+  if (mix.duration && typeof mix.duration === 'number') {
+    return Math.floor(mix.duration);
+  }
+
+  // Check other possible field names
+  return Math.floor(mix.duration_seconds || mix.mixDuration || mix.length || (mix.durationMs ? mix.durationMs / 1000 : 0) || 0);
 };
 
 const formatDuration = (seconds: number) => {
@@ -280,10 +300,10 @@ const mixDuration = getDuration(mix);
     font-size: 1.5rem;
   }
 
-  /* Top Section - Artwork + Basic Info */
+  /* Top Section - Artwork + Basic Info (aligned with middle section) */
   .top-section {
     display: grid;
-    grid-template-columns: 200px 1fr;
+    grid-template-columns: 2.1fr 0.9fr;
     gap: 1rem;
     margin-bottom: 1rem;
   }
@@ -300,7 +320,7 @@ const mixDuration = getDuration(mix);
 
   .artwork-preview {
     width: 100%;
-    max-width: 200px;
+    max-width: 320px;
     aspect-ratio: 1;
     background: #f5f5f5;
     border-radius: 8px;
@@ -339,15 +359,24 @@ const mixDuration = getDuration(mix);
     flex: 1;
   }
 
-  /* Middle Section - 3 columns */
+  /* Middle Section - 3 columns (Tracklist larger, Settings/Stats smaller) */
   .middle-section {
     display: grid;
-    grid-template-columns: 1fr 200px 200px;
+    grid-template-columns: 1.2fr 0.9fr 0.9fr;
     gap: 1rem;
     margin-bottom: 1rem;
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 1100px) {
+    .middle-section {
+      grid-template-columns: 1fr 1fr;
+    }
+    .middle-section > .card:first-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 700px) {
     .middle-section {
       grid-template-columns: 1fr;
     }

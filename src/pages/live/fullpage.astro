@@ -3,7 +3,8 @@
 // Full page live stream view - large player with chat and reactions
 export const prerender = false;
 
-const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
+// GIPHY API key - use env var if set, otherwise fallback to public key
+const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6SfraYr';
 ---
 
 <!DOCTYPE html>
@@ -16,6 +17,8 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- HLS.js for video playback -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 </head>
 <body>
   
@@ -651,7 +654,87 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   let currentStream = null;
   let userInfo = null;
   let animationsEnabled = true;
-  
+  let hlsPlayer = null;
+  let isVideoPlaying = false;
+  let currentHlsUrl = null; // Track current URL to avoid re-initializing
+
+  // Setup HLS player for video streams
+  function setupHlsPlayer(stream) {
+    const videoElement = document.getElementById('hlsVideoElement');
+    // Use hlsUrl (from status API) or fall back to videoStreamUrl/streamUrl
+    const hlsUrl = stream?.hlsUrl || stream?.videoStreamUrl || stream?.streamUrl;
+
+    if (!videoElement || !hlsUrl) {
+      console.log('[HLS] No video element or stream URL. Stream:', stream);
+      return;
+    }
+
+    // Skip if already playing the same stream
+    if (currentHlsUrl === hlsUrl && hlsPlayer) {
+      console.log('[HLS] Already playing this stream, skipping re-init');
+      return;
+    }
+
+    console.log('[HLS] Setting up player for:', hlsUrl);
+    currentHlsUrl = hlsUrl;
+
+    // Clean up existing player
+    if (hlsPlayer) {
+      hlsPlayer.destroy();
+      hlsPlayer = null;
+    }
+
+    const nativeHlsSupport = videoElement.canPlayType('application/vnd.apple.mpegurl');
+
+    // Only use native HLS if "probably" - "maybe" doesn't work in Chrome
+    if (nativeHlsSupport === 'probably') {
+      console.log('[HLS] Using native HLS support');
+      videoElement.src = hlsUrl;
+    } else if (window.Hls && Hls.isSupported()) {
+      console.log('[HLS] Using HLS.js library');
+      hlsPlayer = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        backBufferLength: 90,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60
+      });
+
+      hlsPlayer.loadSource(hlsUrl);
+      hlsPlayer.attachMedia(videoElement);
+
+      hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log('[HLS] Manifest parsed, ready to play');
+      });
+
+      hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
+        console.error('[HLS] Error:', data.type, data.details);
+        if (data.fatal) {
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            setTimeout(() => hlsPlayer?.loadSource(hlsUrl), 3000);
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            hlsPlayer.recoverMediaError();
+          }
+        }
+      });
+    } else {
+      console.error('[HLS] Not supported');
+    }
+
+    // Sync video events with UI
+    videoElement.addEventListener('play', () => {
+      isVideoPlaying = true;
+      document.getElementById('playIcon')?.classList.add('hidden');
+      document.getElementById('pauseIcon')?.classList.remove('hidden');
+    });
+
+    videoElement.addEventListener('pause', () => {
+      isVideoPlaying = false;
+      document.getElementById('playIcon')?.classList.remove('hidden');
+      document.getElementById('pauseIcon')?.classList.add('hidden');
+    });
+  }
+
   async function initAuth() {
     try {
       const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
@@ -719,9 +802,11 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   
   async function loadStreamStatus() {
     try {
-      const response = await fetch('/api/livestream/status');
+      // Add cache buster to prevent stale cached responses
+      const cacheBuster = Date.now();
+      const response = await fetch(`/api/livestream/status?_t=${cacheBuster}`);
       const result = await response.json();
-      
+
       if (result.isLive && result.streams && result.streams.length > 0) {
         const stream = result.streams[0];
         currentStream = stream;
@@ -743,11 +828,19 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         }
         
         document.getElementById('offlineOverlay')?.classList.add('hidden');
-        
-        if (stream.streamType === 'audio' || stream.streamUrl?.includes('8000')) {
-          document.getElementById('audioPlayer')?.classList.remove('hidden');
-        } else {
+
+        // Check if this is a video stream (HLS/Red5) or audio-only (Icecast)
+        const isVideoStream = stream.hlsUrl || stream.streamSource === 'red5' ||
+                             (stream.streamType !== 'audio' && !stream.audioStreamUrl?.includes('8000'));
+
+        if (isVideoStream) {
           document.getElementById('videoPlayer')?.classList.remove('hidden');
+          document.getElementById('audioPlayer')?.classList.add('hidden');
+          // Initialize HLS player for video stream
+          setupHlsPlayer(stream);
+        } else {
+          document.getElementById('audioPlayer')?.classList.remove('hidden');
+          document.getElementById('videoPlayer')?.classList.add('hidden');
         }
         
         // Register as listener if logged in

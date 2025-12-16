@@ -891,9 +891,7 @@
     }
   }
 
-  .hidden {
-    display: none !important;
-  }
+  /* Note: Don't define .hidden here - it conflicts with Tailwind responsive utilities */
 
   /* Download button states */
   .action-btn.downloading {

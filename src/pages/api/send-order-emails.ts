@@ -12,7 +12,17 @@ const log = {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const { orderId, orderNumber, order } = await request.json();
+    const { type, orderId, orderNumber, order, artistPayment, stockistOrder, customer, shipping } = await request.json();
+
+    // Route to appropriate email handler based on type
+    if (type === 'artist' && artistPayment) {
+      return sendArtistEmail(orderId, orderNumber, artistPayment);
+    }
+    if (type === 'stockist' && stockistOrder) {
+      return sendStockistEmail(orderId, orderNumber, stockistOrder, customer, shipping);
+    }
+
+    // Default: customer email
     
     log.info('[send-order-email] ========================================');
     log.info('[send-order-email] Received request for order:', orderNumber);
@@ -292,7 +302,7 @@ function buildOrderEmailHtml(orderId: string, orderNumber: string, order: any): 
               </div>
             </td>
           </tr>
-          
+
         </table>
       </td>
     </tr>
@@ -300,4 +310,190 @@ function buildOrderEmailHtml(orderId: string, orderNumber: string, order: any): 
 </body>
 </html>
   `;
+}
+
+// Send payment notification to artist/label
+async function sendArtistEmail(orderId: string, orderNumber: string, artistPayment: any): Promise<Response> {
+  const RESEND_API_KEY = import.meta.env.RESEND_API_KEY;
+
+  if (!RESEND_API_KEY || !artistPayment.artistEmail) {
+    log.info('[send-order-email] Skipping artist email - no API key or artist email');
+    return new Response(JSON.stringify({ success: false, message: 'Artist email skipped' }), {
+      status: 200, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  const itemsHtml = artistPayment.items.map((item: any) => `
+    <tr>
+      <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${item.name}</td>
+      <td style="padding: 10px 0; border-bottom: 1px solid #eee; text-align: right;">£${item.price.toFixed(2)}</td>
+      <td style="padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #16a34a; font-weight: 600;">£${item.artistShare.toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Sale Notification</title></head>
+<body style="margin: 0; padding: 0; background: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table cellpadding="0" cellspacing="0" border="0" width="100%">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background: #fff; border-radius: 8px; overflow: hidden;">
+          <tr>
+            <td style="background: #111; padding: 24px; text-align: center;">
+              <div style="font-size: 24px; font-weight: 800;"><span style="color: #fff;">FRESH</span> <span style="color: #dc2626;">WAX</span></div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 24px;">
+              <h1 style="margin: 0 0 8px; color: #16a34a; font-size: 22px;">You Made a Sale! 🎉</h1>
+              <p style="color: #666; margin: 0 0 24px;">Order ${orderNumber}</p>
+
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 24px;">
+                <tr style="background: #f8f8f8;">
+                  <th style="padding: 12px; text-align: left; font-weight: 600; color: #666;">Item</th>
+                  <th style="padding: 12px; text-align: right; font-weight: 600; color: #666;">Price</th>
+                  <th style="padding: 12px; text-align: right; font-weight: 600; color: #666;">Your Share</th>
+                </tr>
+                ${itemsHtml}
+              </table>
+
+              <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; text-align: center;">
+                <div style="color: #166534; font-size: 14px; margin-bottom: 4px;">Total Earnings</div>
+                <div style="color: #16a34a; font-size: 28px; font-weight: 700;">£${artistPayment.totalArtistShare.toFixed(2)}</div>
+              </div>
+
+              <p style="color: #888; font-size: 13px; margin-top: 24px; text-align: center;">
+                Payments are processed monthly. View your earnings in your <a href="https://freshwax.co.uk/pro/dashboard" style="color: #dc2626;">Pro Dashboard</a>.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Fresh Wax <sales@freshwax.co.uk>',
+        to: [artistPayment.artistEmail],
+        subject: `You made a sale! - ${orderNumber}`,
+        html
+      })
+    });
+
+    if (!response.ok) throw new Error(await response.text());
+    const result = await response.json();
+    log.info('[send-order-email] Artist email sent:', result.id);
+    return new Response(JSON.stringify({ success: true, emailId: result.id }), {
+      status: 200, headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    log.error('[send-order-email] Artist email failed:', error);
+    return new Response(JSON.stringify({ success: false, error: 'Failed to send artist email' }), {
+      status: 500, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+// Send fulfillment request to stockist/supplier
+async function sendStockistEmail(orderId: string, orderNumber: string, stockistOrder: any, customer: any, shipping: any): Promise<Response> {
+  const RESEND_API_KEY = import.meta.env.RESEND_API_KEY;
+
+  if (!RESEND_API_KEY || !stockistOrder.stockistEmail) {
+    log.info('[send-order-email] Skipping stockist email - no API key or stockist email');
+    return new Response(JSON.stringify({ success: false, message: 'Stockist email skipped' }), {
+      status: 200, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  const itemsHtml = stockistOrder.items.map((item: any) => `
+    <tr>
+      <td style="padding: 10px; border: 1px solid #ddd;">${item.name}</td>
+      <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${item.quantity}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${item.vinylColor || 'Standard'}</td>
+    </tr>
+  `).join('');
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Fulfillment Request</title></head>
+<body style="margin: 0; padding: 0; background: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table cellpadding="0" cellspacing="0" border="0" width="100%">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background: #fff; border-radius: 8px; overflow: hidden;">
+          <tr>
+            <td style="background: #111; padding: 24px; text-align: center;">
+              <div style="font-size: 24px; font-weight: 800;"><span style="color: #fff;">FRESH</span> <span style="color: #dc2626;">WAX</span></div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 24px;">
+              <h1 style="margin: 0 0 8px; color: #111; font-size: 22px;">Fulfillment Request</h1>
+              <p style="color: #666; margin: 0 0 24px;">Order ${orderNumber} - Please ship the following items</p>
+
+              <h3 style="color: #333; margin: 0 0 12px;">Items to Ship</h3>
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 24px;">
+                <tr style="background: #f8f8f8;">
+                  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Item</th>
+                  <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Qty</th>
+                  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Variant</th>
+                </tr>
+                ${itemsHtml}
+              </table>
+
+              <h3 style="color: #333; margin: 0 0 12px;">Ship To</h3>
+              <div style="background: #f8f8f8; padding: 16px; border-radius: 6px; margin-bottom: 24px;">
+                <strong>${customer.firstName} ${customer.lastName}</strong><br>
+                ${shipping?.address1 || ''}<br>
+                ${shipping?.address2 ? shipping.address2 + '<br>' : ''}
+                ${shipping?.city || ''}, ${shipping?.postcode || ''}<br>
+                ${shipping?.county ? shipping.county + '<br>' : ''}
+                ${shipping?.country || 'United Kingdom'}
+              </div>
+
+              <p style="color: #888; font-size: 13px; text-align: center;">
+                Please update the order status once shipped at <a href="https://freshwax.co.uk/admin/orders" style="color: #dc2626;">admin panel</a>.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: 'Fresh Wax <fulfillment@freshwax.co.uk>',
+        to: [stockistOrder.stockistEmail],
+        subject: `Fulfillment Request - ${orderNumber}`,
+        html
+      })
+    });
+
+    if (!response.ok) throw new Error(await response.text());
+    const result = await response.json();
+    log.info('[send-order-email] Stockist email sent:', result.id);
+    return new Response(JSON.stringify({ success: true, emailId: result.id }), {
+      status: 200, headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    log.error('[send-order-email] Stockist email failed:', error);
+    return new Response(JSON.stringify({ success: false, error: 'Failed to send stockist email' }), {
+      status: 500, headers: { 'Content-Type': 'application/json' }
+    });
+  }
 }

@@ -89,6 +89,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Check if this is a referral code (restricted to Pro upgrade only)
+    if (giftCard.restrictedTo === 'pro_upgrade') {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'This is a referral code that can only be used for Pro subscription upgrades. Apply it during checkout when upgrading to Pro.',
+        isReferralCode: true,
+        restrictedTo: 'pro_upgrade'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const amountToCredit = giftCard.currentBalance;
     const now = new Date();
     const nowISO = now.toISOString();

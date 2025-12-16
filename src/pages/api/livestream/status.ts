@@ -2,6 +2,7 @@
 // Check if any stream is currently live - uses Firebase REST API
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument } from '../../../lib/firebase-rest';
+import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
 
 // Server-side cache
 interface CacheEntry {
@@ -45,7 +46,13 @@ function jsonResponse(data: any, status: number, maxAge: number = 10): Response 
   });
 }
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Initialize Red5 env for HLS URL building
+  const env = (locals as any)?.runtime?.env;
+  initRed5Env({
+    RED5_HLS_URL: env?.RED5_HLS_URL || import.meta.env.RED5_HLS_URL,
+  });
+
   try {
     const url = new URL(request.url);
     const streamId = url.searchParams.get('streamId');
@@ -62,7 +69,13 @@ export const GET: APIRoute = async ({ request }) => {
         }
       }
 
-      const streamDoc = await getDocument('livestreams', streamId);
+      // Check livestreamSlots first (slot-based streams)
+      let streamDoc = await getDocument('livestreamSlots', streamId);
+
+      if (!streamDoc) {
+        // Fall back to legacy livestreams collection
+        streamDoc = await getDocument('livestreams', streamId);
+      }
 
       if (!streamDoc) {
         const result = { success: false, error: 'Stream not found' };
@@ -89,26 +102,67 @@ export const GET: APIRoute = async ({ request }) => {
       }
     }
 
-    // Check for any live stream
-    const liveStreams = await queryCollection('livestreams', {
-      filters: [{ field: 'isLive', op: 'EQUAL', value: true }],
+    // Check livestreamSlots for slots with status='live' (new slot-based system)
+    const liveSlots = await queryCollection('livestreamSlots', {
+      filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
       limit: 5,
       skipCache: true
     });
 
+    // Convert slots to stream format for the player
+    let liveStreams = liveSlots.map(slot => ({
+      id: slot.id,
+      title: slot.title || `${slot.djName}'s Stream`,
+      djName: slot.djName,
+      djId: slot.djId,
+      djAvatar: slot.djAvatar || '/placeholder.webp',
+      genre: slot.genre || 'Jungle / D&B',
+      description: slot.description || '',
+      isLive: true,
+      status: 'live',
+      startedAt: slot.liveStartTime || slot.startTime,
+      // Always build HLS URL from stream key + env var (more reliable than stored URL)
+      hlsUrl: slot.streamKey ? buildHlsUrl(slot.streamKey) : slot.hlsUrl || null,
+      streamKey: slot.streamKey,
+      streamSource: 'red5',
+      currentViewers: slot.currentViewers || 0,
+      totalLikes: slot.totalLikes || 0,
+      averageRating: slot.averageRating || 0,
+      coverImage: slot.coverImage || '/placeholder.webp',
+    }));
+
+    // Also check legacy livestreams collection
+    if (liveStreams.length === 0) {
+      const legacyStreams = await queryCollection('livestreams', {
+        filters: [{ field: 'isLive', op: 'EQUAL', value: true }],
+        limit: 5,
+        skipCache: true
+      });
+      liveStreams = legacyStreams;
+    }
+
     if (liveStreams.length === 0) {
       // Check for scheduled streams
       const now = new Date().toISOString();
-      const allStreams = await queryCollection('livestreams', {
+
+      // Check scheduled slots
+      const scheduledSlots = await queryCollection('livestreamSlots', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'scheduled' }],
         limit: 10,
         skipCache: true
       });
 
-      const scheduled = allStreams
-        .filter(s => s.scheduledFor && s.scheduledFor > now)
-        .sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime())
-        .slice(0, 3);
+      const scheduled = scheduledSlots
+        .filter(s => s.startTime && s.startTime > now)
+        .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+        .slice(0, 3)
+        .map(s => ({
+          id: s.id,
+          title: s.title || `${s.djName}'s Stream`,
+          djName: s.djName,
+          scheduledFor: s.startTime,
+          genre: s.genre,
+        }));
 
       const result = {
         success: true,

@@ -21,7 +21,7 @@ function generateReleaseId(artistName: string): string {
 }
 
 /**
- * Parse submission from R2 bucket
+ * Parse submission from R2 bucket (submissions/ folder in releases bucket)
  */
 async function parseSubmission(
   submissionId: string,
@@ -29,9 +29,9 @@ async function parseSubmission(
 ): Promise<{ metadata: SubmissionMetadata; artworkKey: string | null; trackKeys: string[] }> {
   console.log(`[Parser] Parsing submission: ${submissionId}`);
 
-  // Get metadata.json
-  const metadataKey = `${submissionId}/metadata.json`;
-  const metadataObj = await env.UPLOADS_BUCKET.get(metadataKey);
+  // Get metadata.json from submissions/ folder
+  const metadataKey = `submissions/${submissionId}/metadata.json`;
+  const metadataObj = await env.RELEASES_BUCKET.get(metadataKey);
 
   if (!metadataObj) {
     throw new Error(`Metadata not found: ${metadataKey}`);
@@ -41,7 +41,7 @@ async function parseSubmission(
   console.log(`[Parser] Metadata loaded: ${metadata.artistName} - ${metadata.releaseName}`);
 
   // List all files in submission folder
-  const list = await env.UPLOADS_BUCKET.list({ prefix: submissionId + '/' });
+  const list = await env.RELEASES_BUCKET.list({ prefix: `submissions/${submissionId}/` });
 
   let artworkKey: string | null = null;
   const trackKeys: string[] = [];
@@ -160,6 +160,32 @@ async function processSubmission(
 
   const now = new Date().toISOString();
 
+  // Map processed tracks with additional metadata from submission
+  const enrichedTracks = processedTracks.map((track, index) => {
+    const submissionTrack = metadata.tracks[index] || {};
+    return {
+      ...track,
+      trackNumber: track.trackNumber,
+      displayTrackNumber: submissionTrack.trackNumber || index + 1,
+      title: track.title || submissionTrack.title || submissionTrack.trackName || `Track ${index + 1}`,
+      trackName: submissionTrack.trackName || track.title,
+      trackISRC: submissionTrack.trackISRC || '',
+      featured: submissionTrack.featured || '',
+      remixer: submissionTrack.remixer || '',
+      explicit: submissionTrack.explicit || false
+    };
+  });
+
+  // Build social links object
+  const socialLinks = metadata.socialLinks || {
+    instagram: metadata.instagramLink || '',
+    soundcloud: metadata.soundcloudLink || '',
+    spotify: metadata.spotifyLink || '',
+    bandcamp: metadata.bandcampLink || '',
+    youtube: metadata.youtubeLink || '',
+    other: metadata.otherLinks || ''
+  };
+
   return {
     id: releaseId,
     artistName: metadata.artistName,
@@ -168,52 +194,108 @@ async function processSubmission(
     artist: metadata.artistName,
     coverUrl,
     thumbUrl,
-    tracks: processedTracks,
-    genre: metadata.genre,
-    catalogNumber: metadata.catalogNumber,
+    tracks: enrichedTracks,
+
+    // Release Details
+    releaseType: metadata.releaseType || 'EP',
+    labelCode: metadata.labelCode || metadata.catalogNumber || '',
+    masteredBy: metadata.masteredBy || '',
+    genre: metadata.genre || 'Drum and Bass',
+    catalogNumber: metadata.catalogNumber || metadata.labelCode || '',
     releaseDate: metadata.releaseDate,
-    description: metadata.description,
-    pricePerSale: metadata.pricePerSale,
-    trackPrice: metadata.trackPrice,
-    vinylPrice: metadata.vinylPrice,
-    vinylRelease: metadata.vinylRelease,
+    description: metadata.description || metadata.releaseDescription || '',
+    releaseDescription: metadata.releaseDescription || metadata.description || '',
+
+    // Pre-order
+    hasPreOrder: metadata.hasPreOrder || false,
+    preOrderDate: metadata.preOrderDate || null,
+
+    // Content flags
+    hasExplicitContent: metadata.hasExplicitContent || false,
+
+    // Previous release info
+    isPreviouslyReleased: metadata.isPreviouslyReleased || false,
+    originalReleaseDate: metadata.originalReleaseDate || null,
+    recordingLocation: metadata.recordingLocation || '',
+    recordingYear: metadata.recordingYear || '',
+
+    // Copyright & Publishing
+    copyrightYear: metadata.copyrightYear || new Date().getFullYear().toString(),
+    copyrightHolder: metadata.copyrightHolder || metadata.artistName,
+    publishingRights: metadata.publishingRights || '',
+    publishingCompany: metadata.publishingCompany || '',
+    primaryLanguage: metadata.primaryLanguage || 'English',
+
+    // Pricing
+    pricePerSale: metadata.pricePerSale || 5.00,
+    trackPrice: metadata.trackPrice || 1.00,
+
+    // Vinyl
+    vinylRelease: metadata.vinylRelease || false,
+    vinylPrice: metadata.vinylPrice || null,
+    vinylRecordCount: metadata.vinylRecordCount || metadata.vinyl?.recordCount || '',
+    vinylRPM: metadata.vinylRPM || metadata.vinyl?.rpm || '33',
+    vinylSize: metadata.vinylSize || metadata.vinyl?.size || '12"',
+    vinylWeight: metadata.vinylWeight || metadata.vinyl?.weight || '140g',
+    pressingPlant: metadata.pressingPlant || metadata.vinyl?.pressingPlant || '',
+    expectedShippingDate: metadata.expectedShippingDate || metadata.vinyl?.expectedShippingDate || null,
+
+    // Limited Edition
+    hasLimitedEdition: metadata.hasLimitedEdition || metadata.limitedEdition?.enabled || false,
+    limitedEditionType: metadata.limitedEditionType || metadata.limitedEdition?.type || '',
+    limitedEditionDetails: metadata.limitedEditionDetails || metadata.limitedEdition?.details || '',
+
+    // Social Links
+    socialLinks,
+
+    // Barcode
+    upcEanCode: metadata.upcEanCode || '',
+
+    // Notes
+    notes: metadata.notes || '',
+
+    // Status
     status: 'pending',
     published: false,
     approved: false,
     storage: 'r2',
     createdAt: now,
     updatedAt: now,
-    processedAt: now
+    processedAt: now,
+
+    // Email for notifications
+    email: metadata.email,
+    userId: metadata.userId
   };
 }
 
 /**
- * Delete submission files from uploads bucket
+ * Delete submission files from releases bucket (submissions/ folder)
  */
 async function deleteSubmission(submissionId: string, env: Env): Promise<void> {
   console.log(`[Cleanup] Deleting: ${submissionId}`);
 
-  const list = await env.UPLOADS_BUCKET.list({ prefix: submissionId + '/' });
+  const list = await env.RELEASES_BUCKET.list({ prefix: `submissions/${submissionId}/` });
 
   for (const object of list.objects) {
-    await env.UPLOADS_BUCKET.delete(object.key);
+    await env.RELEASES_BUCKET.delete(object.key);
   }
 
   console.log(`[Cleanup] Deleted ${list.objects.length} files`);
 }
 
 /**
- * List all pending submissions
+ * List all pending submissions (from submissions/ folder in releases bucket)
  */
 async function listSubmissions(env: Env): Promise<string[]> {
-  const list = await env.UPLOADS_BUCKET.list();
+  const list = await env.RELEASES_BUCKET.list({ prefix: 'submissions/' });
   const submissions = new Set<string>();
 
   for (const object of list.objects) {
-    // Extract submission folder from path
+    // Extract submission folder from path like "submissions/{submissionId}/..."
     const parts = object.key.split('/');
-    if (parts.length >= 2) {
-      submissions.add(parts[0]);
+    if (parts.length >= 3 && parts[0] === 'submissions') {
+      submissions.add(parts[1]);
     }
   }
 

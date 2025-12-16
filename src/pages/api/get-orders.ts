@@ -1,7 +1,8 @@
 // src/pages/api/get-orders.ts
 // Fetch orders for a customer - uses Firebase REST API
+// Optimized: Uses batch fetch for releases to avoid N+1 queries
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument } from '../../lib/firebase-rest';
+import { queryCollection, getDocumentsBatch } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -13,18 +14,6 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ url }) => {
   const userId = url.searchParams.get('userId');
-
-  // Cache release lookups within this request to avoid duplicate reads
-  const releaseCache = new Map<string, any>();
-
-  async function getCachedRelease(releaseId: string) {
-    if (releaseCache.has(releaseId)) {
-      return releaseCache.get(releaseId);
-    }
-    const data = await getDocument('releases', releaseId);
-    releaseCache.set(releaseId, data);
-    return data;
-  }
 
   if (!userId) {
     return new Response(JSON.stringify({
@@ -52,9 +41,29 @@ export const GET: APIRoute = async ({ url }) => {
       order.customerId === userId
     );
 
-    const orders = await Promise.all(userOrders.map(async (orderData: any) => {
+    // OPTIMIZATION: Collect all unique release IDs first, then batch fetch
+    const releaseIds = new Set<string>();
+    for (const order of userOrders) {
+      if (order.items && Array.isArray(order.items)) {
+        for (const item of order.items) {
+          if (item.type === 'digital' || item.type === 'release' || item.type === 'track') {
+            const releaseId = item.releaseId || item.productId || item.id;
+            if (releaseId) releaseIds.add(releaseId);
+          }
+        }
+      }
+    }
+
+    // Batch fetch all releases at once (avoids N+1 queries)
+    const releaseCache = releaseIds.size > 0
+      ? await getDocumentsBatch('releases', Array.from(releaseIds))
+      : new Map<string, any>();
+
+    log.info('[get-orders] Batch fetched', releaseCache.size, 'releases for', userOrders.length, 'orders');
+
+    const orders = userOrders.map((orderData: any) => {
       if (orderData.items && Array.isArray(orderData.items)) {
-        orderData.items = await Promise.all(orderData.items.map(async (item: any) => {
+        orderData.items = orderData.items.map((item: any) => {
           if (item.type !== 'digital' && item.type !== 'release' && item.type !== 'track') {
             return item;
           }
@@ -67,7 +76,7 @@ export const GET: APIRoute = async ({ url }) => {
           if (!releaseId) return item;
 
           try {
-            const releaseData = await getCachedRelease(releaseId);
+            const releaseData = releaseCache.get(releaseId);
 
             if (releaseData) {
 
@@ -152,11 +161,11 @@ export const GET: APIRoute = async ({ url }) => {
           }
 
           return item;
-        }));
+        });
       }
 
       return orderData;
-    }));
+    });
 
     orders.sort((a: any, b: any) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;

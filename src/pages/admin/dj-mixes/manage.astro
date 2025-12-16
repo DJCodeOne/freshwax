@@ -42,8 +42,35 @@ const formatDate = (date) => {
   });
 };
 
-// Format duration
-const formatDuration = (seconds) => {
+// Get duration in seconds from mix object
+const getDurationSeconds = (mix: any): number => {
+  // Check durationSeconds first (number)
+  if (mix.durationSeconds && typeof mix.durationSeconds === 'number') {
+    return Math.floor(mix.durationSeconds);
+  }
+
+  // Check if duration is a string in format "H:MM:SS" or "MM:SS"
+  if (mix.duration && typeof mix.duration === 'string' && mix.duration.includes(':')) {
+    const parts = mix.duration.split(':').map(Number);
+    if (parts.length === 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2]; // H:MM:SS
+    } else if (parts.length === 2) {
+      return parts[0] * 60 + parts[1]; // MM:SS
+    }
+  }
+
+  // Check duration as number
+  if (mix.duration && typeof mix.duration === 'number') {
+    return Math.floor(mix.duration);
+  }
+
+  // Check other possible field names
+  return Math.floor(mix.duration_seconds || mix.mixDuration || mix.length || (mix.durationMs ? mix.durationMs / 1000 : 0) || 0);
+};
+
+// Format duration for display
+const formatDuration = (mix: any) => {
+  const seconds = getDurationSeconds(mix);
   if (!seconds) return '-';
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
@@ -132,7 +159,7 @@ export const prerender = false;
                   </div>
                 </td>
                 <td class="cell-primary" style="font-size: 0.95rem; font-weight: 600;">{mix.djName || 'Unknown DJ'}</td>
-                <td class="cell-secondary" style="font-size: 0.9rem;">{formatDuration(mix.duration)}</td>
+                <td class="cell-secondary" style="font-size: 0.9rem;">{formatDuration(mix)}</td>
                 <td>
                   <div class="mix-stats">
                     <span title="Plays">▶️ {(mix.plays || 0).toLocaleString()}</span>

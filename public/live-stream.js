@@ -10,6 +10,46 @@ import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase
 let pusher = null;
 let chatChannel = null;
 
+// Early stub functions for emoji/gif pickers (will be replaced by setupEmojiPicker/setupGiphyPicker)
+// This ensures buttons work even before chat is fully initialized
+window.toggleEmojiPicker = function() {
+  console.log('[EmojiPicker] Button clicked - picker not ready yet');
+  const emojiPicker = document.getElementById('emojiPicker');
+  const giphyModal = document.getElementById('giphyModal');
+  if (emojiPicker) {
+    emojiPicker.classList.toggle('hidden');
+    giphyModal?.classList.add('hidden');
+  }
+};
+
+window.toggleGiphyPicker = function() {
+  console.log('[GiphyPicker] Button clicked - picker not ready yet');
+  const giphyModal = document.getElementById('giphyModal');
+  const emojiPicker = document.getElementById('emojiPicker');
+  if (giphyModal) {
+    if (giphyModal.classList.contains('hidden')) {
+      giphyModal.classList.remove('hidden');
+      emojiPicker?.classList.add('hidden');
+      document.body.style.overflow = 'hidden';
+    } else {
+      giphyModal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  }
+};
+
+window.switchEmojiCategory = function(category) {
+  console.log('[EmojiPicker] Category switch - waiting for full init');
+};
+
+window.switchGifCategory = function(category) {
+  console.log('[GiphyPicker] Category switch - waiting for full init');
+};
+
+window.searchGiphyDebounced = function(query) {
+  console.log('[GiphyPicker] Search - waiting for full init');
+};
+
 // Get Pusher config at runtime (not module load time) to ensure window.PUSHER_CONFIG is set
 function getPusherConfig() {
   const config = {
@@ -1366,7 +1406,7 @@ async function setupChat(streamId) {
     const result = await response.json();
     if (result.success) {
       chatMessages = result.messages || [];
-      renderChatMessages(chatMessages);
+      renderChatMessages(chatMessages, true); // Force scroll to bottom on initial load
     }
   } catch (error) {
     console.warn('[Chat] Failed to load initial messages:', error);
@@ -1522,11 +1562,11 @@ window.cancelReply = function() {
   }
 };
 
-function renderChatMessages(messages) {
+function renderChatMessages(messages, forceScrollToBottom = false) {
   const container = document.getElementById('chatMessages');
   if (!container) return;
 
-  const wasAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
+  const wasAtBottom = forceScrollToBottom || container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
 
   // Helper to format time
   const formatTime = (timestamp) => {
@@ -1545,10 +1585,10 @@ function renderChatMessages(messages) {
       const msgPreview = msg.message ? msg.message.substring(0, 50) : '';
       // Use stored reply info directly (works across all screens)
       const replyHtml = msg.replyTo && msg.replyToUserName ? `
-        <div style="background: #1a1a2e; border-left: 2px solid #444; padding: 0.25rem 0.5rem; margin-bottom: 0.25rem; border-radius: 4px; font-size: 0.75rem;">
-          <span style="color: #888;">↩ </span>
-          <span style="color: #dc2626;">${escapeHtml(msg.replyToUserName)}</span>
-          <span style="color: #666; margin-left: 0.25rem;">${escapeHtml((msg.replyToPreview || 'GIF').substring(0, 40))}${(msg.replyToPreview || '').length > 40 ? '...' : ''}</span>
+        <div style="background: #1a2e1a; border-left: 2px solid #22c55e; padding: 0.25rem 0.5rem; margin-bottom: 0.25rem; border-radius: 4px; font-size: 0.75rem;">
+          <span style="color: #22c55e;">↩ </span>
+          <span style="color: #22c55e;">${escapeHtml(msg.replyToUserName)}</span>
+          <span style="color: #86efac; margin-left: 0.25rem;">${escapeHtml((msg.replyToPreview || 'GIF').substring(0, 40))}${(msg.replyToPreview || '').length > 40 ? '...' : ''}</span>
         </div>
       ` : '';
 
@@ -1557,7 +1597,7 @@ function renderChatMessages(messages) {
         return `
           <div class="chat-message chat-bot-message" style="padding: 0.5rem; margin: 0.25rem 0; animation: slideIn 0.2s ease-out; background: linear-gradient(135deg, #1a1a2e 0%, #2d1f3d 100%); border-radius: 8px; border-left: 3px solid #a855f7;">
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-              <img src="/logo.webp" alt="Bot" style="width: 20px; height: 20px; border-radius: 50%;" />
+              <img src="/logo.webp" alt="Bot" style="width: 20px; height: 20px; border-radius: 50%; background: #fff; padding: 2px;" />
               <span style="font-weight: 600; color: #a855f7; font-size: 0.8125rem;">FreshWax Bot</span>
               <span style="background: #a855f7; color: #fff; font-size: 0.625rem; padding: 0.125rem 0.375rem; border-radius: 4px; font-weight: 600;">BOT</span>
               <span style="font-size: 0.6875rem; color: #666; margin-left: auto;">${time}</span>
@@ -1574,7 +1614,7 @@ function renderChatMessages(messages) {
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
               <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem;">${escapeHtml(msg.userName)}</span>
               <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <button class="reply-btn" onclick="window.replyToMessage('${msg.id}', '${escapeHtml(msg.userName)}', 'GIF')" style="opacity: 0; background: none; border: none; color: #666; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">↩ Reply</button>
+                <button class="reply-btn" onclick="window.replyToMessage('${msg.id}', '${escapeHtml(msg.userName)}', 'GIF')" style="opacity: 0; background: none; border: none; color: #22c55e; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">↩ Reply</button>
                 <span style="font-size: 0.6875rem; color: #666;">${time}</span>
               </div>
             </div>
@@ -1589,7 +1629,7 @@ function renderChatMessages(messages) {
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.125rem;">
             <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem;">${escapeHtml(msg.userName)}</span>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <button class="reply-btn" onclick="window.replyToMessage('${msg.id}', '${escapeHtml(msg.userName)}', '${escapeHtml(msgPreview).replace(/'/g, "\\'")}')" style="opacity: 0; background: none; border: none; color: #666; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">↩ Reply</button>
+              <button class="reply-btn" onclick="window.replyToMessage('${msg.id}', '${escapeHtml(msg.userName)}', '${escapeHtml(msgPreview).replace(/'/g, "\\'")}')" style="opacity: 0; background: none; border: none; color: #22c55e; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">↩ Reply</button>
               <span style="font-size: 0.6875rem; color: #666;">${time}</span>
             </div>
           </div>
@@ -1652,23 +1692,37 @@ function setupEmojiPicker() {
     };
   });
   
+  // Define the toggle function that will be used by both onclick attribute and programmatic handlers
+  window.toggleEmojiPicker = function() {
+    console.log('[EmojiPicker] Toggle called');
+    emojiPicker?.classList.toggle('hidden');
+    giphyModal?.classList.add('hidden');
+    document.body.style.overflow = ''; // Re-enable scroll if GIF modal was open
+    emojiBtn?.classList.toggle('active');
+    document.getElementById('giphyBtn')?.classList.remove('active');
+
+    if (!emojiPicker?.classList.contains('hidden')) {
+      renderEmojis(currentCategory);
+    }
+  };
+
+  // Also attach emoji category switch to window
+  window.switchEmojiCategory = function(category) {
+    document.querySelectorAll('.emoji-cat').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.emoji-cat[data-cat="${category}"]`)?.classList.add('active');
+    currentCategory = category;
+    renderEmojis(currentCategory);
+  };
+
   if (emojiBtn) {
     console.log('[EmojiPicker] Attaching click handler to emoji button');
-    emojiBtn.onclick = () => {
-      console.log('[EmojiPicker] Emoji button clicked!');
-      emojiPicker?.classList.toggle('hidden');
-      giphyModal?.classList.add('hidden');
-      document.body.style.overflow = ''; // Re-enable scroll if GIF modal was open
-      emojiBtn.classList.toggle('active');
-      document.getElementById('giphyBtn')?.classList.remove('active');
-
-      if (!emojiPicker?.classList.contains('hidden')) {
-        renderEmojis(currentCategory);
-      }
-    };
+    emojiBtn.onclick = window.toggleEmojiPicker;
   } else {
     console.warn('[EmojiPicker] Emoji button NOT found!');
   }
+
+  // Initialize with default category
+  renderEmojis(currentCategory);
 }
 
 function setupGiphyPicker() {
@@ -2073,4 +2127,36 @@ document.addEventListener('click', (e) => {
 // ==========================================
 // INITIALIZE
 // ==========================================
-init();
+
+// Track if we've already initialized to prevent double-init
+let isInitialized = false;
+
+async function safeInit() {
+  // Check if we're on the live page
+  if (!window.location.pathname.startsWith('/live')) {
+    console.log('[LiveStream] Not on live page, skipping init');
+    return;
+  }
+
+  // Prevent double initialization
+  if (isInitialized) {
+    console.log('[LiveStream] Already initialized, refreshing stream status...');
+    // Just refresh the stream data
+    checkForLiveStream();
+    return;
+  }
+
+  isInitialized = true;
+  console.log('[LiveStream] Initializing...');
+  await init();
+}
+
+// Initial load
+safeInit();
+
+// Re-initialize on Astro View Transitions navigation
+document.addEventListener('astro:page-load', () => {
+  console.log('[LiveStream] astro:page-load event fired');
+  isInitialized = false; // Reset flag to allow re-init
+  safeInit();
+});

@@ -584,7 +584,8 @@ export function getCacheStats(): { size: number; keys: string[] } {
 export async function setDocument(
   collection: string,
   docId: string,
-  data: Record<string, any>
+  data: Record<string, any>,
+  idToken?: string
 ): Promise<{ success: boolean; id: string }> {
   const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
   const apiKey = getEnvVar('FIREBASE_API_KEY');
@@ -600,9 +601,14 @@ export async function setDocument(
     fields[key] = toFirestoreValue(value);
   }
 
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (idToken) {
+    headers['Authorization'] = `Bearer ${idToken}`;
+  }
+
   const response = await fetch(url, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ fields })
   });
 
@@ -630,7 +636,8 @@ export async function setDocument(
 export async function updateDocument(
   collection: string,
   docId: string,
-  data: Record<string, any>
+  data: Record<string, any>,
+  idToken?: string
 ): Promise<{ success: boolean }> {
   const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
   const apiKey = getEnvVar('FIREBASE_API_KEY');
@@ -647,9 +654,14 @@ export async function updateDocument(
     fields[key] = toFirestoreValue(value);
   }
 
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (idToken) {
+    headers['Authorization'] = `Bearer ${idToken}`;
+  }
+
   const response = await fetch(url, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ fields })
   });
 
@@ -667,7 +679,8 @@ export async function updateDocument(
 
 export async function deleteDocument(
   collection: string,
-  docId: string
+  docId: string,
+  idToken?: string
 ): Promise<{ success: boolean }> {
   const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
   const apiKey = getEnvVar('FIREBASE_API_KEY');
@@ -678,9 +691,14 @@ export async function deleteDocument(
 
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?key=${apiKey}`;
 
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (idToken) {
+    headers['Authorization'] = `Bearer ${idToken}`;
+  }
+
   const response = await fetch(url, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' }
+    headers
   });
 
   if (!response.ok && response.status !== 404) {
@@ -757,9 +775,11 @@ export async function arrayRemove(
 }
 
 // Add a document with auto-generated ID
+// idToken is optional - if provided, request is authenticated
 export async function addDocument(
   collection: string,
-  data: Record<string, any>
+  data: Record<string, any>,
+  idToken?: string
 ): Promise<{ success: boolean; id: string }> {
   const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
   const apiKey = getEnvVar('FIREBASE_API_KEY');
@@ -775,9 +795,14 @@ export async function addDocument(
     fields[key] = toFirestoreValue(value);
   }
 
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (idToken) {
+    headers['Authorization'] = `Bearer ${idToken}`;
+  }
+
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ fields })
   });
 

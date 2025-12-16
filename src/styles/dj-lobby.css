@@ -11,7 +11,19 @@
     min-height: 100vh;
   }
   
-  .hidden { display: none !important; }
+  /* DJ Lobby scoped hidden class - applies to all elements with .hidden class inside .dj-lobby-page */
+  .dj-lobby-page .hidden {
+    display: none !important;
+  }
+
+  /* Fallback specific hidden classes for elements outside dj-lobby-page scope */
+  .auth-gate.hidden,
+  .access-denied.hidden,
+  .not-eligible.hidden,
+  .lobby-container.hidden,
+  #mainLobby.hidden {
+    display: none !important;
+  }
   .red { color: #dc2626; }
   
   /* Auth Gate */
@@ -54,7 +66,7 @@
     background: linear-gradient(to bottom, #000000, #111827);
     z-index: 100;
   }
-  
+
   .denied-content {
     text-align: center;
     padding: 2rem;
@@ -96,7 +108,7 @@
     overflow-y: auto;
     padding: 2rem 1.5rem;
   }
-  
+
   .not-eligible-content {
     text-align: center;
     padding: 2rem 2.5rem;
@@ -679,6 +691,7 @@
     overflow: hidden;
     position: relative;
   }
+
   
   .offline-state {
     text-align: center;
@@ -870,7 +883,145 @@
     background: rgba(16, 185, 129, 0.15);
     color: #10b981;
   }
-  
+
+  .key-status.ready {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+  }
+
+  /* 2x2 Grid Layout for Go Live Setup */
+  .go-live-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .grid-cell {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 0.6rem;
+  }
+
+  .grid-cell label {
+    display: block;
+    font-size: 0.7rem;
+    color: #9ca3af;
+    margin-bottom: 0.3rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .grid-cell input,
+  .grid-cell select {
+    width: 100%;
+    padding: 0.4rem 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.85rem;
+  }
+
+  .grid-cell input:focus,
+  .grid-cell select:focus {
+    outline: none;
+    border-color: #10b981;
+  }
+
+  .credentials-cell .cred-row {
+    margin-bottom: 0.4rem;
+  }
+
+  .credentials-cell .cred-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .credentials-cell .cred-value {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+  }
+
+  .credentials-cell code {
+    flex: 1;
+    padding: 0.3rem 0.5rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    font-size: 0.7rem;
+    color: #10b981;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .credentials-cell .copy-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.65rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 4px;
+    color: #ccc;
+    cursor: pointer;
+  }
+
+  .credentials-cell .copy-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .obs-instructions-compact {
+    font-size: 0.75rem;
+  }
+
+  .obs-instructions-compact summary {
+    cursor: pointer;
+    color: #9ca3af;
+    font-weight: 600;
+    padding: 0.3rem 0;
+  }
+
+  .obs-instructions-compact summary:hover {
+    color: #fff;
+  }
+
+  .obs-instructions-compact ol {
+    margin: 0.4rem 0 0 0;
+    padding-left: 1.2rem;
+    color: #9ca3af;
+    line-height: 1.5;
+  }
+
+  .obs-instructions-compact li {
+    margin-bottom: 0.15rem;
+  }
+
+  /* Glowing Go Live Button */
+  .ready-btn.glow {
+    animation: buttonGlow 2s ease-in-out infinite;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+  }
+
+  @keyframes buttonGlow {
+    0%, 100% {
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2);
+    }
+    50% {
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.6), 0 0 50px rgba(16, 185, 129, 0.3);
+    }
+  }
+
+  .ready-btn.glow:hover {
+    animation: none;
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.7), 0 0 60px rgba(16, 185, 129, 0.4);
+  }
+
+  /* Responsive: Stack on mobile */
+  @media (max-width: 500px) {
+    .go-live-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
   .key-not-available {
     text-align: center;
     padding: 1rem 0.75rem;
@@ -1212,6 +1363,570 @@
   }
   
   /* DM Modal */
+  /* Go Live Modal */
+  .go-live-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .go-live-modal.hidden {
+    display: none !important;
+  }
+
+  .go-live-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  .go-live-modal-content {
+    position: relative;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border-radius: 16px;
+    width: 95%;
+    max-width: 600px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    border: 2px solid #374151;
+  }
+
+  .go-live-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(90deg, #dc2626, #991b1b);
+    color: white;
+  }
+
+  .go-live-modal-header h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.05em;
+    margin: 0;
+  }
+
+  .close-go-live-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+  }
+
+  .close-go-live-btn:hover {
+    background: rgba(255,255,255,0.3);
+  }
+
+  .go-live-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .go-live-step {
+    color: #fff;
+  }
+
+  .step-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .step-number {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #374151;
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  .step-number.active {
+    background: #dc2626;
+    color: white;
+  }
+
+  .step-line {
+    width: 40px;
+    height: 2px;
+    background: #374151;
+  }
+
+  .go-live-step h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+
+  .step-desc {
+    color: #9ca3af;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .stream-credentials {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stream-credentials .cred-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .stream-credentials .cred-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .stream-credentials label {
+    color: #9ca3af;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .stream-credentials .cred-value {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .stream-credentials code {
+    flex: 1;
+    background: #111;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: #10b981;
+    word-break: break-all;
+  }
+
+  .stream-info-inputs {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stream-info-inputs .input-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .stream-info-inputs label {
+    color: #9ca3af;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .stream-info-inputs input,
+  .stream-info-inputs select {
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 2px solid #374151;
+    background: #111;
+    color: white;
+    font-size: 1rem;
+  }
+
+  .stream-info-inputs input:focus,
+  .stream-info-inputs select:focus {
+    outline: none;
+    border-color: #dc2626;
+  }
+
+  .step-instructions {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .step-instructions h4 {
+    color: #10b981;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .step-instructions ol {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: #d1d5db;
+    font-size: 0.875rem;
+    line-height: 1.8;
+  }
+
+  .step-actions {
+    text-align: center;
+  }
+
+  .ready-btn {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .ready-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+  }
+
+  .ready-btn:disabled {
+    background: #374151;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .ready-hint {
+    color: #9ca3af;
+    font-size: 0.8rem;
+    margin-top: 0.75rem;
+  }
+
+  /* Inline Stream Info (title/genre in stream key section) */
+  .inline-stream-info {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .inline-stream-info .info-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .inline-stream-info label {
+    color: #9ca3af;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .inline-stream-info input,
+  .inline-stream-info select {
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    border: 2px solid #374151;
+    background: #111;
+    color: white;
+    font-size: 0.9rem;
+  }
+
+  .inline-stream-info input:focus,
+  .inline-stream-info select:focus {
+    outline: none;
+    border-color: #dc2626;
+  }
+
+  /* OBS Instructions (collapsible) */
+  .obs-instructions {
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 10px;
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+  }
+
+  .obs-instructions summary {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    color: #10b981;
+    font-weight: 600;
+    font-size: 0.85rem;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .obs-instructions summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .obs-instructions summary::before {
+    content: '▶';
+    font-size: 0.7em;
+    transition: transform 0.2s;
+  }
+
+  .obs-instructions[open] summary::before {
+    transform: rotate(90deg);
+  }
+
+  .obs-instructions ol {
+    margin: 0;
+    padding: 0 1rem 1rem 2.25rem;
+    color: #d1d5db;
+    font-size: 0.8rem;
+    line-height: 1.7;
+  }
+
+  /* Larger ready button for inline section */
+  .ready-btn.large {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+    justify-content: center;
+  }
+
+  .ready-section .ready-hint {
+    text-align: center;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  /* Stream Source Selector */
+  .stream-source-selector {
+    margin-bottom: 1.5rem;
+  }
+
+  .stream-source-selector > label {
+    color: #9ca3af;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 0.75rem;
+  }
+
+  .source-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .source-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 1rem;
+    background: #1f2937;
+    border: 2px solid #374151;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .source-option:hover {
+    border-color: #6b7280;
+  }
+
+  .source-option.active {
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+  }
+
+  .source-option .source-icon {
+    font-size: 1.5rem;
+  }
+
+  .source-option .source-label {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .source-option .source-desc {
+    color: #9ca3af;
+    font-size: 0.75rem;
+  }
+
+  /* Relay Stream Setup */
+  .relay-info-card {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
+    border: 2px solid rgba(16, 185, 129, 0.4);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .relay-station-header {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .relay-station-icon {
+    font-size: 2rem;
+  }
+
+  .relay-station-header h4 {
+    margin: 0;
+    color: #10b981;
+    font-size: 1.25rem;
+  }
+
+  .relay-station-status {
+    color: #6ee7b7;
+    font-size: 0.8rem;
+    margin: 0.25rem 0 0 0;
+  }
+
+  .relay-station-desc {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    margin: 0 0 1rem 0;
+  }
+
+  .relay-url-display {
+    background: #111;
+    border-radius: 8px;
+    padding: 0.75rem;
+  }
+
+  .relay-url-display label {
+    color: #9ca3af;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 0.375rem;
+  }
+
+  .relay-url-display code {
+    color: #10b981;
+    font-family: monospace;
+    font-size: 0.8rem;
+    word-break: break-all;
+  }
+
+  .relay-instructions {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+
+  .relay-instructions h4 {
+    color: #60a5fa;
+  }
+
+  /* Connecting State */
+  .connecting-state {
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .connecting-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid #374151;
+    border-top-color: #dc2626;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1.5rem;
+  }
+
+  .connection-status {
+    color: #9ca3af;
+    font-size: 0.9rem;
+  }
+
+  /* Live State */
+  .live-state {
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .live-badge {
+    display: inline-block;
+    background: #dc2626;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    animation: pulse-live 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-live {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+    50% { box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
+  }
+
+  .close-success-btn {
+    background: #374151;
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 1rem;
+  }
+
+  .close-success-btn:hover {
+    background: #4b5563;
+  }
+
+  /* Error State */
+  .error-state {
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .error-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .error-state h3 {
+    color: #f87171;
+  }
+
+  .retry-btn {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 1rem;
+  }
+
+  .retry-btn:hover {
+    background: #b91c1c;
+  }
+
   .dm-modal {
     position: fixed;
     inset: 0;
@@ -1219,6 +1934,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .dm-modal.hidden {
+    display: none !important;
   }
   
   .dm-modal-overlay {
@@ -1794,7 +2513,122 @@
   .dj-item.is-ready::after { content: '✓'; margin-left: 0.2rem; color: #10b981; }
   
   .empty-state { color: #9ca3af; font-size: 0.8rem; font-style: italic; }
-  
+
+  /* ============================================
+     RELAY CHAT SECTION
+     Shows embedded chat from relay sources (Twitch, YouTube, etc.)
+     ============================================ */
+
+  .relay-chat-section {
+    background: linear-gradient(to bottom, #1a1a2e, #16162e);
+    border-radius: 12px;
+    border: 2px solid #4f46e5;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 400px;
+  }
+
+  .relay-chat-section.hidden {
+    display: none;
+  }
+
+  .relay-chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    flex-shrink: 0;
+  }
+
+  .relay-chat-header h3 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .toggle-relay-chat-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .toggle-relay-chat-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .relay-chat-container {
+    flex: 1;
+    min-height: 250px;
+    position: relative;
+    transition: height 0.3s ease;
+  }
+
+  .relay-chat-container.collapsed {
+    min-height: 0;
+    height: 0;
+    overflow: hidden;
+  }
+
+  .relay-chat-frame {
+    width: 100%;
+    height: 100%;
+    min-height: 250px;
+    border: none;
+    background: #111;
+  }
+
+  .relay-chat-frame.hidden {
+    display: none;
+  }
+
+  .relay-chat-unsupported {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+    min-height: 200px;
+  }
+
+  .relay-chat-unsupported.hidden {
+    display: none;
+  }
+
+  .relay-chat-unsupported p {
+    color: #9ca3af;
+    margin-bottom: 1rem;
+  }
+
+  .open-chat-link {
+    color: #7c3aed;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    background: rgba(124, 58, 237, 0.1);
+    border-radius: 8px;
+    transition: background 0.2s;
+  }
+
+  .open-chat-link:hover {
+    background: rgba(124, 58, 237, 0.2);
+  }
+
   /* ============================================
      MOBILE & TABLET OPTIMIZATIONS
      Optimized for streaming via Bluetooth to cars, speakers, soundbars, casting to TV

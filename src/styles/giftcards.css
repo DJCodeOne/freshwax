@@ -895,9 +895,7 @@
     color: #fff;
   }
   
-  .hidden {
-    display: none !important;
-  }
+  /* Note: Don't define .hidden here - it conflicts with Tailwind responsive utilities */
   
   /* Responsive */
   @media (max-width: 600px) {

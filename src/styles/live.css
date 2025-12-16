@@ -2321,12 +2321,11 @@
   .inline-reactions {
     display: flex;
     align-items: center;
-    gap: 0.375rem;
-    margin-left: auto;
-    padding-left: 0.75rem;
-    border-left: 1px solid #333;
+    justify-content: center;
+    gap: 0.5rem;
+    flex: 1;
+    padding: 0 1rem;
     overflow: visible;
-    flex-shrink: 0;
   }
   
   .inline-btn {
@@ -2390,7 +2389,12 @@
     border-color: #ef4444;
     background: rgba(239, 68, 68, 0.1);
   }
-  
+
+  .inline-btn.clap-btn:hover {
+    border-color: #fbbf24;
+    background: rgba(251, 191, 36, 0.1);
+  }
+
   .inline-btn.rocket-btn {
     position: relative;
     margin-right: 0.75rem;
@@ -2806,9 +2810,10 @@
   
   .chat-input-wrapper {
     display: flex;
+    align-items: center;
     gap: 0.5rem;
   }
-  
+
   .chat-input-wrapper input {
     flex: 1;
     padding: 0.875rem 1rem;
@@ -2818,26 +2823,27 @@
     color: #fff;
     font-size: 1rem;
   }
-  
+
   .chat-input-wrapper input:focus {
     outline: none;
     border-color: #6366f1;
   }
-  
-  .chat-input-wrapper button {
+
+  .chat-input-wrapper #sendBtn {
     padding: 0.875rem 1.25rem;
     background: #dc2626;
     border: none;
     border-radius: 8px;
     color: #fff;
     cursor: pointer;
+    flex-shrink: 0;
   }
-  
-  .chat-input-wrapper button:hover {
+
+  .chat-input-wrapper #sendBtn:hover {
     background: #b91c1c;
   }
-  
-  .chat-input-wrapper button svg {
+
+  .chat-input-wrapper #sendBtn svg {
     width: 20px;
     height: 20px;
   }

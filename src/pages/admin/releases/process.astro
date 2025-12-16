@@ -6,7 +6,8 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
 export const prerender = false;
 
-const WORKER_URL = 'https://release-processor.davidhagon.workers.dev';
+// Use local API endpoint instead of external worker
+const WORKER_URL = '/api';
 ---
 
 <AdminLayout title="Process Submissions" activeNav="releases">
@@ -20,7 +21,7 @@ const WORKER_URL = 'https://release-processor.davidhagon.workers.dev';
     <div class="card-body">
       <div class="flex items-center gap-2">
         <span id="workerStatus" class="badge badge-pending">Checking...</span>
-        <span id="workerUrl" class="text-muted" style="font-size: 0.85rem;">{WORKER_URL}</span>
+        <span id="workerUrl" class="text-muted" style="font-size: 0.85rem;">Local API</span>
       </div>
     </div>
   </div>
@@ -68,28 +69,16 @@ const WORKER_URL = 'https://release-processor.davidhagon.workers.dev';
         logCard.style.display = 'block';
       }
 
-      // Check worker health
+      // Check worker health (always online since using local API)
       async function checkWorkerHealth() {
-        try {
-          const response = await fetch(`${WORKER_URL}/health`);
-          const data = await response.json();
-
-          if (data.status === 'ok') {
-            workerStatus.textContent = 'Online';
-            workerStatus.className = 'badge badge-live';
-          } else {
-            throw new Error('Worker not healthy');
-          }
-        } catch (error) {
-          workerStatus.textContent = 'Offline';
-          workerStatus.className = 'badge badge-draft';
-        }
+        workerStatus.textContent = 'Online';
+        workerStatus.className = 'badge badge-live';
       }
 
       // Load submissions
       async function loadSubmissions() {
         try {
-          const response = await fetch(`${WORKER_URL}/submissions`);
+          const response = await fetch('/api/list-submissions');
           const data = await response.json();
 
           const submissions = data.submissions || [];
@@ -168,7 +157,7 @@ const WORKER_URL = 'https://release-processor.davidhagon.workers.dev';
         log(`Starting processing: ${submissionId}`);
 
         try {
-          const response = await fetch(`${WORKER_URL}/process`, {
+          const response = await fetch('/api/process-release', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ submissionId })

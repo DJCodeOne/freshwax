@@ -6,6 +6,7 @@ import '../styles/mobile-enhancements.css';
 import { ViewTransitions } from 'astro:transitions';
 import GlobalAudioPlayer from '../components/GlobalAudioPlayer.astro';
 import AudioCoordinator from '../components/AudioCoordinator.astro';
+import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
 import SEO from '../components/SEO.astro';
 import Analytics from '../components/Analytics.astro';
 
@@ -101,10 +102,13 @@ interface Props {
   
   // Breadcrumbs
   breadcrumbs?: { name: string; url: string }[];
+
+  // Hide shuffle button (for live pages)
+  hideShuffle?: boolean;
 }
 
-const { 
-  title, 
+const {
+  title,
   description = 'Independent UK jungle and drum & bass record label and music store. Digital downloads, limited edition vinyl pressings, DJ mixes, and official merchandise.',
   image,
   imageAlt,
@@ -120,7 +124,8 @@ const {
   article,
   faqs,
   itemList,
-  breadcrumbs
+  breadcrumbs,
+  hideShuffle
 } = Astro.props;
 
 // =============================================
@@ -268,7 +273,10 @@ const GTM_ID = ''; // Optional: Google Tag Manager ID
     
     <!-- Global Audio Player -->
     <GlobalAudioPlayer />
-    
+
+    <!-- Floating Shuffle Button (hidden on live pages) -->
+    {!hideShuffle && <FloatingShuffleButton />}
+
     <!-- Spacer for mini player -->
     <div id="mini-player-spacer" class="h-0 transition-all duration-300"></div>
     

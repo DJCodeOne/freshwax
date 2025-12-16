@@ -234,7 +234,7 @@ export const STREAM_INSTRUCTIONS = {
   },
   ffmpeg: {
     title: 'Stream with FFmpeg (Advanced)',
-    command: 'ffmpeg -re -i input.mp3 -c:a aac -b:a 128k -f flv rtmp://stream.freshwax.co.uk:1935/live/YOUR_STREAM_KEY'
+    command: 'ffmpeg -re -i input.mp3 -c:a aac -b:a 128k -f flv rtmp://rtmp.freshwax.co.uk:1935/live/YOUR_STREAM_KEY'
   }
 };
 

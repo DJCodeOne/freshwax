@@ -609,8 +609,17 @@ export const prerender = false;
       paymentMethod: 'test_mode',
       paymentStatus: 'completed'
     };
-    
+
     try {
+      // Get Firebase ID token for authenticated write
+      if (currentUser) {
+        try {
+          orderData.idToken = await currentUser.getIdToken();
+        } catch (tokenErr) {
+          console.warn('Could not get ID token:', tokenErr);
+        }
+      }
+
       const response = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

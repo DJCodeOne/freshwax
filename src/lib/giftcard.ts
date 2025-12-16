@@ -38,7 +38,7 @@ export function formatGBP(amount: number): string {
 /**
  * Gift card types
  */
-export type GiftCardType = 'welcome' | 'promotional' | 'purchased' | 'refund';
+export type GiftCardType = 'welcome' | 'promotional' | 'purchased' | 'refund' | 'referral';
 
 export interface GiftCard {
   id?: string;
@@ -53,6 +53,8 @@ export interface GiftCard {
   isActive: boolean;
   description: string;
   createdFor?: string; // email or userId it was created for (optional)
+  createdByUserId?: string; // userId of the person who generated this (for referrals)
+  restrictedTo?: 'pro_upgrade'; // If set, this gift card can only be used for specific purposes
 }
 
 export interface UserCredit {
@@ -112,7 +114,7 @@ export function createWelcomeGiftCard(userEmail?: string): Omit<GiftCard, 'id'> 
  * Create a promotional gift card
  */
 export function createPromotionalGiftCard(
-  value: number, 
+  value: number,
   description: string,
   createdFor?: string
 ): Omit<GiftCard, 'id'> {
@@ -130,3 +132,36 @@ export function createPromotionalGiftCard(
     createdFor
   };
 }
+
+/**
+ * Create a referral gift card (50% off Pro upgrade)
+ * Can only be used for Pro subscription upgrades
+ */
+export function createReferralGiftCard(
+  referrerUserId: string,
+  referrerName?: string
+): Omit<GiftCard, 'id'> {
+  const REFERRAL_DISCOUNT = 5; // £5 off (50% of £10 Pro price)
+
+  return {
+    code: generateGiftCardCode(),
+    originalValue: REFERRAL_DISCOUNT,
+    currentBalance: REFERRAL_DISCOUNT,
+    type: 'referral',
+    createdAt: new Date().toISOString(),
+    expiresAt: getDefaultExpiry(),
+    redeemedBy: null,
+    redeemedAt: null,
+    isActive: true,
+    description: referrerName
+      ? `£${REFERRAL_DISCOUNT} referral discount from ${referrerName} - Valid for Pro upgrade only`
+      : `£${REFERRAL_DISCOUNT} referral discount - Valid for Pro upgrade only`,
+    createdByUserId: referrerUserId,
+    restrictedTo: 'pro_upgrade'
+  };
+}
+
+/**
+ * Referral discount amount
+ */
+export const REFERRAL_DISCOUNT_AMOUNT = 5; // £5

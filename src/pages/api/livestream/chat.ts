@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
-import { BOT_USER, isBotCommand, processBotCommand } from '../../../lib/chatbot';
+import { BOT_USER, isBotCommand, processBotCommand, getRandomTuneComment, getWelcomeMessage, shouldCommentOnTune, shouldWelcomeUser } from '../../../lib/chatbot';
 
 // Helper to initialize Firebase and return env
 function initFirebase(locals: any) {
@@ -431,6 +431,86 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       } catch (botError) {
         console.error('[chat] Bot command error:', botError);
+      }
+    }
+
+    // Interactive bot features - use waitUntil to ensure async operations complete
+    if (!isBotCommand(message) && type !== 'bot') {
+      const interactiveBotTask = (async () => {
+        try {
+          // Query for previous messages from this user in this stream
+          const previousMessages = await queryCollection('livestream-chat', {
+            filters: [
+              { field: 'streamId', op: 'EQUAL', value: streamId },
+              { field: 'userId', op: 'EQUAL', value: userId }
+            ],
+            limit: 2
+          });
+
+          // If this is their first message (only 1 result = the one we just sent)
+          const isNewUser = previousMessages.length <= 1;
+
+          if (isNewUser && shouldWelcomeUser()) {
+            // Small delay so welcome appears after their message
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            const welcomeText = getWelcomeMessage(userName || 'friend');
+            const welcomeNow = new Date().toISOString();
+            const welcomeMessage = {
+              streamId,
+              userId: BOT_USER.id,
+              userName: BOT_USER.name,
+              userAvatar: BOT_USER.avatar,
+              message: welcomeText,
+              type: 'bot',
+              badge: BOT_USER.badge,
+              isModerated: false,
+              createdAt: welcomeNow
+            };
+
+            const { id: welcomeId } = await addDocument('livestream-chat', welcomeMessage);
+            await triggerPusher(chatChannel, 'new-message', {
+              id: welcomeId,
+              ...welcomeMessage
+            }, env);
+            console.log('[chat] Bot welcomed new user:', userName);
+          }
+          // Random chance to comment on a tune (only for non-new users to avoid spam)
+          else if (!isNewUser && shouldCommentOnTune()) {
+            // Shorter delay for tune comments (1-3 seconds)
+            await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+
+            const tuneComment = getRandomTuneComment();
+            const tuneNow = new Date().toISOString();
+            const tuneMessage = {
+              streamId,
+              userId: BOT_USER.id,
+              userName: BOT_USER.name,
+              userAvatar: BOT_USER.avatar,
+              message: tuneComment,
+              type: 'bot',
+              badge: BOT_USER.badge,
+              isModerated: false,
+              createdAt: tuneNow
+            };
+
+            const { id: tuneId } = await addDocument('livestream-chat', tuneMessage);
+            await triggerPusher(chatChannel, 'new-message', {
+              id: tuneId,
+              ...tuneMessage
+            }, env);
+            console.log('[chat] Bot tune comment:', tuneComment);
+          }
+        } catch (interactiveError) {
+          // Silent fail - don't break the chat for interactive features
+          console.error('[chat] Interactive bot error:', interactiveError);
+        }
+      })();
+
+      // Use Cloudflare's waitUntil to keep worker alive for async bot operations
+      const ctx = (locals as any)?.runtime?.ctx;
+      if (ctx?.waitUntil) {
+        ctx.waitUntil(interactiveBotTask);
       }
     }
 

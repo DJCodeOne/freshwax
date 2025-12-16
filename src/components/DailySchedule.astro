@@ -53,10 +53,21 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     )}
   </div>
 
-  <!-- Time Grid -->
+  <!-- Time Grid - Two Column Layout -->
   <div class="schedule-grid-wrapper">
-    <div class="schedule-grid">
-      <!-- Rendered by JS -->
+    <div class="schedule-columns">
+      <div class="schedule-column">
+        <div class="column-header">09:00 - 20:00</div>
+        <div class="schedule-grid schedule-grid-left">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+      <div class="schedule-column">
+        <div class="column-header">21:00 - 08:00</div>
+        <div class="schedule-grid schedule-grid-right">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
     </div>
   </div>
 
@@ -216,6 +227,9 @@ const { mode, id = 'dailySchedule' } = Astro.props;
   .daily-schedule {
     background: var(--bg-secondary, #fff);
     border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     overflow: hidden;
     border: 2px solid var(--border-light, #e5e5e5);
   }
@@ -386,37 +400,91 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     background: var(--accent-red, #dc2626);
   }
 
-  /* Grid */
+  /* Grid - Two Column Layout */
   .schedule-grid-wrapper {
-    max-height: 500px;
+    flex: 1;
     overflow-y: auto;
+    padding: 1rem 1.25rem;
+    background: #f8f9fa;
+  }
+
+  .schedule-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    height: 100%;
+    min-height: 500px;
+  }
+
+  .schedule-column {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-secondary, #fff);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid var(--border-light, #e0e0e0);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  .column-header {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    color: #fff;
+    padding: 1rem 1.25rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+    letter-spacing: 0.08em;
+    text-align: center;
+    border-bottom: 3px solid var(--accent-red, #dc2626);
   }
 
   .schedule-grid {
     display: grid;
-    grid-template-columns: 72px 1fr;
+    grid-template-columns: 70px 1fr;
+    flex: 1;
+  }
+
+  /* Mobile: Stack columns vertically */
+  @media (max-width: 900px) {
+    .schedule-columns {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .schedule-grid {
+      grid-template-columns: 60px 1fr;
+    }
+
+    .column-header {
+      font-size: 1.125rem;
+      padding: 0.875rem 1rem;
+    }
   }
 
   /* Grid cells - using :global for JS-generated content */
   :global(.schedule-grid .time-label) {
-    padding: 0.875rem 0.625rem;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--text-secondary, #666);
-    text-align: right;
+    padding: 1rem 0.75rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #333;
+    text-align: center;
     border-bottom: 1px solid var(--border-light, #e5e5e5);
-    background: var(--bg-primary, #f5f5f5);
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   :global(.schedule-grid .time-label.past) {
-    color: #bbb;
+    color: #aaa;
+    background: #f0f0f0;
   }
 
   :global(.schedule-grid .slot-cell) {
-    padding: 0.375rem;
+    padding: 0.5rem;
     border-bottom: 1px solid var(--border-light, #e5e5e5);
-    min-height: 56px;
-    transition: background 0.15s;
+    min-height: 64px;
+    transition: all 0.2s ease;
   }
 
   :global(.schedule-grid .slot-cell.past) {
@@ -426,29 +494,52 @@ const { mode, id = 'dailySchedule' } = Astro.props;
 
   :global(.schedule-grid .slot-cell.available) {
     cursor: pointer;
+    background: rgba(22, 163, 74, 0.03);
   }
 
   :global(.schedule-grid .slot-cell.available:hover) {
-    background: rgba(22, 163, 74, 0.08);
+    background: rgba(22, 163, 74, 0.12);
+    transform: scale(1.01);
   }
 
   :global(.mode-public .slot-cell.available) {
     cursor: default;
+    background: transparent;
   }
 
   :global(.mode-public .slot-cell.available:hover) {
     background: transparent;
+    transform: none;
+  }
+
+  /* Available slot indicator for booking mode */
+  :global(.mode-booking .slot-cell.available::after) {
+    content: 'AVAILABLE';
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #16a34a;
+    border: 2px dashed rgba(22, 163, 74, 0.3);
+    border-radius: 8px;
+    background: rgba(22, 163, 74, 0.04);
   }
 
   /* Slot blocks */
   :global(.slot-block) {
-    padding: 0.625rem 0.75rem;
-    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
     height: 100%;
-    min-height: 48px;
+    min-height: 52px;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   }
 
   :global(.slot-block.booked) {
@@ -460,32 +551,38 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
     color: #fff;
     cursor: pointer;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
+    transform: scale(1.02);
   }
 
   :global(.slot-block.live) {
     background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
     color: #fff;
     animation: pulse-live 2s infinite;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
   }
 
   @keyframes pulse-live {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.85; }
+    0%, 100% { opacity: 1; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35); }
+    50% { opacity: 0.9; box-shadow: 0 4px 20px rgba(220, 38, 38, 0.5); }
   }
 
   :global(.slot-block.in_lobby) {
     background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
     color: #fff;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
   }
 
   :global(.slot-block.my-booking) {
     background: linear-gradient(135deg, #059669 0%, #10b981 100%);
     cursor: pointer;
     position: relative;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
   }
 
   :global(.slot-block.my-booking:hover) {
     background: linear-gradient(135deg, #047857 0%, #059669 100%);
+    transform: scale(1.02);
   }
 
   :global(.slot-block .cancel-hint) {
@@ -500,8 +597,6 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     background: #f0f0f0;
     border: 1px dashed #ccc;
     color: #999;
-    justify-content: center;
-    align-items: center;
   }
 
   :global(.slot-block.past-slot .past-text) {
@@ -512,15 +607,71 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     color: #aaa;
   }
 
+  /* Go Live Now - current hour with no booking */
+  :global(.slot-block.go-live-now) {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: 2px solid #34d399;
+    color: white;
+    cursor: pointer;
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  :global(.slot-block.go-live-now:hover) {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: scale(1.02);
+  }
+
+  :global(.slot-block.go-live-now .go-live-text) {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+  }
+
+  /* Current hour slot styling */
+  :global(.slot-cell.current-hour) {
+    background: rgba(16, 185, 129, 0.1);
+  }
+
+  :global(.time-label.current) {
+    color: #10b981;
+    font-weight: 700;
+  }
+
+  :global(.slot-block.current-hour) {
+    border: 2px solid #10b981;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+  }
+
+  :global(.status-badge.go-live) {
+    background: #10b981;
+    color: white;
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  :global(.go-live-hint) {
+    font-size: 0.7rem;
+    color: #10b981;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.4); }
+    50% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.8); }
+  }
+
   :global(.slot-block .dj-name) {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1rem;
-    letter-spacing: 0.02em;
+    font-size: 1.375rem;
+    letter-spacing: 0.03em;
     line-height: 1.2;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
   }
 
   :global(.slot-block .slot-time) {
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
+    font-weight: 600;
     opacity: 0.9;
     margin-top: 0.125rem;
   }
@@ -551,37 +702,39 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.25rem;
-    background: var(--bg-primary, #f5f5f5);
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(to top, #f0f0f0 0%, #fff 100%);
     border-top: 2px solid var(--border-light, #e5e5e5);
   }
 
   .selection-info {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.375rem;
   }
 
   .selection-count {
+    font-size: 1.125rem;
     font-weight: 700;
     color: var(--text-primary, #000);
   }
 
   .selection-hint {
-    font-size: 0.75rem;
-    color: var(--text-muted, #888);
+    font-size: 0.8125rem;
+    color: var(--text-muted, #666);
   }
 
   .booking-actions {
     display: flex;
-    gap: 0.75rem;
+    gap: 1rem;
   }
 
   .clear-btn {
-    padding: 0.625rem 1.25rem;
+    padding: 0.875rem 1.5rem;
     background: transparent;
-    border: 2px solid rgba(0,0,0,0.2);
+    border: 2px solid rgba(0, 0, 0, 0.15);
     border-radius: 8px;
+    font-size: 0.9375rem;
     font-weight: 600;
     color: var(--text-secondary, #666);
     cursor: pointer;
@@ -595,32 +748,46 @@ const { mode, id = 'dailySchedule' } = Astro.props;
   }
 
   .cancel-btn {
-    padding: 0.625rem 1.25rem;
+    padding: 0.875rem 1.5rem;
     background: #fff;
     border: 2px solid var(--border-light, #e5e5e5);
     border-radius: 8px;
+    font-size: 0.9375rem;
     font-weight: 600;
     cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .cancel-btn:hover {
+    background: #f5f5f5;
   }
 
   .save-btn {
-    padding: 0.625rem 1.5rem;
-    background: var(--bg-dark, #000);
+    padding: 0.875rem 2rem;
+    background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
     color: #fff;
     border: none;
     border-radius: 8px;
+    font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   .save-btn:hover:not(:disabled) {
-    background: var(--accent-red, #dc2626);
+    background: linear-gradient(135deg, #15803d 0%, #16a34a 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(22, 163, 74, 0.4);
   }
 
   .save-btn:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
+    background: #999;
+    box-shadow: none;
   }
 
   .admin-footer {
@@ -896,7 +1063,8 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     if (!container) return;
 
     const scheduleMode = mode;
-    const grid = container.querySelector('.schedule-grid');
+    const gridLeft = container.querySelector('.schedule-grid-left');
+    const gridRight = container.querySelector('.schedule-grid-right');
     const dateLabel = container.querySelector('.date-label');
     
     // State
@@ -991,10 +1159,12 @@ const { mode, id = 'dailySchedule' } = Astro.props;
       
       const newDate = new Date(currentDate);
       newDate.setDate(newDate.getDate() + delta);
-      
-      // Don't allow going before today
-      if (newDate < today) return;
-      
+
+      // Allow going back one day (for early morning slots in previous schedule day)
+      const minDate = new Date(today);
+      minDate.setDate(minDate.getDate() - 1);
+      if (newDate < minDate) return;
+
       // Don't allow going beyond max advance days
       if (newDate > maxDate) return;
       
@@ -1021,9 +1191,12 @@ const { mode, id = 'dailySchedule' } = Astro.props;
       const nextBtn = container.querySelector('.next-day');
       const todayBtn = container.querySelector('.today-btn');
       
-      // Disable prev if on today
+      // Allow going back one day (for early morning slots that belong to previous schedule day)
+      // At 2:46am Tuesday, you're still in Monday's late-night window (21:00-08:00)
       if (prevBtn) {
-        const isAtStart = currentDate.getTime() <= today.getTime();
+        const minDate = new Date(today);
+        minDate.setDate(minDate.getDate() - 1); // Allow going back one day
+        const isAtStart = currentDate.getTime() <= minDate.getTime();
         prevBtn.disabled = isAtStart;
         prevBtn.style.opacity = isAtStart ? '0.3' : '1';
         prevBtn.style.cursor = isAtStart ? 'not-allowed' : 'pointer';
@@ -1092,27 +1265,37 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     }
 
     function renderGrid() {
-      if (!grid) return;
-      
-      const now = new Date();
-      grid.innerHTML = '';
+      if (!gridLeft || !gridRight) return;
 
-      for (let i = 0; i < TOTAL_HOURS; i++) {
-        const hour = (START_HOUR + i) % 24;
-        const isNextDay = START_HOUR + i >= 24;
-        
+      const now = new Date();
+      gridLeft.innerHTML = '';
+      gridRight.innerHTML = '';
+
+      // Left column: hours 9-20 (12 hours)
+      // Right column: hours 21-8 (12 hours, wrapping to next day)
+      const leftHours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+      const rightHours = [21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7, 8];
+
+      function renderSlotToGrid(grid, hour, isNextDay) {
         const slotDate = new Date(currentDate);
         if (isNextDay) slotDate.setDate(slotDate.getDate() + 1);
         slotDate.setHours(hour, 0, 0, 0);
-        
+
+        // Slot end time is 1 hour after start
+        const slotEndDate = new Date(slotDate);
+        slotEndDate.setHours(slotEndDate.getHours() + 1);
+
         const dateStr = slotDate.toISOString().split('T')[0];
-        const isPast = slotDate < now;
+        // Only mark as past if the slot has completely ended
+        const isPast = slotEndDate <= now;
+        // Current hour = slot is in progress (started but not ended)
+        const isCurrentHour = slotDate <= now && now < slotEndDate;
         const booking = findBookingForSlot(slotDate);
         const isSelected = selectedSlots.some(s => s.hour === hour && s.date === dateStr);
 
         // Time label
         const timeLabel = document.createElement('div');
-        timeLabel.className = isPast ? 'time-label past' : 'time-label';
+        timeLabel.className = isPast ? 'time-label past' : (isCurrentHour ? 'time-label current' : 'time-label');
         timeLabel.textContent = formatHour(hour);
         grid.appendChild(timeLabel);
 
@@ -1121,19 +1304,19 @@ const { mode, id = 'dailySchedule' } = Astro.props;
         cell.className = 'slot-cell';
         cell.dataset.hour = hour.toString();
         cell.dataset.date = dateStr;
-        
+
         if (isPast) cell.classList.add('past');
+        else if (isCurrentHour) cell.classList.add('current-hour');
         else if (!booking) cell.classList.add('available');
 
         if (booking) {
           const isMyBooking = currentUserId && booking.djId === currentUserId;
-          const block = createBookingBlock(booking, isSelected, isMyBooking);
+          const block = createBookingBlock(booking, isSelected, isMyBooking, isCurrentHour);
           cell.appendChild(block);
-          
+
           if (scheduleMode === 'admin') {
             block.addEventListener('click', () => openEditSlotModal(booking));
           } else if (scheduleMode === 'booking' && isMyBooking && !isPast) {
-            // Allow user to cancel their own booking
             block.addEventListener('click', () => confirmCancelBooking(booking));
           }
         } else if (isSelected) {
@@ -1144,48 +1327,127 @@ const { mode, id = 'dailySchedule' } = Astro.props;
             <span class="slot-time">${formatHour(hour)} - ${formatHour((hour + 1) % 24)}</span>
           `;
           cell.appendChild(block);
-          
+
           if (scheduleMode === 'booking') {
             block.addEventListener('click', () => toggleSlotSelection(hour, dateStr));
           }
         } else if (isPast) {
-          // Show greyed out past slot indicator
           const pastBlock = document.createElement('div');
           pastBlock.className = 'slot-block past-slot';
           pastBlock.innerHTML = `<span class="past-text">Past</span>`;
           cell.appendChild(pastBlock);
+        } else if (isCurrentHour && scheduleMode === 'booking') {
+          // Current hour with no booking - show "Go Live Now" option
+          const goLiveBlock = document.createElement('div');
+          goLiveBlock.className = 'slot-block go-live-now';
+          goLiveBlock.innerHTML = `
+            <span class="go-live-text">GO LIVE NOW</span>
+            <span class="slot-time">${formatHour(hour)} - ${formatHour((hour + 1) % 24)}</span>
+          `;
+          cell.appendChild(goLiveBlock);
+          goLiveBlock.addEventListener('click', async () => {
+            // Try early_start first (extends upcoming booking), then fall back to go-live page
+            if (currentUserId) {
+              goLiveBlock.innerHTML = '<span class="go-live-text">Starting...</span>';
+              goLiveBlock.style.pointerEvents = 'none';
+
+              try {
+                const idToken = await window.firebaseAuth?.currentUser?.getIdToken();
+                const response = await fetch('/api/livestream/slots', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    action: 'early_start',
+                    djId: currentUserId,
+                    idToken
+                  })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                  // Successfully extended booking - go to go-live page
+                  alert(`Your ${new Date(result.originalStartTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} booking has been extended to start now!`);
+                  window.location.href = '/account/go-live';
+                } else if (result.noUpcomingBooking) {
+                  // No upcoming booking - just go to go-live page for ad-hoc streaming
+                  window.location.href = '/account/go-live';
+                } else {
+                  alert(result.error || 'Could not start early. Try the Go Live page.');
+                  goLiveBlock.innerHTML = `
+                    <span class="go-live-text">GO LIVE NOW</span>
+                    <span class="slot-time">${formatHour(hour)} - ${formatHour((hour + 1) % 24)}</span>
+                  `;
+                  goLiveBlock.style.pointerEvents = 'auto';
+                }
+              } catch (e) {
+                console.error('Early start error:', e);
+                window.location.href = '/account/go-live';
+              }
+            } else {
+              window.location.href = '/account/go-live';
+            }
+          });
         } else if (scheduleMode === 'booking' && !bookingsDisabled) {
           cell.addEventListener('click', () => toggleSlotSelection(hour, dateStr));
         }
 
         grid.appendChild(cell);
       }
+
+      // Render left column (09:00 - 20:00, same day)
+      leftHours.forEach(hour => {
+        renderSlotToGrid(gridLeft, hour, false);
+      });
+
+      // Render right column (21:00 - 08:00, hours 0-8 are next day)
+      rightHours.forEach(hour => {
+        const isNextDay = hour < 9; // Hours 0-8 are next day
+        renderSlotToGrid(gridRight, hour, isNextDay);
+      });
     }
 
-    function createBookingBlock(booking, isSelected, isMyBooking = false) {
+    function createBookingBlock(booking, isSelected, isMyBooking = false, isCurrentHour = false) {
       const block = document.createElement('div');
       const status = booking.status || 'scheduled';
-      block.className = `slot-block booked ${status}${isMyBooking ? ' my-booking' : ''}`;
-      
+      block.className = `slot-block booked ${status}${isMyBooking ? ' my-booking' : ''}${isCurrentHour ? ' current-hour' : ''}`;
+
       const startTime = new Date(booking.startTime);
       const endTime = new Date(booking.endTime);
-      const isPastSlot = startTime < new Date();
-      
+      const slotEndTime = new Date(startTime);
+      slotEndTime.setHours(slotEndTime.getHours() + 1);
+      const isPastSlot = slotEndTime <= new Date(); // Only past if slot has ended
+
       let statusBadge = '';
       if (status === 'live') statusBadge = '<span class="status-badge">LIVE</span>';
       else if (status === 'in_lobby') statusBadge = '<span class="status-badge">IN LOBBY</span>';
-      
+      else if (isCurrentHour && isMyBooking) statusBadge = '<span class="status-badge go-live">GO LIVE</span>';
+
       // Show cancel hint for user's own future bookings in booking mode
-      const cancelHint = (isMyBooking && scheduleMode === 'booking' && !isPastSlot && status === 'scheduled') 
-        ? '<span class="cancel-hint">Click to cancel</span>' 
+      const cancelHint = (isMyBooking && scheduleMode === 'booking' && !isPastSlot && status === 'scheduled' && !isCurrentHour)
+        ? '<span class="cancel-hint">Click to cancel</span>'
         : '';
-      
+
+      // Show go live hint for current hour bookings
+      const goLiveHint = (isMyBooking && isCurrentHour && status === 'scheduled')
+        ? '<span class="go-live-hint">Click to go live</span>'
+        : '';
+
       block.innerHTML = `
         <span class="dj-name">${booking.djName}${statusBadge}</span>
         <span class="slot-time">${formatTime(startTime)} - ${formatTime(endTime)}</span>
-        ${cancelHint}
+        ${cancelHint}${goLiveHint}
       `;
-      
+
+      // If it's user's current hour booking, clicking should go to go-live page
+      if (isMyBooking && isCurrentHour && status === 'scheduled') {
+        block.style.cursor = 'pointer';
+        block.addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.location.href = '/account/go-live';
+        });
+      }
+
       return block;
     }
 
@@ -1252,8 +1514,27 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     }
 
     async function saveBooking() {
-      if (selectedSlots.length === 0 || !currentUserId) return;
-      
+      console.log('[DailySchedule] saveBooking called', { selectedSlots, currentUserId, userDisplayName });
+
+      // Validate we have slots selected
+      if (selectedSlots.length === 0) {
+        alert('Please select at least one time slot');
+        return;
+      }
+
+      // Validate we have a user
+      if (!currentUserId) {
+        console.error('[DailySchedule] No currentUserId set!');
+        alert('You must be logged in to book a slot. Please refresh the page and try again.');
+        return;
+      }
+
+      if (!userDisplayName) {
+        console.error('[DailySchedule] No userDisplayName set!');
+        alert('Unable to get your display name. Please refresh the page and try again.');
+        return;
+      }
+
       const saveBtn = container.querySelector('.save-btn');
       if (saveBtn) {
         saveBtn.disabled = true;
@@ -1267,39 +1548,72 @@ const { mode, id = 'dailySchedule' } = Astro.props;
           return a.hour - b.hour;
         });
 
+        console.log('[DailySchedule] Sorted slots:', sortedSlots);
+
         // Create bookings
         for (const slot of sortedSlots) {
-          const startTime = new Date(slot.date);
-          startTime.setHours(slot.hour, 0, 0, 0);
+          // Parse the date string properly
+          const [year, month, day] = slot.date.split('-').map(Number);
+          const startTime = new Date(year, month - 1, day, slot.hour, 0, 0, 0);
+
+          console.log('[DailySchedule] Creating booking:', {
+            slot,
+            startTime: startTime.toISOString(),
+            djId: currentUserId,
+            djName: userDisplayName
+          });
+
+          // Get Firebase idToken for authenticated write
+          let idToken = null;
+          try {
+            const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+            const auth = getAuth();
+            if (auth.currentUser) {
+              idToken = await auth.currentUser.getIdToken();
+              console.log('[DailySchedule] Got idToken for authenticated write');
+            }
+          } catch (tokenErr) {
+            console.warn('[DailySchedule] Could not get idToken:', tokenErr);
+          }
+
+          const requestBody = {
+            action: 'book',
+            djId: currentUserId,
+            djName: userDisplayName,
+            title: `${userDisplayName} Live`,
+            startTime: startTime.toISOString(),
+            duration: 60,
+            idToken: idToken
+          };
+
+          console.log('[DailySchedule] POST body:', { ...requestBody, idToken: idToken ? '[PRESENT]' : null });
 
           const response = await fetch('/api/livestream/slots', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'book',
-              djId: currentUserId,
-              djName: userDisplayName,
-              title: `${userDisplayName} Live`,
-              startTime: startTime.toISOString(),
-              duration: 60
-            })
+            body: JSON.stringify(requestBody)
           });
 
+          console.log('[DailySchedule] Response status:', response.status);
+
           const data = await response.json();
+          console.log('[DailySchedule] Response data:', data);
+
           if (!data.success) {
             throw new Error(data.error || 'Booking failed');
           }
         }
 
         // Success - close modal and refresh
-        alert('Booking confirmed!');
+        alert('Booking confirmed! Your slot has been reserved.');
         window.closeScheduleModal?.();
-        
+
         // Trigger refresh on other instances
         window.dispatchEvent(new CustomEvent('schedule-updated'));
 
       } catch (error) {
-        alert(error.message || 'Failed to save booking');
+        console.error('[DailySchedule] Booking error:', error);
+        alert('Booking failed: ' + (error.message || 'Unknown error. Please try again.'));
       } finally {
         if (saveBtn) {
           saveBtn.disabled = false;
@@ -1311,40 +1625,52 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     async function confirmCancelBooking(booking) {
       const startTime = new Date(booking.startTime);
       const now = new Date();
-      const hoursUntilStart = (startTime - now) / (1000 * 60 * 60);
-      
-      // Check if within 1 hour of start
-      if (hoursUntilStart < 1) {
-        alert('Cannot cancel bookings less than 1 hour before start time.');
+
+      // Only prevent cancelling if the slot has already passed
+      if (startTime < now) {
+        alert('Cannot cancel a slot that has already started.');
         return;
       }
-      
+
       const timeStr = startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       const dateStr = startTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
       
       if (!confirm(`Cancel your booking?\n\n${booking.djName || booking.title}\n${dateStr} at ${timeStr}\n\nThis action cannot be undone.`)) {
         return;
       }
-      
+
       try {
+        // Get Firebase idToken for authenticated write
+        let idToken = null;
+        try {
+          const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+          const auth = getAuth();
+          if (auth.currentUser) {
+            idToken = await auth.currentUser.getIdToken();
+          }
+        } catch (tokenErr) {
+          console.warn('[DailySchedule] Could not get idToken for cancel:', tokenErr);
+        }
+
         const response = await fetch('/api/livestream/slots', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'cancel',
             slotId: booking.id,
-            djId: currentUserId
+            djId: currentUserId,
+            idToken: idToken
           })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
           alert('Booking cancelled successfully.');
-          
+
           // Refresh the schedule
           await loadAndRender();
-          
+
           // Notify other instances
           window.dispatchEvent(new CustomEvent('schedule-updated'));
         } else {
@@ -1621,9 +1947,7 @@ const { mode, id = 'dailySchedule' } = Astro.props;
 
     // Utility functions
     function formatHour(hour) {
-      const period = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-      return `${displayHour}${period}`;
+      return `${hour.toString().padStart(2, '0')}:00`;
     }
 
     function formatTime(date) {
@@ -1633,11 +1957,14 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     // Public API
     window[`schedule_${id}`] = {
       setUser(userId, displayName) {
+        console.log(`[DailySchedule ${id}] setUser called:`, { userId, displayName });
         currentUserId = userId;
-        userDisplayName = displayName;
+        userDisplayName = displayName || 'DJ';
+        console.log(`[DailySchedule ${id}] User set:`, { currentUserId, userDisplayName });
       },
       refresh: loadAndRender,
-      getSelectedSlots: () => [...selectedSlots]
+      getSelectedSlots: () => [...selectedSlots],
+      getUser: () => ({ userId: currentUserId, displayName: userDisplayName })
     };
 
     // Listen for updates from other instances

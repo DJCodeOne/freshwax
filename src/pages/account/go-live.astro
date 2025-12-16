@@ -22,7 +22,7 @@ export const prerender = false;
         <div class="not-approved-icon">🔒</div>
         <h1>DJ ACCESS <span class="red">REQUIRED</span></h1>
         <p>You need to be an approved DJ to go live on Fresh Wax.</p>
-        <a href="/partner" class="cta-btn">Apply to be a DJ →</a>
+        <a href="/account/request-role" class="cta-btn">Apply to be a DJ →</a>
         
         <div id="adminBypass" class="admin-bypass hidden">
           <p style="color: #22c55e; margin-top: 2rem;">Admin detected!</p>
@@ -84,8 +84,22 @@ export const prerender = false;
                   <h4>Need to go live now?</h4>
                 </div>
                 <p class="bypass-desc">Request bypass access - an admin will review and approve.</p>
+                <div class="relay-tip">
+                  <span class="relay-icon">📡</span>
+                  <span class="relay-text">Already streaming elsewhere? Relay your show to Fresh Wax! Fill in where you're streaming and we can pull your feed.</span>
+                </div>
                 <div class="bypass-form-inner">
-                  <textarea id="bypassReason" placeholder="Why do you need immediate access? (optional)" rows="2" maxlength="200"></textarea>
+                  <textarea id="bypassReason" placeholder="Why do you need access?" rows="2" maxlength="300"></textarea>
+                  <div class="relay-fields">
+                    <div class="relay-field">
+                      <label for="stationName">Where are you streaming?</label>
+                      <input type="text" id="stationName" placeholder="e.g. The Underground Lair, Twitch, YouTube, Facebook Live" maxlength="50" />
+                    </div>
+                    <div class="relay-field">
+                      <label for="relayUrl">Your stream URL</label>
+                      <input type="text" id="relayUrl" placeholder="e.g. twitch.tv/yourname, youtube.com/live/..., facebook.com/..." maxlength="500" />
+                    </div>
+                  </div>
                   <button id="submitBypassRequest" class="bypass-request-btn">🎫 Request Bypass Access</button>
                 </div>
               </div>
@@ -190,7 +204,53 @@ export const prerender = false;
             <button id="goLiveBtn" class="go-live-btn">🔴 GO LIVE</button>
           </div>
         </div>
-        
+
+        <!-- Event Request Section - for Pro users needing extended hours -->
+        <div id="eventRequestSection" class="event-request-section hidden">
+          <details class="event-request-details">
+            <summary class="event-request-summary">
+              <span class="event-icon">📅</span>
+              <span>Need more than 2 hours? Request extended time for an event</span>
+            </summary>
+            <div class="event-request-content">
+              <p class="event-desc">Pro members can request extended streaming hours for special events. Once approved, you can book slots for up to the approved duration on that date.</p>
+
+              <div id="eventRequestForm" class="event-form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="eventName">Event Name *</label>
+                    <input type="text" id="eventName" placeholder="e.g. Fresh Wax Birthday Special" maxlength="100" required />
+                  </div>
+                  <div class="form-group">
+                    <label for="eventDate">Event Date *</label>
+                    <input type="date" id="eventDate" required />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="eventHours">Hours Needed (1-12) *</label>
+                    <input type="number" id="eventHours" min="1" max="12" value="4" required />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="eventDescription">Event Description</label>
+                  <textarea id="eventDescription" placeholder="Tell us about your event..." rows="2" maxlength="500"></textarea>
+                </div>
+                <div class="event-form-actions">
+                  <button type="button" id="submitEventRequest" class="submit-event-btn">Submit Request</button>
+                </div>
+                <div id="eventRequestStatus" class="event-request-status hidden"></div>
+              </div>
+
+              <!-- My Event Requests -->
+              <div id="myEventRequests" class="my-event-requests hidden">
+                <h4>Your Event Requests</h4>
+                <div id="eventRequestsList"></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
         <!-- Connection Details Panel - shown after clicking Go Live -->
         <div id="connectionDetails" class="connection-details hidden">
           <div class="connection-header">
@@ -219,7 +279,7 @@ export const prerender = false;
               <div class="credential-item">
                 <label>Server URL</label>
                 <div class="credential-value">
-                  <input type="text" id="obsServerUrl" readonly value="rtmp://stream.freshwax.co.uk:1935/live" />
+                  <input type="text" id="obsServerUrl" readonly value="rtmp://rtmp.freshwax.co.uk:1935/live" />
                   <button class="copy-btn" onclick="copyField('obsServerUrl')">📋 Copy</button>
                 </div>
               </div>
@@ -320,7 +380,7 @@ export const prerender = false;
               <div class="credential-item">
                 <label>RTMP URL</label>
                 <div class="credential-value">
-                  <input type="text" id="otherRtmpUrl" readonly value="rtmp://stream.freshwax.co.uk:1935/live" />
+                  <input type="text" id="otherRtmpUrl" readonly value="rtmp://rtmp.freshwax.co.uk:1935/live" />
                   <button class="copy-btn" onclick="copyField('otherRtmpUrl')">📋 Copy</button>
                 </div>
               </div>
@@ -432,7 +492,18 @@ export const prerender = false;
   .bypass-form-inner textarea { width: 100%; padding: 0.875rem 1rem; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.25); border-radius: 12px; color: #fff; font-size: 1.125rem; resize: none; font-family: inherit; box-sizing: border-box; flex: 1; min-height: 70px; }
   .bypass-form-inner textarea:focus { outline: none; border-color: #22c55e; }
   .bypass-form-inner textarea::placeholder { color: #777; }
-  
+
+  .relay-tip { display: flex; gap: 0.75rem; align-items: flex-start; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
+  .relay-icon { font-size: 1.25rem; flex-shrink: 0; line-height: 1.4; }
+  .relay-text { color: #9ca3af; font-size: 0.9rem; line-height: 1.4; }
+
+  .relay-fields { display: flex; flex-direction: column; gap: 0.625rem; }
+  .relay-field { display: flex; flex-direction: column; gap: 0.25rem; }
+  .relay-field label { color: #9ca3af; font-size: 0.8rem; font-weight: 500; }
+  .relay-field input { width: 100%; padding: 0.625rem 0.875rem; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; color: #fff; font-size: 0.95rem; font-family: inherit; box-sizing: border-box; }
+  .relay-field input:focus { outline: none; border-color: #22c55e; }
+  .relay-field input::placeholder { color: #666; }
+
   .bypass-request-btn { width: 100%; padding: 1rem 1.5rem; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border: none; border-radius: 12px; color: #fff; font-size: 1.25rem; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-top: auto; animation: greenGlow 2s ease-in-out infinite; }
   .bypass-request-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(34, 197, 94, 0.6); }
   .bypass-request-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; animation: none; }
@@ -630,6 +701,37 @@ export const prerender = false;
   .software-badge { padding: 0.25rem 0.75rem; background: rgba(255,255,255,0.08); border: 1px solid #333; border-radius: 20px; color: #ccc; font-size: 0.75rem; }
   .copy-btn { padding: 0.25rem 0.75rem; background: #333; border: none; border-radius: 4px; color: #fff; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
   .copy-btn:hover { background: #dc2626; }
+
+  /* Event Request Section */
+  .event-request-section { margin: 2rem 0; }
+  .event-request-details { background: rgba(0,0,0,0.3); border: 1px solid #333; border-radius: 12px; overflow: hidden; }
+  .event-request-summary { padding: 1rem 1.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; color: #ccc; font-size: 0.95rem; transition: all 0.2s; }
+  .event-request-summary:hover { background: rgba(255,255,255,0.05); color: #fff; }
+  .event-request-summary .event-icon { font-size: 1.25rem; }
+  .event-request-content { padding: 1.5rem; border-top: 1px solid #333; }
+  .event-desc { color: #888; font-size: 0.875rem; margin: 0 0 1.5rem 0; }
+  .event-form { background: rgba(0,0,0,0.2); border: 1px solid #444; border-radius: 8px; padding: 1.25rem; }
+  .event-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  @media (max-width: 500px) { .event-form .form-row { grid-template-columns: 1fr; } }
+  .event-form-actions { margin-top: 1rem; }
+  .submit-event-btn { padding: 0.75rem 2rem; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border: none; border-radius: 8px; color: #fff; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .submit-event-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
+  .submit-event-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .event-request-status { margin-top: 1rem; padding: 0.75rem; border-radius: 6px; font-size: 0.875rem; }
+  .event-request-status.success { background: rgba(34, 197, 94, 0.2); border: 1px solid #22c55e; color: #22c55e; }
+  .event-request-status.error { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; }
+  .my-event-requests { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #333; }
+  .my-event-requests h4 { color: #fff; margin: 0 0 1rem 0; font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 0.02em; }
+  .event-request-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: rgba(0,0,0,0.2); border: 1px solid #333; border-radius: 6px; margin-bottom: 0.5rem; }
+  .event-request-item.approved { border-color: #22c55e; background: rgba(34, 197, 94, 0.1); }
+  .event-request-item.rejected { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+  .event-request-item .event-info { flex: 1; }
+  .event-request-item .event-name { color: #fff; font-weight: 600; margin-bottom: 0.25rem; }
+  .event-request-item .event-meta { color: #888; font-size: 0.8125rem; }
+  .event-request-item .event-status { padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+  .event-request-item .event-status.pending { background: #fbbf24; color: #000; }
+  .event-request-item .event-status.approved { background: #22c55e; color: #fff; }
+  .event-request-item .event-status.rejected { background: #ef4444; color: #fff; }
 </style>
 
 <script type="module">
@@ -942,15 +1044,17 @@ export const prerender = false;
   document.getElementById('submitBypassRequest')?.addEventListener('click', async () => {
     const btn = document.getElementById('submitBypassRequest');
     const reason = document.getElementById('bypassReason')?.value?.trim() || '';
-    
+    const stationName = document.getElementById('stationName')?.value?.trim() || '';
+    const relayUrl = document.getElementById('relayUrl')?.value?.trim() || '';
+
     if (!currentUser || !artistData) {
       alert('Please sign in first');
       return;
     }
-    
+
     btn.disabled = true;
     btn.innerHTML = '<span>Submitting...</span>';
-    
+
     try {
       const response = await fetch('/api/admin/bypass-requests', {
         method: 'POST',
@@ -961,13 +1065,15 @@ export const prerender = false;
           djName: artistData.artistName || artistData.name || currentUser.email?.split('@')[0],
           email: currentUser.email,
           reason: reason || null,
+          stationName: stationName || null,
+          relayUrl: relayUrl || null,
           mixCount: currentBypassStatus?.mixCount || 0,
           bestMixLikes: currentBypassStatus?.bestMixLikes || 0
         })
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         await checkBypassStatus(currentBypassStatus || {});
       } else {
@@ -1410,7 +1516,7 @@ export const prerender = false;
     } else {
       document.getElementById('otherInstructions').classList.remove('hidden');
       document.getElementById('otherStreamKey').value = streamKey;
-      document.getElementById('otherFullUrl').value = `rtmp://stream.freshwax.co.uk:1935/live/${streamKey}`;
+      document.getElementById('otherFullUrl').value = `rtmp://rtmp.freshwax.co.uk:1935/live/${streamKey}`;
     }
     
     // Show the connection details panel, hide the config form
@@ -1588,4 +1694,161 @@ export const prerender = false;
     btn.disabled = false;
     btn.textContent = '⏹️ END STREAM';
   }
+
+  // ==========================================
+  // EVENT REQUEST FUNCTIONS
+  // ==========================================
+
+  async function checkProSubscription(userId) {
+    try {
+      const response = await fetch(`/api/user/profile?userId=${userId}`);
+      const result = await response.json();
+      if (result.success && result.user) {
+        const subscription = result.user.subscription;
+        if (subscription?.tier === 'pro' && subscription.expiresAt) {
+          return new Date(subscription.expiresAt) > new Date();
+        }
+      }
+    } catch (e) {
+      console.warn('Error checking subscription:', e);
+    }
+    return false;
+  }
+
+  async function initEventRequestSection() {
+    if (!currentUser) return;
+
+    const isPro = await checkProSubscription(currentUser.uid);
+    if (isPro) {
+      document.getElementById('eventRequestSection')?.classList.remove('hidden');
+      setupEventRequestHandlers();
+      loadMyEventRequests();
+    }
+  }
+
+  function setupEventRequestHandlers() {
+    // Set min date to tomorrow
+    const eventDateInput = document.getElementById('eventDate');
+    if (eventDateInput) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      eventDateInput.min = tomorrow.toISOString().split('T')[0];
+    }
+
+    // Submit event request
+    document.getElementById('submitEventRequest')?.addEventListener('click', async () => {
+      const eventName = document.getElementById('eventName')?.value.trim();
+      const eventDate = document.getElementById('eventDate')?.value;
+      const eventHours = parseInt(document.getElementById('eventHours')?.value || '4');
+      const eventDescription = document.getElementById('eventDescription')?.value.trim();
+      const statusEl = document.getElementById('eventRequestStatus');
+      const btn = document.getElementById('submitEventRequest');
+
+      if (!eventName || !eventDate) {
+        showEventStatus('Please fill in all required fields', 'error');
+        return;
+      }
+
+      if (eventHours < 1 || eventHours > 12) {
+        showEventStatus('Hours must be between 1 and 12', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      try {
+        const response = await fetch('/api/livestream/event-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create',
+            userId: currentUser.uid,
+            userEmail: currentUser.email,
+            userName: artistData?.djName || artistData?.artistName || currentUser.displayName || 'Unknown',
+            eventName,
+            eventDate,
+            hoursRequested: eventHours,
+            eventDescription
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          showEventStatus("Request submitted! We'll review it and get back to you.", 'success');
+          document.getElementById('eventName').value = '';
+          document.getElementById('eventDate').value = '';
+          document.getElementById('eventHours').value = '4';
+          document.getElementById('eventDescription').value = '';
+          loadMyEventRequests();
+        } else {
+          showEventStatus(result.error || 'Failed to submit request', 'error');
+        }
+      } catch (error) {
+        console.error('Event request error:', error);
+        showEventStatus('Failed to submit request. Please try again.', 'error');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Submit Request';
+    });
+  }
+
+  function showEventStatus(message, type) {
+    const statusEl = document.getElementById('eventRequestStatus');
+    if (statusEl) {
+      statusEl.textContent = message;
+      statusEl.className = 'event-request-status ' + type;
+      statusEl.classList.remove('hidden');
+      setTimeout(() => statusEl.classList.add('hidden'), 5000);
+    }
+  }
+
+  async function loadMyEventRequests() {
+    if (!currentUser) return;
+
+    try {
+      const response = await fetch(`/api/livestream/event-requests?userId=${currentUser.uid}`);
+      const result = await response.json();
+
+      const container = document.getElementById('myEventRequests');
+      const listEl = document.getElementById('eventRequestsList');
+
+      if (result.success && result.requests?.length > 0) {
+        container?.classList.remove('hidden');
+        listEl.innerHTML = result.requests.map(req => {
+          const eventDate = new Date(req.eventDate + 'T00:00:00').toLocaleDateString('en-GB', {
+            weekday: 'short', day: 'numeric', month: 'short'
+          });
+          return `
+            <div class="event-request-item ${req.status}">
+              <div class="event-info">
+                <div class="event-name">${req.eventName}</div>
+                <div class="event-meta">${eventDate} • ${req.hoursRequested} hours requested</div>
+              </div>
+              <span class="event-status ${req.status}">${req.status}</span>
+            </div>
+          `;
+        }).join('');
+      } else {
+        container?.classList.add('hidden');
+      }
+    } catch (error) {
+      console.error('Error loading event requests:', error);
+    }
+  }
+
+  // Initialize event request section after auth
+  document.addEventListener('DOMContentLoaded', () => {
+    // Wait for auth to be ready, then check Pro status
+    const checkInterval = setInterval(() => {
+      if (currentUser && authInitialized) {
+        clearInterval(checkInterval);
+        initEventRequestSection();
+      }
+    }, 500);
+    // Stop checking after 10 seconds
+    setTimeout(() => clearInterval(checkInterval), 10000);
+  });
 </script>

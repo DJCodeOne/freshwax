@@ -10,7 +10,7 @@
     <button type="button" class="refresh-btn" id="refreshBookingsBtn">↻ Refresh</button>
   </div>
   
-  <p class="section-desc">Manage your upcoming live stream slots. Cancel at least 1 hour before start time.</p>
+  <p class="section-desc">Manage your upcoming live stream slots.</p>
   
   <div id="bookingsList" class="bookings-list">
     <p class="loading">Loading your bookings...</p>
@@ -316,12 +316,13 @@
         const endTime = new Date(booking.endTime);
         const timeUntil = startTime.getTime() - now.getTime();
         const hoursUntil = timeUntil / (1000 * 60 * 60);
-        
+
         let cardClass = 'booking-card';
         let badgeClass = 'scheduled';
         let badgeText = 'Scheduled';
-        let canCancel = hoursUntil > 1;
-        
+        // Allow cancellation anytime before the slot starts
+        let canCancel = timeUntil > 0 && booking.status !== 'live';
+
         if (booking.status === 'live') {
           cardClass += ' live-now';
           badgeClass = 'live';
@@ -331,7 +332,7 @@
           cardClass += ' upcoming-soon';
           badgeClass = 'soon';
           badgeText = 'Starting Soon';
-          canCancel = false;
+          // Can still cancel upcoming-soon slots
         } else if (hoursUntil <= 0) {
           canCancel = false;
         }
@@ -365,7 +366,7 @@
                   Cancel Booking
                 </button>
               ` : `
-                <button type="button" class="cancel-booking-btn" disabled title="Cannot cancel within 1 hour of start time">
+                <button type="button" class="cancel-booking-btn" disabled title="Cannot cancel live or past slots">
                   Cannot Cancel
                 </button>
               `}

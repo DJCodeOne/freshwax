@@ -1,7 +1,7 @@
 // src/pages/api/get-dj-mixes.ts
 // Uses Firebase REST API - works on Cloudflare Pages (no Admin SDK)
 import type { APIRoute } from 'astro';
-import { queryCollection } from '../../lib/firebase-rest';
+import { queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -11,7 +11,14 @@ const log = {
   error: (...args: any[]) => console.error(...args),
 };
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   const url = new URL(request.url);
   const limitParam = url.searchParams.get('limit');
   const userId = url.searchParams.get('userId');
@@ -24,10 +31,74 @@ export const GET: APIRoute = async ({ request }) => {
     
     // If userId provided, filter by userId
     if (userId) {
+      // Try userId field first
       mixes = await queryCollection('dj-mixes', {
         filters: [{ field: 'userId', op: 'EQUAL', value: userId }]
       });
-      log.info('[get-dj-mixes] Found', mixes.length, 'mixes for user');
+      console.log('[get-dj-mixes] Found', mixes.length, 'mixes with userId field');
+
+      // If no results, try user_id field (snake_case)
+      if (mixes.length === 0) {
+        mixes = await queryCollection('dj-mixes', {
+          filters: [{ field: 'user_id', op: 'EQUAL', value: userId }]
+        });
+        console.log('[get-dj-mixes] Found', mixes.length, 'mixes with user_id field');
+      }
+
+      // If still no results, try uploaderId field
+      if (mixes.length === 0) {
+        mixes = await queryCollection('dj-mixes', {
+          filters: [{ field: 'uploaderId', op: 'EQUAL', value: userId }]
+        });
+        console.log('[get-dj-mixes] Found', mixes.length, 'mixes with uploaderId field');
+      }
+
+      // If still no results, try to match by user's displayName
+      // First, get the user's displayName from their profile (parallel queries)
+      if (mixes.length === 0) {
+        try {
+          const { getDocument } = await import('../../lib/firebase-rest');
+          // Fetch from all collections in parallel
+          const [customerProfile, userProfile, artistProfile] = await Promise.all([
+            getDocument('customers', userId),
+            getDocument('users', userId),
+            getDocument('artists', userId)
+          ]);
+
+          // Extract displayName from whichever profile has it
+          const displayName = customerProfile?.displayName ||
+                             userProfile?.displayName ||
+                             userProfile?.partnerInfo?.displayName ||
+                             artistProfile?.artistName ||
+                             artistProfile?.name;
+
+          console.log('[get-dj-mixes] Trying to match by displayName:', displayName);
+
+          if (displayName) {
+            // Try matching by djName or dj_name or displayName
+            let djMixes = await queryCollection('dj-mixes', {
+              filters: [{ field: 'djName', op: 'EQUAL', value: displayName }]
+            });
+
+            if (djMixes.length === 0) {
+              djMixes = await queryCollection('dj-mixes', {
+                filters: [{ field: 'dj_name', op: 'EQUAL', value: displayName }]
+              });
+            }
+
+            if (djMixes.length === 0) {
+              djMixes = await queryCollection('dj-mixes', {
+                filters: [{ field: 'displayName', op: 'EQUAL', value: displayName }]
+              });
+            }
+
+            mixes = djMixes;
+            console.log('[get-dj-mixes] Found', mixes.length, 'mixes by displayName match');
+          }
+        } catch (e) {
+          console.error('[get-dj-mixes] Error matching by displayName:', e);
+        }
+      }
     } else {
       // Query mixes - try 'published' field first, then 'status'
       mixes = await queryCollection('dj-mixes', {

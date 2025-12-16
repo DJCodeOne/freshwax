@@ -1,12 +1,24 @@
 // public/dj-lobby-pusher.js
 // DJ Lobby client - Pusher-based real-time (replaces Firebase onSnapshot)
-// Version: 3.0 - December 2025 - Full Pusher migration
+// Version: 3.1 - December 2025 - Fixed module load timing
 
 // ==========================================
 // PUSHER CONFIGURATION (from window.PUSHER_CONFIG set by Layout.astro)
 // ==========================================
-const PUSHER_KEY = window.PUSHER_CONFIG?.key || '';
-const PUSHER_CLUSTER = window.PUSHER_CONFIG?.cluster || 'eu';
+// NOTE: Must use getter function - can't read window.PUSHER_CONFIG at module load time
+function getPusherConfig() {
+  const config = {
+    key: window.PUSHER_CONFIG?.key || '',
+    cluster: window.PUSHER_CONFIG?.cluster || 'eu'
+  };
+  console.log('[DJLobby DEBUG] getPusherConfig:', {
+    hasConfig: !!window.PUSHER_CONFIG,
+    keyLength: config.key.length,
+    keyPrefix: config.key.substring(0, 8),
+    cluster: config.cluster
+  });
+  return config;
+}
 
 let pusher = null;
 let lobbyChannel = null;
@@ -25,17 +37,31 @@ let dmMessages = [];
 export async function initDjLobbyPusher(user, info) {
   currentUser = user;
   userInfo = info;
-  
+
   console.log('[DJLobby] Initializing Pusher for:', user.uid);
-  
+
   // Load Pusher script if not loaded
   if (!window.Pusher) {
+    console.log('[DJLobby DEBUG] Loading Pusher script...');
     await loadPusherScript();
+    console.log('[DJLobby DEBUG] Pusher script loaded');
   }
-  
+
+  // Get Pusher config at runtime (not module load time!)
+  const pusherConfig = getPusherConfig();
+
+  if (!pusherConfig.key) {
+    console.error('[DJLobby] ERROR: Pusher key not configured!');
+    console.error('[DJLobby] window.PUSHER_CONFIG:', window.PUSHER_CONFIG);
+    return;
+  }
+
+  // Enable Pusher debug logging
+  window.Pusher.logToConsole = true;
+
   // Initialize Pusher
-  pusher = new window.Pusher(PUSHER_KEY, {
-    cluster: PUSHER_CLUSTER,
+  pusher = new window.Pusher(pusherConfig.key, {
+    cluster: pusherConfig.cluster,
     authEndpoint: '/api/dj-lobby/pusher-auth',
     auth: {
       params: {
@@ -43,26 +69,57 @@ export async function initDjLobbyPusher(user, info) {
       }
     }
   });
-  
+
+  // Add connection state logging
+  pusher.connection.bind('state_change', (states) => {
+    console.log('[DJLobby DEBUG] Pusher state change:', states.previous, '->', states.current);
+  });
+
+  pusher.connection.bind('error', (err) => {
+    console.error('[DJLobby DEBUG] Pusher connection error:', err);
+  });
+
+  pusher.connection.bind('connected', () => {
+    console.log('[DJLobby DEBUG] Pusher connected successfully');
+  });
+
   // Subscribe to public lobby channel
+  console.log('[DJLobby DEBUG] Subscribing to dj-lobby channel...');
   lobbyChannel = pusher.subscribe('dj-lobby');
-  
+
+  lobbyChannel.bind('pusher:subscription_succeeded', () => {
+    console.log('[DJLobby DEBUG] Successfully subscribed to dj-lobby');
+  });
+
+  lobbyChannel.bind('pusher:subscription_error', (error) => {
+    console.error('[DJLobby DEBUG] dj-lobby subscription error:', error);
+  });
+
   // Subscribe to private channel for this user (for DMs, takeover notifications)
+  console.log('[DJLobby DEBUG] Subscribing to private-dj-' + user.uid);
   privateChannel = pusher.subscribe(`private-dj-${user.uid}`);
-  
+
+  privateChannel.bind('pusher:subscription_succeeded', () => {
+    console.log('[DJLobby DEBUG] Successfully subscribed to private channel');
+  });
+
+  privateChannel.bind('pusher:subscription_error', (error) => {
+    console.error('[DJLobby DEBUG] Private channel subscription error:', error);
+  });
+
   // Set up event handlers
   setupLobbyEvents();
   setupPrivateEvents();
-  
+
   // Join the lobby
   await joinLobby();
-  
+
   // Load initial data
   await loadInitialData();
-  
+
   // Start heartbeat
   startHeartbeat();
-  
+
   console.log('[DJLobby] Pusher initialized');
 }
 
@@ -215,19 +272,48 @@ function setupPrivateEvents() {
 // ==========================================
 
 async function joinLobby() {
+  console.log('[DJLobby DEBUG] joinLobby called');
   try {
-    await fetch('/api/dj-lobby/presence', {
+    // Get fresh idToken for Firebase write
+    const idToken = await currentUser.getIdToken();
+    console.log('[DJLobby DEBUG] Got idToken, length:', idToken?.length);
+
+    const djData = {
+      id: currentUser.uid,
+      odamiMa: currentUser.uid,
+      name: userInfo.name,
+      avatar: userInfo.avatar,
+      avatarLetter: userInfo.firstName?.charAt(0) || userInfo.name?.charAt(0) || 'D',
+      isReady: false
+    };
+
+    console.log('[DJLobby DEBUG] Calling /api/dj-lobby/presence POST with:', djData);
+
+    const response = await fetch('/api/dj-lobby/presence', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
       body: JSON.stringify({
         action: 'join',
         userId: currentUser.uid,
         name: userInfo.name,
         avatar: userInfo.avatar,
-        avatarLetter: userInfo.firstName?.charAt(0) || userInfo.name?.charAt(0) || 'D',
+        avatarLetter: djData.avatarLetter,
         isReady: false
       })
     });
+
+    // Add self to online DJs list immediately (in case Pusher event arrives late)
+    const existingIndex = onlineDjs.findIndex(dj => dj.id === currentUser.uid);
+    if (existingIndex === -1) {
+      onlineDjs.push(djData);
+    } else {
+      onlineDjs[existingIndex] = { ...onlineDjs[existingIndex], ...djData };
+    }
+    updateOnlineDjsUI();
+
     console.log('[DJLobby] Joined lobby');
   } catch (error) {
     console.error('[DJLobby] Failed to join:', error);
@@ -236,9 +322,14 @@ async function joinLobby() {
 
 async function leaveLobby() {
   try {
+    const idToken = await currentUser.getIdToken();
+
     await fetch('/api/dj-lobby/presence', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
       body: JSON.stringify({
         action: 'leave',
         userId: currentUser.uid
@@ -254,9 +345,14 @@ function startHeartbeat() {
   // Send heartbeat every 30 seconds
   heartbeatInterval = setInterval(async () => {
     try {
+      const idToken = await currentUser.getIdToken();
+
       await fetch('/api/dj-lobby/presence', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
         body: JSON.stringify({
           action: 'heartbeat',
           userId: currentUser.uid,
@@ -289,13 +385,19 @@ async function loadInitialData() {
 }
 
 async function loadOnlineDjs() {
+  console.log('[DJLobby DEBUG] loadOnlineDjs called');
   try {
     const response = await fetch('/api/dj-lobby/presence');
+    console.log('[DJLobby DEBUG] loadOnlineDjs response status:', response.status);
+
     const result = await response.json();
-    
+    console.log('[DJLobby DEBUG] loadOnlineDjs result:', result);
+
     if (result.success) {
       onlineDjs = result.djs;
       updateOnlineDjsUI();
+    } else {
+      console.error('[DJLobby DEBUG] loadOnlineDjs failed:', result.error);
     }
   } catch (error) {
     console.error('[DJLobby] Failed to load online DJs:', error);
@@ -360,7 +462,7 @@ function updateOnlineDjsUI() {
     const isMe = dj.id === currentUser?.uid || dj.odamiMa === currentUser?.uid;
     const isReady = dj.isReady === true;
     const avatarLetter = dj.avatarLetter || (dj.name ? dj.name.charAt(0).toUpperCase() : 'D');
-    const hasAvatar = dj.avatar && dj.avatar !== '/logo.webp';
+    const hasAvatar = dj.avatar && dj.avatar !== '/place-holder.webp' && dj.avatar !== '/logo.webp';
     
     return `
       <div class="dj-item ${isReady ? 'is-ready' : ''}" data-dj-id="${dj.id || dj.odamiMa}">

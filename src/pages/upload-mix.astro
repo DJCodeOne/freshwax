@@ -48,18 +48,126 @@ import Footer from '../components/Footer.astro';
     <!-- Login Required Banner (hidden by default, shown if not logged in) -->
     <div id="login-banner" class="hidden bg-red-600 text-white p-6 text-center relative z-10">
       <p class="text-lg font-bold mb-4">🔒 You must be logged in to upload DJ mixes</p>
-      <div class="flex gap-4 justify-center flex-wrap">
-        <a href="/login?redirect=/upload-mix" class="px-6 py-3 bg-white text-red-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-sm uppercase">
-          Login as Customer
-        </a>
-        <a href="/login?redirect=/upload-mix" class="px-6 py-3 bg-white text-red-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-sm uppercase">
-          Login as Artist/DJ
-        </a>
+      <a href="/login?redirect=/upload-mix" class="inline-block px-8 py-3 bg-white text-red-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-sm uppercase">
+        Login to Upload
+      </a>
+    </div>
+
+    <!-- Quick Drop Section -->
+    <section id="quick-drop-section" class="container mx-auto px-6 pt-8 pb-4 max-w-4xl relative z-10">
+      <div class="quick-drop-card bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl shadow-xl border-2 border-amber-400 overflow-hidden">
+        <div class="p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="quick-drop-badge">QUICK DROP</span>
+            <span class="text-amber-700 text-sm font-medium">No forms, no fuss - just drop and go!</span>
+          </div>
+
+          <div id="quick-drop-zone" class="quick-drop-zone">
+            <svg class="w-12 h-12 mx-auto mb-3 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p class="text-amber-800 font-bold mb-1">Drop your MP3 or WAV here for instant upload</p>
+            <p class="text-amber-600 text-sm">WAV files auto-convert to MP3 - straight to the DJ Mixes page!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Drop Confirmation Modal -->
+    <div id="quick-drop-modal" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="quick-drop-modal-backdrop"></div>
+      <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full relative z-10 overflow-hidden">
+          <div class="bg-gradient-to-r from-amber-500 to-orange-500 p-4">
+            <h3 class="text-white font-bold text-xl">Quick Drop Upload</h3>
+          </div>
+          <div class="p-6">
+            <div class="flex items-center gap-4 mb-6">
+              <img id="quick-drop-artwork-preview" src="/place-holder.webp" alt="Placeholder artwork" class="w-20 h-20 rounded-lg border-2 border-amber-200 object-cover" />
+              <div class="flex-1 min-w-0">
+                <p class="font-bold text-gray-900 truncate" id="quick-drop-title-preview">Mix Title</p>
+                <p class="text-gray-600 text-sm" id="quick-drop-dj-preview">DJ Name</p>
+                <p class="text-amber-600 text-sm font-medium" id="quick-drop-duration-preview">Duration: --:--</p>
+              </div>
+            </div>
+
+            <!-- Conversion Status (shown when converting WAV) -->
+            <div id="quick-drop-converting" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div class="flex items-center gap-3">
+                <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="text-sm text-blue-800" id="quick-drop-convert-status">Converting WAV to MP3...</p>
+              </div>
+              <div class="mt-2 w-full bg-blue-200 rounded-full h-2 overflow-hidden">
+                <div id="quick-drop-convert-bar" class="h-full bg-blue-600 transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div id="quick-drop-ready-msg" class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+              <p class="text-sm text-amber-800">
+                <strong>Ready to upload!</strong> Your mix will use the default artwork.
+                You can edit details later from your dashboard.
+              </p>
+            </div>
+
+            <!-- Genre Selection for Quick Drop -->
+            <div class="mb-6">
+              <label for="quick-drop-genre" class="block text-sm font-bold text-gray-700 mb-2">Select Genre <span class="text-red-600">*</span></label>
+              <select id="quick-drop-genre" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white">
+                <option value="">Choose a genre...</option>
+                <option value="Jungle">Jungle</option>
+                <option value="Drum and Bass">Drum and Bass</option>
+                <option value="Hardcore">Hardcore</option>
+                <option value="Jungle Techno">Jungle Techno</option>
+                <option value="Old Skool">Old Skool</option>
+                <option value="Tribal">Tribal</option>
+                <option value="Ragga Jungle">Ragga Jungle</option>
+                <option value="Darkstep">Darkstep</option>
+                <option value="Techstep">Techstep</option>
+                <option value="Breakcore">Breakcore</option>
+              </select>
+            </div>
+
+            <div class="flex gap-3">
+              <button id="quick-drop-cancel" class="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all font-bold">
+                Cancel
+              </button>
+              <button id="quick-drop-confirm" class="flex-1 px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all font-bold">
+                Upload Now
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Drop Progress (hidden by default) -->
+          <div id="quick-drop-progress" class="hidden p-6 pt-0">
+            <div class="bg-amber-50 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-2">
+                <p class="font-bold text-amber-800">Uploading...</p>
+                <p id="quick-drop-progress-text" class="text-sm font-bold text-amber-600">0%</p>
+              </div>
+              <div class="w-full bg-amber-200 rounded-full h-3 overflow-hidden">
+                <div id="quick-drop-progress-bar" class="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-300" style="width: 0%"></div>
+              </div>
+              <p id="quick-drop-status" class="text-sm text-amber-700 mt-2 text-center">Preparing...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Divider between Quick Drop and Full Form -->
+    <div class="container mx-auto px-6 max-w-4xl relative z-10">
+      <div class="flex items-center gap-4 py-4">
+        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-gray-300"></div>
+        <span class="text-gray-500 font-bold text-sm uppercase tracking-wider px-4">Or fill in the details below</span>
+        <div class="flex-1 h-px bg-gradient-to-l from-transparent via-gray-300 to-gray-300"></div>
       </div>
     </div>
 
     <!-- Upload Form -->
-    <section class="container mx-auto px-6 py-12 max-w-4xl relative z-10">
+    <section class="container mx-auto px-6 pb-12 max-w-4xl relative z-10">
       <div class="bg-white rounded-2xl shadow-xl border-2 border-black overflow-hidden">
         <form id="upload-form" class="p-8 space-y-6">
           
@@ -370,6 +478,50 @@ Artist - Track Title
     background-color: #eff6ff !important;
   }
 
+  /* Quick Drop Styles */
+  .quick-drop-badge {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    background: linear-gradient(135deg, #f59e0b, #ea580c);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    border-radius: 9999px;
+    text-transform: uppercase;
+  }
+
+  .quick-drop-zone {
+    border: 2px dashed #fbbf24;
+    border-radius: 1rem;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .quick-drop-zone:hover {
+    border-color: #f59e0b;
+    background: rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px);
+  }
+
+  .quick-drop-zone.drag-over {
+    border-color: #ea580c !important;
+    background: rgba(254, 243, 199, 0.8) !important;
+    transform: scale(1.02);
+    box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3);
+  }
+
+  .quick-drop-card {
+    transition: all 0.3s ease;
+  }
+
+  .quick-drop-card:hover {
+    box-shadow: 0 10px 40px rgba(245, 158, 11, 0.2);
+  }
+
   #artwork-drop-zone.drag-over {
     border-color: #16a34a !important;
     background-color: #f0fdf4 !important;
@@ -523,21 +675,26 @@ Artist - Track Title
   const loginBanner = document.getElementById('login-banner');
   const uploadForm = document.getElementById('upload-form');
   const heroSection = document.getElementById('hero-section');
+  const quickDropSection = document.getElementById('quick-drop-section');
 
   // Initially disable form until auth check completes
   if (uploadForm) {
     uploadForm.style.opacity = '0.5';
     uploadForm.style.pointerEvents = 'none';
   }
+  if (quickDropSection) {
+    quickDropSection.style.opacity = '0.5';
+    quickDropSection.style.pointerEvents = 'none';
+  }
 
   onAuthStateChanged(auth, (user) => {
-    
+
     if (!user) {
-      // Not logged in - show login banner, disable form
+      // Not logged in - show login banner, disable form and Quick Drop
       submitBtn.disabled = true;
       submitBtn.textContent = '🔒 Login Required to Upload';
       loginBanner.classList.remove('hidden');
-      
+
       if (uploadForm) {
         uploadForm.style.opacity = '0.5';
         uploadForm.style.pointerEvents = 'none';
@@ -545,13 +702,18 @@ Artist - Track Title
           el.disabled = true;
         });
       }
-      
+
+      if (quickDropSection) {
+        quickDropSection.style.opacity = '0.5';
+        quickDropSection.style.pointerEvents = 'none';
+      }
+
     } else {
-      // Logged in - enable form
+      // Logged in - enable form and Quick Drop
       submitBtn.disabled = false;
       submitBtn.textContent = 'Upload Mix';
       loginBanner.classList.add('hidden');
-      
+
       if (uploadForm) {
         uploadForm.style.opacity = '1';
         uploadForm.style.pointerEvents = 'auto';
@@ -559,7 +721,12 @@ Artist - Track Title
           el.disabled = false;
         });
       }
-      
+
+      if (quickDropSection) {
+        quickDropSection.style.opacity = '1';
+        quickDropSection.style.pointerEvents = 'auto';
+      }
+
     }
   });
 </script>
@@ -882,10 +1049,495 @@ Artist - Track Title
     artworkDropZone.classList.remove('hidden');
   });
 
+  // ===== QUICK DROP FUNCTIONALITY =====
+  let quickDropFile = null;
+  let quickDropDuration = 0;
+  let quickDropDjName = '';
+  let quickDropTitle = '';
+  let quickDropOriginalFilename = '';
+  let isConverting = false;
+
+  const quickDropSection = document.getElementById('quick-drop-section');
+  const quickDropZone = document.getElementById('quick-drop-zone');
+  const quickDropModal = document.getElementById('quick-drop-modal');
+  const quickDropBackdrop = document.getElementById('quick-drop-modal-backdrop');
+  const quickDropTitlePreview = document.getElementById('quick-drop-title-preview');
+  const quickDropDjPreview = document.getElementById('quick-drop-dj-preview');
+  const quickDropDurationPreview = document.getElementById('quick-drop-duration-preview');
+  const quickDropGenre = document.getElementById('quick-drop-genre');
+  const quickDropCancel = document.getElementById('quick-drop-cancel');
+  const quickDropConfirm = document.getElementById('quick-drop-confirm');
+  const quickDropProgressContainer = document.getElementById('quick-drop-progress');
+  const quickDropProgressBar = document.getElementById('quick-drop-progress-bar');
+  const quickDropProgressText = document.getElementById('quick-drop-progress-text');
+  const quickDropStatus = document.getElementById('quick-drop-status');
+  const quickDropConverting = document.getElementById('quick-drop-converting');
+  const quickDropConvertStatus = document.getElementById('quick-drop-convert-status');
+  const quickDropConvertBar = document.getElementById('quick-drop-convert-bar');
+  const quickDropReadyMsg = document.getElementById('quick-drop-ready-msg');
+
+  // Load lamejs for WAV to MP3 conversion
+  let lamejsLoaded = false;
+  async function loadLamejs() {
+    if (lamejsLoaded || window.lamejs) return;
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
+      script.onload = () => {
+        lamejsLoaded = true;
+        resolve();
+      };
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  // Convert WAV to MP3 using lamejs
+  async function convertWavToMp3(wavFile, onProgress) {
+    await loadLamejs();
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target.result;
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+          onProgress(10, 'Decoding audio...');
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+          const numChannels = audioBuffer.numberOfChannels;
+          const sampleRate = audioBuffer.sampleRate;
+          const samples = audioBuffer.length;
+
+          onProgress(20, 'Preparing conversion...');
+
+          // Get audio data
+          const leftChannel = audioBuffer.getChannelData(0);
+          const rightChannel = numChannels > 1 ? audioBuffer.getChannelData(1) : leftChannel;
+
+          // Convert float32 to int16
+          const leftInt16 = new Int16Array(samples);
+          const rightInt16 = new Int16Array(samples);
+
+          for (let i = 0; i < samples; i++) {
+            leftInt16[i] = Math.max(-32768, Math.min(32767, Math.floor(leftChannel[i] * 32767)));
+            rightInt16[i] = Math.max(-32768, Math.min(32767, Math.floor(rightChannel[i] * 32767)));
+          }
+
+          onProgress(30, 'Encoding MP3...');
+
+          // Create MP3 encoder - 192kbps for good quality
+          const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, 192);
+          const mp3Data = [];
+
+          // Encode in chunks
+          const chunkSize = 1152;
+          const totalChunks = Math.ceil(samples / chunkSize);
+
+          for (let i = 0; i < samples; i += chunkSize) {
+            const leftChunk = leftInt16.subarray(i, i + chunkSize);
+            const rightChunk = rightInt16.subarray(i, i + chunkSize);
+
+            let mp3buf;
+            if (numChannels === 1) {
+              mp3buf = mp3encoder.encodeBuffer(leftChunk);
+            } else {
+              mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+            }
+
+            if (mp3buf.length > 0) {
+              mp3Data.push(mp3buf);
+            }
+
+            // Update progress (30-90%)
+            const chunkProgress = Math.floor((i / samples) * 60) + 30;
+            if (i % (chunkSize * 100) === 0) {
+              onProgress(chunkProgress, `Encoding... ${Math.floor((i / samples) * 100)}%`);
+            }
+          }
+
+          // Flush remaining data
+          const mp3buf = mp3encoder.flush();
+          if (mp3buf.length > 0) {
+            mp3Data.push(mp3buf);
+          }
+
+          onProgress(95, 'Finalizing...');
+
+          // Create blob
+          const blob = new Blob(mp3Data, { type: 'audio/mpeg' });
+          const mp3File = new File([blob], wavFile.name.replace(/\.wav$/i, '.mp3'), { type: 'audio/mpeg' });
+
+          onProgress(100, 'Conversion complete!');
+          audioContext.close();
+
+          resolve(mp3File);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(wavFile);
+    });
+  }
+
+  // Check if file is WAV
+  function isWavFile(file) {
+    return file.type === 'audio/wav' || file.type === 'audio/x-wav' || file.name.toLowerCase().endsWith('.wav');
+  }
+
+  // Check if file is MP3
+  function isMp3File(file) {
+    return file.type === 'audio/mpeg' || file.name.toLowerCase().endsWith('.mp3');
+  }
+
+  // Parse filename to extract DJ name and title
+  function parseFilename(filename) {
+    // Remove extension
+    const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
+
+    // Try common patterns: "DJ Name - Mix Title", "DJ Name_Mix Title", "DJ_Name - Mix_Title"
+    let djName = '';
+    let title = '';
+
+    // Pattern 1: "DJ Name - Mix Title" or "DJ Name – Mix Title" (em dash)
+    if (nameWithoutExt.includes(' - ') || nameWithoutExt.includes(' – ')) {
+      const separator = nameWithoutExt.includes(' - ') ? ' - ' : ' – ';
+      const parts = nameWithoutExt.split(separator);
+      djName = parts[0].trim();
+      title = parts.slice(1).join(separator).trim();
+    }
+    // Pattern 2: "DJ_Name - Mix_Title"
+    else if (nameWithoutExt.includes('_') && nameWithoutExt.includes(' - ')) {
+      const parts = nameWithoutExt.split(' - ');
+      djName = parts[0].replace(/_/g, ' ').trim();
+      title = parts.slice(1).join(' - ').replace(/_/g, ' ').trim();
+    }
+    // Fallback: Use entire filename as title, leave DJ name empty
+    else {
+      djName = '';
+      title = nameWithoutExt.replace(/_/g, ' ').trim();
+    }
+
+    // Clean up and apply limits
+    djName = djName.substring(0, 30);
+    title = title.substring(0, 50);
+
+    return { djName, title };
+  }
+
+  // Handle Quick Drop file
+  async function handleQuickDropFile(file) {
+    // Check if it's a supported format
+    if (!isMp3File(file) && !isWavFile(file)) {
+      alert('Quick Drop supports MP3 and WAV files only');
+      return;
+    }
+
+    // Store original filename for parsing before any conversion
+    quickDropOriginalFilename = file.name;
+
+    // Parse filename (use original name even if we convert)
+    const parsed = parseFilename(quickDropOriginalFilename);
+    quickDropDjName = parsed.djName;
+    quickDropTitle = parsed.title || 'Untitled Mix';
+
+    // Update modal preview
+    quickDropTitlePreview.textContent = quickDropTitle;
+    quickDropDjPreview.textContent = quickDropDjName || 'Unknown DJ';
+    quickDropDurationPreview.textContent = 'Calculating duration...';
+
+    // Show modal immediately
+    quickDropModal.classList.remove('hidden');
+    quickDropGenre.value = '';
+    quickDropProgressContainer.classList.add('hidden');
+    quickDropConfirm.disabled = true; // Disable until ready
+    quickDropCancel.disabled = false;
+
+    // Handle WAV conversion
+    if (isWavFile(file)) {
+      isConverting = true;
+      quickDropConverting.classList.remove('hidden');
+      quickDropReadyMsg.classList.add('hidden');
+      quickDropConvertBar.style.width = '0%';
+
+      try {
+        const mp3File = await convertWavToMp3(file, (progress, status) => {
+          quickDropConvertBar.style.width = progress + '%';
+          quickDropConvertStatus.textContent = status;
+        });
+
+        quickDropFile = mp3File;
+        isConverting = false;
+        quickDropConverting.classList.add('hidden');
+        quickDropReadyMsg.classList.remove('hidden');
+        quickDropConfirm.disabled = false;
+
+        // Get duration from converted file
+        const audioUrl = URL.createObjectURL(mp3File);
+        const tempAudio = new Audio();
+        tempAudio.addEventListener('loadedmetadata', () => {
+          quickDropDuration = Math.round(tempAudio.duration);
+          quickDropDurationPreview.textContent = `Duration: ${formatDuration(quickDropDuration)}`;
+          URL.revokeObjectURL(audioUrl);
+        });
+        tempAudio.src = audioUrl;
+
+      } catch (err) {
+        console.error('WAV conversion error:', err);
+        alert('Failed to convert WAV to MP3. Please try an MP3 file instead.');
+        quickDropModal.classList.add('hidden');
+        isConverting = false;
+        return;
+      }
+    } else {
+      // MP3 file - use directly
+      quickDropFile = file;
+      quickDropConverting.classList.add('hidden');
+      quickDropReadyMsg.classList.remove('hidden');
+      quickDropConfirm.disabled = false;
+
+      // Calculate duration
+      const audioUrl = URL.createObjectURL(file);
+      const tempAudio = new Audio();
+
+      tempAudio.addEventListener('loadedmetadata', () => {
+        quickDropDuration = Math.round(tempAudio.duration);
+        quickDropDurationPreview.textContent = `Duration: ${formatDuration(quickDropDuration)}`;
+        URL.revokeObjectURL(audioUrl);
+      });
+
+      tempAudio.addEventListener('error', () => {
+        quickDropDurationPreview.textContent = 'Duration: Unknown';
+        URL.revokeObjectURL(audioUrl);
+      });
+
+      tempAudio.src = audioUrl;
+    }
+  }
+
+  // Quick Drop zone event listeners
+  quickDropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    quickDropZone.classList.add('drag-over');
+  });
+
+  quickDropZone.addEventListener('dragleave', () => {
+    quickDropZone.classList.remove('drag-over');
+  });
+
+  quickDropZone.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    quickDropZone.classList.remove('drag-over');
+
+    // Check auth first
+    const user = await getAuthUser();
+    if (!user) {
+      alert('Please log in to upload mixes');
+      window.location.href = '/login?redirect=/upload-mix';
+      return;
+    }
+
+    if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
+      handleQuickDropFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  // Click to browse for Quick Drop
+  quickDropZone.addEventListener('click', async () => {
+    const user = await getAuthUser();
+    if (!user) {
+      alert('Please log in to upload mixes');
+      window.location.href = '/login?redirect=/upload-mix';
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.mp3,.wav,audio/mpeg,audio/wav,audio/x-wav';
+    input.onchange = (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handleQuickDropFile(e.target.files[0]);
+      }
+    };
+    input.click();
+  });
+
+  // Modal cancel
+  quickDropCancel.addEventListener('click', () => {
+    if (isConverting) {
+      alert('Please wait for conversion to complete');
+      return;
+    }
+    quickDropModal.classList.add('hidden');
+    quickDropFile = null;
+  });
+
+  quickDropBackdrop.addEventListener('click', () => {
+    if (isConverting) return; // Don't allow closing during conversion
+    if (!quickDropCancel.disabled) {
+      quickDropModal.classList.add('hidden');
+      quickDropFile = null;
+    }
+  });
+
+  // Quick Drop upload
+  quickDropConfirm.addEventListener('click', async () => {
+    if (!quickDropFile) {
+      alert('No file selected');
+      return;
+    }
+
+    const genre = quickDropGenre.value;
+    if (!genre) {
+      alert('Please select a genre');
+      quickDropGenre.focus();
+      return;
+    }
+
+    const user = await getAuthUser();
+    if (!user) {
+      alert('Please log in to upload mixes');
+      window.location.href = '/login?redirect=/upload-mix';
+      return;
+    }
+
+    // Check subscription limits
+    try {
+      const limitCheck = await fetch(`/api/subscription?userId=${user.uid}&action=canUploadMix`);
+      const limitResult = await limitCheck.json();
+
+      if (!limitResult.allowed) {
+        const upgrade = confirm(
+          `${limitResult.reason}\n\nWould you like to upgrade to Pro for unlimited uploads?`
+        );
+        if (upgrade) {
+          window.location.href = '/account/dashboard#upgrade';
+        }
+        quickDropModal.classList.add('hidden');
+        return;
+      }
+    } catch (err) {
+      console.warn('Could not check upload limits:', err);
+    }
+
+    // Disable buttons during upload
+    quickDropConfirm.disabled = true;
+    quickDropCancel.disabled = true;
+    quickDropProgressContainer.classList.remove('hidden');
+
+    try {
+      const formData = new FormData();
+      formData.append('djName', quickDropDjName || 'Unknown DJ');
+      formData.append('mixTitle', quickDropTitle);
+      formData.append('mixDescription', '');
+      formData.append('genre', genre);
+      formData.append('tracklist', '');
+      formData.append('durationSeconds', quickDropDuration.toString());
+      formData.append('audioFile', quickDropFile);
+      formData.append('userId', user.uid);
+      formData.append('usePlaceholderArtwork', 'true'); // Signal to use placeholder
+
+      quickDropStatus.textContent = 'Uploading...';
+
+      const result = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const percentComplete = Math.round((e.loaded / e.total) * 100);
+            const visualProgress = Math.min(percentComplete * 0.85, 85);
+            quickDropProgressBar.style.width = visualProgress + '%';
+            quickDropProgressText.textContent = Math.round(visualProgress) + '%';
+
+            if (percentComplete < 100) {
+              const mbUploaded = (e.loaded / (1024 * 1024)).toFixed(1);
+              const mbTotal = (e.total / (1024 * 1024)).toFixed(1);
+              quickDropStatus.textContent = `Uploading... ${mbUploaded}MB / ${mbTotal}MB`;
+            }
+          }
+        });
+
+        xhr.upload.addEventListener('load', () => {
+          quickDropProgressBar.style.width = '90%';
+          quickDropProgressText.textContent = '90%';
+          quickDropStatus.textContent = 'Processing...';
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText));
+            } catch (e) {
+              reject(new Error('Invalid server response'));
+            }
+          } else {
+            try {
+              const errorResponse = JSON.parse(xhr.responseText);
+              reject(new Error(errorResponse.error || `Server error: ${xhr.status}`));
+            } catch (e) {
+              reject(new Error(`Server error: ${xhr.status}`));
+            }
+          }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Network error')));
+        xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+        xhr.open('POST', '/api/upload-mix');
+        xhr.send(formData);
+      });
+
+      quickDropProgressBar.style.width = '100%';
+      quickDropProgressText.textContent = '100%';
+
+      if (result.success) {
+        quickDropStatus.textContent = 'Upload complete!';
+
+        // Record usage
+        try {
+          const token = await user.getIdToken();
+          await fetch('/api/subscription', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              action: 'recordMixUpload',
+              userId: user.uid
+            })
+          });
+        } catch (err) {
+          console.warn('Could not record usage:', err);
+        }
+
+        alert(`Mix uploaded successfully!\n\n"${quickDropTitle}" is now LIVE on the DJ Mixes page!`);
+
+        setTimeout(() => {
+          window.location.href = '/dj-mixes';
+        }, 1000);
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+    } catch (error) {
+      console.error('Quick Drop upload error:', error);
+      quickDropStatus.textContent = 'Upload failed';
+      alert(`Upload failed: ${error.message}`);
+
+      quickDropConfirm.disabled = false;
+      quickDropCancel.disabled = false;
+      quickDropProgressContainer.classList.add('hidden');
+    }
+  });
+  // ===== END QUICK DROP =====
+
   // Form submission
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     // Wait for auth to be ready
     const user = await getAuthUser();
     if (!user) {
@@ -893,7 +1545,26 @@ Artist - Track Title
       window.location.href = '/login?redirect=/upload-mix';
       return;
     }
-    
+
+    // Check subscription limits before upload
+    try {
+      const limitCheck = await fetch(`/api/subscription?userId=${user.uid}&action=canUploadMix`);
+      const limitResult = await limitCheck.json();
+
+      if (!limitResult.allowed) {
+        const upgrade = confirm(
+          `${limitResult.reason}\n\nWould you like to upgrade to Pro for unlimited uploads?`
+        );
+        if (upgrade) {
+          window.location.href = '/account/dashboard#upgrade';
+        }
+        return;
+      }
+    } catch (err) {
+      console.warn('Could not check upload limits:', err);
+      // Continue with upload if limit check fails
+    }
+
     const djName = djNameInput.value.trim();
     const mixTitle = mixTitleInput.value.trim();
     const mixDescription = mixDescriptionInput.value.trim();
@@ -1027,10 +1698,31 @@ Artist - Track Title
       progressText.textContent = '100%';
 
       if (result.success) {
-        
+
         statusText.textContent = 'Upload complete! Mix is now LIVE!';
         submitBtn.textContent = 'Complete!';
-        
+
+        // Record the upload for usage tracking
+        try {
+          const user = await getAuthUser();
+          if (user) {
+            const token = await user.getIdToken();
+            await fetch('/api/subscription', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                action: 'recordMixUpload',
+                userId: user.uid
+              })
+            });
+          }
+        } catch (err) {
+          console.warn('Could not record upload usage:', err);
+        }
+
         alert(`✅ Mix uploaded and published successfully!
 
 Mix: ${mixTitle}

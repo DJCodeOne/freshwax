@@ -169,8 +169,8 @@ export async function processAudioTrack(
 
   console.log(`[Audio] Processing track ${trackNumber}: ${trackTitle}`);
 
-  // Download track from uploads bucket
-  const trackObj = await env.UPLOADS_BUCKET.get(trackKey);
+  // Download track from releases bucket (submissions/ folder)
+  const trackObj = await env.RELEASES_BUCKET.get(trackKey);
   if (!trackObj) {
     throw new Error(`Track not found: ${trackKey}`);
   }

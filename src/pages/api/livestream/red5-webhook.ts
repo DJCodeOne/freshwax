@@ -12,19 +12,25 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, addDocument, queryCollection, incrementField, initFirebaseEnv } from '../../../lib/firebase-rest';
-import { RED5_CONFIG, verifyWebhookSignature, type Red5WebhookEvent } from '../../../lib/red5';
+import { RED5_CONFIG, verifyWebhookSignature, initRed5Env, type Red5WebhookEvent } from '../../../lib/red5';
 
-// Helper to initialize Firebase
-function initFirebase(locals: any) {
+// Helper to initialize Firebase and Red5
+function initServices(locals: any) {
   const env = locals?.runtime?.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+  initRed5Env({
+    RED5_RTMP_URL: env?.RED5_RTMP_URL || import.meta.env.RED5_RTMP_URL,
+    RED5_HLS_URL: env?.RED5_HLS_URL || import.meta.env.RED5_HLS_URL,
+    RED5_SIGNING_SECRET: env?.RED5_SIGNING_SECRET || import.meta.env.RED5_SIGNING_SECRET,
+    RED5_WEBHOOK_SECRET: env?.RED5_WEBHOOK_SECRET || import.meta.env.RED5_WEBHOOK_SECRET,
+  });
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
+  initServices(locals);
   const now = new Date().toISOString();
   
   try {
@@ -255,7 +261,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // GET endpoint for testing/health check
 export const GET: APIRoute = async ({ locals }) => {
-  initFirebase(locals);
+  initServices(locals);
   return new Response(JSON.stringify({
     status: 'ok',
     endpoint: 'Red5 Webhook Handler',

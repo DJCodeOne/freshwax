@@ -181,21 +181,21 @@ export const POST: APIRoute = async ({ request }) => {
           status: 'approved',
           approvedAt: now,
           streamKey: streamKey || null,
-          serverUrl: serverUrl || 'rtmp://stream.freshwax.co.uk/live'
+          serverUrl: serverUrl || 'rtmp://rtmp.freshwax.co.uk/live'
         });
 
         await updateDocument('djTakeoverRequests', `request_${requestDoc.requesterId}`, {
           status: 'approved',
           approvedAt: now,
           streamKey: streamKey || null,
-          serverUrl: serverUrl || 'rtmp://stream.freshwax.co.uk/live'
+          serverUrl: serverUrl || 'rtmp://rtmp.freshwax.co.uk/live'
         });
 
         await triggerPusher(`private-dj-${requestDoc.requesterId}`, 'takeover-approved', {
           targetDjId: requesterId,
           targetDjName: requestDoc.targetDjName,
           streamKey: streamKey || null,
-          serverUrl: serverUrl || 'rtmp://stream.freshwax.co.uk/live',
+          serverUrl: serverUrl || 'rtmp://rtmp.freshwax.co.uk/live',
           timestamp: now
         });
 

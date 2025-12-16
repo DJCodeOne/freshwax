@@ -179,7 +179,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
   try {
     const body = await request.json();
-    const { action, requestId, userId, userEmail, userName, email, djName, requestType, reason, mixCount, bestMixLikes } = body;
+    const { action, requestId, userId, userEmail, userName, email, djName, requestType, reason, stationName, relayUrl, mixCount, bestMixLikes } = body;
 
     // Admin action: approve, deny, or expire
     if (action === 'approve' || action === 'deny' || action === 'expire') {
@@ -227,6 +227,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const targetRequestType = existingRequest.requestType || 'go-live';
         const userEmail = existingRequest.userEmail || '';
         const userName = existingRequest.userName || '';
+        const approvedStationName = existingRequest.stationName || '';
+        const approvedRelayUrl = existingRequest.relayUrl || '';
 
         if (targetUserId) {
           // Update user with bypass permission
@@ -236,6 +238,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
             bypassedBy: 'admin'
           };
 
+          // If relay URL was provided, add approved relay data
+          if (approvedRelayUrl) {
+            updateData.approvedRelay = {
+              stationName: approvedStationName,
+              relayUrl: approvedRelayUrl,
+              approvedAt: new Date().toISOString(),
+              approvedBy: 'admin'
+            };
+          }
+
           const existingUser = await getDocument('users', targetUserId);
           if (existingUser) {
             await updateDocument('users', targetUserId, updateData);
@@ -244,13 +256,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
 
           // Also add to djLobbyBypass collection for the admin list
-          await setDocument('djLobbyBypass', targetUserId, {
+          const bypassData: any = {
             email: userEmail,
             name: userName,
             reason: existingRequest.reason || 'Approved via bypass request',
             grantedAt: new Date(),
             grantedBy: 'admin'
-          });
+          };
+
+          // Include relay info if provided
+          if (approvedRelayUrl) {
+            bypassData.stationName = approvedStationName;
+            bypassData.relayUrl = approvedRelayUrl;
+            bypassData.relayApproved = true;
+          }
+
+          await setDocument('djLobbyBypass', targetUserId, bypassData);
         }
 
         // Update request status
@@ -328,6 +349,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       userName: userName || djName || 'Unknown',
       requestType: requestType || 'go-live',
       reason: reason || '',
+      stationName: stationName || '',
+      relayUrl: relayUrl || '',
       status: 'pending',
       createdAt: new Date().toISOString(),
       // Store mix stats for admin review

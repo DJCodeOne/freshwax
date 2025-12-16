@@ -87,33 +87,38 @@ export function invalidateReleasesCache(pattern?: string): void {
 }
 
 // Helper function to get label from release data
-function getLabelFromRelease(release: any): string {
-  return release.labelName || 
-         release.label || 
-         release.recordLabel || 
-         release.copyrightHolder || 
+export function getLabelFromRelease(release: any): string {
+  return release.labelName ||
+         release.label ||
+         release.recordLabel ||
+         release.copyrightHolder ||
          'Unknown Label';
 }
 
 // Helper function to normalize ratings data
-function normalizeRatings(data: any): { average: number; count: number; total: number } {
+export function normalizeRatings(data: any): { average: number; count: number; total: number; fiveStarCount?: number } {
   const ratings = data.ratings || data.overallRating || {};
-  
+
   return {
     average: Number(ratings.average) || 0,
     count: Number(ratings.count) || 0,
-    total: Number(ratings.total) || 0
+    total: Number(ratings.total) || 0,
+    fiveStarCount: Number(ratings.fiveStarCount) || 0
   };
 }
 
 // Helper function to normalize a single release document
-function normalizeRelease(data: any): any {
+export function normalizeRelease(data: any, id?: string): any {
   if (!data) return null;
 
+  const normalizedRatings = normalizeRatings(data);
+
   return {
+    ...(id ? { id } : {}),
     ...data,
     label: getLabelFromRelease(data),
-    ratings: normalizeRatings(data),
+    ratings: normalizedRatings,
+    overallRating: normalizedRatings, // Backward compatibility
     tracks: (data.tracks || []).map((track: any, index: number) => ({
       ...track,
       trackNumber: track.trackNumber || track.displayTrackNumber || (index + 1),

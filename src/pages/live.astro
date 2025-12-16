@@ -13,9 +13,19 @@ export const prerender = false;
 
 // GIPHY API key - use env var if set, otherwise fallback to public key
 const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6SfraYr';
+
+// Dynamic thumbnail URL for social sharing - shows current stream or DJ image when live
+const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 ---
 
-<Layout title="Live Stream - Fresh Wax">
+<Layout
+  title="Live Stream - Fresh Wax"
+  description="Watch live DJ streams on Fresh Wax. Tune in for live jungle, drum & bass, and breakbeat sets from our resident and guest DJs."
+  image={ogImageUrl}
+  imageAlt="Fresh Wax Live Stream"
+  type="video.other"
+  hideShuffle={true}
+>
   <Header />
   
   <!-- Sticky Mini Player for Mobile -->
@@ -36,7 +46,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       </div>
       <div class="fs-stats">
         <div class="fs-stat"><span>Views:</span><span id="fsViewers">0</span></div>
-        <div class="fs-stat"><span>Likes:</span><span id="fsLikes">0</span></div>
+        <div class="fs-stat"><span>Reacts:</span><span id="fsLikes">0</span></div>
         <div class="fs-stat"><span>Time:</span><span id="fsDuration">0:00</span></div>
       </div>
       <button id="exitFullscreen" class="fs-exit-btn">Exit</button>
@@ -51,6 +61,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
         <button class="fs-reaction-btn" data-emoji="⭐" title="Star">⭐</button>
         <button class="fs-reaction-btn" data-emoji="🔊" title="Bass">🔊</button>
         <button class="fs-reaction-btn" data-emoji="👊" title="Fist">👊</button>
+        <button class="fs-reaction-btn" data-emoji="👏" title="Clap">👏</button>
         <button class="fs-reaction-btn" data-emoji="🚀" title="Rocket">🚀</button>
         <button id="fsAnimToggleBtn" class="fs-reaction-btn fs-anim-toggle" title="Turn off emoji animations">
           <svg class="anim-on-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
@@ -181,12 +192,20 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
             <div class="stream-meta">
               <h1 id="streamTitle"><span class="title-live">LIVE</span> <span class="title-session">SESSION</span></h1>
             </div>
+            <!-- Record Button (Pro Feature) -->
+            <div class="record-control">
+              <button id="recordBtn" class="record-btn pro-locked" disabled title="Upgrade to Pro to record livestreams">
+                <span class="record-dot"></span>
+                <span class="record-text">REC</span>
+              </button>
+              <span id="recordDuration" class="record-duration hidden">00:00</span>
+            </div>
           </div>
           <div class="stream-info-right">
             <div class="stream-stats">
               <div class="stat"><span class="stat-icon">Views</span><span id="viewerCount">0</span></div>
-              <button class="stat like-stat" id="likeStatBtn" title="Like this stream">
-                <span class="stat-icon">Likes</span><span id="likeCount">0</span>
+              <button class="stat like-stat" id="likeStatBtn" title="React to this stream">
+                <span class="stat-icon">Reacts</span><span id="likeCount">0</span>
               </button>
               <div class="stat"><span class="stat-icon">Time</span><span id="streamDuration">0:00</span></div>
               <a href="/account/dj-lobby" id="djLobbyBtn" class="dj-lobby-btn hidden" title="Open DJ Lobby">
@@ -1342,7 +1361,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   // Setup reaction button click handlers
   setTimeout(() => {
     console.log('[Reaction Setup] Attaching click handlers...');
-    ['likeBtn', 'fireBtn', 'explosionBtn', 'starBtn', 'bassBtn', 'fistBtn', 'rocketBtn'].forEach(id => {
+    ['likeBtn', 'fireBtn', 'explosionBtn', 'starBtn', 'bassBtn', 'fistBtn', 'clapBtn', 'rocketBtn'].forEach(id => {
       const btn = document.getElementById(id);
       console.log(`[Reaction Setup] Button ${id}:`, btn ? 'FOUND' : 'NOT FOUND');
       if (btn) {
@@ -4133,4 +4152,4 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   }, { passive: true });
 </script>
 
-<script type="module" src="/live-stream.js?v=20251216-picker2"></script>
+<script type="module" src="/live-stream.js?v=20251216-viewtrans"></script>

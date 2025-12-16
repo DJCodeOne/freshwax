@@ -16,7 +16,22 @@
       "Bash(done)",
       "Bash(node -e:*)",
       "Bash(ls:*)",
-      "Bash(node scripts/fix-firebase-init.js:*)"
+      "Bash(node scripts/fix-firebase-init.js:*)",
+      "Bash(npm run deploy:*)",
+      "Bash(CLOUDFLARE_ACCOUNT_ID=c6922fc9320885b8619aa8b50aea080a npx wrangler pages deploy:*)",
+      "Bash(CLOUDFLARE_ACCOUNT_ID=5f6ae0dd5c6f5c83e2d1aa0fa8928ff4 npx wrangler pages deploy:*)",
+      "Bash(echo:*)",
+      "Bash(where:*)",
+      "Bash(/c/cloudflared/cloudflared.exe:*)",
+      "Bash(timeout:*)",
+      "Bash(cmd //c \"taskkill /IM mediamtx.exe /F\")",
+      "Bash(start //b mediamtx.exe)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd //c \"taskkill /F /IM cloudflared.exe\")",
+      "Bash(dir:*)",
+      "Bash(\"https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/livestreamSlots/mj8y0p5jdkq2o7n?updateMask.fieldPaths=hlsUrl&key=AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g\" )"
     ]
   }
 }

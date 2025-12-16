@@ -1,452 +1,273 @@
 ---
 // New Release - Pro Dashboard
-// Artists can upload new releases to R2 for processing
+// Embed the external uploader in an iframe for now
 import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
 export const prerender = false;
 ---
 <ProDashboardLayout title="New Release" activeSection="/pro/releases/new">
   <div class="new-release-page">
-    <div class="page-header">
-      <h1>Upload New Release</h1>
-      <p class="subtitle">Upload your tracks and artwork for review</p>
-    </div>
-
-    <form id="releaseForm" class="release-form">
-      <!-- Basic Info -->
-      <section class="form-section">
-        <h2>Basic Information</h2>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="title">Release Title *</label>
-            <input type="text" id="title" required placeholder="Enter release title">
-          </div>
-          <div class="form-group">
-            <label for="releaseType">Release Type *</label>
-            <select id="releaseType" required>
-              <option value="">Select type</option>
-              <option value="single">Single</option>
-              <option value="ep">EP</option>
-              <option value="album">Album</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="artistName">Artist Name *</label>
-            <input type="text" id="artistName" required placeholder="Primary artist name">
-          </div>
-          <div class="form-group">
-            <label for="genre">Genre *</label>
-            <select id="genre" required>
-              <option value="">Select genre</option>
-              <option value="jungle">Jungle</option>
-              <option value="drum-and-bass">Drum & Bass</option>
-              <option value="liquid">Liquid</option>
-              <option value="neurofunk">Neurofunk</option>
-              <option value="jump-up">Jump Up</option>
-              <option value="ragga-jungle">Ragga Jungle</option>
-              <option value="house">House</option>
-              <option value="techno">Techno</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="description">Description</label>
-          <textarea id="description" rows="3" placeholder="Tell listeners about this release..."></textarea>
-        </div>
-      </section>
-
-      <!-- Artwork -->
-      <section class="form-section">
-        <h2>Artwork *</h2>
-
-        <div class="artwork-upload">
-          <div class="artwork-preview" id="artworkPreview">
-            <span class="placeholder">📀</span>
-          </div>
-          <div class="artwork-controls">
-            <input type="file" id="artwork" accept="image/jpeg,image/png,image/webp" required style="display: none;">
-            <button type="button" class="btn btn-secondary" onclick="document.getElementById('artwork').click()">
-              Upload Artwork
-            </button>
-            <p class="help-text">Minimum 1400x1400px, JPG or PNG</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Tracks -->
-      <section class="form-section">
-        <h2>Tracks *</h2>
-
-        <div id="tracksList" class="tracks-list">
-          <p class="empty-tracks">No tracks added yet</p>
-        </div>
-
-        <div class="add-track-area">
-          <input type="file" id="trackUpload" accept="audio/mpeg,audio/wav,audio/flac" multiple style="display: none;">
-          <button type="button" class="btn btn-secondary" onclick="document.getElementById('trackUpload').click()">
-            + Add Tracks
-          </button>
-          <p class="help-text">MP3 or WAV files. You can select multiple files.</p>
-        </div>
-      </section>
-
-      <!-- Pricing -->
-      <section class="form-section">
-        <h2>Pricing</h2>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="price">Digital Price (£) *</label>
-            <input type="number" id="price" required min="0" step="0.01" value="7.99" placeholder="0.00">
-          </div>
-          <div class="form-group">
-            <label for="trackPrice">Per Track Price (£)</label>
-            <input type="number" id="trackPrice" min="0" step="0.01" value="1.99" placeholder="0.00">
-          </div>
-        </div>
-      </section>
-
-      <!-- Release Date -->
-      <section class="form-section">
-        <h2>Release Date</h2>
-
-        <div class="form-group">
-          <label for="releaseDate">Release Date *</label>
-          <input type="date" id="releaseDate" required>
-        </div>
-
-        <p class="help-text">
-          All releases are reviewed before going live. You'll receive an email when your release is approved.
-        </p>
-      </section>
-
-      <!-- Progress -->
-      <div id="uploadProgress" class="upload-progress" style="display: none;">
-        <h3>Uploading...</h3>
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill"></div>
-        </div>
-        <p id="progressText">Preparing upload...</p>
-      </div>
-
-      <!-- Actions -->
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary" id="submitBtn">Submit for Review</button>
-      </div>
-
-      <div id="formMessage" class="form-message" style="display: none;"></div>
-    </form>
+    <iframe
+      src="https://freshwax-uploader.pages.dev"
+      class="upload-iframe"
+      frameborder="0"
+      allow="clipboard-write"
+    ></iframe>
   </div>
 
   <style>
     .new-release-page {
-      max-width: 800px;
+      width: 100%;
+      height: calc(100vh - 80px);
+      padding: 0;
+    }
+
+    .upload-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .new-release-page-old {
+      max-width: 1000px;
+      padding: 0 1rem 4rem;
     }
 
     .page-header {
       margin-bottom: 2rem;
+      text-align: center;
     }
 
     .page-header h1 {
       margin: 0 0 0.5rem;
+      font-size: 2rem;
+      color: var(--text-primary, #fff);
     }
 
     .subtitle {
       color: var(--text-secondary, #a3a3a3);
       margin: 0;
-    }
-
-    .release-form {
-      display: flex;
-      flex-direction: column;
-      gap: 2rem;
-    }
-
-    .form-section {
-      background: var(--bg-secondary, #141414);
-      border: 1px solid var(--border-color, #262626);
-      border-radius: 8px;
-      padding: 1.5rem;
-    }
-
-    .form-section h2 {
-      color: var(--text-primary, #fff);
       font-size: 1.1rem;
-      margin: 0 0 1.25rem;
-      padding-bottom: 0.75rem;
-      border-bottom: 1px solid var(--border-color, #262626);
     }
 
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem;
+      color: var(--text-secondary, #a3a3a3);
     }
 
-    @media (max-width: 640px) {
-      .form-row {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .form-group {
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-color, #262626);
+      border-top-color: var(--accent, #dc2626);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
       margin-bottom: 1rem;
     }
 
-    .form-group:last-child {
-      margin-bottom: 0;
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
-    .form-group label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-size: 0.875rem;
-      color: var(--text-secondary, #a3a3a3);
+    /* Tailwind-like utility classes for the React form */
+    :global(.max-w-4xl) { max-width: 56rem; }
+    :global(.max-w-2xl) { max-width: 42rem; }
+    :global(.mx-auto) { margin-left: auto; margin-right: auto; }
+    :global(.mb-8) { margin-bottom: 2rem; }
+    :global(.mb-6) { margin-bottom: 1.5rem; }
+    :global(.mb-4) { margin-bottom: 1rem; }
+    :global(.mb-3) { margin-bottom: 0.75rem; }
+    :global(.mb-2) { margin-bottom: 0.5rem; }
+    :global(.mt-4) { margin-top: 1rem; }
+    :global(.mt-3) { margin-top: 0.75rem; }
+    :global(.mt-2) { margin-top: 0.5rem; }
+    :global(.p-8) { padding: 2rem; }
+    :global(.p-4) { padding: 1rem; }
+    :global(.p-2) { padding: 0.5rem; }
+    :global(.pb-8) { padding-bottom: 2rem; }
+    :global(.py-4) { padding-top: 1rem; padding-bottom: 1rem; }
+    :global(.py-3) { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+    :global(.py-2) { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+    :global(.py-1) { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+    :global(.px-8) { padding-left: 2rem; padding-right: 2rem; }
+    :global(.px-6) { padding-left: 1.5rem; padding-right: 1.5rem; }
+    :global(.px-4) { padding-left: 1rem; padding-right: 1rem; }
+    :global(.px-3) { padding-left: 0.75rem; padding-right: 0.75rem; }
+    :global(.pl-8) { padding-left: 2rem; }
+    :global(.pr-4) { padding-right: 1rem; }
+    :global(.gap-4) { gap: 1rem; }
+    :global(.gap-3) { gap: 0.75rem; }
+    :global(.gap-2) { gap: 0.5rem; }
+
+    :global(.text-center) { text-align: center; }
+    :global(.text-left) { text-align: left; }
+    :global(.text-2xl) { font-size: 1.5rem; }
+    :global(.text-xl) { font-size: 1.25rem; }
+    :global(.text-lg) { font-size: 1.125rem; }
+    :global(.text-sm) { font-size: 0.875rem; }
+    :global(.text-xs) { font-size: 0.75rem; }
+    :global(.font-bold) { font-weight: 700; }
+    :global(.font-semibold) { font-weight: 600; }
+    :global(.font-medium) { font-weight: 500; }
+    :global(.uppercase) { text-transform: uppercase; }
+    :global(.tracking-wider) { letter-spacing: 0.05em; }
+    :global(.tracking-wide) { letter-spacing: 0.025em; }
+    :global(.font-mono) { font-family: monospace; }
+
+    :global(.flex) { display: flex; }
+    :global(.flex-1) { flex: 1; }
+    :global(.flex-col) { flex-direction: column; }
+    :global(.items-center) { align-items: center; }
+    :global(.items-start) { align-items: flex-start; }
+    :global(.justify-center) { justify-content: center; }
+    :global(.justify-between) { justify-content: space-between; }
+    :global(.justify-end) { justify-content: flex-end; }
+
+    :global(.grid) { display: grid; }
+    :global(.grid-cols-2) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    :global(.grid-cols-3) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+    :global(.w-full) { width: 100%; }
+    :global(.w-32) { width: 8rem; }
+    :global(.w-16) { width: 4rem; }
+    :global(.w-5) { width: 1.25rem; }
+    :global(.w-4) { width: 1rem; }
+    :global(.h-32) { height: 8rem; }
+    :global(.h-16) { height: 4rem; }
+    :global(.h-5) { height: 1.25rem; }
+    :global(.h-4) { height: 1rem; }
+    :global(.h-3) { height: 0.75rem; }
+
+    :global(.bg-white) { background-color: white; }
+    :global(.bg-gray-50) { background-color: #f9fafb; }
+    :global(.bg-gray-100) { background-color: #f3f4f6; }
+    :global(.bg-gray-200) { background-color: #e5e7eb; }
+    :global(.bg-green-50) { background-color: #f0fdf4; }
+    :global(.bg-red-50) { background-color: #fef2f2; }
+    :global(.bg-red-600) { background-color: #dc2626; }
+    :global(.bg-black) { background-color: #000; }
+
+    :global(.text-gray-900) { color: #111827; }
+    :global(.text-gray-700) { color: #374151; }
+    :global(.text-gray-600) { color: #4b5563; }
+    :global(.text-gray-500) { color: #6b7280; }
+    :global(.text-gray-400) { color: #9ca3af; }
+    :global(.text-gray-300) { color: #d1d5db; }
+    :global(.text-white) { color: white; }
+    :global(.text-red-600) { color: #dc2626; }
+    :global(.text-red-700) { color: #b91c1c; }
+    :global(.text-green-700) { color: #15803d; }
+    :global(.text-green-500) { color: #22c55e; }
+
+    :global(.border) { border-width: 1px; }
+    :global(.border-2) { border-width: 2px; }
+    :global(.border-t) { border-top-width: 1px; }
+    :global(.border-b-2) { border-bottom-width: 2px; }
+    :global(.border-dashed) { border-style: dashed; }
+    :global(.border-gray-200) { border-color: #e5e7eb; }
+    :global(.border-gray-300) { border-color: #d1d5db; }
+    :global(.border-green-300) { border-color: #86efac; }
+    :global(.border-green-500) { border-color: #22c55e; }
+    :global(.border-red-200) { border-color: #fecaca; }
+    :global(.border-red-500) { border-color: #ef4444; }
+
+    :global(.rounded-xl) { border-radius: 0.75rem; }
+    :global(.rounded-lg) { border-radius: 0.5rem; }
+    :global(.rounded) { border-radius: 0.25rem; }
+    :global(.rounded-full) { border-radius: 9999px; }
+
+    :global(.shadow-lg) { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+
+    :global(.cursor-pointer) { cursor: pointer; }
+    :global(.cursor-not-allowed) { cursor: not-allowed; }
+
+    :global(.transition-colors) { transition-property: color, background-color, border-color; transition-duration: 150ms; }
+    :global(.transition-all) { transition-property: all; transition-duration: 150ms; }
+    :global(.transition-transform) { transition-property: transform; transition-duration: 150ms; }
+
+    :global(.space-y-4 > :not([hidden]) ~ :not([hidden])) { margin-top: 1rem; }
+    :global(.space-y-3 > :not([hidden]) ~ :not([hidden])) { margin-top: 0.75rem; }
+
+    :global(.object-cover) { object-fit: cover; }
+    :global(.resize-none) { resize: none; }
+    :global(.sticky) { position: sticky; }
+    :global(.bottom-0) { bottom: 0; }
+    :global(.fixed) { position: fixed; }
+    :global(.inset-0) { inset: 0; }
+    :global(.z-50) { z-index: 50; }
+    :global(.bg-opacity-50) { background-color: rgba(0, 0, 0, 0.5); }
+    :global(.animate-spin) { animation: spin 1s linear infinite; }
+    :global(.relative) { position: relative; }
+    :global(.absolute) { position: absolute; }
+    :global(.top-1\/2) { top: 50%; }
+    :global(.left-4) { left: 1rem; }
+    :global(.-translate-y-1\/2) { transform: translateY(-50%); }
+    :global(.rotate-180) { transform: rotate(180deg); }
+
+    :global(.placeholder-gray-400::placeholder) { color: #9ca3af; }
+
+    :global(.focus\:outline-none:focus) { outline: none; }
+    :global(.focus\:ring-2:focus) { box-shadow: 0 0 0 2px; }
+    :global(.focus\:ring-red-600:focus) { box-shadow: 0 0 0 2px #dc2626; }
+    :global(.focus\:border-transparent:focus) { border-color: transparent; }
+
+    :global(.hover\:bg-gray-200:hover) { background-color: #e5e7eb; }
+    :global(.hover\:bg-red-50:hover) { background-color: #fef2f2; }
+    :global(.hover\:bg-red-100:hover) { background-color: #fee2e2; }
+    :global(.hover\:bg-red-700:hover) { background-color: #b91c1c; }
+    :global(.hover\:border-gray-400:hover) { border-color: #9ca3af; }
+    :global(.hover\:text-red-700:hover) { color: #b91c1c; }
+    :global(.hover\:text-red-800:hover) { color: #991b1b; }
+
+    :global(.disabled\:bg-gray-400:disabled) { background-color: #9ca3af; }
+    :global(.disabled\:cursor-not-allowed:disabled) { cursor: not-allowed; }
+
+    :global(.file\:mr-4::file-selector-button) { margin-right: 1rem; }
+    :global(.file\:py-2::file-selector-button) { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+    :global(.file\:px-4::file-selector-button) { padding-left: 1rem; padding-right: 1rem; }
+    :global(.file\:rounded::file-selector-button) { border-radius: 0.25rem; }
+    :global(.file\:border-0::file-selector-button) { border: 0; }
+    :global(.file\:text-sm::file-selector-button) { font-size: 0.875rem; }
+    :global(.file\:font-semibold::file-selector-button) { font-weight: 600; }
+    :global(.file\:bg-red-50::file-selector-button) { background-color: #fef2f2; }
+    :global(.file\:text-red-600::file-selector-button) { color: #dc2626; }
+    :global(.hover\:file\:bg-red-100:hover::file-selector-button) { background-color: #fee2e2; }
+
+    /* Override dark mode form inputs for this page */
+    :global(#form-container input),
+    :global(#form-container select),
+    :global(#form-container textarea) {
+      background-color: white !important;
+      color: #111827 !important;
     }
 
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      background: var(--bg-tertiary, #1a1a1a);
-      border: 1px solid var(--border-color, #262626);
-      border-radius: 6px;
-      color: var(--text-primary, #fff);
-      font-size: 1rem;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
+    :global(#form-container input:focus),
+    :global(#form-container select:focus),
+    :global(#form-container textarea:focus) {
       outline: none;
-      border-color: var(--accent, #22c55e);
+      box-shadow: 0 0 0 2px #dc2626;
     }
 
-    .help-text {
-      font-size: 0.8rem;
-      color: var(--text-muted, #666);
-      margin-top: 0.5rem;
+    :global(#form-container button[type="submit"]) {
+      background-color: #dc2626;
+      color: white;
     }
 
-    .artwork-upload {
-      display: flex;
-      gap: 1.5rem;
-      align-items: flex-start;
+    :global(#form-container button[type="submit"]:hover:not(:disabled)) {
+      background-color: #b91c1c;
     }
 
-    .artwork-preview {
-      width: 150px;
-      height: 150px;
-      background: var(--bg-tertiary, #1a1a1a);
-      border: 2px dashed var(--border-color, #262626);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-
-    .artwork-preview .placeholder {
-      font-size: 3rem;
-      opacity: 0.3;
-    }
-
-    .artwork-preview img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .artwork-controls {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .tracks-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      margin-bottom: 1rem;
-    }
-
-    .empty-tracks {
-      color: var(--text-muted, #666);
-      text-align: center;
-      padding: 1rem;
-    }
-
-    .track-item {
-      display: grid;
-      grid-template-columns: auto 1fr auto auto;
-      gap: 1rem;
-      align-items: center;
-      padding: 0.75rem 1rem;
-      background: var(--bg-tertiary, #1a1a1a);
-      border-radius: 6px;
-    }
-
-    .track-number {
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg-secondary, #141414);
-      border-radius: 4px;
-      font-size: 0.8rem;
-      color: var(--text-secondary, #a3a3a3);
-    }
-
-    .track-info {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .track-title-input {
-      background: transparent;
-      border: none;
-      color: var(--text-primary, #fff);
-      font-size: 0.9rem;
-      padding: 0;
-      width: 100%;
-    }
-
-    .track-title-input:focus {
-      outline: none;
-    }
-
-    .track-meta {
-      font-size: 0.75rem;
-      color: var(--text-muted, #666);
-    }
-
-    .track-duration {
-      color: var(--text-secondary, #a3a3a3);
-      font-size: 0.85rem;
-    }
-
-    .track-remove {
-      background: none;
-      border: none;
-      color: var(--text-muted, #666);
-      cursor: pointer;
-      padding: 0.25rem;
-      font-size: 1.25rem;
-    }
-
-    .track-remove:hover {
-      color: #ef4444;
-    }
-
-    .add-track-area {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 1.5rem;
-      border: 2px dashed var(--border-color, #262626);
-      border-radius: 8px;
-      text-align: center;
-    }
-
-    .upload-progress {
-      background: var(--bg-secondary, #141414);
-      border: 1px solid var(--border-color, #262626);
-      border-radius: 8px;
-      padding: 1.5rem;
-      text-align: center;
-    }
-
-    .upload-progress h3 {
-      margin: 0 0 1rem;
-      color: var(--text-primary, #fff);
-    }
-
-    .progress-bar {
-      width: 100%;
-      height: 8px;
-      background: var(--bg-tertiary, #1a1a1a);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 0.5rem;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: var(--accent, #22c55e);
-      width: 0%;
-      transition: width 0.3s;
-    }
-
-    #progressText {
-      color: var(--text-secondary, #a3a3a3);
-      font-size: 0.875rem;
-      margin: 0;
-    }
-
-    .form-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 1rem;
-    }
-
-    .btn {
-      padding: 0.75rem 1.5rem;
-      border-radius: 6px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      border: none;
-    }
-
-    .btn-primary {
-      background: var(--accent, #22c55e);
-      color: #000;
-    }
-
-    .btn-primary:hover {
-      background: var(--accent-hover, #16a34a);
-    }
-
-    .btn-secondary {
-      background: var(--bg-tertiary, #1a1a1a);
-      color: var(--text-primary, #fff);
-      border: 1px solid var(--border-color, #262626);
-    }
-
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .form-message {
-      padding: 1rem;
-      border-radius: 6px;
-      text-align: center;
-    }
-
-    .form-message.success {
-      background: rgba(34, 197, 94, 0.1);
-      border: 1px solid rgba(34, 197, 94, 0.3);
-      color: #22c55e;
-    }
-
-    .form-message.error {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #ef4444;
+    @media (max-width: 768px) {
+      :global(.grid-cols-2) { grid-template-columns: 1fr; }
+      :global(.grid-cols-3) { grid-template-columns: 1fr 1fr; }
     }
   </style>
 
-  <script type="module">
+  <script type="module" is:inline>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
 
@@ -459,255 +280,27 @@ export const prerender = false;
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    let currentUser = null;
-    let tracks = [];
-    let artworkFile = null;
-
-    // Set default release date to today
-    document.getElementById('releaseDate').valueAsDate = new Date();
-
     onAuthStateChanged(auth, (user) => {
+      const loadingEl = document.getElementById('auth-loading');
+      const formContainer = document.getElementById('form-container');
+
       if (!user) {
         window.location.href = '/login?redirect=/pro/releases/new';
         return;
       }
-      currentUser = user;
 
-      // Pre-fill artist name if available
-      if (user.displayName) {
-        document.getElementById('artistName').value = user.displayName;
-      }
-    });
+      // Hide loading, show form
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (formContainer) formContainer.style.display = 'block';
 
-    // Artwork upload
-    document.getElementById('artwork').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      artworkFile = file;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        document.getElementById('artworkPreview').innerHTML = `<img src="${e.target.result}" alt="Artwork preview">`;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    // Track upload
-    document.getElementById('trackUpload').addEventListener('change', (e) => {
-      const files = Array.from(e.target.files);
-      files.forEach(file => {
-        const track = {
-          id: Date.now() + Math.random(),
-          file: file,
-          title: file.name.replace(/\.[^/.]+$/, '').replace(/^\d+[-_.\s]*/, ''), // Remove extension and leading numbers
-          duration: '0:00',
-          durationSeconds: 0
-        };
-
-        // Get duration
-        const audio = new Audio();
-        audio.onloadedmetadata = () => {
-          track.durationSeconds = Math.floor(audio.duration);
-          const minutes = Math.floor(audio.duration / 60);
-          const seconds = Math.floor(audio.duration % 60);
-          track.duration = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-          renderTracks();
-        };
-        audio.src = URL.createObjectURL(file);
-
-        tracks.push(track);
-        renderTracks();
-      });
-    });
-
-    function renderTracks() {
-      const tracksList = document.getElementById('tracksList');
-
-      if (tracks.length === 0) {
-        tracksList.innerHTML = '<p class="empty-tracks">No tracks added yet</p>';
-        return;
-      }
-
-      tracksList.innerHTML = tracks.map((track, index) => `
-        <div class="track-item" data-id="${track.id}">
-          <span class="track-number">${index + 1}</span>
-          <div class="track-info">
-            <input type="text" class="track-title-input" value="${track.title}" data-track-id="${track.id}">
-            <span class="track-meta">${track.file.name} • ${(track.file.size / 1024 / 1024).toFixed(1)} MB</span>
-          </div>
-          <span class="track-duration">${track.duration}</span>
-          <button type="button" class="track-remove" data-track-id="${track.id}">×</button>
-        </div>
-      `).join('');
-
-      // Re-attach event listeners
-      tracksList.querySelectorAll('.track-title-input').forEach(input => {
-        input.addEventListener('change', (e) => {
-          const track = tracks.find(t => t.id == e.target.dataset.trackId);
-          if (track) track.title = e.target.value;
-        });
-      });
-
-      tracksList.querySelectorAll('.track-remove').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          tracks = tracks.filter(t => t.id != e.target.dataset.trackId);
-          renderTracks();
-        });
-      });
-    }
-
-    // Form submission
-    document.getElementById('releaseForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await submitRelease();
-    });
-
-    async function submitRelease() {
-      const messageEl = document.getElementById('formMessage');
-      const progressEl = document.getElementById('uploadProgress');
-      const progressFill = document.getElementById('progressFill');
-      const progressText = document.getElementById('progressText');
-      const submitBtn = document.getElementById('submitBtn');
-
-      messageEl.style.display = 'none';
-
-      if (!currentUser) {
-        showMessage('Please sign in to continue', 'error');
-        return;
-      }
-
-      if (!artworkFile) {
-        showMessage('Please upload artwork', 'error');
-        return;
-      }
-
-      if (tracks.length === 0) {
-        showMessage('Please add at least one track', 'error');
-        return;
-      }
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Uploading...';
-      progressEl.style.display = 'block';
-
-      try {
-        // Generate submission ID
-        const artistName = document.getElementById('artistName').value;
-        const sanitizedArtist = artistName.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30);
-        const timestamp = Date.now();
-        const submissionId = `${sanitizedArtist}_${timestamp}`;
-
-        // Create metadata
-        const metadata = {
-          artistName: artistName,
-          releaseName: document.getElementById('title').value,
-          releaseType: document.getElementById('releaseType').value,
-          genre: document.getElementById('genre').value,
-          description: document.getElementById('description').value,
-          pricePerSale: parseFloat(document.getElementById('price').value) || 7.99,
-          trackPrice: parseFloat(document.getElementById('trackPrice').value) || 1.99,
-          releaseDate: document.getElementById('releaseDate').value,
-          tracks: tracks.map((t, i) => ({
-            trackNumber: i + 1,
-            title: t.title,
-            duration: t.durationSeconds,
-            bpm: null,
-            key: null
-          })),
-          submittedAt: new Date().toISOString(),
-          email: currentUser.email,
-          userId: currentUser.uid
-        };
-
-        // Total files to upload: metadata + artwork + tracks
-        const totalFiles = 2 + tracks.length;
-        let uploadedFiles = 0;
-
-        const updateProgress = (text) => {
-          uploadedFiles++;
-          const percent = Math.round((uploadedFiles / totalFiles) * 100);
-          progressFill.style.width = `${percent}%`;
-          progressText.textContent = text;
-        };
-
-        // Upload metadata.json
-        progressText.textContent = 'Uploading metadata...';
-        await uploadToR2(`${submissionId}/metadata.json`, JSON.stringify(metadata, null, 2), 'application/json');
-        updateProgress('Metadata uploaded');
-
-        // Upload artwork
-        progressText.textContent = 'Uploading artwork...';
-        const artworkExt = artworkFile.name.split('.').pop().toLowerCase();
-        await uploadToR2(`${submissionId}/cover.${artworkExt}`, artworkFile, artworkFile.type);
-        updateProgress('Artwork uploaded');
-
-        // Upload tracks
-        for (let i = 0; i < tracks.length; i++) {
-          const track = tracks[i];
-          const trackNum = String(i + 1).padStart(2, '0');
-          const trackExt = track.file.name.split('.').pop().toLowerCase();
-          const safeTitle = track.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50);
-
-          progressText.textContent = `Uploading track ${i + 1}/${tracks.length}...`;
-          await uploadToR2(`${submissionId}/tracks/${trackNum}-${safeTitle}.${trackExt}`, track.file, track.file.type);
-          updateProgress(`Track ${i + 1} uploaded`);
+      // Pass user data to React component via custom event
+      window.dispatchEvent(new CustomEvent('fw:user-ready', {
+        detail: {
+          email: user.email || '',
+          userId: user.uid || '',
+          artistName: user.displayName || ''
         }
-
-        progressFill.style.width = '100%';
-        progressText.textContent = 'Upload complete!';
-
-        showMessage('Release submitted successfully! You\'ll receive an email when it\'s been processed and approved.', 'success');
-
-        // Redirect after delay
-        setTimeout(() => {
-          window.location.href = '/pro/releases';
-        }, 3000);
-
-      } catch (error) {
-        console.error('Error uploading release:', error);
-        showMessage('Error uploading release: ' + error.message, 'error');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Submit for Review';
-        progressEl.style.display = 'none';
-      }
-    }
-
-    async function uploadToR2(key, data, contentType) {
-      // Get presigned URL from API
-      const presignResponse = await fetch('/api/releases/presign-upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key: key,
-          contentType: contentType,
-          bucket: 'uploads' // Use uploads bucket
-        })
-      });
-
-      if (!presignResponse.ok) {
-        throw new Error('Failed to get upload URL');
-      }
-
-      const { uploadUrl } = await presignResponse.json();
-
-      // Upload to R2
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': contentType },
-        body: data
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload file');
-      }
-    }
-
-    function showMessage(text, type) {
-      const messageEl = document.getElementById('formMessage');
-      messageEl.textContent = text;
-      messageEl.className = `form-message ${type}`;
-      messageEl.style.display = 'block';
-      messageEl.scrollIntoView({ behavior: 'smooth' });
-    }
+      }));
+    });
   </script>
 </ProDashboardLayout>

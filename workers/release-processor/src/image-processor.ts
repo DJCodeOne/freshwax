@@ -63,8 +63,8 @@ export async function processArtwork(
 ): Promise<{ coverUrl: string; thumbUrl: string }> {
   console.log(`[Image] Processing artwork: ${artworkKey}`);
 
-  // Download artwork from uploads bucket
-  const artworkObj = await env.UPLOADS_BUCKET.get(artworkKey);
+  // Download artwork from releases bucket (submissions/ folder)
+  const artworkObj = await env.RELEASES_BUCKET.get(artworkKey);
   if (!artworkObj) {
     throw new Error(`Artwork not found: ${artworkKey}`);
   }

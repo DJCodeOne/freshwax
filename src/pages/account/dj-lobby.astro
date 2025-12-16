@@ -3,6 +3,12 @@
 // DJ-only lobby with stream preview, private chat, streaming instructions, and takeover system
 import '../../styles/dj-lobby.css';
 export const prerender = false;
+
+// Pusher config for client-side (PUBLIC_ prefixed vars are safe to expose)
+const pusherConfig = {
+  key: import.meta.env.PUBLIC_PUSHER_KEY || '',
+  cluster: import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu'
+};
 ---
 
 <!DOCTYPE html>
@@ -15,8 +21,15 @@ export const prerender = false;
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- HLS.js for video playback -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+
+  <!-- Pusher configuration - must be set before dj-lobby-pusher.js loads -->
+  <script define:vars={{ pusherConfig }}>
+    window.PUSHER_CONFIG = pusherConfig;
+  </script>
 </head>
-<body>
+<body class="dj-lobby-page">
   <!-- Auth Gate -->
   <div id="authGate" class="auth-gate">
     <div class="auth-content">
@@ -168,12 +181,12 @@ export const prerender = false;
       <div class="key-column">
         <!-- Stream Control Card -->
         <div class="stream-control-card">
-          <a href="/account/go-live" id="goLiveBtn" class="go-live-btn">
+          <button id="goLiveBtn" class="go-live-btn">
             <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
               <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
             </svg>
             Go Live
-          </a>
+          </button>
           <div class="control-divider"></div>
           <button id="lobbyEndStreamBtn" class="lobby-end-stream-btn disabled" disabled>
             <span class="end-icon">⏹</span>
@@ -244,6 +257,17 @@ export const prerender = false;
             <span class="setup-text">Streaming Setup Guide</span>
             <span class="setup-arrow">→</span>
           </a>
+        </div>
+
+        <!-- DJs Online Box -->
+        <div class="djs-online-box">
+          <div class="box-header">
+            <h3>🎧 DJs in Lobby</h3>
+            <span class="online-count"><span id="onlineDjCount">0</span> online</span>
+          </div>
+          <div id="djsList" class="djs-list">
+            <p class="empty-state">No DJs online yet</p>
+          </div>
         </div>
       </div>
       
@@ -316,63 +340,78 @@ export const prerender = false;
           </div>
         </div>
         
-        <!-- Stream Key Section (under video player) -->
-        <div class="stream-key-section">
+        <!-- Stream Key Section (under video player) - Inline Go Live Info -->
+        <div class="stream-key-section" id="streamKeySection">
           <div class="section-header">
-            <h3>🔑 Your Stream Key</h3>
-            <span id="keyStatus" class="key-status">Checking...</span>
+            <h3>🎙️ Go Live Setup</h3>
+            <span id="keyStatus" class="key-status ready">Ready</span>
           </div>
-          
-          <div id="keyNotAvailable" class="key-not-available">
-            <div class="lock-icon">🔒</div>
-            <p>Your stream key will be available <strong>15 minutes</strong> before your scheduled slot.</p>
-            <p id="nextSlotInfo" class="next-slot-info">You have no upcoming slots booked.</p>
-            <a href="/account/go-live" class="book-slot-link">Book a Slot →</a>
-          </div>
-          
-          <div id="keyAvailable" class="key-available hidden">
-            <div class="key-header">
-              <span class="unlocked-icon">🔓</span>
-              <div>
-                <strong id="slotTimeDisplay">Your slot: --:-- - --:--</strong>
-                <span id="countdownToSlot" class="countdown-text"></span>
+
+          <!-- Always visible Go Live controls - 2x2 Grid Layout -->
+          <div id="keyAvailable" class="key-available">
+            <div class="go-live-grid">
+              <!-- Top Left: Stream Title -->
+              <div class="grid-cell">
+                <label for="inlineStreamTitle">Stream Title</label>
+                <input type="text" id="inlineStreamTitle" placeholder="e.g., Friday Night Jungle Session" maxlength="60" />
               </div>
-            </div>
-            
-            <div class="stream-credentials">
-              <div class="cred-row">
-                <label>RTMP Server URL</label>
-                <div class="cred-value">
-                  <code id="rtmpUrl">rtmp://stream.freshwax.co.uk/live</code>
-                  <button class="copy-btn" data-copy="rtmpUrl">Copy</button>
+
+              <!-- Top Right: Genre -->
+              <div class="grid-cell">
+                <label for="inlineStreamGenre">Genre</label>
+                <select id="inlineStreamGenre">
+                  <option value="Jungle / D&B">Jungle / D&B</option>
+                  <option value="Jungle">Jungle</option>
+                  <option value="Drum & Bass">Drum & Bass</option>
+                  <option value="Liquid D&B">Liquid D&B</option>
+                  <option value="Ragga Jungle">Ragga Jungle</option>
+                  <option value="Neurofunk">Neurofunk</option>
+                  <option value="Jump Up">Jump Up</option>
+                  <option value="Breakbeat">Breakbeat</option>
+                </select>
+              </div>
+
+              <!-- Bottom Left: Stream Credentials -->
+              <div class="grid-cell credentials-cell">
+                <div class="cred-row">
+                  <label>RTMP Server</label>
+                  <div class="cred-value">
+                    <code id="rtmpUrl">rtmp://rtmp.freshwax.co.uk/live</code>
+                    <button class="copy-btn" data-copy="rtmpUrl">Copy</button>
+                  </div>
+                </div>
+                <div class="cred-row">
+                  <label>Stream Key</label>
+                  <div class="cred-value">
+                    <code id="myStreamKey">Loading...</code>
+                    <button class="copy-btn" data-copy="myStreamKey">Copy</button>
+                  </div>
                 </div>
               </div>
-              <div class="cred-row">
-                <label>Stream Key</label>
-                <div class="cred-value">
-                  <code id="myStreamKey">-</code>
-                  <button class="copy-btn" data-copy="myStreamKey">Copy</button>
-                </div>
+
+              <!-- Bottom Right: OBS Setup -->
+              <div class="grid-cell obs-cell">
+                <details class="obs-instructions-compact">
+                  <summary>OBS Setup</summary>
+                  <ol>
+                    <li>Settings → Stream → Custom</li>
+                    <li>Paste Server URL & Key</li>
+                    <li>Start Streaming in OBS</li>
+                    <li>Click Go Live below</li>
+                  </ol>
+                </details>
               </div>
             </div>
-            
-            <div class="ready-section">
-              <p>Ready to go? Set yourself as ready so the stream transitions smoothly.</p>
-              <button id="setReadyBtn" class="ready-btn">
-                <span id="readyBtnText">✓ I'm Ready</span>
+
+            <!-- Go Live Button - Full Width with Glow -->
+            <div class="ready-section" id="readySection">
+              <button id="setReadyBtn" class="ready-btn large glow">
+                <span id="readyBtnText">🎯 I'm Ready - Go Live!</span>
               </button>
-              <p id="readyStatus" class="ready-status hidden">✓ You're set as ready. Stream will transition automatically when current DJ finishes.</p>
+              <p id="readyStatus" class="ready-status hidden">✓ You're set as ready.</p>
             </div>
           </div>
-          
-          <!-- Currently Live Controls -->
-          <div id="myStreamControls" class="my-stream-controls hidden">
-            <div class="live-badge">🔴 YOU ARE LIVE</div>
-            <div class="live-stats">
-              <span id="myStreamDuration">Duration: 00:00</span>
-            </div>
-            <button id="endStreamBtn" class="end-stream-btn">End Stream</button>
-          </div>
+
         </div>
       </div>
       
@@ -407,25 +446,209 @@ export const prerender = false;
           </div>
         </div>
         
-        <!-- DJs Online Box -->
-        <div class="djs-online-box">
-          <div class="box-header">
-            <h3>🎧 DJs in Lobby</h3>
-            <span class="online-count"><span id="onlineDjCount">0</span> online</span>
+        <!-- Relay Chat (shown when streaming via relay) -->
+        <div id="relayChatSection" class="relay-chat-section hidden">
+          <div class="relay-chat-header">
+            <h3>📺 <span id="relayChatSourceName">Source Chat</span></h3>
+            <button id="toggleRelayChatBtn" class="toggle-relay-chat-btn" title="Toggle chat">−</button>
           </div>
-          <div id="djsList" class="djs-list">
-            <p class="empty-state">No DJs online yet</p>
+          <div id="relayChatContainer" class="relay-chat-container">
+            <iframe id="relayChatFrame" class="relay-chat-frame" allow="autoplay" allowfullscreen></iframe>
+            <div id="relayChatUnsupported" class="relay-chat-unsupported hidden">
+              <p>Chat embed not available for this platform.</p>
+              <a id="relayChatExternalLink" href="#" target="_blank" rel="noopener" class="open-chat-link">Open Chat in New Tab →</a>
+            </div>
           </div>
         </div>
       </div>
     </div>
-    
+
     <footer class="lobby-footer">
       <span>Fresh Wax</span>
       <span class="footer-dot">•</span>
       <span>DJ Lobby</span>
     </footer>
     
+    <!-- Go Live Modal -->
+    <div id="goLiveModal" class="go-live-modal hidden">
+      <div class="go-live-modal-overlay"></div>
+      <div class="go-live-modal-content">
+        <div class="go-live-modal-header">
+          <h2>🎙️ Go Live</h2>
+          <button id="closeGoLiveBtn" class="close-go-live-btn">✕</button>
+        </div>
+
+        <div class="go-live-modal-body">
+          <!-- Step 1: Stream Setup -->
+          <div id="goLiveStep1" class="go-live-step">
+            <div class="step-indicator">
+              <span class="step-number active">1</span>
+              <span class="step-line"></span>
+              <span class="step-number">2</span>
+            </div>
+
+            <h3>Setup Your Stream</h3>
+
+            <!-- Stream Source Selector (shown only if relay is approved) -->
+            <div id="streamSourceSelector" class="stream-source-selector hidden">
+              <label>Stream Source</label>
+              <div class="source-options">
+                <button type="button" class="source-option active" data-source="obs">
+                  <span class="source-icon">📡</span>
+                  <span class="source-label">OBS / RTMP</span>
+                  <span class="source-desc">Stream from your computer</span>
+                </button>
+                <button type="button" class="source-option" data-source="relay" id="relaySourceOption">
+                  <span class="source-icon">🔄</span>
+                  <span class="source-label" id="relaySourceLabel">Relay</span>
+                  <span class="source-desc" id="relaySourceDesc">Relay from another station</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- OBS Stream Setup (default) -->
+            <div id="obsStreamSetup">
+              <p class="step-desc">Copy these settings into OBS Studio or your streaming software:</p>
+
+              <div class="stream-credentials">
+              <div class="cred-row">
+                <label>Server URL</label>
+                <div class="cred-value">
+                  <code id="goLiveServerUrl">rtmp://rtmp.freshwax.co.uk/live</code>
+                  <button class="copy-btn" data-copy="goLiveServerUrl">Copy</button>
+                </div>
+              </div>
+              <div class="cred-row">
+                <label>Stream Key</label>
+                <div class="cred-value">
+                  <code id="goLiveStreamKey">Loading...</code>
+                  <button class="copy-btn" data-copy="goLiveStreamKey">Copy</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="stream-info-inputs">
+              <div class="input-row">
+                <label for="goLiveTitle">Stream Title</label>
+                <input type="text" id="goLiveTitle" placeholder="e.g., Friday Night Jungle Session" maxlength="60" />
+              </div>
+              <div class="input-row">
+                <label for="goLiveGenre">Genre</label>
+                <select id="goLiveGenre">
+                  <option value="Jungle / D&B">Jungle / D&B</option>
+                  <option value="Jungle">Jungle</option>
+                  <option value="Drum & Bass">Drum & Bass</option>
+                  <option value="Liquid D&B">Liquid D&B</option>
+                  <option value="Ragga Jungle">Ragga Jungle</option>
+                  <option value="Neurofunk">Neurofunk</option>
+                  <option value="Jump Up">Jump Up</option>
+                  <option value="Breakbeat">Breakbeat</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="step-instructions">
+                <h4>Instructions:</h4>
+                <ol>
+                  <li>Open OBS Studio (or your streaming app)</li>
+                  <li>Go to Settings → Stream</li>
+                  <li>Set Service to "Custom"</li>
+                  <li>Paste the Server URL and Stream Key above</li>
+                  <li>Click "Start Streaming" in OBS</li>
+                  <li>Come back here and click "I'm Ready"</li>
+                </ol>
+              </div>
+            </div>
+
+            <!-- Relay Stream Setup (shown when relay source selected) -->
+            <div id="relayStreamSetup" class="hidden">
+              <div class="relay-info-card">
+                <div class="relay-station-header">
+                  <span class="relay-station-icon">📡</span>
+                  <div>
+                    <h4 id="relayStationName">Station Name</h4>
+                    <p class="relay-station-status">Approved relay source</p>
+                  </div>
+                </div>
+                <p class="relay-station-desc">Your stream will be pulled from this external source and broadcast on Fresh Wax.</p>
+                <div class="relay-url-display">
+                  <label>Relay URL</label>
+                  <code id="relayUrlDisplay">rtmp://...</code>
+                </div>
+              </div>
+
+              <div class="stream-info-inputs">
+                <div class="input-row">
+                  <label for="relayStreamTitle">Stream Title</label>
+                  <input type="text" id="relayStreamTitle" placeholder="e.g., Live from Kool FM" maxlength="60" />
+                </div>
+                <div class="input-row">
+                  <label for="relayStreamGenre">Genre</label>
+                  <select id="relayStreamGenre">
+                    <option value="Jungle / D&B">Jungle / D&B</option>
+                    <option value="Jungle">Jungle</option>
+                    <option value="Drum & Bass">Drum & Bass</option>
+                    <option value="Liquid D&B">Liquid D&B</option>
+                    <option value="Ragga Jungle">Ragga Jungle</option>
+                    <option value="Neurofunk">Neurofunk</option>
+                    <option value="Jump Up">Jump Up</option>
+                    <option value="Breakbeat">Breakbeat</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="step-instructions relay-instructions">
+                <h4>How Relay Works:</h4>
+                <ol>
+                  <li>Make sure you're live on your external station</li>
+                  <li>Ensure you have a booked slot on Fresh Wax at this time</li>
+                  <li>Click "Start Relay" and we'll pull your stream</li>
+                </ol>
+              </div>
+            </div>
+
+            <div class="step-actions">
+              <button id="goLiveReadyBtn" class="ready-btn">
+                <span class="ready-icon">🎯</span>
+                I'm Ready - Go Live!
+              </button>
+              <p class="ready-hint" id="readyHint">Click once you've started streaming in OBS</p>
+            </div>
+          </div>
+
+          <!-- Step 2: Connecting -->
+          <div id="goLiveStep2" class="go-live-step hidden">
+            <div class="connecting-state">
+              <div class="connecting-spinner"></div>
+              <h3>Connecting to your stream...</h3>
+              <p>Verifying that OBS is streaming to Fresh Wax</p>
+              <p id="connectionStatus" class="connection-status">Checking stream...</p>
+            </div>
+          </div>
+
+          <!-- Step 3: Live! -->
+          <div id="goLiveStep3" class="go-live-step hidden">
+            <div class="live-state">
+              <div class="live-badge">🔴 LIVE</div>
+              <h3>You're Live on Fresh Wax!</h3>
+              <p>Your stream is now visible to everyone.</p>
+              <button id="closeGoLiveSuccessBtn" class="close-success-btn">Close</button>
+            </div>
+          </div>
+
+          <!-- Error State -->
+          <div id="goLiveError" class="go-live-step hidden">
+            <div class="error-state">
+              <div class="error-icon">⚠️</div>
+              <h3>Stream Not Detected</h3>
+              <p id="goLiveErrorMsg">We couldn't detect your stream. Make sure OBS is streaming with the correct key.</p>
+              <button id="goLiveRetryBtn" class="retry-btn">Try Again</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- DM Modal -->
     <div id="dmModal" class="dm-modal hidden">
       <div class="dm-modal-overlay"></div>
@@ -507,15 +730,17 @@ export const prerender = false;
     sendDm,
     cleanup as cleanupPusher,
     getOnlineDjs
-  } from '/dj-lobby-pusher.js';
+  } from '/dj-lobby-pusher.js?v=3';
   
   const app = initializeApp({
     apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store"
   });
-  
+
   const auth = getAuth(app);
+  // Expose auth globally for pusher module to get idToken
+  window.firebaseAuth = auth;
   const db = getFirestore(app);
   
   let currentUser = null;
@@ -525,7 +750,12 @@ export const prerender = false;
   let presenceRef = null;
   let streamStartTime = null;
   let streamEndTime = null;
-  
+
+  // HLS Player state
+  let hlsPlayer = null;
+  let isVideoPlaying = false;
+  let currentHlsUrl = null; // Track current URL to avoid re-initializing
+
   // Takeover limiting - max 3 attempts per session
   let takeoverAttempts = 0;
   const MAX_TAKEOVER_ATTEMPTS = 3;
@@ -606,10 +836,11 @@ export const prerender = false;
         }
       };
       
-      // Check user type first
+      // Check user type first - pass email for admin check
+      const userEmail = currentUser?.email ? encodeURIComponent(currentUser.email) : '';
       let response;
       try {
-        response = await fetchWithTimeout(`/api/get-user-type?uid=${userId}`);
+        response = await fetchWithTimeout(`/api/get-user-type?uid=${userId}&email=${userEmail}`);
       } catch (e) {
         console.error('[DJ Lobby] get-user-type fetch failed:', e);
         showAccessDenied();
@@ -637,13 +868,15 @@ export const prerender = false;
       
       userInfo = {
         id: userId,
+        uid: userId,  // Also add uid for bypass request compatibility
         name: displayName,
         firstName: displayName.split(' ')[0] || 'D',
         avatar: result.avatarUrl || currentUser.photoURL || null,
+        email: currentUser.email,
         isAdmin: isAdmin
       };
       
-      console.log('[DJ Lobby] User info set:', { displayName, firebaseDisplayName: currentUser.displayName, apiPartnerDisplayName: result.partnerDisplayName });
+      console.log('[DJ Lobby] User info set:', { displayName, firebaseDisplayName: currentUser.displayName, apiPartnerDisplayName: result.partnerDisplayName, avatarUrl: result.avatarUrl, photoURL: currentUser.photoURL, finalAvatar: userInfo.avatar });
       
       // Check eligibility (must have mix with 10+ likes OR have bypass approval)
       console.log('[DJ Lobby] Checking eligibility...');
@@ -1099,10 +1332,110 @@ export const prerender = false;
       `;
     }).join('');
   }
-  
+
+  // Setup HLS player for video streams
+  function setupHlsPlayer(stream) {
+    const videoElement = document.getElementById('hlsVideo');
+    // Use hlsUrl (from status API) or fall back to videoStreamUrl/streamUrl
+    const hlsUrl = stream?.hlsUrl || stream?.videoStreamUrl || stream?.streamUrl;
+
+    if (!videoElement || !hlsUrl) {
+      console.log('[HLS] No video element or stream URL. Stream:', stream);
+      return;
+    }
+
+    // Skip if already playing the same stream
+    if (currentHlsUrl === hlsUrl && hlsPlayer) {
+      console.log('[HLS] Already playing this stream, skipping re-init');
+      return;
+    }
+
+    console.log('[HLS] Setting up player for:', hlsUrl);
+    currentHlsUrl = hlsUrl;
+
+    // Clean up existing player
+    if (hlsPlayer) {
+      console.log('[HLS] Destroying existing player');
+      hlsPlayer.destroy();
+      hlsPlayer = null;
+    }
+
+    const nativeHlsSupport = videoElement.canPlayType('application/vnd.apple.mpegurl');
+
+    // Only use native HLS if "probably" - "maybe" means browser might not actually support it
+    if (nativeHlsSupport === 'probably') {
+      console.log('[HLS] Using native HLS support');
+      videoElement.src = hlsUrl;
+    } else if (window.Hls && Hls.isSupported()) {
+      console.log('[HLS] Using HLS.js library');
+      hlsPlayer = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        backBufferLength: 90,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60
+      });
+
+      hlsPlayer.loadSource(hlsUrl);
+      hlsPlayer.attachMedia(videoElement);
+
+      hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
+        console.log('[HLS] Manifest parsed, ready to play');
+      });
+
+      hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
+        console.error('[HLS] Error:', data.type, data.details);
+        if (data.fatal) {
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            console.log('[HLS] Network error, will retry...');
+            setTimeout(() => {
+              if (hlsPlayer) {
+                hlsPlayer.loadSource(hlsUrl);
+              }
+            }, 3000);
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            console.log('[HLS] Media error, recovering...');
+            hlsPlayer.recoverMediaError();
+          }
+        }
+      });
+    } else {
+      console.error('[HLS] Not supported');
+    }
+
+    // Sync video events with UI
+    videoElement.addEventListener('play', () => {
+      isVideoPlaying = true;
+      document.getElementById('playIcon')?.classList.add('hidden');
+      document.getElementById('pauseIcon')?.classList.remove('hidden');
+    });
+
+    videoElement.addEventListener('pause', () => {
+      isVideoPlaying = false;
+      document.getElementById('playIcon')?.classList.remove('hidden');
+      document.getElementById('pauseIcon')?.classList.add('hidden');
+    });
+  }
+
+  // Cleanup HLS player
+  function cleanupHlsPlayer() {
+    if (hlsPlayer) {
+      hlsPlayer.destroy();
+      hlsPlayer = null;
+    }
+    isVideoPlaying = false;
+    currentHlsUrl = null;
+    const videoElement = document.getElementById('hlsVideo');
+    if (videoElement) {
+      videoElement.src = '';
+    }
+  }
+
   async function loadStreamStatus() {
     try {
-      const response = await fetch('/api/livestream/status');
+      // Add cache buster to prevent stale cached responses
+      const cacheBuster = Date.now();
+      const response = await fetch(`/api/livestream/status?_t=${cacheBuster}`);
       const result = await response.json();
       
       const statusDot = document.querySelector('.status-dot');
@@ -1111,20 +1444,19 @@ export const prerender = false;
       const videoPreview = document.getElementById('videoPreview');
       const audioPreview = document.getElementById('audioPreview');
       const timeRemaining = document.getElementById('timeRemaining');
-      const myControls = document.getElementById('myStreamControls');
       const takeoverRequest = document.getElementById('takeoverRequest');
       const noStreamTakeover = document.getElementById('noStreamTakeover');
-      
+
       if (result.success && result.isLive && result.primaryStream) {
         currentStream = result.primaryStream;
-        
+
         statusDot.classList.remove('offline');
         statusDot.classList.add('live');
         statusText.textContent = `${currentStream.djName} is LIVE`;
-        
+
         offlineState.classList.add('hidden');
         timeRemaining.classList.remove('hidden');
-        
+
         // Parse stream times
         if (currentStream.startedAt) {
           streamStartTime = new Date(currentStream.startedAt);
@@ -1134,41 +1466,48 @@ export const prerender = false;
         } else if (currentStream.duration) {
           streamEndTime = new Date(streamStartTime.getTime() + currentStream.duration * 60000);
         }
-        
+
         document.getElementById('currentDjName').textContent = currentStream.djName || 'DJ';
         document.getElementById('currentStreamTitle').textContent = currentStream.title || 'Live Stream';
         if (currentStream.djAvatar) {
           document.getElementById('currentDjAvatar').src = currentStream.djAvatar;
         }
-        
-        if (currentStream.streamType === 'audio' || currentStream.streamUrl?.includes('8000')) {
-          audioPreview.classList.remove('hidden');
-          videoPreview.classList.add('hidden');
-          if (currentStream.djAvatar) document.getElementById('streamCover').src = currentStream.djAvatar;
-        } else {
+
+        // Check if this is a video stream (HLS/Red5) or audio-only (Icecast)
+        const isVideoStream = currentStream.hlsUrl || currentStream.streamSource === 'red5' ||
+                             (currentStream.streamType !== 'audio' && !currentStream.audioStreamUrl?.includes('8000'));
+
+        if (isVideoStream) {
           videoPreview.classList.remove('hidden');
           audioPreview.classList.add('hidden');
+          // Setup HLS video player
+          setupHlsPlayer(currentStream);
+        } else {
+          audioPreview.classList.remove('hidden');
+          videoPreview.classList.add('hidden');
+          cleanupHlsPlayer();
+          if (currentStream.djAvatar) document.getElementById('streamCover').src = currentStream.djAvatar;
         }
-        
+
+        // Handle takeover UI and End Stream button based on who is streaming
         if (currentStream.djId === currentUser?.uid) {
-          myControls.classList.remove('hidden');
           takeoverRequest.classList.add('hidden');
           noStreamTakeover.classList.add('hidden');
-          
-          // Enable end stream button for current streamer
+          // Enable End Stream button for current streamer
           updateEndStreamButton(true, true);
         } else {
-          myControls.classList.add('hidden');
           takeoverRequest.classList.remove('hidden');
           noStreamTakeover.classList.add('hidden');
           document.getElementById('takeoverFromName').textContent = currentStream.djName || 'current DJ';
-          
-          // Disable end stream button - not your stream
+          // Disable End Stream button - not your stream (unless admin)
           updateEndStreamButton(true, false);
         }
-        
-        // Disable Go Live button when someone is streaming
-        document.getElementById('goLiveBtn').classList.add('disabled');
+
+        // Hide Go Live setup section when someone is streaming (gives more space to video)
+        document.getElementById('streamKeySection')?.classList.add('hidden');
+
+        // Check for relay chat
+        updateRelayChatSection(currentStream);
       } else {
         currentStream = null;
         streamStartTime = null;
@@ -1180,24 +1519,115 @@ export const prerender = false;
         videoPreview.classList.add('hidden');
         audioPreview.classList.add('hidden');
         timeRemaining.classList.add('hidden');
-        myControls.classList.add('hidden');
         takeoverRequest.classList.add('hidden');
         noStreamTakeover.classList.remove('hidden');
-        
+
+        // Cleanup HLS player when stream ends
+        cleanupHlsPlayer();
+
         document.getElementById('currentDjName').textContent = '-';
         document.getElementById('currentStreamTitle').textContent = 'No stream';
         document.getElementById('currentDjAvatar').src = '/place-holder.webp';
-        
-        // Disable end stream button - no active stream
+
+        // Disable End Stream button - no active stream
         updateEndStreamButton(false, false);
-        
-        // Enable Go Live button when no one is streaming
-        document.getElementById('goLiveBtn').classList.remove('disabled');
+
+        // Show Go Live setup section when no one is streaming
+        document.getElementById('streamKeySection')?.classList.remove('hidden');
+
+        // Hide relay chat when no stream
+        updateRelayChatSection(null);
       }
     } catch (e) {
       console.error('Stream status error:', e);
     }
   }
+
+  // Relay Chat Helper - shows chat from relay source (Twitch, YouTube, etc.)
+  function updateRelayChatSection(stream) {
+    const section = document.getElementById('relayChatSection');
+    const frame = document.getElementById('relayChatFrame');
+    const unsupported = document.getElementById('relayChatUnsupported');
+    const sourceName = document.getElementById('relayChatSourceName');
+    const externalLink = document.getElementById('relayChatExternalLink');
+
+    // Hide if no stream or not a relay
+    if (!stream || !stream.relayUrl) {
+      section?.classList.add('hidden');
+      if (frame) frame.src = '';
+      return;
+    }
+
+    const relayUrl = stream.relayUrl;
+    const chatEmbed = getRelayChatEmbed(relayUrl);
+
+    if (chatEmbed) {
+      section?.classList.remove('hidden');
+      sourceName.textContent = chatEmbed.name + ' Chat';
+      frame.src = chatEmbed.embedUrl;
+      frame.classList.remove('hidden');
+      unsupported?.classList.add('hidden');
+    } else {
+      // Show unsupported message with link to original
+      section?.classList.remove('hidden');
+      sourceName.textContent = 'Source Chat';
+      frame.src = '';
+      frame.classList.add('hidden');
+      unsupported?.classList.remove('hidden');
+      externalLink.href = relayUrl;
+    }
+  }
+
+  function getRelayChatEmbed(url) {
+    const host = window.location.hostname;
+
+    // Twitch
+    const twitchMatch = url.match(/twitch\.tv\/([^\/\?]+)/i);
+    if (twitchMatch) {
+      const channel = twitchMatch[1];
+      return {
+        name: 'Twitch',
+        embedUrl: `https://www.twitch.tv/embed/${channel}/chat?parent=${host}&darkpopout`
+      };
+    }
+
+    // YouTube Live (multiple URL formats)
+    const ytVideoMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\/\?]+)/i);
+    const ytLiveMatch = url.match(/youtube\.com\/live\/([^\/\?]+)/i);
+    const ytChannelMatch = url.match(/youtube\.com\/(?:channel|c)\/([^\/\?]+)/i);
+
+    if (ytVideoMatch || ytLiveMatch) {
+      const videoId = ytVideoMatch ? ytVideoMatch[1] : ytLiveMatch[1];
+      return {
+        name: 'YouTube',
+        embedUrl: `https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${host}`
+      };
+    }
+
+    // Kick.com
+    const kickMatch = url.match(/kick\.com\/([^\/\?]+)/i);
+    if (kickMatch) {
+      const channel = kickMatch[1];
+      return {
+        name: 'Kick',
+        embedUrl: `https://kick.com/${channel}/chatroom`
+      };
+    }
+
+    // No supported embed found
+    return null;
+  }
+
+  // Toggle relay chat visibility
+  document.getElementById('toggleRelayChatBtn')?.addEventListener('click', () => {
+    const container = document.getElementById('relayChatContainer');
+    const btn = document.getElementById('toggleRelayChatBtn');
+    if (container?.classList.toggle('collapsed')) {
+      btn.textContent = '+';
+    } else {
+      btn.textContent = '−';
+    }
+  });
   
   function updateTimeRemaining() {
     const timeLeft = document.getElementById('timeLeft');
@@ -1267,60 +1697,54 @@ export const prerender = false;
   
   function checkStreamKeyAvailability() {
     const keyStatus = document.getElementById('keyStatus');
-    const keyNotAvailable = document.getElementById('keyNotAvailable');
-    const keyAvailable = document.getElementById('keyAvailable');
-    
-    if (!mySlot) {
-      keyStatus.textContent = 'No slot';
-      keyStatus.className = 'key-status locked';
-      showKeyNotAvailable();
-      return;
-    }
-    
-    const now = new Date();
-    const slotStart = new Date(mySlot.startTime);
-    const slotEnd = new Date(mySlot.endTime);
-    const unlockTime = new Date(slotStart.getTime() - 15 * 60 * 1000);
-    
-    document.getElementById('nextSlotInfo').textContent = 
-      `Your next slot: ${slotStart.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${slotEnd.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
-    
-    if (now >= unlockTime) {
-      keyStatus.textContent = 'Available';
-      keyStatus.className = 'key-status unlocked';
-      keyNotAvailable.classList.add('hidden');
-      keyAvailable.classList.remove('hidden');
-      
-      document.getElementById('slotTimeDisplay').textContent = 
-        `Your slot: ${slotStart.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${slotEnd.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
-      
-      const minsUntil = Math.ceil((slotStart - now) / 60000);
-      if (minsUntil > 0) {
-        document.getElementById('countdownToSlot').textContent = `Starts in ${formatDuration(minsUntil)}`;
-      } else {
-        document.getElementById('countdownToSlot').textContent = `Your slot is NOW!`;
+    const slotTimeDisplay = document.getElementById('slotTimeDisplay');
+    const countdownEl = document.getElementById('countdownToSlot');
+    const streamKeyEl = document.getElementById('myStreamKey');
+
+    // If user has a booked slot, show slot info
+    if (mySlot) {
+      const now = new Date();
+      const slotStart = new Date(mySlot.startTime);
+      const slotEnd = new Date(mySlot.endTime);
+
+      if (slotTimeDisplay) {
+        slotTimeDisplay.textContent =
+          `Your slot: ${slotStart.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${slotEnd.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
       }
-      
-      document.getElementById('myStreamKey').textContent = mySlot.streamKey || 'Loading...';
-      
-      if (!mySlot.streamKey) {
-        fetchStreamKey();
+
+      const minsUntil = Math.ceil((slotStart - now) / 60000);
+      if (countdownEl) {
+        if (minsUntil > 0) {
+          countdownEl.textContent = `Starts in ${formatDuration(minsUntil)}`;
+        } else if (now < slotEnd) {
+          countdownEl.textContent = `Your slot is NOW!`;
+        } else {
+          countdownEl.textContent = '';
+        }
+      }
+
+      // If slot has a stream key, use it
+      if (mySlot.streamKey) {
+        if (streamKeyEl) streamKeyEl.textContent = mySlot.streamKey;
+        currentStreamKey = mySlot.streamKey;
       }
     } else {
-      keyStatus.textContent = 'Locked';
-      keyStatus.className = 'key-status locked';
-      showKeyNotAvailable();
-      
-      const minsUntilUnlock = Math.ceil((unlockTime - now) / 60000);
-      document.getElementById('nextSlotInfo').innerHTML = 
-        `Your next slot: ${slotStart.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}<br>
-         <span style="color: #dc2626;">Key unlocks in ${formatDuration(minsUntilUnlock)}</span>`;
+      if (slotTimeDisplay) slotTimeDisplay.textContent = 'Your slot: --:-- - --:--';
+      if (countdownEl) countdownEl.textContent = '';
     }
-  }
-  
-  function showKeyNotAvailable() {
-    document.getElementById('keyNotAvailable').classList.remove('hidden');
-    document.getElementById('keyAvailable').classList.add('hidden');
+
+    // Always generate a stream key if we don't have one
+    if (!currentStreamKey) {
+      loadStreamKeyForGoLive();
+    } else {
+      // Display existing key
+      if (streamKeyEl) streamKeyEl.textContent = currentStreamKey;
+    }
+
+    if (keyStatus) {
+      keyStatus.textContent = 'Ready';
+      keyStatus.className = 'key-status ready';
+    }
   }
   
   async function fetchStreamKey() {
@@ -1359,7 +1783,7 @@ export const prerender = false;
   
   function showTakeoverApproved(data) {
     const div = document.getElementById('takeoverApproved');
-    document.getElementById('takeoverServerUrl').textContent = data.serverUrl || 'rtmp://stream.freshwax.co.uk/live';
+    document.getElementById('takeoverServerUrl').textContent = data.serverUrl || 'rtmp://rtmp.freshwax.co.uk/live';
     document.getElementById('takeoverStreamKey').textContent = data.streamKey || '-';
     div.classList.remove('hidden');
     document.getElementById('takeoverRequest').classList.add('hidden');
@@ -1630,13 +2054,284 @@ export const prerender = false;
     }
   }
 
+  // ==========================================
+  // GO LIVE MODAL
+  // ==========================================
+
+  let currentStreamKey = null;
+  let streamKeyValidUntil = null;
+  let currentStreamSource = 'obs'; // 'obs' or 'relay'
+  let approvedRelayData = null;
+
+  async function openGoLiveInline() {
+    // Check if someone else is already streaming
+    if (currentStream && currentStream.djId !== currentUser.uid) {
+      alert('Someone is already live! Use the Takeover feature if you want to take over.');
+      return;
+    }
+
+    // Generate/fetch stream key if needed
+    if (!currentStreamKey) {
+      document.getElementById('keyStatus').textContent = 'Loading...';
+      await loadStreamKeyForGoLive();
+    }
+
+    // Scroll to the Go Live section
+    const keySection = document.getElementById('streamKeySection');
+    keySection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Update status
+    document.getElementById('keyStatus').textContent = 'Ready';
+    document.getElementById('keyStatus').className = 'key-status ready';
+  }
+
+  // Keep old function name for backwards compatibility
+  async function openGoLiveModal() {
+    return openGoLiveInline();
+  }
+
+  async function checkApprovedRelay() {
+    const selector = document.getElementById('streamSourceSelector');
+    const obsSetup = document.getElementById('obsStreamSetup');
+    const relaySetup = document.getElementById('relayStreamSetup');
+
+    try {
+      // Fetch user data to check for approved relay
+      const userResponse = await fetch(`/api/user/profile?userId=${currentUser.uid}`);
+      const userData = await userResponse.json();
+
+      if (userData.success && userData.user?.approvedRelay?.relayUrl) {
+        approvedRelayData = userData.user.approvedRelay;
+
+        // Update relay UI
+        document.getElementById('relaySourceLabel').textContent = approvedRelayData.stationName || 'Relay';
+        document.getElementById('relaySourceDesc').textContent = `Relay from ${approvedRelayData.stationName || 'external station'}`;
+        document.getElementById('relayStationName').textContent = approvedRelayData.stationName || 'External Station';
+        document.getElementById('relayUrlDisplay').textContent = approvedRelayData.relayUrl;
+
+        // Show the stream source selector
+        selector.classList.remove('hidden');
+      } else {
+        // No approved relay - hide selector
+        approvedRelayData = null;
+        selector.classList.add('hidden');
+        selectStreamSource('obs');
+      }
+    } catch (error) {
+      console.warn('Could not check relay status:', error);
+      selector.classList.add('hidden');
+      selectStreamSource('obs');
+    }
+  }
+
+  function selectStreamSource(source) {
+    currentStreamSource = source;
+
+    const obsSetup = document.getElementById('obsStreamSetup');
+    const relaySetup = document.getElementById('relayStreamSetup');
+    const readyBtn = document.getElementById('goLiveReadyBtn');
+    const readyHint = document.getElementById('readyHint');
+
+    // Update button states
+    document.querySelectorAll('.source-option').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.source === source);
+    });
+
+    if (source === 'obs') {
+      obsSetup.classList.remove('hidden');
+      relaySetup.classList.add('hidden');
+      readyBtn.innerHTML = '<span class="ready-icon">🎯</span> I\'m Ready - Go Live!';
+      readyHint.textContent = 'Click once you\'ve started streaming in OBS';
+    } else if (source === 'relay') {
+      obsSetup.classList.add('hidden');
+      relaySetup.classList.remove('hidden');
+      readyBtn.innerHTML = '<span class="ready-icon">📡</span> Start Relay';
+      readyHint.textContent = 'Make sure you\'re live on your external station';
+    }
+  }
+
+  function closeGoLiveModal() {
+    document.getElementById('goLiveModal').classList.add('hidden');
+    showGoLiveStep(1); // Reset to step 1 for next time
+  }
+
+  function showGoLiveStep(step) {
+    // Hide all steps
+    document.getElementById('goLiveStep1').classList.add('hidden');
+    document.getElementById('goLiveStep2').classList.add('hidden');
+    document.getElementById('goLiveStep3').classList.add('hidden');
+    document.getElementById('goLiveError').classList.add('hidden');
+
+    // Show requested step
+    const stepEl = document.getElementById(`goLiveStep${step}`);
+    if (stepEl) {
+      stepEl.classList.remove('hidden');
+    }
+  }
+
+  function showGoLiveError(message) {
+    document.getElementById('goLiveStep1').classList.add('hidden');
+    document.getElementById('goLiveStep2').classList.add('hidden');
+    document.getElementById('goLiveStep3').classList.add('hidden');
+    document.getElementById('goLiveError').classList.remove('hidden');
+    document.getElementById('goLiveErrorMsg').textContent = message;
+  }
+
+  async function loadStreamKeyForGoLive() {
+    // Update both modal element (if exists) and inline element
+    const modalKeyEl = document.getElementById('goLiveStreamKey');
+    const inlineKeyEl = document.getElementById('myStreamKey');
+
+    // Check if we already have a valid stream key
+    if (currentStreamKey && streamKeyValidUntil) {
+      const validUntil = new Date(streamKeyValidUntil);
+      const now = new Date();
+      // If key is still valid (with 2 min buffer), reuse it
+      if (validUntil.getTime() - now.getTime() > 2 * 60 * 1000) {
+        console.log('[GoLive] Reusing existing stream key, valid until:', streamKeyValidUntil);
+        if (modalKeyEl) modalKeyEl.textContent = currentStreamKey;
+        if (inlineKeyEl) inlineKeyEl.textContent = currentStreamKey;
+        return;
+      }
+    }
+
+    if (modalKeyEl) modalKeyEl.textContent = 'Generating...';
+    if (inlineKeyEl) inlineKeyEl.textContent = 'Generating...';
+
+    try {
+      const token = await currentUser.getIdToken();
+
+      // Request a new stream key for go-live
+      const response = await fetch('/api/livestream/slots', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'generate_key',
+          djId: currentUser.uid,
+          djName: userInfo.name
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.streamKey) {
+        currentStreamKey = result.streamKey;
+        streamKeyValidUntil = result.validUntil;
+        if (modalKeyEl) modalKeyEl.textContent = result.streamKey;
+        if (inlineKeyEl) inlineKeyEl.textContent = result.streamKey;
+        console.log('[GoLive] New stream key generated, valid until:', result.validUntil);
+      } else {
+        if (modalKeyEl) modalKeyEl.textContent = 'Error - try again';
+        if (inlineKeyEl) inlineKeyEl.textContent = 'Error - try again';
+        console.error('[GoLive] Failed to generate key:', result.error);
+      }
+    } catch (error) {
+      console.error('[GoLive] Error loading stream key:', error);
+      if (modalKeyEl) modalKeyEl.textContent = 'Error - try again';
+      if (inlineKeyEl) inlineKeyEl.textContent = 'Error - try again';
+    }
+  }
+
+  async function handleGoLiveReady() {
+    // Get title and genre - check inline fields first, then modal fields
+    let title, genre;
+
+    if (currentStreamSource === 'relay') {
+      title = document.getElementById('relayStreamTitle')?.value?.trim() || `Live from ${approvedRelayData?.stationName || 'External Station'}`;
+      genre = document.getElementById('relayStreamGenre')?.value || 'Jungle / D&B';
+    } else {
+      // Try inline fields first, then fall back to modal fields
+      title = document.getElementById('inlineStreamTitle')?.value?.trim()
+           || document.getElementById('goLiveTitle')?.value?.trim()
+           || 'Live Session';
+      genre = document.getElementById('inlineStreamGenre')?.value
+           || document.getElementById('goLiveGenre')?.value
+           || 'Jungle / D&B';
+    }
+
+    // For OBS mode, check stream key
+    if (currentStreamSource === 'obs' && !currentStreamKey) {
+      throw new Error('No stream key available. Please refresh and try again.');
+    }
+
+    // For relay mode, check approved relay data
+    if (currentStreamSource === 'relay' && !approvedRelayData?.relayUrl) {
+      throw new Error('No approved relay URL found. Please contact admin.');
+    }
+
+    console.log('[GoLive] Starting go live with key:', currentStreamKey?.substring(0, 10) + '...');
+
+    const token = await currentUser.getIdToken();
+
+    // Build request body based on source type
+    const requestBody = {
+      action: currentStreamSource === 'relay' ? 'start_relay' : 'go_live',
+      djId: currentUser.uid,
+      djName: userInfo.name,
+      title: title,
+      genre: genre
+    };
+
+    if (currentStreamSource === 'relay') {
+      requestBody.relayUrl = approvedRelayData.relayUrl;
+      requestBody.stationName = approvedRelayData.stationName;
+    } else {
+      requestBody.streamKey = currentStreamKey;
+    }
+
+    // Send request
+    const response = await fetch('/api/livestream/slots', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      // Stream is live!
+      console.log('[GoLive] Successfully went live!', result);
+
+      // Refresh stream status
+      await loadStreamStatus();
+
+      // Update UI to show we're live
+      updateEndStreamButton(true, true);
+
+      // Hide ready section since we're now live
+      document.getElementById('readySection')?.classList.add('hidden');
+
+      return true;
+    } else {
+      // Log full error for debugging
+      console.error('[GoLive] API Error:', result);
+
+      // Throw error so caller knows it failed
+      let errorMsg = result.error || 'Failed to go live';
+      if (result.details) errorMsg += ': ' + result.details;
+      if (result.error === 'stream_not_detected') {
+        errorMsg = 'Stream not detected. Make sure OBS is streaming with the correct key.';
+      } else if (result.error === 'relay_failed') {
+        errorMsg = 'Failed to connect to relay stream.';
+      }
+
+      throw new Error(errorMsg);
+    }
+  }
+
   async function sendMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     if (!text) return;
-    
+
     input.value = '';
-    
+
     try {
       // Use Pusher module's sendChatMessage (handles API + Pusher broadcast)
       await sendChatMessage(text);
@@ -1724,7 +2419,35 @@ export const prerender = false;
     document.getElementById('dmNotifDismissBtn').addEventListener('click', () => {
       document.getElementById('dmNotification').classList.add('hidden');
     });
-    
+
+    // Go Live Modal
+    document.getElementById('goLiveBtn').addEventListener('click', openGoLiveModal);
+    document.getElementById('closeGoLiveBtn').addEventListener('click', closeGoLiveModal);
+    document.querySelector('.go-live-modal-overlay').addEventListener('click', closeGoLiveModal);
+    document.getElementById('goLiveReadyBtn').addEventListener('click', handleGoLiveReady);
+    document.getElementById('goLiveRetryBtn').addEventListener('click', () => {
+      showGoLiveStep(1);
+    });
+    document.getElementById('closeGoLiveSuccessBtn').addEventListener('click', closeGoLiveModal);
+
+    // Stream source selector
+    document.querySelectorAll('.source-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectStreamSource(btn.dataset.source);
+      });
+    });
+
+    // Copy buttons in Go Live modal
+    document.querySelectorAll('.go-live-modal .copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.copy;
+        const text = document.getElementById(targetId).textContent;
+        navigator.clipboard.writeText(text);
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      });
+    });
+
     // Sign out
     document.getElementById('signOutBtn').addEventListener('click', async () => {
       try {
@@ -1791,42 +2514,75 @@ export const prerender = false;
       if (e.key === 'Enter') sendMessage();
     });
     
-    // Play/Pause
+    // Play/Pause - handles both audio and video
     document.getElementById('playPauseBtn').addEventListener('click', () => {
       const audio = document.getElementById('audioElement');
+      const video = document.getElementById('hlsVideo');
       const playIcon = document.getElementById('playIcon');
       const pauseIcon = document.getElementById('pauseIcon');
-      
-      if (!audio.src && currentStream?.streamUrl) {
-        audio.src = currentStream.streamUrl;
-        audio.play();
-      } else if (audio.paused) {
-        audio.play();
+
+      // Determine which media element is active
+      const isVideoStream = currentStream && currentStream.streamType !== 'audio' && !currentStream.streamUrl?.includes('8000');
+      const media = isVideoStream ? video : audio;
+
+      if (!media) return;
+
+      if (isVideoStream) {
+        // Video stream - HLS player handles the source
+        if (isVideoPlaying) {
+          media.pause();
+        } else {
+          media.play().catch(err => console.error('[HLS] Play error:', err));
+        }
       } else {
-        audio.pause();
+        // Audio stream
+        if (!audio.src && currentStream?.streamUrl) {
+          audio.src = currentStream.streamUrl;
+          audio.play();
+        } else if (audio.paused) {
+          audio.play();
+        } else {
+          audio.pause();
+        }
+        playIcon.classList.toggle('hidden', !audio.paused);
+        pauseIcon.classList.toggle('hidden', audio.paused);
       }
-      
-      playIcon.classList.toggle('hidden', !audio.paused);
-      pauseIcon.classList.toggle('hidden', audio.paused);
     });
-    
-    // Volume
+
+    // Volume - controls both audio and video
     document.getElementById('volumeSlider').addEventListener('input', (e) => {
-      document.getElementById('audioElement').volume = e.target.value / 100;
+      const volume = e.target.value / 100;
+      document.getElementById('audioElement').volume = volume;
+      document.getElementById('hlsVideo').volume = volume;
     });
-    
+
     document.getElementById('muteBtn').addEventListener('click', () => {
       const audio = document.getElementById('audioElement');
-      audio.muted = !audio.muted;
-      document.getElementById('volumeSlider').value = audio.muted ? 0 : audio.volume * 100;
+      const video = document.getElementById('hlsVideo');
+      const isVideoStream = currentStream && currentStream.streamType !== 'audio' && !currentStream.streamUrl?.includes('8000');
+      const media = isVideoStream ? video : audio;
+
+      if (media) {
+        media.muted = !media.muted;
+        document.getElementById('volumeSlider').value = media.muted ? 0 : media.volume * 100;
+      }
     });
     
-    // Ready button - use presence API instead of Firestore
+    // Ready button - Go Live! Sets ready status AND starts stream
     document.getElementById('setReadyBtn')?.addEventListener('click', async () => {
       if (!currentUser) return;
-      
+
+      const btn = document.getElementById('setReadyBtn');
+      const btnText = document.getElementById('readyBtnText');
+
+      // Disable button and show processing
+      btn.disabled = true;
+      btn.classList.remove('glow');
+      btnText.textContent = '⏳ Going Live...';
+
       try {
-        const response = await fetch('/api/dj-lobby/presence', {
+        // First set ready status
+        await fetch('/api/dj-lobby/presence', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1835,16 +2591,23 @@ export const prerender = false;
             isReady: true
           })
         });
-        
-        if (response.ok) {
-          document.getElementById('setReadyBtn').classList.add('is-ready');
-          document.getElementById('readyBtnText').textContent = '✓ Ready!';
-          document.getElementById('readyStatus').classList.remove('hidden');
-        } else {
-          console.error('Ready error: API returned', response.status);
-        }
+
+        // Then start the stream
+        await handleGoLiveReady();
+
+        // Show success state
+        btn.classList.add('is-ready');
+        btn.style.background = '#10b981';
+        btnText.textContent = '🔴 YOU ARE LIVE!';
+        document.getElementById('readyStatus')?.classList.remove('hidden');
       } catch (e) {
-        console.error('Ready error:', e);
+        console.error('Go Live error:', e);
+        // Show error message
+        alert(e.message || 'Failed to go live. Please check OBS is streaming and try again.');
+        // Reset button
+        btnText.textContent = '🎯 I\'m Ready - Go Live!';
+        btn.disabled = false;
+        btn.classList.add('glow');
       }
     });
     
@@ -1926,30 +2689,41 @@ export const prerender = false;
       const div = document.getElementById('incomingTakeover');
       const requesterId = div.dataset.requesterId;
       if (!requesterId || !currentUser) return;
-      
+
       try {
-        const token = await currentUser.getIdToken();
-        const response = await fetch('/api/livestream/slots', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ action: 'getStreamKey', djId: currentUser.uid })
-        });
-        
-        const result = await response.json();
-        
-        await setDoc(doc(db, 'djTakeoverRequests', `request_${requesterId}`), {
-          status: 'approved',
-          requesterId: requesterId,
-          serverUrl: result.serverUrl || 'rtmp://stream.freshwax.co.uk/live',
-          streamKey: result.streamKey || 'Contact admin',
-          approvedAt: serverTimestamp()
-        }, { merge: true });
-        
-        await deleteDoc(doc(db, 'djTakeoverRequests', currentUser.uid));
-        hideIncomingTakeover();
-        alert('Takeover approved!');
+        // Get current stream key from the live stream or generated key
+        let streamKeyToPass = currentStreamKey;
+        let serverUrl = 'rtmp://rtmp.freshwax.co.uk/live';
+
+        // If we have a current stream, use its key
+        if (currentStream && currentStream.djId === currentUser.uid && currentStream.streamKey) {
+          streamKeyToPass = currentStream.streamKey;
+        }
+
+        // If no stream key available, try to fetch it
+        if (!streamKeyToPass) {
+          const token = await currentUser.getIdToken();
+          const response = await fetch('/api/livestream/slots?action=checkStreamKey&djId=' + currentUser.uid, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const result = await response.json();
+          if (result.success && result.streamKey) {
+            streamKeyToPass = result.streamKey;
+          }
+        }
+
+        // Use the Pusher module to approve takeover (handles API + Pusher broadcast)
+        const approved = await approveTakeover(requesterId, streamKeyToPass, serverUrl);
+
+        if (approved) {
+          hideIncomingTakeover();
+          alert('Takeover approved! The new DJ can now use your stream key.');
+        } else {
+          alert('Failed to approve takeover. Please try again.');
+        }
       } catch (e) {
         console.error('Accept error:', e);
+        alert('Failed to approve takeover');
       }
     });
     
@@ -1957,17 +2731,19 @@ export const prerender = false;
       const div = document.getElementById('incomingTakeover');
       const requesterId = div.dataset.requesterId;
       if (!requesterId) return;
-      
+
       try {
-        await setDoc(doc(db, 'djTakeoverRequests', `request_${requesterId}`), {
-          status: 'declined',
-          declinedAt: serverTimestamp()
-        }, { merge: true });
-        
-        await deleteDoc(doc(db, 'djTakeoverRequests', currentUser.uid));
-        hideIncomingTakeover();
+        // Use the Pusher module to decline takeover (handles API + Pusher broadcast)
+        const declined = await declineTakeover(requesterId);
+
+        if (declined) {
+          hideIncomingTakeover();
+        } else {
+          alert('Failed to decline takeover');
+        }
       } catch (e) {
         console.error('Decline error:', e);
+        alert('Failed to decline takeover');
       }
     });
     

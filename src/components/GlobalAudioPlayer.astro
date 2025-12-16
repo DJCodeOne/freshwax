@@ -25,7 +25,7 @@
       <div class="flex items-center gap-2 sm:gap-4">
         
         <!-- LEFT: Spectrum Analyser -->
-        <div id="spectrum-left" class="hidden sm:flex items-end gap-[2px] h-8 flex-shrink-0">
+        <div id="spectrum-left" class="hidden lg:flex items-end gap-[2px] h-8 flex-shrink-0">
           <div class="spectrum-bar" style="--bar-index: 0;"></div>
           <div class="spectrum-bar" style="--bar-index: 1;"></div>
           <div class="spectrum-bar" style="--bar-index: 2;"></div>
@@ -91,7 +91,7 @@
           </button>
           
           <!-- Volume -->
-          <div class="hidden md:flex items-center gap-2 flex-shrink-0">
+          <div class="hidden sm:flex items-center gap-2 flex-shrink-0">
             <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0 3 3 0 010 4.242 1 1 0 11-1.414-1.414 1 1 0 000-1.414 1 1 0 010-1.414z" clip-rule="evenodd"/>
             </svg>
@@ -105,14 +105,14 @@
           <span id="mini-mode-indicator" class="hidden sm:inline-block text-[10px] uppercase tracking-wider text-gray-500 bg-black/30 px-2 py-1 rounded"></span>
           
           <!-- Duration -->
-          <div class="hidden sm:flex items-center gap-1 text-[10px] sm:text-xs text-gray-400 font-mono flex-shrink-0 bg-black/30 px-2 py-1 rounded">
+          <div class="flex items-center gap-1 text-[10px] sm:text-xs text-gray-400 font-mono flex-shrink-0 bg-black/30 px-2 py-1 rounded">
             <span id="mini-current-time" class="text-red-500 font-bold">0:00</span>
             <span class="text-gray-600">/</span>
             <span id="mini-duration">0:00</span>
           </div>
-          
+
           <!-- RIGHT: Spectrum Analyser -->
-          <div id="spectrum-right" class="hidden sm:flex items-end gap-[2px] h-8 flex-shrink-0">
+          <div id="spectrum-right" class="hidden lg:flex items-end gap-[2px] h-8 flex-shrink-0">
             <div class="spectrum-bar" style="--bar-index: 7;"></div>
             <div class="spectrum-bar" style="--bar-index: 6;"></div>
             <div class="spectrum-bar" style="--bar-index: 5;"></div>
@@ -330,8 +330,17 @@
       if (miniPlayer) miniPlayer.classList.remove('playing');
     }
 
+    var miniPlayerInitialized = false;
+
     function initMiniPlayer() {
-      
+      console.log('[MINI-PLAYER] initMiniPlayer called, already initialized:', miniPlayerInitialized);
+
+      // Prevent multiple initializations
+      if (miniPlayerInitialized && window.startShuffle) {
+        console.log('[MINI-PLAYER] Already initialized, skipping');
+        return;
+      }
+
       var globalAudio = document.getElementById('global-audio');
       var miniPlayer = document.getElementById('mini-player');
       var miniPlayBtn = document.getElementById('mini-play-btn');
@@ -342,11 +351,68 @@
       var miniClose = document.getElementById('mini-close');
       var miniShuffleBtn = document.getElementById('mini-shuffle-btn');
 
+      console.log('[MINI-PLAYER] Elements found:', {
+        globalAudio: !!globalAudio,
+        miniPlayer: !!miniPlayer,
+        miniShuffleBtn: !!miniShuffleBtn
+      });
+
       if (!globalAudio || !miniPlayer) {
+        console.error('[MINI-PLAYER] Missing required elements, aborting init');
         return;
       }
 
+      miniPlayerInitialized = true;
+
       window.globalAudio = globalAudio;
+
+      // Store target volume for fade in/out (global scope so accessible everywhere)
+      var shuffleTargetVolume = 1.0;
+      var SHUFFLE_FADE_IN_DURATION = 2; // seconds for fade in
+      var SHUFFLE_FADE_DURATION = 3; // seconds for fade out
+      var shuffleFadingOut = false;
+
+      // Fade in new track - accessible from playCurrentShuffleTrack
+      function fadeInShuffleTrack() {
+        var targetVolume = shuffleTargetVolume || 1.0;
+        var fadeSteps = 10;
+        var fadeInterval = (SHUFFLE_FADE_IN_DURATION * 1000) / fadeSteps;
+        var volumeStep = targetVolume / fadeSteps;
+        var step = 0;
+
+        globalAudio.volume = 0;
+
+        var fadeTimer = setInterval(function() {
+          step++;
+          globalAudio.volume = Math.min(targetVolume, volumeStep * step);
+
+          if (step >= fadeSteps) {
+            clearInterval(fadeTimer);
+            globalAudio.volume = targetVolume;
+          }
+        }, fadeInterval);
+      }
+
+      // Fade out current track and play next
+      function fadeOutAndNext() {
+        shuffleTargetVolume = globalAudio.volume || 1.0;
+        var startVolume = shuffleTargetVolume;
+        var fadeSteps = 15;
+        var fadeInterval = (SHUFFLE_FADE_DURATION * 1000) / fadeSteps;
+        var volumeStep = startVolume / fadeSteps;
+        var step = 0;
+
+        var fadeTimer = setInterval(function() {
+          step++;
+          globalAudio.volume = Math.max(0, startVolume - (volumeStep * step));
+
+          if (step >= fadeSteps) {
+            clearInterval(fadeTimer);
+            shuffleFadingOut = false;
+            playNextShuffleTrack();
+          }
+        }, fadeInterval);
+      }
 
       // === AUDIO EVENT LISTENERS ===
       if (!globalAudio.hasListeners) {
@@ -393,7 +459,22 @@
             stopSpectrum();
           }
         });
-        
+
+        // Shuffle mode: play 60 seconds starting from 60s mark (so skip at 120s)
+        // With fade out starting 3 seconds before end
+        var SHUFFLE_CLIP_END = 120; // Start at 60s, play for 60s, end at 120s
+        var SHUFFLE_FADE_START = SHUFFLE_CLIP_END - SHUFFLE_FADE_DURATION;
+
+        globalAudio.addEventListener('timeupdate', function() {
+          if (!window.FreshWaxPlayer.isShuffleMode) return;
+
+          // Start fade out 3 seconds before end
+          if (globalAudio.currentTime >= SHUFFLE_FADE_START && !shuffleFadingOut) {
+            shuffleFadingOut = true;
+            fadeOutAndNext();
+          }
+        });
+
         globalAudio.addEventListener('error', function(e) {
           console.error('[MINI-PLAYER] Audio error:', e);
           if (window.FreshWaxPlayer.isShuffleMode) {
@@ -403,44 +484,25 @@
       }
 
       // === PLAY/PAUSE BUTTON ===
-if (miniPlayBtn) {
-  miniPlayBtn.onclick = function() {
-    if (!globalAudio.src) return;
-    
-    if (globalAudio.paused) {
-      // CRITICAL: Stop any playing preview clips FIRST and cancel resume
-      if (window.AudioManager) {
-        window.AudioManager.stopAllTracklistPreviews();
-        window.AudioManager._lockState(150); // Prevent resume from firing
+      if (miniPlayBtn) {
+        miniPlayBtn.onclick = function() {
+          if (!globalAudio.src) return;
+
+          if (globalAudio.paused) {
+            // CRITICAL: Stop any playing preview clips FIRST and cancel resume
+            if (window.AudioManager) {
+              window.AudioManager.stopAllTracklistPreviews();
+              window.AudioManager._lockState(150); // Prevent resume from firing
+            }
+
+            globalAudio.play().catch(function(err) {
+              console.error('[MINI-PLAYER] Play failed:', err);
+            });
+          } else {
+            globalAudio.pause();
+          }
+        };
       }
-      
-      globalAudio.play().catch(function(err) {
-        console.error('[MINI-PLAYER] Play failed:', err);
-      });
-    } else {
-      globalAudio.pause();
-    }
-  };
-}// === PLAY/PAUSE BUTTON ===
-if (miniPlayBtn) {
-  miniPlayBtn.onclick = function() {
-    if (!globalAudio.src) return;
-    
-    if (globalAudio.paused) {
-      // CRITICAL: Stop any playing preview clips FIRST and cancel resume
-      if (window.AudioManager) {
-        window.AudioManager.stopAllTracklistPreviews();
-        window.AudioManager._lockState(150); // Prevent resume from firing
-      }
-      
-      globalAudio.play().catch(function(err) {
-        console.error('[MINI-PLAYER] Play failed:', err);
-      });
-    } else {
-      globalAudio.pause();
-    }
-  };
-}
 
       // === SKIP BUTTONS ===
       if (miniSkipBack) {
@@ -557,6 +619,7 @@ if (miniPlayBtn) {
       // === SHUFFLE FUNCTIONS ===
       
       function startShuffle() {
+        console.log('[MINI-PLAYER] startShuffle called');
         var shuffleBtn = document.getElementById('mini-shuffle-btn');
         var floatingBtn = document.getElementById('floating-shuffle-btn');
         if (shuffleBtn) shuffleBtn.classList.add('loading');
@@ -607,6 +670,7 @@ if (miniPlayBtn) {
       
       // Expose startShuffle globally
       window.startShuffle = startShuffle;
+      console.log('[MINI-PLAYER] startShuffle exposed globally');
       
       function initShufflePlayback() {
         var tracks = window.FreshWaxPlayer.shuffleTracks;
@@ -632,7 +696,11 @@ if (miniPlayBtn) {
         window.FreshWaxPlayer.shuffledQueue = shuffled;
         window.FreshWaxPlayer.shuffleIndex = 0;
         window.FreshWaxPlayer.isShuffleMode = true;
-        
+
+        // Initialize target volume for fade effects (store current volume or default to 1.0)
+        var audio = document.getElementById('global-audio');
+        shuffleTargetVolume = (audio && audio.volume > 0) ? audio.volume : 1.0;
+
         if (window.AudioManager) {
           window.AudioManager.onShufflePlay();
         }
@@ -703,13 +771,37 @@ if (miniPlayBtn) {
           playNextShuffleTrack();
           return;
         }
-        
+
         var audio = document.getElementById('global-audio');
         if (audio) {
+          // Start with volume 0 for fade in effect
+          audio.volume = 0;
           audio.src = trackAudioUrl;
           audio.load();
-          audio.play().catch(function(err) {
+
+          // Shuffle mode: start 60 seconds into the track
+          var SHUFFLE_START_TIME = 60;
+
+          // Wait for audio to be ready, then seek to start position
+          var seekOnce = function() {
+            if (audio.duration && audio.duration > SHUFFLE_START_TIME + 10) {
+              audio.currentTime = SHUFFLE_START_TIME;
+            } else if (audio.duration && audio.duration > 30) {
+              // If track is shorter than 70s, start at 30% into track
+              audio.currentTime = audio.duration * 0.3;
+            }
+            // Remove listener after seeking
+            audio.removeEventListener('loadedmetadata', seekOnce);
+          };
+          audio.addEventListener('loadedmetadata', seekOnce);
+
+          audio.play().then(function() {
+            // Fade in after play starts
+            fadeInShuffleTrack();
+          }).catch(function(err) {
             console.error('[MINI-PLAYER] Shuffle play error:', err);
+            // Reset volume on error
+            audio.volume = shuffleTargetVolume || 1.0;
             setTimeout(function() {
               playNextShuffleTrack();
             }, 500);

@@ -2,6 +2,7 @@
 // Uses Firebase REST API - works on Cloudflare Pages
 import type { APIRoute } from 'astro';
 import { getDocument, clearCache } from '../../lib/firebase-rest';
+import { normalizeRelease } from '../../lib/releases';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -10,51 +11,6 @@ const log = {
 };
 
 export const prerender = false;
-
-function getLabelFromRelease(release: any): string {
-  return release.labelName || 
-         release.label || 
-         release.recordLabel || 
-         release.copyrightHolder || 
-         'Unknown Label';
-}
-
-function normalizeRatings(data: any): { average: number; count: number; total: number; fiveStarCount: number } {
-  const ratings = data.ratings || data.overallRating || {};
-  
-  return {
-    average: Number(ratings.average) || 0,
-    count: Number(ratings.count) || 0,
-    total: Number(ratings.total) || 0,
-    fiveStarCount: Number(ratings.fiveStarCount) || 0
-  };
-}
-
-function normalizeRelease(data: any, id: string): any {
-  if (!data) return null;
-  
-  const normalizedRatings = normalizeRatings(data);
-  
-  return {
-    id,
-    ...data,
-    label: getLabelFromRelease(data),
-    ratings: normalizedRatings,
-    overallRating: normalizedRatings, // Also return as overallRating for backward compatibility
-    tracks: (data.tracks || []).map((track: any, index: number) => ({
-      ...track,
-      trackNumber: track.trackNumber || track.displayTrackNumber || (index + 1),
-      displayTrackNumber: track.displayTrackNumber || track.trackNumber || (index + 1),
-      previewUrl: track.previewUrl || track.preview_url || track.mp3Url || null,
-      duration: track.duration || null,
-      ratings: track.ratings ? {
-        average: Number(track.ratings.average) || 0,
-        count: Number(track.ratings.count) || 0,
-        total: Number(track.ratings.total) || 0
-      } : undefined
-    }))
-  };
-}
 
 export const GET: APIRoute = async ({ request }) => {
   const url = new URL(request.url);

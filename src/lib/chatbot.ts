@@ -9,6 +9,65 @@ export const BOT_USER = {
   badge: 'BOT'
 };
 
+// Random tune comments - subtle, music-focused reactions
+export const TUNE_COMMENTS = [
+  'This one is a banger 🔥',
+  'Love this tune!',
+  'Absolute heater right here',
+  'The bass on this one though 🔊',
+  'Now we\'re cooking',
+  'Big tune alert!',
+  'This is the one',
+  'Vibes are immaculate rn',
+  'Pure fire 🔥',
+  'The drop on this 👏',
+  'This track is special',
+  'Proper selection',
+  'Heavy!',
+  'Sick tune',
+  'This goes hard',
+  'Quality selection here',
+  'The vibes are unmatched',
+  'Tune of the set?',
+  'This one hits different',
+  'Wavey 🌊'
+];
+
+// Welcome messages for new users
+export const WELCOME_MESSAGES = [
+  (name: string) => `Welcome ${name}! 👋`,
+  (name: string) => `${name} just joined the party! 🎉`,
+  (name: string) => `Big up ${name} for tuning in!`,
+  (name: string) => `Welcome to the stream ${name}!`,
+  (name: string) => `${name} in the building! 🏠`,
+  (name: string) => `Safe ${name}, enjoy the vibes!`,
+  (name: string) => `${name} has entered the chat 🎵`,
+  (name: string) => `Welcome ${name}, grab a seat and vibe with us`,
+  (name: string) => `Hey ${name}! Good to have you here`,
+  (name: string) => `${name} checking in ✌️`
+];
+
+// Get a random tune comment
+export function getRandomTuneComment(): string {
+  return TUNE_COMMENTS[Math.floor(Math.random() * TUNE_COMMENTS.length)];
+}
+
+// Get a random welcome message for a user
+export function getWelcomeMessage(userName: string): string {
+  const messageFunc = WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)];
+  return messageFunc(userName);
+}
+
+// Determine if bot should comment on a tune (random chance - roughly every 10-15 messages)
+export function shouldCommentOnTune(): boolean {
+  return Math.random() < 0.08; // 8% chance per message
+}
+
+// Determine if bot should welcome a new user (random chance to avoid spam)
+export function shouldWelcomeUser(): boolean {
+  return Math.random() < 0.95; // 95% chance to welcome new users
+}
+
 // Bot commands and their handlers
 export const BOT_COMMANDS: Record<string, {
   description: string;

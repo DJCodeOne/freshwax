@@ -1,13 +1,21 @@
 // src/pages/api/get-user-type.ts
 // Returns user type info - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument } from '../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   const url = new URL(request.url);
   const uid = url.searchParams.get('uid');
+  const authEmail = url.searchParams.get('email'); // Email from Firebase Auth
 
   if (!uid) {
     return new Response(JSON.stringify({
@@ -101,7 +109,7 @@ export const GET: APIRoute = async ({ request }) => {
       }
     }
 
-    // Check legacy customers collection
+    // Check legacy customers collection - avatarUrl from customers takes priority (upload-avatar saves here)
     if (customerDoc) {
       isCustomer = true;
       if (!name) {
@@ -110,13 +118,16 @@ export const GET: APIRoute = async ({ request }) => {
       if (!partnerDisplayName && customerDoc.displayName) {
         partnerDisplayName = customerDoc.displayName;
       }
-      if (!avatarUrl) {
-        avatarUrl = customerDoc.avatarUrl || customerDoc.photoURL || '';
+      // Customer avatarUrl takes precedence over users collection (upload-avatar saves to customers)
+      if (customerDoc.avatarUrl) {
+        avatarUrl = customerDoc.avatarUrl;
+      } else if (!avatarUrl) {
+        avatarUrl = customerDoc.photoURL || '';
       }
     }
 
-    // Check for admin email
-    let userEmail = userDoc?.email || customerDoc?.email || artistDoc?.email || '';
+    // Check for admin email - include authEmail from Firebase Auth as fallback
+    let userEmail = userDoc?.email || customerDoc?.email || artistDoc?.email || authEmail || '';
     const ADMIN_EMAILS = ['freshwaxonline@gmail.com', 'davidhagon@gmail.com'];
     if (userEmail && ADMIN_EMAILS.includes(userEmail.toLowerCase())) {
       isAdmin = true;
@@ -124,6 +135,27 @@ export const GET: APIRoute = async ({ request }) => {
 
     const hasPartnerRole = isArtist || isDJ || isMerchSupplier;
     const isPro = hasPartnerRole && isApproved;
+
+    // Get referral code from user document (generated when upgrading to Pro)
+    const referralCode = userDoc?.referralCode || null;
+
+    // If no avatarUrl found in Firestore, check if one exists in R2
+    console.log('[get-user-type] avatarUrl from Firestore:', avatarUrl || 'none');
+    if (!avatarUrl) {
+      const r2PublicUrl = env?.R2_PUBLIC_URL || import.meta.env.R2_PUBLIC_URL || 'https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev';
+      const potentialAvatarUrl = `${r2PublicUrl}/avatars/${uid}.webp`;
+      console.log('[get-user-type] Checking R2 for avatar:', potentialAvatarUrl);
+      try {
+        const avatarCheck = await fetch(potentialAvatarUrl, { method: 'HEAD' });
+        console.log('[get-user-type] R2 avatar check response:', avatarCheck.status);
+        if (avatarCheck.ok) {
+          avatarUrl = `${potentialAvatarUrl}?t=${Date.now()}`;
+          console.log('[get-user-type] Found avatar in R2:', avatarUrl);
+        }
+      } catch (e) {
+        console.log('[get-user-type] R2 avatar check failed:', e);
+      }
+    }
 
     // Admin override
     if (isAdmin) {
@@ -153,7 +185,8 @@ export const GET: APIRoute = async ({ request }) => {
       partnerDisplayName,
       avatarUrl,
       canBuy: isCustomer,
-      canSell: isAdmin ? true : (hasPartnerRole && isApproved)
+      canSell: isAdmin ? true : (hasPartnerRole && isApproved),
+      referralCode
     }), {
       status: 200,
       headers: {

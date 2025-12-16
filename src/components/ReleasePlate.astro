@@ -1285,20 +1285,27 @@ const totalDurationFormatted = totalDurationSeconds > 0
   // ============================================
   // RELEASE PLAYER - TRACKLIST PREVIEWS
   // Lazy audio creation, AudioManager integration
+  // CLIP RESTRICTION: Play 90 seconds (1:30) starting at 60s into the track
   // ============================================
+  var CLIP_START_TIME = 60; // Start at 60 seconds into track
+  var CLIP_DURATION = 90;   // Play for 90 seconds (1:30) max
+  var CLIP_END_TIME = CLIP_START_TIME + CLIP_DURATION; // Stop at 150 seconds
+  var FADE_DURATION = 3;    // Fade in/out over 3 seconds
+  var FADE_OUT_START = CLIP_END_TIME - FADE_DURATION; // Start fading out 3s before end
+
   function initReleasePlayer() {
     document.querySelectorAll('[data-release]').forEach(function(releaseCard) {
       if (releaseCard.hasAttribute('data-player-init')) return;
       releaseCard.setAttribute('data-player-init', 'true');
-      
+
       var releaseId = releaseCard.getAttribute('data-release');
       if (!releaseId) return;
-      
+
       var canvas = releaseCard.querySelector('.shared-waveform[data-release-id="' + releaseId + '"]');
       var volumeSlider = releaseCard.querySelector('.shared-volume-slider[data-release-id="' + releaseId + '"]');
       var nowPlayingText = releaseCard.querySelector('[data-now-playing-text="' + releaseId + '"]');
       var playButtons = releaseCard.querySelectorAll('.play-button');
-      
+
       var currentAudio = null;
       var currentButton = null;
       var currentVolume = 0.7;
@@ -1319,7 +1326,9 @@ const totalDurationFormatted = totalDurationSeconds > 0
           if (!currentAudio || !currentAudio.duration || !isFinite(currentAudio.duration)) return;
           var rect = canvas.getBoundingClientRect();
           var progress = (e.clientX - rect.left) / rect.width;
-          currentAudio.currentTime = progress * currentAudio.duration;
+          // Seek within clip window (60s-150s) - waveform represents only the clip
+          var seekTime = CLIP_START_TIME + (progress * CLIP_DURATION);
+          currentAudio.currentTime = Math.min(Math.max(seekTime, CLIP_START_TIME), CLIP_END_TIME - 1);
         };
       }
       
@@ -1368,13 +1377,55 @@ const totalDurationFormatted = totalDurationSeconds > 0
             audio.src = previewUrl;
             audio.volume = currentVolume;
             releaseCard.appendChild(audio);
-            
+
             audio.ontimeupdate = function() {
               if (audio === currentAudio && audio.duration && isFinite(audio.duration)) {
-                drawWaveform(audio.currentTime / audio.duration, !audio.paused);
+                var currentTime = audio.currentTime;
+
+                // CLIP RESTRICTION: Stop playback at CLIP_END_TIME (150s)
+                if (currentTime >= CLIP_END_TIME) {
+                  console.log('[Player] Clip limit reached (90s preview), stopping');
+                  audio.pause();
+                  audio.volume = currentVolume; // Reset volume after fade
+                  audio.currentTime = CLIP_START_TIME;
+                  button.classList.remove('playing');
+                  if (playIcon) playIcon.classList.remove('hidden');
+                  if (pauseIcon) pauseIcon.classList.add('hidden');
+                  if (nowPlayingText) nowPlayingText.textContent = '90s preview ended';
+                  drawWaveform(0, false);
+                  showToast('90 second preview ended');
+                  if (window.AudioManager) window.AudioManager.onTracklistPreviewStop(audio);
+                  return;
+                }
+
+                // FADE IN: First 3 seconds of clip (60s to 63s)
+                if (currentTime >= CLIP_START_TIME && currentTime < CLIP_START_TIME + FADE_DURATION) {
+                  var fadeInProgress = (currentTime - CLIP_START_TIME) / FADE_DURATION;
+                  audio.volume = currentVolume * fadeInProgress;
+                }
+                // FADE OUT: Last 3 seconds of clip (147s to 150s)
+                else if (currentTime >= FADE_OUT_START) {
+                  var fadeOutProgress = (CLIP_END_TIME - currentTime) / FADE_DURATION;
+                  audio.volume = currentVolume * Math.max(0, fadeOutProgress);
+                }
+                // Normal volume in between
+                else {
+                  audio.volume = currentVolume;
+                }
+
+                // Show clip progress on waveform (60s-150s = 0%-100%)
+                var clipProgress = (currentTime - CLIP_START_TIME) / CLIP_DURATION;
+                drawWaveform(Math.max(0, Math.min(1, clipProgress)), !audio.paused);
               }
             };
-            
+
+            audio.onloadedmetadata = function() {
+              // Set starting position to 60 seconds (or 0 if track is shorter)
+              if (audio.duration > CLIP_START_TIME) {
+                audio.currentTime = CLIP_START_TIME;
+              }
+            };
+
             audio.onended = function() {
               button.classList.remove('playing');
               if (playIcon) playIcon.classList.remove('hidden');
@@ -1383,7 +1434,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
               drawWaveform(0, false);
               if (window.AudioManager) window.AudioManager.onTracklistPreviewStop(audio);
             };
-            
+
             audio.onerror = function() {
               button.classList.remove('playing');
               if (window.AudioManager) window.AudioManager.onTracklistPreviewStop(audio);
@@ -1438,13 +1489,25 @@ const totalDurationFormatted = totalDurationSeconds > 0
           
           currentAudio = audio;
           currentButton = button;
-          
+
+          // Ensure we start at the clip start position (60s)
+          if (audio.duration && audio.duration > CLIP_START_TIME) {
+            if (audio.currentTime < CLIP_START_TIME || audio.currentTime >= CLIP_END_TIME) {
+              audio.currentTime = CLIP_START_TIME;
+              audio.volume = 0; // Start at 0 for fade in
+            }
+          } else {
+            audio.volume = 0; // Start at 0 for fade in
+          }
+
           audio.play().then(function() {
             button.classList.add('playing');
             if (playIcon) playIcon.classList.add('hidden');
             if (pauseIcon) pauseIcon.classList.remove('hidden');
             if (nowPlayingText) nowPlayingText.textContent = trackTitle;
+            showToast('Playing 90 second preview');
           }).catch(function(err) {
+            audio.volume = currentVolume; // Reset volume on error
             alert('Could not play preview. The file may be unavailable.');
             if (window.AudioManager) window.AudioManager.onTracklistPreviewStop(audio);
           });

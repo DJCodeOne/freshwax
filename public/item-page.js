@@ -182,31 +182,56 @@ function formatDate(timestamp) {
   const date = new Date(timestamp);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
-  
+
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
-  
+
   if (minutes < 1) return 'Just now';
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
   if (days < 7) return `${days}d ago`;
-  
+
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+// Toast notification
+function showToast(message) {
+  const existing = document.getElementById('fw-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'fw-toast';
+  toast.textContent = message;
+  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:500;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);animation:fadeInUp 0.3s ease;';
+  document.body.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.animation = 'fadeOut 0.3s ease';
+    setTimeout(() => { toast.remove(); }, 300);
+  }, 2000);
+}
+
 // Player initialization - FIXED with lazy audio creation
+// CLIP RESTRICTION: Play 60 seconds starting at 60s into the track
+const CLIP_START_TIME = 60; // Start at 60 seconds into track
+const CLIP_DURATION = 60;   // Play for 60 seconds max
+const CLIP_END_TIME = CLIP_START_TIME + CLIP_DURATION; // Stop at 120 seconds
+const FADE_DURATION = 3;    // Fade in/out over 3 seconds
+const FADE_OUT_START = CLIP_END_TIME - FADE_DURATION; // Start fading out 3s before end
+const TARGET_VOLUME = 1.0;  // Target volume for playback
+
 function initPlayer() {
   const trackList = document.getElementById('full-track-list');
   if (!trackList) return;
 
   const playButtons = document.querySelectorAll('.play-button');
   const waveformCanvases = document.querySelectorAll('.track-waveform');
-  
+
   let currentAudio = null;
   let currentButton = null;
   let currentCanvas = null;
-  
+
   const bars = 20;
   
   console.log('[Player] Initializing with', playButtons.length, 'play buttons');
@@ -255,11 +280,13 @@ function initPlayer() {
     canvas.addEventListener('click', (e) => {
       const trackId = canvas.getAttribute('data-track-id');
       const audio = document.querySelector(`.track-audio[data-track-id="${trackId}"]`);
-      
+
       if (audio && audio.duration && isFinite(audio.duration)) {
         const rect = canvas.getBoundingClientRect();
         const progress = (e.clientX - rect.left) / rect.width;
-        audio.currentTime = progress * audio.duration;
+        // Seek within clip window (60s-120s) - waveform represents only the clip
+        const seekTime = CLIP_START_TIME + (progress * CLIP_DURATION);
+        audio.currentTime = Math.min(Math.max(seekTime, CLIP_START_TIME), CLIP_END_TIME - 1);
       }
     });
   });
@@ -310,17 +337,59 @@ function initPlayer() {
         audio.preload = 'none';
         audio.src = previewUrl;
         document.getElementById('full-track-list').appendChild(audio);
-        
+
         console.log('[Player] Created audio element for:', trackTitle, 'src:', previewUrl);
-        
+
         // Set up event handlers
         audio.addEventListener('timeupdate', () => {
-          if (audio === currentAudio && audio.duration && isFinite(audio.duration) && canvas) {
-            const progress = audio.currentTime / audio.duration;
-            drawWaveform(canvas, progress, !audio.paused);
+          if (audio === currentAudio && audio.duration && isFinite(audio.duration)) {
+            const currentTime = audio.currentTime;
+
+            // CLIP RESTRICTION: Stop playback at CLIP_END_TIME (120s)
+            if (currentTime >= CLIP_END_TIME) {
+              console.log('[Player] Clip limit reached (60s preview), stopping');
+              audio.pause();
+              audio.volume = TARGET_VOLUME; // Reset volume after fade
+              audio.currentTime = CLIP_START_TIME; // Reset to clip start
+              if (playIcon) playIcon.classList.remove('hidden');
+              if (pauseIcon) pauseIcon.classList.add('hidden');
+              if (canvas) drawWaveform(canvas, 0, false);
+              currentAudio = null;
+              currentButton = null;
+              currentCanvas = null;
+
+              // Show toast notification
+              showToast('60 second preview ended');
+
+              if (window.AudioManager) {
+                window.AudioManager.onTracklistPreviewStop();
+              }
+              return;
+            }
+
+            // FADE IN: First 3 seconds of clip (60s to 63s)
+            if (currentTime >= CLIP_START_TIME && currentTime < CLIP_START_TIME + FADE_DURATION) {
+              const fadeInProgress = (currentTime - CLIP_START_TIME) / FADE_DURATION;
+              audio.volume = TARGET_VOLUME * fadeInProgress;
+            }
+            // FADE OUT: Last 3 seconds of clip (117s to 120s)
+            else if (currentTime >= FADE_OUT_START) {
+              const fadeOutProgress = (CLIP_END_TIME - currentTime) / FADE_DURATION;
+              audio.volume = TARGET_VOLUME * Math.max(0, fadeOutProgress);
+            }
+            // Normal volume in between
+            else {
+              audio.volume = TARGET_VOLUME;
+            }
+
+            // Show clip progress on waveform (60s-120s = 0%-100%)
+            if (canvas) {
+              const clipProgress = (currentTime - CLIP_START_TIME) / CLIP_DURATION;
+              drawWaveform(canvas, Math.max(0, Math.min(1, clipProgress)), !audio.paused);
+            }
           }
         });
-        
+
         audio.addEventListener('ended', () => {
           console.log('[Player] Track ended:', trackId);
           if (playIcon) playIcon.classList.remove('hidden');
@@ -329,17 +398,21 @@ function initPlayer() {
           currentAudio = null;
           currentButton = null;
           currentCanvas = null;
-          
+
           // *** NOTIFY AUDIOMANAGER - allow mini player to resume ***
           if (window.AudioManager) {
             window.AudioManager.onTracklistPreviewStop();
           }
         });
-        
+
         audio.addEventListener('loadedmetadata', () => {
           console.log('[Player] Metadata loaded:', { trackId, duration: audio.duration });
+          // Set starting position to 60 seconds (or 0 if track is shorter)
+          if (audio.duration > CLIP_START_TIME) {
+            audio.currentTime = CLIP_START_TIME;
+          }
         });
-        
+
         audio.addEventListener('error', (e) => {
           console.error('[Player] Audio error:', { trackId, error: e, src: audio.src });
         });
@@ -384,16 +457,28 @@ function initPlayer() {
       currentAudio = audio;
       currentButton = button;
       currentCanvas = canvas;
-      
-      console.log('[Player] Playing track:', trackTitle);
+
+      // Ensure we start at the clip start position (60s)
+      if (audio.duration && audio.duration > CLIP_START_TIME) {
+        if (audio.currentTime < CLIP_START_TIME || audio.currentTime >= CLIP_END_TIME) {
+          audio.currentTime = CLIP_START_TIME;
+          audio.volume = 0; // Start at 0 for fade in
+        }
+      } else {
+        audio.volume = 0; // Start at 0 for fade in
+      }
+
+      console.log('[Player] Playing track:', trackTitle, 'from', CLIP_START_TIME + 's (60s preview)');
       audio.play().then(() => {
         console.log('[Player] Playback started');
         if (playIcon) playIcon.classList.add('hidden');
         if (pauseIcon) pauseIcon.classList.remove('hidden');
+        showToast('Playing 60 second preview');
       }).catch(err => {
         console.error('[Player] Play error:', err);
+        audio.volume = TARGET_VOLUME; // Reset volume on error
         alert('Could not play preview. The file may be unavailable.');
-        
+
         // *** NOTIFY AUDIOMANAGER - play failed ***
         if (window.AudioManager) {
           window.AudioManager.onTracklistPreviewStop();
@@ -1096,6 +1181,94 @@ document.addEventListener('click', (e) => {
   }, 1500);
 });
 
+// ========== WISHLIST SYSTEM ==========
+function getUserId() {
+  const match = document.cookie.match(/(?:^|; )userId=([^;]*)/);
+  return match ? match[1] : null;
+}
+
+function initWishlist() {
+  const wishlistBtn = document.getElementById('wishlistBtn');
+  if (!wishlistBtn || wishlistBtn.hasAttribute('data-wishlist-init')) return;
+  wishlistBtn.setAttribute('data-wishlist-init', 'true');
+
+  const userId = getUserId();
+
+  // Check initial wishlist state
+  if (userId) {
+    const releaseId = wishlistBtn.getAttribute('data-release-id');
+    fetch(`/api/wishlist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, releaseId, action: 'check' })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.inWishlist) {
+        setWishlistState(wishlistBtn, true);
+      }
+    })
+    .catch(err => console.log('[Wishlist] Check error:', err));
+  }
+
+  // Handle click
+  wishlistBtn.addEventListener('click', async () => {
+    const userId = getUserId();
+    const releaseId = wishlistBtn.getAttribute('data-release-id');
+
+    if (!userId) {
+      showToast('Please log in to add items to your wishlist');
+      return;
+    }
+
+    // Disable button during request
+    wishlistBtn.style.opacity = '0.5';
+    wishlistBtn.style.pointerEvents = 'none';
+
+    try {
+      const response = await fetch('/api/wishlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, releaseId, action: 'toggle' })
+      });
+
+      const data = await response.json();
+
+      wishlistBtn.style.opacity = '1';
+      wishlistBtn.style.pointerEvents = 'auto';
+
+      if (data.success) {
+        setWishlistState(wishlistBtn, data.inWishlist);
+        showToast(data.inWishlist ? 'Added to wishlist!' : 'Removed from wishlist');
+      } else {
+        showToast('Failed to update wishlist');
+      }
+    } catch (err) {
+      wishlistBtn.style.opacity = '1';
+      wishlistBtn.style.pointerEvents = 'auto';
+      console.error('[Wishlist] Error:', err);
+      showToast('Failed to update wishlist');
+    }
+  });
+}
+
+function setWishlistState(btn, inWishlist) {
+  const icon = btn.querySelector('.wishlist-icon');
+  if (icon) {
+    if (inWishlist) {
+      icon.setAttribute('fill', 'currentColor');
+      btn.classList.add('bg-red-600', 'border-red-600');
+      btn.classList.remove('bg-gray-700', 'border-gray-500');
+      btn.setAttribute('title', 'Remove from wishlist');
+    } else {
+      icon.setAttribute('fill', 'none');
+      btn.classList.remove('bg-red-600', 'border-red-600');
+      btn.classList.add('bg-gray-700', 'border-gray-500');
+      btn.setAttribute('title', 'Add to wishlist');
+    }
+  }
+}
+
 // Initialize when DOM is ready
 function initializeApp() {
   console.log('[App] Initializing item page...');
@@ -1104,6 +1277,7 @@ function initializeApp() {
   // initComments(); // Handled by inline script in item/[id].astro
   initShare();
   initBio();
+  initWishlist();
   loadSuggestions();
   initCarousel();
   initScrollToComments();
