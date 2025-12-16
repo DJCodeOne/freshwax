@@ -1457,12 +1457,30 @@ async function setupChat(streamId) {
 
   // Make channel available for shoutout sending
   window.pusherChannel = chatChannel;
-  
+
   console.log('[Chat] Pusher connected to stream-' + streamId);
-  
-  setupEmojiPicker();
-  setupGiphyPicker();
-  setupChatInput(streamId);
+  console.log('[Chat] Now calling setup functions for emoji, giphy, and chat input...');
+
+  try {
+    setupEmojiPicker();
+    console.log('[Chat] setupEmojiPicker completed');
+  } catch (e) {
+    console.error('[Chat] setupEmojiPicker failed:', e);
+  }
+
+  try {
+    setupGiphyPicker();
+    console.log('[Chat] setupGiphyPicker completed');
+  } catch (e) {
+    console.error('[Chat] setupGiphyPicker failed:', e);
+  }
+
+  try {
+    setupChatInput(streamId);
+    console.log('[Chat] setupChatInput completed');
+  } catch (e) {
+    console.error('[Chat] setupChatInput failed:', e);
+  }
 }
 
 function renderChatMessages(messages) {
@@ -1480,27 +1498,43 @@ function renderChatMessages(messages) {
   
   container.innerHTML = `
     <div class="chat-welcome" style="text-align: center; padding: 0.75rem; background: #1a1a2e; border-radius: 8px; margin-bottom: 0.5rem;">
-      <p style="color: #a5b4fc; margin: 0; font-size: 0.8125rem;">Welcome! Be respectful 🎵</p>
+      <p style="color: #a5b4fc; margin: 0; font-size: 0.8125rem;">Welcome! Type !help for commands 🎵</p>
     </div>
     ${messages.map(msg => {
       const time = formatTime(msg.createdAt);
-      
+      const isBot = msg.type === 'bot' || msg.userId === 'freshwax-bot';
+
+      // Bot messages have special styling
+      if (isBot) {
+        return `
+          <div class="chat-message chat-bot-message" style="padding: 0.5rem; margin: 0.25rem 0; animation: slideIn 0.2s ease-out; background: linear-gradient(135deg, #1a1a2e 0%, #2d1f3d 100%); border-radius: 8px; border-left: 3px solid #a855f7;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+              <img src="/logo.webp" alt="Bot" style="width: 20px; height: 20px; border-radius: 50%;" />
+              <span style="font-weight: 600; color: #a855f7; font-size: 0.8125rem;">FreshWax Bot</span>
+              <span style="background: #a855f7; color: #fff; font-size: 0.625rem; padding: 0.125rem 0.375rem; border-radius: 4px; font-weight: 600;">BOT</span>
+              <span style="font-size: 0.6875rem; color: #666; margin-left: auto;">${time}</span>
+            </div>
+            <div style="color: #e9d5ff; font-size: 0.875rem; word-break: break-word; line-height: 1.5; white-space: pre-line;">${escapeHtml(msg.message)}</div>
+          </div>
+        `;
+      }
+
       if (msg.type === 'giphy' && msg.giphyUrl) {
         return `
           <div class="chat-message" style="padding: 0.5rem 0; animation: slideIn 0.2s ease-out;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
-              <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem;">${msg.userName}</span>
+              <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem;">${escapeHtml(msg.userName)}</span>
               <span style="font-size: 0.6875rem; color: #666;">${time}</span>
             </div>
             <img src="${msg.giphyUrl}" alt="GIF" style="max-width: 150px; border-radius: 6px;" loading="lazy" />
           </div>
         `;
       }
-      
+
       return `
         <div class="chat-message" style="padding: 0.5rem 0; animation: slideIn 0.2s ease-out;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.125rem;">
-            <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem;">${msg.userName}</span>
+            <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem;">${escapeHtml(msg.userName)}</span>
             <span style="font-size: 0.6875rem; color: #666;">${time}</span>
           </div>
           <div style="color: #fff; font-size: 0.875rem; word-break: break-word; line-height: 1.4;">${escapeHtml(msg.message)}</div>
@@ -1521,11 +1555,19 @@ function escapeHtml(text) {
 }
 
 function setupEmojiPicker() {
+  console.log('[EmojiPicker] Setting up emoji picker...');
   const emojiBtn = document.getElementById('emojiBtn');
   const emojiPicker = document.getElementById('emojiPicker');
   const emojiGrid = document.getElementById('emojiGrid');
   const giphyPicker = document.getElementById('giphyPicker');
-  
+
+  console.log('[EmojiPicker] Elements found:', {
+    emojiBtn: !!emojiBtn,
+    emojiPicker: !!emojiPicker,
+    emojiGrid: !!emojiGrid,
+    giphyPicker: !!giphyPicker
+  });
+
   let currentCategory = 'music';
   
   function renderEmojis(category) {
@@ -1555,25 +1597,38 @@ function setupEmojiPicker() {
   });
   
   if (emojiBtn) {
+    console.log('[EmojiPicker] Attaching click handler to emoji button');
     emojiBtn.onclick = () => {
+      console.log('[EmojiPicker] Emoji button clicked!');
       emojiPicker?.classList.toggle('hidden');
       giphyPicker?.classList.add('hidden');
       emojiBtn.classList.toggle('active');
       document.getElementById('giphyBtn')?.classList.remove('active');
-      
+
       if (!emojiPicker?.classList.contains('hidden')) {
         renderEmojis(currentCategory);
       }
     };
+  } else {
+    console.warn('[EmojiPicker] Emoji button NOT found!');
   }
 }
 
 function setupGiphyPicker() {
+  console.log('[GiphyPicker] Setting up giphy picker...');
+  console.log('[GiphyPicker] GIPHY_API_KEY set:', !!GIPHY_API_KEY, GIPHY_API_KEY ? `(${GIPHY_API_KEY.length} chars)` : '');
   const giphyBtn = document.getElementById('giphyBtn');
   const giphyPicker = document.getElementById('giphyPicker');
   const giphySearch = document.getElementById('giphySearch');
   const giphyGrid = document.getElementById('giphyGrid');
   const emojiPicker = document.getElementById('emojiPicker');
+
+  console.log('[GiphyPicker] Elements found:', {
+    giphyBtn: !!giphyBtn,
+    giphyPicker: !!giphyPicker,
+    giphySearch: !!giphySearch,
+    giphyGrid: !!giphyGrid
+  });
   
   let searchTimeout;
   
@@ -1621,16 +1676,20 @@ function setupGiphyPicker() {
   }
   
   if (giphyBtn) {
+    console.log('[GiphyPicker] Attaching click handler to giphy button');
     giphyBtn.onclick = () => {
+      console.log('[GiphyPicker] Giphy button clicked!');
       giphyPicker?.classList.toggle('hidden');
       emojiPicker?.classList.add('hidden');
       giphyBtn.classList.toggle('active');
       document.getElementById('emojiBtn')?.classList.remove('active');
-      
+
       if (!giphyPicker?.classList.contains('hidden')) {
         searchGiphy('');
       }
     };
+  } else {
+    console.warn('[GiphyPicker] Giphy button NOT found!');
   }
 }
 

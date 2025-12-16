@@ -972,7 +972,8 @@
   .schedule-item {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    gap: 0.75rem;
     position: relative;
     padding: 0.75rem 1rem;
     background: #f9fafb;
@@ -980,32 +981,57 @@
     border-radius: 8px;
     font-size: 0.875rem;
   }
-  
+
   .schedule-item:hover {
     border-color: #dc2626;
   }
-  
+
   .schedule-item.my-slot {
     border-color: #dc2626;
     background: #fef2f2;
   }
-  
+
   .schedule-item.live {
     border-color: #10b981;
     background: #f0fdf4;
   }
-  
+
   .schedule-item.cancelled {
     opacity: 0.6;
   }
-  
+
   .schedule-item.cancelled .schedule-time-val,
   .schedule-item.cancelled .schedule-time-range,
-  .schedule-item.cancelled .schedule-duration {
+  .schedule-item.cancelled .schedule-duration,
+  .schedule-item.cancelled .schedule-duration-val {
     text-decoration: line-through;
     color: #999;
   }
-  
+
+  .schedule-time-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 70px;
+    padding-right: 0.75rem;
+    border-right: 2px solid #e5e7eb;
+    flex-shrink: 0;
+  }
+
+  .schedule-time-block .schedule-time-val {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #dc2626;
+    line-height: 1.2;
+  }
+
+  .schedule-duration-val {
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: 500;
+    margin-top: 0.125rem;
+  }
+
   .schedule-dj-avatar {
     width: 40px;
     height: 40px;
@@ -1014,19 +1040,34 @@
     background: #e5e7eb;
     flex-shrink: 0;
   }
-  
+
   .schedule-dj-info {
-    text-align: center;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
   }
-  
+
   .schedule-dj-info h4 {
-    margin: 0 0 0.25rem 0;
-    font-size: 1.125rem;
+    margin: 0;
+    font-size: 1rem;
     font-weight: 700;
     color: #111;
     line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  
+
+  .schedule-title {
+    display: block;
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 0.125rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .schedule-meta {
     display: flex;
     align-items: center;
@@ -1034,7 +1075,7 @@
     gap: 0.5rem;
     flex-wrap: wrap;
   }
-  
+
   .schedule-time-range,
   .schedule-time-val {
     font-weight: 600;
@@ -1470,7 +1511,19 @@
     align-items: center;
     gap: 1rem;
   }
-  
+
+  .stream-info-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .stream-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
   .live-badge {
     display: flex;
     align-items: center;
@@ -1499,12 +1552,82 @@
     background: #fff;
     animation: pulse 1.5s infinite;
   }
-  
+
+  /* On Air text - styled for live badge */
+  .on-air-text {
+    color: #fff;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .on-air-text.hidden {
+    display: none;
+  }
+
+  #liveStatusText.hidden {
+    display: none;
+  }
+
+  .live-badge.is-live #liveStatusText {
+    color: #fff;
+  }
+
+  /* Like button in stats bar - matches .stat layout */
+  .like-stat {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0;
+    transition: all 0.2s ease;
+    color: inherit;
+    font-family: inherit;
+  }
+
+  .like-stat:hover {
+    color: #dc2626;
+  }
+
+  .like-stat:hover .stat-icon {
+    color: #dc2626;
+  }
+
+  .like-stat:active {
+    transform: scale(0.95);
+  }
+
+  .like-stat.liked .stat-icon {
+    color: #dc2626;
+  }
+
+  .like-stat.clicking {
+    animation: like-pulse 0.3s ease;
+  }
+
+  @keyframes like-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+
   .stream-meta h1 {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 1.5rem;
     color: #fff;
     margin: 0;
+  }
+
+  /* LIVE SESSION title colors */
+  .stream-meta h1 .title-live {
+    color: #fff;
+  }
+
+  .stream-meta h1 .title-session {
+    color: #dc2626;
   }
   
   .stream-dj {
@@ -1560,83 +1683,13 @@
     height: 100%;
   }
   
-  .chat-listeners-grid {
-    display: grid;
-    grid-template-columns: 1fr 240px;
-    gap: 1rem;
+  /* Chat section takes full width now (listeners removed) */
+  .chat-section {
     height: 100%;
-    overflow: hidden;
-  }
-  
-  @media (max-width: 1500px) {
-    .chat-listeners-grid {
-      grid-template-columns: 1fr 200px;
-    }
-  }
-  
-  @media (max-width: 1300px) {
-    .chat-listeners-grid {
-      grid-template-columns: 1fr 180px;
-    }
-  }
-  
-  @media (max-width: 1100px) {
-    .chat-listeners-grid {
-      grid-template-columns: 1fr;
-    }
-    .listeners-card {
-      order: -1;
-    }
-  }
-  
-  .listeners-card {
-    background: #fff;
-    border: 2px solid #333;
-    border-radius: 12px;
-    padding: 1rem;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
   }
-  
-  .listeners-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.75rem;
-  }
-  
-  .listeners-header h3 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #111;
-    margin: 0;
-  }
-  
-  .listener-badge {
-    background: #dc2626;
-    color: #fff;
-    padding: 0.2rem 0.6rem;
-    border-radius: 10px;
-    font-size: 0.85rem;
-    font-weight: 700;
-  }
-  
-  .listeners-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    max-height: 520px;
-    overflow-y: auto;
-  }
-  
-  .listeners-list .empty-message {
-    color: #888;
-    font-size: 0.875rem;
-    text-align: center;
-    padding: 0.75rem 0;
-  }
-  
+
   @media (max-width: 900px) {
     .chat-column {
       order: 3;
@@ -1799,7 +1852,65 @@
     align-items: center;
     justify-content: center;
   }
-  
+
+  /* Fresh Wax watermark/branding overlay */
+  .stream-watermark {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.85;
+    transition: opacity 0.3s ease;
+    display: block !important;
+    visibility: visible !important;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px;
+    border-radius: 6px;
+  }
+
+  .stream-watermark img {
+    width: 80px;
+    height: auto;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+    display: block !important;
+    visibility: visible !important;
+    max-width: none;
+  }
+
+  /* Reduce opacity when video controls are visible (hover) */
+  .video-player:hover .stream-watermark {
+    opacity: 0.3;
+  }
+
+  /* Hide watermark on very small screens */
+  @media (max-width: 480px) {
+    .stream-watermark {
+      top: 10px;
+      left: 10px;
+    }
+
+    .stream-watermark img {
+      width: 50px;
+    }
+  }
+
+  /* Fullscreen video container */
+  .fs-video-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .fs-watermark {
+    top: 20px;
+    left: 20px;
+  }
+
+  .fs-watermark img {
+    width: 100px;
+  }
+
   .audio-only-placeholder {
     display: flex;
     flex-direction: column;
@@ -2122,7 +2233,7 @@
     border-radius: 10px;
     flex-shrink: 0;
   }
-  
+
   .dj-info-left,
   .dj-info-right {
     display: flex;
@@ -2130,18 +2241,17 @@
     gap: 0.75rem;
     min-width: 0;
   }
-  
+
   .dj-info-left {
     flex: 1;
   }
-  
+
   .dj-info-right {
-    flex: 1.5;
+    flex: 1;
     justify-content: flex-end;
   }
-  
-  .dj-info-label,
-  .dj-info-title-label {
+
+  .dj-info-label {
     font-size: 10px;
     font-weight: 700;
     color: #666;
@@ -2149,7 +2259,20 @@
     letter-spacing: 1px;
     flex-shrink: 0;
   }
-  
+
+  .dj-info-bar .dj-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #333;
+    flex-shrink: 0;
+  }
+
+  .dj-info-bar.is-live .dj-avatar {
+    border-color: #dc2626;
+  }
+
   .dj-info-name {
     font-size: 16px;
     font-weight: 700;
@@ -2159,7 +2282,16 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  
+
+  .dj-info-bar .stream-genre {
+    font-size: 12px;
+    color: #666;
+    padding: 0.25rem 0.5rem;
+    background: #222;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
   .dj-info-title {
     font-size: 14px;
     color: #666;
@@ -2167,17 +2299,22 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  
+
   .dj-info-bar.is-live .dj-info-label {
     color: #dc2626;
   }
-  
+
   .dj-info-bar.is-live .dj-info-name {
     color: #fff;
   }
-  
+
   .dj-info-bar.is-live .dj-info-title {
     color: #aaa;
+  }
+
+  .dj-info-bar.is-live .stream-genre {
+    background: rgba(220, 38, 38, 0.2);
+    color: #f87171;
   }
   
   /* Inline Reactions Styles */
@@ -2350,7 +2487,33 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
-  
+
+  /* Pro-locked state for non-Pro users */
+  .record-btn.pro-locked {
+    opacity: 0.6;
+    cursor: pointer;
+    position: relative;
+    border-color: #6b7280;
+  }
+
+  .record-btn.pro-locked .record-dot {
+    background: #6b7280;
+  }
+
+  .record-btn.pro-locked .record-text::after {
+    content: ' 🔒';
+    font-size: 9px;
+  }
+
+  .record-btn.pro-locked:hover {
+    border-color: #f59e0b;
+    color: #f59e0b;
+  }
+
+  .record-btn.pro-locked:hover .record-dot {
+    background: #f59e0b;
+  }
+
   .record-btn:not(:disabled):hover {
     border-color: #dc2626;
     color: #dc2626;
@@ -2547,13 +2710,22 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .chat-messages:has(.chat-message) {
+    justify-content: flex-start;
+    align-items: stretch;
   }
   
   .chat-welcome {
     text-align: center;
-    padding: 1rem;
+    padding: 2rem;
     background: #1a1a2e;
     border-radius: 8px;
+    margin: auto;
+    max-width: 400px;
   }
   
   .chat-welcome p {
@@ -5410,4 +5582,26 @@
     opacity: 1;
   }
   
-  .hidden { display: none !important; }
+  /* Live page scoped hidden class - won't affect Tailwind responsive utilities */
+  .live-page .hidden,
+  #fullscreenMode.hidden,
+  #fsVideo.hidden,
+  #djLobbyBtn.hidden,
+  #countdownOverlay.hidden,
+  #offlineOverlay.hidden,
+  #fsOfflineOverlay.hidden,
+  #audioPlayer.hidden,
+  #videoPlayer.hidden,
+  .pause-icon.hidden,
+  .modal.hidden,
+  .selected-time-info.hidden,
+  #queueSection.hidden,
+  .form-error.hidden,
+  .booking-success.hidden,
+  .lobby-panel.hidden,
+  .lobby-grace-period.hidden,
+  .speed-result.hidden,
+  .end-stream.hidden,
+  .slot-available-section.hidden {
+    display: none !important;
+  }

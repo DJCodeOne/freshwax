@@ -8,23 +8,23 @@
     <h3>LIVE CHAT</h3>
     <span class="chat-viewers" id="chatViewers">0 watching</span>
   </div>
-  
+
   <div class="chat-messages" id="chatMessages">
     <div class="chat-welcome">
       <p>Welcome to <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span> Live Stream!</p>
       <p class="chat-hint">Chat is active during live streams.</p>
     </div>
   </div>
-  
-  <div id="chatInputSection" class="chat-input-section">
+
+  <div id="chatInputSection" class="chat-input-section" style="position: relative;">
     <div id="loginPrompt" class="login-prompt">
       <p><a href="/login">Sign in</a> to chat</p>
     </div>
-    
+
     <div id="chatForm" class="chat-form hidden">
       <div class="chat-tools">
-        <button type="button" id="emojiBtn" class="tool-btn" title="Emojis">:)</button>
-        <button type="button" id="giphyBtn" class="tool-btn" title="GIFs">GIF</button>
+        <button type="button" id="emojiBtn" class="tool-btn" title="Emojis" onclick="window.toggleEmojiPicker()">:)</button>
+        <button type="button" id="giphyBtn" class="tool-btn" title="GIFs" onclick="window.toggleGiphyPicker()">GIF</button>
       </div>
       <div class="chat-input-wrapper">
         <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
@@ -33,24 +33,199 @@
         </button>
       </div>
     </div>
-  </div>
-  
-  <div id="emojiPicker" class="emoji-picker hidden">
-    <div class="emoji-categories">
-      <button class="emoji-cat active" data-cat="music">Music</button>
-      <button class="emoji-cat" data-cat="reactions">Fire</button>
-      <button class="emoji-cat" data-cat="faces">Faces</button>
-      <button class="emoji-cat" data-cat="vibes">Vibes</button>
+
+    <!-- Emoji Picker - positioned above chat input -->
+    <div id="emojiPicker" class="picker-modal hidden">
+      <div class="picker-header">
+        <span>Emojis</span>
+        <button type="button" class="picker-close" onclick="window.toggleEmojiPicker()">×</button>
+      </div>
+      <div class="emoji-categories">
+        <button class="emoji-cat active" data-cat="music" onclick="window.switchEmojiCategory('music')">🎵 Music</button>
+        <button class="emoji-cat" data-cat="reactions" onclick="window.switchEmojiCategory('reactions')">🔥 Fire</button>
+        <button class="emoji-cat" data-cat="faces" onclick="window.switchEmojiCategory('faces')">😎 Faces</button>
+        <button class="emoji-cat" data-cat="vibes" onclick="window.switchEmojiCategory('vibes')">🌴 Vibes</button>
+      </div>
+      <div class="emoji-grid" id="emojiGrid"></div>
     </div>
-    <div class="emoji-grid" id="emojiGrid"></div>
-  </div>
-  
-  <div id="giphyPicker" class="giphy-picker hidden">
-    <div class="giphy-search">
-      <input type="text" id="giphySearch" placeholder="Search GIFs..." />
-    </div>
-    <div class="giphy-grid" id="giphyGrid">
-      <p class="giphy-hint">Search for a GIF above</p>
+
+    <!-- GIF Picker - positioned above chat input -->
+    <div id="giphyPicker" class="picker-modal hidden">
+      <div class="picker-header">
+        <span>GIFs</span>
+        <button type="button" class="picker-close" onclick="window.toggleGiphyPicker()">×</button>
+      </div>
+      <div class="giphy-search">
+        <input type="text" id="giphySearch" placeholder="Search GIFs..." oninput="window.searchGiphyDebounced(this.value)" />
+      </div>
+      <div class="giphy-grid" id="giphyGrid">
+        <p class="giphy-hint">Loading trending GIFs...</p>
+      </div>
     </div>
   </div>
 </div>
+
+<style>
+  /* Picker Modal - Fixed positioning to ensure visibility */
+  .picker-modal {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 0;
+    right: 0;
+    background: #1a1a1a;
+    border: 2px solid #444;
+    border-radius: 12px;
+    padding: 0;
+    z-index: 9999;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+    max-height: 450px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Specific GIF picker sizing */
+  #giphyPicker {
+    max-height: 500px;
+  }
+
+  .picker-modal.hidden {
+    display: none !important;
+  }
+
+  .picker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #222;
+    border-bottom: 1px solid #333;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .picker-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .picker-close:hover {
+    color: #fff;
+  }
+
+  /* Emoji Categories */
+  .emoji-categories {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    flex-wrap: wrap;
+  }
+
+  .emoji-cat {
+    padding: 0.375rem 0.625rem;
+    background: #2a2a2a;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    color: #aaa;
+    transition: all 0.15s;
+  }
+
+  .emoji-cat:hover,
+  .emoji-cat.active {
+    background: #6366f1;
+    color: #fff;
+  }
+
+  /* Emoji Grid */
+  .emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.25rem;
+    padding: 0.5rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .emoji-item {
+    padding: 0.5rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.15s;
+    text-align: center;
+  }
+
+  .emoji-item:hover {
+    background: rgba(99, 102, 241, 0.3);
+  }
+
+  /* GIF Search */
+  .giphy-search {
+    padding: 0.5rem;
+    background: #1a1a1a;
+  }
+
+  .giphy-search input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.875rem;
+  }
+
+  .giphy-search input:focus {
+    outline: none;
+    border-color: #6366f1;
+  }
+
+  /* GIF Grid */
+  .giphy-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    padding: 0.5rem;
+    overflow-y: auto;
+    flex: 1;
+    max-height: 380px;
+  }
+
+  .giphy-item {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  .giphy-item:hover {
+    transform: scale(1.05);
+  }
+
+  .giphy-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .giphy-hint {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #666;
+    padding: 1rem;
+    margin: 0;
+    font-size: 0.875rem;
+  }
+</style>

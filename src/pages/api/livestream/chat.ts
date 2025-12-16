@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { BOT_USER, isBotCommand, processBotCommand } from '../../../lib/chatbot';
 
 // Helper to initialize Firebase and return env
 function initFirebase(locals: any) {
@@ -392,18 +393,57 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }, env);
     console.log('[chat.ts] Pusher broadcast result:', pusherSuccess);
 
+    // Check if this is a bot command and send bot response
+    let botResponse = null;
+    if (isBotCommand(message)) {
+      try {
+        const responseText = await processBotCommand(message, streamId, env);
+        if (responseText) {
+          const botNow = new Date().toISOString();
+          const botMessage = {
+            streamId,
+            userId: BOT_USER.id,
+            userName: BOT_USER.name,
+            userAvatar: BOT_USER.avatar,
+            message: responseText,
+            type: 'bot',
+            badge: BOT_USER.badge,
+            isModerated: false,
+            createdAt: botNow
+          };
+
+          // Save bot message to Firestore
+          const { id: botMessageId } = await addDocument('livestream-chat', botMessage);
+
+          // Broadcast bot message via Pusher
+          await triggerPusher(chatChannel, 'new-message', {
+            id: botMessageId,
+            ...botMessage
+          }, env);
+
+          botResponse = {
+            id: botMessageId,
+            ...botMessage
+          };
+        }
+      } catch (botError) {
+        console.error('[chat] Bot command error:', botError);
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       pusherSuccess,
       message: {
         id: messageId,
         ...chatMessage
-      }
+      },
+      botResponse
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error: any) {
     console.error('[livestream/chat] POST Error:', error);
     return new Response(JSON.stringify({
