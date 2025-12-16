@@ -1522,11 +1522,6 @@ function renderChatMessages(messages) {
     return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Helper to find replied message
-  const findReplyMessage = (replyToId) => {
-    return messages.find(m => m.id === replyToId);
-  };
-
   container.innerHTML = `
     <div class="chat-welcome" style="text-align: center; padding: 0.75rem; background: #1a1a2e; border-radius: 8px; margin-bottom: 0.5rem;">
       <p style="color: #a5b4fc; margin: 0; font-size: 0.8125rem;">Welcome! Type !help for commands 🎵</p>
@@ -1535,12 +1530,12 @@ function renderChatMessages(messages) {
       const time = formatTime(msg.createdAt);
       const isBot = msg.type === 'bot' || msg.userId === 'freshwax-bot';
       const msgPreview = msg.message ? msg.message.substring(0, 50) : '';
-      const replyTo = msg.replyTo ? findReplyMessage(msg.replyTo) : null;
-      const replyHtml = replyTo ? `
+      // Use stored reply info directly (works across all screens)
+      const replyHtml = msg.replyTo && msg.replyToUserName ? `
         <div style="background: #1a1a2e; border-left: 2px solid #444; padding: 0.25rem 0.5rem; margin-bottom: 0.25rem; border-radius: 4px; font-size: 0.75rem;">
           <span style="color: #888;">↩ </span>
-          <span style="color: #dc2626;">${escapeHtml(replyTo.userName)}</span>
-          <span style="color: #666; margin-left: 0.25rem;">${escapeHtml((replyTo.message || 'GIF').substring(0, 40))}${(replyTo.message || '').length > 40 ? '...' : ''}</span>
+          <span style="color: #dc2626;">${escapeHtml(msg.replyToUserName)}</span>
+          <span style="color: #666; margin-left: 0.25rem;">${escapeHtml((msg.replyToPreview || 'GIF').substring(0, 40))}${(msg.replyToPreview || '').length > 40 ? '...' : ''}</span>
         </div>
       ` : '';
 
@@ -1774,7 +1769,11 @@ function setupChatInput(streamId) {
     input.value = '';
 
     // Get reply data and clear it
-    const replyTo = window.replyingTo?.id || null;
+    const replyData = window.replyingTo ? {
+      replyTo: window.replyingTo.id,
+      replyToUserName: window.replyingTo.userName,
+      replyToPreview: window.replyingTo.preview
+    } : {};
     if (window.replyingTo) {
       window.cancelReply();
     }
@@ -1789,7 +1788,7 @@ function setupChatInput(streamId) {
           userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
           message,
           type: 'text',
-          replyTo
+          ...replyData
         })
       });
 
