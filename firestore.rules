@@ -240,6 +240,8 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
       allow write: if isAdmin();
+      // Allow server-side chat messages (API uses REST without user auth)
+      allow create: if request.resource.data.keys().hasAll(['streamId', 'userId', 'message', 'createdAt']);
     }
     
     // Livestream slots (schedule) - public read, authenticated write

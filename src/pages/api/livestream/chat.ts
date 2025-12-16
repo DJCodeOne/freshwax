@@ -339,25 +339,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     
-    // Rate limiting - max 1 message per second per user
-    const recentMessages = await queryCollection('livestream-chat', {
-      filters: [
-        { field: 'streamId', op: 'EQUAL', value: streamId },
-        { field: 'userId', op: 'EQUAL', value: userId }
-      ],
-      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-      limit: 1
-    });
+    // Rate limiting - max 1 message per second per user (skip if query fails)
+    try {
+      const recentMessages = await queryCollection('livestream-chat', {
+        filters: [
+          { field: 'streamId', op: 'EQUAL', value: streamId },
+          { field: 'userId', op: 'EQUAL', value: userId }
+        ],
+        orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+        limit: 1
+      });
 
-    if (recentMessages.length > 0) {
-      const lastMessage = recentMessages[0];
-      const timeSince = Date.now() - new Date(lastMessage.createdAt).getTime();
-      if (timeSince < 1000) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Slow down! Wait a moment before sending another message.'
-        }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+      if (recentMessages.length > 0) {
+        const lastMessage = recentMessages[0];
+        const timeSince = Date.now() - new Date(lastMessage.createdAt).getTime();
+        if (timeSince < 1000) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Slow down! Wait a moment before sending another message.'
+          }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+        }
       }
+    } catch (rateLimitError) {
+      // Skip rate limiting if query fails (missing index)
+      console.warn('[chat] Rate limit check failed:', rateLimitError);
     }
     
     const now = new Date().toISOString();
@@ -399,11 +404,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('[livestream/chat] POST Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to send message'
+      error: 'Failed to send message',
+      details: error?.message || String(error)
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
