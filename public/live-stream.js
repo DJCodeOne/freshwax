@@ -1566,6 +1566,13 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
   const container = document.getElementById('chatMessages');
   if (!container) return;
 
+  // Sort messages by createdAt to ensure correct order (oldest first, newest last)
+  const sortedMessages = [...messages].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+    const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+    return dateA - dateB;
+  });
+
   const wasAtBottom = forceScrollToBottom || container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
 
   // Helper to format time
@@ -1579,7 +1586,7 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
     <div class="chat-welcome" style="text-align: center; padding: 0.75rem; background: #1a1a2e; border-radius: 8px; margin-bottom: 0.5rem;">
       <p style="color: #a5b4fc; margin: 0; font-size: 0.8125rem;">Welcome! Type !help for commands 🎵</p>
     </div>
-    ${messages.map(msg => {
+    ${sortedMessages.map(msg => {
       const time = formatTime(msg.createdAt);
       const isBot = msg.type === 'bot' || msg.userId === 'freshwax-bot';
       const msgPreview = msg.message ? msg.message.substring(0, 50) : '';
@@ -1640,7 +1647,10 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
   `;
 
   if (wasAtBottom) {
-    container.scrollTop = container.scrollHeight;
+    // Use requestAnimationFrame to ensure DOM has updated before scrolling
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+    });
   }
 }
 
@@ -1668,12 +1678,14 @@ function setupEmojiPicker() {
   
   function renderEmojis(category) {
     const emojis = EMOJI_CATEGORIES[category] || [];
-    if (emojiGrid) {
-      emojiGrid.innerHTML = emojis.map(emoji => 
+    // Get fresh reference to handle View Transitions
+    const grid = document.getElementById('emojiGrid');
+    if (grid) {
+      grid.innerHTML = emojis.map(emoji =>
         `<button style="padding: 0.5rem; background: none; border: none; font-size: 1.25rem; cursor: pointer; border-radius: 6px; -webkit-tap-highlight-color: transparent;" data-emoji="${emoji}">${emoji}</button>`
       ).join('');
-      
-      emojiGrid.querySelectorAll('button').forEach(btn => {
+
+      grid.querySelectorAll('button').forEach(btn => {
         btn.onclick = () => {
           const input = document.getElementById('chatInput');
           if (input) input.value += btn.dataset.emoji;
@@ -1693,15 +1705,20 @@ function setupEmojiPicker() {
   });
   
   // Define the toggle function that will be used by both onclick attribute and programmatic handlers
+  // Always get fresh DOM references to handle View Transitions
   window.toggleEmojiPicker = function() {
     console.log('[EmojiPicker] Toggle called');
-    emojiPicker?.classList.toggle('hidden');
-    giphyModal?.classList.add('hidden');
+    const picker = document.getElementById('emojiPicker');
+    const gifModal = document.getElementById('giphyModal');
+    const btn = document.getElementById('emojiBtn');
+
+    picker?.classList.toggle('hidden');
+    gifModal?.classList.add('hidden');
     document.body.style.overflow = ''; // Re-enable scroll if GIF modal was open
-    emojiBtn?.classList.toggle('active');
+    btn?.classList.toggle('active');
     document.getElementById('giphyBtn')?.classList.remove('active');
 
-    if (!emojiPicker?.classList.contains('hidden')) {
+    if (!picker?.classList.contains('hidden')) {
       renderEmojis(currentCategory);
     }
   };
@@ -2158,5 +2175,6 @@ safeInit();
 document.addEventListener('astro:page-load', () => {
   console.log('[LiveStream] astro:page-load event fired');
   isInitialized = false; // Reset flag to allow re-init
+  chatMessages = []; // Clear old messages
   safeInit();
 });
