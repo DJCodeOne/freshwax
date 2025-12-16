@@ -301,7 +301,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { streamId, userId, userName, userAvatar, message, type, giphyUrl, giphyId } = data;
+    const { streamId, userId, userName, userAvatar, message, type, giphyUrl, giphyId, replyTo } = data;
     
     if (!streamId || !userId || !message) {
       return new Response(JSON.stringify({
@@ -377,6 +377,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       type: type || 'text',
       giphyUrl: giphyUrl || null,
       giphyId: giphyId || null,
+      replyTo: replyTo || null,
       isModerated: false,
       createdAt: now
     };

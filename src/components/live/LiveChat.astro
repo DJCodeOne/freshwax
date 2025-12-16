@@ -22,6 +22,7 @@
     </div>
 
     <div id="chatForm" class="chat-form hidden">
+      <div id="replyIndicator" class="reply-indicator" style="display: none;"></div>
       <div class="chat-tools">
         <button type="button" id="emojiBtn" class="tool-btn" title="Emojis" onclick="window.toggleEmojiPicker()">:)</button>
         <button type="button" id="giphyBtn" class="tool-btn" title="GIFs" onclick="window.toggleGiphyPicker()">GIF</button>
@@ -65,7 +66,19 @@
   </div>
 </div>
 
-<style>
+<style is:global>
+  /* Reply Indicator */
+  .reply-indicator {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: #1a1a2e;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    font-size: 0.8125rem;
+    gap: 0.25rem;
+  }
+
   /* Picker Modal - Fixed positioning to ensure visibility */
   .picker-modal {
     position: absolute;

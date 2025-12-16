@@ -1483,19 +1483,50 @@ async function setupChat(streamId) {
   }
 }
 
+// Track reply state
+window.replyingTo = null;
+
+window.replyToMessage = function(msgId, userName, messagePreview) {
+  window.replyingTo = { id: msgId, userName, preview: messagePreview };
+  const replyIndicator = document.getElementById('replyIndicator');
+  if (replyIndicator) {
+    replyIndicator.innerHTML = `
+      <span style="color: #888;">Replying to </span>
+      <span style="color: #dc2626; font-weight: 600;">${escapeHtml(userName)}</span>
+      <span style="color: #666; margin-left: 0.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; display: inline-block; vertical-align: bottom;">${escapeHtml(messagePreview.substring(0, 30))}${messagePreview.length > 30 ? '...' : ''}</span>
+      <button onclick="window.cancelReply()" style="margin-left: auto; background: none; border: none; color: #888; cursor: pointer; font-size: 1rem;">×</button>
+    `;
+    replyIndicator.style.display = 'flex';
+  }
+  document.getElementById('chatInput')?.focus();
+};
+
+window.cancelReply = function() {
+  window.replyingTo = null;
+  const replyIndicator = document.getElementById('replyIndicator');
+  if (replyIndicator) {
+    replyIndicator.style.display = 'none';
+  }
+};
+
 function renderChatMessages(messages) {
   const container = document.getElementById('chatMessages');
   if (!container) return;
-  
+
   const wasAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
-  
+
   // Helper to format time
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   };
-  
+
+  // Helper to find replied message
+  const findReplyMessage = (replyToId) => {
+    return messages.find(m => m.id === replyToId);
+  };
+
   container.innerHTML = `
     <div class="chat-welcome" style="text-align: center; padding: 0.75rem; background: #1a1a2e; border-radius: 8px; margin-bottom: 0.5rem;">
       <p style="color: #a5b4fc; margin: 0; font-size: 0.8125rem;">Welcome! Type !help for commands 🎵</p>
@@ -1503,8 +1534,17 @@ function renderChatMessages(messages) {
     ${messages.map(msg => {
       const time = formatTime(msg.createdAt);
       const isBot = msg.type === 'bot' || msg.userId === 'freshwax-bot';
+      const msgPreview = msg.message ? msg.message.substring(0, 50) : '';
+      const replyTo = msg.replyTo ? findReplyMessage(msg.replyTo) : null;
+      const replyHtml = replyTo ? `
+        <div style="background: #1a1a2e; border-left: 2px solid #444; padding: 0.25rem 0.5rem; margin-bottom: 0.25rem; border-radius: 4px; font-size: 0.75rem;">
+          <span style="color: #888;">↩ </span>
+          <span style="color: #dc2626;">${escapeHtml(replyTo.userName)}</span>
+          <span style="color: #666; margin-left: 0.25rem;">${escapeHtml((replyTo.message || 'GIF').substring(0, 40))}${(replyTo.message || '').length > 40 ? '...' : ''}</span>
+        </div>
+      ` : '';
 
-      // Bot messages have special styling
+      // Bot messages have special styling (no reply button)
       if (isBot) {
         return `
           <div class="chat-message chat-bot-message" style="padding: 0.5rem; margin: 0.25rem 0; animation: slideIn 0.2s ease-out; background: linear-gradient(135deg, #1a1a2e 0%, #2d1f3d 100%); border-radius: 8px; border-left: 3px solid #a855f7;">
@@ -1521,28 +1561,36 @@ function renderChatMessages(messages) {
 
       if (msg.type === 'giphy' && msg.giphyUrl) {
         return `
-          <div class="chat-message" style="padding: 0.5rem 0; animation: slideIn 0.2s ease-out;">
+          <div class="chat-message" style="padding: 0.5rem 0; animation: slideIn 0.2s ease-out; position: relative;" onmouseenter="this.querySelector('.reply-btn').style.opacity='1'" onmouseleave="this.querySelector('.reply-btn').style.opacity='0'">
+            ${replyHtml}
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
               <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem;">${escapeHtml(msg.userName)}</span>
-              <span style="font-size: 0.6875rem; color: #666;">${time}</span>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <button class="reply-btn" onclick="window.replyToMessage('${msg.id}', '${escapeHtml(msg.userName)}', 'GIF')" style="opacity: 0; background: none; border: none; color: #666; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">↩ Reply</button>
+                <span style="font-size: 0.6875rem; color: #666;">${time}</span>
+              </div>
             </div>
-            <img src="${msg.giphyUrl}" alt="GIF" style="max-width: 150px; border-radius: 6px;" loading="lazy" />
+            <img src="${msg.giphyUrl}" alt="GIF" style="max-width: 300px; border-radius: 8px;" loading="lazy" />
           </div>
         `;
       }
 
       return `
-        <div class="chat-message" style="padding: 0.5rem 0; animation: slideIn 0.2s ease-out;">
+        <div class="chat-message" style="padding: 0.5rem 0; animation: slideIn 0.2s ease-out; position: relative;" onmouseenter="this.querySelector('.reply-btn').style.opacity='1'" onmouseleave="this.querySelector('.reply-btn').style.opacity='0'">
+          ${replyHtml}
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.125rem;">
             <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem;">${escapeHtml(msg.userName)}</span>
-            <span style="font-size: 0.6875rem; color: #666;">${time}</span>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <button class="reply-btn" onclick="window.replyToMessage('${msg.id}', '${escapeHtml(msg.userName)}', '${escapeHtml(msgPreview).replace(/'/g, "\\'")}')" style="opacity: 0; background: none; border: none; color: #666; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">↩ Reply</button>
+              <span style="font-size: 0.6875rem; color: #666;">${time}</span>
+            </div>
           </div>
-          <div style="color: #fff; font-size: 0.875rem; word-break: break-word; line-height: 1.4;">${escapeHtml(msg.message)}</div>
+          <div style="color: #fff; font-size: 1rem; word-break: break-word; line-height: 1.5;">${escapeHtml(msg.message)}</div>
         </div>
       `;
     }).join('')}
   `;
-  
+
   if (wasAtBottom) {
     container.scrollTop = container.scrollHeight;
   }
@@ -1718,13 +1766,19 @@ async function sendGiphyMessage(giphyUrl, giphyId) {
 function setupChatInput(streamId) {
   const input = document.getElementById('chatInput');
   const sendBtn = document.getElementById('sendBtn');
-  
+
   async function sendMessage() {
     if (!currentUser || !input?.value.trim()) return;
-    
+
     const message = input.value.trim();
     input.value = '';
-    
+
+    // Get reply data and clear it
+    const replyTo = window.replyingTo?.id || null;
+    if (window.replyingTo) {
+      window.cancelReply();
+    }
+
     try {
       const response = await fetch('/api/livestream/chat', {
         method: 'POST',
@@ -1734,10 +1788,11 @@ function setupChatInput(streamId) {
           userId: currentUser.uid,
           userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
           message,
-          type: 'text'
+          type: 'text',
+          replyTo
         })
       });
-      
+
       const result = await response.json();
       if (!result.success) {
         alert(result.error || 'Failed to send');
