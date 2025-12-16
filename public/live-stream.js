@@ -9,8 +9,31 @@ import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase
 // Pusher for real-time chat (config from window.PUSHER_CONFIG set by Layout.astro)
 let pusher = null;
 let chatChannel = null;
-const PUSHER_KEY = window.PUSHER_CONFIG?.key || '';
-const PUSHER_CLUSTER = window.PUSHER_CONFIG?.cluster || 'eu';
+
+// Get Pusher config at runtime (not module load time) to ensure window.PUSHER_CONFIG is set
+function getPusherConfig() {
+  const config = {
+    key: window.PUSHER_CONFIG?.key || '',
+    cluster: window.PUSHER_CONFIG?.cluster || 'eu'
+  };
+  console.log('[DEBUG] getPusherConfig called:', {
+    hasConfig: !!window.PUSHER_CONFIG,
+    keyLength: config.key.length,
+    keyPrefix: config.key.substring(0, 8),
+    cluster: config.cluster
+  });
+  return config;
+}
+
+// Persistent autoplay: Remember when user has interacted with player
+const AUTOPLAY_KEY = 'freshwax_autoplay';
+function shouldAutoplay() {
+  // Always try autoplay if user has previously played
+  return sessionStorage.getItem(AUTOPLAY_KEY) === 'true';
+}
+function rememberAutoplay() {
+  sessionStorage.setItem(AUTOPLAY_KEY, 'true');
+}
 
 // ==========================================
 // FIREBASE CONFIGURATION
@@ -39,8 +62,6 @@ let isPlaying = false;
 let chatMessages = []; // Store chat messages for Pusher updates
 
 // Recording state
-let mediaRecorder = null;
-let recordedChunks = [];
 let recordingStartTime = null;
 let recordingInterval = null;
 let isRecording = false;
@@ -234,7 +255,9 @@ async function refreshViewerCount(streamId) {
 // ==========================================
 async function checkLiveStatus() {
   try {
-    const response = await fetch('/api/livestream/status');
+    // Add cache buster to avoid Cloudflare caching stale responses
+    const cacheBuster = Date.now();
+    const response = await fetch(`/api/livestream/status?_t=${cacheBuster}`);
     const result = await response.json();
     
     if (result.success && result.isLive && result.primaryStream) {
@@ -285,17 +308,31 @@ function showOfflineState(scheduled) {
 // ==========================================
 function showLiveStream(stream) {
   currentStream = stream;
-  
+
   // Expose stream ID globally for reaction buttons
   window.currentStreamId = stream.id;
   window.firebaseAuth = auth;
-  
+
+  // Hide all offline states (main page and fullscreen mode)
   document.getElementById('offlineState')?.classList.add('hidden');
+  document.getElementById('offlineOverlay')?.classList.add('hidden');
+  document.getElementById('fsOfflineOverlay')?.classList.add('hidden');
   document.getElementById('liveState')?.classList.remove('hidden');
+
+  // Update live badge (main page)
+  const liveBadge = document.getElementById('liveBadge');
+  const liveStatusText = document.getElementById('liveStatusText');
+  if (liveBadge) liveBadge.classList.add('is-live');
+  if (liveStatusText) liveStatusText.textContent = 'LIVE';
+
+  // Update fullscreen mode live badge
+  const fsBadge = document.getElementById('fsLiveBadge');
+  const fsStatus = document.getElementById('fsLiveStatus');
+  if (fsBadge) fsBadge.classList.add('is-live');
+  if (fsStatus) fsStatus.textContent = 'LIVE';
   
-  // Update stream info
+  // Update stream info (main page and fullscreen mode)
   const elements = {
-    streamTitle: stream.title,
     djName: stream.djName,
     streamGenre: stream.genre || 'Jungle / D&B',
     viewerCount: stream.currentViewers || 0,
@@ -303,22 +340,35 @@ function showLiveStream(stream) {
     avgRating: (stream.averageRating || 0).toFixed(1),
     streamDescription: stream.description || 'No description',
     audioDjName: stream.djName || 'DJ',
-    audioShowTitle: stream.title || 'Live on Fresh Wax'
+    audioShowTitle: stream.title || 'Live on Fresh Wax',
+    // Fullscreen mode elements
+    fsStreamTitle: stream.title || 'Live Stream',
+    fsDjName: stream.djName || 'DJ'
   };
-  
+
   Object.entries(elements).forEach(([id, value]) => {
     const el = document.getElementById(id);
     if (el) el.textContent = value;
   });
-  
-  // Update images
+
+  // Set stream title with proper HTML styling (LIVE white, SESSION red)
+  const streamTitleEl = document.getElementById('streamTitle');
+  if (streamTitleEl) {
+    streamTitleEl.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
+  }
+
+  // Update images (main page)
   const djAvatar = document.getElementById('djAvatar');
   const streamCover = document.getElementById('streamCover');
   const vinylDjAvatar = document.getElementById('vinylDjAvatar');
-  
+
   if (stream.djAvatar && djAvatar) djAvatar.src = stream.djAvatar;
   if (stream.coverImage && streamCover) streamCover.src = stream.coverImage;
   if (stream.djAvatar && vinylDjAvatar) vinylDjAvatar.src = stream.djAvatar;
+
+  // Update fullscreen mode images
+  const fsDjAvatar = document.getElementById('fsDjAvatar');
+  if (stream.djAvatar && fsDjAvatar) fsDjAvatar.src = stream.djAvatar;
   
   // Setup player based on stream type/source
   if (stream.streamSource === 'twitch' && stream.twitchChannel) {
@@ -366,7 +416,7 @@ function setupHlsPlayer(stream) {
   }
   
   console.log('[HLS] Setting up player with URL:', hlsUrl);
-  
+
   // Video event handlers for LED meters
   function onVideoPlay() {
     initGlobalAudioAnalyzer(videoElement);
@@ -375,36 +425,71 @@ function setupHlsPlayer(stream) {
     }
     startGlobalMeters();
   }
-  
+
   function onVideoPause() {
     stopGlobalMeters();
   }
-  
+
   if (videoElement) {
     videoElement.addEventListener('play', onVideoPlay);
     videoElement.addEventListener('pause', onVideoPause);
     videoElement.addEventListener('ended', onVideoPause);
-    
+
+    // Add error listener for video element
+    videoElement.addEventListener('error', (e) => {
+      console.error('[HLS] Video element error:', e);
+      console.error('[HLS] Video error code:', videoElement.error?.code);
+      console.error('[HLS] Video error message:', videoElement.error?.message);
+    });
+
     // Mobile-specific: Enable inline playback
     videoElement.setAttribute('playsinline', '');
     videoElement.setAttribute('webkit-playsinline', '');
-    
+
+    const nativeHlsSupport = videoElement.canPlayType('application/vnd.apple.mpegurl');
+
     // Check if HLS is supported natively (Safari/iOS)
-    if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+    // Only use native if "probably" - "maybe" means browser might not actually support it
+    // Chrome returns "maybe" but can't actually play HLS natively
+    if (nativeHlsSupport === 'probably') {
+      console.log('[HLS] Using native HLS support (probably)');
       videoElement.src = hlsUrl;
       videoElement.addEventListener('loadedmetadata', () => {
-        // On mobile, wait for user interaction
-        if (!window.isMobileDevice) {
-          videoElement.play().catch(console.error);
-        }
+        console.log('[HLS] Native: loadedmetadata fired, attempting autoplay');
+        const attemptNativeAutoplay = async () => {
+          try {
+            if (shouldAutoplay()) {
+              await videoElement.play();
+              isPlaying = true;
+              document.getElementById('playIcon')?.classList.add('hidden');
+              document.getElementById('pauseIcon')?.classList.remove('hidden');
+              document.getElementById('playBtn')?.classList.add('playing');
+              console.log('[HLS] Native autoplay successful');
+              return;
+            }
+            // Try muted autoplay
+            videoElement.muted = true;
+            await videoElement.play();
+            isPlaying = true;
+            document.getElementById('playIcon')?.classList.add('hidden');
+            document.getElementById('pauseIcon')?.classList.remove('hidden');
+            document.getElementById('playBtn')?.classList.add('playing');
+            setTimeout(() => { videoElement.muted = false; }, 100);
+          } catch (err) {
+            console.log('[HLS] Native autoplay blocked:', err.name);
+          }
+        };
+        attemptNativeAutoplay();
       });
     }
     // Use HLS.js for other browsers
     else if (window.Hls && Hls.isSupported()) {
+      console.log('[HLS] Using HLS.js library');
       if (hlsPlayer) {
+        console.log('[HLS] Destroying existing player');
         hlsPlayer.destroy();
       }
-      
+
       hlsPlayer = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
@@ -413,19 +498,49 @@ function setupHlsPlayer(stream) {
         maxBufferLength: window.isMobileDevice ? 30 : 60,
         maxMaxBufferLength: window.isMobileDevice ? 60 : 120
       });
-      
+
       hlsPlayer.loadSource(hlsUrl);
       hlsPlayer.attachMedia(videoElement);
-      
+
       hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log('[HLS] Manifest parsed, starting playback');
-        if (!window.isMobileDevice) {
-          videoElement.play().catch(console.error);
-        }
+        console.log('[HLS] Manifest parsed, attempting autoplay');
+        // Always try to autoplay - modern browsers allow muted autoplay
+        // If user has previously played, we try with sound
+        const attemptAutoplay = async () => {
+          try {
+            // First try playing with sound if user previously played
+            if (shouldAutoplay()) {
+              await videoElement.play();
+              isPlaying = true;
+              document.getElementById('playIcon')?.classList.add('hidden');
+              document.getElementById('pauseIcon')?.classList.remove('hidden');
+              document.getElementById('playBtn')?.classList.add('playing');
+              console.log('[HLS] Autoplay successful with sound');
+              return;
+            }
+            // Otherwise try muted autoplay
+            videoElement.muted = true;
+            await videoElement.play();
+            isPlaying = true;
+            document.getElementById('playIcon')?.classList.add('hidden');
+            document.getElementById('pauseIcon')?.classList.remove('hidden');
+            document.getElementById('playBtn')?.classList.add('playing');
+            console.log('[HLS] Muted autoplay successful');
+            // Unmute after a brief moment
+            setTimeout(() => {
+              videoElement.muted = false;
+            }, 100);
+          } catch (err) {
+            console.log('[HLS] Autoplay blocked, waiting for user interaction:', err.name);
+            // Autoplay blocked - show play button
+            document.getElementById('playBtn')?.classList.remove('playing');
+          }
+        };
+        attemptAutoplay();
       });
-      
+
       hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
-        console.error('[HLS] Error:', data);
+        console.error('[HLS] Error:', data.type, data.details);
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
@@ -443,7 +558,7 @@ function setupHlsPlayer(stream) {
               hlsPlayer.recoverMediaError();
               break;
             default:
-              console.error('[HLS] Fatal error');
+              console.error('[HLS] Fatal error, cannot recover');
               hlsPlayer.destroy();
               showStreamError('Stream unavailable. The DJ may still be connecting.');
               setTimeout(() => {
@@ -455,7 +570,7 @@ function setupHlsPlayer(stream) {
         }
       });
     } else {
-      console.error('[HLS] Not supported in this browser');
+      console.error('[HLS] Not supported - Hls exists:', !!window.Hls, 'isSupported:', window.Hls ? Hls.isSupported() : false);
       showStreamError('Your browser does not support HLS playback.');
     }
     
@@ -481,10 +596,13 @@ function setupHlsPlayer(stream) {
           playBtn.classList.remove('playing');
           stopGlobalMeters();
         } else {
+          // Remember that user wants autoplay for future page visits
+          rememberAutoplay();
           initGlobalAudioAnalyzer(videoElement);
           if (globalAudioContext?.state === 'suspended') {
             globalAudioContext.resume();
           }
+          videoElement.muted = false; // Ensure unmuted when user explicitly clicks
           videoElement.play().catch(err => {
             console.error('[HLS] Play error:', err);
             // On mobile, show tap to play message
@@ -739,13 +857,35 @@ function startGlobalMeters() {
 }
 
 // ==========================================
-// STREAM RECORDING
+// STREAM RECORDING (Pro Feature)
 // ==========================================
 function setupRecording(mediaElement) {
   const recordBtn = document.getElementById('recordBtn');
   if (!recordBtn) return;
-  
+
+  // Check if user has Pro subscription
+  const isPro = window.userIsPro === true;
+
+  if (!isPro) {
+    // Non-Pro users: show locked state
+    recordBtn.disabled = true;
+    recordBtn.classList.add('pro-locked');
+    recordBtn.title = '🔒 Upgrade to Pro to record livestreams';
+    recordBtn.onclick = (e) => {
+      e.preventDefault();
+      // Show upgrade prompt
+      const upgrade = confirm('Recording is a Pro feature.\n\nUpgrade to Fresh Wax Pro to record livestreams and download them as audio files.\n\nWould you like to upgrade now?');
+      if (upgrade) {
+        window.location.href = '/account/dashboard#upgrade';
+      }
+    };
+    return;
+  }
+
+  // Pro users: enable recording
   recordBtn.disabled = false;
+  recordBtn.classList.remove('pro-locked');
+  recordBtn.title = 'Record live stream';
   recordBtn.onclick = () => {
     if (isRecording) {
       stopRecording();
@@ -755,15 +895,57 @@ function setupRecording(mediaElement) {
   };
 }
 
-function startRecording(mediaElement) {
+// MP3 encoder variables
+let recordingAudioContext = null;
+let recordingSourceNode = null;
+let recordingScriptNode = null;
+let recordingLeftChannel = [];
+let recordingRightChannel = [];
+let recordingSampleRate = 44100;
+
+// Load lamejs MP3 encoder
+let lameEncoder = null;
+async function loadLameEncoder() {
+  if (lameEncoder) return lameEncoder;
+
+  return new Promise((resolve) => {
+    if (window.lamejs) {
+      lameEncoder = window.lamejs;
+      resolve(lameEncoder);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
+    script.onload = () => {
+      lameEncoder = window.lamejs;
+      console.log('[Recording] Lame encoder loaded');
+      resolve(lameEncoder);
+    };
+    script.onerror = () => {
+      console.error('[Recording] Failed to load lame encoder');
+      resolve(null);
+    };
+    document.head.appendChild(script);
+  });
+}
+
+async function startRecording(mediaElement) {
   const recordBtn = document.getElementById('recordBtn');
   const recordDuration = document.getElementById('recordDuration');
-  
+
   if (!mediaElement) {
     console.error('[Recording] No media element');
     return;
   }
-  
+
+  // Load MP3 encoder
+  await loadLameEncoder();
+  if (!lameEncoder) {
+    alert('Failed to load MP3 encoder. Recording not available.');
+    return;
+  }
+
   try {
     let stream;
     if (mediaElement.captureStream) {
@@ -774,55 +956,58 @@ function startRecording(mediaElement) {
       alert('Recording not supported in your browser.');
       return;
     }
-    
+
     const audioTracks = stream.getAudioTracks();
     if (audioTracks.length === 0) {
       alert('No audio track available.');
       return;
     }
-    
+
     const audioStream = new MediaStream(audioTracks);
-    
-    let mimeType = 'audio/webm;codecs=opus';
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-      mimeType = 'audio/webm';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'audio/ogg;codecs=opus';
-        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
-      }
-    }
-    
-    const options = mimeType ? { mimeType, audioBitsPerSecond: 192000 } : { audioBitsPerSecond: 192000 };
-    mediaRecorder = new MediaRecorder(audioStream, options);
-    recordedChunks = [];
-    
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) recordedChunks.push(e.data);
+
+    // Create audio context for capturing raw PCM data
+    recordingAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    recordingSampleRate = recordingAudioContext.sampleRate;
+    recordingSourceNode = recordingAudioContext.createMediaStreamSource(audioStream);
+
+    // Use ScriptProcessor to capture raw audio (deprecated but widely supported)
+    const bufferSize = 4096;
+    recordingScriptNode = recordingAudioContext.createScriptProcessor(bufferSize, 2, 2);
+
+    // Clear previous recording data
+    recordingLeftChannel = [];
+    recordingRightChannel = [];
+
+    recordingScriptNode.onaudioprocess = (e) => {
+      if (!isRecording) return;
+
+      // Get raw PCM data from both channels
+      const leftData = new Float32Array(e.inputBuffer.getChannelData(0));
+      const rightData = new Float32Array(e.inputBuffer.getChannelData(1));
+
+      recordingLeftChannel.push(leftData);
+      recordingRightChannel.push(rightData);
     };
-    
-    mediaRecorder.onstop = () => downloadRecording();
-    mediaRecorder.onerror = () => {
-      stopRecording();
-      alert('Recording error occurred.');
-    };
-    
-    mediaRecorder.start(1000);
+
+    recordingSourceNode.connect(recordingScriptNode);
+    recordingScriptNode.connect(recordingAudioContext.destination);
+
     isRecording = true;
     recordingStartTime = Date.now();
-    
+
     recordBtn?.classList.add('recording');
     const recordText = recordBtn.querySelector('.record-text');
     if (recordText) recordText.textContent = 'STOP';
     recordDuration?.classList.remove('hidden');
-    
+
     recordingInterval = setInterval(() => {
       const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
       const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
       const secs = (elapsed % 60).toString().padStart(2, '0');
       if (recordDuration) recordDuration.textContent = `${mins}:${secs}`;
     }, 1000);
-    
-    console.log('[Recording] Started');
+
+    console.log('[Recording] Started - capturing at ' + recordingSampleRate + 'Hz');
   } catch (err) {
     console.error('[Recording] Failed:', err);
     alert('Failed to start recording.');
@@ -832,52 +1017,132 @@ function startRecording(mediaElement) {
 function stopRecording() {
   const recordBtn = document.getElementById('recordBtn');
   const recordDuration = document.getElementById('recordDuration');
-  
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop();
-  }
-  
+
+  const wasRecording = isRecording;
   isRecording = false;
-  
+
   if (recordingInterval) {
     clearInterval(recordingInterval);
     recordingInterval = null;
   }
-  
+
+  // Disconnect audio nodes
+  if (recordingScriptNode) {
+    recordingScriptNode.disconnect();
+    recordingScriptNode = null;
+  }
+  if (recordingSourceNode) {
+    recordingSourceNode.disconnect();
+    recordingSourceNode = null;
+  }
+  if (recordingAudioContext) {
+    recordingAudioContext.close();
+    recordingAudioContext = null;
+  }
+
   recordBtn?.classList.remove('recording');
   const recordText = recordBtn?.querySelector('.record-text');
   if (recordText) recordText.textContent = 'REC';
   recordDuration?.classList.add('hidden');
   if (recordDuration) recordDuration.textContent = '00:00';
-  
+
   console.log('[Recording] Stopped');
+
+  // Encode and download if we were recording
+  if (wasRecording && recordingLeftChannel.length > 0) {
+    encodeAndDownloadMp3();
+  }
 }
 
-function downloadRecording() {
-  if (recordedChunks.length === 0) return;
-  
-  const blob = new Blob(recordedChunks, { type: recordedChunks[0].type || 'audio/webm' });
-  const djName = document.getElementById('djName')?.textContent || 'DJ';
-  const streamTitle = document.getElementById('streamTitle')?.textContent || 'Live';
-  const date = new Date().toISOString().split('T')[0];
-  
-  const sanitize = (str) => str.replace(/[^a-zA-Z0-9\s\-\_]/g, '').trim().replace(/\s+/g, '_');
-  const filename = `FreshWax_${sanitize(djName)}_${sanitize(streamTitle)}_${date}.webm`;
-  
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 100);
-  
-  recordedChunks = [];
-  console.log(`[Recording] Downloaded: ${filename}`);
+function encodeAndDownloadMp3() {
+  if (!lameEncoder || recordingLeftChannel.length === 0) {
+    console.log('[Recording] No data to encode');
+    recordingLeftChannel = [];
+    recordingRightChannel = [];
+    return;
+  }
+
+  console.log('[Recording] Encoding to MP3...');
+
+  try {
+    // Flatten the recorded chunks into single arrays
+    const leftLength = recordingLeftChannel.reduce((acc, chunk) => acc + chunk.length, 0);
+    const leftBuffer = new Float32Array(leftLength);
+    const rightBuffer = new Float32Array(leftLength);
+
+    let offset = 0;
+    for (let i = 0; i < recordingLeftChannel.length; i++) {
+      leftBuffer.set(recordingLeftChannel[i], offset);
+      rightBuffer.set(recordingRightChannel[i], offset);
+      offset += recordingLeftChannel[i].length;
+    }
+
+    // Convert Float32 to Int16
+    const leftInt16 = floatTo16BitPCM(leftBuffer);
+    const rightInt16 = floatTo16BitPCM(rightBuffer);
+
+    // Create MP3 encoder at 192kbps stereo
+    const mp3encoder = new lameEncoder.Mp3Encoder(2, recordingSampleRate, 192);
+    const mp3Data = [];
+
+    // Encode in chunks
+    const sampleBlockSize = 1152;
+    for (let i = 0; i < leftInt16.length; i += sampleBlockSize) {
+      const leftChunk = leftInt16.subarray(i, i + sampleBlockSize);
+      const rightChunk = rightInt16.subarray(i, i + sampleBlockSize);
+      const mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
+      if (mp3buf.length > 0) {
+        mp3Data.push(mp3buf);
+      }
+    }
+
+    // Flush remaining data
+    const mp3buf = mp3encoder.flush();
+    if (mp3buf.length > 0) {
+      mp3Data.push(mp3buf);
+    }
+
+    // Create blob from MP3 data
+    const blob = new Blob(mp3Data, { type: 'audio/mp3' });
+
+    // Generate filename
+    const djName = document.getElementById('djName')?.textContent || 'DJ';
+    const streamTitle = document.getElementById('streamTitle')?.textContent || 'Live';
+    const date = new Date().toISOString().split('T')[0];
+    const sanitize = (str) => str.replace(/[^a-zA-Z0-9\s\-\_]/g, '').trim().replace(/\s+/g, '_');
+    const filename = `FreshWax_${sanitize(djName)}_${sanitize(streamTitle)}_${date}.mp3`;
+
+    // Download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+
+    console.log(`[Recording] Downloaded: ${filename} (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
+  } catch (err) {
+    console.error('[Recording] Encoding failed:', err);
+    alert('Failed to encode recording. Please try again.');
+  }
+
+  // Clear buffers
+  recordingLeftChannel = [];
+  recordingRightChannel = [];
+}
+
+function floatTo16BitPCM(input) {
+  const output = new Int16Array(input.length);
+  for (let i = 0; i < input.length; i++) {
+    const s = Math.max(-1, Math.min(1, input[i]));
+    output[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+  return output;
 }
 
 // ==========================================
@@ -1028,23 +1293,58 @@ async function sendHeartbeat(streamId) {
 // CHAT SYSTEM - Pusher Real-time
 // ==========================================
 async function setupChat(streamId) {
+  console.log('[DEBUG] setupChat called with streamId:', streamId);
+
   // Load Pusher script if not already loaded
   if (!window.Pusher) {
+    console.log('[DEBUG] Pusher not loaded, loading script...');
     await new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
-      script.onload = resolve;
-      script.onerror = reject;
+      script.onload = () => {
+        console.log('[DEBUG] Pusher script loaded successfully');
+        resolve();
+      };
+      script.onerror = (e) => {
+        console.error('[DEBUG] Pusher script failed to load:', e);
+        reject(e);
+      };
       document.head.appendChild(script);
     });
+  } else {
+    console.log('[DEBUG] Pusher already loaded');
   }
-  
-  // Initialize Pusher
+
+  // Initialize Pusher with runtime config
   if (!pusher) {
-    pusher = new window.Pusher(PUSHER_KEY, {
-      cluster: PUSHER_CLUSTER,
+    const pusherConfig = getPusherConfig();
+    if (!pusherConfig.key) {
+      console.error('[Chat] Pusher key not configured - check window.PUSHER_CONFIG');
+      console.error('[DEBUG] window.PUSHER_CONFIG:', window.PUSHER_CONFIG);
+      return;
+    }
+    console.log('[Chat] Initializing Pusher with key:', pusherConfig.key.substring(0, 8) + '...');
+
+    // Enable Pusher logging for debug
+    window.Pusher.logToConsole = true;
+
+    pusher = new window.Pusher(pusherConfig.key, {
+      cluster: pusherConfig.cluster,
       forceTLS: true
     });
+
+    // Add connection state logging
+    pusher.connection.bind('state_change', (states) => {
+      console.log('[DEBUG] Pusher state change:', states.previous, '->', states.current);
+    });
+
+    pusher.connection.bind('error', (err) => {
+      console.error('[DEBUG] Pusher connection error:', err);
+    });
+
+    console.log('[DEBUG] Pusher instance created, connection state:', pusher.connection.state);
+  } else {
+    console.log('[DEBUG] Pusher already initialized, state:', pusher.connection.state);
   }
   
   // Load initial messages via API (20 messages, 20 Firebase reads total)
@@ -1061,13 +1361,26 @@ async function setupChat(streamId) {
   
   // Subscribe to Pusher channel for real-time updates (no Firebase reads!)
   if (chatChannel) {
+    console.log('[DEBUG] Unsubscribing from previous channel:', chatChannel.name);
     chatChannel.unbind_all();
     pusher.unsubscribe(chatChannel.name);
   }
-  
-  chatChannel = pusher.subscribe(`stream-${streamId}`);
-  
+
+  const channelName = `stream-${streamId}`;
+  console.log('[DEBUG] Subscribing to channel:', channelName);
+  chatChannel = pusher.subscribe(channelName);
+
+  // Add subscription state logging
+  chatChannel.bind('pusher:subscription_succeeded', () => {
+    console.log('[DEBUG] Successfully subscribed to channel:', channelName);
+  });
+
+  chatChannel.bind('pusher:subscription_error', (error) => {
+    console.error('[DEBUG] Channel subscription error:', channelName, error);
+  });
+
   chatChannel.bind('new-message', (message) => {
+    console.log('[DEBUG] Received new-message event:', message);
     // Add new message to array
     chatMessages.push(message);
     
@@ -1088,19 +1401,27 @@ async function setupChat(streamId) {
   // Listen for reactions from other viewers
   chatChannel.bind('reaction', (data) => {
     console.log('[Reaction] Received:', data);
-    
+    console.log('[Reaction] Current user:', currentUser?.uid);
+    console.log('[Reaction] Data userId:', data.userId);
+
     // Skip if this is our own reaction (we already showed it locally)
-    if (currentUser && data.userId === currentUser.uid) {
-      console.log('[Reaction] Skipping own reaction');
+    // Use a session-based check to allow same user on multiple devices
+    const reactionSessionId = data.sessionId || data.userId;
+    const mySessionId = window.reactionSessionId || currentUser?.uid;
+
+    if (reactionSessionId && mySessionId && reactionSessionId === mySessionId) {
+      console.log('[Reaction] Skipping own reaction (same session)');
       return;
     }
-    
+
     // Display the reaction animation - all reactions are emoji
     const emoji = data.emoji || '❤️';
     const emojiList = emoji.split(',');
-    
+    console.log('[Reaction] Displaying emojis:', emojiList);
+
     // Create burst of emojis in random positions
     const numEmojis = 4 + Math.floor(Math.random() * 4);
+    console.log('[Reaction] Creating', numEmojis, 'floating emojis');
     for (let i = 0; i < numEmojis; i++) {
       setTimeout(() => {
         createFloatingEmojiFromBroadcast(emojiList);
@@ -1115,7 +1436,25 @@ async function setupChat(streamId) {
       window.handleIncomingShoutout(data);
     }
   });
-  
+
+  // Listen for like count updates
+  chatChannel.bind('like-update', (data) => {
+    console.log('[Like Update] Received:', data);
+    const likeCount = document.getElementById('likeCount');
+    if (likeCount && data.totalLikes !== undefined) {
+      likeCount.textContent = data.totalLikes;
+    }
+  });
+
+  // Listen for viewer count updates
+  chatChannel.bind('viewer-update', (data) => {
+    console.log('[Viewer Update] Received:', data);
+    const viewerCount = document.getElementById('viewerCount');
+    if (viewerCount && data.currentViewers !== undefined) {
+      viewerCount.textContent = data.currentViewers;
+    }
+  });
+
   // Make channel available for shoutout sending
   window.pusherChannel = chatChannel;
   
@@ -1393,16 +1732,19 @@ function setupReactions(streamId) {
 
 // Create floating emoji from broadcast (random position)
 function createFloatingEmojiFromBroadcast(emojiList) {
+  console.log('[Reaction] createFloatingEmojiFromBroadcast called with:', emojiList);
   const playerArea = document.querySelector('.player-wrapper') || document.querySelector('.player-column');
   let x, y;
-  
+
   if (playerArea) {
     const rect = playerArea.getBoundingClientRect();
     x = rect.left + Math.random() * rect.width;
     y = rect.top + rect.height * 0.6 + Math.random() * rect.height * 0.3;
+    console.log('[Reaction] Player area found, position:', { x, y, rect });
   } else {
     x = window.innerWidth * 0.3 + Math.random() * window.innerWidth * 0.4;
     y = window.innerHeight * 0.4 + Math.random() * window.innerHeight * 0.3;
+    console.log('[Reaction] No player area, using window position:', { x, y });
   }
   
   // Create the floating emoji

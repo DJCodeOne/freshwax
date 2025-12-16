@@ -69,13 +69,18 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     
     <div class="fullscreen-content">
       <div class="fs-player" id="fsPlayer">
-        <div class="fs-offline-overlay" id="fsOfflineOverlay">
+        <div class="fs-offline-overlay hidden" id="fsOfflineOverlay" style="display: none !important;">
           <div class="fs-offline-content">
             <div class="fs-offline-icon">OFFLINE</div>
             <h2>No one is streaming right now</h2>
           </div>
         </div>
-        <video id="fsVideo" class="fs-video hidden" controls playsinline></video>
+        <div class="fs-video-container">
+          <video id="fsVideo" class="fs-video hidden" controls playsinline></video>
+          <div class="stream-watermark fs-watermark">
+            <img src="/logo.webp" alt="Fresh Wax" />
+          </div>
+        </div>
       </div>
       <div class="fs-chat">
         <div class="fs-chat-header">Live Chat</div>
@@ -176,9 +181,10 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
             <div class="live-badge" id="liveBadge">
               <span class="live-dot"></span>
               <span id="liveStatusText">OFFLINE</span>
+              <span id="onAirText" class="on-air-text hidden">On Air</span>
             </div>
             <div class="stream-meta">
-              <h1 id="streamTitle">No Live Streams</h1>
+              <h1 id="streamTitle"><span class="title-live">LIVE</span> <span class="title-session">SESSION</span></h1>
               <div class="stream-dj">
                 <img id="djAvatar" src="/place-holder.webp" alt="DJ" class="dj-avatar" />
                 <span id="djName">-</span>
@@ -188,7 +194,9 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
           </div>
           <div class="stream-stats">
             <div class="stat"><span class="stat-icon">Views</span><span id="viewerCount">0</span></div>
-            <div class="stat"><span class="stat-icon">Likes</span><span id="likeCount">0</span></div>
+            <button class="stat like-stat" id="likeStatBtn" title="Like this stream">
+              <span class="stat-icon">Likes</span><span id="likeCount">0</span>
+            </button>
             <div class="stat"><span class="stat-icon">Time</span><span id="streamDuration">0:00</span></div>
             <a href="/account/dj-lobby" id="djLobbyBtn" class="dj-lobby-btn hidden" title="Open DJ Lobby">
               <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
@@ -206,9 +214,9 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         </div>
         
         <div class="player-container" id="playerContainer">
-          
-          <!-- Offline Overlay -->
-          <div id="offlineOverlay" class="offline-overlay">
+
+          <!-- Offline Overlay - hidden by default, shown via JS when truly offline -->
+          <div id="offlineOverlay" class="offline-overlay hidden" style="display: none !important;">
             <div class="offline-overlay-content">
               <div class="offline-icon-large">OFFLINE</div>
               <h2>No one is streaming right now</h2>
@@ -276,6 +284,11 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
           
           <div id="videoPlayer" class="video-player hidden">
             <video id="hlsVideoElement" class="hls-video" controls playsinline></video>
+          </div>
+
+          <!-- Fresh Wax watermark - always visible on player -->
+          <div class="stream-watermark" id="playerWatermark">
+            <img src="/logo.webp" alt="Fresh Wax" />
           </div>
         </div>
         
@@ -569,7 +582,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
           </div>
           <div class="rtmp-info">
             <p>RTMP URL:</p>
-            <code>rtmp://stream.freshwax.co.uk/live</code>
+            <code>rtmp://rtmp.freshwax.co.uk/live</code>
           </div>
           <p class="go-live-hint">Start your stream in OBS or your preferred software using the details above.</p>
         </div>
@@ -629,7 +642,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       </div>
       <div class="lobby-rtmp">
         <span class="lobby-label">RTMP URL:</span>
-        <code>rtmp://stream.freshwax.co.uk/live</code>
+        <code>rtmp://rtmp.freshwax.co.uk/live</code>
         <button class="copy-key-btn" onclick="copyRtmpUrl()">Copy</button>
       </div>
       <div class="lobby-buttons">
@@ -688,7 +701,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
             </div>
             <div class="takeover-cred-item">
               <span class="lobby-label">RTMP URL:</span>
-              <code>rtmp://stream.freshwax.co.uk/live</code>
+              <code>rtmp://rtmp.freshwax.co.uk/live</code>
               <button class="copy-key-btn" onclick="copyRtmpUrl()">Copy</button>
             </div>
           </div>
@@ -1045,46 +1058,57 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
 
   // Track reaction state to prevent spam
   let lastReactionTime = 0;
+  // Unique session ID for this browser tab
+  const reactionSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+  window.reactionSessionId = reactionSessionId;
   const REACTION_COOLDOWN = 500; // 500ms between reactions
 
   async function triggerReaction(e) {
     e.preventDefault();
-    
+    console.log('[triggerReaction] Called');
+
     // Require login for all reactions
     const auth = window.firebaseAuth;
     const user = auth?.currentUser;
-    
+    console.log('[triggerReaction] User:', user ? user.uid : 'NOT LOGGED IN');
+
     if (!user) {
       alert('Please sign in to react');
       return;
     }
-    
+
     // Cooldown to prevent spam
     const now = Date.now();
-    if (now - lastReactionTime < REACTION_COOLDOWN) return;
+    if (now - lastReactionTime < REACTION_COOLDOWN) {
+      console.log('[triggerReaction] Cooldown active, skipping');
+      return;
+    }
     lastReactionTime = now;
-    
+
     const btn = e.currentTarget || e.target;
     const emojiList = btn?.dataset?.emoji?.split(',') || ['❤️'];
     const emojiType = btn?.id?.replace('Btn', '') || 'like';
-    
+    console.log('[triggerReaction] Emoji:', emojiList, 'Type:', emojiType);
+
     // Trigger visual animation locally
     triggerReactionBurst(btn, emojiList);
     btn?.classList.add('liked');
     setTimeout(() => btn?.classList.remove('liked'), 300);
-    
+
     // Broadcast to all viewers and increment like count via API
     try {
       // Get current stream ID from the page
       const streamId = window.currentStreamId || document.body.dataset.streamId;
-      
+      console.log('[triggerReaction] StreamId:', streamId);
+
       if (!streamId) {
         console.log('[Reaction] No active stream to react to');
         return;
       }
       
       // Broadcast emoji reaction to all viewers
-      await fetch('/api/livestream/react', {
+      console.log('[triggerReaction] Sending emoji broadcast...');
+      const emojiResponse = await fetch('/api/livestream/react', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1093,11 +1117,15 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
           userId: user.uid,
           userName: user.displayName || user.email?.split('@')[0] || 'Viewer',
           emoji: emojiList.join(','),
-          emojiType: emojiType
+          emojiType: emojiType,
+          sessionId: reactionSessionId
         })
       });
-      
+      const emojiResult = await emojiResponse.json();
+      console.log('[triggerReaction] Emoji broadcast result:', emojiResult);
+
       // Also record as like
+      console.log('[triggerReaction] Sending like...');
       const response = await fetch('/api/livestream/react', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1107,8 +1135,9 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
           userId: user.uid
         })
       });
-      
+
       const result = await response.json();
+      console.log('[triggerReaction] Like result:', result);
       if (result.success) {
         // Update like count in UI
         const likeCount = document.getElementById('likeCount');
@@ -1123,14 +1152,92 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   
   // Setup reaction button click handlers
   setTimeout(() => {
+    console.log('[Reaction Setup] Attaching click handlers...');
     ['likeBtn', 'fireBtn', 'explosionBtn', 'starBtn', 'bassBtn', 'fistBtn', 'rocketBtn'].forEach(id => {
       const btn = document.getElementById(id);
+      console.log(`[Reaction Setup] Button ${id}:`, btn ? 'FOUND' : 'NOT FOUND');
       if (btn) {
-        btn.addEventListener('click', triggerReaction);
+        btn.addEventListener('click', (e) => {
+          console.log(`[Reaction] ${id} clicked!`);
+          triggerReaction(e);
+        });
       }
     });
+
+    // Like button in stats bar
+    const likeStatBtn = document.getElementById('likeStatBtn');
+    if (likeStatBtn) {
+      likeStatBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const auth = window.firebaseAuth;
+        const user = auth?.currentUser;
+
+        if (!user) {
+          alert('Please sign in to like');
+          return;
+        }
+
+        const streamId = window.currentStreamId;
+        if (!streamId) {
+          console.log('[Like] No active stream');
+          return;
+        }
+
+        // Immediate visual feedback - optimistic UI
+        const likeCountEl = document.getElementById('likeCount');
+        const currentCount = parseInt(likeCountEl?.textContent || '0');
+        if (likeCountEl) likeCountEl.textContent = currentCount + 1;
+
+        // Animation feedback
+        likeStatBtn.classList.add('clicking');
+        likeStatBtn.classList.add('liked');
+        setTimeout(() => likeStatBtn.classList.remove('clicking'), 300);
+
+        // Trigger heart animation from button position
+        triggerReactionBurst(likeStatBtn, ['❤️', '💖', '💗', '💓', '💕']);
+
+        try {
+          // Send like and broadcast emoji to all viewers
+          fetch('/api/livestream/react', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'emoji',
+              streamId,
+              userId: user.uid,
+              userName: user.displayName || 'Viewer',
+              emoji: '❤️,💖,💗,💓,💕',
+              emojiType: 'like'
+            })
+          });
+
+          // Increment like count in database
+          const response = await fetch('/api/livestream/react', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'like',
+              streamId,
+              userId: user.uid
+            })
+          });
+
+          const result = await response.json();
+          // Update with actual count from server
+          if (result.success && result.totalLikes !== undefined && likeCountEl) {
+            likeCountEl.textContent = result.totalLikes;
+          }
+        } catch (error) {
+          console.error('[Like] Error:', error);
+          // Revert optimistic update on error
+          if (likeCountEl) likeCountEl.textContent = currentCount;
+        }
+      });
+    }
   }, 100);
-  
+
   // Animation toggle button
   const animToggleBtn = document.getElementById('animToggleBtn');
   const fsAnimToggleBtn = document.getElementById('fsAnimToggleBtn');
@@ -1221,22 +1328,14 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     }
   });
   
-  // Fullscreen reaction buttons - trigger main page reactions
+  // Fullscreen reaction buttons - call triggerReaction directly
   document.querySelectorAll('.fs-reaction-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const emoji = btn.dataset.emoji;
-      // Find matching main page button and click it
-      const mainBtns = {
-        '❤️': 'likeBtn',
-        '🔥': 'fireBtn',
-        '💥': 'explosionBtn',
-        '⭐': 'starBtn',
-        '🔊': 'bassBtn',
-        '👊': 'fistBtn',
-        '🚀': 'rocketBtn'
-      };
-      const mainBtn = document.getElementById(mainBtns[emoji]);
-      mainBtn?.click();
+    // Skip the animation toggle button
+    if (btn.id === 'fsAnimToggleBtn') return;
+
+    btn.addEventListener('click', (e) => {
+      console.log('[Reaction] Button clicked:', btn.dataset.emoji);
+      triggerReaction(e);
     });
   });
   
@@ -1523,29 +1622,43 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   
   // Booking modal - check login first
   document.getElementById('bookSlotBtn')?.addEventListener('click', () => {
+    console.log('[Live] Book Slot button clicked');
+
     // Check if user is logged in by looking for auth state
     const checkAuth = async () => {
+      console.log('[Live] Checking auth state...');
+
       // Wait for auth to be ready
       let user = null;
-      if (window.authReady) {
-        user = await window.authReady;
-      } else {
-        const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-        const auth = getAuth();
-        user = auth.currentUser;
+      try {
+        if (window.authReady) {
+          console.log('[Live] Using window.authReady');
+          user = await window.authReady;
+        } else {
+          console.log('[Live] Importing Firebase Auth...');
+          const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+          const auth = getAuth();
+          user = auth.currentUser;
+        }
+      } catch (err) {
+        console.error('[Live] Auth check error:', err);
       }
-      
+
+      console.log('[Live] User:', user ? { uid: user.uid, displayName: user.displayName, email: user.email } : null);
+
       if (!user) {
         // Not logged in - redirect to login
+        console.log('[Live] No user, redirecting to login');
         window.location.href = '/login?redirect=/live';
         return;
       }
-      
+
       // Logged in - open booking schedule modal
       const displayName = user.displayName || user.email?.split('@')[0] || 'DJ';
+      console.log('[Live] Opening booking schedule with:', { uid: user.uid, displayName });
       window.openBookingSchedule(user.uid, displayName);
     };
-    
+
     checkAuth();
   });
   
@@ -1975,8 +2088,12 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
           avatar: result.avatarUrl || currentUser?.photoURL || null,
           isDj: result.roles?.dj === true || result.roles?.artist === true,
           isAdmin: result.isAdmin || false,
-          isApproved: result.isApproved || false
+          isApproved: result.isApproved || false,
+          isPro: result.isPro || result.isAdmin || false
         };
+
+        // Store Pro status globally for live-stream.js to access
+        window.userIsPro = userInfo.isPro;
         
         // Update global user info for shoutouts
         window.currentUserInfo = {
@@ -2104,7 +2221,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
         await setDoc(doc(firestoreDb, 'djTakeoverRequests', `request_${requesterId}`), {
           status: 'approved',
           requesterId: requesterId,
-          serverUrl: result.serverUrl || 'rtmp://stream.freshwax.co.uk/live',
+          serverUrl: result.serverUrl || 'rtmp://rtmp.freshwax.co.uk/live',
           streamKey: result.streamKey || 'Contact admin for key',
           approvedAt: serverTimestamp()
         }, { merge: true });
@@ -2466,7 +2583,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   };
   
   window.copyRtmpUrl = function() {
-    navigator.clipboard.writeText('rtmp://stream.freshwax.co.uk/live');
+    navigator.clipboard.writeText('rtmp://rtmp.freshwax.co.uk/live');
     showCopyFeedback('RTMP URL copied!');
   };
   
@@ -2848,23 +2965,36 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
     list.innerHTML = todaySlots.map(slot => {
       const isMySlot = currentUser && slot.djId === currentUser.uid;
       const isLive = slot.status === 'live';
-      const duration = Math.round((new Date(slot.endTime) - new Date(slot.startTime)) / 60000);
-      
+      const durationMins = Math.round((new Date(slot.endTime) - new Date(slot.startTime)) / 60000);
+
+      // Format duration nicely: "1 hour", "2 hours", "1.5 hours", or "30 mins"
+      let durationText;
+      if (durationMins >= 60) {
+        const hours = durationMins / 60;
+        if (hours === Math.floor(hours)) {
+          durationText = hours === 1 ? '1 hour' : `${hours} hours`;
+        } else {
+          durationText = `${hours.toFixed(1)} hours`;
+        }
+      } else {
+        durationText = `${durationMins} mins`;
+      }
+
       // Format status text
       let statusText = slot.status;
       if (slot.status === 'in_lobby') statusText = 'In Lobby';
       else if (slot.status === 'queued') statusText = 'Queued';
       else if (slot.status === 'scheduled') statusText = 'Scheduled';
       else if (slot.status === 'live') statusText = 'LIVE';
-      
+
       return `<div class="schedule-item${isMySlot ? ' my-slot' : ''}${isLive ? ' live' : ''}">
+        <div class="schedule-time-block">
+          <span class="schedule-time-val">${formatTime(slot.startTime)}</span>
+          <span class="schedule-duration-val">${durationText}</span>
+        </div>
         <div class="schedule-dj-info">
           <h4>${slot.djName}</h4>
-          <div class="schedule-meta">
-            <span class="schedule-time-val">${formatTime(slot.startTime)}</span>
-            <span class="schedule-separator">•</span>
-            <span class="schedule-duration">${duration}m</span>
-          </div>
+          ${slot.title && slot.title !== slot.djName ? `<span class="schedule-title">${slot.title}</span>` : ''}
           ${statusText ? `<span class="schedule-status ${slot.status}">${statusText}</span>` : ''}
         </div>
         ${isMySlot && (slot.status === 'scheduled' || slot.status === 'queued') ? `<button class="cancel-slot-btn" onclick="cancelSlot('${slot.id}')">×</button>` : ''}
@@ -2913,8 +3043,11 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       
       streamInfoBar?.classList.add('is-live');
       liveBadge?.classList.add('is-live');
-      if (liveStatusText) liveStatusText.textContent = 'LIVE';
-      if (streamTitle) streamTitle.textContent = currentLive.title || `${currentLive.djName} Live`;
+      // Hide status text when live and show "On Air"
+      if (liveStatusText) liveStatusText.classList.add('hidden');
+      const onAirText = document.getElementById('onAirText');
+      if (onAirText) onAirText.classList.remove('hidden');
+      if (streamTitle) streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
       if (djAvatar) djAvatar.src = currentLive.djAvatar || '/place-holder.webp';
       if (djName) djName.textContent = currentLive.djName;
       
@@ -2950,8 +3083,14 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       
       streamInfoBar?.classList.remove('is-live');
       liveBadge?.classList.remove('is-live');
-      if (liveStatusText) liveStatusText.textContent = 'OFFLINE';
-      if (streamTitle) streamTitle.textContent = 'No Live Streams';
+      // Show "OFFLINE" and hide "On Air"
+      if (liveStatusText) {
+        liveStatusText.textContent = 'OFFLINE';
+        liveStatusText.classList.remove('hidden');
+      }
+      const onAirTextOff = document.getElementById('onAirText');
+      if (onAirTextOff) onAirTextOff.classList.add('hidden');
+      if (streamTitle) streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
       if (djAvatar) djAvatar.src = '/place-holder.webp';
       if (djName) djName.textContent = 'Offline';
       
@@ -2976,7 +3115,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
       if (inLobby.length > 0) {
         showCountdown(inLobby[0]);
       } else {
-        offlineOverlay?.classList.remove('hidden');
+        // Offline overlay removed - no longer showing "OFFLINE" message
         countdownOverlay?.classList.add('hidden');
       }
     }
@@ -3808,4 +3947,4 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || '';
   }, { passive: true });
 </script>
 
-<script type="module" src="/live-stream.js"></script>
+<script type="module" src="/live-stream.js?v=20251216-8"></script>

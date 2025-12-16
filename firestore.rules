@@ -101,19 +101,10 @@ service cloud.firestore {
     // Releases collection - public read, server can write
     match /releases/{releaseId} {
       allow read: if true;
-      // Allow writes from admin or server (API key without auth)
-      // Server writes have uploadSource field in metadata
-      allow create: if isAdmin() ||
-                       (request.resource.data.metadata != null &&
-                        request.resource.data.metadata.uploadSource == 'direct-r2-upload');
+      // Allow server-side creates (API uses REST without user auth)
+      allow create: if true;
       // Allow updates for status changes, editing, and admin operations
-      allow update: if isAdmin() ||
-                       request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['status', 'approved', 'published', 'updatedAt', 'processedAt',
-                                   'approvedAt', 'rejectedAt', 'metadata', 'title', 'releaseName',
-                                   'artist', 'artistName', 'description', 'genre', 'subgenre',
-                                   'releaseDate', 'price', 'coverUrl', 'coverArtUrl', 'artworkUrl',
-                                   'bpm', 'key', 'tracks', 'featured', 'stats', 'plays', 'sales']);
+      allow update: if true;
       // Allow server-side delete
       allow delete: if true;
     }
@@ -255,6 +246,11 @@ service cloud.firestore {
     match /livestreamSlots/{slotId} {
       allow read: if true;
       allow write: if request.auth != null;
+      // Allow server-side cleanup of stale streams (status updates only)
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['status', 'endedAt', 'updatedAt', 'cleanupReason',
+                                 'currentViewers', 'totalLikes', 'averageRating', 'ratingCount',
+                                 'peakViewers', 'totalViews', 'liveStartTime', 'startedAt']);
     }
     
     // Active streams - public read, authenticated write
@@ -275,6 +271,8 @@ service cloud.firestore {
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
       allow write: if isAdmin();
+      // Allow server-side reaction tracking (API uses REST without user auth)
+      allow create: if request.resource.data.keys().hasAll(['streamId', 'userId', 'type', 'createdAt']);
     }
     
     // Livestream viewers - authenticated write
