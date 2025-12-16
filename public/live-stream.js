@@ -494,9 +494,22 @@ function setupHlsPlayer(stream) {
         enableWorker: true,
         lowLatencyMode: true,
         backBufferLength: 90,
-        // Mobile optimizations
+        // Buffer settings for stable playback
         maxBufferLength: window.isMobileDevice ? 30 : 60,
-        maxMaxBufferLength: window.isMobileDevice ? 60 : 120
+        maxMaxBufferLength: window.isMobileDevice ? 60 : 120,
+        // Live sync settings - helps prevent audio cuts
+        liveSyncDurationCount: 3,
+        liveMaxLatencyDurationCount: 10,
+        liveDurationInfinity: true,
+        // Stall recovery - auto-recover from buffer stalls
+        highBufferWatchdogPeriod: 2,
+        nudgeOffset: 0.1,
+        nudgeMaxRetry: 5,
+        // Fragment loading retry settings
+        fragLoadingMaxRetry: 6,
+        fragLoadingMaxRetryTimeout: 64000,
+        manifestLoadingMaxRetry: 4,
+        levelLoadingMaxRetry: 4
       });
 
       hlsPlayer.loadSource(hlsUrl);
@@ -1602,13 +1615,13 @@ function setupEmojiPicker() {
   const emojiBtn = document.getElementById('emojiBtn');
   const emojiPicker = document.getElementById('emojiPicker');
   const emojiGrid = document.getElementById('emojiGrid');
-  const giphyPicker = document.getElementById('giphyPicker');
+  const giphyModal = document.getElementById('giphyModal');
 
   console.log('[EmojiPicker] Elements found:', {
     emojiBtn: !!emojiBtn,
     emojiPicker: !!emojiPicker,
     emojiGrid: !!emojiGrid,
-    giphyPicker: !!giphyPicker
+    giphyModal: !!giphyModal
   });
 
   let currentCategory = 'music';
@@ -1644,7 +1657,8 @@ function setupEmojiPicker() {
     emojiBtn.onclick = () => {
       console.log('[EmojiPicker] Emoji button clicked!');
       emojiPicker?.classList.toggle('hidden');
-      giphyPicker?.classList.add('hidden');
+      giphyModal?.classList.add('hidden');
+      document.body.style.overflow = ''; // Re-enable scroll if GIF modal was open
       emojiBtn.classList.toggle('active');
       document.getElementById('giphyBtn')?.classList.remove('active');
 
@@ -1661,79 +1675,134 @@ function setupGiphyPicker() {
   console.log('[GiphyPicker] Setting up giphy picker...');
   console.log('[GiphyPicker] GIPHY_API_KEY set:', !!GIPHY_API_KEY, GIPHY_API_KEY ? `(${GIPHY_API_KEY.length} chars)` : '');
   const giphyBtn = document.getElementById('giphyBtn');
-  const giphyPicker = document.getElementById('giphyPicker');
+  const giphyModal = document.getElementById('giphyModal');
   const giphySearch = document.getElementById('giphySearch');
   const giphyGrid = document.getElementById('giphyGrid');
   const emojiPicker = document.getElementById('emojiPicker');
 
   console.log('[GiphyPicker] Elements found:', {
     giphyBtn: !!giphyBtn,
-    giphyPicker: !!giphyPicker,
+    giphyModal: !!giphyModal,
     giphySearch: !!giphySearch,
     giphyGrid: !!giphyGrid
   });
-  
+
   let searchTimeout;
-  
-  async function searchGiphy(query) {
+  let currentCategory = 'trending';
+
+  async function searchGiphy(query, category = null) {
     if (!GIPHY_API_KEY) {
-      if (giphyGrid) giphyGrid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #666; padding: 1rem;">Giphy not configured</p>';
+      if (giphyGrid) giphyGrid.innerHTML = '<p class="gif-loading">Giphy not configured</p>';
       return;
     }
-    
+
+    // Show loading state
+    if (giphyGrid) giphyGrid.innerHTML = '<p class="gif-loading">Loading GIFs...</p>';
+
     try {
-      const endpoint = query 
-        ? `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=20&rating=pg-13`
-        : `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=20&rating=pg-13`;
-      
+      let endpoint;
+      if (query) {
+        // Search query takes priority
+        endpoint = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=32&rating=pg-13`;
+      } else if (category && category !== 'trending') {
+        // Category search
+        endpoint = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(category)}&limit=32&rating=pg-13`;
+      } else {
+        // Default to trending
+        endpoint = `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=32&rating=pg-13`;
+      }
+
       const response = await fetch(endpoint);
       const data = await response.json();
-      
+
       if (data.data?.length > 0 && giphyGrid) {
         giphyGrid.innerHTML = data.data.map(gif => `
-          <div style="aspect-ratio: 1; border-radius: 6px; overflow: hidden; cursor: pointer; -webkit-tap-highlight-color: transparent;" data-url="${gif.images.fixed_height.url}" data-id="${gif.id}">
-            <img src="${gif.images.fixed_height_small.url}" alt="${gif.title}" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy" />
+          <div class="giphy-item" data-url="${gif.images.fixed_height.url}" data-id="${gif.id}">
+            <img src="${gif.images.fixed_height_small.url}" alt="${gif.title}" loading="lazy" />
           </div>
         `).join('');
-        
-        giphyGrid.querySelectorAll('div[data-url]').forEach(item => {
+
+        giphyGrid.querySelectorAll('.giphy-item').forEach(item => {
           item.onclick = () => {
             sendGiphyMessage(item.dataset.url, item.dataset.id);
-            giphyPicker?.classList.add('hidden');
+            giphyModal?.classList.add('hidden');
             giphyBtn?.classList.remove('active');
+            document.body.style.overflow = '';
           };
         });
       } else if (giphyGrid) {
-        giphyGrid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: #666; padding: 1rem;">No GIFs found</p>';
+        giphyGrid.innerHTML = '<p class="gif-loading">No GIFs found</p>';
       }
     } catch (error) {
       console.error('[Giphy] Error:', error);
+      if (giphyGrid) giphyGrid.innerHTML = '<p class="gif-loading">Error loading GIFs</p>';
     }
   }
-  
-  if (giphySearch) {
-    giphySearch.oninput = (e) => {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => searchGiphy(e.target.value), 500);
-    };
-  }
-  
+
+  // Category switching
+  window.switchGifCategory = function(category) {
+    currentCategory = category;
+    // Update active button
+    document.querySelectorAll('.gif-cat').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.cat === category);
+    });
+    // Clear search and load category
+    if (giphySearch) giphySearch.value = '';
+    searchGiphy('', category);
+  };
+
+  // Debounced search
+  window.searchGiphyDebounced = function(query) {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      if (query) {
+        // Clear category selection when searching
+        document.querySelectorAll('.gif-cat').forEach(btn => btn.classList.remove('active'));
+      }
+      searchGiphy(query);
+    }, 400);
+  };
+
+  // Toggle modal
+  window.toggleGiphyPicker = function() {
+    console.log('[GiphyPicker] Toggle called');
+    emojiPicker?.classList.add('hidden');
+    document.getElementById('emojiBtn')?.classList.remove('active');
+
+    if (giphyModal?.classList.contains('hidden')) {
+      giphyModal.classList.remove('hidden');
+      giphyBtn?.classList.add('active');
+      document.body.style.overflow = 'hidden'; // Prevent background scroll
+      // Reset to trending
+      currentCategory = 'trending';
+      document.querySelectorAll('.gif-cat').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.cat === 'trending');
+      });
+      if (giphySearch) giphySearch.value = '';
+      searchGiphy('', 'trending');
+    } else {
+      giphyModal?.classList.add('hidden');
+      giphyBtn?.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+  };
+
   if (giphyBtn) {
     console.log('[GiphyPicker] Attaching click handler to giphy button');
     giphyBtn.onclick = () => {
       console.log('[GiphyPicker] Giphy button clicked!');
-      giphyPicker?.classList.toggle('hidden');
-      emojiPicker?.classList.add('hidden');
-      giphyBtn.classList.toggle('active');
-      document.getElementById('emojiBtn')?.classList.remove('active');
-
-      if (!giphyPicker?.classList.contains('hidden')) {
-        searchGiphy('');
-      }
+      window.toggleGiphyPicker();
     };
   } else {
     console.warn('[GiphyPicker] Giphy button NOT found!');
   }
+
+  // ESC key to close modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !giphyModal?.classList.contains('hidden')) {
+      window.toggleGiphyPicker();
+    }
+  });
 }
 
 async function sendGiphyMessage(giphyUrl, giphyId) {
@@ -1990,21 +2059,14 @@ window.addEventListener('beforeunload', () => {
   if (isRecording) stopRecording();
 });
 
-// Close pickers on outside click
+// Close emoji picker on outside click (GIF modal handles its own close via overlay onclick)
 document.addEventListener('click', (e) => {
   const emojiPicker = document.getElementById('emojiPicker');
-  const giphyPicker = document.getElementById('giphyPicker');
   const emojiBtn = document.getElementById('emojiBtn');
-  const giphyBtn = document.getElementById('giphyBtn');
-  
+
   if (!emojiPicker?.contains(e.target) && !emojiBtn?.contains(e.target)) {
     emojiPicker?.classList.add('hidden');
     emojiBtn?.classList.remove('active');
-  }
-  
-  if (!giphyPicker?.contains(e.target) && !giphyBtn?.contains(e.target)) {
-    giphyPicker?.classList.add('hidden');
-    giphyBtn?.classList.remove('active');
   }
 });
 

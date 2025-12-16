@@ -50,18 +50,32 @@
       <div class="emoji-grid" id="emojiGrid"></div>
     </div>
 
-    <!-- GIF Picker - positioned above chat input -->
-    <div id="giphyPicker" class="picker-modal hidden">
-      <div class="picker-header">
-        <span>GIFs</span>
-        <button type="button" class="picker-close" onclick="window.toggleGiphyPicker()">×</button>
-      </div>
-      <div class="giphy-search">
-        <input type="text" id="giphySearch" placeholder="Search GIFs..." oninput="window.searchGiphyDebounced(this.value)" />
-      </div>
-      <div class="giphy-grid" id="giphyGrid">
-        <p class="giphy-hint">Loading trending GIFs...</p>
-      </div>
+  </div>
+</div>
+
+<!-- Large GIF Modal - Full overlay -->
+<div id="giphyModal" class="gif-modal-overlay hidden" onclick="if(event.target === this) window.toggleGiphyPicker()">
+  <div class="gif-modal">
+    <div class="gif-modal-header">
+      <h2>Choose a GIF</h2>
+      <button type="button" class="gif-modal-close" onclick="window.toggleGiphyPicker()">×</button>
+    </div>
+    <div class="gif-modal-search">
+      <input type="text" id="giphySearch" placeholder="Search GIFs..." oninput="window.searchGiphyDebounced(this.value)" />
+    </div>
+    <div class="gif-modal-categories">
+      <button class="gif-cat active" data-cat="trending" onclick="window.switchGifCategory('trending')">Trending</button>
+      <button class="gif-cat" data-cat="reactions" onclick="window.switchGifCategory('reactions')">Reactions</button>
+      <button class="gif-cat" data-cat="music" onclick="window.switchGifCategory('music')">Music</button>
+      <button class="gif-cat" data-cat="dance" onclick="window.switchGifCategory('dance')">Dance</button>
+      <button class="gif-cat" data-cat="party" onclick="window.switchGifCategory('party')">Party</button>
+      <button class="gif-cat" data-cat="dj" onclick="window.switchGifCategory('dj')">DJ</button>
+    </div>
+    <div class="gif-modal-grid" id="giphyGrid">
+      <p class="gif-loading">Loading trending GIFs...</p>
+    </div>
+    <div class="gif-modal-footer">
+      <span class="giphy-attribution">Powered by GIPHY</span>
     </div>
   </div>
 </div>
@@ -183,48 +197,172 @@
     background: rgba(99, 102, 241, 0.3);
   }
 
-  /* GIF Search */
-  .giphy-search {
-    padding: 0.5rem;
+  /* Large GIF Modal Overlay */
+  .gif-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: fadeIn 0.2s ease;
+  }
+
+  .gif-modal-overlay.hidden {
+    display: none !important;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .gif-modal {
     background: #1a1a1a;
-  }
-
-  .giphy-search input {
+    border-radius: 16px;
     width: 100%;
-    padding: 0.625rem 0.875rem;
-    background: #111;
+    max-width: 900px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     border: 1px solid #333;
-    border-radius: 8px;
-    color: #fff;
-    font-size: 0.875rem;
+    animation: slideUp 0.25s ease;
   }
 
-  .giphy-search input:focus {
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .gif-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #333;
+    background: #222;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .gif-modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .gif-modal-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+
+  .gif-modal-close:hover {
+    color: #fff;
+  }
+
+  .gif-modal-search {
+    padding: 1rem 1.5rem;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+  }
+
+  .gif-modal-search input {
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    background: #111;
+    border: 2px solid #333;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1rem;
+    transition: border-color 0.15s;
+  }
+
+  .gif-modal-search input:focus {
     outline: none;
     border-color: #6366f1;
   }
 
-  /* GIF Grid */
-  .giphy-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+  .gif-modal-search input::placeholder {
+    color: #666;
+  }
+
+  .gif-modal-categories {
+    display: flex;
     gap: 0.5rem;
-    padding: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    flex-wrap: wrap;
+  }
+
+  .gif-cat {
+    padding: 0.5rem 1rem;
+    background: #2a2a2a;
+    border: none;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    color: #aaa;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+
+  .gif-cat:hover {
+    background: #3a3a3a;
+    color: #fff;
+  }
+
+  .gif-cat.active {
+    background: #6366f1;
+    color: #fff;
+  }
+
+  .gif-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    padding: 1.5rem;
     overflow-y: auto;
     flex: 1;
-    max-height: 380px;
+    min-height: 300px;
+  }
+
+  @media (max-width: 768px) {
+    .gif-modal-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .gif-modal-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 
   .giphy-item {
     aspect-ratio: 1;
-    border-radius: 6px;
+    border-radius: 12px;
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.15s;
+    transition: transform 0.15s, box-shadow 0.15s;
+    background: #222;
   }
 
   .giphy-item:hover {
     transform: scale(1.05);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
   }
 
   .giphy-item img {
@@ -233,12 +371,25 @@
     object-fit: cover;
   }
 
-  .giphy-hint {
+  .gif-loading {
     grid-column: 1 / -1;
     text-align: center;
     color: #666;
-    padding: 1rem;
+    padding: 3rem;
     margin: 0;
-    font-size: 0.875rem;
+    font-size: 1rem;
+  }
+
+  .gif-modal-footer {
+    padding: 0.75rem 1.5rem;
+    background: #222;
+    border-top: 1px solid #333;
+    border-radius: 0 0 16px 16px;
+    text-align: right;
+  }
+
+  .giphy-attribution {
+    font-size: 0.75rem;
+    color: #666;
   }
 </style>
