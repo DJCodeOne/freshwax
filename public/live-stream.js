@@ -12,6 +12,40 @@ let chatChannel = null;
 
 // Emoji/GIF pickers are now handled by inline script in LiveChat.astro
 
+// Register view when entering stream (increments totalViews)
+async function registerStreamView(streamId) {
+  if (!streamId) return;
+
+  // Generate anonymous ID if not logged in
+  const user = auth?.currentUser;
+  const userId = user?.uid || 'anon-' + Math.random().toString(36).substr(2, 9);
+  const userName = user?.displayName || 'Viewer';
+
+  try {
+    const response = await fetch('/api/livestream/listeners', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'join',
+        streamId,
+        userId,
+        userName,
+        avatarUrl: user?.photoURL || null
+      })
+    });
+    const result = await response.json();
+    console.log('[View] Registered stream view:', result);
+
+    // Update the view count display with the new totalViews from server
+    const viewerCount = document.getElementById('viewerCount');
+    if (viewerCount && result.success && result.totalViews) {
+      viewerCount.textContent = result.totalViews;
+    }
+  } catch (e) {
+    console.log('[View] Could not register view:', e);
+  }
+}
+
 // Expose sendGifMessage globally for LiveChat component
 window.sendGifMessage = async function(giphyUrl, giphyId) {
   console.log('[GIF] window.sendGifMessage called:', { giphyUrl, giphyId });
@@ -399,6 +433,9 @@ function showLiveStream(stream) {
   // Expose stream ID globally for reaction buttons
   window.currentStreamId = stream.id;
   window.firebaseAuth = auth;
+
+  // Register view (increments totalViews counter)
+  registerStreamView(stream.id);
 
   // Hide all offline states (main page and fullscreen mode)
   document.getElementById('offlineState')?.classList.add('hidden');
@@ -1370,17 +1407,12 @@ async function sendHeartbeat(streamId) {
         sessionId: viewerSessionId
       })
     });
-    
+
     const data = await response.json();
     const count = data.count || 0;
-    
-    // Update viewer count displays
-    const viewerCount = document.getElementById('viewerCount');
+
+    // Update "watching" display only (not viewerCount - that shows totalViews)
     const chatViewers = document.getElementById('chatViewers');
-    
-    if (viewerCount) {
-      viewerCount.textContent = count;
-    }
     if (chatViewers) {
       chatViewers.textContent = `${count} watching`;
     }

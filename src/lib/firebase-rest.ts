@@ -646,7 +646,12 @@ export async function updateDocument(
     throw new Error('Firebase configuration missing - ensure initFirebaseEnv() is called');
   }
 
-  const updateMask = Object.keys(data).map(key => `updateMask.fieldPaths=${key}`).join('&');
+  // Quote field paths with backticks if they contain special characters, then URL-encode
+  const updateMask = Object.keys(data).map(key => {
+    // Firestore requires backticks around field names with special characters like hyphens
+    const quotedKey = /^[a-zA-Z_][a-zA-Z_0-9]*$/.test(key) ? key : `\`${key}\``;
+    return `updateMask.fieldPaths=${encodeURIComponent(quotedKey)}`;
+  }).join('&');
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?${updateMask}&key=${apiKey}`;
 
   const fields: Record<string, any> = {};

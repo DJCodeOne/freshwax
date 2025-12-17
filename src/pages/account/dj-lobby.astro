@@ -141,7 +141,33 @@ const pusherConfig = {
           <button id="resubmitBypassRequest" class="resubmit-bypass-btn">Submit New Request</button>
         </div>
       </div>
-      
+
+      <!-- Quick Access Key Section -->
+      <div id="quickAccessSection" class="quick-access-section">
+        <div class="bypass-or-divider">
+          <span>OR</span>
+        </div>
+
+        <div class="quick-access-card">
+          <div class="quick-access-header">
+            <span class="quick-access-icon">🔑</span>
+            <div>
+              <h4>Have an access code?</h4>
+              <p>Enter a quick access code to gain instant DJ lobby access.</p>
+            </div>
+          </div>
+          <div class="quick-access-form">
+            <input type="text" id="quickAccessCodeInput" placeholder="Enter access code" maxlength="10" autocomplete="off" />
+            <button id="redeemAccessCodeBtn" class="redeem-code-btn">
+              <span class="btn-text">Redeem Code</span>
+              <span class="btn-spinner hidden">⏳</span>
+            </button>
+          </div>
+          <p id="quickAccessError" class="quick-access-error hidden"></p>
+          <p id="quickAccessSuccess" class="quick-access-success hidden"></p>
+        </div>
+      </div>
+
       <div class="eligibility-why">
         <h4>Why this requirement?</h4>
         <p>This helps ensure our livestreams feature genuine DJs who play jungle and drum & bass music. Upload a quality mix, get your fans to show some love, and you'll be in the lobby in no time! 🔊</p>
@@ -259,6 +285,19 @@ const pusherConfig = {
           </a>
         </div>
 
+        <!-- OBS Setup -->
+        <div class="obs-setup-section">
+          <details class="obs-instructions-compact">
+            <summary>🎬 OBS Quick Setup</summary>
+            <ol>
+              <li>Settings → Stream → Custom</li>
+              <li>Paste Server URL & Key</li>
+              <li>Start Streaming in OBS</li>
+              <li>Click Go Live below</li>
+            </ol>
+          </details>
+        </div>
+
         <!-- DJs Online Box -->
         <div class="djs-online-box">
           <div class="box-header">
@@ -291,9 +330,9 @@ const pusherConfig = {
             </div>
             
             <div id="videoPreview" class="video-preview hidden">
-              <video id="hlsVideo" playsinline></video>
+              <video id="hlsVideo" playsinline autoplay></video>
             </div>
-            
+
             <div id="audioPreview" class="audio-preview hidden">
               <div class="audio-visualizer">
                 <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
@@ -301,7 +340,7 @@ const pusherConfig = {
                 <div class="viz-bar"></div><div class="viz-bar"></div>
               </div>
               <img id="streamCover" src="/place-holder.webp" alt="Stream" class="stream-cover" />
-              <audio id="audioElement" crossorigin="anonymous"></audio>
+              <audio id="audioElement" crossorigin="anonymous" autoplay></audio>
             </div>
             
             <!-- Time Remaining Overlay -->
@@ -371,35 +410,22 @@ const pusherConfig = {
                 </select>
               </div>
 
-              <!-- Bottom Left: Stream Credentials -->
-              <div class="grid-cell credentials-cell">
-                <div class="cred-row">
+              <!-- Stream Credentials - Separate Containers -->
+              <div class="credentials-row-split">
+                <div class="cred-box">
                   <label>RTMP Server</label>
                   <div class="cred-value">
                     <code id="rtmpUrl">rtmp://rtmp.freshwax.co.uk/live</code>
                     <button class="copy-btn" data-copy="rtmpUrl">Copy</button>
                   </div>
                 </div>
-                <div class="cred-row">
+                <div class="cred-box">
                   <label>Stream Key</label>
                   <div class="cred-value">
                     <code id="myStreamKey">Loading...</code>
                     <button class="copy-btn" data-copy="myStreamKey">Copy</button>
                   </div>
                 </div>
-              </div>
-
-              <!-- Bottom Right: OBS Setup -->
-              <div class="grid-cell obs-cell">
-                <details class="obs-instructions-compact">
-                  <summary>OBS Setup</summary>
-                  <ol>
-                    <li>Settings → Stream → Custom</li>
-                    <li>Paste Server URL & Key</li>
-                    <li>Start Streaming in OBS</li>
-                    <li>Click Go Live below</li>
-                  </ol>
-                </details>
               </div>
             </div>
 
@@ -415,7 +441,7 @@ const pusherConfig = {
         </div>
       </div>
       
-      <!-- Right Column: Chat + DJs Online side by side -->
+      <!-- Right Column: Chat + Viewers side by side -->
       <div class="right-column">
         <!-- Chat Section -->
         <div class="chat-section">
@@ -458,6 +484,18 @@ const pusherConfig = {
               <p>Chat embed not available for this platform.</p>
               <a id="relayChatExternalLink" href="#" target="_blank" rel="noopener" class="open-chat-link">Open Chat in New Tab →</a>
             </div>
+          </div>
+        </div>
+
+        <!-- Stream Viewers Column -->
+        <div class="viewers-column">
+          <div class="viewers-header">
+            <span class="viewers-dot"></span>
+            <span>Watching</span>
+            <span class="viewers-count" id="viewerCount">0</span>
+          </div>
+          <div class="viewers-list" id="viewersList">
+            <p class="no-viewers-msg">No viewers yet</p>
           </div>
         </div>
       </div>
@@ -1171,6 +1209,83 @@ const pusherConfig = {
     }
   });
 
+  // Quick Access Code Redemption
+  document.getElementById('redeemAccessCodeBtn')?.addEventListener('click', async () => {
+    const codeInput = document.getElementById('quickAccessCodeInput');
+    const btn = document.getElementById('redeemAccessCodeBtn');
+    const errorEl = document.getElementById('quickAccessError');
+    const successEl = document.getElementById('quickAccessSuccess');
+    const btnText = btn?.querySelector('.btn-text');
+    const btnSpinner = btn?.querySelector('.btn-spinner');
+
+    const code = codeInput?.value?.trim();
+    if (!code) {
+      errorEl.textContent = 'Please enter an access code';
+      errorEl.classList.remove('hidden');
+      successEl.classList.add('hidden');
+      return;
+    }
+
+    // Show loading state
+    btn.disabled = true;
+    btnText?.classList.add('hidden');
+    btnSpinner?.classList.remove('hidden');
+    errorEl.classList.add('hidden');
+    successEl.classList.add('hidden');
+
+    try {
+      const response = await fetch('/api/redeem-access-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: code,
+          userId: userInfo.uid,
+          userEmail: userInfo.email,
+          userName: userInfo.name
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        successEl.textContent = result.message || 'Access granted! Redirecting to lobby...';
+        successEl.classList.remove('hidden');
+        errorEl.classList.add('hidden');
+
+        // Brief delay then reload to show lobby
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        errorEl.textContent = result.error || 'Invalid access code';
+        errorEl.classList.remove('hidden');
+        successEl.classList.add('hidden');
+
+        // Reset button
+        btn.disabled = false;
+        btnText?.classList.remove('hidden');
+        btnSpinner?.classList.add('hidden');
+      }
+    } catch (error) {
+      console.error('[QuickAccess] Redeem error:', error);
+      errorEl.textContent = 'Failed to redeem code. Please try again.';
+      errorEl.classList.remove('hidden');
+      successEl.classList.add('hidden');
+
+      // Reset button
+      btn.disabled = false;
+      btnText?.classList.remove('hidden');
+      btnSpinner?.classList.add('hidden');
+    }
+  });
+
+  // Allow Enter key to submit the quick access code
+  document.getElementById('quickAccessCodeInput')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('redeemAccessCodeBtn')?.click();
+    }
+  });
+
   function showAccessDenied() {
     document.getElementById('authGate').classList.add('hidden');
     document.getElementById('accessDenied').classList.remove('hidden');
@@ -1344,9 +1459,18 @@ const pusherConfig = {
       return;
     }
 
-    // Skip if already playing the same stream
+    // If same stream URL and player exists, check if actually playing
     if (currentHlsUrl === hlsUrl && hlsPlayer) {
-      console.log('[HLS] Already playing this stream, skipping re-init');
+      // Only skip if actually playing, otherwise try to play
+      if (!videoElement.paused && isVideoPlaying) {
+        console.log('[HLS] Already playing this stream, skipping re-init');
+        return;
+      }
+      // Not playing yet, try to play
+      console.log('[HLS] Same stream but not playing, attempting to play...');
+      videoElement.play().catch(e => {
+        console.log('[HLS] Auto-play blocked, user interaction required:', e.message);
+      });
       return;
     }
 
@@ -1366,6 +1490,10 @@ const pusherConfig = {
     if (nativeHlsSupport === 'probably') {
       console.log('[HLS] Using native HLS support');
       videoElement.src = hlsUrl;
+      // Auto-play for native HLS
+      videoElement.play().catch(e => {
+        console.log('[HLS] Auto-play blocked (native), user interaction required:', e.message);
+      });
     } else if (window.Hls && Hls.isSupported()) {
       console.log('[HLS] Using HLS.js library');
       hlsPlayer = new Hls({
@@ -1380,7 +1508,11 @@ const pusherConfig = {
       hlsPlayer.attachMedia(videoElement);
 
       hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log('[HLS] Manifest parsed, ready to play');
+        console.log('[HLS] Manifest parsed, auto-playing...');
+        // Auto-play when manifest is ready
+        videoElement.play().catch(e => {
+          console.log('[HLS] Auto-play blocked, user interaction required:', e.message);
+        });
       });
 
       hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
@@ -1480,13 +1612,22 @@ const pusherConfig = {
         if (isVideoStream) {
           videoPreview.classList.remove('hidden');
           audioPreview.classList.add('hidden');
-          // Setup HLS video player
+          // Setup HLS video player (includes auto-play)
           setupHlsPlayer(currentStream);
         } else {
           audioPreview.classList.remove('hidden');
           videoPreview.classList.add('hidden');
           cleanupHlsPlayer();
           if (currentStream.djAvatar) document.getElementById('streamCover').src = currentStream.djAvatar;
+          // Setup audio stream with auto-play
+          const audioEl = document.getElementById('audioElement');
+          const audioUrl = currentStream.audioStreamUrl || currentStream.streamUrl;
+          if (audioEl && audioUrl) {
+            audioEl.src = audioUrl;
+            audioEl.play().catch(e => {
+              console.log('[Audio] Auto-play blocked, user interaction required:', e.message);
+            });
+          }
         }
 
         // Handle takeover UI and End Stream button based on who is streaming
@@ -1542,6 +1683,48 @@ const pusherConfig = {
       console.error('Stream status error:', e);
     }
   }
+
+  // Fetch and display stream viewers (users on live page)
+  async function loadStreamViewers() {
+    try {
+      const viewersList = document.getElementById('viewersList');
+      const viewerCount = document.getElementById('viewerCount');
+
+      // Need a current stream to show viewers
+      if (!currentStream || !currentStream.id) {
+        viewerCount.textContent = '0';
+        viewerCount.style.background = '#6b7280';
+        viewersList.innerHTML = '<p class="no-viewers-msg">No active stream</p>';
+        return;
+      }
+
+      const response = await fetch(`/api/livestream/listeners?streamId=${currentStream.id}`);
+      const result = await response.json();
+
+      if (result.success && result.listeners && result.listeners.length > 0) {
+        const listeners = result.listeners;
+        viewerCount.textContent = listeners.length;
+        viewerCount.style.background = '#22c55e';
+
+        viewersList.innerHTML = listeners.map(listener => `
+          <div class="viewer-item">
+            <img class="viewer-avatar" src="${listener.avatarUrl || '/place-holder.webp'}" alt="" onerror="this.src='/place-holder.webp'" />
+            <span class="viewer-name">${listener.name || 'Viewer'}</span>
+          </div>
+        `).join('');
+      } else {
+        viewerCount.textContent = '0';
+        viewerCount.style.background = '#6b7280';
+        viewersList.innerHTML = '<p class="no-viewers-msg">No viewers yet</p>';
+      }
+    } catch (e) {
+      console.error('Failed to load viewers:', e);
+    }
+  }
+
+  // Load viewers initially and on interval
+  loadStreamViewers();
+  setInterval(loadStreamViewers, 15000);
 
   // Relay Chat Helper - shows chat from relay source (Twitch, YouTube, etc.)
   function updateRelayChatSection(stream) {

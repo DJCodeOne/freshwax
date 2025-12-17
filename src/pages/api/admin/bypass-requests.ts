@@ -230,55 +230,68 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const approvedStationName = existingRequest.stationName || '';
         const approvedRelayUrl = existingRequest.relayUrl || '';
 
+        console.log('[bypass-requests] Approving request:', { requestId, targetUserId, targetRequestType });
+
         if (targetUserId) {
-          // Update user with bypass permission
-          const updateData: any = {
-            [`${targetRequestType}Bypassed`]: true,
-            bypassedAt: new Date().toISOString(),
-            bypassedBy: 'admin'
-          };
-
-          // If relay URL was provided, add approved relay data
-          if (approvedRelayUrl) {
-            updateData.approvedRelay = {
-              stationName: approvedStationName,
-              relayUrl: approvedRelayUrl,
-              approvedAt: new Date().toISOString(),
-              approvedBy: 'admin'
+          try {
+            // Update user with bypass permission
+            const updateData: any = {
+              [`${targetRequestType}Bypassed`]: true,
+              bypassedAt: new Date().toISOString(),
+              bypassedBy: 'admin'
             };
+
+            // If relay URL was provided, add approved relay data
+            if (approvedRelayUrl) {
+              updateData.approvedRelay = {
+                stationName: approvedStationName,
+                relayUrl: approvedRelayUrl,
+                approvedAt: new Date().toISOString(),
+                approvedBy: 'admin'
+              };
+            }
+
+            console.log('[bypass-requests] Updating user document...');
+            const existingUser = await getDocument('users', targetUserId);
+            if (existingUser) {
+              await updateDocument('users', targetUserId, updateData);
+            } else {
+              await setDocument('users', targetUserId, updateData);
+            }
+            console.log('[bypass-requests] User document updated');
+
+            // Also add to djLobbyBypass collection for the admin list
+            const bypassData: any = {
+              email: userEmail,
+              name: userName,
+              reason: existingRequest.reason || 'Approved via bypass request',
+              grantedAt: new Date().toISOString(),
+              grantedBy: 'admin'
+            };
+
+            // Include relay info if provided
+            if (approvedRelayUrl) {
+              bypassData.stationName = approvedStationName;
+              bypassData.relayUrl = approvedRelayUrl;
+              bypassData.relayApproved = true;
+            }
+
+            console.log('[bypass-requests] Adding to djLobbyBypass...');
+            await setDocument('djLobbyBypass', targetUserId, bypassData);
+            console.log('[bypass-requests] Added to djLobbyBypass');
+          } catch (userUpdateError: any) {
+            console.error('[bypass-requests] Error updating user:', userUpdateError);
+            throw userUpdateError;
           }
-
-          const existingUser = await getDocument('users', targetUserId);
-          if (existingUser) {
-            await updateDocument('users', targetUserId, updateData);
-          } else {
-            await setDocument('users', targetUserId, updateData);
-          }
-
-          // Also add to djLobbyBypass collection for the admin list
-          const bypassData: any = {
-            email: userEmail,
-            name: userName,
-            reason: existingRequest.reason || 'Approved via bypass request',
-            grantedAt: new Date(),
-            grantedBy: 'admin'
-          };
-
-          // Include relay info if provided
-          if (approvedRelayUrl) {
-            bypassData.stationName = approvedStationName;
-            bypassData.relayUrl = approvedRelayUrl;
-            bypassData.relayApproved = true;
-          }
-
-          await setDocument('djLobbyBypass', targetUserId, bypassData);
         }
 
         // Update request status
+        console.log('[bypass-requests] Updating request status...');
         await updateDocument('bypassRequests', requestId, {
           status: 'approved',
           processedAt: new Date().toISOString()
         });
+        console.log('[bypass-requests] Request approved successfully');
 
         return new Response(JSON.stringify({
           success: true,

@@ -378,17 +378,169 @@ export const prerender = false;
     letter-spacing: 0.02em;
   }
 
-  @media (max-width: 640px) { 
-    .bypass-request-card { 
-      flex-direction: column; 
-    } 
-    .bypass-request-actions { 
-      flex-direction: row; 
-      width: 100%; 
-    } 
-    .bypass-request-actions button { 
-      flex: 1; 
-    } 
+  @media (max-width: 640px) {
+    .bypass-request-card {
+      flex-direction: column;
+    }
+    .bypass-request-actions {
+      flex-direction: row;
+      width: 100%;
+    }
+    .bypass-request-actions button {
+      flex: 1;
+    }
+  }
+
+  /* Quick Access Key Styles */
+  .quick-access-key-display {
+    margin-top: 1rem;
+  }
+
+  .key-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 2px solid #10b981;
+    border-radius: 12px;
+    padding: 1.5rem;
+    color: #fff;
+  }
+
+  .key-card.inactive {
+    border-color: #6b7280;
+    opacity: 0.7;
+  }
+
+  .key-code-display {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .key-code {
+    font-family: 'Courier New', monospace;
+    font-size: 2rem;
+    font-weight: bold;
+    letter-spacing: 0.2em;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 1px dashed #10b981;
+  }
+
+  .copy-key-btn {
+    padding: 0.5rem 1rem;
+    background: #10b981;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .copy-key-btn:hover {
+    background: #059669;
+  }
+
+  .key-meta {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: #9ca3af;
+  }
+
+  .key-status {
+    font-weight: 600;
+  }
+
+  .key-status.active {
+    color: #10b981;
+  }
+
+  .key-status.inactive {
+    color: #ef4444;
+  }
+
+  .key-actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .key-actions button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .revoke-key-btn {
+    background: #ef4444;
+    color: #fff;
+  }
+
+  .revoke-key-btn:hover {
+    background: #dc2626;
+  }
+
+  .expiry-btn {
+    background: #374151;
+    color: #fff;
+  }
+
+  .expiry-btn:hover {
+    background: #4b5563;
+  }
+
+  .no-key-state {
+    text-align: center;
+    padding: 2rem;
+    background: var(--bg-secondary, #f9fafb);
+    border: 2px dashed var(--border-light, #e5e5e5);
+    border-radius: 12px;
+  }
+
+  .no-key-state p {
+    margin: 0;
+    color: var(--text-secondary, #6b7280);
+  }
+
+  .no-key-state .hint {
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+  }
+
+  .key-users-list {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-light, #e5e5e5);
+  }
+
+  .key-users-list h4 {
+    font-size: 0.9rem;
+    color: var(--text-secondary, #6b7280);
+    margin: 0 0 0.75rem 0;
+  }
+
+  .key-user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-secondary, #f9fafb);
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+  }
+
+  .user-email {
+    font-weight: 500;
+  }
+
+  .user-date {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #6b7280);
   }
 </style>
 
@@ -457,6 +609,25 @@ export const prerender = false;
       <h2>📼 Recent Streams</h2>
       <div id="recentStreams" class="streams-list">
         <p class="loading">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Quick Access Key -->
+    <div class="section">
+      <div class="section-header">
+        <h2>🔑 Quick Access Key</h2>
+        <button id="generateKeyBtn" class="add-btn">+ Generate New Key</button>
+      </div>
+      <p class="section-desc">Generate a code that DJs can use to instantly get lobby access. Share this code with DJs you want to grant access to.</p>
+
+      <div id="quickAccessKeyDisplay" class="quick-access-key-display">
+        <p class="loading">Loading...</p>
+      </div>
+
+      <!-- Key users list -->
+      <div id="keyUsersList" class="key-users-list hidden">
+        <h4>Users who redeemed this key:</h4>
+        <div id="keyUsersContainer"></div>
       </div>
     </div>
 
@@ -643,7 +814,8 @@ export const prerender = false;
       loadBypassList(),
       loadModerationList(),
       loadBypassRequests(),
-      loadEventRequests()
+      loadEventRequests(),
+      loadQuickAccessKey()
     ]);
 
     setupEventListeners();
@@ -1055,7 +1227,174 @@ export const prerender = false;
       container.innerHTML = '<p class="empty-state">Failed to load bypass list</p>';
     }
   }
-  
+
+  // ==========================================
+  // QUICK ACCESS KEY FUNCTIONS
+  // ==========================================
+
+  async function loadQuickAccessKey() {
+    const container = document.getElementById('quickAccessKeyDisplay');
+    const usersList = document.getElementById('keyUsersList');
+    const usersContainer = document.getElementById('keyUsersContainer');
+
+    try {
+      const response = await fetch(`/api/admin/quick-access-key?adminKey=${ADMIN_KEY}`);
+      const result = await response.json();
+
+      if (result.success && result.hasKey) {
+        const key = result.key;
+        const isExpired = key.expiresAt && new Date(key.expiresAt) < new Date();
+        const expiryText = key.expiresAt
+          ? `Expires: ${new Date(key.expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+          : 'No expiry';
+
+        container.innerHTML = `
+          <div class="key-card ${!key.active || isExpired ? 'inactive' : ''}">
+            <div class="key-code-display">
+              <span class="key-code">${key.code}</span>
+              <button class="copy-key-btn" onclick="copyAccessKey('${key.code}')">📋 Copy</button>
+            </div>
+            <div class="key-meta">
+              <span class="key-status ${key.active && !isExpired ? 'active' : 'inactive'}">
+                ${!key.active ? '🚫 Revoked' : isExpired ? '⏰ Expired' : '✅ Active'}
+              </span>
+              <span>${expiryText}</span>
+              <span>Used by ${key.usedCount || 0} DJs</span>
+            </div>
+            <div class="key-actions">
+              ${key.active && !isExpired ? `<button class="revoke-key-btn" onclick="revokeQuickAccessKey()">Revoke Key</button>` : ''}
+              <button class="expiry-btn" onclick="showSetExpiryModal()">Set Expiry</button>
+            </div>
+          </div>
+        `;
+
+        // Show users who redeemed
+        if (key.usedBy && key.usedBy.length > 0) {
+          usersList.classList.remove('hidden');
+          usersContainer.innerHTML = key.usedBy.map(user => `
+            <div class="key-user-item">
+              <span class="user-email">${user.email || user.name || user.userId}</span>
+              <span class="user-date">${user.redeemedAt ? new Date(user.redeemedAt).toLocaleDateString('en-GB') : ''}</span>
+            </div>
+          `).join('');
+        } else {
+          usersList.classList.add('hidden');
+        }
+      } else {
+        container.innerHTML = `
+          <div class="no-key-state">
+            <p>No quick access key generated yet.</p>
+            <p class="hint">Click "Generate New Key" to create one.</p>
+          </div>
+        `;
+        usersList.classList.add('hidden');
+      }
+    } catch (error) {
+      console.error('Error loading quick access key:', error);
+      container.innerHTML = '<p class="empty-state">Failed to load quick access key</p>';
+    }
+  }
+
+  window.copyAccessKey = function(code) {
+    navigator.clipboard.writeText(code).then(() => {
+      const btn = document.querySelector('.copy-key-btn');
+      if (btn) {
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+      }
+    });
+  };
+
+  window.revokeQuickAccessKey = async function() {
+    if (!confirm('Revoke the quick access key? Users who already redeemed will keep their access.')) return;
+
+    try {
+      const response = await fetch('/api/admin/quick-access-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'revoke',
+          adminKey: ADMIN_KEY
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        loadQuickAccessKey();
+      } else {
+        alert('Error: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error revoking key:', error);
+      alert('Failed to revoke key');
+    }
+  };
+
+  window.showSetExpiryModal = function() {
+    const expiry = prompt('Set expiry date (YYYY-MM-DD) or leave empty to remove expiry:');
+    if (expiry === null) return; // Cancelled
+
+    setKeyExpiry(expiry || null);
+  };
+
+  async function setKeyExpiry(expiresAt) {
+    try {
+      const response = await fetch('/api/admin/quick-access-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'setExpiry',
+          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+          adminKey: ADMIN_KEY
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        loadQuickAccessKey();
+      } else {
+        alert('Error: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error setting expiry:', error);
+      alert('Failed to set expiry');
+    }
+  }
+
+  document.getElementById('generateKeyBtn')?.addEventListener('click', async () => {
+    const confirmMsg = 'Generate a new quick access key? This will replace any existing key.';
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const response = await fetch('/api/admin/quick-access-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'generate',
+          adminKey: ADMIN_KEY
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        loadQuickAccessKey();
+        alert('New key generated: ' + result.key.code);
+      } else {
+        alert('Error: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error generating key:', error);
+      alert('Failed to generate key');
+    }
+  });
+
+  // ==========================================
+  // END QUICK ACCESS KEY FUNCTIONS
+  // ==========================================
+
   window.revokeBypass = async function(userId, email) {
     if (!confirm(`Revoke lobby access bypass for ${email || userId}?`)) return;
     

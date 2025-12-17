@@ -10,8 +10,8 @@ export const prerender = false;
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
   initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
   });
 }
 
@@ -33,21 +33,25 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Listeners are stored with a TTL - only show those active in last 2 minutes
     const twoMinutesAgo = Date.now() - (2 * 60 * 1000);
 
+    // Query by streamId only, then filter by lastSeen in code
+    // This avoids needing a composite index
     const results = await queryCollection('stream-listeners', {
       filters: [
-        { field: 'streamId', op: 'EQUAL', value: streamId },
-        { field: 'lastSeen', op: 'GREATER_THAN', value: twoMinutesAgo }
+        { field: 'streamId', op: 'EQUAL', value: streamId }
       ],
-      orderBy: { field: 'lastSeen', direction: 'DESCENDING' },
-      limit: 50
+      limit: 100
     });
 
-    const listeners = results.map(data => ({
-      id: data.id,
-      name: data.userName || 'Anonymous',
-      avatarUrl: data.avatarUrl || null,
-      joinedAt: data.joinedAt || data.lastSeen
-    }));
+    // Filter to only recent listeners and map to response format
+    const listeners = results
+      .filter(data => (data.lastSeen || 0) > twoMinutesAgo)
+      .map(data => ({
+        id: data.id,
+        name: data.userName || 'Anonymous',
+        avatarUrl: data.avatarUrl || null,
+        joinedAt: data.joinedAt || data.lastSeen
+      }))
+      .slice(0, 50);
     
     return new Response(JSON.stringify({ 
       success: true, 
@@ -106,12 +110,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
       // Increment totalViews on the stream slot (counts every visit, even repeat visits by same user)
+      let newTotalViews = 1;
       try {
         const slot = await getDocument('livestreamSlots', streamId);
         if (slot) {
           const currentViews = slot.totalViews || 0;
+          newTotalViews = currentViews + 1;
           await updateDocument('livestreamSlots', streamId, {
-            totalViews: currentViews + 1
+            totalViews: newTotalViews
           });
         }
       } catch (e) {
@@ -120,7 +126,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       return new Response(JSON.stringify({
         success: true,
-        message: 'Joined as listener'
+        message: 'Joined as listener',
+        totalViews: newTotalViews
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
@@ -139,15 +146,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
     } else if (action === 'heartbeat') {
-      // Update last seen timestamp
-      await updateDocument('stream-listeners', listenerId, {
+      // Update last seen timestamp - use setDocument to create if doesn't exist
+      await setDocument('stream-listeners', listenerId, {
+        streamId,
+        userId,
+        userName: userName || 'Viewer',
+        avatarUrl: avatarUrl || null,
         lastSeen: Date.now()
       });
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'Heartbeat received' 
-      }), { 
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Heartbeat received'
+      }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
