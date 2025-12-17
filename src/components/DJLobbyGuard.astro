@@ -226,12 +226,7 @@ const { redirectTo = '/account/request-role', showProgress = true } = Astro.prop
 </style>
 
 <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
-
-  const firebaseConfig = window.FIREBASE_CONFIG || {};
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
   const loadingEl = document.getElementById('djGuardLoading');
   const deniedEl = document.getElementById('djGuardDenied');
@@ -240,7 +235,7 @@ const { redirectTo = '/account/request-role', showProgress = true } = Astro.prop
   const progressInfo = document.getElementById('progressInfo');
   const progressContent = document.getElementById('progressContent');
 
-  onAuthStateChanged(auth, async (user) => {
+  async function checkEligibility(user) {
     if (!user) {
       // Not logged in
       loadingEl.style.display = 'none';
@@ -296,5 +291,29 @@ const { redirectTo = '/account/request-role', showProgress = true } = Astro.prop
       loadingEl.style.display = 'none';
       deniedEl.style.display = 'flex';
     }
-  });
+  }
+
+  // Wait for global auth from Header, then check eligibility
+  async function init() {
+    if (window.authReady) {
+      const user = await window.authReady;
+      checkEligibility(user);
+
+      // Listen for future auth changes
+      if (window.firebaseAuth) {
+        onAuthStateChanged(window.firebaseAuth, checkEligibility);
+      }
+    } else {
+      // Fallback if Header hasn't initialized yet
+      setTimeout(() => {
+        if (window.firebaseAuth) {
+          checkEligibility(window.firebaseAuth.currentUser);
+          onAuthStateChanged(window.firebaseAuth, checkEligibility);
+        }
+      }, 500);
+    }
+  }
+
+  init();
+  document.addEventListener('astro:page-load', init);
 </script>

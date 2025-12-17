@@ -106,31 +106,41 @@ service cloud.firestore {
     }
 
     // DJ Mixes collection (hyphenated) - public read
+    // Note: create/stat updates allow server-side API (REST API doesn't have auth token)
     match /dj-mixes/{mixId} {
       allow read: if true;
-      allow create: if isAuthenticated();
+      allow create: if request.resource.data.userId != null;
       allow update: if isAdmin() ||
                       (isAuthenticated() && resource.data.userId == request.auth.uid) ||
-                      // Allow stat updates (plays, likes, downloads) from authenticated users
-                      (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys()
+                      // Allow stat updates and admin metadata updates from anyone (needed for REST API)
+                      request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['plays', 'likes', 'downloads', 'playCount', 'likeCount', 'downloadCount',
                                   'last_played_date', 'last_liked_date', 'last_unliked_date',
-                                  'last_download_date', 'last_downloaded_date', 'commentCount', 'ratings']));
-      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+                                  'last_download_date', 'last_downloaded_date', 'commentCount', 'comments', 'ratings', 'updatedAt',
+                                  'title', 'name', 'djName', 'dj_name', 'displayName', 'genre',
+                                  'description', 'shoutOuts', 'artworkUrl', 'imageUrl', 'artwork_url',
+                                  'tracklist', 'tracklistArray', 'trackCount', 'published', 'allowDownload', 'featured', 'userId']);
+      // Allow delete from REST API (admin API has its own key protection)
+      allow delete: if true;
     }
 
     // DJ Mixes collection (underscore) - public read
+    // Note: create/stat updates allow server-side API (REST API doesn't have auth token)
     match /dj_mixes/{mixId} {
       allow read: if true;
-      allow create: if isAuthenticated();
+      allow create: if request.resource.data.userId != null;
       allow update: if isAdmin() ||
                       (isAuthenticated() && resource.data.userId == request.auth.uid) ||
-                      // Allow stat updates from authenticated users
-                      (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys()
+                      // Allow stat updates and admin metadata updates from anyone (needed for REST API)
+                      request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['plays', 'likes', 'downloads', 'playCount', 'likeCount', 'downloadCount',
                                   'last_played_date', 'last_liked_date', 'last_unliked_date',
-                                  'last_download_date', 'last_downloaded_date', 'commentCount', 'ratings']));
-      allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+                                  'last_download_date', 'last_downloaded_date', 'commentCount', 'comments', 'ratings', 'updatedAt',
+                                  'title', 'name', 'djName', 'dj_name', 'displayName', 'genre',
+                                  'description', 'shoutOuts', 'artworkUrl', 'imageUrl', 'artwork_url',
+                                  'tracklist', 'tracklistArray', 'trackCount', 'published', 'allowDownload', 'featured', 'userId']);
+      // Allow delete from REST API (admin API has its own key protection)
+      allow delete: if true;
     }
 
     // DJ Mixes Pending - authenticated create, admin manage

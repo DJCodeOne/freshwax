@@ -124,7 +124,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       id: mix.id,
       title: mix.title || mix.name || 'Untitled Mix',
       artist: mix.artist || mix.djName || 'Unknown DJ',
-      artwork: mix.artworkUrl || mix.coverUrl || mix.imageUrl || '/place-holder.webp',
+      artwork: mix.artwork_url || mix.artworkUrl || mix.coverUrl || mix.imageUrl || '/place-holder.webp',
+      artworkUrl: mix.artwork_url || mix.artworkUrl || mix.coverUrl || mix.imageUrl || '/place-holder.webp',
+      artwork_url: mix.artwork_url || mix.artworkUrl || mix.coverUrl || mix.imageUrl || '/place-holder.webp',
       audioUrl: mix.audioUrl || mix.mp3Url || mix.streamUrl || null,
       duration: mix.duration || null,
       genre: mix.genre || mix.genres || [],
@@ -148,16 +150,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
     log.info('[get-dj-mixes] Loaded', mixes.length, 'mixes, returning', limitedMixes.length);
     
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       success: true,
       mixes: limitedMixes,
       total: limitedMixes.length,
       source: 'firebase-rest'
     }), {
       status: 200,
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300, s-maxage=300'
+        // Don't cache user-specific data, short cache for public listings
+        'Cache-Control': userId ? 'no-store, no-cache, must-revalidate' : 'public, max-age=60, s-maxage=60'
       }
     });
     

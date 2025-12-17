@@ -212,6 +212,21 @@ const formatCurrency = (amount) => {
     </div>
   </div>
 
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="delete-modal hidden">
+    <div class="delete-modal-overlay"></div>
+    <div class="delete-modal-content">
+      <div class="delete-modal-icon">⚠️</div>
+      <h3>Delete Release?</h3>
+      <p id="deleteModalText">Are you sure you want to delete this release?</p>
+      <p class="delete-warning">This will delete all associated files and cannot be undone.</p>
+      <div class="delete-modal-actions">
+        <button id="cancelDeleteBtn" class="btn btn-outline">Cancel</button>
+        <button id="confirmDeleteBtn" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <Fragment slot="scripts">
     <script is:inline>
       // Filter functionality
@@ -282,41 +297,177 @@ const formatCurrency = (amount) => {
         });
       });
 
-      // Delete release
+      // Delete release - with custom confirmation modal
+      let pendingDeleteId = null;
+      let pendingDeleteBtn = null;
+      const deleteModal = document.getElementById('deleteModal');
+      const deleteModalText = document.getElementById('deleteModalText');
+      const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+      const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
       document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
+        btn.addEventListener('click', () => {
           const id = btn.dataset.id;
           const name = btn.dataset.name || 'this release';
-          
-          if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-          
-          btn.disabled = true;
-          btn.textContent = '...';
-          
-          try {
-            const response = await fetch('/api/delete-release', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ releaseId: id })
-            });
-            
-            if (!response.ok) throw new Error('Failed to delete');
-            
-            const row = btn.closest('tr');
-            row.style.opacity = '0';
-            row.style.transition = 'opacity 0.3s';
-            setTimeout(() => row.remove(), 300);
-            
-            showToast('Release deleted');
-            
-          } catch (error) {
-            console.error(error);
-            showToast('Failed to delete release', 'error');
-            btn.disabled = false;
-            btn.textContent = '🗑️';
-          }
+
+          // Store pending delete info
+          pendingDeleteId = id;
+          pendingDeleteBtn = btn;
+
+          // Update modal text and show
+          deleteModalText.textContent = `Are you sure you want to delete "${name}"?`;
+          deleteModal.classList.remove('hidden');
         });
+      });
+
+      // Cancel delete
+      cancelDeleteBtn?.addEventListener('click', () => {
+        deleteModal.classList.add('hidden');
+        pendingDeleteId = null;
+        pendingDeleteBtn = null;
+      });
+
+      // Click overlay to cancel
+      deleteModal?.querySelector('.delete-modal-overlay')?.addEventListener('click', () => {
+        deleteModal.classList.add('hidden');
+        pendingDeleteId = null;
+        pendingDeleteBtn = null;
+      });
+
+      // Confirm delete
+      confirmDeleteBtn?.addEventListener('click', async () => {
+        if (!pendingDeleteId || !pendingDeleteBtn) return;
+
+        const btn = pendingDeleteBtn;
+        const id = pendingDeleteId;
+
+        // Hide modal and disable button
+        deleteModal.classList.add('hidden');
+        btn.disabled = true;
+        btn.textContent = '...';
+        confirmDeleteBtn.disabled = true;
+        confirmDeleteBtn.textContent = 'Deleting...';
+
+        try {
+          const response = await fetch('/api/delete-release', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ releaseId: id })
+          });
+
+          if (!response.ok) throw new Error('Failed to delete');
+
+          const row = btn.closest('tr');
+          row.style.opacity = '0';
+          row.style.transition = 'opacity 0.3s';
+          setTimeout(() => row.remove(), 300);
+
+          showToast('Release deleted');
+
+        } catch (error) {
+          console.error(error);
+          showToast('Failed to delete release', 'error');
+          btn.disabled = false;
+          btn.textContent = '🗑️';
+        } finally {
+          // Reset modal state
+          pendingDeleteId = null;
+          pendingDeleteBtn = null;
+          confirmDeleteBtn.disabled = false;
+          confirmDeleteBtn.textContent = 'Delete';
+        }
       });
     </script>
   </Fragment>
 </AdminLayout>
+
+<style>
+  /* Delete Confirmation Modal */
+  .delete-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .delete-modal.hidden {
+    display: none;
+  }
+
+  .delete-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+  }
+
+  .delete-modal-content {
+    position: relative;
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  .delete-modal-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .delete-modal-content h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    color: #fff;
+    margin: 0 0 0.5rem;
+  }
+
+  .delete-modal-content p {
+    color: #9ca3af;
+    margin: 0 0 0.5rem;
+    font-size: 1rem;
+  }
+
+  .delete-warning {
+    color: #ef4444 !important;
+    font-size: 0.9rem !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  .delete-modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+  }
+
+  .delete-modal-actions .btn {
+    min-width: 100px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+  }
+
+  .delete-modal-actions .btn-danger {
+    background: #dc2626;
+    color: #fff;
+    border: none;
+  }
+
+  .delete-modal-actions .btn-danger:hover {
+    background: #b91c1c;
+  }
+
+  .delete-modal-actions .btn-outline {
+    background: transparent;
+    border: 1px solid #555;
+    color: #fff;
+  }
+
+  .delete-modal-actions .btn-outline:hover {
+    background: #333;
+  }
+</style>

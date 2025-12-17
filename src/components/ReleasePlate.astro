@@ -552,9 +552,10 @@ const totalDurationFormatted = totalDurationSeconds > 0
         </button>
       </div>
       <div class="p-4">
-        <p class="text-sm text-gray-600 mb-3">
-          <span class="font-semibold" id="share-modal-title"></span> by <span class="font-semibold" id="share-modal-artist"></span>
-        </p>
+        <div class="mb-3">
+          <div class="text-sm font-bold text-gray-900 break-words" id="share-modal-title"></div>
+          <div class="text-xs text-gray-600">by <span class="font-semibold text-gray-700" id="share-modal-artist"></span></div>
+        </div>
         <div class="flex gap-2">
           <input 
             type="text" 

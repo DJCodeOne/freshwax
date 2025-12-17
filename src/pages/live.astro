@@ -616,77 +616,6 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     </div>
   </div>
 
-  <!-- Eligibility Check Modal -->
-  <div id="eligibilityModal" class="modal hidden">
-    <div class="modal-overlay"></div>
-    <div class="modal-content eligibility-modal-content">
-      <div class="modal-header eligibility-header">
-        <h2>DJ Lobby Access</h2>
-        <button class="modal-close" id="closeEligibilityModal">X</button>
-      </div>
-      <div class="modal-body">
-        <!-- Loading state -->
-        <div id="eligibilityLoading" class="eligibility-loading">
-          <div class="spinner"></div>
-          <p>Checking access...</p>
-        </div>
-
-        <!-- Not eligible state -->
-        <div id="eligibilityNotEligible" class="eligibility-content hidden">
-          <div class="eligibility-icon">🔒</div>
-          <h3>Access Required</h3>
-          <p class="eligibility-desc">To go live, you need to meet one of these requirements:</p>
-
-          <div class="eligibility-requirements">
-            <div class="requirement-item" id="mixRequirement">
-              <span class="req-icon">📀</span>
-              <div class="req-info">
-                <span class="req-title">Upload a DJ Mix</span>
-                <span class="req-status" id="mixStatus">0 / 1 mix uploaded</span>
-              </div>
-            </div>
-            <div class="requirement-item" id="likesRequirement">
-              <span class="req-icon">❤️</span>
-              <div class="req-info">
-                <span class="req-title">Get 10 Likes on a Mix</span>
-                <span class="req-status" id="likesStatus">0 / 10 likes</span>
-                <div class="likes-progress">
-                  <div class="likes-bar" id="likesBar" style="width: 0%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="eligibility-divider">
-            <span>OR</span>
-          </div>
-
-          <div class="quick-access-section">
-            <h4>Have an Access Code?</h4>
-            <p>Enter a quick access code to get instant access:</p>
-            <div class="access-code-input">
-              <input type="text" id="accessCodeInput" placeholder="Enter code (e.g., FWAX2024)" maxlength="10" />
-              <button type="button" id="redeemCodeBtn" class="redeem-btn">Redeem</button>
-            </div>
-            <div id="accessCodeError" class="access-code-error hidden"></div>
-            <div id="accessCodeSuccess" class="access-code-success hidden"></div>
-          </div>
-
-          <div class="eligibility-actions">
-            <a href="/account/mixes" class="upload-mix-btn">Upload a Mix</a>
-          </div>
-        </div>
-
-        <!-- Eligible state (redirect happening) -->
-        <div id="eligibilityEligible" class="eligibility-content hidden">
-          <div class="eligibility-icon success">✓</div>
-          <h3>Access Granted!</h3>
-          <p>Redirecting to DJ Lobby...</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <div id="lobbyPanel" class="lobby-panel hidden">
     <div class="lobby-content">
       <h3>DJ Lobby</h3>
@@ -1971,7 +1900,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     });
   });
   
-  // Go Live Now button handler - checks eligibility before redirecting to lobby
+  // Go Live Now button handler - redirects directly to DJ lobby
+  // The DJ lobby page handles eligibility checking with the dark theme
   document.getElementById('goLiveNowBtn')?.addEventListener('click', async () => {
     // Wait for auth to be ready
     let user = null;
@@ -1989,130 +1919,11 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       return;
     }
 
-    // Show eligibility modal and check access
-    const modal = document.getElementById('eligibilityModal');
-    const loading = document.getElementById('eligibilityLoading');
-    const notEligible = document.getElementById('eligibilityNotEligible');
-    const eligible = document.getElementById('eligibilityEligible');
-
-    modal.classList.remove('hidden');
-    loading.classList.remove('hidden');
-    notEligible.classList.add('hidden');
-    eligible.classList.add('hidden');
-
-    try {
-      // Check eligibility via API
-      const response = await fetch(`/api/check-dj-eligibility?userId=${user.uid}`);
-      const result = await response.json();
-
-      loading.classList.add('hidden');
-
-      if (result.eligible || result.bypassGranted) {
-        // User is eligible - show success and redirect
-        eligible.classList.remove('hidden');
-        setTimeout(() => {
-          window.location.href = '/account/dj-lobby';
-        }, 1000);
-      } else {
-        // Not eligible - show requirements
-        notEligible.classList.remove('hidden');
-
-        // Update mix status
-        const mixStatus = document.getElementById('mixStatus');
-        const mixReq = document.getElementById('mixRequirement');
-        if (result.mixCount >= 1) {
-          mixStatus.textContent = '✓ 1 mix uploaded';
-          mixReq.classList.add('completed');
-        } else {
-          mixStatus.textContent = `${result.mixCount || 0} / 1 mix uploaded`;
-        }
-
-        // Update likes status
-        const likesStatus = document.getElementById('likesStatus');
-        const likesBar = document.getElementById('likesBar');
-        const likesReq = document.getElementById('likesRequirement');
-        const bestLikes = result.bestMixLikes || 0;
-        const progress = Math.min(100, (bestLikes / 10) * 100);
-
-        if (bestLikes >= 10) {
-          likesStatus.textContent = '✓ 10+ likes achieved';
-          likesReq.classList.add('completed');
-        } else {
-          likesStatus.textContent = `${bestLikes} / 10 likes`;
-        }
-        likesBar.style.width = `${progress}%`;
-      }
-    } catch (error) {
-      console.error('Eligibility check error:', error);
-      loading.classList.add('hidden');
-      // On error, allow access (fail open for now)
-      eligible.classList.remove('hidden');
-      setTimeout(() => {
-        window.location.href = '/account/dj-lobby';
-      }, 1000);
-    }
+    // Redirect directly to DJ lobby - it handles eligibility checking
+    window.location.href = '/account/dj-lobby';
   });
 
-  // Close eligibility modal
-  document.getElementById('closeEligibilityModal')?.addEventListener('click', () => {
-    document.getElementById('eligibilityModal')?.classList.add('hidden');
-  });
 
-  // Redeem access code
-  document.getElementById('redeemCodeBtn')?.addEventListener('click', async () => {
-    const codeInput = document.getElementById('accessCodeInput');
-    const errorDiv = document.getElementById('accessCodeError');
-    const successDiv = document.getElementById('accessCodeSuccess');
-    const code = codeInput.value.trim().toUpperCase();
-
-    if (!code) {
-      errorDiv.textContent = 'Please enter an access code';
-      errorDiv.classList.remove('hidden');
-      successDiv.classList.add('hidden');
-      return;
-    }
-
-    errorDiv.classList.add('hidden');
-    successDiv.classList.add('hidden');
-
-    try {
-      const response = await fetch('/api/redeem-access-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          code,
-          userId: currentUser?.uid,
-          userEmail: currentUser?.email,
-          userName: userInfo?.name || currentUser?.displayName
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        successDiv.textContent = result.message || 'Access granted!';
-        successDiv.classList.remove('hidden');
-        // Redirect to lobby after success
-        setTimeout(() => {
-          window.location.href = '/account/dj-lobby';
-        }, 1500);
-      } else {
-        errorDiv.textContent = result.error || 'Invalid code';
-        errorDiv.classList.remove('hidden');
-      }
-    } catch (error) {
-      console.error('Redeem code error:', error);
-      errorDiv.textContent = 'Failed to redeem code. Please try again.';
-      errorDiv.classList.remove('hidden');
-    }
-  });
-
-  // Allow Enter key to submit access code
-  document.getElementById('accessCodeInput')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      document.getElementById('redeemCodeBtn')?.click();
-    }
-  });
   
   document.getElementById('closeGoLiveNowModal')?.addEventListener('click', () => {
     document.getElementById('goLiveNowModal')?.classList.add('hidden');

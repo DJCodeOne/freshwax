@@ -55,27 +55,32 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       });
     }
 
-    // Check ownership - allow if userId matches
+    // Check ownership - allow if:
+    // 1. userId matches, OR
+    // 2. Mix has no userId (backfill scenario - allow if user ID is passed)
     const isOwner = mixData?.userId === currentUserId;
+    const canBackfillOwnership = !mixData?.userId && currentUserId;
+
+    console.log('[update-mix] Ownership check:', {
+      mixUserId: mixData?.userId,
+      currentUserId,
+      isOwner,
+      canBackfillOwnership
+    });
 
     // Also check by artist name if partnerId is set
-    if (!isOwner && partnerId) {
+    let isPartnerOwner = false;
+    if (!isOwner && !canBackfillOwnership && partnerId) {
       const partnerDoc = await getDocument('artists', partnerId);
       const partnerName = partnerDoc?.artistName?.toLowerCase().trim() || null;
       const mixDjName = (mixData?.djName || mixData?.dj_name || '').toLowerCase().trim();
 
       if (partnerName && mixDjName === partnerName) {
-        // Owner via artist name match - OK
-      } else {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Not authorized to edit this mix'
-        }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        isPartnerOwner = true;
       }
-    } else if (!isOwner) {
+    }
+
+    if (!isOwner && !canBackfillOwnership && !isPartnerOwner) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Not authorized to edit this mix'
@@ -90,9 +95,10 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       updatedAt: new Date().toISOString()
     };
 
-    // Update title if provided
+    // Update title if provided (max 37 chars)
     if (title !== undefined) {
-      updateData.title = title.slice(0, 80);
+      updateData.title = title.slice(0, 37);
+      updateData.name = title.slice(0, 37);
     }
 
     if (description !== undefined) {

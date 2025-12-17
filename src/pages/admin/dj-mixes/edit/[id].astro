@@ -9,6 +9,10 @@ export const prerender = false;
 
 const { id } = Astro.params;
 
+// Get admin key from environment
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+
 let mix: any = null;
 let errorMessage = '';
 
@@ -118,12 +122,12 @@ const mixDuration = getDuration(mix);
         <div class="card-body">
           <div class="form-row-2">
             <div class="form-group">
-              <label class="form-label">Mix Title *</label>
-              <input type="text" name="title" class="form-input" value={mix.title || ''} required maxlength="80" />
+              <label class="form-label">Mix Title * <span class="char-limit">(max 22)</span></label>
+              <input type="text" name="title" class="form-input" value={mix.title || ''} required maxlength="22" />
             </div>
             <div class="form-group">
-              <label class="form-label">DJ Name *</label>
-              <input type="text" name="djName" class="form-input" value={mix.djName || mix.dj_name || mix.displayName || ''} required maxlength="50" />
+              <label class="form-label">DJ Name * <span class="char-limit">(max 22)</span></label>
+              <input type="text" name="djName" class="form-input" value={mix.djName || mix.dj_name || mix.displayName || ''} required maxlength="22" />
             </div>
           </div>
 
@@ -497,6 +501,12 @@ const mixDuration = getDuration(mix);
     font-size: 0.85rem;
   }
 
+  .char-limit {
+    font-weight: 400;
+    color: #888;
+    font-size: 0.75rem;
+  }
+
   .form-input,
   .form-textarea {
     width: 100%;
@@ -656,7 +666,7 @@ const mixDuration = getDuration(mix);
   }
 </style>
 
-<script define:vars={{ mixId: mix.id }}>
+<script define:vars={{ mixId: mix.id, adminKey }}>
   const form = document.getElementById('editForm');
   const saveBtn = document.getElementById('saveBtn');
   const descriptionField = document.getElementById('descriptionField');
@@ -725,6 +735,7 @@ const mixDuration = getDuration(mix);
 
     const updates = {
       mixId: mixId,
+      adminKey: adminKey,
       title: formData.get('title'),
       djName: formData.get('djName'),
       genre: formData.get('genre'),

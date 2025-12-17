@@ -96,30 +96,35 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       });
     }
     
-    // Check ownership - allow if userId matches
+    // Check ownership - allow if:
+    // 1. userId matches, OR
+    // 2. Mix has no userId (backfill scenario - allow if user ID is passed)
     const isOwner = mixData?.userId === currentUserId;
-    
+    const canBackfillOwnership = !mixData?.userId && currentUserId;
+
+    console.log('[update-mix-artwork] Ownership check:', {
+      mixUserId: mixData?.userId,
+      currentUserId,
+      isOwner,
+      canBackfillOwnership
+    });
+
     // Also check by artist name if partnerId is set
-    if (!isOwner && partnerId) {
+    let isPartnerOwner = false;
+    if (!isOwner && !canBackfillOwnership && partnerId) {
       const partnerData = await getDocument('artists', partnerId);
       const partnerName = partnerData?.artistName?.toLowerCase().trim() || null;
       const mixDjName = (mixData?.djName || mixData?.dj_name || '').toLowerCase().trim();
-      
+
       if (partnerName && mixDjName === partnerName) {
-        // Owner via artist name match
-      } else {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Not authorized to edit this mix' 
-        }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        isPartnerOwner = true;
       }
-    } else if (!isOwner) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Not authorized to edit this mix' 
+    }
+
+    if (!isOwner && !canBackfillOwnership && !isPartnerOwner) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Not authorized to edit this mix'
       }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' }
@@ -153,13 +158,21 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     
     const artworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
 
-    // Update Firebase with new artwork URL
-    await updateDocument('dj-mixes', mixId, {
+    // Update Firebase with new artwork URL (and backfill userId if missing)
+    const updateData: Record<string, any> = {
       artwork_url: artworkUrl,
       artworkUrl: artworkUrl,
       imageUrl: artworkUrl,
       updatedAt: new Date().toISOString()
-    });
+    };
+
+    // Backfill userId if mix doesn't have one
+    if (!mixData?.userId && currentUserId) {
+      updateData.userId = currentUserId;
+      console.log('[update-mix-artwork] Backfilling userId:', currentUserId);
+    }
+
+    await updateDocument('dj-mixes', mixId, updateData);
     
     console.log(`[update-mix-artwork] Updated artwork for mix ${mixId}: ${artworkUrl}`);
     

@@ -43,10 +43,11 @@ function formatDuration(seconds: number | string | null | undefined): string {
   if (!seconds) return '--:--';
   const numSeconds = typeof seconds === 'string' ? parseFloat(seconds) : seconds;
   if (!numSeconds || isNaN(numSeconds)) return '--:--';
-  
+
   const hrs = Math.floor(numSeconds / 3600);
   const mins = Math.floor((numSeconds % 3600) / 60);
-  
+  const secs = Math.floor(numSeconds % 60);
+
   if (hrs > 0) {
     const hourWord = hrs === 1 ? 'hour' : 'hours';
     const minWord = mins === 1 ? 'minute' : 'minutes';
@@ -55,15 +56,43 @@ function formatDuration(seconds: number | string | null | undefined): string {
     }
     return `${hrs} ${hourWord}`;
   }
-  const minWord = mins === 1 ? 'minute' : 'minutes';
-  return `${mins} ${minWord}`;
+  if (mins > 0) {
+    const minWord = mins === 1 ? 'minute' : 'minutes';
+    if (secs > 0 && mins < 5) {
+      // Show seconds only for short durations under 5 minutes
+      const secWord = secs === 1 ? 'second' : 'seconds';
+      return `${mins} ${minWord} ${secs} ${secWord}`;
+    }
+    return `${mins} ${minWord}`;
+  }
+  // Under 1 minute - show seconds
+  const secWord = secs === 1 ? 'second' : 'seconds';
+  return `${secs} ${secWord}`;
 }
 
 // Helper to get duration from mix object
 function getMixDuration(mix: any): number | null {
+  // Check durationSeconds first (should be a number)
   if (mix.durationSeconds && typeof mix.durationSeconds === 'number') {
     return mix.durationSeconds;
   }
+  // Check if durationSeconds is stored as a string number
+  if (mix.durationSeconds && !isNaN(parseFloat(mix.durationSeconds))) {
+    return parseFloat(mix.durationSeconds);
+  }
+  // Check duration_seconds
+  if (mix.duration_seconds && typeof mix.duration_seconds === 'number') {
+    return mix.duration_seconds;
+  }
+  // Check mixDuration
+  if (mix.mixDuration && typeof mix.mixDuration === 'number') {
+    return mix.mixDuration;
+  }
+  // Check duration if it's a number
+  if (mix.duration && typeof mix.duration === 'number') {
+    return mix.duration;
+  }
+  // Check duration if it's a time string format like "1:23:45" or "23:45"
   if (mix.duration && typeof mix.duration === 'string' && mix.duration.includes(':')) {
     const parts = mix.duration.split(':').map(Number);
     if (parts.length === 3) {
@@ -72,7 +101,7 @@ function getMixDuration(mix: any): number | null {
       return parts[0] * 60 + parts[1];
     }
   }
-  return mix.duration_seconds || mix.mixDuration || null;
+  return null;
 }
 
 // Extract unique genres from mixes for filter
@@ -410,7 +439,7 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
                   class="chart-artwork"
                 />
                 <div class="chart-info">
-                  <span class="chart-mix-title">{mix.title?.substring(0, 25)}{mix.title?.length > 25 ? '...' : ''}</span>
+                  <span class="chart-mix-title">{mix.title}</span>
                   <span class="chart-mix-dj">{mix.djName || mix.dj_name}</span>
                 </div>
                 <div class="chart-stats">
@@ -437,9 +466,10 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
         </button>
       </div>
       <div class="modal-body">
-        <p class="modal-subtitle">
-          <span id="shareModalTitle"></span> by <span id="shareModalDJ"></span>
-        </p>
+        <div class="modal-subtitle">
+          <div class="share-mix-title" id="shareModalTitle"></div>
+          <div class="share-mix-dj">by <span id="shareModalDJ"></span></div>
+        </div>
         <div class="share-input-group">
           <input type="text" id="shareLink" readonly />
           <button id="copyShareButton">
@@ -815,15 +845,24 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
     if (!seconds || !isFinite(seconds)) return '--:--';
     var hrs = Math.floor(seconds / 3600);
     var mins = Math.floor((seconds % 3600) / 60);
-    
+    var secs = Math.floor(seconds % 60);
+
     if (hrs > 0) {
       var hourWord = hrs === 1 ? 'hour' : 'hours';
       var minWord = mins === 1 ? 'minute' : 'minutes';
       if (mins > 0) return hrs + ' ' + hourWord + ' ' + mins + ' ' + minWord;
       return hrs + ' ' + hourWord;
     }
-    var minWord = mins === 1 ? 'minute' : 'minutes';
-    return mins + ' ' + minWord;
+    if (mins > 0) {
+      var minWord = mins === 1 ? 'minute' : 'minutes';
+      if (secs > 0 && mins < 5) {
+        var secWord = secs === 1 ? 'second' : 'seconds';
+        return mins + ' ' + minWord + ' ' + secs + ' ' + secWord;
+      }
+      return mins + ' ' + minWord;
+    }
+    var secWord = secs === 1 ? 'second' : 'seconds';
+    return secs + ' ' + secWord;
   }
 
   function initMixCards() {
@@ -880,12 +919,21 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
       }
 
       btn.onclick = function() {
+        var audioUrl = card.getAttribute('data-audio-url');
+
+        // Check if audio URL exists
+        if (!audioUrl || audioUrl === 'undefined' || audioUrl === 'null' || audioUrl === '') {
+          console.error('[DJ-MIXES] No audio URL for mix:', mixId);
+          alert('This mix has no audio file available. The upload may not have completed successfully.');
+          return;
+        }
+
         var mixData = {
           id: mixId,
           title: card.getAttribute('data-title'),
           dj_name: card.getAttribute('data-dj'),
           artwork_url: card.getAttribute('data-artwork'),
-          audio_url: card.getAttribute('data-audio-url')
+          audio_url: audioUrl
         };
 
         // Reset all other buttons
@@ -901,55 +949,73 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
         // Pause shuffle widget if playing
         if (window.shuffleWidgetAudio && !window.shuffleWidgetAudio.paused) {
           window.shuffleWidgetAudio.pause();
-          
+
           var shuffleWidget = document.getElementById('shuffle-widget');
           if (shuffleWidget) shuffleWidget.classList.remove('playing');
-          
+
           var shuffleIconPlay = document.getElementById('shuffle-icon-play');
           var shuffleIconPause = document.getElementById('shuffle-icon-pause');
           var shuffleCtrlPlay = document.getElementById('shuffle-ctrl-play-icon');
           var shuffleCtrlPause = document.getElementById('shuffle-ctrl-pause-icon');
-          
+
           if (shuffleIconPlay) shuffleIconPlay.classList.remove('hidden');
           if (shuffleIconPause) shuffleIconPause.classList.add('hidden');
           if (shuffleCtrlPlay) shuffleCtrlPlay.classList.remove('hidden');
           if (shuffleCtrlPause) shuffleCtrlPause.classList.add('hidden');
         }
 
-        if (window.playMix && window.globalAudio) {
-          var isThisMix = window.FreshWaxPlayer && window.FreshWaxPlayer.currentMix && window.FreshWaxPlayer.currentMix.id === mixId;
-          
-          if (isThisMix) {
-            if (window.globalAudio.paused) {
-              window.globalAudio.play().then(function() {
-                playIcon.classList.add('hidden');
-                pauseIcon.classList.remove('hidden');
-                if (playText) playText.textContent = 'Pause';
-              });
+        // Check if player is ready
+        if (!window.playMix || !window.globalAudio) {
+          console.warn('[DJ-MIXES] Player not ready, retrying in 500ms...');
+          // Retry after a short delay
+          setTimeout(function() {
+            if (window.playMix && window.globalAudio) {
+              btn.click();
             } else {
-              window.globalAudio.pause();
-              playIcon.classList.remove('hidden');
-              pauseIcon.classList.add('hidden');
-              if (playText) playText.textContent = 'Play';
+              console.error('[DJ-MIXES] Player still not ready');
+              alert('Audio player is loading. Please try again.');
             }
-          } else {
-            window.playMix(mixData).then(function() {
+          }, 500);
+          return;
+        }
+
+        var isThisMix = window.FreshWaxPlayer && window.FreshWaxPlayer.currentMix && window.FreshWaxPlayer.currentMix.id === mixId;
+
+        if (isThisMix) {
+          if (window.globalAudio.paused) {
+            window.globalAudio.play().then(function() {
               playIcon.classList.add('hidden');
               pauseIcon.classList.remove('hidden');
               if (playText) playText.textContent = 'Pause';
-              
-              // Track play (once per session per mix)
-              var trackKey = 'tracked_' + mixId;
-              if (!window.FreshWaxPlayer[trackKey]) {
-                window.FreshWaxPlayer[trackKey] = true;
-                trackPlay(mixId).then(function(result) {
-                  if (result && result.plays !== undefined) {
-                    updatePlayCount(mixId, result.plays);
-                  }
-                });
-              }
+            }).catch(function(err) {
+              console.error('[DJ-MIXES] Play failed:', err);
             });
+          } else {
+            window.globalAudio.pause();
+            playIcon.classList.remove('hidden');
+            pauseIcon.classList.add('hidden');
+            if (playText) playText.textContent = 'Play';
           }
+        } else {
+          window.playMix(mixData).then(function() {
+            playIcon.classList.add('hidden');
+            pauseIcon.classList.remove('hidden');
+            if (playText) playText.textContent = 'Pause';
+
+            // Track play (once per session per mix)
+            var trackKey = 'tracked_' + mixId;
+            if (!window.FreshWaxPlayer[trackKey]) {
+              window.FreshWaxPlayer[trackKey] = true;
+              trackPlay(mixId).then(function(result) {
+                if (result && result.plays !== undefined) {
+                  updatePlayCount(mixId, result.plays);
+                }
+              });
+            }
+          }).catch(function(err) {
+            console.error('[DJ-MIXES] playMix failed:', err);
+            alert('Failed to play this mix. Please try again.');
+          });
         }
       };
     });

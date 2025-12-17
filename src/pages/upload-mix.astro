@@ -112,6 +112,12 @@ import Footer from '../components/Footer.astro';
               </p>
             </div>
 
+            <!-- DJ Name for Quick Drop -->
+            <div class="mb-4">
+              <label for="quick-drop-dj-name" class="block text-sm font-bold text-gray-700 mb-2">DJ Name <span class="text-gray-400 font-normal">(optional)</span></label>
+              <input type="text" id="quick-drop-dj-name" maxlength="30" placeholder="Enter your DJ name..." class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white text-gray-900" />
+            </div>
+
             <!-- Genre Selection for Quick Drop -->
             <div class="mb-6">
               <label for="quick-drop-genre" class="block text-sm font-bold text-gray-700 mb-2">Select Genre <span class="text-red-600">*</span></label>
@@ -175,14 +181,14 @@ import Footer from '../components/Footer.astro';
           <div>
             <label for="dj-name" class="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide">
               DJ Name <span class="text-red-600">*</span>
-              <span class="text-gray-500 text-xs font-normal ml-2">(<span id="dj-name-count">0</span>/25)</span>
+              <span class="text-gray-500 text-xs font-normal ml-2">(<span id="dj-name-count">0</span>/22)</span>
             </label>
             <input
               type="text"
               id="dj-name"
               name="djName"
               required
-              maxlength="25"
+              maxlength="37"
               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
               placeholder="Enter your DJ name"
             />
@@ -192,14 +198,14 @@ import Footer from '../components/Footer.astro';
           <div>
             <label for="mix-title" class="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide">
               Mix Title <span class="text-red-600">*</span>
-              <span class="text-gray-500 text-xs font-normal ml-2">(<span id="mix-title-count">0</span>/25)</span>
+              <span class="text-gray-500 text-xs font-normal ml-2">(<span id="mix-title-count">0</span>/37)</span>
             </label>
             <input
               type="text"
               id="mix-title"
               name="mixTitle"
               required
-              maxlength="25"
+              maxlength="37"
               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
               placeholder="Enter mix title"
             />
@@ -1018,6 +1024,7 @@ Artist - Track Title
   const quickDropDjPreview = document.getElementById('quick-drop-dj-preview');
   const quickDropDurationPreview = document.getElementById('quick-drop-duration-preview');
   const quickDropGenre = document.getElementById('quick-drop-genre');
+  const quickDropDjNameInput = document.getElementById('quick-drop-dj-name');
   const quickDropCancel = document.getElementById('quick-drop-cancel');
   const quickDropConfirm = document.getElementById('quick-drop-confirm');
   const quickDropProgressContainer = document.getElementById('quick-drop-progress');
@@ -1027,6 +1034,10 @@ Artist - Track Title
   const quickDropConverting = document.getElementById('quick-drop-converting');
   const quickDropConvertStatus = document.getElementById('quick-drop-convert-status');
   const quickDropConvertBar = document.getElementById('quick-drop-convert-bar');
+
+  // Track active uploads for cancel functionality
+  let activeQuickDropXhr = null;
+  let activeMainFormXhr = null;
   const quickDropReadyMsg = document.getElementById('quick-drop-ready-msg');
 
   // Load lamejs for WAV to MP3 conversion
@@ -1323,6 +1334,17 @@ Artist - Track Title
       alert('Please wait for conversion to complete');
       return;
     }
+    // If upload is in progress, abort it
+    if (activeQuickDropXhr) {
+      activeQuickDropXhr.abort();
+      activeQuickDropXhr = null;
+      quickDropCancel.textContent = 'Cancel';
+      quickDropCancel.disabled = false;
+      quickDropConfirm.disabled = false;
+      quickDropProgressContainer.classList.add('hidden');
+      quickDropStatus.textContent = 'Upload cancelled';
+      return;
+    }
     quickDropModal.classList.add('hidden');
     quickDropFile = null;
   });
@@ -1375,72 +1397,189 @@ Artist - Track Title
       console.warn('Could not check upload limits:', err);
     }
 
-    // Disable buttons during upload
+    // Disable confirm button, but keep cancel enabled for abort
     quickDropConfirm.disabled = true;
-    quickDropCancel.disabled = true;
+    quickDropCancel.disabled = false;
+    quickDropCancel.textContent = 'Cancel Upload';
     quickDropProgressContainer.classList.remove('hidden');
 
     try {
-      const formData = new FormData();
-      formData.append('djName', quickDropDjName || 'Unknown DJ');
-      formData.append('mixTitle', quickDropTitle);
-      formData.append('mixDescription', '');
-      formData.append('genre', genre);
-      formData.append('tracklist', '');
-      formData.append('durationSeconds', quickDropDuration.toString());
-      formData.append('audioFile', quickDropFile);
-      formData.append('userId', user.uid);
-      formData.append('usePlaceholderArtwork', 'true'); // Signal to use placeholder
+      let result;
+      const fileSizeMB = quickDropFile.size / (1024 * 1024);
+      const LARGE_FILE_THRESHOLD_MB = 50; // Use presigned URL for files over 50MB
 
-      quickDropStatus.textContent = 'Uploading...';
+      if (fileSizeMB > LARGE_FILE_THRESHOLD_MB) {
+        // LARGE FILE: Use presigned URL for direct R2 upload
+        console.log(`Quick Drop: Large file detected (${fileSizeMB.toFixed(1)}MB), using direct R2 upload`);
+        quickDropStatus.textContent = 'Preparing upload...';
 
-      const result = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-
-        xhr.upload.addEventListener('progress', (e) => {
-          if (e.lengthComputable) {
-            const percentComplete = Math.round((e.loaded / e.total) * 100);
-            const visualProgress = Math.min(percentComplete * 0.85, 85);
-            quickDropProgressBar.style.width = visualProgress + '%';
-            quickDropProgressText.textContent = Math.round(visualProgress) + '%';
-
-            if (percentComplete < 100) {
-              const mbUploaded = (e.loaded / (1024 * 1024)).toFixed(1);
-              const mbTotal = (e.total / (1024 * 1024)).toFixed(1);
-              quickDropStatus.textContent = `Uploading... ${mbUploaded}MB / ${mbTotal}MB`;
-            }
-          }
+        // Step 1: Get presigned URL
+        const presignResponse = await fetch('/api/mix/presign-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileName: quickDropFile.name,
+            contentType: quickDropFile.type || 'audio/mpeg',
+            fileSize: quickDropFile.size
+          })
         });
 
-        xhr.upload.addEventListener('load', () => {
-          quickDropProgressBar.style.width = '90%';
-          quickDropProgressText.textContent = '90%';
-          quickDropStatus.textContent = 'Processing...';
+        if (!presignResponse.ok) {
+          const err = await presignResponse.json();
+          throw new Error(err.error || 'Failed to prepare upload');
+        }
+
+        const { uploadUrl, publicUrl, mixId, folderPath } = await presignResponse.json();
+        console.log('Got presigned URL, starting direct upload...');
+
+        // Step 2: Upload directly to R2 with progress tracking
+        quickDropStatus.textContent = 'Uploading to cloud storage...';
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          activeQuickDropXhr = xhr;
+
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              const percentComplete = Math.round((e.loaded / e.total) * 100);
+              const visualProgress = Math.min(percentComplete * 0.85, 85);
+              quickDropProgressBar.style.width = visualProgress + '%';
+              quickDropProgressText.textContent = Math.round(visualProgress) + '%';
+
+              if (percentComplete < 100) {
+                const mbUploaded = (e.loaded / (1024 * 1024)).toFixed(1);
+                const mbTotal = (e.total / (1024 * 1024)).toFixed(1);
+                quickDropStatus.textContent = `Uploading... ${mbUploaded}MB / ${mbTotal}MB`;
+              }
+            }
+          });
+
+          xhr.upload.addEventListener('load', () => {
+            quickDropProgressBar.style.width = '90%';
+            quickDropProgressText.textContent = '90%';
+            quickDropStatus.textContent = 'Saving mix info...';
+            quickDropCancel.disabled = true;
+          });
+
+          xhr.addEventListener('load', () => {
+            activeQuickDropXhr = null;
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(true);
+            } else {
+              reject(new Error(`Upload failed: ${xhr.status}`));
+            }
+          });
+
+          xhr.addEventListener('error', () => {
+            activeQuickDropXhr = null;
+            reject(new Error('Network error during upload'));
+          });
+          xhr.addEventListener('abort', () => {
+            activeQuickDropXhr = null;
+            reject(new Error('Upload cancelled'));
+          });
+
+          xhr.open('PUT', uploadUrl);
+          xhr.setRequestHeader('Content-Type', quickDropFile.type || 'audio/mpeg');
+          xhr.send(quickDropFile);
         });
 
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              resolve(JSON.parse(xhr.responseText));
-            } catch (e) {
-              reject(new Error('Invalid server response'));
-            }
-          } else {
-            try {
-              const errorResponse = JSON.parse(xhr.responseText);
-              reject(new Error(errorResponse.error || `Server error: ${xhr.status}`));
-            } catch (e) {
-              reject(new Error(`Server error: ${xhr.status}`));
-            }
-          }
+        // Step 3: Finalize - save metadata to Firebase
+        const finalizeResponse = await fetch('/api/mix/finalize-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mixId,
+            audioUrl: publicUrl,
+            artworkUrl: '/place-holder.webp',
+            folderPath,
+            djName: (quickDropDjNameInput?.value?.trim()) || 'UNKNOWN DJ',
+            mixTitle: quickDropTitle,
+            mixDescription: '',
+            genre: genre,
+            tracklist: '',
+            durationSeconds: quickDropDuration,
+            userId: user.uid
+          })
         });
 
-        xhr.addEventListener('error', () => reject(new Error('Network error')));
-        xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+        if (!finalizeResponse.ok) {
+          const err = await finalizeResponse.json();
+          throw new Error(err.error || 'Failed to save mix info');
+        }
 
-        xhr.open('POST', '/api/upload-mix');
-        xhr.send(formData);
-      });
+        result = await finalizeResponse.json();
+      } else {
+        // NORMAL FILE: Use existing upload through API
+        const formData = new FormData();
+        formData.append('djName', (quickDropDjNameInput?.value?.trim()) || 'UNKNOWN DJ');
+        formData.append('mixTitle', quickDropTitle);
+        formData.append('mixDescription', '');
+        formData.append('genre', genre);
+        formData.append('tracklist', '');
+        formData.append('durationSeconds', quickDropDuration.toString());
+        formData.append('audioFile', quickDropFile);
+        formData.append('userId', user.uid);
+        formData.append('usePlaceholderArtwork', 'true');
+
+        quickDropStatus.textContent = 'Uploading...';
+
+        result = await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          activeQuickDropXhr = xhr;
+
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              const percentComplete = Math.round((e.loaded / e.total) * 100);
+              const visualProgress = Math.min(percentComplete * 0.85, 85);
+              quickDropProgressBar.style.width = visualProgress + '%';
+              quickDropProgressText.textContent = Math.round(visualProgress) + '%';
+
+              if (percentComplete < 100) {
+                const mbUploaded = (e.loaded / (1024 * 1024)).toFixed(1);
+                const mbTotal = (e.total / (1024 * 1024)).toFixed(1);
+                quickDropStatus.textContent = `Uploading... ${mbUploaded}MB / ${mbTotal}MB`;
+              }
+            }
+          });
+
+          xhr.upload.addEventListener('load', () => {
+            quickDropProgressBar.style.width = '90%';
+            quickDropProgressText.textContent = '90%';
+            quickDropStatus.textContent = 'Processing...';
+            quickDropCancel.disabled = true;
+          });
+
+          xhr.addEventListener('load', () => {
+            activeQuickDropXhr = null;
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                resolve(JSON.parse(xhr.responseText));
+              } catch (e) {
+                reject(new Error('Invalid server response'));
+              }
+            } else {
+              try {
+                const errorResponse = JSON.parse(xhr.responseText);
+                reject(new Error(errorResponse.error || `Server error: ${xhr.status}`));
+              } catch (e) {
+                reject(new Error(`Server error: ${xhr.status}`));
+              }
+            }
+          });
+
+          xhr.addEventListener('error', () => {
+            activeQuickDropXhr = null;
+            reject(new Error('Network error'));
+          });
+          xhr.addEventListener('abort', () => {
+            activeQuickDropXhr = null;
+            reject(new Error('Upload cancelled'));
+          });
+
+          xhr.open('POST', '/api/upload-mix');
+          xhr.send(formData);
+        });
+      }
 
       quickDropProgressBar.style.width = '100%';
       quickDropProgressText.textContent = '100%';
@@ -1477,11 +1616,17 @@ Artist - Track Title
 
     } catch (error) {
       console.error('Quick Drop upload error:', error);
-      quickDropStatus.textContent = 'Upload failed';
-      alert(`Upload failed: ${error.message}`);
+      activeQuickDropXhr = null;
+
+      // Don't show alert for cancelled uploads
+      if (error.message !== 'Upload cancelled') {
+        quickDropStatus.textContent = 'Upload failed';
+        alert(`Upload failed: ${error.message}`);
+      }
 
       quickDropConfirm.disabled = false;
       quickDropCancel.disabled = false;
+      quickDropCancel.textContent = 'Cancel';
       quickDropProgressContainer.classList.add('hidden');
     }
   });
@@ -1552,92 +1697,212 @@ Artist - Track Title
 
     // Use selected genre
     const finalGenre = genreValue;
+    const userId = user?.uid || getCookie('partnerId') || getCookie('customerId') || '';
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Uploading...';
     progressContainer.classList.remove('hidden');
 
     try {
-      const formData = new FormData();
-      formData.append('djName', djName);
-      formData.append('mixTitle', mixTitle);
-      formData.append('mixDescription', mixDescription);
-      formData.append('genre', finalGenre);
-      formData.append('tracklist', tracklist);
-      formData.append('durationSeconds', audioDurationSeconds.toString());
-      formData.append('audioFile', selectedAudioFile);
-      
-      // Add userId from auth (user is already verified above) or cookie fallback
-      const userId = user?.uid || getCookie('partnerId') || getCookie('customerId') || '';
-      formData.append('userId', userId);
-      
-      if (selectedArtworkFile) {
-        formData.append('artworkFile', selectedArtworkFile);
+      let result;
+      const fileSizeMB = selectedAudioFile.size / (1024 * 1024);
+      const LARGE_FILE_THRESHOLD_MB = 50; // Use presigned URL for files over 50MB
+
+      if (fileSizeMB > LARGE_FILE_THRESHOLD_MB) {
+        // LARGE FILE: Use presigned URL for direct R2 upload
+        console.log(`Large file detected (${fileSizeMB.toFixed(1)}MB), using direct R2 upload`);
+        statusText.textContent = 'Preparing upload...';
+
+        // Step 1: Get presigned URL (including artwork if selected)
+        const presignBody = {
+          fileName: selectedAudioFile.name,
+          contentType: selectedAudioFile.type || 'audio/mpeg',
+          fileSize: selectedAudioFile.size
+        };
+
+        // Include artwork info if selected
+        if (selectedArtworkFile) {
+          presignBody.artworkFileName = selectedArtworkFile.name;
+          presignBody.artworkContentType = selectedArtworkFile.type;
+        }
+
+        const presignResponse = await fetch('/api/mix/presign-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(presignBody)
+        });
+
+        if (!presignResponse.ok) {
+          const err = await presignResponse.json();
+          throw new Error(err.error || 'Failed to prepare upload');
+        }
+
+        const { uploadUrl, publicUrl, mixId, folderPath, artworkUploadUrl, artworkPublicUrl } = await presignResponse.json();
+        console.log('Got presigned URL, starting direct upload...');
+
+        // Step 2: Upload directly to R2 with progress tracking
+        statusText.textContent = 'Uploading to cloud storage...';
+        await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              const percentComplete = Math.round((e.loaded / e.total) * 100);
+              const visualProgress = Math.min(percentComplete * 0.85, 85);
+              progressBar.style.width = visualProgress + '%';
+              progressText.textContent = Math.round(visualProgress) + '%';
+
+              if (percentComplete < 100) {
+                const mbUploaded = (e.loaded / (1024 * 1024)).toFixed(1);
+                const mbTotal = (e.total / (1024 * 1024)).toFixed(1);
+                statusText.textContent = `Uploading... ${mbUploaded}MB / ${mbTotal}MB`;
+              }
+            }
+          });
+
+          xhr.upload.addEventListener('load', () => {
+            progressBar.style.width = '90%';
+            progressText.textContent = '90%';
+            statusText.textContent = 'Saving mix info...';
+          });
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(true);
+            } else {
+              reject(new Error(`Upload failed: ${xhr.status}`));
+            }
+          });
+
+          xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
+          xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+          xhr.open('PUT', uploadUrl);
+          xhr.setRequestHeader('Content-Type', selectedAudioFile.type || 'audio/mpeg');
+          xhr.send(selectedAudioFile);
+        });
+
+        // Step 2.5: Upload artwork if selected and presigned URL was generated
+        let finalArtworkUrl = '/place-holder.webp';
+        if (selectedArtworkFile && artworkUploadUrl && artworkPublicUrl) {
+          statusText.textContent = 'Uploading artwork...';
+          await new Promise((resolve, reject) => {
+            const artworkXhr = new XMLHttpRequest();
+            artworkXhr.addEventListener('load', () => {
+              if (artworkXhr.status >= 200 && artworkXhr.status < 300) {
+                resolve(true);
+              } else {
+                reject(new Error(`Artwork upload failed: ${artworkXhr.status}`));
+              }
+            });
+            artworkXhr.addEventListener('error', () => reject(new Error('Artwork upload network error')));
+            artworkXhr.open('PUT', artworkUploadUrl);
+            artworkXhr.setRequestHeader('Content-Type', selectedArtworkFile.type);
+            artworkXhr.send(selectedArtworkFile);
+          });
+          finalArtworkUrl = artworkPublicUrl;
+          console.log('Artwork uploaded successfully:', finalArtworkUrl);
+        }
+
+        // Step 3: Finalize - save metadata to Firebase
+        const finalizeResponse = await fetch('/api/mix/finalize-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mixId,
+            audioUrl: publicUrl,
+            artworkUrl: finalArtworkUrl,
+            folderPath,
+            djName,
+            mixTitle,
+            mixDescription,
+            genre: finalGenre,
+            tracklist,
+            durationSeconds: audioDurationSeconds,
+            userId
+          })
+        });
+
+        if (!finalizeResponse.ok) {
+          const err = await finalizeResponse.json();
+          throw new Error(err.error || 'Failed to save mix info');
+        }
+
+        result = await finalizeResponse.json();
+      } else {
+        // NORMAL FILE: Use existing upload through API
+        const formData = new FormData();
+        formData.append('djName', djName);
+        formData.append('mixTitle', mixTitle);
+        formData.append('mixDescription', mixDescription);
+        formData.append('genre', finalGenre);
+        formData.append('tracklist', tracklist);
+        formData.append('durationSeconds', audioDurationSeconds.toString());
+        formData.append('audioFile', selectedAudioFile);
+        formData.append('userId', userId);
+
+        if (selectedArtworkFile) {
+          formData.append('artworkFile', selectedArtworkFile);
+        }
+
+        statusText.textContent = 'Uploading audio file...';
+
+        // Use XMLHttpRequest for real upload progress tracking
+        result = await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+
+          xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+              const percentComplete = Math.round((e.loaded / e.total) * 100);
+              const visualProgress = Math.min(percentComplete * 0.85, 85);
+              progressBar.style.width = visualProgress + '%';
+              progressText.textContent = Math.round(visualProgress) + '%';
+
+              if (percentComplete < 100) {
+                const mbUploaded = (e.loaded / (1024 * 1024)).toFixed(1);
+                const mbTotal = (e.total / (1024 * 1024)).toFixed(1);
+                statusText.textContent = `Uploading... ${mbUploaded}MB / ${mbTotal}MB`;
+              }
+            }
+          });
+
+          xhr.upload.addEventListener('load', () => {
+            progressBar.style.width = '90%';
+            progressText.textContent = '90%';
+            statusText.textContent = 'Processing on server...';
+            submitBtn.textContent = 'Processing...';
+          });
+
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                const response = JSON.parse(xhr.responseText);
+                resolve(response);
+              } catch (e) {
+                reject(new Error('Invalid server response'));
+              }
+            } else {
+              try {
+                const errorResponse = JSON.parse(xhr.responseText);
+                reject(new Error(errorResponse.error || errorResponse.details || `Server error: ${xhr.status}`));
+              } catch (e) {
+                reject(new Error(`Server error: ${xhr.status}`));
+              }
+            }
+          });
+
+          xhr.addEventListener('error', () => {
+            reject(new Error('Network error - please check your connection'));
+          });
+
+          xhr.addEventListener('abort', () => {
+            reject(new Error('Upload cancelled'));
+          });
+
+          xhr.open('POST', '/api/upload-mix');
+          xhr.send(formData);
+        });
       }
-
-      statusText.textContent = 'Uploading audio file...';
-
-      // Use XMLHttpRequest for real upload progress tracking
-      const result = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        
-        // Track upload progress (data being sent to server)
-        xhr.upload.addEventListener('progress', (e) => {
-          if (e.lengthComputable) {
-            const percentComplete = Math.round((e.loaded / e.total) * 100);
-            // Cap visual progress at 85% during upload phase
-            // Server processing takes the remaining 15%
-            const visualProgress = Math.min(percentComplete * 0.85, 85);
-            progressBar.style.width = visualProgress + '%';
-            progressText.textContent = Math.round(visualProgress) + '%';
-            
-            // Update status text based on progress
-            if (percentComplete < 100) {
-              const mbUploaded = (e.loaded / (1024 * 1024)).toFixed(1);
-              const mbTotal = (e.total / (1024 * 1024)).toFixed(1);
-              statusText.textContent = `Uploading... ${mbUploaded}MB / ${mbTotal}MB`;
-            }
-          }
-        });
-        
-        // When upload to server completes, show processing state
-        xhr.upload.addEventListener('load', () => {
-          progressBar.style.width = '90%';
-          progressText.textContent = '90%';
-          statusText.textContent = 'Processing on server...';
-          submitBtn.textContent = 'Processing...';
-        });
-        
-        // Handle response
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const response = JSON.parse(xhr.responseText);
-              resolve(response);
-            } catch (e) {
-              reject(new Error('Invalid server response'));
-            }
-          } else {
-            try {
-              const errorResponse = JSON.parse(xhr.responseText);
-              reject(new Error(errorResponse.error || errorResponse.details || `Server error: ${xhr.status}`));
-            } catch (e) {
-              reject(new Error(`Server error: ${xhr.status}`));
-            }
-          }
-        });
-        
-        xhr.addEventListener('error', () => {
-          reject(new Error('Network error - please check your connection'));
-        });
-        
-        xhr.addEventListener('abort', () => {
-          reject(new Error('Upload cancelled'));
-        });
-        
-        xhr.open('POST', '/api/upload-mix');
-        xhr.send(formData);
-      });
 
       // Upload complete!
       progressBar.style.width = '100%';

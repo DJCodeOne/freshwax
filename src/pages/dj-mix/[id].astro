@@ -55,15 +55,49 @@ const {
   djName: mixDjName = ''
 } = mix || {};
 
-// Get duration from various possible field names
-const durationSeconds = mix?.durationSeconds || mix?.duration || mix?.duration_seconds || mix?.mixDuration || null;
+// Get duration from various possible field names (in order of preference)
+function getDurationSeconds(mix: any): number | null {
+  // Check durationSeconds first (should be a number)
+  if (mix?.durationSeconds && typeof mix.durationSeconds === 'number') {
+    return mix.durationSeconds;
+  }
+  // Check if it's stored as a string number
+  if (mix?.durationSeconds && !isNaN(parseFloat(mix.durationSeconds))) {
+    return parseFloat(mix.durationSeconds);
+  }
+  // Check duration_seconds
+  if (mix?.duration_seconds && typeof mix.duration_seconds === 'number') {
+    return mix.duration_seconds;
+  }
+  // Check mixDuration
+  if (mix?.mixDuration && typeof mix.mixDuration === 'number') {
+    return mix.mixDuration;
+  }
+  // Check duration if it's a number
+  if (mix?.duration && typeof mix.duration === 'number') {
+    return mix.duration;
+  }
+  // Check duration if it's a time string format like "1:23:45" or "23:45"
+  if (mix?.duration && typeof mix.duration === 'string' && mix.duration.includes(':')) {
+    const parts = mix.duration.split(':').map(Number);
+    if (parts.length === 3) {
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) {
+      return parts[0] * 60 + parts[1];
+    }
+  }
+  return null;
+}
+
+const durationSeconds = getDurationSeconds(mix);
 
 // Format duration helper
-function formatDurationDisplay(seconds) {
+function formatDurationDisplay(seconds: number | null) {
   if (!seconds || !isFinite(seconds)) return null;
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
-  
+  const secs = Math.floor(seconds % 60);
+
   if (hrs > 0) {
     const hourWord = hrs === 1 ? 'hour' : 'hours';
     const minWord = mins === 1 ? 'minute' : 'minutes';
@@ -72,8 +106,18 @@ function formatDurationDisplay(seconds) {
     }
     return `${hrs} ${hourWord}`;
   }
-  const minWord = mins === 1 ? 'minute' : 'minutes';
-  return `${mins} ${minWord}`;
+  if (mins > 0) {
+    const minWord = mins === 1 ? 'minute' : 'minutes';
+    if (secs > 0 && mins < 5) {
+      // Show seconds only for short durations under 5 minutes
+      const secWord = secs === 1 ? 'second' : 'seconds';
+      return `${mins} ${minWord} ${secs} ${secWord}`;
+    }
+    return `${mins} ${minWord}`;
+  }
+  // Under 1 minute - show seconds
+  const secWord = secs === 1 ? 'second' : 'seconds';
+  return `${secs} ${secWord}`;
 }
 
 const formattedDuration = formatDurationDisplay(durationSeconds);
@@ -133,8 +177,8 @@ const formattedDate = mix ? new Date(upload_date).toLocaleDateString('en-GB', {
             <!-- Info Column - Now First on Desktop -->
             <div class="lg:flex-1 space-y-3 sm:space-y-4 md:space-y-6 order-1 lg:order-1 min-w-0">
               <div class="text-center lg:text-left overflow-hidden">
-                <h1 class="text-5xl md:text-7xl font-black text-red-500 mb-2 md:mb-3 leading-tight uppercase drop-shadow-lg truncate" title={title}>{title}</h1>
-                <p class="text-3xl md:text-4xl font-black text-white mb-1 md:mb-2 uppercase drop-shadow-md truncate" title={dj_name}>{dj_name}</p>
+                <h1 class="text-3xl sm:text-4xl md:text-5xl font-black text-red-500 mb-2 md:mb-3 leading-tight uppercase drop-shadow-lg" title={title}>{title}</h1>
+                <p class="text-xl md:text-2xl font-black text-white mb-1 md:mb-2 uppercase drop-shadow-md truncate" title={dj_name}>{dj_name}</p>
               </div>
 
               <!-- Info Grid -->
@@ -264,12 +308,12 @@ const formattedDate = mix ? new Date(upload_date).toLocaleDateString('en-GB', {
 
         <!-- Description Section -->
         {description && (
-          <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-2 sm:p-3 md:p-6 mb-3 sm:mb-4 md:mb-6">
-            <h2 class="text-base sm:text-lg md:text-2xl font-black text-white uppercase tracking-wider mb-2 sm:mb-3 md:mb-4 pb-2 sm:pb-3 md:pb-4 border-b-2 border-red-600 drop-shadow-lg">
+          <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-3 sm:p-4 md:p-5 mb-3 sm:mb-4 md:mb-6">
+            <h2 class="text-sm sm:text-base md:text-lg font-black text-white uppercase tracking-wider mb-2 pb-2 border-b-2 border-red-600 drop-shadow-lg">
               About This Mix
             </h2>
-            <div class="bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-gray-600 p-3 sm:p-4 md:p-5 rounded shadow-inner">
-              <p class="text-white text-xs sm:text-sm md:text-base font-semibold leading-relaxed whitespace-pre-wrap">
+            <div class="bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-gray-600 p-2 sm:p-3 rounded shadow-inner overflow-hidden">
+              <p class="text-white text-sm sm:text-base md:text-lg font-medium leading-normal whitespace-pre-wrap break-words overflow-wrap-anywhere">
                 {description}
               </p>
             </div>
@@ -460,9 +504,10 @@ const formattedDate = mix ? new Date(upload_date).toLocaleDateString('en-GB', {
           </button>
         </div>
         <div class="p-3 sm:p-4">
-          <p class="text-xs sm:text-sm text-black font-bold mb-2 sm:mb-3 truncate">
-            <span id="share-modal-title"></span> by <span id="share-modal-dj"></span>
-          </p>
+          <div class="mb-2 sm:mb-3">
+            <div class="text-sm sm:text-base font-bold text-black break-words" id="share-modal-title"></div>
+            <div class="text-xs sm:text-sm text-gray-600">by <span class="font-semibold text-gray-700" id="share-modal-dj"></span></div>
+          </div>
           <div class="flex gap-1.5 sm:gap-2">
             <input 
               type="text" 
@@ -700,17 +745,26 @@ Artist - Track Title
     const durationDisplay = document.getElementById('mix-duration-display');
     // Only update if currently showing placeholder
     if (durationDisplay && durationDisplay.textContent === '--:--' && audio.duration && isFinite(audio.duration)) {
-      const totalMins = Math.floor(audio.duration / 60);
-      const hours = Math.floor(totalMins / 60);
-      const mins = totalMins % 60;
-      
+      const totalSecs = Math.floor(audio.duration);
+      const hours = Math.floor(totalSecs / 3600);
+      const mins = Math.floor((totalSecs % 3600) / 60);
+      const secs = totalSecs % 60;
+
       if (hours > 0) {
         const hourWord = hours === 1 ? 'hour' : 'hours';
         const minWord = mins === 1 ? 'minute' : 'minutes';
-        durationDisplay.textContent = hours + ' ' + hourWord + ' ' + mins + ' ' + minWord;
-      } else {
+        durationDisplay.textContent = hours + ' ' + hourWord + (mins > 0 ? ' ' + mins + ' ' + minWord : '');
+      } else if (mins > 0) {
         const minWord = mins === 1 ? 'minute' : 'minutes';
-        durationDisplay.textContent = mins + ' ' + minWord;
+        if (secs > 0 && mins < 5) {
+          const secWord = secs === 1 ? 'second' : 'seconds';
+          durationDisplay.textContent = mins + ' ' + minWord + ' ' + secs + ' ' + secWord;
+        } else {
+          durationDisplay.textContent = mins + ' ' + minWord;
+        }
+      } else {
+        const secWord = secs === 1 ? 'second' : 'seconds';
+        durationDisplay.textContent = secs + ' ' + secWord;
       }
     }
   });
@@ -1375,22 +1429,29 @@ Artist - Track Title
   // Open edit modal
   editTracklistBtn?.addEventListener('click', function() {
     // Get current tracklist from display
-    const trackItems = tracklistDisplay?.querySelectorAll('p');
+    // Only get actual track items, not placeholder text
+    // Placeholder container has 'text-center' class, real tracks don't
     let currentTracklist = [];
-    
-    if (trackItems && trackItems.length > 0) {
-      trackItems.forEach(function(p) {
-        // Remove the track number prefix that's added by display
-        let text = p.textContent || '';
-        text = text.replace(/^\d+\.\s*/, '').trim();
-        if (text) currentTracklist.push(text);
-      });
+
+    if (tracklistDisplay && !tracklistDisplay.classList.contains('text-center')) {
+      const trackItems = tracklistDisplay.querySelectorAll('p');
+      if (trackItems && trackItems.length > 0) {
+        trackItems.forEach(function(p) {
+          // Remove the track number prefix that's added by display
+          let text = p.textContent || '';
+          text = text.replace(/^\d+\.\s*/, '').trim();
+          // Skip placeholder text
+          if (text && !text.includes('No tracklist available') && !text.includes('click Edit Tracklist')) {
+            currentTracklist.push(text);
+          }
+        });
+      }
     }
-    
+
     if (editTracklistTextarea) {
       editTracklistTextarea.value = currentTracklist.join('\n');
     }
-    
+
     editTracklistModal?.classList.remove('hidden');
   });
 

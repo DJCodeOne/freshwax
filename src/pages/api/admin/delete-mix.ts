@@ -4,7 +4,7 @@
 import '../../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Workers
 import type { APIRoute } from 'astro';
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { getDocument, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, deleteDocument, initFirebaseEnv, invalidateMixesCache } from '../../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -109,6 +109,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Delete mix document
     await deleteDocument('dj-mixes', mixId);
     log.info('[admin/delete-mix] Mix deleted');
+
+    // Clear mixes cache so changes appear immediately
+    invalidateMixesCache();
 
     return new Response(JSON.stringify({
       success: true,

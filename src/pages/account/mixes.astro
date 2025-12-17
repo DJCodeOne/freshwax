@@ -83,16 +83,16 @@ export const prerender = false;
           <!-- Title -->
           <div class="form-group">
             <label for="editTitle">Mix Title</label>
-            <input type="text" id="editTitle" name="title" maxlength="80" placeholder="Enter mix title">
-            <div class="char-counter"><span id="titleCharCount">0</span> / 80 characters</div>
+            <input type="text" id="editTitle" name="title" maxlength="37" placeholder="Enter mix title">
+            <div class="char-counter"><span id="titleCharCount">0</span> / 37 characters</div>
           </div>
           
           <!-- Artwork -->
           <div class="form-group">
             <label>Cover Artwork</label>
             <div class="artwork-upload-area">
-              <div class="current-artwork" id="currentArtwork">
-                <img id="artworkPreview" src="" alt="Current artwork">
+              <div class="current-artwork no-artwork" id="currentArtwork">
+                <img id="artworkPreview" src="/place-holder.webp" alt="Current artwork" onerror="this.src='/place-holder.webp'">
               </div>
               <div class="artwork-controls">
                 <input type="file" id="artworkInput" accept="image/*" hidden>
@@ -196,16 +196,25 @@ export const prerender = false;
   // Format numbers
   const formatNumber = (num) => (num || 0).toLocaleString();
 
+  // Reset state for View Transitions
+  function resetState() {
+    mixesInitialized = false;
+  }
+
   // Initialize mixes for a user
   async function initMixes(user) {
     if (mixesInitialized) return;
     mixesInitialized = true;
 
+    // Show loading state
+    loadingState?.classList.remove('hidden');
+    mainContent?.classList.add('hidden');
+
     console.log('[mixes.astro] User logged in:', user.uid);
     currentUserId = user.uid;
 
     try {
-      const response = await fetch(`/api/get-dj-mixes?userId=${encodeURIComponent(user.uid)}`);
+      const response = await fetch(`/api/get-dj-mixes?userId=${encodeURIComponent(user.uid)}&t=${Date.now()}`);
         const data = await response.json();
         
         // Hide loading, show main content
@@ -241,13 +250,14 @@ export const prerender = false;
             // Render mixes grid
             mixesContainer.innerHTML = `<div class="mixes-grid">
               ${data.mixes.map(mix => {
-                const artworkUrl = mix.artwork_url || mix.artworkUrl || mix.artwork || mix.imageUrl || mix.coverUrl || '';
+                const rawArtworkUrl = mix.artwork_url || mix.artworkUrl || mix.artwork || mix.imageUrl || mix.coverUrl || '';
+                const artworkUrl = rawArtworkUrl && !rawArtworkUrl.includes('place-holder') ? rawArtworkUrl : '';
                 const title = (mix.title || 'Untitled Mix').replace(/"/g, '&quot;');
                 const description = (mix.description || '').replace(/"/g, '&quot;');
                 return `
                   <div class="mix-card" data-mix-id="${mix.id}">
                     <div class="mix-image">
-                      ${artworkUrl ? `<img src="${artworkUrl}" alt="${title}" />` : '<div class="mix-placeholder">🎧</div>'}
+                      ${artworkUrl ? `<img src="${artworkUrl}" alt="${title}" />` : '<img src="/place-holder.webp" alt="Placeholder" />'}
                       <div class="mix-overlay">
                         <a href="/dj-mix/${mix.id}" class="overlay-btn" target="_blank">View</a>
                       </div>
@@ -307,6 +317,21 @@ export const prerender = false;
   if (auth.currentUser) {
     initMixes(auth.currentUser);
   }
+
+  // Handle View Transitions - reset and reinitialize when page loads via client navigation
+  document.addEventListener('astro:page-load', () => {
+    resetState();
+    if (auth.currentUser) {
+      initMixes(auth.currentUser);
+    }
+  });
+
+  // Also handle visibility change (tab switching back)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && auth.currentUser && !mixesInitialized) {
+      initMixes(auth.currentUser);
+    }
+  });
 
   function attachMixEventListeners() {
     // Edit buttons
@@ -383,7 +408,7 @@ export const prerender = false;
   const charCountEl = document.getElementById('charCount');
   const charCounterEl = document.querySelector('.char-counter');
   const maxDescChars = 150;
-  const maxTitleChars = 80;
+  const maxTitleChars = 22;
   
   // Artwork elements
   const artworkInput = document.getElementById('artworkInput');
@@ -511,11 +536,12 @@ export const prerender = false;
       document.getElementById('editDescription').value = description;
       
       // Set artwork preview
-      if (artwork) {
+      const hasRealArtwork = artwork && !artwork.includes('place-holder');
+      if (hasRealArtwork) {
         artworkPreview.src = artwork;
         artworkPreview.parentElement.classList.remove('no-artwork');
       } else {
-        artworkPreview.src = '/default-mix-cover.webp';
+        artworkPreview.src = '/place-holder.webp';
         artworkPreview.parentElement.classList.add('no-artwork');
       }
       
@@ -1028,7 +1054,7 @@ export const prerender = false;
     border: 2px solid #374151;
     border-radius: 12px;
     width: 100%;
-    max-width: 580px;
+    max-width: 520px;
     margin: 1rem;
   }
 
@@ -1036,7 +1062,7 @@ export const prerender = false;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.25rem 1.75rem;
+    padding: 1rem 1.25rem;
     background: #111;
     border-radius: 10px 10px 0 0;
     color: #fff;
@@ -1055,9 +1081,9 @@ export const prerender = false;
   }
 
   .form-group {
-    padding: 0 1.75rem;
-    margin-top: 1.75rem;
-    margin-bottom: 1.5rem;
+    padding: 0 1.25rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
   }
 
   .form-group label {
@@ -1155,7 +1181,7 @@ export const prerender = false;
   .modal-actions {
     display: flex;
     gap: 0.75rem;
-    padding: 1.75rem;
+    padding: 1.25rem;
     border-top: 1px solid #374151;
   }
 
@@ -1215,8 +1241,8 @@ export const prerender = false;
   }
   
   .current-artwork {
-    width: 100px;
-    height: 100px;
+    width: 80px;
+    height: 80px;
     border: 2px solid #374151;
     border-radius: 8px;
     overflow: hidden;
@@ -1235,6 +1261,11 @@ export const prerender = false;
     align-items: center;
     justify-content: center;
     font-size: 2rem;
+    background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  }
+
+  .current-artwork.no-artwork img {
+    opacity: 0.7;
   }
   
   .artwork-controls {

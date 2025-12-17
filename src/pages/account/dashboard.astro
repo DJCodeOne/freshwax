@@ -690,10 +690,29 @@ export const prerender = false;
             const mixTitle = mix.title || mix.name || 'Untitled Mix';
             const genre = mix.genre || 'Jungle & D&B';
             
-            // Fix duration - handle NaN, null, undefined, 0
-            const rawDuration = mix.duration || mix.durationSeconds || mix.duration_seconds || 0;
-            const durationNum = parseInt(rawDuration, 10);
-            const durationDisplay = (durationNum && !isNaN(durationNum) && durationNum > 0) ? Math.floor(durationNum / 60) + ' mins' : '';
+            // Fix duration - handle NaN, null, undefined, 0, strings, formatted strings
+            let rawDuration = mix.durationSeconds || mix.duration_seconds || mix.duration || 0;
+            // Handle formatted strings like "1:30:00" or "45:30"
+            if (typeof rawDuration === 'string' && rawDuration.includes(':')) {
+              const parts = rawDuration.split(':').map(Number);
+              if (parts.length === 3) {
+                rawDuration = parts[0] * 3600 + parts[1] * 60 + parts[2];
+              } else if (parts.length === 2) {
+                rawDuration = parts[0] * 60 + parts[1];
+              }
+            }
+            const durationNum = typeof rawDuration === 'number' ? rawDuration : parseInt(rawDuration, 10);
+            let durationDisplay = '';
+            if (durationNum && !isNaN(durationNum) && durationNum > 0) {
+              const hrs = Math.floor(durationNum / 3600);
+              const mins = Math.floor((durationNum % 3600) / 60);
+              const secs = Math.floor(durationNum % 60);
+              if (hrs > 0) {
+                durationDisplay = `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+              } else {
+                durationDisplay = `${mins}:${secs.toString().padStart(2, '0')}`;
+              }
+            }
             
             // Get latest comment preview - only show if it has real text (min 3 chars, not just emoji)
             const latestComment = commentsArray.length > 0 ? commentsArray[commentsArray.length - 1] : null;

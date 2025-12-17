@@ -865,11 +865,25 @@
   updateHeaderCartBadge();
 
   // Re-initialize on View Transitions page load
-  document.addEventListener('astro:page-load', () => {
+  document.addEventListener('astro:page-load', async () => {
     initHeader();
     updateHeaderCartBadge();
-    // Re-apply auth UI state (avatar, name, etc.) since DOM was swapped
-    updateAuthUI();
+
+    // Ensure auth state is available for new page components
+    // Re-create authReady promise for components that might be waiting
+    if (auth.currentUser !== undefined) {
+      // Auth is already initialized, update window.authUser and re-apply UI
+      window.authUser = auth.currentUser;
+
+      // Create a new resolved promise for any new components
+      window.authReady = Promise.resolve(auth.currentUser);
+
+      // Re-apply auth UI state (avatar, name, etc.) since DOM was swapped
+      updateAuthUI();
+
+      // Dispatch custom event for components that listen for auth state
+      window.dispatchEvent(new CustomEvent('auth-state-ready', { detail: { user: auth.currentUser } }));
+    }
   });
 </script>
 

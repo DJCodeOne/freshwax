@@ -1,7 +1,7 @@
 // src/pages/api/admin/toggle-mix-publish.ts
 // Toggle DJ mix publish status
 import type { APIRoute } from 'astro';
-import { updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { updateDocument, initFirebaseEnv, invalidateMixesCache } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -30,6 +30,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       published: !!published,
       updatedAt: new Date().toISOString()
     });
+
+    // Clear mixes cache so changes appear immediately
+    invalidateMixesCache();
 
     return new Response(JSON.stringify({
       success: true,

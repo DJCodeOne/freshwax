@@ -50,7 +50,7 @@ const CACHE_TTL = {
   // Static/rarely changing data - 10 minutes
   RELEASES_LIST: 10 * 60 * 1000,
   RELEASE_DETAIL: 30 * 1000,  // 30 seconds for individual releases (comments/ratings change)
-  DJ_MIXES_LIST: 10 * 60 * 1000,
+  DJ_MIXES_LIST: 2 * 60 * 1000, // 2 minutes (reduced for faster updates)
   MERCH_LIST: 10 * 60 * 1000,
   
   // Semi-dynamic data - 3 minutes
@@ -476,12 +476,21 @@ export async function getLiveDJMixes(limit?: number): Promise<any[]> {
 
   const mixes = await queryCollection('dj-mixes', {
     filters: [{ field: 'published', op: 'EQUAL', value: true }],
-    limit,
     cacheTTL: CACHE_TTL.DJ_MIXES_LIST
   });
-  
-  setCache(cacheKey, mixes, CACHE_TTL.DJ_MIXES_LIST);
-  return mixes;
+
+  // Sort by uploadedAt descending (newest first) - done client-side to avoid needing composite index
+  mixes.sort((a, b) => {
+    const dateA = new Date(a.uploadedAt || a.createdAt || 0).getTime();
+    const dateB = new Date(b.uploadedAt || b.createdAt || 0).getTime();
+    return dateB - dateA;
+  });
+
+  // Apply limit after sorting
+  const result = limit ? mixes.slice(0, limit) : mixes;
+
+  setCache(cacheKey, result, CACHE_TTL.DJ_MIXES_LIST);
+  return result;
 }
 
 // Batch get ratings for multiple releases (reduces reads significantly)

@@ -85,51 +85,53 @@ const {
 </style>
 
 <script>
-  // Initialize auth gates on page load
-  function initAuthGates() {
-    import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js').then(({ initializeApp }) => {
-      import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js').then(({ getAuth, onAuthStateChanged }) => {
-        const firebaseConfig = {
-          apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
-          authDomain: "freshwax-store.firebaseapp.com",
-          projectId: "freshwax-store",
-          storageBucket: "freshwax-store.firebasestorage.app",
-          messagingSenderId: "675435782973",
-          appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        
-        onAuthStateChanged(auth, (user) => {
-          document.querySelectorAll('.auth-gate-wrapper').forEach(wrapper => {
-            const prompt = wrapper.querySelector('#authGatePrompt, .auth-gate-prompt');
-            const content = wrapper.querySelector('#authGateContent, .auth-gate-content-wrapper');
-            
-            if (user) {
-              // User is logged in - show content
-              prompt?.classList.add('hidden');
-              content?.classList.remove('hidden');
-            } else {
-              // User is not logged in - show prompt
-              prompt?.classList.remove('hidden');
-              content?.classList.add('hidden');
-              
-              // Update return URL if specified
-              const returnTo = wrapper.dataset.returnTo;
-              if (returnTo) {
-                const btn = prompt?.querySelector('.auth-gate-btn');
-                if (btn) {
-                  btn.href = `/login?returnTo=${encodeURIComponent(returnTo)}`;
-                }
-              }
-            }
-          });
-        });
-      });
+  // Update auth gates based on current user state
+  function updateAuthGates(user) {
+    document.querySelectorAll('.auth-gate-wrapper').forEach(wrapper => {
+      const prompt = wrapper.querySelector('#authGatePrompt, .auth-gate-prompt');
+      const content = wrapper.querySelector('#authGateContent, .auth-gate-content-wrapper');
+
+      if (user) {
+        // User is logged in - show content
+        prompt?.classList.add('hidden');
+        content?.classList.remove('hidden');
+      } else {
+        // User is not logged in - show prompt
+        prompt?.classList.remove('hidden');
+        content?.classList.add('hidden');
+
+        // Update return URL if specified
+        const returnTo = wrapper.dataset.returnTo || window.location.pathname;
+        const btn = prompt?.querySelector('.auth-gate-btn');
+        if (btn) {
+          btn.href = `/login?returnTo=${encodeURIComponent(returnTo)}`;
+        }
+      }
     });
   }
-  
+
+  // Initialize auth gates - uses global auth from Header
+  async function initAuthGates() {
+    // Wait for Header's auth to be ready
+    if (window.authReady) {
+      const user = await window.authReady;
+      updateAuthGates(user);
+
+      // Also listen for future auth changes via the global auth instance
+      if (window.firebaseAuth) {
+        const { onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+        onAuthStateChanged(window.firebaseAuth, updateAuthGates);
+      }
+    } else {
+      // Fallback: check again after a short delay if Header hasn't initialized yet
+      setTimeout(() => {
+        if (window.firebaseAuth?.currentUser !== undefined) {
+          updateAuthGates(window.firebaseAuth.currentUser);
+        }
+      }, 500);
+    }
+  }
+
   // Run on initial load and after view transitions
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAuthGates);
@@ -137,4 +139,9 @@ const {
     initAuthGates();
   }
   document.addEventListener('astro:page-load', initAuthGates);
+
+  // Also listen for auth-state-ready event from Header
+  window.addEventListener('auth-state-ready', (e) => {
+    updateAuthGates(e.detail?.user);
+  });
 </script>
