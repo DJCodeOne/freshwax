@@ -3371,8 +3371,9 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       if (inLobby.length > 0) {
         showCountdown(inLobby[0]);
       } else {
-        // Offline overlay removed - no longer showing "OFFLINE" message
+        // Show offline overlay when no one is streaming and no countdown
         countdownOverlay?.classList.add('hidden');
+        offlineOverlay?.classList.remove('hidden');
       }
     }
     

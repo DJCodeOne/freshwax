@@ -676,19 +676,32 @@ function setupHlsPlayer(stream) {
         attemptAutoplay();
       });
 
+      // Track retry attempts to prevent infinite loops
+      let networkRetryCount = 0;
+      const MAX_NETWORK_RETRIES = 3;
+
       hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
         console.error('[HLS] Error:', data.type, data.details);
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              console.log('[HLS] Network error, recovering...');
-              hlsPlayer.startLoad();
-              setTimeout(() => {
-                if (!isPlaying) {
-                  showReconnecting();
-                  hlsPlayer.loadSource(hlsUrl);
-                }
-              }, 3000);
+              networkRetryCount++;
+              if (networkRetryCount <= MAX_NETWORK_RETRIES) {
+                console.log(`[HLS] Network error, recovering... (attempt ${networkRetryCount}/${MAX_NETWORK_RETRIES})`);
+                hlsPlayer.startLoad();
+                setTimeout(() => {
+                  if (!isPlaying) {
+                    showReconnecting();
+                    hlsPlayer.loadSource(hlsUrl);
+                  }
+                }, 3000);
+              } else {
+                console.log('[HLS] Max retries reached, stream appears to be offline');
+                hlsPlayer.destroy();
+                showStreamError('Stream is offline or unavailable.');
+                // Show offline overlay
+                document.getElementById('offlineOverlay')?.classList.remove('hidden');
+              }
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
               console.log('[HLS] Media error, recovering...');
