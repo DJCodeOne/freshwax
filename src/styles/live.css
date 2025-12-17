@@ -240,7 +240,7 @@
     width: 40px;
     height: 40px;
     background: #222;
-    border: 2px solid #444;
+    border: 2px solid #444 !important;
     border-radius: 8px;
     font-size: 1.1rem;
     cursor: pointer;
@@ -252,17 +252,36 @@
     flex-shrink: 0;
   }
   
-  .fs-reaction-btn:hover {
-    border-color: #666;
-    transform: scale(1.1);
+  .fs-reaction-btn:focus,
+  .fs-reaction-btn:active {
+    outline: none !important;
+    border-color: #444 !important;
+    box-shadow: none !important;
+  }
+
+  .fs-reaction-btn:focus-visible {
+    outline: 2px solid #666;
+    outline-offset: 2px;
   }
   
+  
+  .fs-reaction-btn.liked {
+    animation: likePopAnim 0.3s ease;
+    border-color: #444;
+  }
+  @media (hover: hover) {
+    .fs-reaction-btn:hover {
+      border-color: #666;
+      transform: scale(1.1);
+    }
+
+    .fs-reaction-btn.fs-anim-toggle:hover {
+      color: #fff;
+    }
+  }
+
   .fs-reaction-btn.fs-anim-toggle {
     color: #888;
-  }
-  
-  .fs-reaction-btn.fs-anim-toggle:hover {
-    color: #fff;
   }
   
   .fs-reaction-btn.fs-anim-toggle.off {
@@ -1539,7 +1558,9 @@
     border-radius: 10px;
     color: #fff;
     font-size: 1.125rem;
-    outline: none;
+    outline: none !important;
+    border-color: #444 !important;
+    box-shadow: none !important;
     transition: border-color 0.2s;
   }
   
@@ -2433,7 +2454,7 @@
     width: 36px;
     height: 36px;
     background: #222;
-    border: 2px solid #444;
+    border: 2px solid #444 !important;
     border-radius: 8px;
     color: #888;
     cursor: pointer;
@@ -2576,7 +2597,7 @@
     gap: 6px;
     padding: 8px 12px;
     background: #222;
-    border: 2px solid #444;
+    border: 2px solid #444 !important;
     border-radius: 8px;
     color: #888;
     font-size: 11px;
@@ -2681,7 +2702,9 @@
     -webkit-appearance: none;
     background: #333;
     border-radius: 2px;
-    outline: none;
+    outline: none !important;
+    border-color: #444 !important;
+    box-shadow: none !important;
   }
   
   #volumeSlider::-webkit-slider-thumb {
@@ -2717,11 +2740,15 @@
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
-    outline: none;
+    outline: none !important;
+    border-color: #444 !important;
+    box-shadow: none !important;
   }
 
   .reaction-btn:focus {
-    outline: none;
+    outline: none !important;
+    border-color: #444 !important;
+    box-shadow: none !important;
     border-color: #333;
   }
 
@@ -2931,7 +2958,9 @@
   }
 
   .chat-input-wrapper input:focus {
-    outline: none;
+    outline: none !important;
+    border-color: #444 !important;
+    box-shadow: none !important;
     border-color: #6366f1;
   }
 
@@ -3018,7 +3047,9 @@
   }
   
   .giphy-search input:focus {
-    outline: none;
+    outline: none !important;
+    border-color: #444 !important;
+    box-shadow: none !important;
     border-color: #6366f1;
   }
   
@@ -3267,7 +3298,9 @@
   }
   
   .time-dropdown:focus {
-    outline: none;
+    outline: none !important;
+    border-color: #444 !important;
+    box-shadow: none !important;
     border-color: #dc2626;
   }
   
@@ -3711,7 +3744,9 @@
   .form-group input:focus,
   .form-group select:focus,
   .form-group textarea:focus {
-    outline: none;
+    outline: none !important;
+    border-color: #444 !important;
+    box-shadow: none !important;
     border-color: #dc2626;
   }
   
