@@ -30,8 +30,9 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       const artistsData: any[] = [];
 
       // Get artist info from releases (grouped by artistName)
+      // Note: releases use status 'live' not 'approved'
       const releases = await queryCollection('releases', {
-        filters: [{ field: 'status', op: 'EQUAL', value: 'approved' }],
+        filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
         limit: 500
       });
 
