@@ -1605,7 +1605,6 @@
   .shoutout-emoji:hover {
     background: #222;
     border-color: #dc2626;
-    transform: scale(1.1);
   }
   
   .send-shoutout-btn {
