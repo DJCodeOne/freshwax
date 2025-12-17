@@ -55,116 +55,117 @@ const pusherConfig = {
       <h1>ALMOST <span class="red">THERE</span></h1>
       <p id="eligibilityMessage">You need to build your reputation before accessing the DJ Lobby.</p>
       
-      <div class="eligibility-requirements">
-        <h3>To Access DJ Lobby, You Need:</h3>
-        <div class="requirement-list">
-          <div id="reqMixes" class="requirement">
-            <span class="req-icon">❌</span>
-            <span class="req-text">At least 1 DJ mix uploaded</span>
-          </div>
-          <div id="reqLikes" class="requirement">
-            <span class="req-icon">❌</span>
-            <span class="req-text">At least 10 likes on one of your mixes</span>
-          </div>
-        </div>
-        
-        <div id="progressInfo" class="progress-info hidden">
-          <p>Your best mix: <span id="bestMixLikes">0</span>/10 likes</p>
-          <div class="progress-bar">
-            <div id="likesProgress" class="progress-fill" style="width: 0%"></div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="eligibility-actions">
-        <a href="/upload-mix" class="action-btn primary">Upload a DJ Mix →</a>
-        <a href="/dj-mixes" class="action-btn secondary">View DJ Mixes</a>
-        <a href="/live" class="action-btn secondary">Back to Live</a>
-      </div>
-      
-      <!-- Bypass Request Section -->
-      <div id="bypassRequestSection" class="bypass-request-section">
-        <div class="bypass-or-divider">
-          <span>OR</span>
-        </div>
-        
-        <!-- Request Form State -->
-        <div id="bypassRequestForm" class="bypass-form-card">
-          <div class="bypass-header">
-            <span class="bypass-icon">⚡</span>
-            <div>
-              <h4>Need access now?</h4>
-              <p>Request bypass access - an admin will review and approve.</p>
+      <!-- Two-column layout: Requirements on left, Access options on right -->
+      <div class="eligibility-layout">
+        <!-- Left column: Requirements -->
+        <div class="eligibility-left">
+          <div class="eligibility-requirements">
+            <h3>To Access DJ Lobby, You Need:</h3>
+            <div class="requirement-list">
+              <div id="reqMixes" class="requirement">
+                <span class="req-icon">❌</span>
+                <span class="req-text">At least 1 DJ mix uploaded</span>
+              </div>
+              <div id="reqLikes" class="requirement">
+                <span class="req-icon">❌</span>
+                <span class="req-text">At least 10 likes on one of your mixes</span>
+              </div>
             </div>
-          </div>
-          <div class="bypass-form-inner">
-            <textarea id="bypassReason" placeholder="Why do you need immediate access? (optional)" rows="2" maxlength="200"></textarea>
-            <button id="submitBypassRequest" class="bypass-request-btn">
-              🎫 Request Bypass Access
-            </button>
-          </div>
-        </div>
-        
-        <!-- Pending State -->
-        <div id="bypassPending" class="bypass-status-card pending hidden">
-          <div class="status-header">
-            <span class="status-icon">⏳</span>
-            <div>
-              <h4>Request Pending</h4>
-              <p>Your bypass request has been submitted. You'll get access once an admin approves it.</p>
-            </div>
-          </div>
-          <button id="cancelBypassRequest" class="cancel-bypass-btn">Cancel Request</button>
-        </div>
-        
-        <!-- Approved State -->
-        <div id="bypassApproved" class="bypass-status-card approved hidden">
-          <div class="status-header">
-            <span class="status-icon">✅</span>
-            <div>
-              <h4>Bypass Approved!</h4>
-              <p>Your request has been approved. Click below to enter the lobby.</p>
-            </div>
-          </div>
-          <button id="continueWithBypass" class="continue-bypass-btn">Enter DJ Lobby →</button>
-        </div>
-        
-        <!-- Denied State -->
-        <div id="bypassDenied" class="bypass-status-card denied hidden">
-          <div class="status-header">
-            <span class="status-icon">❌</span>
-            <div>
-              <h4>Request Denied</h4>
-              <p id="bypassDenialReason">Your request was not approved at this time.</p>
-            </div>
-          </div>
-          <button id="resubmitBypassRequest" class="resubmit-bypass-btn">Submit New Request</button>
-        </div>
-      </div>
 
-      <!-- Quick Access Key Section -->
-      <div id="quickAccessSection" class="quick-access-section">
-        <div class="bypass-or-divider">
-          <span>OR</span>
+            <div id="progressInfo" class="progress-info hidden">
+              <p>Your best mix: <span id="bestMixLikes">0</span>/10 likes</p>
+              <div class="progress-bar">
+                <div id="likesProgress" class="progress-fill" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="eligibility-actions">
+            <a href="/upload-mix" class="action-btn primary">Upload a DJ Mix →</a>
+            <a href="/dj-mixes" class="action-btn secondary">View DJ Mixes</a>
+            <a href="/live" class="action-btn secondary">Back to Live</a>
+          </div>
         </div>
 
-        <div class="quick-access-card">
-          <div class="quick-access-header">
-            <span class="quick-access-icon">🔑</span>
-            <div>
-              <h4>Have an access code?</h4>
-              <p>Enter a quick access code to gain instant DJ lobby access.</p>
+        <!-- Right column: Access options -->
+        <div class="eligibility-right">
+          <!-- Bypass Request Section -->
+          <div id="bypassRequestSection" class="bypass-request-section">
+            <!-- Request Form State -->
+            <div id="bypassRequestForm" class="bypass-form-card">
+              <div class="bypass-header">
+                <span class="bypass-icon">⚡</span>
+                <div>
+                  <h4>Need access now?</h4>
+                  <p>Request bypass access - an admin will review and approve.</p>
+                </div>
+              </div>
+              <div class="bypass-form-inner">
+                <textarea id="bypassReason" placeholder="Why do you need immediate access? (optional)" rows="2" maxlength="200"></textarea>
+                <button id="submitBypassRequest" class="bypass-request-btn">
+                  🎫 Request Bypass Access
+                </button>
+              </div>
+            </div>
+
+            <!-- Pending State -->
+            <div id="bypassPending" class="bypass-status-card pending hidden">
+              <div class="status-header">
+                <span class="status-icon">⏳</span>
+                <div>
+                  <h4>Request Pending</h4>
+                  <p>Your bypass request has been submitted. You'll get access once an admin approves it.</p>
+                </div>
+              </div>
+              <button id="cancelBypassRequest" class="cancel-bypass-btn">Cancel Request</button>
+            </div>
+
+            <!-- Approved State -->
+            <div id="bypassApproved" class="bypass-status-card approved hidden">
+              <div class="status-header">
+                <span class="status-icon">✅</span>
+                <div>
+                  <h4>Bypass Approved!</h4>
+                  <p>Your request has been approved. Click below to enter the lobby.</p>
+                </div>
+              </div>
+              <button id="continueWithBypass" class="continue-bypass-btn">Enter DJ Lobby →</button>
+            </div>
+
+            <!-- Denied State -->
+            <div id="bypassDenied" class="bypass-status-card denied hidden">
+              <div class="status-header">
+                <span class="status-icon">❌</span>
+                <div>
+                  <h4>Request Denied</h4>
+                  <p id="bypassDenialReason">Your request was not approved at this time.</p>
+                </div>
+              </div>
+              <button id="resubmitBypassRequest" class="resubmit-bypass-btn">Submit New Request</button>
             </div>
           </div>
-          <div class="quick-access-form">
-            <input type="text" id="quickAccessCodeInput" placeholder="Enter access code" maxlength="10" autocomplete="off" />
-            <button id="redeemAccessCodeBtn" class="redeem-code-btn">
-              <span class="btn-text">Redeem Code</span>
-              <span class="btn-spinner hidden">⏳</span>
-            </button>
+
+          <!-- Quick Access Key Section -->
+          <div id="quickAccessSection" class="quick-access-section">
+            <div class="quick-access-card">
+              <div class="quick-access-header">
+                <span class="quick-access-icon">🔑</span>
+                <div>
+                  <h4>Have an access code?</h4>
+                  <p>Enter a quick access code to gain instant DJ lobby access.</p>
+                </div>
+              </div>
+              <div class="quick-access-form">
+                <input type="text" id="quickAccessCodeInput" placeholder="Enter access code" maxlength="10" autocomplete="off" />
+                <button id="redeemAccessCodeBtn" class="redeem-code-btn">
+                  <span class="btn-text">Redeem Code</span>
+                  <span class="btn-spinner hidden">⏳</span>
+                </button>
+              </div>
+              <p id="quickAccessError" class="quick-access-error hidden"></p>
+              <p id="quickAccessSuccess" class="quick-access-success hidden"></p>
+            </div>
           </div>
-          <p id="quickAccessError" class="quick-access-error hidden"></p>
-          <p id="quickAccessSuccess" class="quick-access-success hidden"></p>
         </div>
       </div>
 
