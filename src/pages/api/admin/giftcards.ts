@@ -6,6 +6,12 @@ import { getDocument, updateDocument, setDocument, queryCollection, addDocument,
 
 const FROM_EMAIL = 'Fresh Wax <noreply@freshwax.co.uk>';
 
+// Helper to get admin key from environment
+function getAdminKey(locals: any): string {
+  const env = locals?.runtime?.env;
+  return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+}
+
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
@@ -223,7 +229,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { action, adminKey } = data;
 
     // Validate admin key
-    if (adminKey !== 'freshwax-admin-2024') {
+    if (adminKey !== getAdminKey(locals)) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Unauthorized'

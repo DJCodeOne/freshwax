@@ -5,7 +5,11 @@ import { setDocument, updateDocument, deleteDocument, initFirebaseEnv } from '..
 
 export const prerender = false;
 
-const ADMIN_KEY = 'freshwax-admin-2024';
+// Helper to get admin key from environment
+function getAdminKey(locals: any): string {
+  const env = locals?.runtime?.env;
+  return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
@@ -20,7 +24,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { userId, djName, twitchChannel, isApproved, adminKey } = data;
 
     // Simple admin key check
-    if (adminKey !== ADMIN_KEY) {
+    if (adminKey !== getAdminKey(locals)) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }

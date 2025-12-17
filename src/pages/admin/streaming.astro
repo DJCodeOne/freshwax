@@ -4,6 +4,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import '../../styles/admin/streaming.css';
 
 export const prerender = false;
+
+// Get admin key from environment for client script
+const adminKey = import.meta.env.ADMIN_KEY || '';
 ---
 
 <style is:global>
@@ -803,8 +806,8 @@ export const prerender = false;
 </AdminLayout>
 
 
-<script>
-  const ADMIN_KEY = 'freshwax-admin-2024';
+<script define:vars={{ adminKey }}>
+  const ADMIN_KEY = adminKey;
   
   async function init() {
     await Promise.all([

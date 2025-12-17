@@ -4,6 +4,12 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
+// Helper to get admin key from environment
+function getAdminKey(locals: any): string {
+  const env = locals?.runtime?.env;
+  return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+}
+
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
@@ -24,7 +30,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Validate admin key for non-welcome credits
-    if (!isWelcomeCredit && adminKey !== 'freshwax-admin-2024') {
+    if (!isWelcomeCredit && adminKey !== getAdminKey(locals)) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Unauthorized'

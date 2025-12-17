@@ -5,7 +5,11 @@
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
-const ADMIN_KEY = 'freshwax-admin-2024';
+// Helper to get admin key from environment
+function getAdminKey(locals: any): string {
+  const env = locals?.runtime?.env;
+  return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+}
 
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
@@ -34,7 +38,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const adminKey = url.searchParams.get('adminKey');
 
   // Admin key check
-  if (adminKey !== ADMIN_KEY) {
+  if (adminKey !== getAdminKey(locals)) {
     return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }
@@ -89,7 +93,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { action, adminKey, expiresAt } = data;
 
     // Admin key check
-    if (adminKey !== ADMIN_KEY) {
+    if (adminKey !== getAdminKey(locals)) {
       return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }

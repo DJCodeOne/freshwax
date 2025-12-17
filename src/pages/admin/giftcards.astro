@@ -5,6 +5,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import '../../styles/admin/giftcards.css';
 
 export const prerender = false;
+
+// Get admin key from environment for client script
+const adminKey = import.meta.env.ADMIN_KEY || '';
 ---
 
 <AdminLayout title="Gift Cards - Admin">
@@ -261,8 +264,8 @@ export const prerender = false;
 </AdminLayout>
 
 
-<script type="module">
-  const ADMIN_KEY = 'freshwax-admin-2024';
+<script define:vars={{ adminKey }}>
+  const ADMIN_KEY = adminKey;
   
   // Load analytics
   async function loadAnalytics() {
