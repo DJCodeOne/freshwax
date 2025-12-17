@@ -3,7 +3,14 @@
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, updateDocument, queryCollection , initFirebaseEnv } from '../../lib/firebase-rest';
 
-export const GET: APIRoute = async ({ request, url }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
+  // Initialize Firebase from runtime env
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+  });
+
   try {
     const userId = url.searchParams.get('userId');
 
@@ -77,10 +84,12 @@ export const GET: APIRoute = async ({ request, url }) => {
         return dateB.localeCompare(dateA);
       });
 
+      // Return actual found artists count (not stored artist names count)
       return new Response(JSON.stringify({
         success: true,
         followedArtists: artistsData,
-        count: followedArtists.length
+        count: artistsData.length,
+        storedCount: followedArtists.length // For debugging - shows if some artists have no releases
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
@@ -90,7 +99,8 @@ export const GET: APIRoute = async ({ request, url }) => {
     return new Response(JSON.stringify({
       success: true,
       followedArtists: [],
-      count: 0
+      count: 0,
+      storedCount: 0
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -108,7 +118,14 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase from runtime env
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+  });
+
   try {
     const body = await request.json();
     const { userId, artistName, artistId, action } = body;

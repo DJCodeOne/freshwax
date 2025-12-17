@@ -4,13 +4,14 @@ import type { APIRoute } from 'astro';
 import { getDocument, setDocument, updateDocument , initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
+  // Initialize Firebase from runtime env
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+  });
+
   try {
-    // Initialize Firebase from runtime env
-    const env = (locals as any)?.runtime?.env;
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     const userId = url.searchParams.get('userId');
 
@@ -51,10 +52,12 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         return wishlist.indexOf(b.id) - wishlist.indexOf(a.id);
       });
 
+      // Return actual found releases count (not stored IDs count)
       return new Response(JSON.stringify({
         success: true,
         wishlist: releases,
-        count: wishlist.length
+        count: releases.length,
+        storedCount: wishlist.length // For debugging - shows if some releases were deleted
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
@@ -64,7 +67,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     return new Response(JSON.stringify({
       success: true,
       wishlist: [],
-      count: 0
+      count: 0,
+      storedCount: 0
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -83,13 +87,14 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase from runtime env
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+  });
+
   try {
-    // Initialize Firebase from runtime env
-    const env = (locals as any)?.runtime?.env;
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     const body = await request.json();
     const { userId, releaseId, action } = body;
