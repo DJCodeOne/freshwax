@@ -126,6 +126,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       streamKey: slot.streamKey,
       streamSource: 'red5',
       currentViewers: slot.currentViewers || 0,
+      totalViews: slot.totalViews || 0,
       totalLikes: slot.totalLikes || 0,
       averageRating: slot.averageRating || 0,
       coverImage: slot.coverImage || '/placeholder.webp',

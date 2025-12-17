@@ -422,7 +422,7 @@ function showLiveStream(stream) {
   const elements = {
     djName: stream.djName,
     streamGenre: stream.genre || 'Jungle / D&B',
-    viewerCount: stream.currentViewers || 0,
+    viewerCount: stream.totalViews || stream.currentViewers || 0,
     likeCount: stream.totalLikes || 0,
     avgRating: (stream.averageRating || 0).toFixed(1),
     streamDescription: stream.description || 'No description',
@@ -1555,8 +1555,8 @@ async function setupChat(streamId) {
   chatChannel.bind('viewer-update', (data) => {
     console.log('[Viewer Update] Received:', data);
     const viewerCount = document.getElementById('viewerCount');
-    if (viewerCount && data.currentViewers !== undefined) {
-      viewerCount.textContent = data.currentViewers;
+    if (viewerCount && data.totalViews !== undefined || data.currentViewers !== undefined) {
+      viewerCount.textContent = data.totalViews || data.currentViewers;
     }
   });
 

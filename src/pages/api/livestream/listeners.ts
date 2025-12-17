@@ -104,11 +104,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
         joinedAt: Date.now(),
         lastSeen: Date.now()
       });
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'Joined as listener' 
-      }), { 
+
+      // Increment totalViews on the stream slot (counts every visit, even repeat visits by same user)
+      try {
+        const slot = await getDocument('livestreamSlots', streamId);
+        if (slot) {
+          const currentViews = slot.totalViews || 0;
+          await updateDocument('livestreamSlots', streamId, {
+            totalViews: currentViews + 1
+          });
+        }
+      } catch (e) {
+        console.log('[listeners] Could not increment totalViews:', e);
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Joined as listener'
+      }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
