@@ -72,7 +72,7 @@ const pusherConfig = {
               </div>
             </div>
 
-            <div id="progressInfo" class="progress-info hidden">
+            <div id="progressInfo" class="progress-info">
               <p>Your best mix: <span id="bestMixLikes">0</span>/10 likes</p>
               <div class="progress-bar">
                 <div id="likesProgress" class="progress-fill" style="width: 0%"></div>
@@ -1030,16 +1030,12 @@ const pusherConfig = {
       reqLikes.querySelector('.req-icon').textContent = '✅';
     }
     
-    // Show progress if they have mixes but need likes
-    if (eligibility.reason === 'insufficient_likes' && eligibility.bestMixLikes !== undefined) {
-      const progressInfo = document.getElementById('progressInfo');
-      if (progressInfo) {
-        progressInfo.classList.remove('hidden');
-        document.getElementById('bestMixLikes').textContent = eligibility.bestMixLikes;
-        const progress = Math.min(100, (eligibility.bestMixLikes / eligibility.requiredLikes) * 100);
-        document.getElementById('likesProgress').style.width = progress + '%';
-      }
-    }
+    // Always show progress - update values (defaults to 0 if not available)
+    const bestLikes = eligibility.bestMixLikes || 0;
+    const requiredLikes = eligibility.requiredLikes || 10;
+    document.getElementById('bestMixLikes').textContent = bestLikes;
+    const progress = Math.min(100, (bestLikes / requiredLikes) * 100);
+    document.getElementById('likesProgress').style.width = progress + '%';
     
     whySection.classList.remove('hidden');
     
