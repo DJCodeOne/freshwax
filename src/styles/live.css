@@ -1602,11 +1602,7 @@
     justify-content: center;
   }
   
-  .shoutout-emoji:hover {
-    background: #222;
-    border-color: #dc2626;
-  }
-  
+    
   .send-shoutout-btn {
     width: 100%;
     display: flex;
