@@ -1964,31 +1964,14 @@
     justify-content: center;
   }
 
-  /* Fresh Wax watermark/branding overlay */
+  /* Fresh Wax watermark/branding overlay - HIDDEN */
   .stream-watermark {
     display: none !important;
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    z-index: 9999;
-    pointer-events: none;
-    opacity: 1;
-    transition: opacity 0.3s ease;
-    display: block !important;
-    visibility: visible !important;
-    background: #fff;
-    padding: 8px;
-    border-radius: 8px;
-    box-shadow: none;
+    visibility: hidden !important;
   }
 
   .stream-watermark img {
-    width: 100px;
-    height: auto;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
-    display: block !important;
-    visibility: visible !important;
-    max-width: none;
+    display: none !important;
   }
 
   /* Reduce opacity when video controls are visible (hover) */
