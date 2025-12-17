@@ -910,17 +910,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
         currentViewers: 0,
       };
 
-      await setDocument('livestreamSlots', slotId, newSlot, idToken);
-      invalidateCache();
+      try {
+        console.log('[go_live] Creating slot with idToken:', !!idToken, 'slotId:', slotId);
+        await setDocument('livestreamSlots', slotId, newSlot, idToken);
+        invalidateCache();
 
-      return new Response(JSON.stringify({
-        success: true,
-        slot: { id: slotId, ...newSlot },
-        streamKey,
-        rtmpUrl: newSlot.rtmpUrl,
-        hlsUrl: newSlot.hlsUrl,
-        message: 'You are now live!'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return new Response(JSON.stringify({
+          success: true,
+          slot: { id: slotId, ...newSlot },
+          streamKey,
+          rtmpUrl: newSlot.rtmpUrl,
+          hlsUrl: newSlot.hlsUrl,
+          message: 'You are now live!'
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      } catch (createError: any) {
+        console.error('[go_live] Failed to create slot:', createError);
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Failed to create live slot',
+          details: createError?.message || 'Unknown error'
+        }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      }
     }
 
     // START RELAY - Start a relay stream from an external source
