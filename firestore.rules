@@ -18,7 +18,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow read, write: if isAdmin();
       allow read, update: if request.auth != null && request.auth.uid == userId;
-      // Allow server-side user updates (role management API)
+      // Allow server-side reads and updates (admin API uses REST)
+      allow read: if true;
       allow create, update: if true;
     }
 
@@ -34,6 +35,8 @@ service cloud.firestore {
     match /artists/{artistId} {
       allow read, write: if isAdmin();
       allow read, create, update: if request.auth != null && request.auth.uid == artistId;
+      // Allow server-side reads (admin API uses REST)
+      allow read: if true;
       // Allow server-side partner operations (API uses REST without user auth)
       allow create, update: if true;
     }
@@ -42,6 +45,8 @@ service cloud.firestore {
     match /customers/{customerId} {
       allow read, write: if isAdmin();
       allow read, create, update: if request.auth != null && request.auth.uid == customerId;
+      // Allow server-side reads (admin API uses REST)
+      allow read: if true;
       // Allow server-side avatar updates (API uses REST without user auth)
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
                        .hasOnly(['avatarUrl', 'avatarUpdatedAt']);

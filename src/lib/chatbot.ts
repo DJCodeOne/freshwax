@@ -4,7 +4,7 @@
 // Bot identity
 export const BOT_USER = {
   id: 'freshwax-bot',
-  name: 'FreshWax Bot',
+  name: 'FreshWax',
   avatar: '/logo.webp',
   badge: 'BOT'
 };
@@ -89,7 +89,7 @@ export const BOT_COMMANDS: Record<string, {
     handler: async (streamId, env) => {
       const stream = await getCurrentStream(streamId, env);
       if (stream) {
-        return `Now playing: ${stream.djName} - ${stream.title || 'Live Session'}${stream.genre ? ` | Genre: ${stream.genre}` : ''}`;
+        return `Now playing: ${stream.djName} - ${stream.title || 'Live Session'}`;
       }
       return 'No one is currently streaming.';
     }

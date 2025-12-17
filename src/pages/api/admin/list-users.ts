@@ -3,7 +3,18 @@
 // Uses Firebase REST API to bypass Firestore rules
 
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument } from '../../../lib/firebase-rest';
+import { queryCollection, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+
+export const prerender = false;
+
+// Helper to initialize Firebase for Cloudflare runtime
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env || {};
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
+    FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+  });
+}
 
 interface UserData {
   id: string;
@@ -49,7 +60,10 @@ async function isAdmin(uid: string): Promise<boolean> {
   return false;
 }
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  initFirebase(locals);
+
   try {
     // Get admin UID from header or query param
     const url = new URL(request.url);

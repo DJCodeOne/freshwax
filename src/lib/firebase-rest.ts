@@ -216,7 +216,7 @@ export async function queryCollection(
   }
 
   // Include API key for authenticated reads
-  const apiKey = getEnvVar('FIREBASE_API_KEY') || getEnvVar('PUBLIC_FIREBASE_API_KEY');
+  const apiKey = getEnvVar('FIREBASE_API_KEY') || getEnvVar('PUBLIC_FIREBASE_API_KEY') || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
   const url = apiKey
     ? `${FIRESTORE_BASE}:runQuery?key=${apiKey}`
     : `${FIRESTORE_BASE}:runQuery`;
@@ -320,7 +320,7 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
   }
 
   // Include API key for authenticated reads
-  const apiKey = getEnvVar('FIREBASE_API_KEY') || getEnvVar('PUBLIC_FIREBASE_API_KEY');
+  const apiKey = getEnvVar('FIREBASE_API_KEY') || getEnvVar('PUBLIC_FIREBASE_API_KEY') || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
   const url = apiKey
     ? `${FIRESTORE_BASE}/${collection}/${docId}?key=${apiKey}`
     : `${FIRESTORE_BASE}/${collection}/${docId}`;

@@ -10,85 +10,43 @@ import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase
 let pusher = null;
 let chatChannel = null;
 
-// Early stub functions for emoji/gif pickers (will be replaced by setupEmojiPicker/setupGiphyPicker)
-// This ensures buttons work even before chat is fully initialized
-window.toggleEmojiPicker = function() {
-  console.log('[EmojiPicker] Stub toggle called');
-  const emojiPicker = document.getElementById('emojiPicker');
-  const giphyModal = document.getElementById('giphyModal');
-  const emojiBtn = document.getElementById('emojiBtn');
-  console.log('[EmojiPicker] Elements:', { emojiPicker: !!emojiPicker, giphyModal: !!giphyModal });
-  if (emojiPicker) {
-    emojiPicker.classList.toggle('hidden');
-    giphyModal?.classList.add('hidden');
-    emojiBtn?.classList.toggle('active');
-    document.getElementById('giphyBtn')?.classList.remove('active');
+// Emoji/GIF pickers are now handled by inline script in LiveChat.astro
+
+// Expose sendGifMessage globally for LiveChat component
+window.sendGifMessage = async function(giphyUrl, giphyId) {
+  console.log('[GIF] window.sendGifMessage called:', { giphyUrl, giphyId });
+  console.log('[GIF] currentUser:', !!currentUser, 'currentStream:', !!currentStream);
+
+  if (!currentUser) {
+    console.error('[GIF] No current user - not logged in');
+    alert('Please log in to send GIFs');
+    return;
   }
-};
-
-window.toggleGiphyPicker = function() {
-  console.log('[GiphyPicker] Stub toggle called');
-  const giphyModal = document.getElementById('giphyModal');
-  const emojiPicker = document.getElementById('emojiPicker');
-  const giphyBtn = document.getElementById('giphyBtn');
-  console.log('[GiphyPicker] Elements:', { giphyModal: !!giphyModal, emojiPicker: !!emojiPicker });
-  if (giphyModal) {
-    if (giphyModal.classList.contains('hidden')) {
-      giphyModal.classList.remove('hidden');
-      emojiPicker?.classList.add('hidden');
-      giphyBtn?.classList.add('active');
-      document.getElementById('emojiBtn')?.classList.remove('active');
-      document.body.style.overflow = 'hidden';
-    } else {
-      giphyModal.classList.add('hidden');
-      giphyBtn?.classList.remove('active');
-      document.body.style.overflow = '';
-    }
+  if (!currentStream) {
+    console.error('[GIF] No current stream');
+    alert('No active stream');
+    return;
   }
-};
 
-window.switchEmojiCategory = function(category) {
-  console.log('[EmojiPicker] Category switch - waiting for full init');
-};
-
-window.switchGifCategory = function(category) {
-  console.log('[GiphyPicker] Category switch - waiting for full init');
-};
-
-window.searchGiphyDebounced = function(query) {
-  console.log('[GiphyPicker] Search - waiting for full init');
-};
-
-// Attach click handlers to emoji/gif buttons
-function attachPickerButtons() {
-  const emojiBtn = document.getElementById('emojiBtn');
-  const giphyBtn = document.getElementById('giphyBtn');
-  console.log('[Pickers] Attaching handlers:', { emojiBtn: !!emojiBtn, giphyBtn: !!giphyBtn });
-  if (emojiBtn && !emojiBtn._hasClickHandler) {
-    emojiBtn._hasClickHandler = true;
-    emojiBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log('[EmojiBtn] Click event fired');
-      window.toggleEmojiPicker();
+  try {
+    const response = await fetch('/api/livestream/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        streamId: currentStream.id,
+        userId: currentUser.uid,
+        userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+        message: '[GIF]',
+        type: 'giphy',
+        giphyUrl,
+        giphyId
+      })
     });
+    console.log('[GIF] Sent successfully:', response.ok);
+  } catch (error) {
+    console.error('[GIF] Error sending:', error);
   }
-  if (giphyBtn && !giphyBtn._hasClickHandler) {
-    giphyBtn._hasClickHandler = true;
-    giphyBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log('[GiphyBtn] Click event fired');
-      window.toggleGiphyPicker();
-    });
-  }
-}
-
-// Attach on DOM ready
-document.addEventListener('DOMContentLoaded', attachPickerButtons);
-
-// Attach on View Transitions navigation
-document.addEventListener('astro:page-load', attachPickerButtons);
+};
 
 // Get Pusher config at runtime (not module load time) to ensure window.PUSHER_CONFIG is set
 function getPusherConfig() {
@@ -137,9 +95,57 @@ const db = getFirestore(app);
 // ==========================================
 let currentUser = null;
 let currentStream = null;
+
+// Expose state globally for LiveChat component
+window.liveStreamState = { currentUser: null, currentStream: null };
 let viewerSessionId = null;
 let isPlaying = false;
 let chatMessages = []; // Store chat messages for Pusher updates
+let activeUsers = new Map(); // Track active users { odlId -> { id, name, avatar, lastSeen } }
+
+// Expose function to get online viewers for LiveChat sidebar
+window.getOnlineViewers = function() {
+  const now = Date.now();
+  const fiveMinutesAgo = now - (5 * 60 * 1000);
+
+  // Filter to users active in last 5 minutes, exclude bots
+  const active = [];
+  activeUsers.forEach((user, id) => {
+    if (user.lastSeen > fiveMinutesAgo && id !== 'freshwax-bot') {
+      active.push(user);
+    }
+  });
+
+  return active;
+};
+
+// Track user from chat message
+function trackActiveUser(msg) {
+  if (!msg.userId || msg.userId === 'freshwax-bot') return;
+
+  activeUsers.set(msg.userId, {
+    id: msg.userId,
+    name: msg.userName || 'User',
+    avatar: msg.userAvatar || null,
+    lastSeen: Date.now()
+  });
+
+  // Also include current logged-in user
+  const currentUser = window.liveStreamState?.currentUser;
+  if (currentUser && !activeUsers.has(currentUser.uid)) {
+    activeUsers.set(currentUser.uid, {
+      id: currentUser.uid,
+      name: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+      avatar: currentUser.photoURL || null,
+      lastSeen: Date.now()
+    });
+  }
+
+  // Update the sidebar if function exists
+  if (window.updateOnlineUsers) {
+    window.updateOnlineUsers(window.getOnlineViewers());
+  }
+}
 
 // Recording state
 let recordingStartTime = null;
@@ -388,6 +394,7 @@ function showOfflineState(scheduled) {
 // ==========================================
 function showLiveStream(stream) {
   currentStream = stream;
+  window.liveStreamState.currentStream = stream; // Expose for LiveChat
 
   // Expose stream ID globally for reaction buttons
   window.currentStreamId = stream.id;
@@ -1440,12 +1447,14 @@ async function setupChat(streamId) {
     console.log('[DEBUG] Pusher already initialized, state:', pusher.connection.state);
   }
   
-  // Load initial messages via API (20 messages, 20 Firebase reads total)
+  // Load initial messages via API (15 messages max)
   try {
-    const response = await fetch(`/api/livestream/chat?streamId=${streamId}&limit=20`);
+    const response = await fetch(`/api/livestream/chat?streamId=${streamId}&limit=15`);
     const result = await response.json();
     if (result.success) {
       chatMessages = result.messages || [];
+      // Track active users from initial messages
+      chatMessages.forEach(msg => trackActiveUser(msg));
       renderChatMessages(chatMessages, true); // Force scroll to bottom on initial load
     }
   } catch (error) {
@@ -1476,15 +1485,18 @@ async function setupChat(streamId) {
     console.log('[DEBUG] Received new-message event:', message);
     // Add new message to array
     chatMessages.push(message);
-    
-    // Keep only last 50 messages in memory
-    if (chatMessages.length > 50) {
-      chatMessages = chatMessages.slice(-50);
+
+    // Track active user
+    trackActiveUser(message);
+
+    // Keep only last 15 messages in memory
+    if (chatMessages.length > 15) {
+      chatMessages = chatMessages.slice(-15);
     }
-    
+
     // Re-render
     renderChatMessages(chatMessages);
-    
+
     // Notify mobile tab badge
     if (typeof window.notifyNewChatMessage === 'function') {
       window.notifyNewChatMessage();
@@ -1645,7 +1657,7 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
           <div class="chat-message chat-bot-message" style="padding: 0.5rem; margin: 0.25rem 0; animation: slideIn 0.2s ease-out; background: linear-gradient(135deg, #1a1a2e 0%, #2d1f3d 100%); border-radius: 8px; border-left: 3px solid #a855f7;">
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
               <img src="/logo.webp" alt="Bot" style="width: 20px; height: 20px; border-radius: 50%; background: #fff; padding: 2px;" />
-              <span style="font-weight: 600; color: #a855f7; font-size: 0.8125rem;">FreshWax Bot</span>
+              <span style="font-weight: 600; color: #a855f7; font-size: 0.8125rem;">FreshWax</span>
               <span style="background: #a855f7; color: #fff; font-size: 0.625rem; padding: 0.125rem 0.375rem; border-radius: 4px; font-weight: 600;">BOT</span>
               <span style="font-size: 0.6875rem; color: #666; margin-left: auto;">${time}</span>
             </div>
@@ -1686,11 +1698,29 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
     }).join('')}
   `;
 
-  if (wasAtBottom) {
-    // Use requestAnimationFrame to ensure DOM has updated before scrolling
-    requestAnimationFrame(() => {
-      container.scrollTop = container.scrollHeight;
-    });
+  if (wasAtBottom || forceScrollToBottom) {
+    const scrollToBottom = () => {
+      // Try scrollIntoView on last message
+      const lastMessage = container.querySelector('.chat-message:last-of-type');
+      if (lastMessage) {
+        lastMessage.scrollIntoView({ behavior: 'instant', block: 'end' });
+      } else {
+        container.scrollTop = container.scrollHeight;
+      }
+    };
+
+    // Scroll immediately
+    scrollToBottom();
+
+    // Use requestAnimationFrame to ensure DOM has updated
+    requestAnimationFrame(scrollToBottom);
+
+    // Multiple attempts for images/GIFs that load async
+    if (forceScrollToBottom) {
+      setTimeout(scrollToBottom, 50);
+      setTimeout(scrollToBottom, 200);
+      setTimeout(scrollToBottom, 500);
+    }
   }
 }
 
@@ -1917,8 +1947,18 @@ function setupGiphyPicker() {
 }
 
 async function sendGiphyMessage(giphyUrl, giphyId) {
-  if (!currentUser || !currentStream) return;
-  
+  console.log('[GIF] sendGiphyMessage called with:', { giphyUrl, giphyId });
+  console.log('[GIF] currentUser:', !!currentUser, 'currentStream:', !!currentStream);
+
+  if (!currentUser) {
+    console.error('[GIF] No current user - not logged in');
+    return;
+  }
+  if (!currentStream) {
+    console.error('[GIF] No current stream');
+    return;
+  }
+
   try {
     await fetch('/api/livestream/chat', {
       method: 'POST',
@@ -1937,6 +1977,9 @@ async function sendGiphyMessage(giphyUrl, giphyId) {
     console.error('[Chat] GIF error:', error);
   }
 }
+
+// Expose for LiveChat component
+window.sendGifMessage = sendGiphyMessage;
 
 function setupChatInput(streamId) {
   const input = document.getElementById('chatInput');
@@ -2145,14 +2188,26 @@ function startDurationTimer(startedAt) {
 function setupAuthListener() {
   onAuthStateChanged(auth, (user) => {
     currentUser = user;
-    
+    window.liveStreamState.currentUser = user; // Expose for LiveChat
+
     const loginPrompt = document.getElementById('loginPrompt');
     const chatForm = document.getElementById('chatForm');
     
     if (user) {
       loginPrompt?.classList.add('hidden');
       chatForm?.classList.remove('hidden');
-      
+
+      // Add current user to online users list immediately
+      activeUsers.set(user.uid, {
+        id: user.uid,
+        name: user.displayName || user.email?.split('@')[0] || 'User',
+        avatar: user.photoURL || null,
+        lastSeen: Date.now()
+      });
+      if (window.updateOnlineUsers) {
+        window.updateOnlineUsers(window.getOnlineViewers());
+      }
+
       if (currentStream) {
         loadUserReactions(currentStream.id);
       }

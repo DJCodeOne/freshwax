@@ -1,208 +1,428 @@
 ---
 // src/components/live/LiveChat.astro
-// Live stream chat with emoji picker and GIF support
+// Live stream chat with emoji picker, GIF support, and online users
 ---
 
 <div class="chat-section">
-  <div class="chat-header">
-    <h3>LIVE CHAT</h3>
-    <span class="chat-viewers" id="chatViewers">0 watching</span>
-  </div>
-
-  <div class="chat-messages" id="chatMessages">
-    <div class="chat-welcome">
-      <p>Welcome to <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span> Live Stream!</p>
-      <p class="chat-hint">Chat is active during live streams.</p>
+    <div class="chat-header">
+      <h3>LIVE CHAT</h3>
+      <span class="chat-viewers" id="chatViewers">0 watching</span>
     </div>
-  </div>
 
-  <div id="chatInputSection" class="chat-input-section" style="position: relative;">
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-welcome">
+        <p>Welcome to <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span> Live Stream!</p>
+        <p class="chat-hint">Chat is active during live streams.</p>
+      </div>
+    </div>
+
+    <div id="chatInputSection" class="chat-input-section" style="position: relative;">
     <div id="loginPrompt" class="login-prompt">
       <p><a href="/login">Sign in</a> to chat</p>
     </div>
 
     <div id="chatForm" class="chat-form hidden">
       <div id="replyIndicator" class="reply-indicator" style="display: none;"></div>
+
+      <!-- Emoji Picker Panel -->
+      <div id="emojiPanel" class="emoji-panel" style="display: none;">
+        <div class="emoji-panel-header">
+          <span>Emojis</span>
+          <button type="button" class="emoji-panel-close" id="closeEmojiPanel">×</button>
+        </div>
+        <div class="emoji-panel-cats">
+          <button class="emoji-panel-cat active" data-category="music">🎵</button>
+          <button class="emoji-panel-cat" data-category="fire">🔥</button>
+          <button class="emoji-panel-cat" data-category="faces">😎</button>
+          <button class="emoji-panel-cat" data-category="vibes">🌴</button>
+        </div>
+        <div class="emoji-panel-grid" id="emojiPanelGrid"></div>
+      </div>
+
       <div class="chat-input-wrapper">
         <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
-        <div class="chat-input-tools">
-          <button type="button" id="emojiBtn" class="input-tool-btn" title="Emojis">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
-          </button>
-          <button type="button" id="giphyBtn" class="input-tool-btn" title="GIFs">
-            <span style="font-size: 11px; font-weight: 700;">GIF</span>
-          </button>
-        </div>
+        <button type="button" id="openEmojiPanel" class="chat-tool-btn" title="Emojis" onclick="window.toggleEmojiPanel && window.toggleEmojiPanel()">😀</button>
+        <button type="button" id="openGifModal" class="chat-tool-btn" title="GIFs" onclick="window.toggleGifModal && window.toggleGifModal()">GIF</button>
         <button type="submit" id="sendBtn">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
       </div>
     </div>
-
-    <!-- Emoji Picker - positioned above chat input -->
-    <div id="emojiPicker" class="picker-modal hidden">
-      <div class="picker-header">
-        <span>Emojis</span>
-        <button type="button" class="picker-close" onclick="window.toggleEmojiPicker()">×</button>
-      </div>
-      <div class="emoji-categories">
-        <button class="emoji-cat active" data-cat="music" onclick="window.switchEmojiCategory('music')">🎵 Music</button>
-        <button class="emoji-cat" data-cat="reactions" onclick="window.switchEmojiCategory('reactions')">🔥 Fire</button>
-        <button class="emoji-cat" data-cat="faces" onclick="window.switchEmojiCategory('faces')">😎 Faces</button>
-        <button class="emoji-cat" data-cat="vibes" onclick="window.switchEmojiCategory('vibes')">🌴 Vibes</button>
-      </div>
-      <div class="emoji-grid" id="emojiGrid"></div>
-    </div>
-
   </div>
 </div>
 
-<!-- Large GIF Modal - Full overlay -->
-<div id="giphyModal" class="gif-modal-overlay hidden" onclick="if(event.target === this) window.toggleGiphyPicker()">
-  <div class="gif-modal">
-    <div class="gif-modal-header">
+<!-- DM Modal -->
+<div id="dmModal" class="dm-modal-bg" style="display: none;">
+  <div class="dm-modal-box">
+    <div class="dm-modal-header">
+      <span>Message <strong id="dmRecipientName"></strong></span>
+      <button type="button" id="closeDmModal" class="dm-modal-close">×</button>
+    </div>
+    <div class="dm-modal-body">
+      <textarea id="dmMessageInput" placeholder="Type your message..." maxlength="500"></textarea>
+    </div>
+    <div class="dm-modal-footer">
+      <button type="button" id="sendDmBtn" class="dm-send-btn">Send Message</button>
+    </div>
+  </div>
+</div>
+
+<!-- GIF Modal -->
+<div id="gifModal" class="gif-modal-bg" style="display: none;">
+  <div class="gif-modal-box">
+    <div class="gif-modal-top">
       <h2>Choose a GIF</h2>
-      <button type="button" class="gif-modal-close" onclick="window.toggleGiphyPicker()">×</button>
+      <button type="button" id="closeGifModal" class="gif-modal-x">×</button>
     </div>
-    <div class="gif-modal-search">
-      <input type="text" id="giphySearch" placeholder="Search GIFs..." oninput="window.searchGiphyDebounced(this.value)" />
+    <div class="gif-modal-search-box">
+      <input type="text" id="gifSearchInput" placeholder="Search GIFs..." />
     </div>
-    <div class="gif-modal-categories">
-      <button class="gif-cat active" data-cat="trending" onclick="window.switchGifCategory('trending')">Trending</button>
-      <button class="gif-cat" data-cat="reactions" onclick="window.switchGifCategory('reactions')">Reactions</button>
-      <button class="gif-cat" data-cat="music" onclick="window.switchGifCategory('music')">Music</button>
-      <button class="gif-cat" data-cat="dance" onclick="window.switchGifCategory('dance')">Dance</button>
-      <button class="gif-cat" data-cat="party" onclick="window.switchGifCategory('party')">Party</button>
-      <button class="gif-cat" data-cat="dj" onclick="window.switchGifCategory('dj')">DJ</button>
+    <div class="gif-modal-cats">
+      <button class="gif-modal-cat active" data-category="trending">Trending</button>
+      <button class="gif-modal-cat" data-category="reactions">Reactions</button>
+      <button class="gif-modal-cat" data-category="music">Music</button>
+      <button class="gif-modal-cat" data-category="dance">Dance</button>
+      <button class="gif-modal-cat" data-category="party">Party</button>
     </div>
-    <div class="gif-modal-grid" id="giphyGrid">
-      <p class="gif-loading">Loading trending GIFs...</p>
+    <div class="gif-modal-results" id="gifResults">
+      <p class="gif-modal-loading">Loading GIFs...</p>
     </div>
-    <div class="gif-modal-footer">
-      <span class="giphy-attribution">Powered by GIPHY</span>
+    <div class="gif-modal-bottom">
+      <span>Powered by GIPHY</span>
     </div>
   </div>
 </div>
+
+<script>
+// Simple self-contained emoji/GIF picker
+(function() {
+  const EMOJIS = {
+    music: ['🎵', '🎶', '🎤', '🎧', '🎹', '🎸', '🥁', '🎺', '🎷', '🪘', '💿', '📀', '🔊', '🔉', '🎼', '🎻', '🪗', '📻', '🎚️', '🎛️', '🎙️', '📯', '🪕', '🎭'],
+    fire: ['🔥', '💥', '⚡', '✨', '💫', '🌟', '⭐', '💯', '🚀', '💪', '👊', '👏', '🙌', '🤘', '✌️', '👍', '🎯', '💎', '🏆', '👑', '🥇', '⚔️', '🛡️', '💣'],
+    faces: ['😀', '😎', '🤩', '😍', '🥳', '🤯', '😱', '🥵', '🤤', '😏', '😈', '👀', '💀', '🤖', '👽', '🎃', '🙃', '😜', '🤪', '😂', '🥹', '😭', '🫠', '🤑'],
+    vibes: ['🌴', '🌊', '🌅', '🌙', '🌈', '☀️', '🍹', '🍻', '🥂', '💜', '💙', '💚', '💛', '🧡', '❤️', '🖤', '🌺', '🍀', '🌸', '🦋', '🌠', '🎪', '🎡', '🎢']
+  };
+
+  let currentCategory = 'music';
+  let gifSearchTimeout = null;
+
+  // Send GIF using existing globals from live-stream.js
+  async function sendGifToChat(giphyUrl, giphyId) {
+    console.log('[GIF] sendGifToChat called:', { giphyUrl, giphyId });
+
+    // Use existing globals set by live-stream.js
+    const streamId = window.currentStreamId;
+    const auth = window.firebaseAuth;
+    const user = auth?.currentUser;
+
+    console.log('[GIF] streamId:', streamId, 'user:', !!user);
+
+    if (!user) {
+      console.error('[GIF] No current user');
+      alert('Please log in to send GIFs');
+      return;
+    }
+    if (!streamId) {
+      console.error('[GIF] No current stream');
+      alert('No active stream');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/livestream/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          streamId: streamId,
+          userId: user.uid,
+          userName: user.displayName || user.email?.split('@')[0] || 'User',
+          message: '[GIF]',
+          type: 'giphy',
+          giphyUrl,
+          giphyId
+        })
+      });
+      console.log('[GIF] Sent successfully:', response.ok);
+    } catch (error) {
+      console.error('[GIF] Error sending:', error);
+    }
+  }
+
+  // Wait for DOM
+  function init() {
+    const emojiBtn = document.getElementById('openEmojiPanel');
+    const emojiPanel = document.getElementById('emojiPanel');
+    const closeEmoji = document.getElementById('closeEmojiPanel');
+    const emojiGrid = document.getElementById('emojiPanelGrid');
+    const chatInput = document.getElementById('chatInput');
+
+    const gifBtn = document.getElementById('openGifModal');
+    const gifModal = document.getElementById('gifModal');
+    const closeGif = document.getElementById('closeGifModal');
+    const gifResults = document.getElementById('gifResults');
+    const gifSearch = document.getElementById('gifSearchInput');
+
+    if (!emojiBtn || !emojiPanel) {
+      console.log('[Picker] Elements not found, retrying...');
+      setTimeout(init, 500);
+      return;
+    }
+
+    console.log('[Picker] Initializing fresh picker buttons');
+
+    // Render emojis
+    function renderEmojis(cat) {
+      const emojis = EMOJIS[cat] || EMOJIS.music;
+      emojiGrid.innerHTML = emojis.map(e =>
+        `<button type="button" class="emoji-grid-btn">${e}</button>`
+      ).join('');
+
+      emojiGrid.querySelectorAll('.emoji-grid-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (chatInput) chatInput.value += btn.textContent;
+          chatInput?.focus();
+        });
+      });
+    }
+
+    // Expose toggle functions globally for onclick handlers
+    window.toggleEmojiPanel = function() {
+      console.log('[Picker] Emoji toggle called');
+      const isVisible = emojiPanel.style.display !== 'none';
+      emojiPanel.style.display = isVisible ? 'none' : 'block';
+      if (!isVisible) renderEmojis(currentCategory);
+    };
+
+    window.toggleGifModal = function() {
+      console.log('[Picker] GIF toggle called');
+      gifModal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      loadGifs('trending');
+    };
+
+    // Close emoji panel
+    closeEmoji?.addEventListener('click', () => {
+      emojiPanel.style.display = 'none';
+    });
+
+    // Emoji category buttons
+    document.querySelectorAll('.emoji-panel-cat').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.emoji-panel-cat').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentCategory = btn.dataset.category;
+        renderEmojis(currentCategory);
+      });
+    });
+
+    // Close GIF modal
+    closeGif?.addEventListener('click', () => {
+      gifModal.style.display = 'none';
+      document.body.style.overflow = '';
+    });
+
+    // Click outside to close GIF modal
+    gifModal?.addEventListener('click', (e) => {
+      if (e.target === gifModal) {
+        gifModal.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+    });
+
+    // GIF category buttons
+    document.querySelectorAll('.gif-modal-cat').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.gif-modal-cat').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        loadGifs(btn.dataset.category);
+      });
+    });
+
+    // GIF search
+    gifSearch?.addEventListener('input', (e) => {
+      clearTimeout(gifSearchTimeout);
+      gifSearchTimeout = setTimeout(() => {
+        const query = e.target.value.trim();
+        if (query) {
+          loadGifs(null, query);
+        } else {
+          loadGifs('trending');
+        }
+      }, 400);
+    });
+
+    // Load GIFs from Giphy
+    async function loadGifs(category, searchQuery = null) {
+      const apiKey = window.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6SfraYr';
+      gifResults.innerHTML = '<p class="gif-modal-loading">Loading GIFs...</p>';
+
+      try {
+        let url;
+        if (searchQuery) {
+          url = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(searchQuery)}&limit=24&rating=pg-13`;
+        } else if (category === 'trending') {
+          url = `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=24&rating=pg-13`;
+        } else {
+          url = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(category)}&limit=24&rating=pg-13`;
+        }
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.data?.length > 0) {
+          gifResults.innerHTML = data.data.map(gif => `
+            <div class="gif-result-item" data-url="${gif.images.fixed_height.url}" data-id="${gif.id}">
+              <img src="${gif.images.fixed_height_small.url}" alt="${gif.title}" loading="lazy" />
+            </div>
+          `).join('');
+
+          gifResults.querySelectorAll('.gif-result-item').forEach(item => {
+            item.addEventListener('click', () => {
+              console.log('[GIF] Selected:', item.dataset.url);
+              // Send GIF using local function
+              sendGifToChat(item.dataset.url, item.dataset.id);
+              gifModal.style.display = 'none';
+              document.body.style.overflow = '';
+            });
+          });
+        } else {
+          gifResults.innerHTML = '<p class="gif-modal-loading">No GIFs found</p>';
+        }
+      } catch (err) {
+        console.error('[GIF] Error:', err);
+        gifResults.innerHTML = '<p class="gif-modal-loading">Error loading GIFs</p>';
+      }
+    }
+
+    // Click outside emoji panel to close
+    document.addEventListener('click', (e) => {
+      if (emojiPanel.style.display !== 'none' &&
+          !emojiPanel.contains(e.target) &&
+          e.target !== emojiBtn) {
+        emojiPanel.style.display = 'none';
+      }
+    });
+
+    // Initialize with music emojis
+    renderEmojis('music');
+
+    // Setup DM modal
+    const dmModal = document.getElementById('dmModal');
+    const closeDmBtn = document.getElementById('closeDmModal');
+    const sendDmBtn = document.getElementById('sendDmBtn');
+    const dmInput = document.getElementById('dmMessageInput');
+    const dmRecipientName = document.getElementById('dmRecipientName');
+    let currentDmRecipient = null;
+
+    closeDmBtn?.addEventListener('click', () => {
+      dmModal.style.display = 'none';
+      dmInput.value = '';
+      currentDmRecipient = null;
+    });
+
+    dmModal?.addEventListener('click', (e) => {
+      if (e.target === dmModal) {
+        dmModal.style.display = 'none';
+        dmInput.value = '';
+        currentDmRecipient = null;
+      }
+    });
+
+    sendDmBtn?.addEventListener('click', async () => {
+      const message = dmInput.value.trim();
+      if (!message || !currentDmRecipient) return;
+
+      const auth = window.firebaseAuth;
+      const user = auth?.currentUser;
+      if (!user) {
+        alert('Please log in to send messages');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/livestream/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            streamId: window.currentStreamId,
+            userId: user.uid,
+            userName: user.displayName || user.email?.split('@')[0] || 'User',
+            message: `@${currentDmRecipient.name}: ${message}`,
+            type: 'dm',
+            recipientId: currentDmRecipient.id
+          })
+        });
+        if (response.ok) {
+          dmModal.style.display = 'none';
+          dmInput.value = '';
+          currentDmRecipient = null;
+        }
+      } catch (err) {
+        console.error('[DM] Error sending:', err);
+      }
+    });
+
+    // Expose openDM function globally
+    window.openDmModal = function(userId, userName) {
+      currentDmRecipient = { id: userId, name: userName };
+      dmRecipientName.textContent = userName;
+      dmModal.style.display = 'flex';
+      dmInput.focus();
+    };
+  }
+
+  // Online users tracking
+  function initOnlineUsers() {
+    const usersList = document.getElementById('onlineUsersList');
+    const userCount = document.getElementById('onlineUserCount');
+    if (!usersList) return;
+
+    // Update online users from Pusher presence or viewer data
+    window.updateOnlineUsers = function(users) {
+      if (!users || users.length === 0) {
+        usersList.innerHTML = '<p class="no-users-msg">No users online</p>';
+        userCount.textContent = '0';
+        return;
+      }
+
+      userCount.textContent = users.length.toString();
+      usersList.innerHTML = users.map(user => {
+        const initial = (user.name || 'U').charAt(0).toUpperCase();
+        const avatarContent = user.avatar
+          ? `<img src="${user.avatar}" alt="${user.name}" />`
+          : initial;
+        return `
+          <div class="online-user-item" onclick="window.openDmModal && window.openDmModal('${user.id}', '${user.name.replace(/'/g, "\\'")}')">
+            <div class="online-user-avatar">${avatarContent}</div>
+            <span class="online-user-name">${user.name}</span>
+          </div>
+        `;
+      }).join('');
+    };
+
+    // Poll for online users (connected to existing viewer system)
+    setInterval(() => {
+      if (window.getOnlineViewers) {
+        const viewers = window.getOnlineViewers();
+        window.updateOnlineUsers(viewers);
+      }
+    }, 5000);
+  }
+
+  // Run on load and on Astro navigation
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => { init(); initOnlineUsers(); });
+  } else {
+    init();
+    initOnlineUsers();
+  }
+  document.addEventListener('astro:page-load', () => { init(); initOnlineUsers(); });
+})();
+</script>
 
 <style is:global>
-  /* Reply Indicator */
-  .reply-indicator {
-    display: flex;
-    align-items: center;
-    padding: 0.5rem 0.75rem;
-    background: #1a1a2e;
-    border-radius: 6px;
-    margin-bottom: 0.5rem;
-    font-size: 0.8125rem;
-    gap: 0.25rem;
-  }
-
-  /* Picker Modal - Fixed positioning to ensure visibility */
-  .picker-modal {
-    position: absolute;
-    bottom: calc(100% + 10px);
-    left: 0;
-    right: 0;
-    background: #1a1a1a;
-    border: 2px solid #444;
-    border-radius: 12px;
-    padding: 0;
-    z-index: 9999;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
-    max-height: 450px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Specific GIF picker sizing */
-  #giphyPicker {
-    max-height: 500px;
-  }
-
-  .picker-modal.hidden {
-    display: none !important;
-  }
-
-  .picker-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    background: #222;
-    border-bottom: 1px solid #333;
-    font-weight: 600;
-    color: #fff;
-  }
-
-  .picker-close {
-    background: none;
-    border: none;
-    color: #888;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-  }
-
-  .picker-close:hover {
-    color: #fff;
-  }
-
-  /* Emoji Categories */
-  .emoji-categories {
-    display: flex;
-    gap: 0.25rem;
-    padding: 0.5rem;
-    background: #1a1a1a;
-    border-bottom: 1px solid #333;
-    flex-wrap: wrap;
-  }
-
-  .emoji-cat {
-    padding: 0.375rem 0.625rem;
-    background: #2a2a2a;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    cursor: pointer;
-    color: #aaa;
-    transition: all 0.15s;
-  }
-
-  .emoji-cat:hover,
-  .emoji-cat.active {
-    background: #6366f1;
-    color: #fff;
-  }
-
-  /* Emoji Grid */
-  .emoji-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 0.25rem;
-    padding: 0.5rem;
-    overflow-y: auto;
-    flex: 1;
-  }
-
-  .emoji-item {
-    padding: 0.5rem;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: background-color 0.15s;
-    text-align: center;
-  }
-
-  .emoji-item:hover {
-    background: rgba(99, 102, 241, 0.3);
-  }
-
-  /* Large GIF Modal Overlay */
-  .gif-modal-overlay {
+  /* DM Modal */
+  .dm-modal-bg {
     position: fixed;
     top: 0;
     left: 0;
@@ -214,169 +434,320 @@
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    animation: fadeIn 0.2s ease;
   }
 
-  .gif-modal-overlay.hidden {
-    display: none !important;
+  .dm-modal-box {
+    background: #1a1a1a;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    border: 1px solid #333;
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+  .dm-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #333;
+    color: #fff;
+    font-size: 0.9375rem;
   }
 
-  .gif-modal {
+  .dm-modal-header strong {
+    color: #6366f1;
+  }
+
+  .dm-modal-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .dm-modal-close:hover { color: #fff; }
+
+  .dm-modal-body {
+    padding: 1rem;
+  }
+
+  .dm-modal-body textarea {
+    width: 100%;
+    height: 100px;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #fff;
+    padding: 0.75rem;
+    font-size: 0.9375rem;
+    resize: none;
+  }
+
+  .dm-modal-body textarea:focus {
+    outline: none;
+    border-color: #6366f1;
+  }
+
+  .dm-modal-footer {
+    padding: 1rem;
+    border-top: 1px solid #333;
+    text-align: right;
+  }
+
+  .dm-send-btn {
+    background: #6366f1;
+    color: #fff;
+    border: none;
+    padding: 0.625rem 1.25rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+
+  .dm-send-btn:hover {
+    background: #5558e3;
+  }
+
+  /* Hide sidebar on mobile */
+  @media (max-width: 768px) {
+    .online-users-sidebar {
+      display: none;
+    }
+  }
+
+  /* Emoji Panel - Fixed position like GIF modal */
+  .emoji-panel {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    max-width: 95vw;
+    background: #1a1a1a;
+    border: 2px solid #444;
+    border-radius: 12px;
+    z-index: 9999;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+  }
+
+  .emoji-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: #222;
+    border-bottom: 1px solid #333;
+    border-radius: 10px 10px 0 0;
+    font-weight: 600;
+    color: #fff;
+    font-size: 0.875rem;
+  }
+
+  .emoji-panel-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.25rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .emoji-panel-close:hover { color: #fff; }
+
+  .emoji-panel-cats {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+  }
+
+  .emoji-panel-cat {
+    padding: 0.375rem 0.5rem;
+    background: #2a2a2a;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  .emoji-panel-cat:hover,
+  .emoji-panel-cat.active {
+    background: #6366f1;
+  }
+
+  .emoji-panel-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+
+  .emoji-grid-btn {
+    padding: 0.625rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  .emoji-grid-btn:hover {
+    background: rgba(99, 102, 241, 0.3);
+  }
+
+  /* Chat tool buttons */
+  .chat-tool-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: #2a2a2a;
+    border: none;
+    border-radius: 6px;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 700;
+    transition: all 0.15s;
+  }
+
+  .chat-tool-btn:hover {
+    background: #6366f1;
+    color: #fff;
+  }
+
+  /* GIF Modal */
+  .gif-modal-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .gif-modal-box {
     background: #1a1a1a;
     border-radius: 16px;
     width: 100%;
-    max-width: 600px;
+    max-width: 550px;
     max-height: 70vh;
     display: flex;
     flex-direction: column;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     border: 1px solid #333;
-    animation: slideUp 0.25s ease;
   }
 
-  @keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
-
-  .gif-modal-header {
+  .gif-modal-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.25rem 1.5rem;
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid #333;
     background: #222;
     border-radius: 16px 16px 0 0;
   }
 
-  .gif-modal-header h2 {
+  .gif-modal-top h2 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.125rem;
     font-weight: 600;
     color: #fff;
   }
 
-  .gif-modal-close {
+  .gif-modal-x {
     background: none;
     border: none;
     color: #888;
-    font-size: 2rem;
+    font-size: 1.75rem;
     cursor: pointer;
-    padding: 0;
     line-height: 1;
-    transition: color 0.15s;
   }
 
-  .gif-modal-close:hover {
-    color: #fff;
-  }
+  .gif-modal-x:hover { color: #fff; }
 
-  .gif-modal-search {
-    padding: 1rem 1.5rem;
+  .gif-modal-search-box {
+    padding: 0.75rem 1.25rem;
     background: #1a1a1a;
     border-bottom: 1px solid #333;
   }
 
-  .gif-modal-search input {
+  .gif-modal-search-box input {
     width: 100%;
-    padding: 0.875rem 1.25rem;
+    padding: 0.75rem 1rem;
     background: #111;
     border: 2px solid #333;
-    border-radius: 12px;
+    border-radius: 8px;
     color: #fff;
-    font-size: 1rem;
-    transition: border-color 0.15s;
+    font-size: 0.9375rem;
   }
 
-  .gif-modal-search input:focus {
+  .gif-modal-search-box input:focus {
     outline: none;
     border-color: #6366f1;
   }
 
-  .gif-modal-search input::placeholder {
-    color: #666;
-  }
-
-  .gif-modal-categories {
+  .gif-modal-cats {
     display: flex;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
+    gap: 0.375rem;
+    padding: 0.625rem 1.25rem;
     background: #1a1a1a;
     border-bottom: 1px solid #333;
     flex-wrap: wrap;
   }
 
-  .gif-cat {
-    padding: 0.5rem 1rem;
+  .gif-modal-cat {
+    padding: 0.375rem 0.75rem;
     background: #2a2a2a;
     border: none;
-    border-radius: 20px;
-    font-size: 0.875rem;
+    border-radius: 16px;
+    font-size: 0.8125rem;
     cursor: pointer;
     color: #aaa;
-    transition: all 0.15s;
     font-weight: 500;
   }
 
-  .gif-cat:hover {
-    background: #3a3a3a;
-    color: #fff;
-  }
+  .gif-modal-cat:hover { background: #3a3a3a; color: #fff; }
+  .gif-modal-cat.active { background: #6366f1; color: #fff; }
 
-  .gif-cat.active {
-    background: #6366f1;
-    color: #fff;
-  }
-
-  .gif-modal-grid {
+  .gif-modal-results {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.25rem;
-    padding: 1.5rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    padding: 1rem;
     overflow-y: auto;
     flex: 1;
-    min-height: 300px;
+    min-height: 200px;
   }
 
-  @media (max-width: 768px) {
-    .gif-modal-grid {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .gif-modal-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.875rem;
-    }
-  }
-
-  .giphy-item {
+  .gif-result-item {
     position: relative;
     width: 100%;
-    padding-bottom: 100%; /* Force square aspect ratio */
-    border-radius: 12px;
+    padding-bottom: 100%;
+    border-radius: 8px;
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.15s, box-shadow 0.15s;
     background: #222;
     border: 2px solid #333;
-    box-sizing: border-box;
   }
 
-  .giphy-item:hover {
-    transform: scale(1.03);
-    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+  .gif-result-item:hover {
     border-color: #6366f1;
+    transform: scale(1.02);
   }
 
-  .giphy-item img {
+  .gif-result-item img {
     position: absolute;
     top: 0;
     left: 0;
@@ -385,62 +756,33 @@
     object-fit: cover;
   }
 
-  .gif-loading {
+  .gif-modal-loading {
     grid-column: 1 / -1;
     text-align: center;
     color: #666;
-    padding: 3rem;
+    padding: 2rem;
     margin: 0;
-    font-size: 1rem;
   }
 
-  .gif-modal-footer {
-    padding: 0.75rem 1.5rem;
+  .gif-modal-bottom {
+    padding: 0.5rem 1.25rem;
     background: #222;
     border-top: 1px solid #333;
     border-radius: 0 0 16px 16px;
     text-align: right;
-  }
-
-  .giphy-attribution {
     font-size: 0.75rem;
     color: #666;
   }
 
-  /* Chat input tools - inline between input and send */
-  .chat-input-tools {
+  /* Reply Indicator */
+  .reply-indicator {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0 0.5rem;
-  }
-
-  .input-tool-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: transparent;
-    border: none;
+    padding: 0.5rem 0.75rem;
+    background: #1a1a2e;
     border-radius: 6px;
-    color: #888;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .input-tool-btn:hover {
-    background: rgba(99, 102, 241, 0.2);
-    color: #6366f1;
-  }
-
-  .input-tool-btn.active {
-    background: rgba(99, 102, 241, 0.3);
-    color: #6366f1;
-  }
-
-  .input-tool-btn svg {
-    width: 20px;
-    height: 20px;
+    margin-bottom: 0.5rem;
+    font-size: 0.8125rem;
+    gap: 0.25rem;
   }
 </style>

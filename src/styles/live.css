@@ -42,7 +42,8 @@
     gap: 0.5rem;
     background: #333;
     padding: 0.5rem 1rem;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     color: #888;
     font-weight: 700;
   }
@@ -139,7 +140,7 @@
   .fs-offline-overlay {
     text-align: center;
     color: #fff;
-    background: rgba(0, 0, 0, 0.5);
+    background: #fff;
     padding: 2rem;
     border-radius: 12px;
     backdrop-filter: blur(4px);
@@ -348,8 +349,8 @@
   
   .live-layout {
     display: grid;
-    grid-template-columns: 260px 1fr 600px;
-    gap: 1.5rem;
+    grid-template-columns: 260px 1fr 420px 182px;
+    gap: 1rem;
     max-width: 1920px;
     margin: 0 auto;
     padding: 1rem 2rem;
@@ -387,24 +388,24 @@
   
   @media (max-width: 1700px) {
     .live-layout {
-      grid-template-columns: 240px 1fr 550px;
-      gap: 1rem;
+      grid-template-columns: 240px 1fr 380px 130px;
+      gap: 0.75rem;
       padding: 0.75rem 1rem;
     }
   }
-  
+
   @media (max-width: 1500px) {
     .live-layout {
-      grid-template-columns: 220px 1fr 500px;
-      gap: 1rem;
+      grid-template-columns: 220px 1fr 350px 120px;
+      gap: 0.75rem;
       padding: 0.75rem 1rem;
     }
   }
-  
+
   @media (max-width: 1300px) {
     .live-layout {
-      grid-template-columns: 200px 1fr 400px;
-      gap: 0.75rem;
+      grid-template-columns: 200px 1fr 320px 110px;
+      gap: 0.5rem;
       padding: 0.5rem 0.75rem;
     }
   }
@@ -414,11 +415,11 @@
       height: auto;
       overflow: auto;
     }
-    
+
     html, body {
       overflow: auto;
     }
-    
+
     .live-layout {
       grid-template-columns: 1fr;
       height: auto;
@@ -426,8 +427,114 @@
     .schedule-column { order: 2; }
     .player-column { order: 1; }
     .chat-column { order: 3; }
+    .online-users-column { display: none; }
   }
-  
+
+  /* Online Users Column */
+  .online-users-column {
+    display: flex;
+    flex-direction: column;
+    background: #0a0a0a;
+    border-radius: 12px;
+    border: 1px solid #222;
+    overflow: hidden;
+    height: 100%;
+  }
+
+  .online-users-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: #111;
+    border-bottom: 1px solid #222;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+  }
+
+  .online-dot {
+    width: 8px;
+    height: 8px;
+    background: #22c55e;
+    border-radius: 50%;
+    animation: onlinePulse 2s infinite;
+  }
+
+  @keyframes onlinePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .online-count {
+    background: #22c55e;
+    color: #000;
+    font-size: 0.625rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 10px;
+    font-weight: 700;
+    margin-left: auto;
+  }
+
+  .online-users-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+  }
+
+  .no-users-msg {
+    color: #555;
+    font-size: 0.75rem;
+    text-align: center;
+    padding: 1rem 0.5rem;
+    margin: 0;
+  }
+
+  .online-user-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+    box-shadow: none;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .online-user-item:hover {
+    background: #1a1a1a;
+  }
+
+  .online-user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #dc2626;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .online-user-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .online-user-name {
+    font-size: 0.75rem;
+    color: #ccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .schedule-column {
     display: flex;
     flex-direction: column;
@@ -811,7 +918,8 @@
     padding: 0.375rem 0.75rem;
     background: #f3f4f6;
     border: 2px solid #e5e7eb;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     font-size: 0.8125rem;
     cursor: pointer;
     flex-shrink: 0;
@@ -1181,7 +1289,8 @@
     padding: 0.4rem 0.75rem;
     background: #333;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     color: #fff;
     text-decoration: none;
     font-size: 0.8rem;
@@ -1201,7 +1310,8 @@
     padding: 0.4rem 0.75rem;
     background: #10b981;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     color: #fff;
     font-size: 0.8rem;
     font-weight: 600;
@@ -1530,7 +1640,8 @@
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     background: #333;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     color: #888;
     font-weight: 700;
     font-size: 0.875rem;
@@ -1740,7 +1851,7 @@
   .offline-overlay-content {
     text-align: center;
     padding: 2rem;
-    background: rgba(0, 0, 0, 0.5);
+    background: #fff;
     border-radius: 12px;
     backdrop-filter: blur(4px);
   }
@@ -1826,7 +1937,7 @@
     font-family: 'Bebas Neue', monospace;
     font-size: 4rem;
     color: #dc2626;
-    text-shadow: 0 0 30px rgba(220, 38, 38, 0.6);
+    text-shadow: none;
   }
   
   .countdown-bar {
@@ -1855,22 +1966,24 @@
 
   /* Fresh Wax watermark/branding overlay */
   .stream-watermark {
+    display: none !important;
     position: absolute;
     top: 15px;
     left: 15px;
     z-index: 9999;
     pointer-events: none;
-    opacity: 0.85;
+    opacity: 1;
     transition: opacity 0.3s ease;
     display: block !important;
     visibility: visible !important;
-    background: rgba(0, 0, 0, 0.3);
+    background: #fff;
     padding: 8px;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
   }
 
   .stream-watermark img {
-    width: 80px;
+    width: 100px;
     height: auto;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
     display: block !important;
@@ -1880,12 +1993,14 @@
 
   /* Reduce opacity when video controls are visible (hover) */
   .video-player:hover .stream-watermark {
+    display: none !important;
     opacity: 0.3;
   }
 
   /* Hide watermark on very small screens */
   @media (max-width: 480px) {
     .stream-watermark {
+    display: none !important;
       top: 10px;
       left: 10px;
     }
@@ -1986,7 +2101,7 @@
     position: absolute;
     top: -10px;
     right: -20px;
-    width: 80px;
+    width: 100px;
     height: 8px;
     background: linear-gradient(90deg, #666 0%, #444 50%, #333 100%);
     border-radius: 4px;
@@ -2619,8 +2734,14 @@
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
+    outline: none;
   }
-  
+
+  .reaction-btn:focus {
+    outline: none;
+    border-color: #333;
+  }
+
   .reaction-btn:hover {
     border-color: #dc2626;
     background: #2a1a1a;
@@ -2711,6 +2832,7 @@
     flex: 1;
     overflow-y: auto;
     padding: 1rem;
+    padding-bottom: 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -2796,7 +2918,8 @@
     padding: 0.5rem 0.75rem;
     background: #1a1a1a;
     border: 2px solid #333;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     color: #fff;
     cursor: pointer;
     font-size: 1rem;
@@ -2873,7 +2996,8 @@
     padding: 0.5rem;
     background: none;
     border: 2px solid transparent;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     font-size: 0.875rem;
     cursor: pointer;
     color: #888;
@@ -2972,7 +3096,8 @@
     flex: 1;
     padding: 0.75rem 1rem;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
@@ -3532,7 +3657,8 @@
     display: block;
     background: #000;
     padding: 0.5rem;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     color: #a5b4fc;
     font-family: monospace;
     font-size: 0.8125rem;
@@ -3711,7 +3837,8 @@
     display: block;
     background: #000;
     padding: 0.75rem;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     color: #10b981;
     font-family: monospace;
     font-size: 0.9375rem;
@@ -3723,7 +3850,8 @@
     padding: 0.5rem 1rem;
     background: #333;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     color: #fff;
     font-size: 0.8125rem;
     cursor: pointer;
@@ -3867,7 +3995,8 @@
   .speed-recommendation {
     margin-top: 0.75rem;
     padding: 0.5rem 0.75rem;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     font-size: 0.75rem;
     font-weight: 600;
   }
@@ -3895,7 +4024,8 @@
     display: block;
     background: #000;
     padding: 0.5rem 0.75rem;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     color: #10b981;
     font-family: monospace;
     font-size: 0.75rem;
@@ -3911,7 +4041,8 @@
     display: block;
     background: #000;
     padding: 0.5rem 0.75rem;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     color: #a5b4fc;
     font-family: monospace;
     font-size: 0.6875rem;
@@ -4017,7 +4148,8 @@
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     background: #1a1a1a;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     border: 1px solid #333;
   }
   
@@ -4117,7 +4249,8 @@
   .lobby-status-msg {
     margin-top: 0.75rem;
     padding: 0.5rem;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     font-size: 0.8125rem;
     text-align: center;
   }
@@ -4173,7 +4306,8 @@
     padding: 0.5rem;
     background: rgba(220, 38, 38, 0.1);
     border: 1px solid #dc2626;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
   }
   .current-dj-avatar {
     width: 28px;
@@ -4273,7 +4407,8 @@
     flex: 1;
     padding: 0.625rem;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
@@ -4329,7 +4464,8 @@
   }
   .takeover-credentials {
     background: #000;
-    border-radius: 6px;
+    border-radius: 8px;
+    box-shadow: none;
     padding: 0.75rem;
     margin-bottom: 0.75rem;
   }
@@ -4761,7 +4897,8 @@
     
     .player-container {
       min-height: 180px;
-      border-radius: 6px;
+      border-radius: 8px;
+    box-shadow: none;
     }
     
     /* Simplify controls layout */

@@ -281,8 +281,8 @@ import '../../styles/global.css';
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Admin UID check
-    const ADMIN_UID = 'Y3TGc171cHSWTqZDRSniyu7Jxc33';
+    // Admin UIDs check
+    const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
 
     const tabs = document.querySelectorAll('.tab');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -305,7 +305,7 @@ import '../../styles/global.css';
       }
 
       // Check admin status
-      if (user.uid !== ADMIN_UID) {
+      if (!ADMIN_UIDS.includes(user.uid)) {
         const adminDoc = await getDoc(doc(db, 'admins', user.uid));
         if (!adminDoc.exists()) {
           window.location.href = '/';

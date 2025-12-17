@@ -9,15 +9,15 @@ export const prerender = false;
 
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
-  const env = locals?.runtime?.env;
+  const env = locals?.runtime?.env || {};
   initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
+    FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
   });
 }
 
 // Hardcoded admin UIDs for verification
-const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33'];
+const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
 const ADMIN_EMAILS = ['freshwaxonline@gmail.com'];
 
 async function isAdmin(uid: string): Promise<boolean> {
