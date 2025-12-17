@@ -1468,22 +1468,54 @@ Artist - Track Title
   editTracklistSave?.addEventListener('click', async function() {
     const mixId = editTracklistBtn?.getAttribute('data-mix-id');
     const newTracklist = editTracklistTextarea?.value || '';
-    
+
     if (!mixId) {
       alert('Error: Mix ID not found');
       return;
     }
-    
+
     editTracklistSave.disabled = true;
     editTracklistSave.textContent = 'Saving...';
-    
+
     try {
+      // Get current user ID for authentication
+      let userId = '';
+      try {
+        const firebaseApp = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+        const firebaseAuth = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+        const { getApps, initializeApp } = firebaseApp;
+        const { getAuth } = firebaseAuth;
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+          authDomain: "freshwax-store.firebaseapp.com",
+          projectId: "freshwax-store",
+          storageBucket: "freshwax-store.firebasestorage.app",
+          messagingSenderId: "675435782973",
+          appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+        };
+
+        const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        let user = auth.currentUser;
+        if (!user && window.authReady) {
+          user = await window.authReady;
+        }
+        if (user) {
+          userId = user.uid;
+        }
+      } catch (authErr) {
+        console.error('[Tracklist] Auth error:', authErr);
+      }
+
       const response = await fetch('/api/update-mix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mixId: mixId,
-          tracklist: newTracklist
+          tracklist: newTracklist,
+          userId: userId
         })
       });
       

@@ -231,11 +231,13 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         
         <div class="player-container" id="playerContainer">
 
-          <!-- Offline Overlay - hidden by default, shown via JS when truly offline -->
-          <div id="offlineOverlay" class="offline-overlay hidden" style="display: none !important;">
+          <!-- Offline Overlay - shown by default, hidden when stream is active -->
+          <div id="offlineOverlay" class="offline-overlay">
             <div class="offline-overlay-content">
+              <img src="/logo.webp" alt="Fresh Wax" class="offline-logo" />
               <div class="offline-icon-large">OFFLINE</div>
-              <h2>No one is streaming right now</h2>
+              <p class="offline-text">No one is streaming right now</p>
+              <p class="offline-subtext">Check the schedule for upcoming shows</p>
             </div>
           </div>
           

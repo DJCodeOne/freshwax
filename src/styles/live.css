@@ -1860,36 +1860,46 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
     z-index: 10;
   }
-  
+
+  .offline-overlay.hidden {
+    display: none;
+  }
+
   .offline-overlay-content {
     text-align: center;
     padding: 2rem;
-    background: #fff;
-    border-radius: 12px;
-    backdrop-filter: blur(4px);
   }
-  
+
+  .offline-logo {
+    width: 120px;
+    height: auto;
+    margin-bottom: 1.5rem;
+    opacity: 0.8;
+  }
+
   .offline-icon-large {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 3rem;
-    letter-spacing: 2px;
+    font-size: 2.5rem;
+    letter-spacing: 4px;
     margin-bottom: 1rem;
-    opacity: 0.5;
-    color: #fff;
+    color: #dc2626;
+    text-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
   }
-  
-  .offline-overlay h2 {
+
+  .offline-text {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.75rem;
-    color: #fff;
-    margin: 0 0 0.5rem 0;
-  }
-  
-  .offline-overlay p {
+    font-size: 1.25rem;
     color: #888;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: 1px;
+  }
+
+  .offline-subtext {
+    font-size: 0.875rem;
+    color: #555;
     margin: 0;
   }
   
