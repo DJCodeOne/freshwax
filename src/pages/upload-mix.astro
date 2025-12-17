@@ -227,24 +227,8 @@ import Footer from '../components/Footer.astro';
               <option value="Darkstep">Darkstep</option>
               <option value="Techstep">Techstep</option>
               <option value="Breakcore">Breakcore</option>
-              <option value="Other">Other (Specify below)</option>
+              <option value="Alternative">Alternative</option>
             </select>
-            
-            <!-- Other Genre Input (hidden by default) -->
-            <div id="other-genre-container" class="hidden mt-3">
-              <label for="other-genre" class="block text-sm font-bold text-gray-700 mb-2">
-                Specify Genre <span class="text-red-600">*</span>
-                <span class="text-gray-500 text-xs font-normal ml-2">(<span id="other-genre-count">0</span>/15)</span>
-              </label>
-              <input
-                type="text"
-                id="other-genre"
-                name="otherGenre"
-                maxlength="15"
-                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all"
-                placeholder=""
-              />
-            </div>
           </div>
 
           <!-- Description / Shout Outs -->
@@ -749,9 +733,6 @@ Artist - Track Title
   
   // Genre elements
   const genreSelect = document.getElementById('genre-select');
-  const otherGenreContainer = document.getElementById('other-genre-container');
-  const otherGenreInput = document.getElementById('other-genre');
-  const otherGenreCount = document.getElementById('other-genre-count');
   
   // Audio elements
   const audioDropZone = document.getElementById('audio-drop-zone');
@@ -790,22 +771,6 @@ Artist - Track Title
   const tracklistInput = document.getElementById('tracklist');
   const tracklistCount = document.getElementById('tracklist-count');
   const descriptionError = document.getElementById('description-error');
-
-  // Genre selection handler
-  genreSelect.addEventListener('change', () => {
-    if (genreSelect.value === 'Other') {
-      otherGenreContainer.classList.remove('hidden');
-      otherGenreInput.required = true;
-    } else {
-      otherGenreContainer.classList.add('hidden');
-      otherGenreInput.required = false;
-      otherGenreInput.value = '';
-    }
-  });
-
-  otherGenreInput.addEventListener('input', () => {
-    otherGenreCount.textContent = otherGenreInput.value.length;
-  });
 
   // Profanity filter
   const profanityList = [
@@ -1570,8 +1535,7 @@ Artist - Track Title
     const mixDescription = mixDescriptionInput.value.trim();
     const tracklist = tracklistInput.value.trim();
     const genreValue = genreSelect.value;
-    const otherGenreValue = otherGenreInput.value.trim();
-    
+
     // Validate required fields
     if (!djName || !mixTitle) {
       alert('Please fill in DJ Name and Mix Title');
@@ -1580,12 +1544,6 @@ Artist - Track Title
 
     if (!genreValue) {
       alert('Please select a genre');
-      return;
-    }
-
-    if (genreValue === 'Other' && !otherGenreValue) {
-      alert('Please specify the genre');
-      otherGenreInput.focus();
       return;
     }
 
@@ -1604,8 +1562,8 @@ Artist - Track Title
       return;
     }
 
-    // Determine final genre
-    const finalGenre = genreValue === 'Other' ? otherGenreValue : genreValue;
+    // Use selected genre
+    const finalGenre = genreValue;
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Uploading...';
