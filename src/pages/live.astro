@@ -3239,14 +3239,16 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       else if (slot.status === 'live') statusText = 'LIVE';
 
       return `<div class="schedule-item${isMySlot ? ' my-slot' : ''}${isLive ? ' live' : ''}">
-        <div class="schedule-time-block">
-          <span class="schedule-time-val">${formatTime(slot.startTime)}</span>
-          <span class="schedule-duration-val">${durationText}</span>
-        </div>
         <div class="schedule-dj-info">
-          <h4>${slot.djName}</h4>
+          <div class="schedule-dj-header">
+            <h4>${slot.djName}</h4>
+            ${isLive ? '<span class="live-badge-small"><span class="live-dot-small"></span>LIVE</span>' : ''}
+          </div>
           ${slot.title && slot.title !== slot.djName ? `<span class="schedule-title">${slot.title}</span>` : ''}
-          ${statusText ? `<span class="schedule-status ${slot.status}">${statusText}</span>` : ''}
+          <div class="schedule-times">
+            <span class="schedule-time-range">${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}</span>
+            <span class="schedule-duration-pill">${durationText}</span>
+          </div>
         </div>
         ${isMySlot && (slot.status === 'scheduled' || slot.status === 'queued') ? `<button class="cancel-slot-btn" onclick="cancelSlot('${slot.id}')">×</button>` : ''}
       </div>`;

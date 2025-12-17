@@ -564,25 +564,25 @@
   }
   
   .schedule-header {
-    background: #fff;
+    background: linear-gradient(to bottom, #374151, #111827);
     padding: 1.25rem;
     border-radius: 12px;
-    border: 2px solid #333;
+    border: 1px solid #4b5563;
   }
-  
+
   .schedule-header h1 {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 2.5rem;
-    color: #111;
+    color: #fff;
     margin: 0;
     letter-spacing: 0.5px;
     line-height: 1;
   }
-  
+
   .schedule-header h1 .red { color: #dc2626; }
-  
+
   .schedule-header p {
-    color: #666;
+    color: #9ca3af;
     font-size: 0.9rem;
     margin: 0.375rem 0 1rem 0;
   }
@@ -753,29 +753,29 @@
   }
   
   .queue-card, .calendar-card, .today-card, .listeners-card, .sidebar-card {
-    background: #fff;
+    background: linear-gradient(to bottom, #374151, #111827);
     padding: 1.25rem;
     border-radius: 12px;
-    border: 2px solid #333;
+    border: 1px solid #4b5563;
     overflow: hidden;
   }
-  
+
   .full-schedule-btn {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: #000;
+    background: linear-gradient(to bottom, #374151, #111827);
     color: #fff;
     padding: 0.625rem 0.875rem;
     border-radius: 8px;
     text-decoration: none;
     transition: all 0.2s;
-    border: 2px solid #333;
+    border: 1px solid #4b5563;
   }
-  
+
   .full-schedule-btn:hover {
-    background: #1a1a1a;
-    border-color: #444;
+    background: linear-gradient(to bottom, #4b5563, #1f2937);
+    border-color: #6b7280;
   }
   
   .schedule-btn-icon {
@@ -812,7 +812,7 @@
     font-family: 'Bebas Neue', sans-serif;
     font-size: 1.5rem;
     font-weight: 400;
-    color: #111;
+    color: #fff;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -1048,6 +1048,13 @@
     flex: 1;
     min-height: 0;
     padding: 1rem !important;
+    background: linear-gradient(to bottom, #374151, #111827) !important;
+    border: 1px solid #4b5563 !important;
+    border-radius: 12px !important;
+  }
+
+  .schedule-card h3 {
+    color: #fff !important;
   }
 
   .schedule-card > .sidebar-card-header,
@@ -1056,7 +1063,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
   }
 
   .schedule-card .schedule-header h3,
@@ -1068,23 +1075,28 @@
     min-width: 0;
   }
 
+  .schedule-card .empty-message {
+    color: #9ca3af !important;
+  }
+
   .view-full-btn {
     background: #dc2626;
     color: #fff;
     border: none;
-    padding: 0.2rem 0.4rem;
+    padding: 0.25rem 0.5rem;
     border-radius: 4px;
-    font-size: 0.625rem;
+    font-size: 0.7rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
     white-space: nowrap;
     flex-shrink: 0;
     line-height: 1.2;
   }
 
   .view-full-btn:hover {
-    background: #b91c1c;
+    background: #ef4444;
+    transform: scale(1.05);
   }
 
   .schedule-list {
@@ -1095,7 +1107,7 @@
     overflow-y: auto;
     min-height: 0;
   }
-  
+
   .schedule-item {
     display: flex;
     align-items: center;
@@ -1103,28 +1115,30 @@
     gap: 0.75rem;
     position: relative;
     padding: 0.75rem 1rem;
-    background: #f9fafb;
-    border: 2px solid #e5e7eb;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     font-size: 0.875rem;
+    transition: all 0.2s;
   }
 
   .schedule-item:hover {
-    border-color: #dc2626;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
   }
 
   .schedule-item.my-slot {
     border-color: #dc2626;
-    background: #fef2f2;
+    background: rgba(220, 38, 38, 0.15);
   }
 
   .schedule-item.live {
     border-color: #10b981;
-    background: #f0fdf4;
+    background: rgba(16, 185, 129, 0.15);
   }
 
   .schedule-item.cancelled {
-    opacity: 0.6;
+    opacity: 0.5;
   }
 
   .schedule-item.cancelled .schedule-time-val,
@@ -1132,7 +1146,7 @@
   .schedule-item.cancelled .schedule-duration,
   .schedule-item.cancelled .schedule-duration-val {
     text-decoration: line-through;
-    color: #999;
+    color: #6b7280;
   }
 
   .schedule-time-block {
@@ -1141,7 +1155,7 @@
     align-items: center;
     min-width: 70px;
     padding-right: 0.75rem;
-    border-right: 2px solid #e5e7eb;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
     flex-shrink: 0;
   }
 
@@ -1174,25 +1188,77 @@
     text-align: left;
   }
 
+  .schedule-dj-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
   .schedule-dj-info h4 {
     margin: 0;
     font-size: 1rem;
     font-weight: 700;
-    color: #111;
+    color: #fff;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
+  .live-badge-small {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: #dc2626;
+    color: white;
+    font-size: 0.625rem;
+    font-weight: 700;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    flex-shrink: 0;
+  }
+
+  .live-dot-small {
+    width: 6px;
+    height: 6px;
+    background: white;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
   .schedule-title {
     display: block;
-    font-size: 0.75rem;
-    color: #666;
-    margin-top: 0.125rem;
+    font-size: 0.8rem;
+    color: #dc2626;
+    font-weight: 600;
+    margin-top: 0.25rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .schedule-times {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.375rem;
+  }
+
+  .schedule-time-range {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #9ca3af;
+  }
+
+  .schedule-duration-pill {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #d1d5db;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
   }
 
   .schedule-meta {
@@ -1754,7 +1820,7 @@
   }
 
   .stream-meta h1 .title-session {
-    color: #dc2626;
+    color: #fff;
   }
   
   .stream-dj {

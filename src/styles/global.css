@@ -5,8 +5,7 @@
 
 /* ============================================
    FONT SYSTEM
-   - Space Grotesk: Headers, titles, labels, buttons
-   - Inter: Body text, paragraphs, descriptions
+   - Inter: Headers, titles, labels, buttons, body text
    - Bebas Neue: Hero/display text
    ============================================ */
 
@@ -28,7 +27,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Headings use Space Grotesk */
+/* Headings use Inter */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);
   font-weight: 700;
