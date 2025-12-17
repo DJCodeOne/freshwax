@@ -3,7 +3,7 @@
 <!-- Features: Spectrum analyser LEDs, shuffle mode, DJ mix mode -->
 
 <div id="global-audio-container" transition:persist="global-audio">
-  <audio id="global-audio" preload="metadata"></audio>
+  <audio id="global-audio" preload="auto" crossorigin="anonymous"></audio>
 </div>
 
 <!-- Mini Player (sticky bottom) -->
@@ -478,7 +478,45 @@
         globalAudio.addEventListener('error', function(e) {
           console.error('[MINI-PLAYER] Audio error:', e);
           if (window.FreshWaxPlayer.isShuffleMode) {
-            playNextShuffleTrack();
+            // Wait a moment then try next track
+            setTimeout(function() {
+              playNextShuffleTrack();
+            }, 1000);
+          }
+        });
+
+        // Handle stalled/waiting events with auto-recovery
+        globalAudio.addEventListener('stalled', function() {
+          console.warn('[MINI-PLAYER] Audio stalled, attempting recovery...');
+          // Try to resume playback after a brief pause
+          setTimeout(function() {
+            if (globalAudio.paused && globalAudio.src) {
+              globalAudio.play().catch(function(err) {
+                console.error('[MINI-PLAYER] Stall recovery failed:', err);
+              });
+            }
+          }, 2000);
+        });
+
+        globalAudio.addEventListener('waiting', function() {
+          console.log('[MINI-PLAYER] Audio buffering...');
+        });
+
+        // Handle network issues with retry logic
+        var networkRetryCount = 0;
+        var maxNetworkRetries = 5;
+
+        globalAudio.addEventListener('suspend', function() {
+          // Browser paused downloading - this is normal
+        });
+
+        // Recover from temporary network issues
+        window.addEventListener('online', function() {
+          console.log('[MINI-PLAYER] Network restored, resuming playback...');
+          if (globalAudio.src && globalAudio.paused && !globalAudio.ended) {
+            globalAudio.play().catch(function(err) {
+              console.error('[MINI-PLAYER] Resume after network restore failed:', err);
+            });
           }
         });
       }
@@ -901,8 +939,10 @@
         if (!isSameMix) {
           window.FreshWaxPlayer.currentMix = mixData;
           window.FreshWaxPlayer.hasTrackedPlay = false;
-          
+
+          // Set source and preload for smooth playback
           audio.src = mixData.audio_url;
+          audio.preload = 'auto';
           audio.load();
           
           var titleEl = document.getElementById('mini-title');

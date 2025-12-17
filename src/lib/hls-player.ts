@@ -88,33 +88,45 @@ export class HlsStreamPlayer {
     try {
       this.setStatus('loading');
       
-      // HLS.js configuration optimized for live streaming
+      // HLS.js configuration optimized for reliable, high-quality live streaming
       this.hls = new Hls({
-        // Low latency settings
-        liveSyncDurationCount: 3,
-        liveMaxLatencyDurationCount: 6,
+        // Live streaming settings - prioritize stability over low latency
+        liveSyncDurationCount: 4,
+        liveMaxLatencyDurationCount: 10,
         liveDurationInfinity: true,
-        
-        // Buffer settings
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-        maxBufferSize: 60 * 1000 * 1000, // 60MB
+
+        // Larger buffer for reliable playback without cutting out
+        maxBufferLength: 60,
+        maxMaxBufferLength: 120,
+        maxBufferSize: 120 * 1000 * 1000, // 120MB for smoother playback
         maxBufferHole: 0.5,
-        
-        // Error recovery
-        fragLoadingMaxRetry: 6,
-        manifestLoadingMaxRetry: 4,
-        levelLoadingMaxRetry: 4,
-        fragLoadingRetryDelay: 1000,
-        
-        // ABR settings
-        abrEwmaDefaultEstimate: 500000, // 500kbps initial estimate
-        abrBandWidthUpFactor: 0.7,
-        abrBandWidthFactor: 0.95,
-        
-        // Latency optimization
-        backBufferLength: 30,
-        
+
+        // Aggressive error recovery for continuous playback
+        fragLoadingMaxRetry: 10,
+        manifestLoadingMaxRetry: 6,
+        levelLoadingMaxRetry: 6,
+        fragLoadingRetryDelay: 500,
+        manifestLoadingRetryDelay: 500,
+        levelLoadingRetryDelay: 500,
+
+        // ABR settings - prefer higher quality, stable bandwidth estimation
+        abrEwmaDefaultEstimate: 1000000, // 1Mbps initial estimate for better quality
+        abrBandWidthUpFactor: 0.6,
+        abrBandWidthFactor: 0.9,
+        abrEwmaFastLive: 3,
+        abrEwmaSlowLive: 9,
+
+        // Keep more buffer for smooth playback
+        backBufferLength: 60,
+
+        // Prefer higher quality levels
+        startLevel: -1, // Auto-select best quality
+        capLevelToPlayerSize: false,
+
+        // Stall recovery
+        nudgeOffset: 0.1,
+        nudgeMaxRetry: 5,
+
         // Debug
         debug: false,
       });

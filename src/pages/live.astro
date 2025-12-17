@@ -295,11 +295,11 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
                 <div class="audio-bar"></div>
               </div>
             </div>
-            <audio id="audioElement" crossorigin="anonymous"></audio>
+            <audio id="audioElement" crossorigin="anonymous" preload="auto"></audio>
           </div>
-          
+
           <div id="videoPlayer" class="video-player hidden">
-            <video id="hlsVideoElement" class="hls-video" controls playsinline></video>
+            <video id="hlsVideoElement" class="hls-video" controls playsinline preload="auto"></video>
           </div>
 
           <!-- Fresh Wax watermark - always visible on player -->
