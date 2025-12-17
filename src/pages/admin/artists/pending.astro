@@ -1,293 +1,67 @@
 ---
 // /src/pages/admin/artists/pending.astro
-// Fresh Wax Partner Approvals - Unified Admin Design
-
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../../lib/firebase-rest';
 
-// Fetch pending partners via REST API
-const allPending = await queryCollection('artists', {
-  filters: [{ field: 'approved', op: 'EQUAL', value: false }]
-});
+const allUsers = await queryCollection('users', { skipCache: true });
 
-const pendingPartners = allPending.map((data: any) => ({
-  ...data,
-  registeredAt: data.registeredAt instanceof Date ? data.registeredAt : new Date(data.registeredAt || Date.now())
-})).sort((a: any, b: any) => b.registeredAt.getTime() - a.registeredAt.getTime());
+const pendingPartners = allUsers.filter((user: any) => {
+  const pending = user.pendingRoles || {};
+  return pending.artist?.status === 'pending' || pending.merchSeller?.status === 'pending';
+}).map((user: any) => {
+  const pending = user.pendingRoles || {};
+  const artistReq = pending.artist?.status === 'pending' ? pending.artist : null;
+  const merchReq = pending.merchSeller?.status === 'pending' ? pending.merchSeller : null;
+  return {
+    id: user.id,
+    email: user.email || '',
+    artistName: artistReq?.artistName || user.displayName || 'Unknown',
+    bio: artistReq?.bio || merchReq?.bio || '',
+    links: artistReq?.links || merchReq?.links || '',
+    isArtist: !!artistReq,
+    isMerchSupplier: !!merchReq,
+    registeredAt: new Date(artistReq?.requestedAt || merchReq?.requestedAt || user.createdAt || Date.now())
+  };
+}).sort((a: any, b: any) => b.registeredAt.getTime() - a.registeredAt.getTime());
 
-// Count by role - DJs are now customer-level, not partners
-const counts = {
-  all: pendingPartners.length,
-  artists: pendingPartners.filter(p => p.isArtist).length,
-  merch: pendingPartners.filter(p => p.isMerchSupplier).length
-};
-
-// Stats for header
-const stats = [
-  { label: 'Total Pending', value: counts.all, type: counts.all > 0 ? 'warning' : 'default' },
-  { label: 'Artists', value: counts.artists, type: 'info' },
-  { label: 'Merch Suppliers', value: counts.merch, type: 'info' },
-];
+const counts = { all: pendingPartners.length, artists: pendingPartners.filter((p: any) => p.isArtist).length, merch: pendingPartners.filter((p: any) => p.isMerchSupplier).length };
+const stats = [{ label: 'Total Pending', value: counts.all, type: counts.all > 0 ? 'warning' : 'default' }, { label: 'Artists', value: counts.artists, type: 'info' }, { label: 'Merch', value: counts.merch, type: 'info' }];
 
 export const prerender = false;
 ---
-
 <AdminLayout title="Partner Approvals" activeNav="pending" showStats={true} stats={stats}>
-  <Fragment slot="actions">
-    <a href="/admin/artists/manage" class="btn btn-outline">View All Partners</a>
-  </Fragment>
+  <div class="toolbar"><div class="filter-tabs">
+    <button class="filter-tab active" data-filter="all">All <span class="count">{counts.all}</span></button>
+    <button class="filter-tab" data-filter="artist">Artists <span class="count">{counts.artists}</span></button>
+    <button class="filter-tab" data-filter="merch">Merch <span class="count">{counts.merch}</span></button>
+  </div></div>
 
-  <!-- Filter Tabs -->
-  <div class="toolbar">
-    <div class="filter-tabs">
-      <button class="filter-tab active" data-filter="all">
-        All <span class="count">{counts.all}</span>
-      </button>
-      <button class="filter-tab" data-filter="artist">
-        🎵 Artists <span class="count">{counts.artists}</span>
-      </button>
-      <button class="filter-tab" data-filter="merch">
-        👕 Merch <span class="count">{counts.merch}</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Partners List -->
   {pendingPartners.length === 0 ? (
-    <div class="card">
-      <div class="card-body">
-        <div class="empty-state">
-          <div class="empty-state-icon">🎉</div>
-          <div class="empty-state-title">All caught up!</div>
-          <p class="empty-state-text">No pending partner approvals at the moment.</p>
-          <a href="/admin/artists/manage" class="btn btn-primary">View All Partners</a>
-        </div>
-      </div>
-    </div>
+    <div class="card"><div class="card-body"><div class="empty-state"><div class="empty-state-title">No pending approvals</div></div></div></div>
   ) : (
-    <div class="card">
-      <div class="card-header">
-        <h2>Pending Applications</h2>
-        <span class="text-muted">{counts.all} awaiting review</span>
-      </div>
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Partner</th>
-              <th>Roles</th>
-              <th>Registered</th>
-              <th class="text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="partnersTableBody">
-            {pendingPartners.map(partner => (
-              <tr 
-                data-id={partner.id}
-                data-roles={JSON.stringify({
-                  artist: partner.isArtist || false,
-                  dj: partner.isDJ || false,
-                  merch: partner.isMerchSupplier || false
-                })}
-              >
-                <td>
-                  <div class="item-cell">
-                    <div class="item-info">
-                      <h4>{partner.artistName || partner.name || 'Unnamed'}</h4>
-                      <p>{partner.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="flex gap-1 flex-wrap">
-                    {partner.isArtist && <span class="badge badge-info">🎵 Artist</span>}
-                    {partner.isDJ && <span class="badge badge-processing">🎧 DJ</span>}
-                    {partner.isMerchSupplier && <span class="badge badge-shipped">👕 Merch</span>}
-                  </div>
-                </td>
-                <td class="cell-secondary">
-                  {partner.registeredAt.toLocaleDateString('en-GB', { 
-                    day: 'numeric', 
-                    month: 'short', 
-                    year: 'numeric' 
-                  })}
-                </td>
-                <td class="text-right">
-                  <div class="flex gap-1 justify-end">
-                    <button 
-                      class="btn btn-success btn-sm approve-btn"
-                      data-id={partner.id}
-                    >
-                      Approve
-                    </button>
-                    <button 
-                      class="btn btn-danger btn-sm reject-btn"
-                      data-id={partner.id}
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <div class="card"><div class="card-header"><h2>Pending Applications ({counts.all})</h2></div>
+      <div class="table-wrapper"><table class="data-table"><thead><tr><th>Applicant</th><th>Bio</th><th>Type</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody id="tbl">{pendingPartners.map((p: any) => (
+          <tr data-id={p.id} data-email={p.email} data-name={p.artistName} data-roles={JSON.stringify({artist:p.isArtist,merch:p.isMerchSupplier})}>
+            <td><h4>{p.artistName}</h4><small>{p.email}</small></td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{p.bio || 'No bio'}</td>
+            <td>{p.isArtist && <span class="badge badge-info">Artist</span>}{p.isMerchSupplier && <span class="badge">Merch</span>}</td>
+            <td>{p.registeredAt.toLocaleDateString('en-GB')}</td>
+            <td><button class="btn btn-success btn-sm approve-btn" data-id={p.id}>Approve</button> <button class="btn btn-danger btn-sm reject-btn" data-id={p.id}>Reject</button></td>
+          </tr>
+        ))}</tbody></table></div></div>
   )}
-
-  <Fragment slot="scripts">
-    <script is:inline>
-      // Filter functionality
-      const filterTabs = document.querySelectorAll('.filter-tab');
-      const tableBody = document.getElementById('partnersTableBody');
-      
-      if (filterTabs.length && tableBody) {
-        filterTabs.forEach(tab => {
-          tab.addEventListener('click', () => {
-            filterTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            
-            const filter = tab.dataset.filter;
-            const rows = tableBody.querySelectorAll('tr');
-            
-            rows.forEach(row => {
-              const roles = JSON.parse(row.dataset.roles || '{}');
-              
-              if (filter === 'all') {
-                row.style.display = '';
-              } else if (filter === 'artist' && roles.artist) {
-                row.style.display = '';
-              } else if (filter === 'dj' && roles.dj) {
-                row.style.display = '';
-              } else if (filter === 'merch' && roles.merch) {
-                row.style.display = '';
-              } else {
-                row.style.display = 'none';
-              }
-            });
-          });
-        });
-      }
-
-      // Approve partner
-      document.querySelectorAll('.approve-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.dataset.id;
-          const row = btn.closest('tr');
-          
-          btn.disabled = true;
-          btn.textContent = 'Approving...';
-          
-          try {
-            const response = await fetch('/api/admin/approve-partner', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ partnerId: id })
-            });
-            
-            if (!response.ok) throw new Error('Failed to approve');
-            
-            row.style.opacity = '0';
-            row.style.transform = 'translateX(20px)';
-            row.style.transition = 'all 0.3s';
-            
-            setTimeout(() => row.remove(), 300);
-            
-            showToast('Partner approved successfully!');
-            updateCounts(-1, row.dataset.roles);
-            
-          } catch (error) {
-            console.error(error);
-            showToast('Failed to approve partner', 'error');
-            btn.disabled = false;
-            btn.textContent = 'Approve';
-          }
-        });
-      });
-
-      // Reject partner
-      document.querySelectorAll('.reject-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (!confirm('Are you sure you want to reject this partner? This will delete their application.')) {
-            return;
-          }
-          
-          const id = btn.dataset.id;
-          const row = btn.closest('tr');
-          
-          btn.disabled = true;
-          btn.textContent = 'Rejecting...';
-          
-          try {
-            const response = await fetch('/api/admin/reject-partner', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ partnerId: id })
-            });
-            
-            if (!response.ok) throw new Error('Failed to reject');
-            
-            row.style.opacity = '0';
-            row.style.transform = 'translateX(20px)';
-            row.style.transition = 'all 0.3s';
-            
-            setTimeout(() => row.remove(), 300);
-            
-            showToast('Partner rejected');
-            updateCounts(-1, row.dataset.roles);
-            
-          } catch (error) {
-            console.error(error);
-            showToast('Failed to reject partner', 'error');
-            btn.disabled = false;
-            btn.textContent = 'Reject';
-          }
-        });
-      });
-
-      // Update filter counts
-      function updateCounts(delta, rolesJson) {
-        const roles = JSON.parse(rolesJson || '{}');
-        
-        // Update "All" count
-        const allTab = document.querySelector('[data-filter="all"] .count');
-        if (allTab) allTab.textContent = parseInt(allTab.textContent) + delta;
-        
-        // Update role-specific counts
-        if (roles.artist) {
-          const tab = document.querySelector('[data-filter="artist"] .count');
-          if (tab) tab.textContent = parseInt(tab.textContent) + delta;
-        }
-        if (roles.dj) {
-          const tab = document.querySelector('[data-filter="dj"] .count');
-          if (tab) tab.textContent = parseInt(tab.textContent) + delta;
-        }
-        if (roles.merch) {
-          const tab = document.querySelector('[data-filter="merch"] .count');
-          if (tab) tab.textContent = parseInt(tab.textContent) + delta;
-        }
-        
-        // Check if empty
-        const remaining = document.querySelectorAll('#partnersTableBody tr').length;
-        if (remaining === 0) {
-          location.reload();
-        }
-      }
-    </script>
-  </Fragment>
+  <Fragment slot="scripts"><script type="module">
+    import{initializeApp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import{getAuth,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import{getFirestore,doc,updateDoc,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    const app=initializeApp({apiKey:"AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",authDomain:"freshwax-store.firebaseapp.com",projectId:"freshwax-store"});
+    const auth=getAuth(app),db=getFirestore(app),ADMINS=['Y3TGc171cHSWTqZDRSniyu7Jxc33','8WmxYeCp4PSym5iWHahgizokn5F2'];
+    onAuthStateChanged(auth,u=>{if(!u||!ADMINS.includes(u.uid))window.location.href='/admin/login';});
+    const tbl=document.getElementById('tbl');
+    document.querySelectorAll('.filter-tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.filter-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');const f=t.dataset.filter;tbl?.querySelectorAll('tr').forEach(r=>{const rl=JSON.parse(r.dataset.roles||'{}');r.style.display=(f==='all'||(f==='artist'&&rl.artist)||(f==='merch'&&rl.merch))?'':'none';});});
+    document.querySelectorAll('.approve-btn').forEach(b=>b.onclick=async()=>{const id=b.dataset.id,row=b.closest('tr'),rl=JSON.parse(row.dataset.roles||'{}'),email=row.dataset.email,name=row.dataset.name;b.disabled=true;b.textContent='Approving...';try{const u={updatedAt:serverTimestamp()};if(rl.artist){u['roles.artist']=true;u['pendingRoles.artist.status']='approved';}if(rl.merch){u['roles.merchSeller']=true;u['pendingRoles.merchSeller.status']='approved';}await updateDoc(doc(db,'users',id),u);b.textContent='Sending email...';try{await fetch('/api/admin/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,name,type:(rl.artist && rl.merch) ? 'both' : (rl.artist ? 'artist' : 'merch')})});}catch(emailErr){console.warn('Email failed:',emailErr);}row.remove();if(!tbl?.querySelector('tr'))location.reload();alert('Approved! Confirmation email sent.');}catch(e){alert(e.message);b.disabled=false;b.textContent='Approve';}});
+    document.querySelectorAll('.reject-btn').forEach(b=>b.onclick=async()=>{const reason=prompt('Reason?');if(reason===null)return;const id=b.dataset.id,row=b.closest('tr'),rl=JSON.parse(row.dataset.roles||'{}');b.disabled=true;try{const u={updatedAt:serverTimestamp()};if(rl.artist)u['pendingRoles.artist.status']='rejected';if(rl.merch)u['pendingRoles.merchSeller.status']='rejected';await updateDoc(doc(db,'users',id),u);row.remove();if(!tbl?.querySelector('tr'))location.reload();alert('Rejected');}catch(e){alert(e.message);b.disabled=false;}});
+  </script></Fragment>
 </AdminLayout>
-
-<style>
-  .filter-tab .count {
-    background: var(--border-light);
-    padding: 0.1rem 0.4rem;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    margin-left: 0.25rem;
-  }
-  
-  .filter-tab.active .count {
-    background: rgba(255,255,255,0.3);
-  }
-</style>
+<style>.filter-tab .count{background:var(--border-light);padding:0.1rem 0.4rem;border-radius:4px;font-size:0.7rem;margin-left:0.25rem;}.filter-tab.active .count{background:rgba(255,255,255,0.3);}</style>
