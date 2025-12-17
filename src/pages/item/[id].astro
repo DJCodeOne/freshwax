@@ -1512,15 +1512,18 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     // Handle click
     followBtn.addEventListener('click', async function(e) {
       e.preventDefault();
-      
+
       const userId = getCurrentUserId();
+      console.log('[Follow] Click - userId:', userId, 'artistName:', artistName);
+
       if (!userId) {
+        console.log('[Follow] No user ID, redirecting to login');
         window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
-      
+
       const isFollowing = followBtn.classList.contains('following');
-      
+
       // Optimistic UI
       if (isFollowing) {
         followBtn.classList.remove('following');
@@ -1529,8 +1532,9 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
         followBtn.classList.add('following');
         followText.textContent = 'Following';
       }
-      
+
       try {
+        console.log('[Follow] Calling API with:', { userId, artistName, artistId, action: 'toggle' });
         const response = await fetch('/api/follow-artist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1541,18 +1545,22 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
             action: 'toggle'
           })
         });
-        
+
         const data = await response.json();
-        
+        console.log('[Follow] API response:', data);
+
         if (data.success) {
           if (data.isFollowing) {
             followBtn.classList.add('following');
             followText.textContent = 'Following';
+            console.log('[Follow] Now following artist');
           } else {
             followBtn.classList.remove('following');
             followText.textContent = 'Follow';
+            console.log('[Follow] Unfollowed artist');
           }
         } else {
+          console.error('[Follow] API returned failure:', data.error);
           // Revert on failure
           if (isFollowing) {
             followBtn.classList.add('following');
@@ -1563,6 +1571,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
           }
         }
       } catch (err) {
+        console.error('[Follow] Error:', err);
         // Revert on error
         if (isFollowing) {
           followBtn.classList.add('following');
