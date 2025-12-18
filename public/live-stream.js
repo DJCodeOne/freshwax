@@ -1722,7 +1722,7 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
                 <span style="font-size: 0.6875rem; color: #666;">${time}</span>
               </div>
             </div>
-            <img src="${msg.giphyUrl}" alt="GIF" style="max-width: 300px; border-radius: 8px;" loading="lazy" />
+            <img src="${msg.giphyUrl}" alt="GIF" style="max-width: 300px; border-radius: 8px;" onload="setTimeout(() => this.scrollIntoView({ behavior: 'instant', block: 'end' }), 50);" />
           </div>
         `;
       }

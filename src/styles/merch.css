@@ -12,7 +12,7 @@
   }
 
   .hero-title {
-    font-family: 'Bebas Neue', Impact, sans-serif;
+    font-family: 'Bebas Neue', sans-serif;
     font-size: 4rem;
     color: #fff;
     margin: 0 0 0.25rem;
@@ -208,7 +208,7 @@
   }
 
   .product-name {
-    font-family: 'Bebas Neue', Impact, sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 1.21rem;
     color: #111;
     text-decoration: none;
@@ -362,7 +362,7 @@
   }
 
   .modal-info h2 {
-    font-family: 'Bebas Neue', Impact, sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 2rem;
     color: #111;
     margin: 0 0 0.25rem;

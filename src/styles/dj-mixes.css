@@ -336,7 +336,7 @@
   }
 
   .sidebar-title {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 1.75rem;
     color: #fff;
     letter-spacing: 0.05em;
@@ -1128,7 +1128,7 @@
   }
 
   .chart-position {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 1.5rem;
     font-weight: 700;
     color: #f59e0b;
@@ -1351,7 +1351,7 @@
   }
   
   .chart-header h3 {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 1.25rem;
     color: white;
     letter-spacing: 0.1em;

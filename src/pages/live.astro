@@ -25,6 +25,13 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   imageAlt="Fresh Wax Live Stream"
   type="video.other"
   hideShuffle={true}
+  video={{
+    duration: "PT0M",
+    uploadDate: new Date().toISOString(),
+    thumbnailUrl: ogImageUrl,
+    contentUrl: "https://freshwax.co.uk/live",
+    embedUrl: "https://freshwax.co.uk/live/embed"
+  }}
 >
   <Header />
   
@@ -2012,10 +2019,19 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'width=550,height=420');
   });
   
-  // Facebook share
+  // Facebook share - use Feed Dialog for better video preview support
   document.getElementById('shareFacebook')?.addEventListener('click', () => {
-    const url = encodeURIComponent(getShareUrl());
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=550,height=420');
+    const shareUrl = getShareUrl();
+    const djName = document.getElementById('sharePreviewName')?.textContent || 'Fresh Wax DJ';
+    const title = encodeURIComponent(`🔴 LIVE NOW: ${djName} on Fresh Wax`);
+    const description = encodeURIComponent('Tune in now for live jungle, drum & bass, and breakbeat!');
+    const url = encodeURIComponent(shareUrl);
+    // Use feed dialog for richer sharing with video preview
+    window.open(
+      `https://www.facebook.com/dialog/feed?app_id=966242223397117&link=${url}&name=${title}&description=${description}&redirect_uri=${encodeURIComponent('https://freshwax.co.uk/live')}`,
+      '_blank',
+      'width=626,height=436'
+    );
   });
   
   // WhatsApp share

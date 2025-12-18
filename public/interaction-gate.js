@@ -91,7 +91,8 @@
       margin-bottom: 0.75rem;
     }
     .ilm-title {
-      font-family: 'Bebas Neue', sans-serif;
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
       font-size: 1.75rem;
       color: #111;
       margin: 0 0 0.5rem 0;

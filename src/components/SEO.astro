@@ -592,13 +592,20 @@ const articleSchema = article ? {
 <meta property="og:locale" content={SITE.locale} />
 
 <!-- Twitter -->
-<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:card" content={video ? "player" : "summary_large_image"} />
 <meta name="twitter:site" content={SITE.twitter} />
 <meta name="twitter:creator" content={SITE.twitter} />
 <meta name="twitter:title" content={fullTitle} />
 <meta name="twitter:description" content={description} />
 <meta name="twitter:image" content={imageUrl} />
 <meta name="twitter:image:alt" content={imageAlt} />
+{video && (
+  <>
+    <meta name="twitter:player" content={video.embedUrl || video.contentUrl} />
+    <meta name="twitter:player:width" content="1280" />
+    <meta name="twitter:player:height" content="720" />
+  </>
+)}
 
 <!-- Music-specific OG -->
 {music && (
@@ -635,11 +642,14 @@ const articleSchema = article ? {
 {video && (
   <>
     <meta property="og:video" content={video.embedUrl || video.contentUrl} />
+    <meta property="og:video:secure_url" content={video.embedUrl || video.contentUrl} />
     <meta property="og:video:type" content="text/html" />
     <meta property="og:video:width" content="1280" />
     <meta property="og:video:height" content="720" />
+    {video.thumbnailUrl && <meta property="og:video:image" content={video.thumbnailUrl} />}
   </>
 )}
+
 
 <!-- Technical SEO -->
 <meta name="author" content={SITE.name} />

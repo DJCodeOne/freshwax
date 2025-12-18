@@ -2,26 +2,26 @@
     body { font-family: 'Inter', sans-serif; background: #f5f5f5; color: #000; min-height: 100vh; }
     
     .header { background: #000; color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-    .header h1 { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 0.05em; }
+    .header h1 { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: 0.05em; }
     .header-nav { display: flex; gap: 1rem; }
     .header-nav a { color: #fff; text-decoration: none; padding: 0.5rem 1rem; border: 2px solid #fff; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: all 0.2s; }
     .header-nav a:hover { background: #fff; color: #000; }
     
     .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
     
-    .page-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; margin-bottom: 0.5rem; color: #dc2626; }
+    .page-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 2.5rem; margin-bottom: 0.5rem; color: #dc2626; }
     .page-subtitle { color: #666; margin-bottom: 2rem; }
     
     .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
     .stat-card { background: #fff; border: 2px solid #000; padding: 1.5rem; text-align: center; }
-    .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: #000; }
+    .stat-value { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 2.5rem; color: #000; }
     .stat-value.warning { color: #f59e0b; }
     .stat-value.danger { color: #dc2626; }
     .stat-label { font-size: 0.75rem; text-transform: uppercase; color: #666; font-weight: 600; letter-spacing: 0.05em; }
     
     .section { background: #fff; border: 2px solid #000; margin-bottom: 2rem; }
     .section-header { background: #000; color: #fff; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
-    .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 0.05em; }
+    .section-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.25rem; letter-spacing: 0.05em; }
     .section-body { padding: 1.5rem; }
     
     .tabs { display: flex; gap: 0; border-bottom: 2px solid #000; }
@@ -117,7 +117,7 @@
     .modal-overlay.show { display: flex; }
     .modal { background: #fff; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
     .modal-header { background: #000; color: #fff; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
-    .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; }
+    .modal-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.25rem; }
     .modal-close { background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
     .modal-body { padding: 1.5rem; }
     .modal-footer { padding: 1rem 1.5rem; border-top: 2px solid #eee; display: flex; justify-content: flex-end; gap: 1rem; }

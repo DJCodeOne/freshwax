@@ -10,7 +10,7 @@
    ============================================ */
 
 :root {
-  --font-display: 'Bebas Neue', 'Inter', sans-serif;
+  --font-display: 'Inter', sans-serif;
   --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;

@@ -374,7 +374,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
   
   .stream-info h1 {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif; font-weight: 700;
     font-size: 1.5rem;
     font-weight: 400;
     letter-spacing: 1px;
@@ -385,7 +385,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   
   .stream-stats { display: flex; align-items: center; gap: 1.5rem; }
   .stat { display: flex; flex-direction: column; align-items: center; gap: 0.125rem; }
-  .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; color: #dc2626; }
+  .stat-value { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.25rem; color: #dc2626; }
   .stat-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 1px; color: #888; }
   
   .dj-lobby-btn {
@@ -424,7 +424,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   }
   
   .offline-content { text-align: center; }
-  .offline-icon { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; color: #333; letter-spacing: 0.25rem; margin-bottom: 1rem; }
+  .offline-icon { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 4rem; color: #333; letter-spacing: 0.25rem; margin-bottom: 1rem; }
   .offline-content h2 { font-size: 1.25rem; color: #666; margin-bottom: 0.5rem; }
   .offline-content p { font-size: 0.875rem; color: #555; }
   
@@ -443,7 +443,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .audio-info { margin-bottom: 1rem; }
   .audio-live-badge { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(220, 38, 38, 0.2); border: 1px solid #dc2626; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; color: #dc2626; letter-spacing: 1px; margin-bottom: 0.75rem; }
   .live-pulse { width: 8px; height: 8px; background: #dc2626; border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
-  .audio-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 1px; margin-bottom: 0.25rem; }
+  .audio-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: 1px; margin-bottom: 0.25rem; }
   .audio-dj { font-size: 1rem; color: #888; }
   
   .audio-bars { display: flex; align-items: flex-end; justify-content: center; gap: 4px; height: 50px; margin-top: 1rem; }
@@ -553,7 +553,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   
   .shoutout-bar { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1rem; background: linear-gradient(90deg, rgba(220, 38, 38, 0.1) 0%, transparent 50%); border-bottom: 1px solid #222; width: 100%; overflow: hidden; }
   .shoutout-left { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
-  .shoutout-label { font-family: 'Bebas Neue', sans-serif; font-size: 0.875rem; letter-spacing: 1px; color: #dc2626; }
+  .shoutout-label { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.875rem; letter-spacing: 1px; color: #dc2626; }
   .shoutout-btn { width: 28px; height: 28px; background: #dc2626; border: none; border-radius: 6px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
   .shoutout-btn:hover { background: #b91c1c; transform: scale(1.1); }
   .shoutout-btn.disabled { opacity: 0.5; cursor: not-allowed; }
@@ -572,7 +572,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .np-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #333; }
   .np-info { display: flex; flex-direction: column; gap: 0.125rem; }
   .np-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 1px; color: #dc2626; }
-  .np-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.125rem; letter-spacing: 0.5px; }
+  .np-name { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.125rem; letter-spacing: 0.5px; }
   .now-playing-right { display: flex; align-items: center; gap: 0.75rem; text-align: right; }
   .np-set-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 1px; color: #888; }
   .np-set-title { font-size: 0.9375rem; color: #ccc; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -580,7 +580,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   
   .chat-section { display: flex; flex-direction: column; background: #111; border-left: 2px solid #222; }
   .chat-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #0a0a0a; border-bottom: 2px solid #222; }
-  .chat-header h3 { font-family: 'Bebas Neue', sans-serif; font-size: 1.125rem; letter-spacing: 1px; }
+  .chat-header h3 { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.125rem; letter-spacing: 1px; }
   .chat-viewers { font-size: 0.75rem; color: #888; }
   .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
   .chat-welcome { text-align: center; padding: 2rem; color: #9ca3af; }
@@ -591,7 +591,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .brand-fresh { color: #fff; font-weight: 700; }
   .brand-wax { color: #dc2626; font-weight: 700; }
   .brand-fresh.dark { color: #000; }
-  .brand-logo { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
+  .brand-logo { font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: 1px; }
   .chat-input-section { padding: 1rem; background: #0a0a0a; border-top: 2px solid #222; position: relative; }
   .login-prompt { text-align: center; padding: 0.75rem; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.875rem; color: #888; }
   .login-prompt a { color: #dc2626; font-weight: 600; }
@@ -622,7 +622,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.8); }
   .modal-content { position: relative; background: #1a1a1a; border: 2px solid #333; border-radius: 20px; padding: 3rem; max-width: 580px; width: 90%; }
   .modal-close { position: absolute; top: 1.25rem; right: 1.25rem; width: 40px; height: 40px; background: #333; border: none; border-radius: 50%; color: #fff; font-size: 1.75rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  .shoutout-modal-content h2 { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; margin-bottom: 1rem; }
+  .shoutout-modal-content h2 { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 2rem; margin-bottom: 1rem; }
   .shoutout-hint { font-size: 1rem; color: #888; margin-bottom: 1.5rem; }
   .shoutout-input-wrapper { position: relative; margin-bottom: 1.25rem; }
   .shoutout-input-wrapper input { width: 100%; padding: 1.25rem 4.5rem 1.25rem 1.5rem; background: #222; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1.25rem; }

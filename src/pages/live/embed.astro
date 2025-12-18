@@ -1,0 +1,337 @@
+---
+// src/pages/live/embed.astro
+// Embeddable live stream player for social media sharing
+// This page is used by Facebook/Twitter to show video previews
+
+export const prerender = false;
+
+// Get current stream info for meta tags
+import { queryCollection } from '../../lib/firebase-rest';
+
+let currentStream: any = null;
+let hlsUrl = '';
+let thumbnailUrl = 'https://freshwax.co.uk/og-image.jpg';
+let streamTitle = 'Fresh Wax Live';
+let djName = 'Fresh Wax';
+
+try {
+  const liveSlots = await queryCollection('livestreamSlots', {
+    where: [{ field: 'status', op: '==', value: 'live' }],
+    limit: 1
+  });
+
+  if (liveSlots.length > 0) {
+    currentStream = liveSlots[0];
+    hlsUrl = currentStream.hlsUrl || '';
+    streamTitle = currentStream.title || 'Live Stream';
+    djName = currentStream.djName || 'Fresh Wax DJ';
+    thumbnailUrl = currentStream.coverImage || currentStream.djAvatar || 'https://freshwax.co.uk/og-image.jpg';
+  }
+} catch (e) {
+  console.error('Error fetching stream:', e);
+}
+
+const isLive = !!currentStream;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{streamTitle} | Fresh Wax Live</title>
+
+  <!-- Essential OG Tags for Facebook Video -->
+  <meta property="og:type" content="video.other" />
+  <meta property="og:url" content="https://freshwax.co.uk/live" />
+  <meta property="og:title" content={`${isLive ? '🔴 LIVE NOW: ' : ''}${streamTitle}`} />
+  <meta property="og:description" content={isLive ? `${djName} is streaming live on Fresh Wax! Tune in now for jungle, drum & bass, and breakbeat.` : 'Watch live DJ streams on Fresh Wax. Jungle, drum & bass, and breakbeat.'} />
+  <meta property="og:site_name" content="Fresh Wax" />
+  <meta property="og:locale" content="en_GB" />
+
+  <!-- Video Tags -->
+  <meta property="og:video" content="https://freshwax.co.uk/live/embed" />
+  <meta property="og:video:secure_url" content="https://freshwax.co.uk/live/embed" />
+  <meta property="og:video:type" content="text/html" />
+  <meta property="og:video:width" content="1280" />
+  <meta property="og:video:height" content="720" />
+
+  <!-- Image fallback -->
+  <meta property="og:image" content={thumbnailUrl} />
+  <meta property="og:image:secure_url" content={thumbnailUrl} />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content={streamTitle} />
+
+  <!-- Twitter Player Card -->
+  <meta name="twitter:card" content="player" />
+  <meta name="twitter:site" content="@freshwaxuk" />
+  <meta name="twitter:title" content={`${isLive ? '🔴 LIVE: ' : ''}${streamTitle}`} />
+  <meta name="twitter:description" content={isLive ? `${djName} is streaming live!` : 'Watch live DJ streams on Fresh Wax'} />
+  <meta name="twitter:image" content={thumbnailUrl} />
+  <meta name="twitter:player" content="https://freshwax.co.uk/live/embed" />
+  <meta name="twitter:player:width" content="1280" />
+  <meta name="twitter:player:height" content="720" />
+
+  <!-- Allow embedding -->
+  <meta http-equiv="X-Frame-Options" content="ALLOWALL" />
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    .embed-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .overlay.hidden {
+      display: none;
+    }
+
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #dc2626;
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+      animation: pulse 2s infinite;
+    }
+
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      background: #fff;
+      border-radius: 50%;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .stream-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .dj-name {
+      font-size: 18px;
+      color: #9ca3af;
+      margin-bottom: 30px;
+    }
+
+    .play-button {
+      width: 80px;
+      height: 80px;
+      background: #dc2626;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .play-button:hover {
+      transform: scale(1.1);
+      background: #ef4444;
+    }
+
+    .play-button svg {
+      width: 32px;
+      height: 32px;
+      fill: #fff;
+      margin-left: 4px;
+    }
+
+    .offline-message {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+
+    .offline-sub {
+      font-size: 16px;
+      color: #9ca3af;
+      margin-bottom: 30px;
+    }
+
+    .watch-btn {
+      display: inline-block;
+      background: #dc2626;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .watch-btn:hover {
+      background: #ef4444;
+    }
+
+    .branding {
+      position: absolute;
+      bottom: 15px;
+      left: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255,255,255,0.7);
+      font-size: 12px;
+    }
+
+    .branding img {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="embed-container">
+    <video id="videoPlayer" playsinline autoplay muted></video>
+
+    <div id="overlay" class={isLive ? 'overlay' : 'overlay'}>
+      {isLive ? (
+        <>
+          <div class="live-badge">
+            <span class="live-dot"></span>
+            LIVE NOW
+          </div>
+          <h1 class="stream-title">{streamTitle}</h1>
+          <p class="dj-name">{djName}</p>
+          <button class="play-button" id="playBtn" aria-label="Play stream">
+            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+        </>
+      ) : (
+        <>
+          <div class="offline-message">No Live Stream</div>
+          <p class="offline-sub">Check back later for live DJ sets</p>
+          <a href="https://freshwax.co.uk/live" class="watch-btn" target="_blank">Visit Fresh Wax Live</a>
+        </>
+      )}
+
+      <div class="branding">
+        <img src="/favicon-32x32.png" alt="Fresh Wax" />
+        <span>freshwax.co.uk</span>
+      </div>
+    </div>
+  </div>
+
+  {isLive && hlsUrl && (
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest" is:inline></script>
+  )}
+
+  <script is:inline define:vars={{ hlsUrl, isLive }}>
+    if (isLive && hlsUrl) {
+      const video = document.getElementById('videoPlayer');
+      const overlay = document.getElementById('overlay');
+      const playBtn = document.getElementById('playBtn');
+
+      function initPlayer() {
+        if (Hls.isSupported()) {
+          const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 30
+          });
+          hls.loadSource(hlsUrl);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            overlay.classList.add('hidden');
+            video.play().catch(() => {
+              // Autoplay blocked, show play button
+              overlay.classList.remove('hidden');
+            });
+          });
+          hls.on(Hls.Events.ERROR, (event, data) => {
+            if (data.fatal) {
+              overlay.classList.remove('hidden');
+            }
+          });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = hlsUrl;
+          video.addEventListener('loadedmetadata', () => {
+            overlay.classList.add('hidden');
+            video.play().catch(() => {
+              overlay.classList.remove('hidden');
+            });
+          });
+        }
+      }
+
+      playBtn?.addEventListener('click', () => {
+        overlay.classList.add('hidden');
+        video.muted = false;
+        video.play();
+      });
+
+      // Auto-init for embeds
+      if (typeof Hls !== 'undefined') {
+        initPlayer();
+      } else {
+        window.addEventListener('load', initPlayer);
+      }
+    }
+  </script>
+</body>
+</html>

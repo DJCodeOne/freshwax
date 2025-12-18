@@ -138,13 +138,13 @@ function renderCart() {
     container.innerHTML = 
       '<div style="background: linear-gradient(to bottom, #1f2937 0%, #111827 100%); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 12px; overflow: hidden;">' +
         '<div style="padding: 1rem 1.25rem; background: linear-gradient(to right, #374151 0%, #1f2937 100%); border-bottom: 2px solid #dc2626;">' +
-          '<h2 style="font-family: Bebas Neue, sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">YOUR BAG</h2>' +
+          '<h2 style="font-family: Inter, sans-serif; font-weight: 700; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">YOUR BAG</h2>' +
         '</div>' +
         '<div style="text-align: center; padding: 4rem 2rem;">' +
           '<div style="font-size: 4rem; margin-bottom: 1.5rem;">🔐</div>' +
-          '<h3 style="margin: 0 0 0.75rem 0; font-family: Bebas Neue, sans-serif; font-size: 2rem; font-weight: 400; color: #fff; letter-spacing: 0.02em;">LOGIN REQUIRED</h3>' +
+          '<h3 style="margin: 0 0 0.75rem 0; font-family: Inter, sans-serif; font-weight: 700; font-size: 2rem; font-weight: 400; color: #fff; letter-spacing: 0.02em;">LOGIN REQUIRED</h3>' +
           '<p style="margin: 0 0 2rem 0; color: #9ca3af; font-size: 1rem;">Please log in to view your bag</p>' +
-          '<a href="/login?redirect=/cart" style="display: inline-block; padding: 0.875rem 2rem; background: #dc2626; color: #fff; text-decoration: none; font-family: Bebas Neue, sans-serif; font-weight: 400; font-size: 1.125rem; border-radius: 8px; letter-spacing: 0.04em;">LOGIN</a>' +
+          '<a href="/login?redirect=/cart" style="display: inline-block; padding: 0.875rem 2rem; background: #dc2626; color: #fff; text-decoration: none; font-family: Inter, sans-serif; font-weight: 700; font-weight: 400; font-size: 1.125rem; border-radius: 8px; letter-spacing: 0.04em;">LOGIN</a>' +
         '</div>' +
       '</div>';
     return;
@@ -158,13 +158,13 @@ function renderCart() {
     container.innerHTML = 
       '<div style="background: linear-gradient(to bottom, #1f2937 0%, #111827 100%); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 12px; overflow: hidden;">' +
         '<div style="padding: 1rem 1.25rem; background: linear-gradient(to right, #374151 0%, #1f2937 100%); border-bottom: 2px solid #dc2626;">' +
-          '<h2 style="font-family: Bebas Neue, sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">YOUR BAG</h2>' +
+          '<h2 style="font-family: Inter, sans-serif; font-weight: 700; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">YOUR BAG</h2>' +
         '</div>' +
         '<div style="text-align: center; padding: 4rem 2rem;">' +
           '<div style="font-size: 4rem; margin-bottom: 1.5rem; filter: grayscale(1); opacity: 0.5;">🎵</div>' +
-          '<h3 style="margin: 0 0 0.75rem 0; font-family: Bebas Neue, sans-serif; font-size: 2rem; font-weight: 400; color: #dc2626; letter-spacing: 0.02em;">YOUR BAG IS EMPTY</h3>' +
+          '<h3 style="margin: 0 0 0.75rem 0; font-family: Inter, sans-serif; font-weight: 700; font-size: 2rem; font-weight: 400; color: #dc2626; letter-spacing: 0.02em;">YOUR BAG IS EMPTY</h3>' +
           '<p style="margin: 0 0 2rem 0; color: #9ca3af; font-size: 1rem;">Time to dig for some fresh wax</p>' +
-          '<a href="/" style="display: inline-block; padding: 0.875rem 2rem; background: #dc2626; color: #fff; text-decoration: none; font-family: Bebas Neue, sans-serif; font-weight: 400; font-size: 1.125rem; border-radius: 8px; letter-spacing: 0.04em;">BROWSE RELEASES</a>' +
+          '<a href="/" style="display: inline-block; padding: 0.875rem 2rem; background: #dc2626; color: #fff; text-decoration: none; font-family: Inter, sans-serif; font-weight: 700; font-weight: 400; font-size: 1.125rem; border-radius: 8px; letter-spacing: 0.04em;">BROWSE RELEASES</a>' +
         '</div>' +
       '</div>';
     return;
@@ -213,7 +213,7 @@ function renderCart() {
           (isPreOrder ? '<div style="position: absolute; top: 0; right: 0; background: linear-gradient(135deg, #f97316, #dc2626); padding: 0.125rem 0.375rem; font-size: 0.5rem; font-weight: 700; color: #fff; text-transform: uppercase; border-bottom-left-radius: 4px;">⏰</div>' : '') +
         '</div>' +
         '<div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">' +
-          '<h3 style="margin: 0 0 0.375rem 0; font-family: Bebas Neue, sans-serif; font-size: 1.5rem; color: #dc2626; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">' + itemName + '</h3>' +
+          '<h3 style="margin: 0 0 0.375rem 0; font-family: Inter, sans-serif; font-weight: 700; font-size: 1.5rem; color: #dc2626; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">' + itemName + '</h3>' +
           (artistName ? '<p style="margin: 0 0 0.5rem 0; font-size: 1rem; color: #9ca3af;">' + artistName + '</p>' : '') +
           '<div style="display: flex; gap: 0.625rem; flex-wrap: wrap; align-items: center; margin-top: auto;">' +
             (itemType === 'vinyl' ? '<span style="display: inline-block; padding: 0.25rem 0.625rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 4px; border: 1.5px solid; background: #052e16; color: #22c55e; border-color: #22c55e;">Digital</span>' : '') +
@@ -262,7 +262,7 @@ function renderCart() {
   container.innerHTML = 
     '<div style="background: linear-gradient(to bottom, #1f2937 0%, #111827 100%); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden;">' +
       '<div style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: linear-gradient(to right, #374151 0%, #1f2937 100%); border-bottom: 2px solid #dc2626;">' +
-        '<h2 style="font-family: Bebas Neue, sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">YOUR BAG</h2>' +
+        '<h2 style="font-family: Inter, sans-serif; font-weight: 700; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">YOUR BAG</h2>' +
         '<span style="font-size: 0.875rem; color: #9ca3af; font-weight: 500;">' + itemCount + ' ' + (itemCount === 1 ? 'item' : 'items') + '</span>' +
       '</div>' +
       '<div style="padding: 1rem;">' +
@@ -271,7 +271,7 @@ function renderCart() {
     '</div>' +
     '<div style="background: linear-gradient(to bottom, #1f2937 0%, #111827 100%); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 12px; overflow: hidden;">' +
       '<div style="padding: 1rem 1.25rem; background: linear-gradient(to right, #374151 0%, #1f2937 100%); border-bottom: 2px solid #dc2626;">' +
-        '<h2 style="font-family: Bebas Neue, sans-serif; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">ORDER SUMMARY</h2>' +
+        '<h2 style="font-family: Inter, sans-serif; font-weight: 700; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">ORDER SUMMARY</h2>' +
       '</div>' +
       '<div style="padding: 1.25rem;">' +
         '<div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">' +
@@ -286,10 +286,10 @@ function renderCart() {
           freeShippingHint +
         '</div>' +
         '<div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; background: rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.15); border-radius: 10px; margin-bottom: 1.25rem;">' +
-          '<span style="font-family: Bebas Neue, sans-serif; font-size: 1.375rem; letter-spacing: 0.04em; color: #fff;">TOTAL</span>' +
+          '<span style="font-family: Inter, sans-serif; font-weight: 700; font-size: 1.375rem; letter-spacing: 0.04em; color: #fff;">TOTAL</span>' +
           '<span style="font-size: 1.75rem; font-weight: 700; color: #dc2626;">£' + total.toFixed(2) + '</span>' +
         '</div>' +
-        '<button onclick="goToCheckout()" style="width: 100%; padding: 1rem; background: #dc2626; color: #fff; border: none; border-radius: 10px; font-family: Bebas Neue, sans-serif; font-size: 1.375rem; font-weight: 400; letter-spacing: 0.06em; cursor: pointer; transition: all 0.2s;">' +
+        '<button onclick="goToCheckout()" style="width: 100%; padding: 1rem; background: #dc2626; color: #fff; border: none; border-radius: 10px; font-family: Inter, sans-serif; font-weight: 700; font-size: 1.375rem; font-weight: 400; letter-spacing: 0.06em; cursor: pointer; transition: all 0.2s;">' +
           'PROCEED TO CHECKOUT' +
         '</button>' +
         '<div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.875rem; font-size: 0.8125rem; color: #6b7280;">' +

@@ -192,7 +192,7 @@
   }
   
   .balance-amount {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 3rem;
     color: #fff;
     margin-bottom: 0.5rem;
@@ -217,8 +217,9 @@
   
   .info-title {
     text-align: center;
+    font-family: 'Bebas Neue', sans-serif;
     font-size: 2rem;
-    font-weight: 800;
+    font-weight: 400;
     color: #111;
     margin: 0 0 2rem 0;
     text-transform: uppercase;
@@ -378,7 +379,7 @@
   }
   
   .amount-value {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 2.5rem;
     color: #dc2626;
   }
@@ -664,7 +665,7 @@
   }
   
   .purchased-section h2 {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 1.75rem;
     color: #fff;
     margin: 0 0 1rem 0;
@@ -812,7 +813,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 2.25rem;
     color: #fff;
     margin: 0 auto 1.25rem;
@@ -865,7 +866,7 @@
   }
   
   .offer-card h2 {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 2.5rem;
     color: #fff;
     margin: 0 0 1rem 0;

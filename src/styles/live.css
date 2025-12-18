@@ -147,7 +147,7 @@
   }
   
   .fs-offline-icon {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 3rem;
     letter-spacing: 2px;
     opacity: 0.5;
@@ -155,7 +155,7 @@
   }
   
   .fs-offline-overlay h2 {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 2rem;
   }
   
@@ -1060,6 +1060,7 @@
   .schedule-card > .sidebar-card-header,
   .schedule-card > .schedule-header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
@@ -1069,10 +1070,10 @@
   .schedule-card .schedule-header h3,
   .schedule-card h3 {
     margin: 0 !important;
-    font-size: 1rem !important;
-    white-space: nowrap;
-    flex: 1;
-    min-width: 0;
+    font-family: 'Bebas Neue', sans-serif !important;
+    font-size: 1.25rem !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.5px;
   }
 
   .schedule-card .empty-message {
@@ -1586,7 +1587,7 @@
   .shoutout-modal-content .modal-header h2 {
     color: #fff;
     font-size: 1.5rem;
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     letter-spacing: 1px;
   }
   
@@ -1682,7 +1683,7 @@
     color: #fff;
     font-size: 1.25rem;
     font-weight: 700;
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     letter-spacing: 1px;
     cursor: pointer;
     transition: all 0.2s;
@@ -1808,7 +1809,7 @@
   }
 
   .stream-meta h1 {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 1.5rem;
     color: #fff;
     margin: 0;
@@ -1947,7 +1948,7 @@
   }
 
   .offline-icon-large {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 2.5rem;
     letter-spacing: 4px;
     margin-bottom: 1rem;
@@ -1956,7 +1957,7 @@
   }
 
   .offline-text {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 1.25rem;
     color: #888;
     margin: 0 0 0.5rem 0;
@@ -1985,7 +1986,7 @@
   }
   
   .countdown-overlay h2 {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 1.5rem;
     color: #dc2626;
     margin: 0 0 1rem 0;
@@ -2219,7 +2220,7 @@
   }
   
   .audio-dj-name {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 2rem;
     color: #fff;
     letter-spacing: 1px;
@@ -2900,7 +2901,7 @@
   .chat-header h3 {
     margin: 0;
     color: #fff;
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 1.125rem;
     letter-spacing: 0.05em;
   }
@@ -2952,7 +2953,7 @@
   .brand-fresh { color: #fff; font-weight: 700; }
   .brand-wax { color: #dc2626; font-weight: 700; }
   .brand-fresh.dark { color: #000; }
-  .brand-logo { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
+  .brand-logo { font-family: 'Inter', sans-serif; letter-spacing: 1px; }
   
   .chat-system-message {
     text-align: center;
@@ -4296,7 +4297,7 @@
   }
   
   .grace-countdown {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 2rem;
     color: #dc2626;
     letter-spacing: 2px;
@@ -5602,7 +5603,7 @@
   }
   
   .mini-dj {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 1.1rem;
     color: #fff;
     white-space: nowrap;
@@ -5882,7 +5883,7 @@
   }
 
   .eligibility-content h3 {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 1.5rem;
     margin: 0 0 0.5rem;
     color: #fff;
