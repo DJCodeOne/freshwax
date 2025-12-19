@@ -1,0 +1,607 @@
+---
+// src/pages/admin/blog/edit/[id].astro
+// Edit existing blog post
+
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import { getDocument, initFirebaseEnv } from '../../../../lib/firebase-rest';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+
+// Initialize Firebase
+const env = Astro.locals?.runtime?.env;
+initFirebaseEnv({
+  FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+  FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+});
+
+// Fetch post
+let post: any = null;
+try {
+  post = await getDocument('blog-posts', id!);
+} catch (e) {
+  console.error('Failed to fetch post:', e);
+}
+
+if (!post) {
+  return Astro.redirect('/admin/blog');
+}
+---
+
+<AdminLayout title={`Edit: ${post.title}`}>
+  <div class="admin-container max-w-5xl">
+    <div class="admin-header mb-6">
+      <div>
+        <a href="/admin/blog" class="text-gray-400 hover:text-white text-sm flex items-center gap-1 mb-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+          Back to Blog
+        </a>
+        <h1>Edit Post</h1>
+      </div>
+      <div class="flex gap-3">
+        <button id="save-draft-btn" class="btn btn-ghost">Save Draft</button>
+        <button id="publish-btn" class="btn btn-primary">
+          {post.status === 'published' ? 'Update' : 'Publish'}
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Main Content -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Title -->
+        <div class="card">
+          <div class="card-body">
+            <input
+              type="text"
+              id="post-title"
+              value={post.title}
+              placeholder="Enter post title..."
+              class="w-full bg-transparent text-2xl font-bold text-white placeholder-gray-500 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <!-- Editor -->
+        <div class="card">
+          <div class="card-body p-0">
+            <!-- Toolbar -->
+            <div class="editor-toolbar flex flex-wrap gap-1 p-3 border-b border-white/10">
+              <button type="button" class="toolbar-btn" data-command="bold" title="Bold (Ctrl+B)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"/>
+                </svg>
+              </button>
+              <button type="button" class="toolbar-btn" data-command="italic" title="Italic (Ctrl+I)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 4h4m-2 0v16m-4 0h4"/>
+                </svg>
+              </button>
+              <button type="button" class="toolbar-btn" data-command="underline" title="Underline (Ctrl+U)">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8v4a5 5 0 0010 0V8M5 20h14"/>
+                </svg>
+              </button>
+              <div class="w-px h-6 bg-white/10 mx-1"></div>
+              <button type="button" class="toolbar-btn" data-command="formatBlock" data-value="h2" title="Heading 2">
+                <span class="font-bold text-sm">H2</span>
+              </button>
+              <button type="button" class="toolbar-btn" data-command="formatBlock" data-value="h3" title="Heading 3">
+                <span class="font-bold text-sm">H3</span>
+              </button>
+              <button type="button" class="toolbar-btn" data-command="formatBlock" data-value="p" title="Paragraph">
+                <span class="text-sm">P</span>
+              </button>
+              <div class="w-px h-6 bg-white/10 mx-1"></div>
+              <button type="button" class="toolbar-btn" data-command="insertUnorderedList" title="Bullet List">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+              </button>
+              <button type="button" class="toolbar-btn" data-command="insertOrderedList" title="Numbered List">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20h14M7 12h14M7 4h14M3 20h.01M3 12h.01M3 4h.01"/>
+                </svg>
+              </button>
+              <div class="w-px h-6 bg-white/10 mx-1"></div>
+              <button type="button" class="toolbar-btn" id="link-btn" title="Insert Link">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                </svg>
+              </button>
+              <button type="button" class="toolbar-btn" id="image-btn" title="Insert Image">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+              </button>
+              <button type="button" class="toolbar-btn" data-command="formatBlock" data-value="blockquote" title="Quote">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                </svg>
+              </button>
+              <div class="w-px h-6 bg-white/10 mx-1"></div>
+              <button type="button" class="toolbar-btn" data-command="removeFormat" title="Clear Formatting">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Content Editor -->
+            <div
+              id="editor"
+              contenteditable="true"
+              class="min-h-[400px] p-6 focus:outline-none prose prose-invert prose-red max-w-none"
+              set:html={post.content || ''}
+            ></div>
+          </div>
+        </div>
+
+        <!-- Excerpt -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Excerpt</h3>
+          </div>
+          <div class="card-body">
+            <textarea
+              id="post-excerpt"
+              rows="3"
+              placeholder="Brief summary for previews and SEO..."
+              class="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none"
+            >{post.excerpt || ''}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="space-y-6">
+        <!-- Publish Settings -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Publish</h3>
+          </div>
+          <div class="card-body space-y-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Status</label>
+              <select id="post-status" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-red-500">
+                <option value="draft" selected={post.status === 'draft'}>Draft</option>
+                <option value="published" selected={post.status === 'published'}>Published</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">URL Slug</label>
+              <input
+                type="text"
+                id="post-slug"
+                value={post.slug || ''}
+                placeholder="auto-generated-from-title"
+                class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+              />
+            </div>
+            {post.publishedAt && (
+              <p class="text-xs text-gray-500">
+                Published: {new Date(post.publishedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </p>
+            )}
+            <p class="text-xs text-gray-500">
+              Views: {post.views || 0}
+            </p>
+          </div>
+        </div>
+
+        <!-- Featured Image -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Featured Image</h3>
+          </div>
+          <div class="card-body">
+            <div id="featured-image-preview" class={post.featuredImage ? 'mb-4' : 'hidden mb-4'}>
+              <img id="featured-image-img" src={post.featuredImage || ''} alt="Featured" class="w-full h-40 object-cover rounded-lg" />
+              <button id="remove-image-btn" class="mt-2 text-sm text-red-400 hover:text-red-300">Remove image</button>
+            </div>
+            <input
+              type="text"
+              id="post-featured-image"
+              value={post.featuredImage || ''}
+              placeholder="Image URL..."
+              class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+            />
+          </div>
+        </div>
+
+        <!-- Category & Tags -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Category & Tags</h3>
+          </div>
+          <div class="card-body space-y-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Category</label>
+              <select id="post-category" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-red-500">
+                <option value="News" selected={post.category === 'News'}>News</option>
+                <option value="Releases" selected={post.category === 'Releases'}>Releases</option>
+                <option value="Events" selected={post.category === 'Events'}>Events</option>
+                <option value="Artist Spotlight" selected={post.category === 'Artist Spotlight'}>Artist Spotlight</option>
+                <option value="Tutorials" selected={post.category === 'Tutorials'}>Tutorials</option>
+                <option value="General" selected={post.category === 'General'}>General</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Tags</label>
+              <input
+                type="text"
+                id="post-tags"
+                value={(post.tags || []).join(', ')}
+                placeholder="jungle, dnb, music (comma separated)"
+                class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- SEO -->
+        <div class="card">
+          <div class="card-header">
+            <h3>SEO Settings</h3>
+          </div>
+          <div class="card-body space-y-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">SEO Title</label>
+              <input
+                type="text"
+                id="post-seo-title"
+                value={post.seoTitle || ''}
+                placeholder="Leave blank to use post title"
+                class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white placeholder-gray-500 focus:outline-none focus:border-red-500"
+              />
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-2">Meta Description</label>
+              <textarea
+                id="post-seo-description"
+                rows="3"
+                placeholder="Leave blank to use excerpt"
+                class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none"
+              >{post.seoDescription || ''}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Author -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Author</h3>
+          </div>
+          <div class="card-body">
+            <input
+              type="text"
+              id="post-author"
+              value={post.author || 'Fresh Wax'}
+              class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-red-500"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Link Modal -->
+  <div id="link-modal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/80" id="link-modal-backdrop"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+      <div class="bg-gray-900 border border-white/10 rounded-xl max-w-md w-full p-6">
+        <h3 class="text-lg font-bold text-white mb-4">Insert Link</h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">URL</label>
+            <input type="url" id="link-url" placeholder="https://..." class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-red-500" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Text (optional)</label>
+            <input type="text" id="link-text" placeholder="Link text" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-red-500" />
+          </div>
+        </div>
+        <div class="flex gap-3 justify-end mt-6">
+          <button id="link-cancel" class="btn btn-ghost">Cancel</button>
+          <button id="link-insert" class="btn btn-primary">Insert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Modal -->
+  <div id="image-modal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/80" id="image-modal-backdrop"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+      <div class="bg-gray-900 border border-white/10 rounded-xl max-w-md w-full p-6">
+        <h3 class="text-lg font-bold text-white mb-4">Insert Image</h3>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Image URL</label>
+            <input type="url" id="image-url" placeholder="https://..." class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-red-500" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400 mb-2">Alt Text</label>
+            <input type="text" id="image-alt" placeholder="Describe the image" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-red-500" />
+          </div>
+        </div>
+        <div class="flex gap-3 justify-end mt-6">
+          <button id="image-cancel" class="btn btn-ghost">Cancel</button>
+          <button id="image-insert" class="btn btn-primary">Insert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .toolbar-btn {
+    padding: 0.5rem;
+    color: #9ca3af;
+    border-radius: 0.375rem;
+    transition: all 0.15s;
+  }
+
+  .toolbar-btn:hover {
+    color: white;
+    background: rgba(255,255,255,0.1);
+  }
+
+  #editor h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  #editor h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  #editor p {
+    margin-bottom: 1rem;
+  }
+
+  #editor ul, #editor ol {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  #editor blockquote {
+    border-left: 4px solid #ef4444;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    color: #9ca3af;
+    font-style: italic;
+  }
+
+  #editor a {
+    color: #ef4444;
+    text-decoration: underline;
+  }
+
+  #editor img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+  }
+</style>
+
+<script define:vars={{ postId: id }}>
+  const editor = document.getElementById('editor');
+  const postTitle = document.getElementById('post-title');
+  const postSlug = document.getElementById('post-slug');
+  const postExcerpt = document.getElementById('post-excerpt');
+  const postStatus = document.getElementById('post-status');
+  const postCategory = document.getElementById('post-category');
+  const postTags = document.getElementById('post-tags');
+  const postFeaturedImage = document.getElementById('post-featured-image');
+  const postAuthor = document.getElementById('post-author');
+  const postSeoTitle = document.getElementById('post-seo-title');
+  const postSeoDescription = document.getElementById('post-seo-description');
+
+  // Featured image preview
+  postFeaturedImage.addEventListener('input', () => {
+    const preview = document.getElementById('featured-image-preview');
+    const img = document.getElementById('featured-image-img');
+    if (postFeaturedImage.value) {
+      img.src = postFeaturedImage.value;
+      preview?.classList.remove('hidden');
+    } else {
+      preview?.classList.add('hidden');
+    }
+  });
+
+  document.getElementById('remove-image-btn')?.addEventListener('click', () => {
+    postFeaturedImage.value = '';
+    document.getElementById('featured-image-preview')?.classList.add('hidden');
+  });
+
+  // Toolbar commands
+  document.querySelectorAll('.toolbar-btn[data-command]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const command = btn.dataset.command;
+      const value = btn.dataset.value || '';
+      document.execCommand(command, false, value);
+      editor.focus();
+    });
+  });
+
+  // Link modal
+  const linkModal = document.getElementById('link-modal');
+  const linkUrl = document.getElementById('link-url');
+  const linkText = document.getElementById('link-text');
+  let savedSelection = null;
+
+  document.getElementById('link-btn')?.addEventListener('click', () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      savedSelection = selection.getRangeAt(0).cloneRange();
+      linkText.value = selection.toString();
+    }
+    linkModal.classList.remove('hidden');
+    linkUrl.focus();
+  });
+
+  document.getElementById('link-cancel')?.addEventListener('click', () => {
+    linkModal.classList.add('hidden');
+    linkUrl.value = '';
+    linkText.value = '';
+  });
+
+  document.getElementById('link-modal-backdrop')?.addEventListener('click', () => {
+    linkModal.classList.add('hidden');
+  });
+
+  document.getElementById('link-insert')?.addEventListener('click', () => {
+    if (linkUrl.value) {
+      const text = linkText.value || linkUrl.value;
+      const html = `<a href="${linkUrl.value}" target="_blank">${text}</a>`;
+
+      if (savedSelection) {
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(savedSelection);
+      }
+
+      document.execCommand('insertHTML', false, html);
+    }
+    linkModal.classList.add('hidden');
+    linkUrl.value = '';
+    linkText.value = '';
+    editor.focus();
+  });
+
+  // Image modal
+  const imageModal = document.getElementById('image-modal');
+  const imageUrl = document.getElementById('image-url');
+  const imageAlt = document.getElementById('image-alt');
+
+  document.getElementById('image-btn')?.addEventListener('click', () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      savedSelection = selection.getRangeAt(0).cloneRange();
+    }
+    imageModal.classList.remove('hidden');
+    imageUrl.focus();
+  });
+
+  document.getElementById('image-cancel')?.addEventListener('click', () => {
+    imageModal.classList.add('hidden');
+    imageUrl.value = '';
+    imageAlt.value = '';
+  });
+
+  document.getElementById('image-modal-backdrop')?.addEventListener('click', () => {
+    imageModal.classList.add('hidden');
+  });
+
+  document.getElementById('image-insert')?.addEventListener('click', () => {
+    if (imageUrl.value) {
+      const html = `<img src="${imageUrl.value}" alt="${imageAlt.value || ''}" />`;
+
+      if (savedSelection) {
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(savedSelection);
+      }
+
+      document.execCommand('insertHTML', false, html);
+    }
+    imageModal.classList.add('hidden');
+    imageUrl.value = '';
+    imageAlt.value = '';
+    editor.focus();
+  });
+
+  // Keyboard shortcuts
+  editor.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case 'b':
+          e.preventDefault();
+          document.execCommand('bold');
+          break;
+        case 'i':
+          e.preventDefault();
+          document.execCommand('italic');
+          break;
+        case 'u':
+          e.preventDefault();
+          document.execCommand('underline');
+          break;
+        case 's':
+          e.preventDefault();
+          savePost(postStatus.value);
+          break;
+      }
+    }
+  });
+
+  // Save function
+  async function savePost(status) {
+    const title = postTitle.value.trim();
+    if (!title) {
+      alert('Please enter a title');
+      postTitle.focus();
+      return;
+    }
+
+    const data = {
+      id: postId,
+      title,
+      slug: postSlug.value || undefined,
+      content: editor.innerHTML,
+      excerpt: postExcerpt.value,
+      status,
+      category: postCategory.value,
+      tags: postTags.value.split(',').map(t => t.trim()).filter(Boolean),
+      featuredImage: postFeaturedImage.value,
+      author: postAuthor.value,
+      seoTitle: postSeoTitle.value,
+      seoDescription: postSeoDescription.value
+    };
+
+    const btn = status === 'published'
+      ? document.getElementById('publish-btn')
+      : document.getElementById('save-draft-btn');
+
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    try {
+      const response = await fetch('/api/admin/blog', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
+
+      // Show saved feedback
+      btn.textContent = 'Saved!';
+      setTimeout(() => {
+        btn.textContent = originalText;
+      }, 2000);
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert('Failed to save: ' + error.message);
+      btn.textContent = originalText;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('save-draft-btn')?.addEventListener('click', () => savePost('draft'));
+  document.getElementById('publish-btn')?.addEventListener('click', () => savePost(postStatus.value === 'published' ? 'published' : 'published'));
+</script>

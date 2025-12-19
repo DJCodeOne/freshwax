@@ -178,18 +178,18 @@ function setupLobbyEvents() {
     }
   });
   
-  // Chat message
-  lobbyChannel.bind('chat-message', (data) => {
-    appendChatMessage(data);
-  });
-  
-  // Chat message deleted
-  lobbyChannel.bind('chat-deleted', (data) => {
-    const msgEl = document.querySelector(`[data-message-id="${data.id}"]`);
-    if (msgEl) {
-      msgEl.remove();
-    }
-  });
+  // Chat message - DISABLED: Now using LiveChat component for livestream chat
+  // lobbyChannel.bind('chat-message', (data) => {
+  //   appendChatMessage(data);
+  // });
+
+  // Chat message deleted - DISABLED: Now using LiveChat component
+  // lobbyChannel.bind('chat-deleted', (data) => {
+  //   const msgEl = document.querySelector(`[data-message-id="${data.id}"]`);
+  //   if (msgEl) {
+  //     msgEl.remove();
+  //   }
+  // });
   
   // Takeover events (for lobby visibility)
   lobbyChannel.bind('takeover-requested', (data) => {
@@ -379,7 +379,7 @@ function stopHeartbeat() {
 async function loadInitialData() {
   await Promise.all([
     loadOnlineDjs(),
-    loadChatHistory(),
+    // loadChatHistory() - DISABLED: Now using LiveChat component for livestream chat
     checkTakeoverStatus()
   ]);
 }
@@ -478,24 +478,13 @@ function updateOnlineDjsUI() {
 }
 
 function renderChatHistory(messages) {
-  const container = document.getElementById('chatMessages');
-  if (!container) return;
-  
-  if (messages.length === 0) {
-    container.innerHTML = `
-      <div class="chat-welcome">
-        <p>Welcome to the DJ Lobby! 👋</p>
-        <p class="hint">Chat with other DJs, coordinate sets, and hang out.</p>
-      </div>
-    `;
-    return;
-  }
-  
-  container.innerHTML = messages.map(msg => createChatMessageHTML(msg)).join('');
-  container.scrollTop = container.scrollHeight;
+  // DISABLED: Now using LiveChat component
+  return;
 }
 
 function appendChatMessage(msg) {
+  // DISABLED: Now using LiveChat component
+  return;
   const container = document.getElementById('chatMessages');
   if (!container) return;
   

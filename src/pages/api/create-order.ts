@@ -427,6 +427,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           body: JSON.stringify({
             from: 'Fresh Wax <orders@freshwax.co.uk>',
             to: [order.customer.email],
+            bcc: ['davidhagon@gmail.com'],
             subject: 'Order Confirmed - ' + shortOrderNumber,
             html: emailHtml
           })
@@ -468,6 +469,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             body: JSON.stringify({
               from: 'Fresh Wax Orders <orders@freshwax.co.uk>',
               to: [STOCKIST_EMAIL],
+              bcc: ['davidhagon@gmail.com'],
               subject: '📦 VINYL FULFILLMENT REQUIRED - ' + orderNumber,
               html: fulfillmentHtml
             })

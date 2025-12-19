@@ -1,11 +1,11 @@
 // src/pages/api/admin/get-settings.ts
-// Get admin settings - uses Firebase REST API
+// Get admin settings - uses Firebase REST API with 30-min cache
 import type { APIRoute } from 'astro';
-import { getDocument } from '../../../lib/firebase-rest';
+import { getSettings } from '../../../lib/firebase-rest';
 
 export const GET: APIRoute = async () => {
   try {
-    const settingsData = await getDocument('settings', 'admin');
+    const settingsData = await getSettings();
 
     if (!settingsData) {
       // Return default settings

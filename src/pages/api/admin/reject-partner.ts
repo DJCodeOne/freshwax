@@ -2,7 +2,7 @@
 // API endpoint to reject (delete) a partner application
 
 import type { APIRoute } from 'astro';
-import { deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { deleteDocument, getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
@@ -22,11 +22,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Delete partner document
+    // Delete partner document from artists collection
     await deleteDocument('artists', partnerId);
 
-    // TODO: Optionally send rejection email
-    // Be mindful of how you communicate rejections
+    // Also update users collection to remove partner roles
+    const userDoc = await getDocument('users', partnerId);
+    if (userDoc) {
+      const existingRoles = userDoc.roles || {};
+      await updateDocument('users', partnerId, {
+        roles: {
+          ...existingRoles,
+          artist: false,
+          merchSupplier: false
+        },
+        partnerInfo: {
+          ...(userDoc.partnerInfo || {}),
+          approved: false,
+          rejectedAt: new Date().toISOString()
+        }
+      });
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

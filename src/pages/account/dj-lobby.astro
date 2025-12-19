@@ -2,6 +2,7 @@
 // src/pages/account/dj-lobby.astro
 // DJ-only lobby with stream preview, private chat, streaming instructions, and takeover system
 import '../../styles/dj-lobby.css';
+import LiveChat from '../../components/live/LiveChat.astro';
 export const prerender = false;
 
 // Pusher config for client-side (PUBLIC_ prefixed vars are safe to expose)
@@ -9,6 +10,9 @@ const pusherConfig = {
   key: import.meta.env.PUBLIC_PUSHER_KEY || '',
   cluster: import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu'
 };
+
+// HLS URL for preview player (from env or default to production)
+const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk';
 ---
 
 <!DOCTYPE html>
@@ -25,16 +29,21 @@ const pusherConfig = {
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
   <!-- Pusher configuration - must be set before dj-lobby-pusher.js loads -->
-  <script define:vars={{ pusherConfig }}>
+  <script define:vars={{ pusherConfig, hlsBaseUrl }}>
     window.PUSHER_CONFIG = pusherConfig;
+    window.HLS_BASE_URL = hlsBaseUrl;
   </script>
 </head>
 <body class="dj-lobby-page">
   <!-- Auth Gate -->
   <div id="authGate" class="auth-gate">
     <div class="auth-content">
-      <div class="spinner"></div>
-      <p>Checking DJ access...</p>
+      <div class="loading-dots wave">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+      <p>Checking DJ access</p>
     </div>
   </div>
   
@@ -180,12 +189,10 @@ const pusherConfig = {
   <div id="mainLobby" class="lobby-container hidden">
     <header class="lobby-header">
       <div class="header-left">
-        <a href="/live" class="back-link">
-          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
-          </svg>
-          Back to Live
-        </a>
+        <div id="headerTimeRemaining" class="header-time-remaining hidden">
+          <span id="headerTimeLeft" class="header-time-value">--:--</span>
+          <span class="header-time-label">remaining</span>
+        </div>
       </div>
       <div class="header-center">
         <h1>DJ <span class="red">LOBBY</span></h1>
@@ -199,6 +206,12 @@ const pusherConfig = {
           </div>
           <span id="headerName" class="header-name">Loading...</span>
         </div>
+        <a href="/live" class="back-link">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+          </svg>
+          Back to Live
+        </a>
         <button id="signOutBtn" class="sign-out-btn">Sign Out</button>
       </div>
     </header>
@@ -208,11 +221,11 @@ const pusherConfig = {
       <div class="key-column">
         <!-- Stream Control Card -->
         <div class="stream-control-card">
-          <button id="goLiveBtn" class="go-live-btn">
+          <button id="setReadyBtn" class="go-live-btn glow">
             <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
               <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
             </svg>
-            Go Live
+            <span id="readyBtnText">Go Live</span>
           </button>
           <div class="control-divider"></div>
           <button id="lobbyEndStreamBtn" class="lobby-end-stream-btn disabled" disabled>
@@ -276,34 +289,20 @@ const pusherConfig = {
             <p>No active stream to take over.</p>
           </div>
         </div>
-        
+
         <!-- Streaming Setup Link -->
         <div class="setup-link-section">
           <a href="/account/streaming-setup" class="setup-link-btn">
-            <span class="setup-icon">📖</span>
-            <span class="setup-text">Streaming Setup Guide</span>
+            <span class="setup-text">Streaming Setup</span>
             <span class="setup-arrow">→</span>
           </a>
-        </div>
-
-        <!-- OBS Setup -->
-        <div class="obs-setup-section">
-          <details class="obs-instructions-compact">
-            <summary>🎬 OBS Quick Setup</summary>
-            <ol>
-              <li>Settings → Stream → Custom</li>
-              <li>Paste Server URL & Key</li>
-              <li>Start Streaming in OBS</li>
-              <li>Click Go Live below</li>
-            </ol>
-          </details>
         </div>
 
         <!-- DJs Online Box -->
         <div class="djs-online-box">
           <div class="box-header">
-            <h3>🎧 DJs in Lobby</h3>
-            <span class="online-count"><span id="onlineDjCount">0</span> online</span>
+            <h3>🎧 DJs in Lobby <span class="online-count-inline" id="onlineDjCount">0</span></h3>
+            <button id="openDmBtn" class="dm-btn">DM</button>
           </div>
           <div id="djsList" class="djs-list">
             <p class="empty-state">No DJs online yet</p>
@@ -313,166 +312,330 @@ const pusherConfig = {
       
       <!-- Middle Column: Preview Only -->
       <div class="main-column">
-        <!-- Current Stream Preview -->
+        <!-- Split Video Players -->
         <div class="preview-section">
-          <div class="preview-header">
-            <h2>Current Stream</h2>
-            <div class="stream-status" id="streamStatus">
-              <span class="status-dot offline"></span>
-              <span id="statusText">No one streaming</span>
-            </div>
-          </div>
-          
-          <div class="preview-player" id="previewPlayer">
-            <div id="offlineState" class="offline-state">
-              <div class="offline-icon">📡</div>
-              <h3>No Live Stream</h3>
-              <p>Be the first to go live!</p>
-            </div>
-            
-            <div id="videoPreview" class="video-preview hidden">
-              <video id="hlsVideo" playsinline autoplay></video>
+          <div class="split-players three-col">
+            <!-- Left: OBS Preview (User's Feed) -->
+            <div class="player-panel obs-panel">
+              <div class="panel-header">
+                <span class="panel-title">Your Preview</span>
+                <div class="connection-indicators">
+                  <div class="indicator" id="serverIndicator" title="Server Connection">
+                    <span class="indicator-dot disconnected"></span>
+                    <span class="indicator-label">Server</span>
+                  </div>
+                  <div class="indicator" id="obsIndicator" title="OBS Connection">
+                    <span class="indicator-dot disconnected"></span>
+                    <span class="indicator-label">OBS</span>
+                  </div>
+                </div>
+              </div>
+              <div class="player-wrapper" id="obsPlayerWrapper">
+                <div id="obsOfflineState" class="offline-state">
+                  <div class="offline-icon">🎬</div>
+                  <h3>No OBS Feed</h3>
+                  <p>Start streaming in OBS to preview</p>
+                  <input type="text" id="customHlsUrl" placeholder="HLS URL (optional)" style="margin-top:10px;padding:6px 10px;width:80%;border:1px solid #444;border-radius:4px;background:#1a1a2e;color:white;font-size:12px;">
+                  <button type="button" id="testPreviewBtn" style="margin-top:8px;padding:8px 16px;background:#7c3aed;color:white;border:none;border-radius:6px;cursor:pointer;">Test Preview</button>
+                </div>
+                <div id="obsVideoPreview" class="video-preview hidden">
+                  <video id="obsVideo" playsinline autoplay muted></video>
+                  <button type="button" id="stopPreviewBtn" style="position:absolute;top:8px;right:8px;padding:4px 10px;background:rgba(220,38,38,0.9);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Stop</button>
+                </div>
+              </div>
+              <div class="player-controls-center" id="obsControls">
+                <button type="button" class="player-control-btn mute-btn" id="obsMuteBtn" title="Toggle Audio">
+                  <svg class="muted-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                    <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                  </svg>
+                  <svg class="unmuted-icon hidden" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                  </svg>
+                </button>
+                <div class="volume-slider-wrapper">
+                  <input type="range" id="obsVolumeSlider" class="volume-slider" min="0" max="100" value="0" orient="vertical" />
+                </div>
+                <div class="stereo-meter" id="obsStereoMeter">
+                  <div class="meter-channel left">
+                    <div class="meter-bar" id="obsLeftMeter"></div>
+                  </div>
+                  <div class="meter-channel right">
+                    <div class="meter-bar" id="obsRightMeter"></div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div id="audioPreview" class="audio-preview hidden">
-              <div class="audio-visualizer">
-                <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
-                <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
-                <div class="viz-bar"></div><div class="viz-bar"></div>
+            <!-- Center: Realtime Stats -->
+            <div class="center-stats-panel">
+              <div class="center-stat">
+                <span class="center-stat-value" id="centerViewers">0</span>
+                <span class="center-stat-label">Viewers</span>
               </div>
-              <img id="streamCover" src="/place-holder.webp" alt="Stream" class="stream-cover" />
-              <audio id="audioElement" crossorigin="anonymous" autoplay></audio>
+              <div class="center-stat">
+                <span class="center-stat-value" id="centerBitrate">--</span>
+                <span class="center-stat-label">Bitrate</span>
+              </div>
+              <div class="center-stat">
+                <span class="center-stat-value" id="centerResolution">--</span>
+                <span class="center-stat-label">Resolution</span>
+              </div>
+              <div class="center-stat">
+                <span class="center-stat-value" id="centerFps">--</span>
+                <span class="center-stat-label">FPS</span>
+              </div>
+              <div class="center-stat">
+                <span class="center-stat-value" id="centerLatency">--</span>
+                <span class="center-stat-label">Latency</span>
+              </div>
+              <div class="center-stat">
+                <span class="center-stat-value" id="centerUptime">--</span>
+                <span class="center-stat-label">Uptime</span>
+              </div>
             </div>
-            
-            <!-- Time Remaining Overlay -->
-            <div id="timeRemaining" class="time-remaining hidden">
-              <span class="time-label">Time Remaining</span>
-              <span id="timeLeft" class="time-value">--:--</span>
+
+            <!-- Right: Live Stream (Current Broadcast) -->
+            <div class="player-panel live-panel">
+              <div class="panel-header">
+                <span class="panel-title">Live Stream</span>
+                <div class="stream-status" id="streamStatus">
+                  <span class="status-dot offline"></span>
+                  <span id="statusText">No one streaming</span>
+                </div>
+              </div>
+              <div class="player-wrapper preview-player" id="previewPlayer">
+                <div id="offlineState" class="offline-state">
+                  <div class="offline-icon">📡</div>
+                  <h3>No Live Stream</h3>
+                  <p>Be the first to go live!</p>
+                </div>
+
+                <div id="videoPreview" class="video-preview hidden">
+                  <video id="hlsVideo" playsinline autoplay></video>
+                </div>
+
+                <div id="audioPreview" class="audio-preview hidden">
+                  <div class="audio-visualizer">
+                    <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
+                    <div class="viz-bar"></div><div class="viz-bar"></div><div class="viz-bar"></div>
+                    <div class="viz-bar"></div><div class="viz-bar"></div>
+                  </div>
+                  <img id="streamCover" src="/place-holder.webp" alt="Stream" class="stream-cover" />
+                  <audio id="audioElement" crossorigin="anonymous" autoplay></audio>
+                </div>
+
+                <!-- Time Remaining (now shown in header) -->
+                <div id="timeRemaining" class="time-remaining hidden" style="display:none;">
+                  <span class="time-label">Time Remaining</span>
+                  <span id="timeLeft" class="time-value">--:--</span>
+                </div>
+
+                <!-- Final Countdown Overlay -->
+                <div id="finalCountdown" class="final-countdown hidden">
+                  <div class="countdown-number-container">
+                    <span id="countdownNumber" class="countdown-number">5</span>
+                  </div>
+                </div>
+
+              </div>
+              <div class="player-controls-center" id="liveControls">
+                <div class="stereo-meter" id="liveStereoMeter">
+                  <div class="meter-channel left">
+                    <div class="meter-bar" id="liveLeftMeter"></div>
+                  </div>
+                  <div class="meter-channel right">
+                    <div class="meter-bar" id="liveRightMeter"></div>
+                  </div>
+                </div>
+                <div class="volume-slider-wrapper">
+                  <input type="range" id="liveVolumeSlider" class="volume-slider" min="0" max="100" value="80" orient="vertical" />
+                </div>
+                <button type="button" class="player-control-btn mute-btn" id="liveMuteBtn" title="Toggle Audio">
+                  <svg class="muted-icon hidden" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                    <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                  </svg>
+                  <svg class="unmuted-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
-          
-          <div class="player-controls">
-            <button id="playPauseBtn" class="control-btn">
-              <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-              <svg id="pauseIcon" class="hidden" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-              </svg>
-            </button>
-            
-            <div class="volume-control">
-              <button id="muteBtn" class="control-btn small">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-                </svg>
-              </button>
-              <input type="range" id="volumeSlider" min="0" max="100" value="80" />
-            </div>
-            
-            <div class="stream-info-display">
-              <img id="currentDjAvatar" src="/place-holder.webp" alt="" class="current-dj-avatar" />
-              <div class="current-dj-details">
-                <span id="currentDjName" class="dj-name">-</span>
-                <span id="currentStreamTitle" class="stream-title">No stream</span>
+
+        </div>
+
+        <!-- Go Live Setup Section -->
+        <div class="stream-key-section" id="streamKeySection">
+          <div id="keyAvailable" class="key-available">
+            <div class="go-live-grid-compact">
+              <div class="setup-row">
+                <div class="cred-box-compact">
+                  <label>Server</label>
+                  <div class="cred-value-compact">
+                    <code id="rtmpUrl" class="url-scrolling"><span class="url-text">rtmp://rtmp.freshwax.co.uk/live</span></code>
+                    <button class="copy-btn-sm" data-copy="rtmpUrl">Copy</button>
+                  </div>
+                </div>
+                <div class="cred-box-compact">
+                  <label>Key</label>
+                  <div class="cred-value-compact">
+                    <code id="myStreamKey" class="key-loading"><span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span></code>
+                    <button class="copy-btn-sm" data-copy="myStreamKey">Copy</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="setup-row">
+                <div class="setup-field">
+                  <label for="inlineStreamTitle">Title</label>
+                  <input type="text" id="inlineStreamTitle" placeholder="Friday Night Session" maxlength="60" />
+                </div>
+                <div class="setup-field">
+                  <label for="inlineStreamGenre">Genre</label>
+                  <select id="inlineStreamGenre">
+                    <option value="Jungle / D&B">Jungle / D&B</option>
+                    <option value="Jungle">Jungle</option>
+                    <option value="Drum & Bass">Drum & Bass</option>
+                    <option value="Liquid D&B">Liquid D&B</option>
+                    <option value="Ragga Jungle">Ragga Jungle</option>
+                    <option value="Neurofunk">Neurofunk</option>
+                    <option value="Jump Up">Jump Up</option>
+                    <option value="Breakbeat">Breakbeat</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        
-        <!-- Stream Key Section (under video player) - Inline Go Live Info -->
-        <div class="stream-key-section" id="streamKeySection">
-          <div class="section-header">
-            <h3>🎙️ Go Live Setup</h3>
-            <span id="keyStatus" class="key-status ready">Ready</span>
+
+        <!-- Multi Streaming Section -->
+        <div class="multi-stream-section">
+          <div class="multi-stream-header">
+            <div class="multi-stream-icon-lg">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9 8h2v8H9zm4 2h2v6h-2z"/>
+              </svg>
+            </div>
+            <div class="multi-stream-title">
+              <h3>Multi Streaming</h3>
+              <p>Broadcast to multiple platforms</p>
+            </div>
           </div>
 
-          <!-- Always visible Go Live controls - 2x2 Grid Layout -->
-          <div id="keyAvailable" class="key-available">
-            <div class="go-live-grid">
-              <!-- Top Left: Stream Title -->
-              <div class="grid-cell">
-                <label for="inlineStreamTitle">Stream Title</label>
-                <input type="text" id="inlineStreamTitle" placeholder="e.g., Friday Night Jungle Session" maxlength="60" />
+          <div class="pro-stream-grid">
+            <!-- Twitch Section -->
+            <div class="pro-stream-card">
+              <div class="pro-card-header">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" class="twitch-color">
+                  <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+                </svg>
+                <span>Twitch</span>
               </div>
-
-              <!-- Top Right: Genre -->
-              <div class="grid-cell">
-                <label for="inlineStreamGenre">Genre</label>
-                <select id="inlineStreamGenre">
-                  <option value="Jungle / D&B">Jungle / D&B</option>
-                  <option value="Jungle">Jungle</option>
-                  <option value="Drum & Bass">Drum & Bass</option>
-                  <option value="Liquid D&B">Liquid D&B</option>
-                  <option value="Ragga Jungle">Ragga Jungle</option>
-                  <option value="Neurofunk">Neurofunk</option>
-                  <option value="Jump Up">Jump Up</option>
-                  <option value="Breakbeat">Breakbeat</option>
-                </select>
-              </div>
-
-              <!-- Stream Credentials - Separate Containers -->
-              <div class="credentials-row-split">
-                <div class="cred-box">
-                  <label>RTMP Server</label>
-                  <div class="cred-value">
-                    <code id="rtmpUrl">rtmp://rtmp.freshwax.co.uk/live</code>
-                    <button class="copy-btn" data-copy="rtmpUrl">Copy</button>
-                  </div>
+              <div class="pro-card-body">
+                <div class="pro-input-row">
+                  <input type="text" id="twitchUsername" placeholder="Username" autocomplete="off" />
                 </div>
-                <div class="cred-box">
-                  <label>Stream Key</label>
-                  <div class="cred-value">
-                    <code id="myStreamKey">Loading...</code>
-                    <button class="copy-btn" data-copy="myStreamKey">Copy</button>
-                  </div>
+                <div class="pro-input-row">
+                  <input type="password" id="twitchStreamKey" placeholder="Stream Key" autocomplete="off" />
                 </div>
+                <button type="button" class="pro-save-btn" id="saveTwitchBtn">Save</button>
               </div>
             </div>
 
-            <!-- Go Live Button - Full Width with Glow -->
-            <div class="ready-section" id="readySection">
-              <button id="setReadyBtn" class="ready-btn large glow">
-                <span id="readyBtnText">🎯 I'm Ready - Go Live!</span>
+            <!-- Relay Section -->
+            <div class="pro-stream-card">
+              <div class="pro-card-header">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" class="relay-color">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                </svg>
+                <span>Relay Source</span>
+              </div>
+              <div class="pro-card-body">
+                <div class="pro-input-row with-btn">
+                  <input type="text" id="relayUrl" placeholder="Stream URL to relay" autocomplete="off" />
+                  <button type="button" class="pro-select-btn" id="openRelayModal" title="Browse stations">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                      <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                    </svg>
+                  </button>
+                </div>
+                <span id="relaySourceName" class="relay-hint"></span>
+              </div>
+            </div>
+
+            <!-- Output URL Section -->
+            <div class="pro-stream-card output-card">
+              <div class="pro-card-header">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" class="output-color">
+                  <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9 8h2v8H9zm4 2h2v6h-2zm-8 4h2v2H5z"/>
+                </svg>
+                <span>Your Output URL</span>
+              </div>
+              <div class="pro-card-body">
+                <div class="output-url-row">
+                  <code id="outputUrl">https://rtmp.freshwax.co.uk/live/freshwax-main/index.m3u8</code>
+                  <button class="pro-copy-btn" id="copyOutputUrl">Copy</button>
+                </div>
+                <span class="output-hint">Share with stations to relay your stream</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Capture & Share Row -->
+          <div class="capture-share-row">
+            <button id="captureThumbBtn" class="capture-btn-compact" title="Capture thumbnail">
+              <span>📸</span>
+              <span>Capture</span>
+            </button>
+            <div id="thumbnailPreview" class="thumb-preview-sm hidden">
+              <img id="capturedThumb" src="" alt="Thumbnail" />
+              <button id="clearThumbBtn" class="clear-btn-sm">✕</button>
+            </div>
+            <div class="share-input-row">
+              <input type="text" id="socialPostText" class="share-text-input" placeholder="Write your post..." maxlength="280" />
+              <button id="shareTwitterBtn" class="share-icon-btn" title="Share to X" disabled>
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
               </button>
-              <p id="readyStatus" class="ready-status hidden">✓ You're set as ready.</p>
+              <button id="shareFacebookBtn" class="share-icon-btn" title="Share to Facebook" disabled>
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+              </button>
             </div>
           </div>
-
         </div>
       </div>
-      
-      <!-- Right Column: Chat + Viewers side by side -->
-      <div class="right-column">
-        <!-- Chat Section -->
-        <div class="chat-section">
-          <div class="chat-header">
-            <h2>💬 DJ Chat</h2>
-            <div class="chat-header-actions">
-              <span class="chat-hint">Private</span>
-              <button id="openDmBtn" class="dm-btn">DM</button>
+
+      <!-- Relay Sources Modal -->
+      <div id="relaySourcesModal" class="modal-overlay hidden">
+        <div class="modal-content relay-modal">
+          <div class="modal-header">
+            <h3>Select Radio Station</h3>
+            <button class="modal-close-btn" id="closeRelayModal">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-hint">Select a station you're currently streaming on to relay through Fresh Wax</p>
+            <div id="relaySourcesList" class="relay-sources-list">
+              <div class="loading-sources">
+                <div class="loading-dots wave">
+                  <span class="dot"></span>
+                  <span class="dot"></span>
+                  <span class="dot"></span>
+                </div>
+                <span>Loading stations</span>
+              </div>
             </div>
           </div>
-          
-          <div class="chat-messages" id="chatMessages">
-            <div class="chat-welcome">
-              <p>Welcome to the DJ Lobby! 👋</p>
-              <p class="hint">Chat with other DJs, coordinate sets, and hang out.</p>
-            </div>
-          </div>
-          
-          <div class="chat-input-section">
-            <div class="chat-input-wrapper">
-              <input type="text" id="chatInput" placeholder="Message other DJs..." maxlength="500" autocomplete="off" />
-              <button id="sendBtn" type="button">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                </svg>
-              </button>
-            </div>
+          <div class="modal-footer">
+            <button class="modal-btn secondary" id="clearRelaySource">Clear Selection</button>
+            <button class="modal-btn primary" id="confirmRelaySource">Confirm</button>
           </div>
         </div>
-        
+      </div>
+
+      <!-- Right Column: Chat + Viewers -->
+      <div class="right-column">
+        <!-- Live Stream Chat (mirrors main live page) -->
+        <LiveChat />
+
         <!-- Relay Chat (shown when streaming via relay) -->
         <div id="relayChatSection" class="relay-chat-section hidden">
           <div class="relay-chat-header">
@@ -488,17 +651,6 @@ const pusherConfig = {
           </div>
         </div>
 
-        <!-- Stream Viewers Column -->
-        <div class="viewers-column">
-          <div class="viewers-header">
-            <span class="viewers-dot"></span>
-            <span>Watching</span>
-            <span class="viewers-count" id="viewerCount">0</span>
-          </div>
-          <div class="viewers-list" id="viewersList">
-            <p class="no-viewers-msg">No viewers yet</p>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -508,186 +660,6 @@ const pusherConfig = {
       <span>DJ Lobby</span>
     </footer>
     
-    <!-- Go Live Modal -->
-    <div id="goLiveModal" class="go-live-modal hidden">
-      <div class="go-live-modal-overlay"></div>
-      <div class="go-live-modal-content">
-        <div class="go-live-modal-header">
-          <h2>🎙️ Go Live</h2>
-          <button id="closeGoLiveBtn" class="close-go-live-btn">✕</button>
-        </div>
-
-        <div class="go-live-modal-body">
-          <!-- Step 1: Stream Setup -->
-          <div id="goLiveStep1" class="go-live-step">
-            <div class="step-indicator">
-              <span class="step-number active">1</span>
-              <span class="step-line"></span>
-              <span class="step-number">2</span>
-            </div>
-
-            <h3>Setup Your Stream</h3>
-
-            <!-- Stream Source Selector (shown only if relay is approved) -->
-            <div id="streamSourceSelector" class="stream-source-selector hidden">
-              <label>Stream Source</label>
-              <div class="source-options">
-                <button type="button" class="source-option active" data-source="obs">
-                  <span class="source-icon">📡</span>
-                  <span class="source-label">OBS / RTMP</span>
-                  <span class="source-desc">Stream from your computer</span>
-                </button>
-                <button type="button" class="source-option" data-source="relay" id="relaySourceOption">
-                  <span class="source-icon">🔄</span>
-                  <span class="source-label" id="relaySourceLabel">Relay</span>
-                  <span class="source-desc" id="relaySourceDesc">Relay from another station</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- OBS Stream Setup (default) -->
-            <div id="obsStreamSetup">
-              <p class="step-desc">Copy these settings into OBS Studio or your streaming software:</p>
-
-              <div class="stream-credentials">
-              <div class="cred-row">
-                <label>Server URL</label>
-                <div class="cred-value">
-                  <code id="goLiveServerUrl">rtmp://rtmp.freshwax.co.uk/live</code>
-                  <button class="copy-btn" data-copy="goLiveServerUrl">Copy</button>
-                </div>
-              </div>
-              <div class="cred-row">
-                <label>Stream Key</label>
-                <div class="cred-value">
-                  <code id="goLiveStreamKey">Loading...</code>
-                  <button class="copy-btn" data-copy="goLiveStreamKey">Copy</button>
-                </div>
-              </div>
-            </div>
-
-            <div class="stream-info-inputs">
-              <div class="input-row">
-                <label for="goLiveTitle">Stream Title</label>
-                <input type="text" id="goLiveTitle" placeholder="e.g., Friday Night Jungle Session" maxlength="60" />
-              </div>
-              <div class="input-row">
-                <label for="goLiveGenre">Genre</label>
-                <select id="goLiveGenre">
-                  <option value="Jungle / D&B">Jungle / D&B</option>
-                  <option value="Jungle">Jungle</option>
-                  <option value="Drum & Bass">Drum & Bass</option>
-                  <option value="Liquid D&B">Liquid D&B</option>
-                  <option value="Ragga Jungle">Ragga Jungle</option>
-                  <option value="Neurofunk">Neurofunk</option>
-                  <option value="Jump Up">Jump Up</option>
-                  <option value="Breakbeat">Breakbeat</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="step-instructions">
-                <h4>Instructions:</h4>
-                <ol>
-                  <li>Open OBS Studio (or your streaming app)</li>
-                  <li>Go to Settings → Stream</li>
-                  <li>Set Service to "Custom"</li>
-                  <li>Paste the Server URL and Stream Key above</li>
-                  <li>Click "Start Streaming" in OBS</li>
-                  <li>Come back here and click "I'm Ready"</li>
-                </ol>
-              </div>
-            </div>
-
-            <!-- Relay Stream Setup (shown when relay source selected) -->
-            <div id="relayStreamSetup" class="hidden">
-              <div class="relay-info-card">
-                <div class="relay-station-header">
-                  <span class="relay-station-icon">📡</span>
-                  <div>
-                    <h4 id="relayStationName">Station Name</h4>
-                    <p class="relay-station-status">Approved relay source</p>
-                  </div>
-                </div>
-                <p class="relay-station-desc">Your stream will be pulled from this external source and broadcast on Fresh Wax.</p>
-                <div class="relay-url-display">
-                  <label>Relay URL</label>
-                  <code id="relayUrlDisplay">rtmp://...</code>
-                </div>
-              </div>
-
-              <div class="stream-info-inputs">
-                <div class="input-row">
-                  <label for="relayStreamTitle">Stream Title</label>
-                  <input type="text" id="relayStreamTitle" placeholder="e.g., Live from Kool FM" maxlength="60" />
-                </div>
-                <div class="input-row">
-                  <label for="relayStreamGenre">Genre</label>
-                  <select id="relayStreamGenre">
-                    <option value="Jungle / D&B">Jungle / D&B</option>
-                    <option value="Jungle">Jungle</option>
-                    <option value="Drum & Bass">Drum & Bass</option>
-                    <option value="Liquid D&B">Liquid D&B</option>
-                    <option value="Ragga Jungle">Ragga Jungle</option>
-                    <option value="Neurofunk">Neurofunk</option>
-                    <option value="Jump Up">Jump Up</option>
-                    <option value="Breakbeat">Breakbeat</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="step-instructions relay-instructions">
-                <h4>How Relay Works:</h4>
-                <ol>
-                  <li>Make sure you're live on your external station</li>
-                  <li>Ensure you have a booked slot on Fresh Wax at this time</li>
-                  <li>Click "Start Relay" and we'll pull your stream</li>
-                </ol>
-              </div>
-            </div>
-
-            <div class="step-actions">
-              <button id="goLiveReadyBtn" class="ready-btn">
-                <span class="ready-icon">🎯</span>
-                I'm Ready - Go Live!
-              </button>
-              <p class="ready-hint" id="readyHint">Click once you've started streaming in OBS</p>
-            </div>
-          </div>
-
-          <!-- Step 2: Connecting -->
-          <div id="goLiveStep2" class="go-live-step hidden">
-            <div class="connecting-state">
-              <div class="connecting-spinner"></div>
-              <h3>Connecting to your stream...</h3>
-              <p>Verifying that OBS is streaming to Fresh Wax</p>
-              <p id="connectionStatus" class="connection-status">Checking stream...</p>
-            </div>
-          </div>
-
-          <!-- Step 3: Live! -->
-          <div id="goLiveStep3" class="go-live-step hidden">
-            <div class="live-state">
-              <div class="live-badge">🔴 LIVE</div>
-              <h3>You're Live on Fresh Wax!</h3>
-              <p>Your stream is now visible to everyone.</p>
-              <button id="closeGoLiveSuccessBtn" class="close-success-btn">Close</button>
-            </div>
-          </div>
-
-          <!-- Error State -->
-          <div id="goLiveError" class="go-live-step hidden">
-            <div class="error-state">
-              <div class="error-icon">⚠️</div>
-              <h3>Stream Not Detected</h3>
-              <p id="goLiveErrorMsg">We couldn't detect your stream. Make sure OBS is streaming with the correct key.</p>
-              <button id="goLiveRetryBtn" class="retry-btn">Try Again</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- DM Modal -->
     <div id="dmModal" class="dm-modal hidden">
       <div class="dm-modal-overlay"></div>
@@ -781,7 +753,11 @@ const pusherConfig = {
   // Expose auth globally for pusher module to get idToken
   window.firebaseAuth = auth;
   const db = getFirestore(app);
-  
+
+  // Debug logging - set to false for production
+  const DEBUG = false;
+  const log = (...args) => DEBUG && console.log(...args);
+
   let currentUser = null;
   let userInfo = null;
   let currentStream = null;
@@ -789,11 +765,111 @@ const pusherConfig = {
   let presenceRef = null;
   let streamStartTime = null;
   let streamEndTime = null;
+  let previousStreamDjId = null; // Track DJ changes for seamless transitions
+  let allDjSlots = []; // Cache of all scheduled slots for consecutive slot calculation
+  let userSubscription = { tier: 'free', isPro: false }; // User subscription status
+  let currentEventSession = null; // Track if current stream is part of an event (no mid-session breaks)
 
   // HLS Player state
   let hlsPlayer = null;
   let isVideoPlaying = false;
   let currentHlsUrl = null; // Track current URL to avoid re-initializing
+
+  // Stream info panel state
+  let infoPanelDurationInterval = null;
+
+  // OBS Preview Player state
+  let obsHlsPlayer = null;
+  let obsStreamActive = false;
+  let obsCheckInterval = null;
+  let serverConnected = false;
+
+  // Stream key for preview (can be set via ?testPreview=key for testing)
+  const urlParams = new URLSearchParams(window.location.search);
+  console.log('[Test Mode] URL params:', window.location.search);
+  let currentStreamKey = urlParams.get('testPreview') || null;
+  const forcePreview = urlParams.has('forcePreview');
+  // Allow overriding HLS base URL for testing (e.g., ?hlsBase=https://tunnel.trycloudflare.com)
+  const testHlsBase = urlParams.get('hlsBase');
+  if (testHlsBase) {
+    window.HLS_BASE_URL = testHlsBase;
+    console.log('[Test Mode] Using custom HLS base URL:', testHlsBase);
+  }
+  // Test preview function - can be triggered by button or URL param
+  function loadTestPreview() {
+    console.log('[Test Mode] Loading test video...');
+    const videoEl = document.getElementById('obsVideo');
+    const offlineState = document.getElementById('obsOfflineState');
+    const videoPreview = document.getElementById('obsVideoPreview');
+    const customUrlInput = document.getElementById('customHlsUrl');
+
+    console.log('[Test Mode] Elements:', { videoEl: !!videoEl, offlineState: !!offlineState, videoPreview: !!videoPreview });
+
+    if (videoEl && offlineState && videoPreview) {
+      offlineState.classList.add('hidden');
+      videoPreview.classList.remove('hidden');
+
+      // Use custom URL if provided, otherwise use Big Buck Bunny test stream
+      const customUrl = customUrlInput?.value?.trim();
+      const testUrl = customUrl || 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+      console.log('[Test Mode] Loading URL:', testUrl, customUrl ? '(custom)' : '(default test)');
+
+      if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+        console.log('[Test Mode] Using HLS.js');
+        const hls = new Hls();
+        hls.loadSource(testUrl);
+        hls.attachMedia(videoEl);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          console.log('[Test Mode] HLS manifest parsed, playing...');
+          videoEl.play().catch(e => console.error('[Test Mode] Play error:', e));
+        });
+        hls.on(Hls.Events.ERROR, (e, data) => console.error('[Test Mode] HLS error:', data));
+      } else {
+        console.log('[Test Mode] Using native HLS');
+        videoEl.src = testUrl;
+        videoEl.play().catch(e => console.error('[Test Mode] Play error:', e));
+      }
+    } else {
+      console.error('[Test Mode] Video elements not found!');
+      alert('Video elements not found - check console');
+    }
+  }
+
+  // Add click handler for test button
+  document.getElementById('testPreviewBtn')?.addEventListener('click', loadTestPreview);
+
+  // Add click handler for stop button
+  document.getElementById('stopPreviewBtn')?.addEventListener('click', () => {
+    const videoEl = document.getElementById('obsVideo');
+    const offlineState = document.getElementById('obsOfflineState');
+    const videoPreview = document.getElementById('obsVideoPreview');
+    if (videoEl) {
+      videoEl.pause();
+      videoEl.src = '';
+    }
+    offlineState?.classList.remove('hidden');
+    videoPreview?.classList.add('hidden');
+    console.log('[Test Mode] Preview stopped');
+  });
+
+  // Direct test mode - use ?directTest to load a known working test video
+  const directTest = urlParams.has('directTest');
+  if (directTest) {
+    console.log('[Test Mode] DIRECT TEST - Loading test video immediately');
+    setTimeout(loadTestPreview, 1000);
+  }
+
+  if (currentStreamKey) {
+    console.log('[Test Mode] Using test preview stream key:', currentStreamKey);
+    if (forcePreview) {
+      console.log('[Test Mode] Force preview enabled - skipping availability check');
+      // Force start preview check immediately after page loads
+      setTimeout(() => {
+        console.log('[Test Mode] Force starting preview check...');
+        startObsPreviewCheck();
+      }, 2000);
+    }
+  }
 
   // Takeover limiting - max 3 attempts per session
   let takeoverAttempts = 0;
@@ -811,7 +887,7 @@ const pusherConfig = {
   // Auth timeout - if auth check takes too long, offer refresh
   let authTimeout = setTimeout(() => {
     if (!authInitialized) {
-      console.log('[DJLobby] Auth timeout - no response after 8 seconds');
+      log('[DJLobby] Auth timeout - no response after 8 seconds');
       const authGate = document.getElementById('authGate');
       if (authGate) {
         authGate.innerHTML = `
@@ -838,7 +914,7 @@ const pusherConfig = {
     
     // Set a timeout for the access check itself
     const accessCheckTimeout = setTimeout(() => {
-      console.log('[DJLobby] Access check timeout - no response after 15 seconds');
+      log('[DJLobby] Access check timeout - no response after 15 seconds');
       const authGate = document.getElementById('authGate');
       if (authGate && !authGate.classList.contains('hidden')) {
         authGate.innerHTML = `
@@ -859,7 +935,7 @@ const pusherConfig = {
   
   async function checkDjAccess(userId) {
     try {
-      console.log('[DJ Lobby] Checking access for:', userId);
+      log('[DJ Lobby] Checking access for:', userId);
       
       // Helper function with timeout
       const fetchWithTimeout = async (url, timeout = 10000) => {
@@ -893,7 +969,7 @@ const pusherConfig = {
       }
       
       const result = await response.json();
-      console.log('[DJ Lobby] User type result:', result);
+      log('[DJ Lobby] User type result:', result);
       
       if (!result.success) { 
         console.error('[DJ Lobby] get-user-type failed:', result.error);
@@ -915,10 +991,10 @@ const pusherConfig = {
         isAdmin: isAdmin
       };
       
-      console.log('[DJ Lobby] User info set:', { displayName, firebaseDisplayName: currentUser.displayName, apiPartnerDisplayName: result.partnerDisplayName, avatarUrl: result.avatarUrl, photoURL: currentUser.photoURL, finalAvatar: userInfo.avatar });
+      log('[DJ Lobby] User info set:', { displayName, firebaseDisplayName: currentUser.displayName, apiPartnerDisplayName: result.partnerDisplayName, avatarUrl: result.avatarUrl, photoURL: currentUser.photoURL, finalAvatar: userInfo.avatar });
       
       // Check eligibility (must have mix with 10+ likes OR have bypass approval)
-      console.log('[DJ Lobby] Checking eligibility...');
+      log('[DJ Lobby] Checking eligibility...');
       let eligibilityResponse;
       try {
         eligibilityResponse = await fetchWithTimeout(`/api/check-dj-eligibility?userId=${userId}`);
@@ -935,7 +1011,7 @@ const pusherConfig = {
       }
       
       const eligibility = await eligibilityResponse.json();
-      console.log('[DJ Lobby] Eligibility result:', eligibility);
+      log('[DJ Lobby] Eligibility result:', eligibility);
       
       if (!eligibility.success) {
         console.error('[DJ Lobby] Eligibility check failed:', eligibility.error);
@@ -944,14 +1020,22 @@ const pusherConfig = {
       }
       
       if (!eligibility.eligible && !isAdmin) {
-        console.log('[DJ Lobby] User not eligible, showing requirements');
+        log('[DJ Lobby] User not eligible, showing requirements');
         showNotEligible(eligibility);
         return;
       }
       
-      console.log('[DJ Lobby] Access granted, showing lobby');
+      log('[DJ Lobby] Access granted, showing lobby');
+
+      // Check subscription tier from eligibility response
+      userSubscription = {
+        tier: eligibility.subscriptionTier || 'free',
+        isPro: eligibility.subscriptionTier === 'pro' || eligibility.subscriptionTier === 'premium' || userInfo.isAdmin
+      };
+
       showLobby();
       initLobby();
+      updateProFeatures();
     } catch (e) {
       console.error('[DJ Lobby] Access check failed:', e);
       showAccessDenied();
@@ -1283,9 +1367,141 @@ const pusherConfig = {
     }
   });
 
+  // Toggle Twitch stream key visibility
+  document.getElementById('toggleTwitchKeyVisibility')?.addEventListener('click', () => {
+    const input = document.getElementById('twitchStreamKey');
+    if (input) {
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+  });
+
+  // Relay Sources Modal
+  let relaySources = [];
+  let selectedRelaySource = null;
+
+  async function loadRelaySources() {
+    try {
+      const response = await fetch('/api/livestream/relay-sources');
+      const result = await response.json();
+      if (result.success && result.sources) {
+        relaySources = result.sources.filter(s => s.active);
+        renderRelaySources();
+      }
+    } catch (e) {
+      console.error('Error loading relay sources:', e);
+      document.getElementById('relaySourcesList').innerHTML =
+        '<div class="no-sources-message">Unable to load stations</div>';
+    }
+  }
+
+  function renderRelaySources() {
+    const container = document.getElementById('relaySourcesList');
+    if (!container) return;
+
+    if (relaySources.length === 0) {
+      container.innerHTML = '<div class="no-sources-message">No radio stations configured yet</div>';
+      return;
+    }
+
+    container.innerHTML = relaySources.map(source => `
+      <div class="relay-source-item ${selectedRelaySource?.id === source.id ? 'selected' : ''}"
+           data-id="${source.id}"
+           data-url="${source.streamUrl}"
+           data-name="${source.name}">
+        <img src="${source.logoUrl || '/place-holder.webp'}" alt="${source.name}" class="relay-source-logo" />
+        <div class="relay-source-info">
+          <div class="relay-source-name">${source.name}</div>
+          <div class="relay-source-genre">${source.genre || 'Various'}</div>
+        </div>
+        <span class="relay-source-status ${source.isCurrentlyLive ? 'live' : 'offline'}">
+          ${source.isCurrentlyLive ? 'Live' : 'Offline'}
+        </span>
+      </div>
+    `).join('');
+
+    // Add click handlers
+    container.querySelectorAll('.relay-source-item').forEach(item => {
+      item.addEventListener('click', () => {
+        container.querySelectorAll('.relay-source-item').forEach(i => i.classList.remove('selected'));
+        item.classList.add('selected');
+        selectedRelaySource = {
+          id: item.dataset.id,
+          url: item.dataset.url,
+          name: item.dataset.name
+        };
+      });
+    });
+  }
+
+  // Open relay modal
+  document.getElementById('openRelayModal')?.addEventListener('click', () => {
+    document.getElementById('relaySourcesModal').classList.remove('hidden');
+    loadRelaySources();
+  });
+
+  // Close relay modal
+  document.getElementById('closeRelayModal')?.addEventListener('click', () => {
+    document.getElementById('relaySourcesModal').classList.add('hidden');
+  });
+
+  // Click outside modal to close
+  document.getElementById('relaySourcesModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'relaySourcesModal') {
+      document.getElementById('relaySourcesModal').classList.add('hidden');
+    }
+  });
+
+  // Clear relay selection
+  document.getElementById('clearRelaySource')?.addEventListener('click', () => {
+    selectedRelaySource = null;
+    document.getElementById('relayUrl').value = '';
+    document.getElementById('relaySourceName').textContent = '';
+    document.getElementById('relaySourcesList').querySelectorAll('.relay-source-item').forEach(i => i.classList.remove('selected'));
+    document.getElementById('relaySourcesModal').classList.add('hidden');
+  });
+
+  // Confirm relay selection
+  document.getElementById('confirmRelaySource')?.addEventListener('click', () => {
+    if (selectedRelaySource) {
+      document.getElementById('relayUrl').value = selectedRelaySource.url;
+      document.getElementById('relaySourceName').textContent = `Relaying from: ${selectedRelaySource.name}`;
+    }
+    document.getElementById('relaySourcesModal').classList.add('hidden');
+  });
+
   function showAccessDenied() {
     document.getElementById('authGate').classList.add('hidden');
     document.getElementById('accessDenied').classList.remove('hidden');
+  }
+
+  // Enable/disable pro features based on subscription
+  function updateProFeatures() {
+    const isPro = userSubscription?.isPro || false;
+    const twitchRow = document.getElementById('twitchRow');
+    const relayRow = document.getElementById('relayRow');
+
+    if (isPro) {
+      // Enable pro features
+      twitchRow?.classList.remove('disabled');
+      twitchRow?.classList.add('enabled');
+      relayRow?.classList.remove('disabled');
+      relayRow?.classList.add('enabled');
+
+      // Enable inputs
+      document.getElementById('twitchUsername')?.removeAttribute('disabled');
+      document.getElementById('twitchStreamKey')?.removeAttribute('disabled');
+      document.getElementById('toggleTwitchKeyVisibility')?.removeAttribute('disabled');
+      document.getElementById('relayUrl')?.removeAttribute('disabled');
+      document.getElementById('openRelayModal')?.removeAttribute('disabled');
+    } else {
+      // Disable pro features for standard accounts
+      twitchRow?.classList.add('disabled');
+      twitchRow?.classList.remove('enabled');
+      relayRow?.classList.add('disabled');
+      relayRow?.classList.remove('enabled');
+    }
+
+    log('[ProFeatures] Updated for tier:', userSubscription?.tier, 'isPro:', isPro);
   }
   
   function showLobby() {
@@ -1327,7 +1543,11 @@ const pusherConfig = {
   }
   
   async function initLobby() {
+    // Initialize livestream chat with default welcome message
+    renderLivestreamMessages([]);
+
     // Load initial data from API
+    await loadAllSlots(); // Load all slots for consecutive slot detection
     await loadStreamStatus();
     await checkAndCleanupChat();
     await loadMySlot();
@@ -1338,11 +1558,15 @@ const pusherConfig = {
     
     // Setup UI event listeners
     setupEventListeners();
-    
+
+    // Load saved Twitch settings
+    loadTwitchSettings();
+
     // Polling for non-realtime data
     setInterval(loadStreamStatus, 10000);
     setInterval(updateTimeRemaining, 1000);
     setInterval(checkStreamKeyAvailability, 30000);
+    setInterval(loadAllSlots, 60000); // Refresh slots every minute for consecutive slot detection
   }
   
   // Page cleanup - called when leaving
@@ -1375,7 +1599,7 @@ const pusherConfig = {
       
       // If no one is currently streaming AND 2 hours have passed since last stream ended
       if (!currentStream && lastStreamEndTime > 0 && (now - lastStreamEndTime) > twoHoursMs) {
-        console.log('Chat cleanup: 2+ hours since last stream, clearing chat history...');
+        log('Chat cleanup: 2+ hours since last stream, clearing chat history...');
         
         // Delete all DJ lobby chat messages
         const chatSnapshot = await getDocs(collection(db, 'djLobbyChat'));
@@ -1391,7 +1615,7 @@ const pusherConfig = {
           lastCleanup: serverTimestamp()
         }, { merge: true });
         
-        console.log('Chat cleanup complete');
+        log('Chat cleanup complete');
       }
     } catch (e) {
       // Permissions error is expected if rules don't allow reading djLobbySettings
@@ -1452,7 +1676,7 @@ const pusherConfig = {
     const hlsUrl = stream?.hlsUrl || stream?.videoStreamUrl || stream?.streamUrl;
 
     if (!videoElement || !hlsUrl) {
-      console.log('[HLS] No video element or stream URL. Stream:', stream);
+      log('[HLS] No video element or stream URL. Stream:', stream);
       return;
     }
 
@@ -1460,23 +1684,23 @@ const pusherConfig = {
     if (currentHlsUrl === hlsUrl && hlsPlayer) {
       // Only skip if actually playing, otherwise try to play
       if (!videoElement.paused && isVideoPlaying) {
-        console.log('[HLS] Already playing this stream, skipping re-init');
+        log('[HLS] Already playing this stream, skipping re-init');
         return;
       }
       // Not playing yet, try to play
-      console.log('[HLS] Same stream but not playing, attempting to play...');
+      log('[HLS] Same stream but not playing, attempting to play...');
       videoElement.play().catch(e => {
-        console.log('[HLS] Auto-play blocked, user interaction required:', e.message);
+        log('[HLS] Auto-play blocked, user interaction required:', e.message);
       });
       return;
     }
 
-    console.log('[HLS] Setting up player for:', hlsUrl);
+    log('[HLS] Setting up player for:', hlsUrl);
     currentHlsUrl = hlsUrl;
 
     // Clean up existing player
     if (hlsPlayer) {
-      console.log('[HLS] Destroying existing player');
+      log('[HLS] Destroying existing player');
       hlsPlayer.destroy();
       hlsPlayer = null;
     }
@@ -1485,14 +1709,14 @@ const pusherConfig = {
 
     // Only use native HLS if "probably" - "maybe" means browser might not actually support it
     if (nativeHlsSupport === 'probably') {
-      console.log('[HLS] Using native HLS support');
+      log('[HLS] Using native HLS support');
       videoElement.src = hlsUrl;
       // Auto-play for native HLS
       videoElement.play().catch(e => {
-        console.log('[HLS] Auto-play blocked (native), user interaction required:', e.message);
+        log('[HLS] Auto-play blocked (native), user interaction required:', e.message);
       });
     } else if (window.Hls && Hls.isSupported()) {
-      console.log('[HLS] Using HLS.js library');
+      log('[HLS] Using HLS.js library');
       hlsPlayer = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
@@ -1505,10 +1729,12 @@ const pusherConfig = {
       hlsPlayer.attachMedia(videoElement);
 
       hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log('[HLS] Manifest parsed, auto-playing...');
+        log('[HLS] Manifest parsed, auto-playing...');
+        // Trigger fade-in for smooth transition
+        triggerStreamFadeIn();
         // Auto-play when manifest is ready
         videoElement.play().catch(e => {
-          console.log('[HLS] Auto-play blocked, user interaction required:', e.message);
+          log('[HLS] Auto-play blocked, user interaction required:', e.message);
         });
       });
 
@@ -1516,14 +1742,14 @@ const pusherConfig = {
         console.error('[HLS] Error:', data.type, data.details);
         if (data.fatal) {
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            console.log('[HLS] Network error, will retry...');
+            log('[HLS] Network error, will retry...');
             setTimeout(() => {
               if (hlsPlayer) {
                 hlsPlayer.loadSource(hlsUrl);
               }
             }, 3000);
           } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            console.log('[HLS] Media error, recovering...');
+            log('[HLS] Media error, recovering...');
             hlsPlayer.recoverMediaError();
           }
         }
@@ -1537,17 +1763,531 @@ const pusherConfig = {
       isVideoPlaying = true;
       document.getElementById('playIcon')?.classList.add('hidden');
       document.getElementById('pauseIcon')?.classList.remove('hidden');
+      startHealthMonitoring();
     });
 
     videoElement.addEventListener('pause', () => {
       isVideoPlaying = false;
       document.getElementById('playIcon')?.classList.remove('hidden');
       document.getElementById('pauseIcon')?.classList.add('hidden');
+      stopHealthMonitoring();
     });
+  }
+
+  // Stream health monitoring interval
+  let healthInterval = null;
+
+  // OBS Preview - Check and play user's stream before going live
+  function updateConnectionIndicators(serverStatus, obsStatus) {
+    const serverDot = document.querySelector('#serverIndicator .indicator-dot');
+    const obsDot = document.querySelector('#obsIndicator .indicator-dot');
+
+    if (serverDot) {
+      serverDot.className = 'indicator-dot ' + serverStatus;
+    }
+    if (obsDot) {
+      obsDot.className = 'indicator-dot ' + obsStatus;
+    }
+  }
+
+  async function checkObsPreview() {
+    // Only check if user has a stream key
+    if (!currentStreamKey) {
+      updateConnectionIndicators('disconnected', 'disconnected');
+      return;
+    }
+
+    // Check server connectivity
+    try {
+      const response = await fetch('/api/livestream/status', {
+        method: 'GET',
+        signal: AbortSignal.timeout(3000)
+      });
+      if (response.ok) {
+        serverConnected = true;
+        updateConnectionIndicators('connected', obsStreamActive ? 'connected' : 'disconnected');
+      } else {
+        serverConnected = false;
+        updateConnectionIndicators('error', 'disconnected');
+      }
+    } catch (e) {
+      serverConnected = false;
+      updateConnectionIndicators('disconnected', 'disconnected');
+    }
+
+    // Check if user's OBS stream is available (preview before going live)
+    const obsPreviewUrl = `${window.HLS_BASE_URL || 'https://rtmp.freshwax.co.uk'}/live/${currentStreamKey}/index.m3u8`;
+    console.log('[Preview] Checking URL:', obsPreviewUrl);
+
+    // Force preview mode - skip availability check and just try to play
+    if (forcePreview) {
+      if (!obsStreamActive) {
+        obsStreamActive = true;
+        updateConnectionIndicators(serverConnected ? 'connected' : 'disconnected', 'connected');
+        initObsPreviewPlayer(obsPreviewUrl);
+        document.querySelector('.obs-panel')?.classList.add('streaming');
+      }
+      return;
+    }
+
+    try {
+      // Use GET instead of HEAD - some servers/tunnels don't support HEAD with CORS
+      const obsResponse = await fetch(obsPreviewUrl, {
+        method: 'GET',
+        signal: AbortSignal.timeout(3000)
+      });
+
+      if (obsResponse.ok) {
+        // OBS stream is available - show preview
+        if (!obsStreamActive) {
+          obsStreamActive = true;
+          updateConnectionIndicators(serverConnected ? 'connected' : 'disconnected', 'connected');
+          initObsPreviewPlayer(obsPreviewUrl);
+          document.querySelector('.obs-panel')?.classList.add('streaming');
+        }
+      } else {
+        // OBS stream not available
+        if (obsStreamActive) {
+          obsStreamActive = false;
+          updateConnectionIndicators(serverConnected ? 'connected' : 'disconnected', 'disconnected');
+          destroyObsPreviewPlayer();
+          document.querySelector('.obs-panel')?.classList.remove('streaming');
+        }
+      }
+    } catch (e) {
+      // OBS stream not available
+      if (obsStreamActive) {
+        obsStreamActive = false;
+        updateConnectionIndicators(serverConnected ? 'connected' : 'disconnected', 'disconnected');
+        destroyObsPreviewPlayer();
+        document.querySelector('.obs-panel')?.classList.remove('streaming');
+      }
+    }
+  }
+
+  function initObsPreviewPlayer(url) {
+    const videoEl = document.getElementById('obsVideo');
+    const offlineState = document.getElementById('obsOfflineState');
+    const videoPreview = document.getElementById('obsVideoPreview');
+
+    if (!videoEl) return;
+
+    // Show video, hide offline state
+    offlineState?.classList.add('hidden');
+    videoPreview?.classList.remove('hidden');
+
+    if (Hls.isSupported()) {
+      if (obsHlsPlayer) {
+        obsHlsPlayer.destroy();
+      }
+      obsHlsPlayer = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        backBufferLength: 30
+      });
+      obsHlsPlayer.loadSource(url);
+      obsHlsPlayer.attachMedia(videoEl);
+      obsHlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
+        videoEl.play().catch(() => {});
+      });
+      obsHlsPlayer.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          destroyObsPreviewPlayer();
+        }
+      });
+    } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+      videoEl.src = url;
+      videoEl.play().catch(() => {});
+    }
+  }
+
+  function destroyObsPreviewPlayer() {
+    const offlineState = document.getElementById('obsOfflineState');
+    const videoPreview = document.getElementById('obsVideoPreview');
+
+    if (obsHlsPlayer) {
+      obsHlsPlayer.destroy();
+      obsHlsPlayer = null;
+    }
+
+    // Show offline state, hide video
+    offlineState?.classList.remove('hidden');
+    videoPreview?.classList.add('hidden');
+  }
+
+  function startObsPreviewCheck() {
+    // Check immediately
+    checkObsPreview();
+    // Then check every 3 seconds
+    if (obsCheckInterval) clearInterval(obsCheckInterval);
+    obsCheckInterval = setInterval(checkObsPreview, 3000);
+  }
+
+  function stopObsPreviewCheck() {
+    if (obsCheckInterval) {
+      clearInterval(obsCheckInterval);
+      obsCheckInterval = null;
+    }
+    destroyObsPreviewPlayer();
+  }
+
+  // Update mute button visual state
+  function updateMuteButtonState(player, isMuted) {
+    const btn = document.getElementById(`${player}MuteBtn`);
+    if (!btn) return;
+
+    const mutedIcon = btn.querySelector('.muted-icon');
+    const unmutedIcon = btn.querySelector('.unmuted-icon');
+
+    if (isMuted) {
+      mutedIcon?.classList.remove('hidden');
+      unmutedIcon?.classList.add('hidden');
+    } else {
+      mutedIcon?.classList.add('hidden');
+      unmutedIcon?.classList.remove('hidden');
+    }
+  }
+
+  // Update center stats panel
+  function updateCenterStats(stats) {
+    if (stats.viewers !== undefined) {
+      const el = document.getElementById('centerViewers');
+      if (el) el.textContent = stats.viewers;
+    }
+    if (stats.bitrate !== undefined) {
+      const el = document.getElementById('centerBitrate');
+      if (el) el.textContent = stats.bitrate;
+    }
+    if (stats.resolution !== undefined) {
+      const el = document.getElementById('centerResolution');
+      if (el) el.textContent = stats.resolution;
+    }
+    if (stats.fps !== undefined) {
+      const el = document.getElementById('centerFps');
+      if (el) el.textContent = stats.fps;
+    }
+    if (stats.latency !== undefined) {
+      const el = document.getElementById('centerLatency');
+      if (el) el.textContent = stats.latency;
+    }
+    if (stats.uptime !== undefined) {
+      const el = document.getElementById('centerUptime');
+      if (el) el.textContent = stats.uptime;
+    }
+  }
+
+  // Update stream health stats from HLS.js
+  function updateStreamHealth() {
+    const healthEl = document.getElementById('streamHealth');
+    const previewSection = document.querySelector('.preview-section');
+    const liveIndicator = document.getElementById('healthLiveIndicator');
+
+    if (!hlsPlayer || !isVideoPlaying) {
+      healthEl?.classList.add('hidden');
+      liveIndicator?.classList.add('hidden');
+      return;
+    }
+
+    healthEl?.classList.remove('hidden');
+
+    // Show live indicator if this is our stream
+    const isMyStream = currentStream?.djId === currentUser?.uid;
+    if (isMyStream) {
+      liveIndicator?.classList.remove('hidden');
+    } else {
+      liveIndicator?.classList.add('hidden');
+    }
+
+    // Get HLS.js stats
+    const bitrateEl = document.getElementById('healthBitrate');
+    const qualityEl = document.getElementById('healthQuality');
+    const droppedEl = document.getElementById('healthDropped');
+    const bufferEl = document.getElementById('healthBuffer');
+    const latencyEl = document.getElementById('healthLatency');
+    const uptimeEl = document.getElementById('healthUptime');
+
+    // Get current level info
+    const currentLevel = hlsPlayer.levels?.[hlsPlayer.currentLevel];
+    const videoEl = document.getElementById('hlsVideo');
+
+    if (currentLevel) {
+      // Bitrate in Mbps
+      const bitrate = currentLevel.bitrate ? (currentLevel.bitrate / 1000000).toFixed(1) : '--';
+      bitrateEl.textContent = bitrate !== '--' ? `${bitrate}Mb` : '--';
+      bitrateEl.className = 'stat-value' + (currentLevel.bitrate < 1000000 ? ' warn' : currentLevel.bitrate < 500000 ? ' bad' : '');
+
+      // Resolution
+      const width = currentLevel.width || videoEl?.videoWidth || 0;
+      const height = currentLevel.height || videoEl?.videoHeight || 0;
+      if (height > 0) {
+        qualityEl.textContent = `${width}x${height}`;
+        qualityEl.className = 'stat-value' + (height < 480 ? ' bad' : height < 720 ? ' warn' : '');
+      } else {
+        qualityEl.textContent = '--';
+        qualityEl.className = 'stat-value';
+      }
+    }
+
+    // Dropped frames from video element
+    if (videoEl) {
+      const quality = videoEl.getVideoPlaybackQuality?.();
+      if (quality) {
+        const dropped = quality.droppedVideoFrames || 0;
+        droppedEl.textContent = dropped.toString();
+        droppedEl.className = 'stat-value' + (dropped > 100 ? ' bad' : dropped > 20 ? ' warn' : '');
+      }
+
+      // Buffer amount
+      if (videoEl.buffered?.length > 0) {
+        const buffered = videoEl.buffered.end(videoEl.buffered.length - 1) - videoEl.currentTime;
+        bufferEl.textContent = `${buffered.toFixed(1)}s`;
+        bufferEl.className = 'stat-value' + (buffered < 2 ? ' bad' : buffered < 5 ? ' warn' : '');
+      }
+    }
+
+    // Latency estimate from HLS.js
+    if (hlsPlayer.latency !== undefined) {
+      const latency = hlsPlayer.latency;
+      latencyEl.textContent = `${latency.toFixed(1)}s`;
+      latencyEl.className = 'stat-value' + (latency > 15 ? ' bad' : latency > 8 ? ' warn' : '');
+    } else if (hlsPlayer.targetLatency !== undefined) {
+      latencyEl.textContent = `~${hlsPlayer.targetLatency.toFixed(0)}s`;
+      latencyEl.className = 'stat-value';
+    } else {
+      latencyEl.textContent = '--';
+    }
+
+    // Uptime from stream start
+    let uptimeStr = '--';
+    if (streamStartTime) {
+      const elapsed = Math.floor((Date.now() - streamStartTime.getTime()) / 1000);
+      const hours = Math.floor(elapsed / 3600);
+      const mins = Math.floor((elapsed % 3600) / 60);
+      const secs = elapsed % 60;
+      if (hours > 0) {
+        uptimeStr = `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      } else {
+        uptimeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+      }
+      if (uptimeEl) {
+        uptimeEl.textContent = uptimeStr;
+        uptimeEl.className = 'stat-value';
+      }
+    } else if (uptimeEl) {
+      uptimeEl.textContent = '--';
+    }
+
+    // Update center stats panel
+    const centerStats = {};
+    if (currentLevel) {
+      const bitrate = currentLevel.bitrate ? (currentLevel.bitrate / 1000000).toFixed(1) : '--';
+      centerStats.bitrate = bitrate !== '--' ? `${bitrate}Mb` : '--';
+      const width = currentLevel.width || videoEl?.videoWidth || 0;
+      const height = currentLevel.height || videoEl?.videoHeight || 0;
+      centerStats.resolution = height > 0 ? `${height}p` : '--';
+      // FPS - get from HLS level or estimate
+      const fps = currentLevel.frameRate || currentLevel.attrs?.['FRAME-RATE'] || '--';
+      centerStats.fps = fps !== '--' ? Math.round(fps) : '--';
+    }
+    if (hlsPlayer.latency !== undefined) {
+      centerStats.latency = `${hlsPlayer.latency.toFixed(1)}s`;
+    } else if (hlsPlayer.targetLatency !== undefined) {
+      centerStats.latency = `~${hlsPlayer.targetLatency.toFixed(0)}s`;
+    }
+    centerStats.uptime = uptimeStr;
+    updateCenterStats(centerStats);
+  }
+
+  // Start health monitoring
+  function startHealthMonitoring() {
+    if (healthInterval) clearInterval(healthInterval);
+    healthInterval = setInterval(updateStreamHealth, 1000);
+  }
+
+  // Stop health monitoring
+  function stopHealthMonitoring() {
+    if (healthInterval) {
+      clearInterval(healthInterval);
+      healthInterval = null;
+    }
+    document.getElementById('streamHealth')?.classList.add('hidden');
+  }
+
+  // Save Twitch settings to localStorage
+  function saveTwitchSettings() {
+    const username = document.getElementById('twitchUsername')?.value?.trim() || '';
+    const streamKey = document.getElementById('twitchStreamKey')?.value?.trim() || '';
+    const saveBtn = document.getElementById('saveTwitchBtn');
+
+    if (!username && !streamKey) {
+      // Clear settings
+      localStorage.removeItem('freshwax_twitch_username');
+      localStorage.removeItem('freshwax_twitch_key');
+    } else {
+      if (username) localStorage.setItem('freshwax_twitch_username', username);
+      if (streamKey) localStorage.setItem('freshwax_twitch_key', streamKey);
+    }
+
+    // Show success feedback
+    if (saveBtn) {
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = 'Saved!';
+      saveBtn.style.background = '#16a34a';
+      setTimeout(() => {
+        saveBtn.textContent = originalText;
+        saveBtn.style.background = '';
+      }, 1500);
+    }
+  }
+
+  // Load saved Twitch settings
+  function loadTwitchSettings() {
+    const username = localStorage.getItem('freshwax_twitch_username');
+    const streamKey = localStorage.getItem('freshwax_twitch_key');
+
+    if (username) {
+      const usernameInput = document.getElementById('twitchUsername');
+      if (usernameInput) usernameInput.value = username;
+    }
+    if (streamKey) {
+      const keyInput = document.getElementById('twitchStreamKey');
+      if (keyInput) keyInput.value = streamKey;
+    }
+  }
+
+  // Copy output URL to clipboard
+  function copyOutputUrlToClipboard() {
+    const outputUrl = document.getElementById('outputUrl')?.textContent?.trim();
+    const copyBtn = document.getElementById('copyOutputUrl');
+
+    if (!outputUrl) return;
+
+    navigator.clipboard.writeText(outputUrl).then(() => {
+      if (copyBtn) {
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+        }, 1500);
+      }
+    }).catch(() => {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = outputUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      if (copyBtn) {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          copyBtn.textContent = 'Copy';
+        }, 1500);
+      }
+    });
+  }
+
+  // Store captured thumbnail data
+  let capturedThumbnailBlob = null;
+  let capturedThumbnailUrl = null;
+
+  // Capture thumbnail from video
+  function captureVideoThumbnail() {
+    const video = document.getElementById('hlsVideo');
+    const btn = document.getElementById('captureThumbBtn');
+    const preview = document.getElementById('thumbnailPreview');
+    const previewImg = document.getElementById('capturedThumb');
+    const twitterBtn = document.getElementById('shareTwitterBtn');
+    const facebookBtn = document.getElementById('shareFacebookBtn');
+
+    if (!video || video.paused || !video.videoWidth) {
+      alert('No video playing to capture');
+      return;
+    }
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Convert to blob and show preview
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+
+        // Store the blob for sharing
+        capturedThumbnailBlob = blob;
+
+        // Clean up previous URL if exists
+        if (capturedThumbnailUrl) {
+          URL.revokeObjectURL(capturedThumbnailUrl);
+        }
+
+        // Create new URL for preview
+        capturedThumbnailUrl = URL.createObjectURL(blob);
+
+        // Show preview
+        if (previewImg && preview) {
+          previewImg.src = capturedThumbnailUrl;
+          preview.classList.remove('hidden');
+        }
+
+        // Enable share buttons
+        if (twitterBtn) twitterBtn.disabled = false;
+        if (facebookBtn) facebookBtn.disabled = false;
+
+        // Show success feedback
+        const captureText = btn.querySelector('.capture-text');
+        if (captureText) {
+          captureText.textContent = '✓ Captured';
+          setTimeout(() => {
+            captureText.textContent = 'Capture';
+          }, 1500);
+        }
+      }, 'image/jpeg', 0.9);
+    } catch (e) {
+      console.error('Thumbnail capture failed:', e);
+      alert('Failed to capture thumbnail');
+    }
+  }
+
+  // Clear captured thumbnail
+  function clearThumbnail() {
+    const preview = document.getElementById('thumbnailPreview');
+    const previewImg = document.getElementById('capturedThumb');
+    const twitterBtn = document.getElementById('shareTwitterBtn');
+    const facebookBtn = document.getElementById('shareFacebookBtn');
+
+    if (capturedThumbnailUrl) {
+      URL.revokeObjectURL(capturedThumbnailUrl);
+      capturedThumbnailUrl = null;
+    }
+    capturedThumbnailBlob = null;
+
+    if (preview) preview.classList.add('hidden');
+    if (previewImg) previewImg.src = '';
+    if (twitterBtn) twitterBtn.disabled = true;
+    if (facebookBtn) facebookBtn.disabled = true;
+  }
+
+  // Share to Twitter/X
+  function shareToTwitter() {
+    const postText = document.getElementById('socialPostText')?.value || '';
+    const text = encodeURIComponent(postText || 'Live now on Fresh Wax! 🎧🔊');
+    const url = encodeURIComponent('https://freshwax.co.uk/live');
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'width=550,height=420');
+  }
+
+  // Share to Facebook
+  function shareToFacebook() {
+    const url = encodeURIComponent('https://freshwax.co.uk/live');
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=550,height=420');
   }
 
   // Cleanup HLS player
   function cleanupHlsPlayer() {
+    stopHealthMonitoring();
     if (hlsPlayer) {
       hlsPlayer.destroy();
       hlsPlayer = null;
@@ -1579,6 +2319,15 @@ const pusherConfig = {
       if (result.success && result.isLive && result.primaryStream) {
         currentStream = result.primaryStream;
 
+        // Set global stream ID for LiveChat component
+        const streamId = currentStream.slotId || currentStream.id || currentStream.streamId;
+        window.currentStreamId = streamId;
+
+        // Initialize livestream chat if not already done
+        if (streamId && !window.livestreamChatInitialized) {
+          initLivestreamChat(streamId);
+        }
+
         statusDot.classList.remove('offline');
         statusDot.classList.add('live');
         statusText.textContent = `${currentStream.djName} is LIVE`;
@@ -1586,15 +2335,55 @@ const pusherConfig = {
         offlineState.classList.add('hidden');
         timeRemaining.classList.remove('hidden');
 
+        // Check if this is a new DJ (for seamless transitions)
+        const isNewDj = previousStreamDjId && previousStreamDjId !== currentStream.djId;
+        const isSameDj = previousStreamDjId === currentStream.djId;
+
+        // If new DJ started, trigger immediate fade in (seamless transition)
+        if (isNewDj) {
+          log('[Stream] New DJ detected, triggering seamless transition');
+          triggerStreamFadeIn();
+        }
+
+        // Update previous DJ tracker
+        previousStreamDjId = currentStream.djId;
+
         // Parse stream times
         if (currentStream.startedAt) {
           streamStartTime = new Date(currentStream.startedAt);
         }
+
+        // Determine if this DJ has a booked slot
+        const hasBookedSlot = currentStream.endTime || currentStream.duration;
+
+        let baseEndTime;
         if (currentStream.endTime) {
-          streamEndTime = new Date(currentStream.endTime);
+          baseEndTime = new Date(currentStream.endTime);
         } else if (currentStream.duration) {
-          streamEndTime = new Date(streamStartTime.getTime() + currentStream.duration * 60000);
+          baseEndTime = new Date(streamStartTime.getTime() + currentStream.duration * 60000);
+        } else {
+          // Default to end of current hour if no scheduled end time
+          const now = new Date();
+          baseEndTime = new Date(now);
+          baseEndTime.setMinutes(0, 0, 0);
+          baseEndTime.setHours(baseEndTime.getHours() + 1);
         }
+
+        // Calculate max stream end time (accounts for events, consecutive slots, subscription tier)
+        // This determines how long the DJ can stream based on:
+        // - Event bookings (2+ hours): Full duration, no mid-session breaks
+        // - Consecutive slots: Extended to end of all consecutive slots
+        // - Unbooked (Free tier): Current hour + next hour (max 2 hrs)
+        // - Unbooked (Pro tier): Current hour + next 2 hours (max 3 hrs)
+        streamEndTime = calculateMaxStreamEndTime(currentStream.djId, streamStartTime || new Date(), hasBookedSlot);
+
+        // If calculateMaxStreamEndTime returned less than baseEndTime, use baseEndTime
+        if (baseEndTime > streamEndTime) {
+          streamEndTime = baseEndTime;
+        }
+
+        const eventMode = isInEventMode();
+        log(`[Stream] End time: ${streamEndTime.toLocaleTimeString()} | Event mode: ${eventMode} | Base: ${baseEndTime.toLocaleTimeString()}`);
 
         document.getElementById('currentDjName').textContent = currentStream.djName || 'DJ';
         document.getElementById('currentStreamTitle').textContent = currentStream.title || 'Live Stream';
@@ -1622,7 +2411,7 @@ const pusherConfig = {
           if (audioEl && audioUrl) {
             audioEl.src = audioUrl;
             audioEl.play().catch(e => {
-              console.log('[Audio] Auto-play blocked, user interaction required:', e.message);
+              log('[Audio] Auto-play blocked, user interaction required:', e.message);
             });
           }
         }
@@ -1643,13 +2432,28 @@ const pusherConfig = {
 
         // Hide Go Live setup section when someone is streaming (gives more space to video)
         document.getElementById('streamKeySection')?.classList.add('hidden');
+        // Expand video player to use the extra space
+        document.querySelector('.preview-section')?.classList.add('expanded');
+        // Disable Go Live button when someone is streaming
+        const goLiveBtn = document.getElementById('setReadyBtn');
+        if (goLiveBtn) {
+          goLiveBtn.disabled = true;
+          goLiveBtn.classList.add('disabled');
+        }
 
         // Check for relay chat
         updateRelayChatSection(currentStream);
+
+        // Update stream info panel with live data
+        updateStreamInfoPanel(true, currentStream);
       } else {
         currentStream = null;
         streamStartTime = null;
         streamEndTime = null;
+
+        // Cleanup livestream chat when stream ends
+        cleanupLivestreamChat();
+
         statusDot.classList.add('offline');
         statusDot.classList.remove('live');
         statusText.textContent = 'No one streaming';
@@ -1672,9 +2476,20 @@ const pusherConfig = {
 
         // Show Go Live setup section when no one is streaming
         document.getElementById('streamKeySection')?.classList.remove('hidden');
+        // Shrink video player back to normal size
+        document.querySelector('.preview-section')?.classList.remove('expanded');
+        // Enable Go Live button when no one is streaming
+        const goLiveBtn = document.getElementById('setReadyBtn');
+        if (goLiveBtn) {
+          goLiveBtn.disabled = false;
+          goLiveBtn.classList.remove('disabled');
+        }
 
         // Hide relay chat when no stream
         updateRelayChatSection(null);
+
+        // Reset stream info panel to offline state
+        updateStreamInfoPanel(false);
       }
     } catch (e) {
       console.error('Stream status error:', e);
@@ -1684,14 +2499,9 @@ const pusherConfig = {
   // Fetch and display stream viewers (users on live page)
   async function loadStreamViewers() {
     try {
-      const viewersList = document.getElementById('viewersList');
-      const viewerCount = document.getElementById('viewerCount');
-
       // Need a current stream to show viewers
       if (!currentStream || !currentStream.id) {
-        viewerCount.textContent = '0';
-        viewerCount.style.background = '#6b7280';
-        viewersList.innerHTML = '<p class="no-viewers-msg">No active stream</p>';
+        updateCenterStats({ viewers: 0 });
         return;
       }
 
@@ -1699,20 +2509,10 @@ const pusherConfig = {
       const result = await response.json();
 
       if (result.success && result.listeners && result.listeners.length > 0) {
-        const listeners = result.listeners;
-        viewerCount.textContent = listeners.length;
-        viewerCount.style.background = '#22c55e';
-
-        viewersList.innerHTML = listeners.map(listener => `
-          <div class="viewer-item">
-            <img class="viewer-avatar" src="${listener.avatarUrl || '/place-holder.webp'}" alt="" onerror="this.src='/place-holder.webp'" />
-            <span class="viewer-name">${listener.name || 'Viewer'}</span>
-          </div>
-        `).join('');
+        const newCount = result.listeners.length;
+        updateCenterStats({ viewers: newCount });
       } else {
-        viewerCount.textContent = '0';
-        viewerCount.style.background = '#6b7280';
-        viewersList.innerHTML = '<p class="no-viewers-msg">No viewers yet</p>';
+        updateCenterStats({ viewers: 0 });
       }
     } catch (e) {
       console.error('Failed to load viewers:', e);
@@ -1722,6 +2522,87 @@ const pusherConfig = {
   // Load viewers initially and on interval
   loadStreamViewers();
   setInterval(loadStreamViewers, 15000);
+
+  // Stream Info Panel - Update real-time stream information
+  function updateStreamInfoPanel(isLive, stream = null) {
+    const statusValue = document.getElementById('streamStatusValue');
+    const statusIndicator = statusValue?.querySelector('.status-indicator');
+    const durationEl = document.getElementById('streamDuration');
+    const bitrateEl = document.getElementById('streamBitrate');
+    const resolutionEl = document.getElementById('streamResolution');
+    const fpsEl = document.getElementById('streamFps');
+
+    if (isLive && stream) {
+      // Update status to live
+      if (statusIndicator) {
+        statusIndicator.classList.remove('offline');
+        statusIndicator.classList.add('live');
+      }
+      if (statusValue) {
+        statusValue.innerHTML = '<span class="status-indicator live"></span> Live';
+      }
+
+      // Start duration timer
+      if (infoPanelDurationInterval) clearInterval(infoPanelDurationInterval);
+      const startTime = stream.startedAt ? new Date(stream.startedAt) : new Date();
+
+      function updateDuration() {
+        const now = new Date();
+        const diff = Math.floor((now - startTime) / 1000);
+        const hours = Math.floor(diff / 3600);
+        const mins = Math.floor((diff % 3600) / 60);
+        const secs = diff % 60;
+        if (durationEl) {
+          durationEl.textContent = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+      }
+      updateDuration();
+      infoPanelDurationInterval = setInterval(updateDuration, 1000);
+
+      // Get video metadata for resolution/fps/bitrate from the video element
+      const videoEl = document.getElementById('liveVideoElement');
+      if (videoEl) {
+        const updateVideoInfo = () => {
+          if (videoEl.videoWidth && videoEl.videoHeight) {
+            if (resolutionEl) resolutionEl.textContent = `${videoEl.videoWidth}x${videoEl.videoHeight}`;
+          }
+        };
+        videoEl.addEventListener('loadedmetadata', updateVideoInfo);
+        videoEl.addEventListener('resize', updateVideoInfo);
+        updateVideoInfo();
+      }
+
+      // Estimate bitrate from HLS (if available)
+      if (hlsPlayer && hlsPlayer.bandwidthEstimate) {
+        const kbps = Math.round(hlsPlayer.bandwidthEstimate / 1000);
+        if (bitrateEl) bitrateEl.textContent = `${kbps} kbps`;
+      } else if (bitrateEl) {
+        bitrateEl.textContent = '-- kbps';
+      }
+
+      // FPS - HLS.js doesn't expose this directly, show default
+      if (fpsEl) fpsEl.textContent = '30';
+
+    } else {
+      // Reset to offline state
+      if (statusValue) {
+        statusValue.innerHTML = '<span class="status-indicator offline"></span> Offline';
+      }
+      if (durationEl) durationEl.textContent = '00:00:00';
+      if (bitrateEl) bitrateEl.textContent = '-- kbps';
+      if (resolutionEl) resolutionEl.textContent = '--';
+      if (fpsEl) fpsEl.textContent = '--';
+
+      // Stop duration timer
+      if (infoPanelDurationInterval) {
+        clearInterval(infoPanelDurationInterval);
+        infoPanelDurationInterval = null;
+      }
+    }
+  }
+
+  // Initialize info panel in offline state
+  updateStreamInfoPanel(false);
 
   // Relay Chat Helper - shows chat from relay source (Twitch, YouTube, etc.)
   function updateRelayChatSection(stream) {
@@ -1811,30 +2692,215 @@ const pusherConfig = {
   
   function updateTimeRemaining() {
     const timeLeft = document.getElementById('timeLeft');
-    
+    const headerTimeLeft = document.getElementById('headerTimeLeft');
+    const headerTimeRemaining = document.getElementById('headerTimeRemaining');
+
     if (!streamEndTime) {
-      timeLeft.textContent = '--:--';
+      if (timeLeft) timeLeft.textContent = '--:--';
+      if (headerTimeLeft) headerTimeLeft.textContent = '--:--';
+      if (headerTimeRemaining) headerTimeRemaining.classList.add('hidden');
       return;
     }
-    
+
     const now = new Date();
     const diff = streamEndTime - now;
-    
+
     if (diff <= 0) {
-      timeLeft.textContent = '00:00';
-      timeLeft.style.color = '#dc2626';
+      // Check if same DJ has next slot (continuous streaming)
+      if (currentStream && hasSameDjNextSlot(currentStream.djId, streamEndTime)) {
+        // Same DJ continues - recalculate end time and skip fade
+        log('[Stream] Same DJ has next slot, extending without transition');
+        const newEndTime = calculateContinuousEndTime(currentStream.djId, streamEndTime);
+        if (newEndTime > streamEndTime) {
+          streamEndTime = newEndTime;
+          hideFinalCountdown();
+          // Reset fade state
+          isFadingOut = false;
+          const playerWrapper = document.querySelector('.preview-player');
+          if (playerWrapper) {
+            playerWrapper.classList.remove('fading-out', 'faded-out');
+          }
+          return; // Continue without fade
+        }
+      }
+
+      if (timeLeft) {
+        timeLeft.textContent = '00:00';
+        timeLeft.style.color = '#dc2626';
+      }
+      if (headerTimeLeft) {
+        headerTimeLeft.textContent = '00:00';
+        headerTimeLeft.classList.add('urgent');
+      }
+      // Trigger fade out when time is up (only if DJ is actually changing)
+      triggerStreamFadeOut();
       return;
     }
-    
+
     const mins = Math.floor(diff / 60000);
     const secs = Math.floor((diff % 60000) / 1000);
-    timeLeft.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    
-    if (mins < 5) {
-      timeLeft.style.color = '#dc2626';
-    } else {
-      timeLeft.style.color = '#fff';
+    const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+    if (timeLeft) timeLeft.textContent = timeStr;
+    if (headerTimeLeft) {
+      headerTimeLeft.textContent = timeStr;
+      if (mins < 5) {
+        headerTimeLeft.classList.add('urgent');
+      } else {
+        headerTimeLeft.classList.remove('urgent');
+      }
     }
+    if (headerTimeRemaining) headerTimeRemaining.classList.remove('hidden');
+
+    // Check if same DJ continues or if in event mode - skip countdown/fade animations
+    const sameDjContinues = currentStream && hasSameDjNextSlot(currentStream.djId, streamEndTime);
+    const inEventMode = isInEventMode();
+
+    // In event mode, never show mid-session transitions (only at very end of entire event)
+    const skipTransitions = sameDjContinues || inEventMode;
+
+    // Start final countdown animation in last 5 seconds (only if DJ changing and not in event mode mid-session)
+    if (diff <= 5000 && diff > 0 && !skipTransitions) {
+      const secondsLeft = Math.ceil(diff / 1000);
+      showFinalCountdown(secondsLeft);
+    } else {
+      hideFinalCountdown();
+    }
+
+    // Start fade out in last 10 seconds (only if DJ changing and not in event mode mid-session)
+    if (diff <= 10000 && diff > 0 && !skipTransitions) {
+      startGradualFadeOut(diff / 10000);
+    }
+
+    if (mins < 5) {
+      if (timeLeft) timeLeft.style.color = '#dc2626';
+    } else {
+      if (timeLeft) timeLeft.style.color = '#fff';
+    }
+  }
+
+  // Final countdown animation
+  let lastCountdownNumber = 0;
+  const countdownAnimations = ['anim-spin', 'anim-slam', 'anim-flip', 'anim-drop', 'anim-glitch'];
+
+  function showFinalCountdown(seconds) {
+    const container = document.getElementById('finalCountdown');
+    const numberEl = document.getElementById('countdownNumber');
+
+    if (!container || !numberEl) return;
+
+    // Only update if number changed
+    if (seconds === lastCountdownNumber) return;
+    lastCountdownNumber = seconds;
+
+    // Show container
+    container.classList.remove('hidden');
+
+    // Pick a random animation for each number
+    const randomAnim = countdownAnimations[Math.floor(Math.random() * countdownAnimations.length)];
+
+    // Reset animation by removing all animation classes
+    numberEl.className = 'countdown-number';
+
+    // Update number and trigger animation
+    numberEl.textContent = seconds.toString();
+
+    // Force reflow to restart animation
+    void numberEl.offsetWidth;
+
+    // Add the random animation class
+    numberEl.classList.add(randomAnim);
+  }
+
+  function hideFinalCountdown() {
+    const container = document.getElementById('finalCountdown');
+    if (container && !container.classList.contains('hidden')) {
+      container.classList.add('hidden');
+      lastCountdownNumber = 0;
+    }
+  }
+
+  // Fade out video and audio gradually
+  let isFadingOut = false;
+  function startGradualFadeOut(progress) {
+    const videoEl = document.getElementById('hlsVideo');
+    const audioEl = document.getElementById('audioElement');
+    const playerWrapper = document.querySelector('.preview-player');
+
+    // Calculate opacity and volume based on remaining time (1 = full, 0 = none)
+    const opacity = Math.max(0, progress);
+    const volume = Math.max(0, progress);
+
+    if (videoEl) {
+      videoEl.style.opacity = opacity;
+      videoEl.volume = volume;
+    }
+    if (audioEl) {
+      audioEl.volume = volume;
+    }
+    if (playerWrapper && !isFadingOut) {
+      playerWrapper.classList.add('fading-out');
+    }
+  }
+
+  // Trigger full fade out
+  function triggerStreamFadeOut() {
+    if (isFadingOut) return;
+    isFadingOut = true;
+
+    const videoEl = document.getElementById('hlsVideo');
+    const audioEl = document.getElementById('audioElement');
+    const playerWrapper = document.querySelector('.preview-player');
+
+    if (playerWrapper) {
+      playerWrapper.classList.add('faded-out');
+    }
+    if (videoEl) {
+      videoEl.style.opacity = '0';
+      videoEl.volume = 0;
+    }
+    if (audioEl) {
+      audioEl.volume = 0;
+    }
+  }
+
+  // Fade in new stream
+  function triggerStreamFadeIn() {
+    isFadingOut = false;
+    const videoEl = document.getElementById('hlsVideo');
+    const audioEl = document.getElementById('audioElement');
+    const playerWrapper = document.querySelector('.preview-player');
+
+    if (playerWrapper) {
+      playerWrapper.classList.remove('fading-out', 'faded-out');
+      playerWrapper.classList.add('fading-in');
+    }
+    if (videoEl) {
+      videoEl.style.opacity = '0';
+      videoEl.style.transition = 'opacity 2s ease-in';
+      setTimeout(() => {
+        videoEl.style.opacity = '1';
+        videoEl.volume = 1;
+      }, 100);
+    }
+    if (audioEl) {
+      audioEl.volume = 0;
+      // Gradually increase volume over 2 seconds
+      let vol = 0;
+      const fadeInInterval = setInterval(() => {
+        vol += 0.05;
+        if (vol >= 1) {
+          vol = 1;
+          clearInterval(fadeInInterval);
+        }
+        audioEl.volume = vol;
+      }, 100);
+    }
+
+    // Remove fade-in class after animation
+    setTimeout(() => {
+      playerWrapper?.classList.remove('fading-in');
+    }, 2000);
   }
   
   async function loadMySlot() {
@@ -1858,7 +2924,205 @@ const pusherConfig = {
       console.error('Load slot error:', e);
     }
   }
-  
+
+  // Load all scheduled slots for today (for consecutive slot detection)
+  async function loadAllSlots() {
+    try {
+      const now = new Date();
+      const end = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const response = await fetch(`/api/livestream/slots?start=${now.toISOString()}&end=${end.toISOString()}`);
+      const result = await response.json();
+      if (result.success && result.slots) {
+        allDjSlots = result.slots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+      }
+    } catch (e) {
+      console.error('Load all slots error:', e);
+    }
+  }
+
+  // Calculate the continuous end time for a DJ (accounting for consecutive slots)
+  function calculateContinuousEndTime(djId, currentEndTime) {
+    if (!allDjSlots || allDjSlots.length === 0) return currentEndTime;
+
+    let endTime = new Date(currentEndTime);
+    const djSlots = allDjSlots.filter(s => s.djId === djId);
+
+    // Sort slots by start time
+    djSlots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+    // Find consecutive slots from current end time
+    let extended = true;
+    while (extended) {
+      extended = false;
+      for (const slot of djSlots) {
+        const slotStart = new Date(slot.startTime);
+        const slotEnd = new Date(slot.endTime);
+
+        // Check if this slot starts at or very close to current end time (within 5 min tolerance)
+        const gap = Math.abs(slotStart.getTime() - endTime.getTime());
+        if (gap <= 5 * 60 * 1000 && slotEnd > endTime) {
+          endTime = slotEnd;
+          extended = true;
+          log(`[Slots] Extended end time to ${slotEnd.toLocaleTimeString()} for consecutive slot`);
+        }
+      }
+    }
+
+    return endTime;
+  }
+
+  // Check if same DJ has the next slot (for continuous streaming without fade)
+  function hasSameDjNextSlot(djId, currentEndTime) {
+    if (!allDjSlots || allDjSlots.length === 0) return false;
+
+    const endTime = new Date(currentEndTime);
+
+    // Find slot that starts at or right after current end time
+    for (const slot of allDjSlots) {
+      const slotStart = new Date(slot.startTime);
+      const gap = Math.abs(slotStart.getTime() - endTime.getTime());
+
+      // If there's a slot starting within 5 minutes of end time
+      if (gap <= 5 * 60 * 1000 && slot.djId === djId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Check if this is an event session (long booking or multi-hour event)
+  // Events run continuously without any breaks/transitions
+  function isEventSession(djId, streamStart) {
+    if (!allDjSlots || allDjSlots.length === 0) return null;
+
+    const djSlots = allDjSlots.filter(s => s.djId === djId && ['scheduled', 'live', 'in_lobby'].includes(s.status));
+    if (djSlots.length === 0) return null;
+
+    // Sort by start time
+    djSlots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+    // Find the slot that covers or is closest to the stream start
+    const start = new Date(streamStart);
+    let eventSlot = null;
+
+    for (const slot of djSlots) {
+      const slotStart = new Date(slot.startTime);
+      const slotEnd = new Date(slot.endTime);
+
+      // Check if stream started during or just before this slot
+      if (start >= new Date(slotStart.getTime() - 15 * 60000) && start < slotEnd) {
+        eventSlot = slot;
+        break;
+      }
+    }
+
+    if (!eventSlot) return null;
+
+    // Check if this is a long booking (2+ hours = event)
+    const duration = eventSlot.duration ||
+      (new Date(eventSlot.endTime) - new Date(eventSlot.startTime)) / 60000;
+
+    if (duration >= 120) {
+      // This is an event - single long booking
+      return {
+        isEvent: true,
+        startTime: new Date(eventSlot.startTime),
+        endTime: new Date(eventSlot.endTime),
+        totalDuration: duration,
+        slots: [eventSlot]
+      };
+    }
+
+    // Check for consecutive slots (multiple hours booked back-to-back = event)
+    let eventEnd = new Date(eventSlot.endTime);
+    let eventSlots = [eventSlot];
+    let totalDuration = duration;
+
+    for (const slot of djSlots) {
+      if (slot.id === eventSlot.id) continue;
+      const slotStart = new Date(slot.startTime);
+      const slotEnd = new Date(slot.endTime);
+      const slotDuration = slot.duration || (slotEnd - slotStart) / 60000;
+
+      // Check if this slot is consecutive (within 5 min)
+      const gap = Math.abs(slotStart.getTime() - eventEnd.getTime());
+      if (gap <= 5 * 60000 && slotEnd > eventEnd) {
+        eventSlots.push(slot);
+        eventEnd = slotEnd;
+        totalDuration += slotDuration;
+      }
+    }
+
+    // If total consecutive time is 2+ hours, treat as event
+    if (totalDuration >= 120 || eventSlots.length >= 2) {
+      return {
+        isEvent: true,
+        startTime: new Date(eventSlot.startTime),
+        endTime: eventEnd,
+        totalDuration,
+        slots: eventSlots
+      };
+    }
+
+    return null;
+  }
+
+  // Calculate max allowed streaming time for a DJ (based on subscription + whether they have next slot)
+  function calculateMaxStreamEndTime(djId, streamStart, hasBookedSlot) {
+    const start = new Date(streamStart);
+    const now = new Date();
+
+    // Check if this is an event session
+    const eventSession = isEventSession(djId, streamStart);
+    if (eventSession && eventSession.isEvent) {
+      currentEventSession = eventSession;
+      log(`[Stream] Event session detected: ${eventSession.totalDuration} minutes total`);
+      return eventSession.endTime;
+    }
+
+    currentEventSession = null;
+
+    // For non-event streams, calculate based on rules:
+    // Free DJ (no booking): current hour + next hour (max 2 hours)
+    // Pro/Paid DJ: current hour + next 2 hours (max 3 hours)
+
+    // End of current hour
+    const endOfCurrentHour = new Date(start);
+    endOfCurrentHour.setMinutes(0, 0, 0);
+    endOfCurrentHour.setHours(endOfCurrentHour.getHours() + 1);
+
+    // If they have booked slots, use those
+    if (hasBookedSlot) {
+      const continuousEnd = calculateContinuousEndTime(djId, endOfCurrentHour);
+      return continuousEnd;
+    }
+
+    // For unbooked streams:
+    const isPro = userSubscription?.isPro || false;
+    const extraHours = isPro ? 2 : 1; // Pro gets +2 hours, Free gets +1 hour
+
+    // Check if they have the next slot(s) booked
+    const hasNextHour = hasSameDjNextSlot(djId, endOfCurrentHour);
+
+    if (hasNextHour) {
+      // They have next hour booked, extend to end of that
+      const continuousEnd = calculateContinuousEndTime(djId, endOfCurrentHour);
+      return continuousEnd;
+    }
+
+    // No booking - allow current hour + extra based on tier
+    const maxEnd = new Date(endOfCurrentHour);
+    maxEnd.setHours(maxEnd.getHours() + extraHours);
+
+    log(`[Stream] Max end time: ${maxEnd.toLocaleTimeString()} (${isPro ? 'Pro' : 'Free'} tier)`);
+    return maxEnd;
+  }
+
+  // Check if stream should have transitions disabled (event mode)
+  function isInEventMode() {
+    return currentEventSession && currentEventSession.isEvent;
+  }
+
   // Format duration in days, hours, minutes
   function formatDuration(totalMinutes) {
     if (totalMinutes <= 0) return '0 minutes';
@@ -1875,6 +3139,29 @@ const pusherConfig = {
     return parts.join(', ');
   }
   
+  function showKeyNotAvailable() {
+    // Called when user has no booked slot - but we still generate a key for them
+    const slotTimeDisplay = document.getElementById('slotTimeDisplay');
+    const countdownEl = document.getElementById('countdownToSlot');
+
+    if (slotTimeDisplay) slotTimeDisplay.textContent = 'No slot booked';
+    if (countdownEl) countdownEl.textContent = 'You can still go live anytime';
+
+    // Always generate a stream key for DJs, even without a booked slot
+    if (!currentStreamKey) {
+      loadStreamKeyForGoLive();
+    } else {
+      // Display existing key
+      const streamKeyEl = document.getElementById('myStreamKey');
+      if (streamKeyEl) {
+        streamKeyEl.classList.remove('key-loading');
+        streamKeyEl.classList.add('key-reveal');
+        streamKeyEl.innerHTML = `<span class="key-text">${currentStreamKey}</span>`;
+      }
+      startObsPreviewCheck();
+    }
+  }
+
   function checkStreamKeyAvailability() {
     const keyStatus = document.getElementById('keyStatus');
     const slotTimeDisplay = document.getElementById('slotTimeDisplay');
@@ -1896,17 +3183,26 @@ const pusherConfig = {
       if (countdownEl) {
         if (minsUntil > 0) {
           countdownEl.textContent = `Starts in ${formatDuration(minsUntil)}`;
+          countdownEl.classList.remove('slot-now');
         } else if (now < slotEnd) {
           countdownEl.textContent = `Your slot is NOW!`;
+          countdownEl.classList.add('slot-now');
         } else {
           countdownEl.textContent = '';
+          countdownEl.classList.remove('slot-now');
         }
       }
 
       // If slot has a stream key, use it
       if (mySlot.streamKey) {
-        if (streamKeyEl) streamKeyEl.textContent = mySlot.streamKey;
+        if (streamKeyEl) {
+          streamKeyEl.classList.remove('key-loading');
+          streamKeyEl.classList.add('key-reveal');
+          streamKeyEl.innerHTML = `<span class="key-text">${mySlot.streamKey}</span>`;
+        }
         currentStreamKey = mySlot.streamKey;
+        // Start checking for OBS preview stream
+        startObsPreviewCheck();
       }
     } else {
       if (slotTimeDisplay) slotTimeDisplay.textContent = 'Your slot: --:-- - --:--';
@@ -1918,12 +3214,13 @@ const pusherConfig = {
       loadStreamKeyForGoLive();
     } else {
       // Display existing key
-      if (streamKeyEl) streamKeyEl.textContent = currentStreamKey;
-    }
-
-    if (keyStatus) {
-      keyStatus.textContent = 'Ready';
-      keyStatus.className = 'key-status ready';
+      if (streamKeyEl) {
+        streamKeyEl.classList.remove('key-loading');
+        streamKeyEl.classList.add('key-reveal');
+        streamKeyEl.innerHTML = `<span class="key-text">${currentStreamKey}</span>`;
+      }
+      // Start checking for OBS preview stream
+      startObsPreviewCheck();
     }
   }
   
@@ -1938,8 +3235,14 @@ const pusherConfig = {
       
       const result = await response.json();
       if (result.success && result.streamKey) {
-        document.getElementById('myStreamKey').textContent = result.streamKey;
+        const keyEl = document.getElementById('myStreamKey');
+        if (keyEl) {
+          keyEl.classList.remove('key-loading');
+          keyEl.classList.add('key-reveal');
+          keyEl.innerHTML = `<span class="key-text">${result.streamKey}</span>`;
+        }
         mySlot.streamKey = result.streamKey;
+        currentStreamKey = result.streamKey;
       }
     } catch (e) {
       console.error('Fetch key error:', e);
@@ -1974,15 +3277,11 @@ const pusherConfig = {
   // function subscribeToChat() { ... }
   
   function renderMessages(messages) {
+    // DISABLED: Now using LiveChat component
+    return;
     const container = document.getElementById('chatMessages');
-    
+
     if (messages.length === 0) {
-      container.innerHTML = `
-        <div class="chat-welcome">
-          <p>Welcome to the DJ Lobby! 👋</p>
-          <p class="hint">Chat with other DJs, coordinate sets, and hang out.</p>
-        </div>
-      `;
       return;
     }
     
@@ -2238,7 +3537,7 @@ const pusherConfig = {
   // GO LIVE MODAL
   // ==========================================
 
-  let currentStreamKey = null;
+  // currentStreamKey is now initialized earlier (line ~820) with test mode support
   let streamKeyValidUntil = null;
   let currentStreamSource = 'obs'; // 'obs' or 'relay'
   let approvedRelayData = null;
@@ -2265,118 +3564,59 @@ const pusherConfig = {
     document.getElementById('keyStatus').className = 'key-status ready';
   }
 
-  // Keep old function name for backwards compatibility
-  async function openGoLiveModal() {
-    return openGoLiveInline();
-  }
-
-  async function checkApprovedRelay() {
-    const selector = document.getElementById('streamSourceSelector');
-    const obsSetup = document.getElementById('obsStreamSetup');
-    const relaySetup = document.getElementById('relayStreamSetup');
-
-    try {
-      // Fetch user data to check for approved relay
-      const userResponse = await fetch(`/api/user/profile?userId=${currentUser.uid}`);
-      const userData = await userResponse.json();
-
-      if (userData.success && userData.user?.approvedRelay?.relayUrl) {
-        approvedRelayData = userData.user.approvedRelay;
-
-        // Update relay UI
-        document.getElementById('relaySourceLabel').textContent = approvedRelayData.stationName || 'Relay';
-        document.getElementById('relaySourceDesc').textContent = `Relay from ${approvedRelayData.stationName || 'external station'}`;
-        document.getElementById('relayStationName').textContent = approvedRelayData.stationName || 'External Station';
-        document.getElementById('relayUrlDisplay').textContent = approvedRelayData.relayUrl;
-
-        // Show the stream source selector
-        selector.classList.remove('hidden');
-      } else {
-        // No approved relay - hide selector
-        approvedRelayData = null;
-        selector.classList.add('hidden');
-        selectStreamSource('obs');
-      }
-    } catch (error) {
-      console.warn('Could not check relay status:', error);
-      selector.classList.add('hidden');
-      selectStreamSource('obs');
-    }
-  }
-
-  function selectStreamSource(source) {
-    currentStreamSource = source;
-
-    const obsSetup = document.getElementById('obsStreamSetup');
-    const relaySetup = document.getElementById('relayStreamSetup');
-    const readyBtn = document.getElementById('goLiveReadyBtn');
-    const readyHint = document.getElementById('readyHint');
-
-    // Update button states
-    document.querySelectorAll('.source-option').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.source === source);
-    });
-
-    if (source === 'obs') {
-      obsSetup.classList.remove('hidden');
-      relaySetup.classList.add('hidden');
-      readyBtn.innerHTML = '<span class="ready-icon">🎯</span> I\'m Ready - Go Live!';
-      readyHint.textContent = 'Click once you\'ve started streaming in OBS';
-    } else if (source === 'relay') {
-      obsSetup.classList.add('hidden');
-      relaySetup.classList.remove('hidden');
-      readyBtn.innerHTML = '<span class="ready-icon">📡</span> Start Relay';
-      readyHint.textContent = 'Make sure you\'re live on your external station';
-    }
-  }
-
-  function closeGoLiveModal() {
-    document.getElementById('goLiveModal').classList.add('hidden');
-    showGoLiveStep(1); // Reset to step 1 for next time
-  }
-
-  function showGoLiveStep(step) {
-    // Hide all steps
-    document.getElementById('goLiveStep1').classList.add('hidden');
-    document.getElementById('goLiveStep2').classList.add('hidden');
-    document.getElementById('goLiveStep3').classList.add('hidden');
-    document.getElementById('goLiveError').classList.add('hidden');
-
-    // Show requested step
-    const stepEl = document.getElementById(`goLiveStep${step}`);
-    if (stepEl) {
-      stepEl.classList.remove('hidden');
-    }
-  }
-
-  function showGoLiveError(message) {
-    document.getElementById('goLiveStep1').classList.add('hidden');
-    document.getElementById('goLiveStep2').classList.add('hidden');
-    document.getElementById('goLiveStep3').classList.add('hidden');
-    document.getElementById('goLiveError').classList.remove('hidden');
-    document.getElementById('goLiveErrorMsg').textContent = message;
-  }
-
   async function loadStreamKeyForGoLive() {
-    // Update both modal element (if exists) and inline element
-    const modalKeyEl = document.getElementById('goLiveStreamKey');
     const inlineKeyEl = document.getElementById('myStreamKey');
 
-    // Check if we already have a valid stream key
+    // Check if we already have a valid stream key in memory
     if (currentStreamKey && streamKeyValidUntil) {
       const validUntil = new Date(streamKeyValidUntil);
       const now = new Date();
       // If key is still valid (with 2 min buffer), reuse it
       if (validUntil.getTime() - now.getTime() > 2 * 60 * 1000) {
-        console.log('[GoLive] Reusing existing stream key, valid until:', streamKeyValidUntil);
-        if (modalKeyEl) modalKeyEl.textContent = currentStreamKey;
-        if (inlineKeyEl) inlineKeyEl.textContent = currentStreamKey;
+        log('[GoLive] Reusing existing stream key, valid until:', streamKeyValidUntil);
+        if (inlineKeyEl) {
+          inlineKeyEl.classList.remove('key-loading');
+          inlineKeyEl.classList.add('key-reveal');
+          inlineKeyEl.innerHTML = `<span class="key-text">${currentStreamKey}</span>`;
+        }
         return;
       }
     }
 
-    if (modalKeyEl) modalKeyEl.textContent = 'Generating...';
-    if (inlineKeyEl) inlineKeyEl.textContent = 'Generating...';
+    // Check localStorage for a saved key (survives page refresh)
+    const savedKey = localStorage.getItem('freshwax_stream_key');
+    const savedValidUntil = localStorage.getItem('freshwax_stream_key_valid_until');
+    if (savedKey && savedValidUntil) {
+      const validUntil = new Date(savedValidUntil);
+      const now = new Date();
+      // If saved key is still valid (with 2 min buffer), use it
+      if (validUntil.getTime() - now.getTime() > 2 * 60 * 1000) {
+        log('[GoLive] Using saved stream key from localStorage, valid until:', savedValidUntil);
+        currentStreamKey = savedKey;
+        streamKeyValidUntil = savedValidUntil;
+        if (inlineKeyEl) {
+          inlineKeyEl.classList.remove('key-loading');
+          inlineKeyEl.classList.add('key-reveal');
+          inlineKeyEl.innerHTML = `<span class="key-text">${savedKey}</span>`;
+        }
+        startObsPreviewCheck();
+        return;
+      } else {
+        // Clear expired key
+        localStorage.removeItem('freshwax_stream_key');
+        localStorage.removeItem('freshwax_stream_key_valid_until');
+      }
+    }
+
+    if (inlineKeyEl) {
+      inlineKeyEl.classList.add('key-loading');
+      inlineKeyEl.classList.remove('key-reveal');
+      inlineKeyEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
+    }
+
+    // Minimum animation duration (1.5 seconds) for visual effect
+    const minAnimationTime = 1500;
+    const animationStart = Date.now();
 
     try {
       const token = await currentUser.getIdToken();
@@ -2397,67 +3637,92 @@ const pusherConfig = {
 
       const result = await response.json();
 
+      // Wait for minimum animation time before revealing
+      const elapsed = Date.now() - animationStart;
+      if (elapsed < minAnimationTime) {
+        await new Promise(resolve => setTimeout(resolve, minAnimationTime - elapsed));
+      }
+
       if (result.success && result.streamKey) {
         currentStreamKey = result.streamKey;
         streamKeyValidUntil = result.validUntil;
-        if (modalKeyEl) modalKeyEl.textContent = result.streamKey;
-        if (inlineKeyEl) inlineKeyEl.textContent = result.streamKey;
-        console.log('[GoLive] New stream key generated, valid until:', result.validUntil);
+
+        // Save to localStorage so it survives page refresh
+        localStorage.setItem('freshwax_stream_key', result.streamKey);
+        localStorage.setItem('freshwax_stream_key_valid_until', result.validUntil);
+
+        if (inlineKeyEl) {
+          inlineKeyEl.classList.remove('key-loading');
+          inlineKeyEl.classList.add('key-reveal');
+          inlineKeyEl.innerHTML = `<span class="key-text">${result.streamKey}</span>`;
+        }
+        log('[GoLive] New stream key generated and saved, valid until:', result.validUntil);
+        // Start checking for OBS preview stream
+        startObsPreviewCheck();
       } else {
-        if (modalKeyEl) modalKeyEl.textContent = 'Error - try again';
-        if (inlineKeyEl) inlineKeyEl.textContent = 'Error - try again';
+        if (inlineKeyEl) {
+          inlineKeyEl.classList.remove('key-loading');
+          inlineKeyEl.classList.remove('key-reveal');
+          inlineKeyEl.textContent = 'Error - try again';
+        }
         console.error('[GoLive] Failed to generate key:', result.error);
       }
     } catch (error) {
       console.error('[GoLive] Error loading stream key:', error);
-      if (modalKeyEl) modalKeyEl.textContent = 'Error - try again';
-      if (inlineKeyEl) inlineKeyEl.textContent = 'Error - try again';
+      if (inlineKeyEl) {
+        inlineKeyEl.classList.remove('key-loading');
+        inlineKeyEl.classList.remove('key-reveal');
+        inlineKeyEl.textContent = 'Error - try again';
+      }
     }
   }
 
   async function handleGoLiveReady() {
-    // Get title and genre - check inline fields first, then modal fields
+    // Get title and genre from inline fields
     let title, genre;
 
-    if (currentStreamSource === 'relay') {
-      title = document.getElementById('relayStreamTitle')?.value?.trim() || `Live from ${approvedRelayData?.stationName || 'External Station'}`;
-      genre = document.getElementById('relayStreamGenre')?.value || 'Jungle / D&B';
-    } else {
-      // Try inline fields first, then fall back to modal fields
-      title = document.getElementById('inlineStreamTitle')?.value?.trim()
-           || document.getElementById('goLiveTitle')?.value?.trim()
-           || 'Live Session';
-      genre = document.getElementById('inlineStreamGenre')?.value
-           || document.getElementById('goLiveGenre')?.value
-           || 'Jungle / D&B';
-    }
+    title = document.getElementById('inlineStreamTitle')?.value?.trim() || 'Live Session';
+    genre = document.getElementById('inlineStreamGenre')?.value || 'Jungle / D&B';
+
+    // Check for user-entered relay URL
+    const userRelayUrl = document.getElementById('relayUrl')?.value?.trim() || null;
+    const relaySourceName = selectedRelaySource?.name || 'External Source';
+
+    // Determine stream mode based on relay URL
+    const isRelayMode = userRelayUrl || (currentStreamSource === 'relay' && approvedRelayData?.relayUrl);
 
     // For OBS mode, check stream key
-    if (currentStreamSource === 'obs' && !currentStreamKey) {
+    if (!isRelayMode && !currentStreamKey) {
       throw new Error('No stream key available. Please refresh and try again.');
     }
 
-    // For relay mode, check approved relay data
-    if (currentStreamSource === 'relay' && !approvedRelayData?.relayUrl) {
-      throw new Error('No approved relay URL found. Please contact admin.');
+    // For relay mode, check relay URL
+    if (isRelayMode && !userRelayUrl && !approvedRelayData?.relayUrl) {
+      throw new Error('No relay URL provided.');
     }
 
-    console.log('[GoLive] Starting go live with key:', currentStreamKey?.substring(0, 10) + '...');
+    log('[GoLive] Starting go live with key:', currentStreamKey?.substring(0, 10) + '...');
 
     const token = await currentUser.getIdToken();
 
+    // Get Twitch username and stream key if provided
+    const twitchUsername = document.getElementById('twitchUsername')?.value?.trim() || null;
+    const twitchStreamKey = document.getElementById('twitchStreamKey')?.value?.trim() || null;
+
     // Build request body based on source type
     const requestBody = {
-      action: currentStreamSource === 'relay' ? 'start_relay' : 'go_live',
+      action: isRelayMode ? 'start_relay' : 'go_live',
       djId: currentUser.uid,
       djName: userInfo.name,
       title: title,
-      genre: genre
+      genre: genre,
+      twitchUsername: twitchUsername,
+      twitchStreamKey: twitchStreamKey
     };
 
-    if (currentStreamSource === 'relay') {
-      requestBody.relayUrl = approvedRelayData.relayUrl;
-      requestBody.stationName = approvedRelayData.stationName;
+    if (isRelayMode) {
+      requestBody.relayUrl = userRelayUrl || approvedRelayData.relayUrl;
+      requestBody.stationName = userRelayUrl ? relaySourceName : approvedRelayData.stationName;
     } else {
       requestBody.streamKey = currentStreamKey;
     }
@@ -2476,7 +3741,7 @@ const pusherConfig = {
 
     if (result.success) {
       // Stream is live!
-      console.log('[GoLive] Successfully went live!', result);
+      log('[GoLive] Successfully went live!', result);
 
       // Refresh stream status
       await loadStreamStatus();
@@ -2583,6 +3848,44 @@ const pusherConfig = {
   }
   
   function setupEventListeners() {
+    // Thumbnail capture and share buttons
+    document.getElementById('captureThumbBtn')?.addEventListener('click', captureVideoThumbnail);
+    document.getElementById('clearThumbBtn')?.addEventListener('click', clearThumbnail);
+    document.getElementById('shareTwitterBtn')?.addEventListener('click', shareToTwitter);
+    document.getElementById('shareFacebookBtn')?.addEventListener('click', shareToFacebook);
+
+    // Twitch save button
+    document.getElementById('saveTwitchBtn')?.addEventListener('click', saveTwitchSettings);
+
+    // Copy output URL button
+    document.getElementById('copyOutputUrl')?.addEventListener('click', copyOutputUrlToClipboard);
+
+    // Volume sliders
+    const obsVolumeSlider = document.getElementById('obsVolumeSlider');
+    const liveVolumeSlider = document.getElementById('liveVolumeSlider');
+    const obsVideo = document.getElementById('obsVideo');
+    const hlsVideo = document.getElementById('hlsVideo');
+
+    if (obsVolumeSlider && obsVideo) {
+      obsVolumeSlider.addEventListener('input', (e) => {
+        obsVideo.volume = e.target.value / 100;
+        if (e.target.value > 0) {
+          obsVideo.muted = false;
+          updateMuteButtonState('obs', false);
+        }
+      });
+    }
+
+    if (liveVolumeSlider && hlsVideo) {
+      liveVolumeSlider.addEventListener('input', (e) => {
+        hlsVideo.volume = e.target.value / 100;
+        if (e.target.value > 0) {
+          hlsVideo.muted = false;
+          updateMuteButtonState('live', false);
+        }
+      });
+    }
+
     // DM Modal
     document.getElementById('openDmBtn').addEventListener('click', openDmModal);
     document.getElementById('closeDmBtn').addEventListener('click', closeDmModal);
@@ -2600,33 +3903,6 @@ const pusherConfig = {
       document.getElementById('dmNotification').classList.add('hidden');
     });
 
-    // Go Live Modal
-    document.getElementById('goLiveBtn').addEventListener('click', openGoLiveModal);
-    document.getElementById('closeGoLiveBtn').addEventListener('click', closeGoLiveModal);
-    document.querySelector('.go-live-modal-overlay').addEventListener('click', closeGoLiveModal);
-    document.getElementById('goLiveReadyBtn').addEventListener('click', handleGoLiveReady);
-    document.getElementById('goLiveRetryBtn').addEventListener('click', () => {
-      showGoLiveStep(1);
-    });
-    document.getElementById('closeGoLiveSuccessBtn').addEventListener('click', closeGoLiveModal);
-
-    // Stream source selector
-    document.querySelectorAll('.source-option').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectStreamSource(btn.dataset.source);
-      });
-    });
-
-    // Copy buttons in Go Live modal
-    document.querySelectorAll('.go-live-modal .copy-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetId = btn.dataset.copy;
-        const text = document.getElementById(targetId).textContent;
-        navigator.clipboard.writeText(text);
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = 'Copy', 2000);
-      });
-    });
 
     // Sign out
     document.getElementById('signOutBtn').addEventListener('click', async () => {
@@ -2645,17 +3921,21 @@ const pusherConfig = {
     // Lobby End Stream button
     document.getElementById('lobbyEndStreamBtn').addEventListener('click', async () => {
       const btn = document.getElementById('lobbyEndStreamBtn');
+      const status = document.getElementById('endStreamStatus');
       if (btn.classList.contains('disabled')) return;
-      
+
       if (!confirm('Are you sure you want to end your stream?')) return;
-      
+
       try {
         btn.disabled = true;
+        btn.classList.add('ending');
         btn.innerHTML = '<span class="end-icon">⏳</span><span class="end-text">Ending...</span>';
-        
+        status.textContent = 'Sending end signal...';
+        status.classList.add('ending');
+
         // Use current stream's DJ ID (for admin ending someone else's stream)
         const targetDjId = currentStream?.djId || currentUser.uid;
-        
+
         const token = await currentUser.getIdToken();
         const response = await fetch('/api/livestream/slots', {
           method: 'POST',
@@ -2669,21 +3949,43 @@ const pusherConfig = {
             isAdmin: userInfo?.isAdmin || false
           })
         });
-        
+
         const result = await response.json();
         if (result.success) {
-          updateEndStreamButton(false, false);
-          await recordStreamEnd(); // Record when stream ended for chat cleanup
-          await loadStreamStatus();
+          // Show countdown while stream terminates
+          let countdown = 10;
+          btn.innerHTML = '<span class="end-icon">🔴</span><span class="end-text">Stopping...</span><span class="end-countdown">' + countdown + 's</span>';
+          status.innerHTML = '⚡ Stream ending in <strong>' + countdown + '</strong> seconds...';
+
+          const countdownInterval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+              btn.innerHTML = '<span class="end-icon">🔴</span><span class="end-text">Stopping...</span><span class="end-countdown">' + countdown + 's</span>';
+              status.innerHTML = '⚡ Stream ending in <strong>' + countdown + '</strong> seconds...';
+            } else {
+              clearInterval(countdownInterval);
+              btn.classList.remove('ending');
+              status.classList.remove('ending');
+              updateEndStreamButton(false, false);
+              status.textContent = 'Stream ended successfully';
+              // Refresh stream status
+              loadStreamStatus();
+              recordStreamEnd();
+            }
+          }, 1000);
         } else {
           alert('Failed to end stream: ' + (result.error || 'Unknown error'));
           btn.innerHTML = '<span class="end-icon">⏹</span><span class="end-text">End Stream</span>';
+          btn.classList.remove('ending');
+          status.classList.remove('ending');
           btn.disabled = false;
         }
       } catch (e) {
         console.error('End stream error:', e);
         alert('Failed to end stream');
         btn.innerHTML = '<span class="end-icon">⏹</span><span class="end-text">End Stream</span>';
+        btn.classList.remove('ending');
+        status.classList.remove('ending');
         btn.disabled = false;
       }
     });
@@ -2747,7 +4049,262 @@ const pusherConfig = {
         document.getElementById('volumeSlider').value = media.muted ? 0 : media.volume * 100;
       }
     });
-    
+
+    // =============== SEPARATE PLAYER CONTROLS ===============
+    // Track which player has audio active (mutual exclusion)
+    let activeAudioPlayer = null; // 'obs' or 'live' or null
+
+    // Update control button icons based on state
+    function updatePlayerControlIcons(player, isPlaying, isMuted) {
+      const playBtn = document.getElementById(`${player}PlayBtn`);
+      const muteBtn = document.getElementById(`${player}MuteBtn`);
+
+      if (playBtn) {
+        const playIcon = playBtn.querySelector('.play-icon');
+        const pauseIcon = playBtn.querySelector('.pause-icon');
+        playIcon?.classList.toggle('hidden', isPlaying);
+        pauseIcon?.classList.toggle('hidden', !isPlaying);
+      }
+
+      if (muteBtn) {
+        const mutedIcon = muteBtn.querySelector('.muted-icon');
+        const unmutedIcon = muteBtn.querySelector('.unmuted-icon');
+        mutedIcon?.classList.toggle('hidden', !isMuted);
+        unmutedIcon?.classList.toggle('hidden', isMuted);
+        muteBtn.classList.toggle('muted', isMuted);
+      }
+    }
+
+    // Mute the other player when one unmutes (mutual exclusion)
+    function enforceAudioMutualExclusion(activePlayer) {
+      const obsVideo = document.getElementById('obsVideo');
+      const liveVideo = document.getElementById('hlsVideo');
+      const liveAudio = document.getElementById('audioElement');
+
+      if (activePlayer === 'obs') {
+        // Mute live stream
+        if (liveVideo) liveVideo.muted = true;
+        if (liveAudio) liveAudio.muted = true;
+        updatePlayerControlIcons('live', !liveVideo?.paused, true);
+        activeAudioPlayer = 'obs';
+      } else if (activePlayer === 'live') {
+        // Mute OBS preview
+        if (obsVideo) obsVideo.muted = true;
+        updatePlayerControlIcons('obs', !obsVideo?.paused, true);
+        activeAudioPlayer = 'live';
+      }
+    }
+
+    // OBS Preview Play/Pause
+    document.getElementById('obsPlayBtn')?.addEventListener('click', () => {
+      const obsVideo = document.getElementById('obsVideo');
+      if (!obsVideo) return;
+
+      if (obsVideo.paused) {
+        obsVideo.play().catch(err => console.error('[OBS Preview] Play error:', err));
+        updatePlayerControlIcons('obs', true, obsVideo.muted);
+      } else {
+        obsVideo.pause();
+        updatePlayerControlIcons('obs', false, obsVideo.muted);
+      }
+    });
+
+    // OBS Preview Mute/Unmute
+    document.getElementById('obsMuteBtn')?.addEventListener('click', () => {
+      const obsVideo = document.getElementById('obsVideo');
+      if (!obsVideo) return;
+
+      const newMutedState = !obsVideo.muted;
+      obsVideo.muted = newMutedState;
+
+      // If unmuting, enforce mutual exclusion
+      if (!newMutedState) {
+        enforceAudioMutualExclusion('obs');
+      }
+
+      updatePlayerControlIcons('obs', !obsVideo.paused, newMutedState);
+    });
+
+    // Live Stream Play/Pause
+    document.getElementById('livePlayBtn')?.addEventListener('click', () => {
+      const liveVideo = document.getElementById('hlsVideo');
+      const liveAudio = document.getElementById('audioElement');
+
+      // Determine which media element is active
+      const isVideoStream = currentStream && currentStream.streamType !== 'audio' && !currentStream.streamUrl?.includes('8000');
+      const media = isVideoStream ? liveVideo : liveAudio;
+
+      if (!media) return;
+
+      if (media.paused) {
+        media.play().catch(err => console.error('[Live Stream] Play error:', err));
+        updatePlayerControlIcons('live', true, media.muted);
+      } else {
+        media.pause();
+        updatePlayerControlIcons('live', false, media.muted);
+      }
+    });
+
+    // Live Stream Mute/Unmute
+    document.getElementById('liveMuteBtn')?.addEventListener('click', () => {
+      const liveVideo = document.getElementById('hlsVideo');
+      const liveAudio = document.getElementById('audioElement');
+
+      // Determine which media element is active
+      const isVideoStream = currentStream && currentStream.streamType !== 'audio' && !currentStream.streamUrl?.includes('8000');
+      const media = isVideoStream ? liveVideo : liveAudio;
+
+      if (!media) return;
+
+      const newMutedState = !media.muted;
+      media.muted = newMutedState;
+
+      // If unmuting, enforce mutual exclusion
+      if (!newMutedState) {
+        enforceAudioMutualExclusion('live');
+      }
+
+      updatePlayerControlIcons('live', !media.paused, newMutedState);
+    });
+
+    // Update live player icons when video state changes
+    const liveVideo = document.getElementById('hlsVideo');
+    if (liveVideo) {
+      liveVideo.addEventListener('play', () => updatePlayerControlIcons('live', true, liveVideo.muted));
+      liveVideo.addEventListener('pause', () => updatePlayerControlIcons('live', false, liveVideo.muted));
+    }
+
+    // Update OBS player icons when video state changes
+    const obsVideoEl = document.getElementById('obsVideo');
+    if (obsVideoEl) {
+      obsVideoEl.addEventListener('play', () => updatePlayerControlIcons('obs', true, obsVideoEl.muted));
+      obsVideoEl.addEventListener('pause', () => updatePlayerControlIcons('obs', false, obsVideoEl.muted));
+    }
+    // =============== END SEPARATE PLAYER CONTROLS ===============
+
+    // =============== STEREO AUDIO METERS ===============
+    let obsAudioContext = null;
+    let obsAnalyserL = null;
+    let obsAnalyserR = null;
+    let liveAudioContext = null;
+    let liveAnalyserL = null;
+    let liveAnalyserR = null;
+    let obsMeterAnimationId = null;
+    let liveMeterAnimationId = null;
+
+    function setupAudioMeter(videoElement, prefix) {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createMediaElementSource(videoElement);
+        const splitter = audioContext.createChannelSplitter(2);
+        const analyserL = audioContext.createAnalyser();
+        const analyserR = audioContext.createAnalyser();
+
+        analyserL.fftSize = 256;
+        analyserR.fftSize = 256;
+        analyserL.smoothingTimeConstant = 0.5;
+        analyserR.smoothingTimeConstant = 0.5;
+
+        source.connect(splitter);
+        splitter.connect(analyserL, 0);
+        splitter.connect(analyserR, 1);
+        source.connect(audioContext.destination);
+
+        return { audioContext, analyserL, analyserR };
+      } catch (e) {
+        console.error(`[${prefix}] Audio meter setup error:`, e);
+        return null;
+      }
+    }
+
+    function updateMeter(analyser, meterEl) {
+      if (!analyser || !meterEl) return 0;
+
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(dataArray);
+
+      // Calculate RMS level
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        sum += dataArray[i] * dataArray[i];
+      }
+      const rms = Math.sqrt(sum / dataArray.length);
+      const level = Math.min(100, (rms / 128) * 100);
+
+      meterEl.style.width = level + '%';
+      return level;
+    }
+
+    function animateObsMeters() {
+      if (obsAnalyserL && obsAnalyserR) {
+        updateMeter(obsAnalyserL, document.getElementById('obsLeftMeter'));
+        updateMeter(obsAnalyserR, document.getElementById('obsRightMeter'));
+      }
+      obsMeterAnimationId = requestAnimationFrame(animateObsMeters);
+    }
+
+    function animateLiveMeters() {
+      if (liveAnalyserL && liveAnalyserR) {
+        updateMeter(liveAnalyserL, document.getElementById('liveLeftMeter'));
+        updateMeter(liveAnalyserR, document.getElementById('liveRightMeter'));
+      }
+      liveMeterAnimationId = requestAnimationFrame(animateLiveMeters);
+    }
+
+    // Setup meters when video plays
+    const obsVid = document.getElementById('obsVideo');
+    if (obsVid) {
+      obsVid.addEventListener('play', () => {
+        if (!obsAudioContext) {
+          const result = setupAudioMeter(obsVid, 'OBS');
+          if (result) {
+            obsAudioContext = result.audioContext;
+            obsAnalyserL = result.analyserL;
+            obsAnalyserR = result.analyserR;
+          }
+        }
+        if (obsAudioContext?.state === 'suspended') {
+          obsAudioContext.resume();
+        }
+        if (!obsMeterAnimationId) animateObsMeters();
+      });
+      obsVid.addEventListener('pause', () => {
+        if (obsMeterAnimationId) {
+          cancelAnimationFrame(obsMeterAnimationId);
+          obsMeterAnimationId = null;
+        }
+        document.getElementById('obsLeftMeter')?.style.setProperty('width', '0%');
+        document.getElementById('obsRightMeter')?.style.setProperty('width', '0%');
+      });
+    }
+
+    const liveVid = document.getElementById('hlsVideo');
+    if (liveVid) {
+      liveVid.addEventListener('play', () => {
+        if (!liveAudioContext) {
+          const result = setupAudioMeter(liveVid, 'Live');
+          if (result) {
+            liveAudioContext = result.audioContext;
+            liveAnalyserL = result.analyserL;
+            liveAnalyserR = result.analyserR;
+          }
+        }
+        if (liveAudioContext?.state === 'suspended') {
+          liveAudioContext.resume();
+        }
+        if (!liveMeterAnimationId) animateLiveMeters();
+      });
+      liveVid.addEventListener('pause', () => {
+        if (liveMeterAnimationId) {
+          cancelAnimationFrame(liveMeterAnimationId);
+          liveMeterAnimationId = null;
+        }
+        document.getElementById('liveLeftMeter')?.style.setProperty('width', '0%');
+        document.getElementById('liveRightMeter')?.style.setProperty('width', '0%');
+      });
+    }
+    // =============== END STEREO AUDIO METERS ===============
+
     // Ready button - Go Live! Sets ready status AND starts stream
     document.getElementById('setReadyBtn')?.addEventListener('click', async () => {
       if (!currentUser) return;
@@ -2778,14 +4335,13 @@ const pusherConfig = {
         // Show success state
         btn.classList.add('is-ready');
         btn.style.background = '#10b981';
-        btnText.textContent = '🔴 YOU ARE LIVE!';
-        document.getElementById('readyStatus')?.classList.remove('hidden');
+        btnText.textContent = '🔴 LIVE';
       } catch (e) {
         console.error('Go Live error:', e);
         // Show error message
         alert(e.message || 'Failed to go live. Please check OBS is streaming and try again.');
         // Reset button
-        btnText.textContent = '🎯 I\'m Ready - Go Live!';
+        btnText.textContent = 'Go Live';
         btn.disabled = false;
         btn.classList.add('glow');
       }
@@ -2951,17 +4507,209 @@ const pusherConfig = {
       }
     });
     
-    // Copy buttons
-    document.querySelectorAll('.copy-btn').forEach(btn => {
+    // Copy buttons (both .copy-btn and .copy-btn-sm)
+    document.querySelectorAll('.copy-btn, .copy-btn-sm').forEach(btn => {
       btn.addEventListener('click', () => {
         const code = document.getElementById(btn.dataset.copy);
         if (code) {
-          navigator.clipboard.writeText(code.textContent);
+          // Get just the text content, strip any extra whitespace
+          const textToCopy = code.textContent.trim();
+          navigator.clipboard.writeText(textToCopy);
           btn.textContent = 'Copied!';
           setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
         }
       });
     });
+  }
+
+  // ============================================
+  // LIVESTREAM CHAT (mirrors main live page)
+  // ============================================
+
+  let livestreamChatChannel = null;
+
+  async function initLivestreamChat(streamId) {
+    if (!streamId) return;
+
+    console.log('[LivestreamChat] Initializing chat for stream:', streamId);
+    window.livestreamChatInitialized = true;
+
+    // Load initial messages
+    try {
+      const response = await fetch(`/api/livestream/chat?streamId=${streamId}&limit=50`);
+      const result = await response.json();
+
+      if (result.success && result.messages) {
+        renderLivestreamMessages(result.messages);
+      }
+    } catch (err) {
+      console.error('[LivestreamChat] Failed to load messages:', err);
+    }
+
+    // Subscribe to Pusher channel for new messages
+    if (window.Pusher && window.PUSHER_CONFIG?.key) {
+      if (!window.livestreamPusher) {
+        window.livestreamPusher = new Pusher(window.PUSHER_CONFIG.key, {
+          cluster: window.PUSHER_CONFIG.cluster || 'eu'
+        });
+      }
+
+      const channelName = `stream-${streamId}`;
+      console.log('[LivestreamChat] Subscribing to channel:', channelName);
+
+      livestreamChatChannel = window.livestreamPusher.subscribe(channelName);
+
+      livestreamChatChannel.bind('new-message', (data) => {
+        console.log('[LivestreamChat] New message:', data);
+        appendLivestreamMessage(data);
+      });
+    }
+
+    // Setup send button handler
+    setupLivestreamChatSend(streamId);
+
+    // Show chat form if logged in
+    if (currentUser) {
+      document.getElementById('loginPrompt')?.classList.add('hidden');
+      document.getElementById('chatForm')?.classList.remove('hidden');
+    }
+  }
+
+  function renderLivestreamMessages(messages) {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+
+    if (!messages || messages.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    // Filter out bot messages for DJ Lobby
+    const filteredMessages = messages.filter(msg => msg.type !== 'bot');
+    container.innerHTML = filteredMessages.map(msg => formatLivestreamMessage(msg)).join('');
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function appendLivestreamMessage(msg) {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+
+    // Skip bot messages in DJ Lobby
+    if (msg.type === 'bot') return;
+
+    // Remove welcome message if present
+    const welcome = container.querySelector('.chat-welcome');
+    if (welcome) welcome.remove();
+
+    const msgHtml = formatLivestreamMessage(msg);
+    container.insertAdjacentHTML('beforeend', msgHtml);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function formatLivestreamMessage(msg) {
+    const time = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+    const initial = (msg.userName || 'U').charAt(0).toUpperCase();
+    const avatarHtml = msg.userAvatar
+      ? `<img src="${msg.userAvatar}" alt="" class="ls-chat-avatar" onerror="this.outerHTML='<span class=\\'ls-chat-avatar-letter\\'>${initial}</span>'" />`
+      : `<span class="ls-chat-avatar-letter">${initial}</span>`;
+
+    // Handle GIF messages
+    if (msg.type === 'giphy' && msg.giphyUrl) {
+      return `
+        <div class="ls-chat-message" data-message-id="${msg.id || ''}">
+          <div class="ls-chat-header">
+            <div class="ls-chat-user">
+              ${avatarHtml}
+              <span class="ls-chat-username">${escapeHtml(msg.userName || 'User')}</span>
+            </div>
+            <span class="ls-chat-time">${time}</span>
+          </div>
+          <div class="ls-chat-gif">
+            <img src="${msg.giphyUrl}" alt="GIF" loading="lazy" />
+          </div>
+        </div>
+      `;
+    }
+
+    // Handle bot messages
+    const badgeHtml = msg.badge ? `<span class="ls-chat-badge">${msg.badge}</span>` : '';
+    const botClass = msg.type === 'bot' ? 'ls-bot-message' : '';
+
+    return `
+      <div class="ls-chat-message ${botClass}" data-message-id="${msg.id || ''}">
+        <div class="ls-chat-header">
+          <div class="ls-chat-user">
+            ${avatarHtml}
+            <span class="ls-chat-username">${escapeHtml(msg.userName || 'User')}</span>
+            ${badgeHtml}
+          </div>
+          <span class="ls-chat-time">${time}</span>
+        </div>
+        <div class="ls-chat-text">${escapeHtml(msg.message || '')}</div>
+      </div>
+    `;
+  }
+
+  function setupLivestreamChatSend(streamId) {
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    if (!chatInput || !sendBtn) return;
+
+    const sendMessage = async () => {
+      const message = chatInput.value.trim();
+      if (!message || !currentUser) return;
+
+      chatInput.value = '';
+      chatInput.disabled = true;
+      sendBtn.disabled = true;
+
+      try {
+        const response = await fetch('/api/livestream/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            streamId: streamId,
+            userId: currentUser.uid,
+            userName: userInfo?.displayName || userInfo?.firstName || currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+            userAvatar: userInfo?.photoURL || currentUser.photoURL || null,
+            message: message,
+            type: 'text'
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          console.error('[LivestreamChat] Send failed:', err);
+        }
+      } catch (err) {
+        console.error('[LivestreamChat] Send error:', err);
+      } finally {
+        chatInput.disabled = false;
+        sendBtn.disabled = false;
+        chatInput.focus();
+      }
+    };
+
+    sendBtn.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  }
+
+  // Cleanup chat when stream ends
+  function cleanupLivestreamChat() {
+    window.currentStreamId = null;
+    window.livestreamChatInitialized = false;
+
+    if (livestreamChatChannel) {
+      livestreamChatChannel.unbind_all();
+      window.livestreamPusher?.unsubscribe(livestreamChatChannel.name);
+      livestreamChatChannel = null;
+    }
   }
 </script>
 </body>

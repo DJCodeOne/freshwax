@@ -136,6 +136,7 @@ let viewerSessionId = null;
 let isPlaying = false;
 let chatMessages = []; // Store chat messages for Pusher updates
 let activeUsers = new Map(); // Track active users { odlId -> { id, name, avatar, lastSeen } }
+window.emojiAnimationsEnabled = false; // Only enable when livestream is active
 
 // Expose function to get online viewers for LiveChat sidebar
 window.getOnlineViewers = function() {
@@ -391,8 +392,25 @@ async function checkLiveStatus() {
   }
 }
 
+// Enable/disable reaction buttons based on stream status
+function setReactionButtonsEnabled(enabled) {
+  const reactionButtons = document.querySelectorAll('.reaction-btn, .anim-toggle-btn, .fs-reaction-btn, #animToggleBtn, #fsAnimToggleBtn');
+  reactionButtons.forEach(btn => {
+    if (enabled) {
+      btn.classList.remove('reactions-disabled');
+      btn.disabled = false;
+    } else {
+      btn.classList.add('reactions-disabled');
+      btn.disabled = true;
+    }
+  });
+  console.log('[Reactions] Buttons ' + (enabled ? 'enabled' : 'disabled'));
+}
+
 // Show offline state
 function showOfflineState(scheduled) {
+  window.emojiAnimationsEnabled = false; // Disable emoji animations when offline
+  setReactionButtonsEnabled(false); // Grey out reaction buttons
   document.getElementById('offlineState')?.classList.remove('hidden');
   document.getElementById('liveState')?.classList.add('hidden');
   
@@ -429,6 +447,8 @@ function showOfflineState(scheduled) {
 function showLiveStream(stream) {
   currentStream = stream;
   window.liveStreamState.currentStream = stream; // Expose for LiveChat
+  window.emojiAnimationsEnabled = true; // Enable emoji animations when live
+  setReactionButtonsEnabled(true); // Enable reaction buttons
 
   // Expose stream ID globally for reaction buttons
   window.currentStreamId = stream.id;
@@ -504,7 +524,13 @@ function showLiveStream(stream) {
   } else {
     setupAudioPlayer(stream);
   }
-  
+
+  // Setup Twitch chat in fullscreen mode if DJ has Twitch channel
+  const twitchChannel = stream.twitchChannel || stream.twitchUsername;
+  if (window.setupFsTwitchChat) {
+    window.setupFsTwitchChat(twitchChannel);
+  }
+
   // Join as viewer
   joinStream(stream.id);
   
@@ -2113,6 +2139,9 @@ function setupReactions(streamId) {
 
 // Create floating emoji from broadcast (random position)
 function createFloatingEmojiFromBroadcast(emojiList) {
+  // Skip if emoji animations are disabled (no active livestream)
+  if (!window.emojiAnimationsEnabled) return;
+
   console.log('[Reaction] createFloatingEmojiFromBroadcast called with:', emojiList);
   const playerArea = document.querySelector('.player-wrapper') || document.querySelector('.player-column');
   let x, y;

@@ -1,10 +1,13 @@
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, queryCollection, addDocument , initFirebaseEnv } from '../../../lib/firebase-rest';
-const ADMIN_UID = 'Y3TGc171cHSWTqZDRSniyu7Jxc33';
+import { getDocument, updateDocument, queryCollection, addDocument, setDocument, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+
+export const prerender = false;
+
+const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
 
 // Helper to check if user is admin
 async function isAdmin(uid: string): Promise<boolean> {
-  if (uid === ADMIN_UID) return true;
+  if (ADMIN_UIDS.includes(uid)) return true;
   const adminDoc = await getDocument('admins', uid);
   return !!adminDoc;
 }
@@ -32,41 +35,45 @@ export const GET: APIRoute = async ({ request, url }) => {
     }
 
     // Get pending requests (admin only)
+    // Uses pendingRoleRequests collection which is publicly readable (for REST API access)
     if (action === 'getPendingRequests') {
       const authHeader = request.headers.get('Authorization');
       const adminUid = authHeader?.replace('Bearer ', '');
-      
+
       if (!adminUid || !(await isAdmin(adminUid))) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Unauthorized' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Unauthorized'
         }), { status: 403 });
       }
 
-      const users = await queryCollection('users', {});
+      // Query the pendingRoleRequests collection (publicly readable)
+      const pendingRequests = await queryCollection('pendingRoleRequests', {
+        skipCache: true,
+        filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }]
+      });
+
       const requests = {
         artist: [] as any[],
         merchSeller: [] as any[],
         djBypass: [] as any[]
       };
 
-      users.forEach(user => {
-        const pending = user.pendingRoles || {};
-
-        if (pending.artist?.status === 'pending') {
-          requests.artist.push({ ...user, request: pending.artist });
-        }
-        if (pending.merchSeller?.status === 'pending') {
-          requests.merchSeller.push({ ...user, request: pending.merchSeller });
-        }
-        if (pending.djBypass?.status === 'pending') {
-          requests.djBypass.push({ ...user, request: pending.djBypass });
+      pendingRequests.forEach((req: any) => {
+        const roleType = req.roleType;
+        if (roleType === 'artist') {
+          requests.artist.push(req);
+        } else if (roleType === 'merchSeller') {
+          requests.merchSeller.push(req);
+        } else if (roleType === 'djBypass') {
+          requests.djBypass.push(req);
         }
       });
 
       return new Response(JSON.stringify({
         success: true,
-        requests
+        requests,
+        totalPending: pendingRequests.length
       }));
     }
 
@@ -149,10 +156,26 @@ export const POST: APIRoute = async ({ request }) => {
         requestData.reason = reason || '';
       }
 
+      // Update users collection (for client-side Firebase SDK access)
       await updateDocument('users', uid, {
         [`pendingRoles.${roleType}`]: requestData,
         updatedAt: new Date()
       });
+
+      // Also write to pendingRoleRequests collection (for REST API access)
+      // Document ID format: {uid}_{roleType}
+      const pendingRequestDoc = {
+        id: `${uid}_${roleType}`,
+        uid: uid,
+        userId: uid,
+        roleType: roleType,
+        displayName: userData.displayName || userData.name || '',
+        email: userData.email || '',
+        ...requestData
+      };
+
+      await setDocument('pendingRoleRequests', `${uid}_${roleType}`, pendingRequestDoc);
+      console.log(`[roles/manage] Created pendingRoleRequests/${uid}_${roleType}`);
 
       return new Response(JSON.stringify({
         success: true,
@@ -189,54 +212,91 @@ export const POST: APIRoute = async ({ request }) => {
         updatedAt: new Date()
       });
 
-      // Also update customers collection
+      // Also update customers collection - create if doesn't exist
       try {
-        await updateDocument('customers', uid, {
+        const existingCustomer = await getDocument('customers', uid);
+        const customerData = {
           [`roles.${roleKey}`]: true,
-          isArtist: roleType === 'artist' ? true : undefined,
-          isMerchSupplier: roleType === 'merchSeller' ? true : undefined,
+          isArtist: roleType === 'artist' ? true : (existingCustomer?.isArtist || false),
+          isMerchSupplier: roleType === 'merchSeller' ? true : (existingCustomer?.isMerchSupplier || false),
           approved: true,
           updatedAt: new Date().toISOString()
-        });
+        };
+
+        if (existingCustomer) {
+          await updateDocument('customers', uid, customerData);
+        } else {
+          // Create customers doc if it doesn't exist
+          await setDocument('customers', uid, {
+            uid: uid,
+            email: userData?.email || '',
+            displayName: userData?.displayName || '',
+            createdAt: new Date().toISOString(),
+            ...customerData
+          });
+          console.log(`[roles/manage] Created customers/${uid} during approval`);
+        }
       } catch (e) {
-        // Customers doc may not exist
+        console.error(`[roles/manage] Failed to update customers/${uid}:`, e);
+      }
+
+      // Delete from pendingRoleRequests collection
+      try {
+        await deleteDocument('pendingRoleRequests', `${uid}_${roleType}`);
+        console.log(`[roles/manage] Deleted pendingRoleRequests/${uid}_${roleType}`);
+      } catch (e) {
+        // May not exist if created before this system
+        console.log(`[roles/manage] pendingRoleRequests/${uid}_${roleType} not found (may be legacy)`);
       }
 
       // For artist or merchSeller roles, create/update artists collection entry
       if (roleType === 'artist' || roleType === 'merchSeller') {
-        const pendingData = userData?.pendingRoles?.[roleType] || {};
-        const existingArtist = await getDocument('artists', uid);
+        try {
+          const pendingData = userData?.pendingRoles?.[roleType] || {};
+          const existingArtist = await getDocument('artists', uid);
 
-        if (existingArtist) {
-          // Update existing artist record
-          await updateDocument('artists', uid, {
-            isArtist: roleType === 'artist' ? true : existingArtist.isArtist,
-            isMerchSupplier: roleType === 'merchSeller' ? true : existingArtist.isMerchSupplier,
-            approved: true,
-            approvedAt: new Date().toISOString(),
-            approvedBy: adminUid,
-            updatedAt: new Date().toISOString()
-          });
-        } else {
-          // Create new artist record
-          const { setDocument } = await import('../../../lib/firebase-rest');
-          await setDocument('artists', uid, {
+          const artistData = {
+            id: uid,
+            userId: uid,
             artistName: pendingData.artistName || userData?.displayName || userData?.name || 'Partner',
             name: userData?.fullName || userData?.name || userData?.displayName || '',
+            displayName: pendingData.artistName || userData?.displayName || '',
             email: userData?.email || '',
             phone: userData?.phone || '',
             bio: pendingData.bio || '',
             links: pendingData.links || '',
             businessName: pendingData.businessName || '',
             isArtist: roleType === 'artist',
+            isDJ: false,
             isMerchSupplier: roleType === 'merchSeller',
             approved: true,
             suspended: false,
             approvedAt: new Date().toISOString(),
             approvedBy: adminUid,
-            registeredAt: new Date().toISOString(),
-            createdAt: new Date().toISOString()
-          });
+            updatedAt: new Date().toISOString()
+          };
+
+          if (existingArtist) {
+            // Update existing artist record - merge with existing data
+            await updateDocument('artists', uid, {
+              ...artistData,
+              isArtist: roleType === 'artist' ? true : existingArtist.isArtist || false,
+              isMerchSupplier: roleType === 'merchSeller' ? true : existingArtist.isMerchSupplier || false,
+              createdAt: existingArtist.createdAt || new Date().toISOString()
+            });
+            console.log(`[roles/manage] Updated artists/${uid} for ${roleType} role`);
+          } else {
+            // Create new artist record
+            await setDocument('artists', uid, {
+              ...artistData,
+              registeredAt: new Date().toISOString(),
+              createdAt: new Date().toISOString()
+            });
+            console.log(`[roles/manage] Created artists/${uid} for ${roleType} role`);
+          }
+        } catch (artistError) {
+          console.error(`[roles/manage] Failed to create/update artists collection for ${uid}:`, artistError);
+          // Don't fail the whole approval - user role is still granted
         }
       }
 
@@ -259,16 +319,16 @@ export const POST: APIRoute = async ({ request }) => {
     // Deny role (admin action)
     if (action === 'denyRole') {
       if (!adminUid || !(await isAdmin(adminUid))) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Unauthorized' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Unauthorized'
         }), { status: 403 });
       }
 
       if (!uid || !roleType) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Missing uid or roleType' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Missing uid or roleType'
         }), { status: 400 });
       }
 
@@ -279,6 +339,14 @@ export const POST: APIRoute = async ({ request }) => {
         [`pendingRoles.${roleType}.denialReason`]: reason || '',
         updatedAt: new Date()
       });
+
+      // Delete from pendingRoleRequests collection
+      try {
+        await deleteDocument('pendingRoleRequests', `${uid}_${roleType}`);
+        console.log(`[roles/manage] Deleted pendingRoleRequests/${uid}_${roleType} (denied)`);
+      } catch (e) {
+        // May not exist if created before this system
+      }
 
       // Create notification for user
       await addDocument('notifications', {
@@ -299,25 +367,62 @@ export const POST: APIRoute = async ({ request }) => {
     // Revoke role (admin action)
     if (action === 'revokeRole') {
       if (!adminUid || !(await isAdmin(adminUid))) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Unauthorized' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Unauthorized'
         }), { status: 403 });
       }
 
       if (!uid || !roleType) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Missing uid or roleType' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Missing uid or roleType'
         }), { status: 400 });
       }
 
       const roleKey = roleType === 'djBypass' ? 'djEligible' : roleType;
 
+      // Update users collection
       await updateDocument('users', uid, {
         [`roles.${roleKey}`]: false,
         updatedAt: new Date()
       });
+
+      // Also update customers collection
+      try {
+        const existingCustomer = await getDocument('customers', uid);
+        if (existingCustomer) {
+          const customerUpdate: any = {
+            [`roles.${roleKey}`]: false,
+            updatedAt: new Date().toISOString()
+          };
+          if (roleType === 'artist') customerUpdate.isArtist = false;
+          if (roleType === 'merchSeller') customerUpdate.isMerchSupplier = false;
+          await updateDocument('customers', uid, customerUpdate);
+        }
+      } catch (e) {
+        console.error(`[roles/manage] Failed to update customers/${uid} during revoke:`, e);
+      }
+
+      // Update artists collection if revoking artist/merch role
+      if (roleType === 'artist' || roleType === 'merchSeller') {
+        try {
+          const existingArtist = await getDocument('artists', uid);
+          if (existingArtist) {
+            const artistUpdate: any = {
+              updatedAt: new Date().toISOString(),
+              revokedAt: new Date().toISOString(),
+              revokedBy: adminUid
+            };
+            if (roleType === 'artist') artistUpdate.isArtist = false;
+            if (roleType === 'merchSeller') artistUpdate.isMerchSupplier = false;
+            await updateDocument('artists', uid, artistUpdate);
+            console.log(`[roles/manage] Revoked ${roleType} from artists/${uid}`);
+          }
+        } catch (e) {
+          console.error(`[roles/manage] Failed to update artists/${uid} during revoke:`, e);
+        }
+      }
 
       return new Response(JSON.stringify({
         success: true,

@@ -87,24 +87,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
       let targetUserId: string | null = null;
       let userName: string | null = null;
 
-      // Try users collection first
-      const users = await queryCollection('users', {
-        filters: [{ field: 'email', op: 'EQUAL', value: email }],
-        limit: 1
-      });
+      // Search all user collections in parallel for efficiency
+      const [users, customers, artists] = await Promise.all([
+        queryCollection('users', {
+          filters: [{ field: 'email', op: 'EQUAL', value: email }],
+          limit: 1
+        }),
+        queryCollection('customers', {
+          filters: [{ field: 'email', op: 'EQUAL', value: email }],
+          limit: 1
+        }),
+        queryCollection('artists', {
+          filters: [{ field: 'email', op: 'EQUAL', value: email }],
+          limit: 1
+        })
+      ]);
+
       if (users.length > 0) {
         targetUserId = users[0].id;
         userName = users[0].displayName || users[0].name || null;
-      } else {
-        // Try customers collection
-        const customers = await queryCollection('customers', {
-          filters: [{ field: 'email', op: 'EQUAL', value: email }],
-          limit: 1
-        });
-        if (customers.length > 0) {
-          targetUserId = customers[0].id;
-          userName = customers[0].displayName || customers[0].firstName || null;
-        }
+      } else if (customers.length > 0) {
+        targetUserId = customers[0].id;
+        userName = customers[0].displayName || customers[0].firstName || null;
+      } else if (artists.length > 0) {
+        targetUserId = artists[0].id;
+        userName = artists[0].displayName || artists[0].artistName || artists[0].name || null;
       }
 
       if (!targetUserId) {
@@ -117,7 +124,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      // Grant bypass
+      // Grant bypass - write to djLobbyBypass collection
       await setDocument('djLobbyBypass', targetUserId, {
         email,
         name: userName,
@@ -126,18 +133,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
         grantedBy: 'admin'
       });
 
-      // Also set user's bypass flag
-      const existingUser = await getDocument('users', targetUserId);
+      // Set user's bypass flag - try update first, then create if doesn't exist
       const userUpdateData = {
         'go-liveBypassed': true,
         bypassedAt: new Date().toISOString(),
         bypassedBy: 'admin'
       };
 
-      if (existingUser) {
+      try {
+        // Try to update existing user document
         await updateDocument('users', targetUserId, userUpdateData);
-      } else {
-        await setDocument('users', targetUserId, userUpdateData);
+      } catch (updateError: any) {
+        // If update fails (doc doesn't exist or permission), try to create
+        try {
+          await setDocument('users', targetUserId, userUpdateData);
+        } catch (createError: any) {
+          // Log but don't fail - the djLobbyBypass entry was created successfully
+          console.warn(`[lobby-bypass] Could not set user bypass flag: ${createError.message}`);
+        }
       }
 
       console.log(`[lobby-bypass] Granted bypass to ${email} (${targetUserId})`);

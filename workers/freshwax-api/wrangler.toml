@@ -1,0 +1,37 @@
+# Cloudflare Worker Configuration
+# Fresh Wax API - Backend services for e-commerce and user management
+
+name = "freshwax-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Environment variables (non-secret)
+[vars]
+FIREBASE_PROJECT_ID = "freshwax-store"
+CORS_ORIGIN = "https://freshwax.co.uk"
+ENVIRONMENT = "production"
+
+# Production environment
+[env.production]
+name = "freshwax-api"
+routes = [
+  { pattern = "api.freshwax.co.uk/*", zone_name = "freshwax.co.uk" }
+]
+
+# Development environment
+[env.development]
+name = "freshwax-api-dev"
+vars = { ENVIRONMENT = "development", CORS_ORIGIN = "http://localhost:4321" }
+
+# Scheduled tasks (cron triggers)
+[triggers]
+crons = [
+  "0 */6 * * *",   # Every 6 hours - cleanup stale data
+  "0 9 * * *"      # Daily at 9am - send reminder emails
+]
+
+# Secrets (set via wrangler secret put):
+# - FIREBASE_SERVICE_ACCOUNT_KEY (JSON string)
+# - RESEND_API_KEY (for emails)
+# - ADMIN_SECRET_KEY (for admin operations)

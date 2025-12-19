@@ -144,30 +144,30 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
           </svg>
         </button>
         
-        <!-- Emoji Reactions -->
+        <!-- Emoji Reactions - disabled by default until stream is live -->
         <div class="inline-reactions">
-          <button id="likeBtn" class="reaction-btn" title="Love" data-emoji="❤️,💖,💗,💓,💕">
+          <button id="likeBtn" class="reaction-btn reactions-disabled" title="Love" data-emoji="❤️,💖,💗,💓,💕" disabled>
             <span class="reaction-emoji">❤️</span>
           </button>
-          <button id="fireBtn" class="reaction-btn" title="Fire" data-emoji="🔥,🔥,🔥,🔥,🔥">
+          <button id="fireBtn" class="reaction-btn reactions-disabled" title="Fire" data-emoji="🔥,🔥,🔥,🔥,🔥" disabled>
             <span class="reaction-emoji">🔥</span>
           </button>
-          <button id="explosionBtn" class="reaction-btn" title="Explosion" data-emoji="💥,💥,💥,💥,💥">
+          <button id="explosionBtn" class="reaction-btn reactions-disabled" title="Explosion" data-emoji="💥,💥,💥,💥,💥" disabled>
             <span class="reaction-emoji">💥</span>
           </button>
-          <button id="starBtn" class="reaction-btn" title="Star" data-emoji="⭐,🌟,✨,⭐,🌟">
+          <button id="starBtn" class="reaction-btn reactions-disabled" title="Star" data-emoji="⭐,🌟,✨,⭐,🌟" disabled>
             <span class="reaction-emoji">⭐</span>
           </button>
-          <button id="bassBtn" class="reaction-btn" title="Bass" data-emoji="🔊,🔊,🔉,🔊,🎵">
+          <button id="bassBtn" class="reaction-btn reactions-disabled" title="Bass" data-emoji="🔊,🔊,🔉,🔊,🎵" disabled>
             <span class="reaction-emoji">🔊</span>
           </button>
-          <button id="fistBtn" class="reaction-btn" title="Fist" data-emoji="👊,👊,👊,👊,👊">
+          <button id="fistBtn" class="reaction-btn reactions-disabled" title="Fist" data-emoji="👊,👊,👊,👊,👊" disabled>
             <span class="reaction-emoji">👊</span>
           </button>
-          <button id="rocketBtn" class="reaction-btn" title="Rocket" data-emoji="🚀,🚀,🚀,🚀,🚀">
+          <button id="rocketBtn" class="reaction-btn reactions-disabled" title="Rocket" data-emoji="🚀,🚀,🚀,🚀,🚀" disabled>
             <span class="reaction-emoji">🚀</span>
           </button>
-          <button id="animToggleBtn" class="reaction-btn anim-toggle-btn" title="Turn off emoji animations">
+          <button id="animToggleBtn" class="reaction-btn anim-toggle-btn reactions-disabled" title="Turn off emoji animations" disabled>
             <svg class="anim-on-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
             <svg class="anim-off-icon hidden" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
           </button>
@@ -238,37 +238,50 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     <!-- Chat Sidebar -->
     <aside class="chat-section">
       <div class="chat-header">
-        <h3>LIVE CHAT</h3>
+        <div class="chat-tabs">
+          <button class="chat-tab active" data-chat="freshwax" id="fwChatTab">
+            <span class="tab-icon">💬</span>
+            <span>Fresh Wax</span>
+          </button>
+          <button class="chat-tab hidden" data-chat="twitch" id="twitchChatTab">
+            <svg class="twitch-tab-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+            </svg>
+            <span>Twitch</span>
+          </button>
+        </div>
         <span class="chat-viewers" id="chatViewers">0 watching</span>
       </div>
       
-      <div class="chat-messages" id="chatMessages">
-        <div class="chat-welcome">
-          <p>Welcome to <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span> Live!</p>
-          <p class="chat-hint">Chat is active during live streams.</p>
-        </div>
-      </div>
-      
-      <div id="chatInputSection" class="chat-input-section">
-        <div id="loginPrompt" class="login-prompt">
-          <p><a href="/login?redirect=/live/fullpage">Sign in</a> to chat</p>
-        </div>
-        
-        <div id="chatForm" class="chat-form hidden">
-          <div class="chat-tools">
-            <button type="button" id="emojiBtn" class="tool-btn" title="Emojis">😊</button>
-            <button type="button" id="giphyBtn" class="tool-btn" title="GIFs">GIF</button>
-          </div>
-          <div class="chat-input-wrapper">
-            <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
-            <button type="submit" id="sendBtn">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-            </button>
+      <!-- Fresh Wax Chat Container -->
+      <div id="fwChatContainer" class="chat-container active">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-welcome">
+            <p>Welcome to <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span> Live!</p>
+            <p class="chat-hint">Chat is active during live streams.</p>
           </div>
         </div>
-      </div>
-      
-      <div id="emojiPicker" class="emoji-picker hidden">
+
+        <div id="chatInputSection" class="chat-input-section">
+          <div id="loginPrompt" class="login-prompt">
+            <p><a href="/login?redirect=/live/fullpage">Sign in</a> to chat</p>
+          </div>
+
+          <div id="chatForm" class="chat-form hidden">
+            <div class="chat-tools">
+              <button type="button" id="emojiBtn" class="tool-btn" title="Emojis">😊</button>
+              <button type="button" id="giphyBtn" class="tool-btn" title="GIFs">GIF</button>
+            </div>
+            <div class="chat-input-wrapper">
+              <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
+              <button type="submit" id="sendBtn">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="emojiPicker" class="emoji-picker hidden">
         <div class="emoji-categories">
           <button class="emoji-cat active" data-cat="music">Music</button>
           <button class="emoji-cat" data-cat="reactions">Fire</button>
@@ -284,6 +297,23 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
         </div>
         <div class="giphy-grid" id="giphyGrid">
           <p class="giphy-hint">Search for a GIF above</p>
+        </div>
+      </div>
+      </div>
+
+      <!-- Twitch Chat Container -->
+      <div id="twitchChatContainer" class="chat-container hidden">
+        <iframe
+          id="twitchChatFrame"
+          class="twitch-chat-frame"
+          allow="autoplay"
+          allowfullscreen
+        ></iframe>
+        <div class="twitch-chat-placeholder" id="twitchChatPlaceholder">
+          <svg class="twitch-placeholder-icon" viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+          </svg>
+          <p>Twitch chat will appear when the DJ is streaming on Twitch</p>
         </div>
       </div>
     </aside>
@@ -420,11 +450,11 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(circle at center, #1a1a1a 0%, #0a0a0a 100%);
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1033 25%, #2d1b4e 50%, #1a1033 75%, #0a0a1a 100%);
   }
   
   .offline-content { text-align: center; }
-  .offline-icon { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 4rem; color: #333; letter-spacing: 0.25rem; margin-bottom: 1rem; }
+  .offline-icon { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; color: #666; letter-spacing: 0.25rem; margin-bottom: 1rem; }
   .offline-content h2 { font-size: 1.25rem; color: #666; margin-bottom: 0.5rem; }
   .offline-content p { font-size: 0.875rem; color: #555; }
   
@@ -510,8 +540,8 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .reaction-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); transform: scale(1.1); }
   .reaction-btn:active { transform: scale(0.95); }
   .reaction-btn.liked { transform: scale(1.2); }
-  .reaction-btn.disabled { opacity: 0.5; cursor: not-allowed; }
-  .reaction-btn.disabled:hover { transform: none; background: rgba(255,255,255,0.05); }
+  .reaction-btn.disabled, .reaction-btn.reactions-disabled, .reaction-btn:disabled { opacity: 0.3; filter: grayscale(100%); cursor: not-allowed; pointer-events: none; }
+  .reaction-btn.disabled:hover, .reaction-btn.reactions-disabled:hover, .reaction-btn:disabled:hover { transform: none; background: rgba(255,255,255,0.05); }
   .reaction-emoji { font-size: 1.25rem; }
   
   .reaction-btn.anim-toggle-btn { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); }
@@ -579,9 +609,28 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .np-genre { font-size: 0.75rem; color: #dc2626; background: rgba(220, 38, 38, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px; }
   
   .chat-section { display: flex; flex-direction: column; background: #111; border-left: 2px solid #222; }
-  .chat-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #0a0a0a; border-bottom: 2px solid #222; }
+  .chat-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: #0a0a0a; border-bottom: 2px solid #222; }
   .chat-header h3 { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.125rem; letter-spacing: 1px; }
   .chat-viewers { font-size: 0.75rem; color: #888; }
+
+  /* Chat Tabs */
+  .chat-tabs { display: flex; gap: 0.5rem; }
+  .chat-tab { display: flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.75rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #888; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .chat-tab:hover { background: #333; color: #fff; }
+  .chat-tab.active { background: #dc2626; border-color: #dc2626; color: #fff; }
+  .chat-tab.hidden { display: none; }
+  .chat-tab[data-chat="twitch"].active { background: #9146ff; border-color: #9146ff; }
+  .twitch-tab-icon { fill: currentColor; }
+
+  /* Chat Containers */
+  .chat-container { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+  .chat-container.active { display: flex; }
+
+  /* Twitch Chat */
+  .twitch-chat-frame { width: 100%; height: 100%; border: none; background: #18181b; }
+  .twitch-chat-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #666; text-align: center; padding: 2rem; }
+  .twitch-placeholder-icon { fill: #9146ff; opacity: 0.5; margin-bottom: 1rem; }
+  .twitch-chat-placeholder p { font-size: 0.875rem; }
   .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
   .chat-welcome { text-align: center; padding: 2rem; color: #9ca3af; }
   .chat-welcome p { font-size: 0.875rem; margin-bottom: 0.5rem; }
@@ -799,6 +848,21 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     }
   }
   
+  // Enable/disable reaction buttons based on stream status
+  function setReactionButtonsEnabled(enabled) {
+    const reactionButtons = document.querySelectorAll('.reaction-btn, .anim-toggle-btn');
+    reactionButtons.forEach(btn => {
+      if (enabled) {
+        btn.classList.remove('reactions-disabled');
+        btn.disabled = false;
+      } else {
+        btn.classList.add('reactions-disabled');
+        btn.disabled = true;
+      }
+    });
+    window.emojiAnimationsEnabled = enabled;
+  }
+
   async function loadStreamStatus() {
     try {
       // Add cache buster to prevent stale cached responses
@@ -809,7 +873,10 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       if (result.isLive && result.streams && result.streams.length > 0) {
         const stream = result.streams[0];
         currentStream = stream;
-        
+
+        // Enable reaction buttons when live
+        setReactionButtonsEnabled(true);
+
         document.getElementById('liveBadge')?.classList.add('is-live');
         document.getElementById('liveStatusText').textContent = 'LIVE';
         document.getElementById('streamTitle').textContent = stream.title || 'Live Stream';
@@ -844,9 +911,78 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
         
         // Register as listener if logged in
         registerAsListener();
+
+        // Setup Twitch chat if DJ has Twitch channel
+        setupTwitchChat(stream.twitchChannel || stream.twitchUsername);
       }
     } catch (e) { console.error('Error loading stream:', e); }
   }
+
+  // Twitch Chat Integration
+  let currentTwitchChannel = null;
+
+  function setupTwitchChat(twitchChannel) {
+    const twitchTab = document.getElementById('twitchChatTab');
+    const twitchContainer = document.getElementById('twitchChatContainer');
+    const twitchFrame = document.getElementById('twitchChatFrame');
+    const twitchPlaceholder = document.getElementById('twitchChatPlaceholder');
+
+    if (twitchChannel && twitchChannel.trim()) {
+      // Show Twitch tab
+      twitchTab?.classList.remove('hidden');
+      currentTwitchChannel = twitchChannel.trim().toLowerCase();
+
+      // Set up iframe URL with parent domain
+      const host = window.location.hostname;
+      const twitchChatUrl = `https://www.twitch.tv/embed/${currentTwitchChannel}/chat?parent=${host}&darkpopout`;
+
+      if (twitchFrame) {
+        twitchFrame.src = twitchChatUrl;
+        twitchPlaceholder?.classList.add('hidden');
+      }
+    } else {
+      // Hide Twitch tab if no channel
+      twitchTab?.classList.add('hidden');
+      currentTwitchChannel = null;
+
+      // Switch to Fresh Wax chat if currently on Twitch
+      const activeTwitchTab = document.querySelector('.chat-tab[data-chat="twitch"].active');
+      if (activeTwitchTab) {
+        switchChat('freshwax');
+      }
+    }
+  }
+
+  function switchChat(chatType) {
+    const tabs = document.querySelectorAll('.chat-tab');
+    const containers = document.querySelectorAll('.chat-container');
+
+    tabs.forEach(tab => {
+      if (tab.dataset.chat === chatType) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+
+    containers.forEach(container => {
+      if (container.id === `${chatType}ChatContainer`) {
+        container.classList.add('active');
+      } else {
+        container.classList.remove('active');
+      }
+    });
+  }
+
+  // Chat tab click handlers
+  document.querySelectorAll('.chat-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const chatType = tab.dataset.chat;
+      if (chatType) {
+        switchChat(chatType);
+      }
+    });
+  });
   
   document.getElementById('playPauseBtn')?.addEventListener('click', () => {
     const audio = document.getElementById('audioElement');

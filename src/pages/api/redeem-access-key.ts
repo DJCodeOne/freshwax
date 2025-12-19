@@ -93,9 +93,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Check if user already has bypass access
-    const userDoc = await getDocument('users', userId);
-    if (userDoc && userDoc['go-liveBypassed'] === true) {
+    // Check if user already has bypass access (check djLobbyBypass which is publicly readable)
+    const existingBypass = await getDocument('djLobbyBypass', userId);
+    if (existingBypass) {
       return new Response(JSON.stringify({
         success: false,
         error: 'You already have DJ lobby access'
@@ -107,21 +107,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const now = new Date().toISOString();
 
-    // Grant bypass access to user (same as admin-granted bypass)
-    const userUpdateData = {
-      'go-liveBypassed': true,
-      bypassedAt: now,
-      bypassedBy: 'quick-access-key',
-      quickAccessCode: code.toUpperCase()
-    };
-
-    if (userDoc) {
-      await updateDocument('users', userId, userUpdateData);
-    } else {
-      await setDocument('users', userId, userUpdateData);
-    }
-
-    // Add to djLobbyBypass collection for tracking
+    // Add to djLobbyBypass collection first (publicly writable)
     await setDocument('djLobbyBypass', userId, {
       email: userEmail || null,
       name: userName || null,
@@ -131,7 +117,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
       quickAccessCode: code.toUpperCase()
     });
 
-    // Update the key document with this redemption
+    // Also set user's bypass flag - try update first, then create if doesn't exist
+    const userUpdateData = {
+      'go-liveBypassed': true,
+      bypassedAt: now,
+      bypassedBy: 'quick-access-key',
+      quickAccessCode: code.toUpperCase()
+    };
+
+    try {
+      await updateDocument('users', userId, userUpdateData);
+    } catch (updateError: any) {
+      try {
+        await setDocument('users', userId, userUpdateData);
+      } catch (createError: any) {
+        // Log but don't fail - djLobbyBypass entry was created successfully
+        console.warn(`[redeem-access-key] Could not set user bypass flag: ${createError.message}`);
+      }
+    }
+
+    // Update the key document with this redemption (use updateDocument to only change usedBy field)
     const updatedUsedBy = [
       ...usedBy,
       {
@@ -142,8 +147,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     ];
 
-    await setDocument('system', 'quickAccessKey', {
-      ...keyDoc,
+    await updateDocument('system', 'quickAccessKey', {
       usedBy: updatedUsedBy
     });
 

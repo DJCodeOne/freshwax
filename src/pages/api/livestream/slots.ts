@@ -249,15 +249,15 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     if (!slots) {
       const allSlots = await queryCollection('livestreamSlots', { skipCache: true });
-      slots = allSlots.filter(slot => slot.startTime >= startDate && slot.startTime <= endDate);
-      if (djId) slots = slots.filter(slot => slot.djId === djId);
+      slots = allSlots.filter((slot: any) => slot.startTime >= startDate && slot.startTime <= endDate);
+      if (djId) slots = slots.filter((slot: any) => slot.djId === djId);
       setCache(cacheKey, slots);
     }
 
     const now = new Date().toISOString();
     // Find any slot that's currently live (regardless of scheduled end time - they might still be streaming)
-    const liveSlot = slots.find(slot => slot.status === 'live');
-    const upcomingSlots = slots.filter(slot => slot.startTime > now && ['scheduled', 'in_lobby', 'queued'].includes(slot.status));
+    const liveSlot = slots.find((slot: any) => slot.status === 'live');
+    const upcomingSlots = slots.filter((slot: any) => slot.startTime > now && ['scheduled', 'in_lobby', 'queued'].includes(slot.status));
 
     return new Response(JSON.stringify({
       success: true,
@@ -835,7 +835,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // GO LIVE - Validate stream is active and mark as live
     if (action === 'go_live') {
-      const { djId, djName, streamKey, title, genre } = data;
+      const { djId, djName, streamKey, title, genre, twitchUsername, twitchStreamKey } = data;
 
       if (!djId || !djName || !streamKey) {
         return new Response(JSON.stringify({ success: false, error: 'DJ ID, name, and stream key required' }), {
@@ -857,28 +857,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
-      // TODO: Validate that OBS is actually streaming with this key
-      // For now, we'll check if MediaMTX has the stream by checking the HLS endpoint
-      // In production, you'd query MediaMTX's API for active streams
+      // Validate that the stream is actually active before going live
       const hlsCheckUrl = buildHlsUrl(streamKey);
       let streamActive = false;
+      let streamCheckAttempts = 0;
+      const maxAttempts = 2;
 
-      try {
-        // Try to check if stream is active (HEAD request to HLS manifest)
-        const checkResponse = await fetch(hlsCheckUrl.replace('/index.m3u8', '/'), {
-          method: 'HEAD',
-          signal: AbortSignal.timeout(5000)
-        });
-        streamActive = checkResponse.ok || checkResponse.status === 200;
-      } catch (e) {
-        // If check fails, assume stream is active (more lenient for now)
-        // In production, implement proper MediaMTX API check
-        console.log('[go_live] Stream check failed, assuming active:', e);
-        streamActive = true;
+      while (streamCheckAttempts < maxAttempts && !streamActive) {
+        streamCheckAttempts++;
+        try {
+          const checkResponse = await fetch(hlsCheckUrl.replace('/index.m3u8', '/'), {
+            method: 'HEAD',
+            signal: AbortSignal.timeout(5000)
+          });
+          streamActive = checkResponse.ok || checkResponse.status === 200;
+          if (!streamActive && streamCheckAttempts < maxAttempts) {
+            await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
+          }
+        } catch (e) {
+          console.warn(`[go_live] Stream check attempt ${streamCheckAttempts} failed:`, e);
+          if (streamCheckAttempts < maxAttempts) {
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        }
       }
 
-      // For now, accept go_live request even if we can't verify
-      // The DJ clicked "Ready" which implies they've started streaming
+      // If stream check failed after retries, warn but allow (DJ clicked Ready)
+      if (!streamActive) {
+        console.warn('[go_live] Could not verify stream, proceeding with DJ confirmation');
+      }
 
       // Calculate end time (top of next hour)
       const endTime = new Date(now);
@@ -908,6 +915,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         viewerPeak: 0,
         totalViews: 0,
         currentViewers: 0,
+        twitchUsername: twitchUsername || null, // For Twitch chat integration
+        twitchStreamKey: twitchStreamKey || null, // DJ's personal Twitch stream key for multi-streaming
       };
 
       try {

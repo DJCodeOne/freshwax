@@ -75,68 +75,52 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artists: false
     };
 
-    // Update customers collection
+    // Update customers collection - only include provided fields
     try {
       const customerDoc = await getDocument('customers', userId);
       if (customerDoc) {
-        await updateDocument('customers', userId, {
-          displayName: updates.displayName,
-          name: updates.fullName || updates.displayName,
-          fullName: updates.fullName,
-          email: updates.email,
-          phone: updates.phone,
-          address: updates.address,
-          isDJ: updates.roles?.dj ?? true,
-          isArtist: updates.roles?.artist ?? false,
-          isMerchSupplier: updates.roles?.merchSupplier ?? false,
-          isAdmin: updates.isAdmin ?? false,
-          roles: updates.roles,
-          permissions: updates.permissions,
-          approved: updates.approved,
-          suspended: updates.suspended,
-          adminNotes: updates.adminNotes || '',
-          updatedAt: timestamp
-        });
-        results.customers = true;
-      } else {
-        // Create customer doc if doesn't exist
-        await setDocument('customers', userId, {
-          displayName: updates.displayName,
-          name: updates.fullName || updates.displayName,
-          fullName: updates.fullName,
-          email: updates.email,
-          phone: updates.phone,
-          address: updates.address,
-          isDJ: updates.roles?.dj ?? true,
-          isArtist: updates.roles?.artist ?? false,
-          isMerchSupplier: updates.roles?.merchSupplier ?? false,
-          isAdmin: updates.isAdmin ?? false,
-          roles: updates.roles,
-          permissions: updates.permissions,
-          approved: updates.approved,
-          suspended: updates.suspended,
-          adminNotes: updates.adminNotes || '',
-          createdAt: timestamp,
-          updatedAt: timestamp
-        });
+        const customerUpdate: any = { updatedAt: timestamp };
+
+        if (updates.displayName !== undefined) {
+          customerUpdate.displayName = updates.displayName;
+          customerUpdate.name = updates.fullName || updates.displayName;
+        }
+        if (updates.fullName !== undefined) customerUpdate.fullName = updates.fullName;
+        if (updates.email !== undefined) customerUpdate.email = updates.email;
+        if (updates.phone !== undefined) customerUpdate.phone = updates.phone;
+        if (updates.address !== undefined) customerUpdate.address = updates.address;
+        if (updates.roles !== undefined) {
+          customerUpdate.roles = updates.roles;
+          customerUpdate.isDJ = updates.roles.dj ?? true;
+          customerUpdate.isArtist = updates.roles.artist ?? false;
+          customerUpdate.isMerchSupplier = updates.roles.merchSupplier ?? false;
+        }
+        if (updates.isAdmin !== undefined) customerUpdate.isAdmin = updates.isAdmin;
+        if (updates.permissions !== undefined) customerUpdate.permissions = updates.permissions;
+        if (updates.approved !== undefined) customerUpdate.approved = updates.approved;
+        if (updates.suspended !== undefined) customerUpdate.suspended = updates.suspended;
+        if (updates.adminNotes !== undefined) customerUpdate.adminNotes = updates.adminNotes;
+
+        await updateDocument('customers', userId, customerUpdate);
         results.customers = true;
       }
     } catch (e) {
       console.error('[update-user] Error updating customers:', e);
     }
 
-    // Update users collection
+    // Update users collection - only include provided fields
     try {
       const userDoc = await getDocument('users', userId);
       if (userDoc) {
-        await updateDocument('users', userId, {
-          displayName: updates.displayName,
-          approved: updates.approved,
-          isAdmin: updates.isAdmin ?? false,
-          roles: updates.roles,
-          permissions: updates.permissions,
-          updatedAt: timestamp
-        });
+        const userUpdate: any = { updatedAt: timestamp };
+
+        if (updates.displayName !== undefined) userUpdate.displayName = updates.displayName;
+        if (updates.approved !== undefined) userUpdate.approved = updates.approved;
+        if (updates.isAdmin !== undefined) userUpdate.isAdmin = updates.isAdmin;
+        if (updates.roles !== undefined) userUpdate.roles = updates.roles;
+        if (updates.permissions !== undefined) userUpdate.permissions = updates.permissions;
+
+        await updateDocument('users', userId, userUpdate);
         results.users = true;
       }
     } catch (e) {
@@ -149,19 +133,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         const artistDoc = await getDocument('artists', userId);
         if (artistDoc) {
-          await updateDocument('artists', userId, {
-            artistName: updates.displayName,
-            displayName: updates.displayName,
-            name: updates.fullName || updates.displayName,
-            email: updates.email,
-            phone: updates.phone,
-            isArtist: updates.roles?.artist ?? false,
-            isMerchSupplier: updates.roles?.merchSupplier ?? false,
-            approved: updates.approved,
-            suspended: updates.suspended,
-            adminNotes: updates.adminNotes || '',
-            updatedAt: timestamp
-          });
+          // Only include fields that are explicitly provided
+          const artistUpdate: any = { updatedAt: timestamp };
+
+          if (updates.displayName !== undefined) {
+            artistUpdate.artistName = updates.displayName;
+            artistUpdate.displayName = updates.displayName;
+            artistUpdate.name = updates.fullName || updates.displayName;
+          }
+          if (updates.email !== undefined) artistUpdate.email = updates.email;
+          if (updates.phone !== undefined) artistUpdate.phone = updates.phone;
+          if (updates.roles?.artist !== undefined) artistUpdate.isArtist = updates.roles.artist;
+          if (updates.roles?.merchSupplier !== undefined) artistUpdate.isMerchSupplier = updates.roles.merchSupplier;
+          if (updates.approved !== undefined) artistUpdate.approved = updates.approved;
+          if (updates.suspended !== undefined) artistUpdate.suspended = updates.suspended;
+          if (updates.adminNotes !== undefined) artistUpdate.adminNotes = updates.adminNotes;
+
+          await updateDocument('artists', userId, artistUpdate);
           results.artists = true;
         } else if (updates.roles?.artist || updates.roles?.merchSupplier) {
           // Create artist doc if user has artist/merch roles

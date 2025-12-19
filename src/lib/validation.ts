@@ -1,5 +1,122 @@
 // src/lib/validation.ts
-// Shared validation utilities
+// Shared validation utilities with Zod schemas
+import { z } from 'zod';
+
+// ============================================
+// ZOD SCHEMAS FOR INPUT VALIDATION
+// ============================================
+
+// Sanitize string to prevent XSS
+export function sanitizeString(str: string): string {
+  return str
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
+// Common field schemas
+export const emailSchema = z.string().email().max(255).transform(s => s.toLowerCase().trim());
+export const nameSchema = z.string().min(1).max(100).transform(s => sanitizeString(s.trim()));
+export const textSchema = z.string().max(1000).transform(s => sanitizeString(s.trim()));
+export const longTextSchema = z.string().max(5000).transform(s => sanitizeString(s.trim()));
+export const urlSchema = z.string().url().max(500).optional();
+export const idSchema = z.string().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/);
+export const adminKeySchema = z.string().min(1).max(128);
+
+// Order schemas
+export const customerSchema = z.object({
+  email: emailSchema,
+  firstName: nameSchema,
+  lastName: nameSchema,
+  phone: z.string().max(20).optional(),
+});
+
+export const addressSchema = z.object({
+  line1: z.string().min(1).max(200).transform(s => sanitizeString(s.trim())),
+  line2: z.string().max(200).transform(s => sanitizeString(s.trim())).optional(),
+  city: z.string().min(1).max(100).transform(s => sanitizeString(s.trim())),
+  postcode: z.string().min(1).max(20).transform(s => sanitizeString(s.trim())),
+  country: z.string().min(2).max(2).default('GB'),
+});
+
+export const orderItemSchema = z.object({
+  id: idSchema,
+  type: z.enum(['release', 'merch', 'giftcard']),
+  title: z.string().max(200),
+  quantity: z.number().int().min(1).max(100),
+  price: z.number().min(0).max(10000),
+  artistId: idSchema.optional(),
+  size: z.string().max(10).optional(),
+  color: z.string().max(50).optional(),
+});
+
+export const createOrderSchema = z.object({
+  customer: customerSchema,
+  shipping: addressSchema,
+  items: z.array(orderItemSchema).min(1).max(50),
+  giftCardCode: z.string().max(50).optional(),
+  notes: textSchema.optional(),
+});
+
+// DJ Mix schemas
+export const djMixSchema = z.object({
+  title: z.string().min(1).max(200).transform(s => sanitizeString(s.trim())),
+  djName: z.string().min(1).max(100).transform(s => sanitizeString(s.trim())),
+  genre: z.string().max(50).transform(s => sanitizeString(s.trim())).optional(),
+  description: longTextSchema.optional(),
+  tracklist: longTextSchema.optional(),
+  userId: idSchema,
+});
+
+// Livestream schemas
+export const livestreamSlotSchema = z.object({
+  djId: idSchema,
+  djName: z.string().min(1).max(100).transform(s => sanitizeString(s.trim())),
+  title: z.string().min(1).max(200).transform(s => sanitizeString(s.trim())),
+  genre: z.string().max(50).transform(s => sanitizeString(s.trim())).optional(),
+  startTime: z.string(),
+  endTime: z.string(),
+});
+
+export const chatMessageSchema = z.object({
+  userId: idSchema,
+  userName: z.string().min(1).max(50).transform(s => sanitizeString(s.trim())),
+  message: z.string().min(1).max(500).transform(s => sanitizeString(s.trim())),
+  isGif: z.boolean().optional(),
+});
+
+// Admin schemas
+export const bypassGrantSchema = z.object({
+  action: z.enum(['grant', 'revoke']),
+  email: emailSchema.optional(),
+  userId: idSchema.optional(),
+  reason: textSchema.optional(),
+  adminKey: adminKeySchema,
+});
+
+export const moderationSchema = z.object({
+  action: z.enum(['ban', 'unban', 'hold', 'release', 'kick']),
+  email: emailSchema.optional(),
+  userId: idSchema.optional(),
+  reason: textSchema.optional(),
+  adminKey: adminKeySchema,
+});
+
+// Validation helper
+export function validateRequest<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; error: string } {
+  const result = schema.safeParse(data);
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+  const errors = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+  return { success: false, error: `Validation failed: ${errors}` };
+}
+
+// ============================================
+// PROFANITY FILTER
+// ============================================
 
 // Profanity filter - comprehensive list
 const PROFANITY_LIST = [

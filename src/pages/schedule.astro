@@ -68,7 +68,7 @@ export const prerender = false;
           </div>
         </div>
         <p>Prove yourself to the community and earn your spot on the schedule</p>
-        <a href="/account/go-live" class="cta-btn">Book a Slot →</a>
+        <a href="/dj-lobby/book" class="cta-btn">Book a Slot →</a>
       </div>
     </div>
   </main>
@@ -79,319 +79,335 @@ export const prerender = false;
 <style is:global>
   .schedule-main {
     min-height: 100vh;
-    background: #fff;
-    padding: 2rem 1rem;
+    background: linear-gradient(to bottom, #000 0%, #111 100%);
+    padding: 1rem;
   }
-  
+
   .container {
-    max-width: 900px;
+    max-width: 1400px;
     margin: 0 auto;
   }
-  
+
   .schedule-header {
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
   }
-  
+
   .schedule-header h1 {
-    font-family: 'Inter', sans-serif; font-weight: 700;
-    font-size: 3rem;
-    color: #111;
-    margin: 0 0 0.5rem 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.5rem;
+    color: #fff;
+    margin: 0 0 0.25rem 0;
+    letter-spacing: 0.02em;
   }
-  
+
   .schedule-header .red {
     color: #dc2626;
   }
-  
+
   .schedule-header p {
-    color: #666;
-    font-size: 1.125rem;
+    color: #888;
+    font-size: 1rem;
   }
-  
+
   .day-nav {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     flex-wrap: wrap;
   }
-  
+
   .nav-btn {
-    background: #111;
+    background: #dc2626;
     color: #fff;
     border: none;
     padding: 0.5rem 1rem;
     font-weight: 700;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     cursor: pointer;
     transition: background 0.2s;
+    border-radius: 4px;
   }
-  
+
   .nav-btn:hover {
-    background: #dc2626;
+    background: #b91c1c;
   }
-  
+
   .day-selector {
     display: flex;
     gap: 0.25rem;
   }
-  
+
   .day-btn {
-    background: #f5f5f5;
-    border: 2px solid #e5e7eb;
+    background: #1f2937;
+    border: 2px solid #374151;
     padding: 0.5rem 0.75rem;
     font-weight: 600;
-    font-size: 0.75rem;
-    color: #111;
+    font-size: 0.7rem;
+    color: #fff;
     cursor: pointer;
     transition: all 0.2s;
     min-width: 70px;
     text-align: center;
+    border-radius: 4px;
   }
-  
+
   .day-btn:hover {
-    background: #e5e7eb;
+    background: #374151;
+    border-color: #4b5563;
   }
-  
+
   .day-btn.active {
     background: #dc2626;
     color: #fff;
     border-color: #dc2626;
   }
-  
+
   .day-btn.today-marker {
     border-color: #dc2626;
   }
-  
+
   .selected-date {
     text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .selected-date h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    color: #fff;
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+
+  .selected-date p {
+    color: #888;
+    font-size: 0.875rem;
+    margin: 0.125rem 0 0 0;
+  }
+
+  .calendar-container {
+    background: #1a1a1a;
+    border: 2px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
     margin-bottom: 1.5rem;
   }
-  
-  .selected-date h2 {
-    font-family: 'Inter', sans-serif; font-weight: 700;
-    font-size: 2rem;
-    color: #111;
-    margin: 0;
-  }
-  
-  .selected-date p {
-    color: #666;
-    font-size: 1rem;
-    margin: 0.25rem 0 0 0;
-  }
-  
-  .calendar-container {
-    background: #fff;
-    border: 2px solid #111;
-    overflow: hidden;
-    margin-bottom: 2rem;
-  }
-  
+
   .daily-calendar {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    background: #333;
+  }
+
+  /* Each hour cell */
+  .hour-row {
+    background: #1a1a1a;
     display: flex;
     flex-direction: column;
+    min-height: 55px;
   }
-  
-  /* Each hour row - stacked time on top, booking below */
-  .hour-row {
-    border-bottom: 1px solid #e0e0e0;
-    min-height: 70px;
-  }
-  
-  .hour-row:last-child {
-    border-bottom: none;
-  }
-  
+
   .hour-row:nth-child(even) {
-    background: #fafafa;
+    background: #151515;
   }
-  
-  /* Time label - centered at top of row */
+
+  /* Time label at top of cell */
   .hour-time {
     text-align: center;
-    padding: 0.6rem;
-    font-size: 1.1rem;
-    font-weight: 700;
+    padding: 0.25rem 0.15rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
     color: #dc2626;
-    background: rgba(0,0,0,0.03);
-    border-bottom: 1px solid #eee;
+    background: rgba(220, 38, 38, 0.1);
+    border-bottom: 1px solid #333;
+    line-height: 1;
   }
-  
+
   /* Booking area below time */
   .hour-content {
+    flex: 1;
     position: relative;
-    min-height: 50px;
-    padding: 0.25rem;
+    padding: 0.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 28px;
   }
-  
+
   /* Slot blocks inside booking area */
   .slot-block {
     background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
     color: #fff;
-    border-radius: 6px;
+    border-radius: 4px;
     overflow: hidden;
     cursor: pointer;
     transition: transform 0.1s, box-shadow 0.1s;
-    margin: 0.25rem;
     position: relative;
+    flex: 1;
   }
-  
+
   .slot-block:hover {
-    transform: scale(1.01);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    z-index: 10;
   }
-  
+
   .slot-block.live {
     background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
     animation: pulse-glow 2s infinite;
   }
-  
+
   .slot-block.in_lobby {
     background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
     color: #000;
   }
-  
+
   .slot-block.completed {
-    background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
-    opacity: 0.7;
+    background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
+    opacity: 0.6;
   }
-  
+
   .slot-inner {
-    padding: 0.75rem 0.5rem;
+    padding: 0.2rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     text-align: center;
+    height: 100%;
   }
-  
+
   .slot-dj {
     font-weight: 700;
-    font-size: 1rem;
-    line-height: 1.2;
+    font-size: 0.6rem;
+    line-height: 1.1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
   }
-  
+
   .slot-title {
-    font-size: 0.85rem;
-    opacity: 0.9;
+    font-size: 0.5rem;
+    opacity: 0.85;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    line-height: 1.2;
+    line-height: 1.1;
     max-width: 100%;
-    margin-top: 0.125rem;
+    display: none;
   }
-  
+
   .slot-time {
-    font-size: 0.75rem;
+    font-size: 0.45rem;
     font-weight: 600;
-    opacity: 0.85;
-    display: flex;
+    opacity: 0.8;
+    display: none;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 0.15rem;
     white-space: nowrap;
-    margin-top: 0.25rem;
   }
-  
+
   .slot-duration {
     background: rgba(255,255,255,0.2);
-    padding: 0.125rem 0.375rem;
-    border-radius: 3px;
-    font-size: 0.7rem;
+    padding: 0.05rem 0.15rem;
+    border-radius: 2px;
+    font-size: 0.45rem;
   }
-  
+
   .slot-block.in_lobby .slot-duration {
     background: rgba(0,0,0,0.15);
   }
-  
+
   .slot-status {
     position: absolute;
-    top: 0.25rem;
-    right: 0.25rem;
-    font-size: 0.6rem;
+    top: 2px;
+    right: 2px;
+    font-size: 0.4rem;
     font-weight: 700;
     text-transform: uppercase;
-    padding: 0.125rem 0.25rem;
-    border-radius: 3px;
+    padding: 1px 3px;
+    border-radius: 2px;
     background: rgba(255,255,255,0.25);
   }
-  
+
   .slot-block.live .slot-status {
     background: #fff;
     color: #dc2626;
     animation: pulse 1s infinite;
   }
-  
+
   @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 10px rgba(220, 38, 38, 0.3); }
-    50% { box-shadow: 0 0 20px rgba(220, 38, 38, 0.5); }
+    0%, 100% { box-shadow: 0 0 8px rgba(220, 38, 38, 0.3); }
+    50% { box-shadow: 0 0 16px rgba(220, 38, 38, 0.5); }
   }
-  
+
   @keyframes pulse {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+    50% { opacity: 0.6; }
   }
-  
+
   .no-shows-banner {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.75rem;
-    padding: 0.875rem 1rem;
-    background: #fef3c7;
-    border-bottom: 2px solid #111;
-    color: #92400e;
-    font-size: 0.9rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
+    color: #888;
+    font-size: 0.85rem;
     font-weight: 500;
+    grid-column: 1 / -1;
+    border-bottom: 1px solid #333;
   }
-  
+
   .no-shows-banner.hidden {
     display: none;
   }
-  
+
   .no-shows-banner .no-shows-icon {
     font-size: 1.25rem;
   }
-  
+
   .dj-cta {
-    background: #111;
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
     color: #fff;
-    padding: 2rem;
+    padding: 1.5rem;
     text-align: center;
-    border: 2px solid #111;
+    border: 2px solid #374151;
+    border-radius: 8px;
   }
-  
+
   .dj-cta h3 {
-    font-family: 'Inter', sans-serif; font-weight: 700;
+    font-family: 'Bebas Neue', sans-serif;
     font-size: 1.75rem;
-    margin: 0 0 1.25rem 0;
+    margin: 0 0 1rem 0;
+    letter-spacing: 0.02em;
   }
-  
+
   .dj-steps {
     display: flex;
     justify-content: center;
     gap: 1.5rem;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
   }
-  
+
   .dj-step {
     display: flex;
     align-items: center;
     gap: 0.5rem;
   }
-  
+
   .step-num {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     background: #dc2626;
     color: #fff;
     border-radius: 50%;
@@ -399,110 +415,125 @@ export const prerender = false;
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
-  
+
   .step-text {
     color: #fff;
     font-weight: 600;
-    font-size: 0.95rem;
-  }
-  
-  .dj-cta p {
-    color: #888;
-    margin: 0 0 1.25rem 0;
     font-size: 0.9rem;
   }
-  
+
+  .dj-cta p {
+    color: #888;
+    margin: 0 0 1rem 0;
+    font-size: 0.85rem;
+  }
+
   .cta-btn {
     display: inline-block;
     background: #dc2626;
     color: #fff;
-    padding: 0.75rem 1.5rem;
+    padding: 0.6rem 1.25rem;
     font-weight: 700;
     text-decoration: none;
     transition: background 0.2s;
+    border-radius: 4px;
+    font-size: 0.9rem;
   }
-  
+
   .cta-btn:hover {
     background: #b91c1c;
   }
-  
-  @media (max-width: 768px) {
+
+  /* Grid time indicators */
+  .daily-calendar .late-night .hour-time {
+    color: #6b7280;
+    background: rgba(107, 114, 128, 0.1);
+  }
+
+  @media (max-width: 1200px) {
+    .daily-calendar {
+      grid-template-columns: repeat(6, 1fr);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .daily-calendar {
+      grid-template-columns: repeat(6, 1fr);
+    }
+
+    .hour-row {
+      min-height: 50px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .schedule-main {
+      padding: 0.5rem;
+    }
+
     .day-nav {
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.5rem;
     }
-    
+
     .day-selector {
       flex-wrap: wrap;
       justify-content: center;
     }
-    
+
     .day-btn {
-      min-width: 60px;
-      padding: 0.4rem 0.5rem;
-      font-size: 0.7rem;
+      min-width: 50px;
+      padding: 0.35rem 0.4rem;
+      font-size: 0.6rem;
     }
-    
+
     .schedule-header h1 {
-      font-size: 2.25rem;
+      font-size: 2rem;
     }
-    
+
+    .daily-calendar {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
     .hour-row {
-      min-height: 60px;
+      min-height: 45px;
     }
-    
+
     .hour-time {
-      font-size: 1rem;
-      padding: 0.5rem;
-    }
-    
-    .hour-content {
-      min-height: 40px;
-      padding: 0.125rem;
-    }
-    
-    .slot-inner {
-      padding: 0.5rem;
-    }
-    
-    .slot-dj {
-      font-size: 0.9rem;
-    }
-    
-    .slot-title {
-      font-size: 0.75rem;
-    }
-    
-    .slot-time {
       font-size: 0.7rem;
+      padding: 0.2rem;
     }
-    
+
+    .slot-dj {
+      font-size: 0.5rem;
+    }
+
     .dj-steps {
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 0.5rem;
       align-items: center;
     }
-    
+
     .dj-step {
       gap: 0.375rem;
     }
-    
+
     .step-num {
-      width: 24px;
-      height: 24px;
-      font-size: 0.75rem;
+      width: 22px;
+      height: 22px;
+      font-size: 0.7rem;
     }
-    
+
     .step-text {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
     }
-    
+
     .dj-cta {
-      padding: 1.5rem 1rem;
+      padding: 1rem;
     }
-    
+
     .dj-cta h3 {
       font-size: 1.5rem;
     }
@@ -513,25 +544,43 @@ export const prerender = false;
   let allSlots = [];
   let selectedDate = new Date();
   selectedDate.setHours(0, 0, 0, 0);
-  
+  let refreshInterval = null;
+
   // Handle both initial load and View Transitions navigation
   function initSchedule() {
     // Reset state for fresh page load
     allSlots = [];
     selectedDate = new Date();
     selectedDate.setHours(0, 0, 0, 0);
-    
+
     updateDayButtons();
     renderDailyCalendar(); // Render empty calendar immediately
     loadSchedule(); // Then load slots
     setupNavigation();
+
+    // Auto-refresh every 30 seconds to catch new bookings
+    if (refreshInterval) clearInterval(refreshInterval);
+    refreshInterval = setInterval(() => {
+      loadSchedule();
+    }, 30000);
   }
-  
+
+  // Cleanup on page leave
+  function cleanupSchedule() {
+    if (refreshInterval) {
+      clearInterval(refreshInterval);
+      refreshInterval = null;
+    }
+  }
+
   // DOMContentLoaded for initial page load
   document.addEventListener('DOMContentLoaded', initSchedule);
-  
+
   // astro:page-load for View Transitions navigation
   document.addEventListener('astro:page-load', initSchedule);
+
+  // Cleanup on page navigation
+  document.addEventListener('astro:before-swap', cleanupSchedule);
   
   function setupNavigation() {
     // Remove existing listeners to prevent duplicates
@@ -660,93 +709,39 @@ export const prerender = false;
       slotsByHour[hour].push(slot);
     });
     
-    // Build hour rows - stacked layout (9am to 8am = 23 hours for international DJs)
+    // Build hour rows - all 24 hours starting from midnight
     let html = '';
-    
-    // Hours 9am-11pm (9-23)
-    for (let hour = 9; hour < 24; hour++) {
-      const hourLabel = hour < 12 ? `${hour}:00 AM` : 
-                       hour === 12 ? '12:00 PM' : 
-                       `${hour - 12}:00 PM`;
-      
+
+    // Helper to format hour label compactly
+    const formatHour = (h) => {
+      const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      const ampm = h >= 12 ? 'p' : 'a';
+      return `${displayHour}${ampm}`;
+    };
+
+    // All 24 hours (0-23)
+    for (let hour = 0; hour < 24; hour++) {
+      const hourLabel = formatHour(hour);
       const hourSlots = slotsByHour[hour] || [];
-      
-      html += `<div class="hour-row" data-hour="${hour}">`;
+      const isLateNight = hour < 9;
+
+      html += `<div class="hour-row${isLateNight ? ' late-night' : ''}" data-hour="${hour}">`;
       html += `  <div class="hour-time">${hourLabel}</div>`;
       html += `  <div class="hour-content">`;
-      
+
       // Add slots for this hour
       hourSlots.forEach(slot => {
-        const startTime = new Date(slot.startTime);
-        const endTime = new Date(slot.endTime);
-        const durationMinutes = (endTime - startTime) / (60 * 1000);
-        
-        const startTimeStr = startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        const endTimeStr = endTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        
-        const durationStr = durationMinutes >= 60 
-          ? `${Math.floor(durationMinutes / 60)}h${durationMinutes % 60 > 0 ? ' ' + (durationMinutes % 60) + 'm' : ''}`
-          : `${durationMinutes}m`;
-        
         html += `
           <div class="slot-block ${slot.status || ''}">
             <div class="slot-inner">
               <div class="slot-dj">${slot.djName || 'TBA'}</div>
-              <div class="slot-title">${slot.title || 'Live Set'}</div>
-              <div class="slot-time">
-                <span>${startTimeStr} - ${endTimeStr}</span>
-                <span class="slot-duration">${durationStr.trim()}</span>
-              </div>
             </div>
-            ${slot.status === 'live' ? '<span class="slot-status">🔴 LIVE</span>' : ''}
-            ${slot.status === 'in_lobby' ? '<span class="slot-status">IN LOBBY</span>' : ''}
+            ${slot.status === 'live' ? '<span class="slot-status">LIVE</span>' : ''}
+            ${slot.status === 'in_lobby' ? '<span class="slot-status">LOBBY</span>' : ''}
           </div>
         `;
       });
-      
-      html += `  </div>`;
-      html += `</div>`;
-    }
-    
-    // Hours 12am-8am (0-8) for late night / international
-    for (let hour = 0; hour <= 8; hour++) {
-      const hourLabel = hour === 0 ? '12:00 AM' : `${hour}:00 AM`;
-      
-      const hourSlots = slotsByHour[hour] || [];
-      
-      html += `<div class="hour-row late-night" data-hour="${hour}">`;
-      html += `  <div class="hour-time">${hourLabel}</div>`;
-      html += `  <div class="hour-content">`;
-      
-      // Add slots for this hour
-      hourSlots.forEach(slot => {
-        const startTime = new Date(slot.startTime);
-        const endTime = new Date(slot.endTime);
-        const durationMinutes = (endTime - startTime) / (60 * 1000);
-        
-        const startTimeStr = startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        const endTimeStr = endTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-        
-        const durationStr = durationMinutes >= 60 
-          ? `${Math.floor(durationMinutes / 60)}h${durationMinutes % 60 > 0 ? ' ' + (durationMinutes % 60) + 'm' : ''}`
-          : `${durationMinutes}m`;
-        
-        html += `
-          <div class="slot-block ${slot.status || ''}">
-            <div class="slot-inner">
-              <div class="slot-dj">${slot.djName || 'TBA'}</div>
-              <div class="slot-title">${slot.title || 'Live Set'}</div>
-              <div class="slot-time">
-                <span>${startTimeStr} - ${endTimeStr}</span>
-                <span class="slot-duration">${durationStr.trim()}</span>
-              </div>
-            </div>
-            ${slot.status === 'live' ? '<span class="slot-status">🔴 LIVE</span>' : ''}
-            ${slot.status === 'in_lobby' ? '<span class="slot-status">IN LOBBY</span>' : ''}
-          </div>
-        `;
-      });
-      
+
       html += `  </div>`;
       html += `</div>`;
     }

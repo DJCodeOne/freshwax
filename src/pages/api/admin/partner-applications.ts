@@ -124,12 +124,52 @@ export const POST: APIRoute = async ({ request }) => {
     if (action === 'approve') {
       // Create partner/user record if needed
       if (application.userId) {
-        const userData = await getDocument('users', application.userId);
+        const userData = await getDocument('users', application.userId) || {};
+        const partnerType = application.partnerType || application.type || 'artist';
+
+        // Build the roles object - preserve existing roles and add the new one
+        const existingRoles = userData.roles || {};
+        const newRoles = { ...existingRoles };
+
+        // Set the appropriate role based on partner type
+        if (partnerType === 'artist' || partnerType === 'dj') {
+          newRoles.artist = true;
+        }
+        if (partnerType === 'dj') {
+          newRoles.dj = true;
+        }
+        if (partnerType === 'merchSupplier' || partnerType === 'merch') {
+          newRoles.merchSupplier = true;
+        }
+
+        // Update user document with role and approval status
         await firestoreWrite('PATCH', `users/${application.userId}`, {
           ...userData,
-          partnerType: application.partnerType || application.type || 'artist',
+          roles: newRoles,
+          partnerType: partnerType,
           partnerApproved: true,
-          partnerApprovedAt: new Date().toISOString()
+          partnerApprovedAt: new Date().toISOString(),
+          partnerInfo: {
+            ...(userData.partnerInfo || {}),
+            approved: true,
+            approvedAt: new Date().toISOString(),
+            displayName: application.artistName || application.businessName || application.name || userData.displayName || ''
+          }
+        });
+
+        // Also create/update entry in artists collection for legacy compatibility
+        await firestoreWrite('PATCH', `artists/${application.userId}`, {
+          id: application.userId,
+          userId: application.userId,
+          email: application.email || userData.email || '',
+          artistName: application.artistName || application.businessName || application.name || '',
+          name: application.artistName || application.businessName || application.name || '',
+          approved: true,
+          approvedAt: new Date().toISOString(),
+          createdAt: application.createdAt || new Date().toISOString(),
+          isArtist: partnerType === 'artist' || partnerType === 'dj',
+          isDJ: partnerType === 'dj',
+          isMerchSupplier: partnerType === 'merchSupplier' || partnerType === 'merch'
         });
       }
 

@@ -179,7 +179,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       
       const newKey = `releases/${folderName}/${relativePath}`;
       
-      await uploadToR2(newKey, fileContent, contentType);
+      await uploadToR2(newKey, fileContent, contentType, R2_CONFIG, s3Client);
       
       const publicUrl = `${R2_CONFIG.publicDomain}/${newKey}`;
       const filename = relativePath.split('/').pop() || '';
@@ -258,17 +258,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
 async function uploadToR2(
   key: string,
   content: Buffer,
-  contentType: string
+  contentType: string,
+  r2Config: ReturnType<typeof getR2Config>,
+  client: S3Client
 ): Promise<void> {
   const command = new PutObjectCommand({
-    Bucket: R2_CONFIG.bucketName,
+    Bucket: r2Config.bucketName,
     Key: key,
     Body: content,
     ContentType: contentType,
     CacheControl: 'public, max-age=31536000',
   });
-  
-  await s3Client.send(command);
+
+  await client.send(command);
 }
 
 function getContentType(filename: string): string {

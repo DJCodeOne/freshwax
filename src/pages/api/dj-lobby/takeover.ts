@@ -275,7 +275,7 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 // DELETE: Cleanup expired requests
-export const DELETE: APIRoute = async () => {
+export const DELETE: APIRoute = async ({ locals }) => {
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,

@@ -915,7 +915,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 7rem;
   font-weight: 400;
   margin-bottom: 0.5rem;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.18em;
   text-shadow: 0 4px 30px rgba(0, 0, 0, 0.7), 0 0 80px rgba(220, 38, 38, 0.2);
   line-height: 0.95;
   text-transform: uppercase;

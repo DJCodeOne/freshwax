@@ -451,28 +451,94 @@ export const prerender = false;
     </div>
   </div>
 
-  <!-- System Status -->
-  <div class="card mt-4">
+  <!-- System Monitor -->
+  <div class="card mt-4 monitor-card">
     <div class="card-header">
-      <h2>🔧 System Status</h2>
+      <h2>📊 System Monitor</h2>
+      <div class="monitor-header-actions">
+        <span id="monitorLastUpdate" class="monitor-timestamp">Checking...</span>
+        <button id="refreshMonitor" class="btn btn-ghost btn-sm">↻ Refresh</button>
+      </div>
     </div>
     <div class="card-body">
-      <div class="grid grid-4 gap-2">
-        <div class="status-item">
-          <span class="status-dot status-ok"></span>
-          <span>Firebase</span>
+      <div class="monitor-grid">
+        <!-- Live Stream Preview -->
+        <div class="monitor-section monitor-preview">
+          <h3 class="monitor-section-title">Live Stream</h3>
+          <div id="streamPreview" class="stream-preview">
+            <div class="preview-placeholder">
+              <span class="preview-icon">📺</span>
+              <span class="preview-text">No active stream</span>
+            </div>
+          </div>
+          <div id="streamInfo" class="stream-info hidden">
+            <div class="stream-info-row">
+              <span class="info-label">DJ:</span>
+              <span id="streamDJ" class="info-value">-</span>
+            </div>
+            <div class="stream-info-row">
+              <span class="info-label">Title:</span>
+              <span id="streamTitle" class="info-value">-</span>
+            </div>
+            <div class="stream-info-row">
+              <span class="info-label">Viewers:</span>
+              <span id="streamViewers" class="info-value">0</span>
+            </div>
+            <div class="stream-info-row">
+              <span class="info-label">Duration:</span>
+              <span id="streamDuration" class="info-value">00:00:00</span>
+            </div>
+          </div>
         </div>
-        <div class="status-item">
-          <span class="status-dot status-ok"></span>
-          <span>R2 Storage</span>
+
+        <!-- Service Health -->
+        <div class="monitor-section monitor-health">
+          <h3 class="monitor-section-title">Service Health</h3>
+          <div id="serviceHealth" class="health-grid">
+            <div class="health-item" data-service="Firebase">
+              <span class="health-dot checking"></span>
+              <span class="health-name">Firebase</span>
+              <span class="health-latency">-</span>
+            </div>
+            <div class="health-item" data-service="R2 Storage">
+              <span class="health-dot checking"></span>
+              <span class="health-name">R2 Storage</span>
+              <span class="health-latency">-</span>
+            </div>
+            <div class="health-item" data-service="Stripe">
+              <span class="health-dot checking"></span>
+              <span class="health-name">Stripe</span>
+              <span class="health-latency">-</span>
+            </div>
+            <div class="health-item" data-service="Stream Server">
+              <span class="health-dot checking"></span>
+              <span class="health-name">Stream Server</span>
+              <span class="health-latency">-</span>
+            </div>
+          </div>
         </div>
-        <div class="status-item">
-          <span class="status-dot status-ok"></span>
-          <span>Stripe</span>
-        </div>
-        <div class="status-item">
-          <span class="status-dot status-ok"></span>
-          <span>Email (Resend)</span>
+
+        <!-- Quick Stats -->
+        <div class="monitor-section monitor-stats">
+          <h3 class="monitor-section-title">Today's Activity</h3>
+          <div class="quick-stats-grid">
+            <div class="quick-stat">
+              <span class="quick-stat-value" id="statOrdersToday">-</span>
+              <span class="quick-stat-label">Orders</span>
+            </div>
+            <div class="quick-stat">
+              <span class="quick-stat-value" id="statRevenueToday">-</span>
+              <span class="quick-stat-label">Revenue</span>
+            </div>
+            <div class="quick-stat">
+              <span class="quick-stat-value" id="statServicesOk">-</span>
+              <span class="quick-stat-label">Services OK</span>
+            </div>
+            <div class="quick-stat">
+              <span class="quick-stat-value" id="statStreamStatus">-</span>
+              <span class="quick-stat-label">Stream</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -773,4 +839,170 @@ export const prerender = false;
   // Initial update and set interval
   updateRequestTimes();
   setInterval(updateRequestTimes, 1000); // Update every second
+</script>
+
+<script>
+  // System Monitor - Real-time health checks
+  let monitorInterval = null;
+  let streamDurationInterval = null;
+  let currentStreamStartTime = null;
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+  };
+
+  const formatDuration = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  async function fetchHealthData() {
+    try {
+      const response = await fetch('/api/admin/health-check');
+      const data = await response.json();
+
+      if (!data.success) return;
+
+      // Update timestamp
+      const lastUpdate = document.getElementById('monitorLastUpdate');
+      if (lastUpdate) {
+        const time = new Date(data.timestamp).toLocaleTimeString('en-GB');
+        lastUpdate.textContent = `Updated: ${time}`;
+      }
+
+      // Update service health
+      let servicesOk = 0;
+      data.services.forEach(service => {
+        const item = document.querySelector(`[data-service="${service.name}"]`);
+        if (item) {
+          const dot = item.querySelector('.health-dot');
+          const latency = item.querySelector('.health-latency');
+
+          dot.className = `health-dot ${service.status}`;
+
+          if (service.latency) {
+            latency.textContent = `${service.latency}ms`;
+          } else if (service.message) {
+            latency.textContent = service.message;
+          } else {
+            latency.textContent = '-';
+          }
+
+          if (service.status === 'ok') servicesOk++;
+        }
+      });
+
+      // Update stats
+      document.getElementById('statServicesOk').textContent = `${servicesOk}/${data.services.length}`;
+
+      if (data.stats) {
+        document.getElementById('statOrdersToday').textContent = data.stats.ordersToday || 0;
+        document.getElementById('statRevenueToday').textContent = formatCurrency(data.stats.revenueToday || 0);
+      }
+
+      // Update livestream info
+      const streamPreview = document.getElementById('streamPreview');
+      const streamInfo = document.getElementById('streamInfo');
+      const streamStatus = document.getElementById('statStreamStatus');
+
+      if (data.livestream && data.livestream.isLive) {
+        // Show live stream preview
+        streamPreview.innerHTML = `
+          <div class="preview-live">
+            <div class="live-indicator">
+              <span class="live-dot"></span>
+              <span>LIVE</span>
+            </div>
+            <video id="streamVideo" class="stream-video" muted autoplay playsinline>
+              <source src="${data.livestream.hlsUrl}" type="application/x-mpegURL">
+            </video>
+          </div>
+        `;
+
+        // Initialize HLS player
+        initHLSPlayer(data.livestream.hlsUrl);
+
+        // Show stream info
+        streamInfo.classList.remove('hidden');
+        document.getElementById('streamDJ').textContent = data.livestream.djName || 'Unknown';
+        document.getElementById('streamTitle').textContent = data.livestream.title || 'Live Session';
+        document.getElementById('streamViewers').textContent = data.livestream.viewers || 0;
+
+        // Track duration
+        currentStreamStartTime = data.livestream.duration || 0;
+        updateStreamDuration();
+
+        streamStatus.textContent = 'LIVE';
+        streamStatus.style.color = '#ef4444';
+      } else {
+        // Show offline state
+        streamPreview.innerHTML = `
+          <div class="preview-placeholder">
+            <span class="preview-icon">📺</span>
+            <span class="preview-text">No active stream</span>
+          </div>
+        `;
+        streamInfo.classList.add('hidden');
+        streamStatus.textContent = 'Offline';
+        streamStatus.style.color = '#6b7280';
+        currentStreamStartTime = null;
+      }
+
+    } catch (error) {
+      console.error('Health check failed:', error);
+      document.getElementById('monitorLastUpdate').textContent = 'Error fetching data';
+    }
+  }
+
+  function initHLSPlayer(hlsUrl) {
+    const video = document.getElementById('streamVideo');
+    if (!video) return;
+
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS support (Safari)
+      video.src = hlsUrl;
+    } else if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+      // HLS.js for other browsers
+      const hls = new Hls({ enableWorker: false });
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+    }
+  }
+
+  function updateStreamDuration() {
+    if (currentStreamStartTime === null) return;
+
+    const durationEl = document.getElementById('streamDuration');
+    if (durationEl) {
+      durationEl.textContent = formatDuration(currentStreamStartTime);
+      currentStreamStartTime++;
+    }
+  }
+
+  // Initialize monitor
+  document.addEventListener('DOMContentLoaded', () => {
+    // Initial fetch
+    fetchHealthData();
+
+    // Refresh every 30 seconds
+    monitorInterval = setInterval(fetchHealthData, 30000);
+
+    // Update duration every second
+    streamDurationInterval = setInterval(updateStreamDuration, 1000);
+
+    // Manual refresh button
+    document.getElementById('refreshMonitor')?.addEventListener('click', () => {
+      document.getElementById('monitorLastUpdate').textContent = 'Checking...';
+      fetchHealthData();
+    });
+  });
+
+  // Load HLS.js for non-Safari browsers
+  if (!document.querySelector('script[src*="hls.js"]')) {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+    document.head.appendChild(script);
+  }
 </script>

@@ -1,6 +1,7 @@
 // Cart page logic - uses FreshWaxCart system
 
 function getCustomerId() {
+  // First check cookie
   var cookies = document.cookie.split(';');
   for (var i = 0; i < cookies.length; i++) {
     var cookie = cookies[i].trim();
@@ -9,6 +10,23 @@ function getCustomerId() {
       return parts[1];
     }
   }
+
+  // Fallback: check Firebase auth user
+  if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+    var uid = window.firebaseAuth.currentUser.uid;
+    // Set the cookie for future use
+    document.cookie = 'customerId=' + uid + '; path=/; max-age=' + (60*60*24*30);
+    return uid;
+  }
+
+  // Fallback: check window.authUser (set by Header.astro)
+  if (window.authUser && window.authUser.uid) {
+    var uid = window.authUser.uid;
+    // Set the cookie for future use
+    document.cookie = 'customerId=' + uid + '; path=/; max-age=' + (60*60*24*30);
+    return uid;
+  }
+
   return null;
 }
 
@@ -307,16 +325,23 @@ function goToCheckout() {
 }
 
 // Initialize
-function init() {
+async function init() {
   // Only run on cart page
   var container = document.getElementById('cart-content');
   if (!container) {
     // Not on cart page, skip
     return;
   }
-  
+
   try {
     console.log('[Cart Page] Initializing...');
+
+    // Wait for auth to be ready if available
+    if (window.authReady) {
+      await window.authReady;
+      console.log('[Cart Page] Auth ready, user:', window.authUser ? window.authUser.uid : 'none');
+    }
+
     updateCartCount();
     renderCart();
   } catch (err) {

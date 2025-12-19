@@ -28,7 +28,7 @@ interface RelayStatus {
 }
 
 // Check if an Icecast/Shoutcast stream is live
-async function checkIcecastStream(url: string): Promise<{ isLive: boolean; nowPlaying: string; listeners?: number }> {
+async function checkIcecastStream(url: string): Promise<{ isLive: boolean; nowPlaying: string; listeners: number | undefined }> {
   try {
     // Try to fetch stream metadata
     const controller = new AbortController();
@@ -57,20 +57,20 @@ async function checkIcecastStream(url: string): Promise<{ isLive: boolean; nowPl
       };
     }
     
-    return { isLive: false, nowPlaying: '' };
+    return { isLive: false, nowPlaying: '', listeners: undefined };
   } catch (error: any) {
     // AbortError means timeout - stream might still be there but slow
     if (error.name === 'AbortError') {
       return { isLive: false, nowPlaying: '', listeners: undefined };
     }
-    
+
     // Connection refused or network error
-    return { isLive: false, nowPlaying: '' };
+    return { isLive: false, nowPlaying: '', listeners: undefined };
   }
 }
 
 // Check Icecast status page (JSON)
-async function checkIcecastStatus(statusUrl: string): Promise<{ isLive: boolean; nowPlaying: string; listeners?: number }> {
+async function checkIcecastStatus(statusUrl: string): Promise<{ isLive: boolean; nowPlaying: string; listeners: number | undefined }> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
@@ -82,7 +82,7 @@ async function checkIcecastStatus(statusUrl: string): Promise<{ isLive: boolean;
     clearTimeout(timeout);
     
     if (!response.ok) {
-      return { isLive: false, nowPlaying: '' };
+      return { isLive: false, nowPlaying: '', listeners: undefined };
     }
     
     const text = await response.text();
@@ -105,35 +105,36 @@ async function checkIcecastStatus(statusUrl: string): Promise<{ isLive: boolean;
     } catch {
       // Not JSON, try parsing as XML or HTML
       if (text.includes('Mount Point') || text.includes('listeners')) {
-        return { isLive: true, nowPlaying: 'Live stream' };
+        return { isLive: true, nowPlaying: 'Live stream', listeners: undefined };
       }
     }
-    
-    return { isLive: false, nowPlaying: '' };
+
+    return { isLive: false, nowPlaying: '', listeners: undefined };
   } catch {
-    return { isLive: false, nowPlaying: '' };
+    return { isLive: false, nowPlaying: '', listeners: undefined };
   }
 }
 
 // Simple HTTP check (just see if URL responds)
-async function checkHttpStatus(url: string): Promise<{ isLive: boolean; nowPlaying: string }> {
+async function checkHttpStatus(url: string): Promise<{ isLive: boolean; nowPlaying: string; listeners: number | undefined }> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    
+
     const response = await fetch(url, {
       method: 'HEAD',
       signal: controller.signal
     });
-    
+
     clearTimeout(timeout);
-    
+
     return {
       isLive: response.ok,
-      nowPlaying: response.ok ? 'Stream available' : ''
+      nowPlaying: response.ok ? 'Stream available' : '',
+      listeners: undefined
     };
   } catch {
-    return { isLive: false, nowPlaying: '' };
+    return { isLive: false, nowPlaying: '', listeners: undefined };
   }
 }
 
@@ -183,7 +184,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
             
             default:
               // No check method - assume available if we have a URL
-              status = { isLive: !!source.streamUrl, nowPlaying: '' };
+              status = { isLive: !!source.streamUrl, nowPlaying: '', listeners: undefined };
           }
           
           // Update the source in Firestore with latest status

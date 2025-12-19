@@ -27,7 +27,7 @@ const firebaseConfig = {
             <img src="/logo.webp" alt="Fresh Wax" class="logo-img">
           </div>
         </a>
-        <h1 class="brand-title"><span class="fresh">Fresh</span> <span class="wax">Wax</span></h1>
+        <h1 class="brand-title"><span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></h1>
         <h2>Create Account</h2>
         <p>Join the jungle & drum and bass community</p>
       </div>
@@ -206,12 +206,12 @@ const firebaseConfig = {
       margin: 1rem 0 0.5rem;
     }
 
-    .brand-title .fresh {
+    .brand-title .brand-fresh {
       color: #fff;
     }
 
-    .brand-title .wax {
-      color: #ef4444;
+    .brand-title .brand-wax {
+      color: #dc2626;
     }
 
     .auth-header h2 {
@@ -626,6 +626,39 @@ const firebaseConfig = {
           displayName: displayName,
           createdAt: serverTimestamp()
         });
+
+        // Also write pending requests to pendingRoleRequests collection (for REST API access)
+        if (requestArtist) {
+          await setDoc(doc(db, 'pendingRoleRequests', `${user.uid}_artist`), {
+            id: `${user.uid}_artist`,
+            uid: user.uid,
+            userId: user.uid,
+            roleType: 'artist',
+            displayName: displayName,
+            email: user.email,
+            status: 'pending',
+            requestedAt: serverTimestamp(),
+            artistName: document.getElementById('artistName').value.trim(),
+            bio: document.getElementById('artistBio').value.trim(),
+            links: document.getElementById('artistLinks').value.trim()
+          });
+        }
+
+        if (requestMerchSeller) {
+          await setDoc(doc(db, 'pendingRoleRequests', `${user.uid}_merchSeller`), {
+            id: `${user.uid}_merchSeller`,
+            uid: user.uid,
+            userId: user.uid,
+            roleType: 'merchSeller',
+            displayName: displayName,
+            email: user.email,
+            status: 'pending',
+            requestedAt: serverTimestamp(),
+            businessName: document.getElementById('businessName').value.trim(),
+            description: document.getElementById('merchDescription').value.trim(),
+            website: document.getElementById('merchWebsite').value.trim()
+          });
+        }
 
         // Show success message
         let successMsg = 'Account created successfully!';

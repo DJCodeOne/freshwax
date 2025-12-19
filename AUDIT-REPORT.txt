@@ -1,0 +1,187 @@
+FRESHWAX PROJECT AUDIT REPORT
+==============================
+Generated: December 2024
+
+================================================================================
+CRITICAL SECURITY ISSUES
+================================================================================
+
+1. FIRESTORE RULES - DELETE PERMISSIONS [CRITICAL]
+   Location: firestore.rules (Lines 146, 165)
+   Issue: "allow delete: if true;" lets ANY user delete DJ mixes
+   Fix: Change to "allow delete: if isAdmin();"
+
+2. WEAK ADMIN AUTHENTICATION [CRITICAL]
+   Location: Multiple API files
+   Issue: Static hardcoded admin key (freshwax-admin-2024) used for all admin ops
+   - No rate limiting
+   - No token expiration
+   - No audit logging
+   Fix: Implement JWT with expiration, add rate limiting
+
+3. MISSING INPUT VALIDATION [CRITICAL]
+   Locations:
+   - src/pages/api/livestream/slots.ts (lines 304-313)
+   - src/pages/api/upload-mix.ts (lines 81-87)
+   - src/pages/api/create-order.ts (lines 52-72)
+   Issue: User inputs not sanitized, only truncated
+   Risk: NoSQL injection, XSS attacks
+   Fix: Add Zod or Joi validation library
+
+4. FIRESTORE RULES - BYPASS COLLECTION [CRITICAL]
+   Location: firestore.rules (Line 330)
+   Issue: "allow create, update: if isAdmin() || true;" - unrestricted writes
+   Fix: Remove "|| true"
+
+================================================================================
+IMPORTANT ISSUES
+================================================================================
+
+5. ERROR HANDLING - STREAM VALIDATION
+   Location: src/pages/api/livestream/slots.ts (lines 859-878)
+   Issue: Assumes stream is active when validation fails
+   Risk: DJ shows as "live" without actual stream
+
+6. N+1 QUERY PROBLEM
+   Location: src/pages/api/admin/list-users.ts (lines 92-97)
+   Issue: Fetches all users (500+) every request, no pagination
+   Fix: Add cursor-based pagination
+
+7. MISSING SECURITY HEADERS
+   Issue: No CSP or HSTS headers configured
+   Fix: Add to Cloudflare page rules or astro.config
+
+8. NO RATE LIMITING
+   Issue: Order creation, comments, login - all unlimited
+   Fix: Add Cloudflare Rate Limiting rules
+
+9. NO AUDIT LOGGING
+   Issue: Admin actions not tracked
+   Fix: Create audit-logs collection, log all admin operations
+
+10. SWALLOWED ERRORS
+    Locations:
+    - src/pages/api/create-order.ts (lines 235-237, 384-386)
+    - src/pages/api/livestream/slots.ts (lines 724-726)
+    Issue: Errors logged but processing continues silently
+
+11. MISSING CSRF PROTECTION
+    Issue: Forms and API endpoints don't use CSRF tokens
+
+12. NO WEBHOOK SIGNATURE VERIFICATION
+    Location: src/pages/api/livestream/red5-webhook.ts
+    Issue: Webhook endpoints don't verify signatures
+
+================================================================================
+PERFORMANCE ISSUES
+================================================================================
+
+13. UNOPTIMIZED IMAGES
+    Location: src/pages/api/upload-mix.ts
+    Issue: Artwork stored at original size, no compression
+    Fix: Use Cloudflare Image Resizing or Sharp
+
+14. CACHE BUSTING MISSING
+    Issue: Updates to artwork won't show until cache expires (1 year)
+    Fix: Use content hash in filename
+
+15. FIREBASE CACHING INEFFICIENT
+    Location: src/lib/firebase-rest.ts
+    Issue: Full objects cached, no partial updates
+
+================================================================================
+CODE QUALITY ISSUES
+================================================================================
+
+16. DUPLICATED ADMIN KEY LOGIC
+    Same getAdminKey function in 3+ files
+    Fix: Extract to src/lib/admin.ts
+
+17. INCONSISTENT ERROR RESPONSES
+    Some return {error: string}, others {success: false, error: string}
+    Fix: Standardize format
+
+18. HARDCODED VALUES SCATTERED
+    Project ID, cache TTL, defaults in multiple files
+    Fix: Create src/lib/constants.ts
+
+19. DEAD/TODO CODE
+    Location: src/pages/api/livestream/slots.ts (lines 971-975)
+    Issue: TODO comments for unimplemented features
+
+================================================================================
+SEO ISSUES
+================================================================================
+
+20. MISSING SEO ON DYNAMIC PAGES
+    Issue: SEO component not applied to all pages
+    Fix: Add SEO component to release, profile, DJ mix pages
+
+21. SITEMAP NOT DYNAMIC
+    Location: src/pages/sitemap.xml.ts
+    Issue: Not loading all releases/mixes from database
+
+================================================================================
+MISSING FEATURES
+================================================================================
+
+22. No rate limiting on API routes
+23. No request signing for webhooks
+24. No audit logging system
+25. No CSRF protection
+26. No payment reconciliation with Stripe
+27. No content security policy
+28. No HSTS header
+29. No monitoring/alerting setup
+30. No load testing done
+
+================================================================================
+GOOD PRACTICES FOUND
+================================================================================
+
++ Clean Astro project structure
++ Proper use of Cloudflare Workers/Pages
++ Firebase REST API with caching layer
++ AdminLayout component for consistency
++ SEO component exists
++ Proper error responses in most APIs
++ Good separation of concerns
++ TypeScript usage throughout
++ Environment variable pattern (needs improvement)
+
+================================================================================
+PRIORITY ACTION ITEMS
+================================================================================
+
+IMMEDIATE (Today):
+1. Fix Firestore rules - remove "allow delete: if true"
+2. Fix Firestore rules - remove "|| true" from bypass collection
+
+THIS WEEK:
+3. Add input validation (Zod) to all API routes
+4. Add pagination to user list API
+5. Add CSP and HSTS headers
+
+THIS MONTH:
+6. Implement proper admin authentication (JWT)
+7. Add rate limiting
+8. Add audit logging
+9. Implement webhook signature verification
+
+================================================================================
+FILES REQUIRING CHANGES
+================================================================================
+
+Critical:
+- firestore.rules (lines 146, 165, 330)
+- src/pages/api/admin/*.ts (auth strengthening)
+- src/pages/api/livestream/slots.ts (validation)
+
+Important:
+- All API routes (input validation)
+- astro.config.mjs (security headers)
+- src/lib/firebase-rest.ts (caching)
+
+================================================================================
+END OF REPORT
+================================================================================

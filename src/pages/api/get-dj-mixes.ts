@@ -28,33 +28,28 @@ export const GET: APIRoute = async ({ request, locals }) => {
   
   try {
     let mixes: any[] = [];
-    
+
     // If userId provided, filter by userId
     if (userId) {
-      // Try userId field first
-      mixes = await queryCollection('dj-mixes', {
-        filters: [{ field: 'userId', op: 'EQUAL', value: userId }]
+      // OPTIMIZED: Query all possible userId fields in PARALLEL (saves 2 sequential reads)
+      const [mixesByUserId, mixesByUserId2, mixesByUploaderId] = await Promise.all([
+        queryCollection('dj-mixes', { filters: [{ field: 'userId', op: 'EQUAL', value: userId }] }),
+        queryCollection('dj-mixes', { filters: [{ field: 'user_id', op: 'EQUAL', value: userId }] }),
+        queryCollection('dj-mixes', { filters: [{ field: 'uploaderId', op: 'EQUAL', value: userId }] })
+      ]);
+
+      // Merge results and dedupe by id
+      const allMixes = [...mixesByUserId, ...mixesByUserId2, ...mixesByUploaderId];
+      const seenIds = new Set<string>();
+      mixes = allMixes.filter(mix => {
+        if (seenIds.has(mix.id)) return false;
+        seenIds.add(mix.id);
+        return true;
       });
-      console.log('[get-dj-mixes] Found', mixes.length, 'mixes with userId field');
 
-      // If no results, try user_id field (snake_case)
-      if (mixes.length === 0) {
-        mixes = await queryCollection('dj-mixes', {
-          filters: [{ field: 'user_id', op: 'EQUAL', value: userId }]
-        });
-        console.log('[get-dj-mixes] Found', mixes.length, 'mixes with user_id field');
-      }
-
-      // If still no results, try uploaderId field
-      if (mixes.length === 0) {
-        mixes = await queryCollection('dj-mixes', {
-          filters: [{ field: 'uploaderId', op: 'EQUAL', value: userId }]
-        });
-        console.log('[get-dj-mixes] Found', mixes.length, 'mixes with uploaderId field');
-      }
+      log.info('[get-dj-mixes] Found', mixes.length, 'mixes by userId fields (parallel query)');
 
       // If still no results, try to match by user's displayName
-      // First, get the user's displayName from their profile (parallel queries)
       if (mixes.length === 0) {
         try {
           const { getDocument } = await import('../../lib/firebase-rest');
@@ -72,28 +67,26 @@ export const GET: APIRoute = async ({ request, locals }) => {
                              artistProfile?.artistName ||
                              artistProfile?.name;
 
-          console.log('[get-dj-mixes] Trying to match by displayName:', displayName);
-
           if (displayName) {
-            // Try matching by djName or dj_name or displayName
-            let djMixes = await queryCollection('dj-mixes', {
-              filters: [{ field: 'djName', op: 'EQUAL', value: displayName }]
+            log.info('[get-dj-mixes] Trying to match by displayName:', displayName);
+
+            // OPTIMIZED: Query all displayName fields in PARALLEL
+            const [byDjName, byDjName2, byDisplayName] = await Promise.all([
+              queryCollection('dj-mixes', { filters: [{ field: 'djName', op: 'EQUAL', value: displayName }] }),
+              queryCollection('dj-mixes', { filters: [{ field: 'dj_name', op: 'EQUAL', value: displayName }] }),
+              queryCollection('dj-mixes', { filters: [{ field: 'displayName', op: 'EQUAL', value: displayName }] })
+            ]);
+
+            // Merge and dedupe
+            const allDjMixes = [...byDjName, ...byDjName2, ...byDisplayName];
+            const seenDjIds = new Set<string>();
+            mixes = allDjMixes.filter(mix => {
+              if (seenDjIds.has(mix.id)) return false;
+              seenDjIds.add(mix.id);
+              return true;
             });
 
-            if (djMixes.length === 0) {
-              djMixes = await queryCollection('dj-mixes', {
-                filters: [{ field: 'dj_name', op: 'EQUAL', value: displayName }]
-              });
-            }
-
-            if (djMixes.length === 0) {
-              djMixes = await queryCollection('dj-mixes', {
-                filters: [{ field: 'displayName', op: 'EQUAL', value: displayName }]
-              });
-            }
-
-            mixes = djMixes;
-            console.log('[get-dj-mixes] Found', mixes.length, 'mixes by displayName match');
+            log.info('[get-dj-mixes] Found', mixes.length, 'mixes by displayName match (parallel query)');
           }
         } catch (e) {
           console.error('[get-dj-mixes] Error matching by displayName:', e);
@@ -114,8 +107,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       
       // If still no results, try without filter (get all)
       if (mixes.length === 0) {
-        const { documents } = await import('../../lib/firebase-rest').then(m => m.listCollection('dj-mixes', limit));
-        mixes = documents;
+        mixes = await queryCollection('dj-mixes', { limit });
       }
     }
     

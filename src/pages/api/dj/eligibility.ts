@@ -44,15 +44,45 @@ export const GET: APIRoute = async ({ url, locals }) => {
     if (action === 'checkEligibility' && uid) {
       const settings = await getSettings();
 
-      // Get user document
-      const userData = await getDocument('users', uid);
-      
-      // If already eligible, return true
+      // Check for bypass in djLobbyBypass collection first (publicly readable)
+      const bypassDoc = await getDocument('djLobbyBypass', uid);
+      if (bypassDoc) {
+        return new Response(JSON.stringify({
+          success: true,
+          eligible: true,
+          reason: 'bypass_granted',
+          canAccessLobby: true,
+          canBook: true,
+          canGoLive: true
+        }));
+      }
+
+      // Try to get user document (may fail if not authenticated)
+      let userData: any = null;
+      try {
+        userData = await getDocument('users', uid);
+      } catch (e) {
+        // Users collection requires auth - this is ok, we'll check other criteria
+      }
+
+      // If already eligible via role, return true
       if (userData?.roles?.djEligible) {
         return new Response(JSON.stringify({
           success: true,
           eligible: true,
           reason: 'already_eligible',
+          canAccessLobby: true,
+          canBook: true,
+          canGoLive: true
+        }));
+      }
+
+      // If has bypass flag in user doc, return true
+      if (userData?.['go-liveBypassed'] === true) {
+        return new Response(JSON.stringify({
+          success: true,
+          eligible: true,
+          reason: 'bypass_granted',
           canAccessLobby: true,
           canBook: true,
           canGoLive: true

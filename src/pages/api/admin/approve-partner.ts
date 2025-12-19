@@ -2,7 +2,7 @@
 // API endpoint to approve a partner
 
 import type { APIRoute } from 'astro';
-import { updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { updateDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
@@ -22,17 +22,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Update partner document
+    const now = new Date().toISOString();
+
+    // Get the artist document to check their roles
+    const artistDoc = await getDocument('artists', partnerId);
+
+    // Update artists collection
     await updateDocument('artists', partnerId, {
       approved: true,
-      approvedAt: new Date().toISOString(),
+      approvedAt: now,
       status: 'approved'
     });
 
-    // TODO: Send approval email notification
-    // You could integrate with an email service like Resend, SendGrid, etc.
-    // const partner = await getDocument('artists', partnerId);
-    // await sendApprovalEmail(partner.email, partner.artistName);
+    // Also update users collection for consistency
+    const userDoc = await getDocument('users', partnerId);
+    if (userDoc) {
+      const existingRoles = userDoc.roles || {};
+      await updateDocument('users', partnerId, {
+        roles: {
+          ...existingRoles,
+          artist: existingRoles.artist || artistDoc?.isArtist || true,
+          merchSupplier: existingRoles.merchSupplier || artistDoc?.isMerchSupplier || false
+        },
+        partnerInfo: {
+          ...(userDoc.partnerInfo || {}),
+          approved: true,
+          approvedAt: now
+        }
+      });
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

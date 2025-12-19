@@ -31,7 +31,29 @@
       "Bash(taskkill:*)",
       "Bash(cmd //c \"taskkill /F /IM cloudflared.exe\")",
       "Bash(dir:*)",
-      "Bash(\"https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/livestreamSlots/mj8y0p5jdkq2o7n?updateMask.fieldPaths=hlsUrl&key=AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g\" )"
+      "Bash(\"https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/livestreamSlots/mj8y0p5jdkq2o7n?updateMask.fieldPaths=hlsUrl&key=AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g\" )",
+      "Bash(nslookup:*)",
+      "WebFetch(domain:freshwax.co.uk)",
+      "Bash(cmd //c \"dir /s /b C:\\Users\\Owner\\*mediamtx*.exe 2>nul\")",
+      "Bash(cmd //c \"tasklist | findstr /i mediamtx\")",
+      "Bash(cmd //c \"wmic process where name=''mediamtx.exe'' get ExecutablePath 2>nul\")",
+      "Bash(cmd //c \"dir /s /b C:\\mediamtx\\*.yml C:\\mediamtx\\*.yaml 2>nul\")",
+      "Bash(cmd //c \"dir /s /b C:\\Users\\Owner\\Downloads\\mediamtx* 2>nul\")",
+      "Bash(cmd //c \"dir /s /b C:\\ffmpeg* 2>nul | findstr /i ffmpeg.exe\")",
+      "Bash(cmd //c \"dir /s /b C:\\Users\\Owner\\*ffmpeg.exe 2>nul\")",
+      "Bash(cmd //c \"taskkill /F /IM mediamtx.exe\")",
+      "Bash(cmd //c \"tasklist | findstr /i ffmpeg\")",
+      "Bash(cmd //c \"cd /d C:\\mediamtx && start /b mediamtx.exe\")",
+      "Bash(cmd //c \"where ffmpeg 2>nul || echo C:\\ffmpeg\\bin\\ffmpeg.exe\")",
+      "Bash(start /b cmd /c \"C:\\ffmpeg\\bin\\ffmpeg.exe -re -f lavfi -i testsrc=size=1280x720:rate=30 -f lavfi -i sine=frequency=440:sample_rate=44100 -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -c:a aac -b:a 128k -f flv rtmp://localhost:1935/live/test_dj1_stream > C:\\mediamtx\\test-stream.log 2>&1\")",
+      "Bash(cmd //c \"tasklist | findstr /i cloudflared\")",
+      "Bash(cmd //c \"dir /s /b C:\\Users\\Owner\\*.yml 2>nul | findstr /i cloudflared\")",
+      "Bash(start /b cmd /c \"C:\\ffmpeg\\bin\\ffmpeg.exe -re -f lavfi -i testsrc=size=1280x720:rate=30 -f lavfi -i sine=frequency=440:sample_rate=44100 -c:v libx264 -preset ultrafast -tune zerolatency -b:v 2500k -c:a aac -b:a 128k -f flv rtmp://localhost:1935/live/freshwax-main > C:\\mediamtx\\test-stream.log 2>&1\")",
+      "Bash(npm run typecheck:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(npx tsc:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(find:*)"
     ]
   }
 }

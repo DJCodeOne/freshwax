@@ -52,16 +52,19 @@ const CACHE_TTL = {
   RELEASE_DETAIL: 30 * 1000,  // 30 seconds for individual releases (comments/ratings change)
   DJ_MIXES_LIST: 2 * 60 * 1000, // 2 minutes (reduced for faster updates)
   MERCH_LIST: 10 * 60 * 1000,
-  
+
   // Semi-dynamic data - 3 minutes
   USER_PROFILE: 3 * 60 * 1000,
   RATINGS: 30 * 1000,  // 30 seconds for ratings
   COMMENTS: 30 * 1000, // 30 seconds for comments
-  
+
   // Dynamic data - 1 minute
   ORDERS: 1 * 60 * 1000,
   LIVESTREAM: 1 * 60 * 1000,
-  
+
+  // Admin settings - 30 minutes (rarely changes, saves many reads)
+  SETTINGS: 30 * 60 * 1000,
+
   // Default - 5 minutes
   DEFAULT: 5 * 60 * 1000,
 };
@@ -354,6 +357,26 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
   
   pendingRequests.set(cacheKey, fetchPromise);
   return fetchPromise;
+}
+
+// ==========================================
+// CACHED SETTINGS HELPER (30 min cache)
+// ==========================================
+
+/**
+ * Get admin settings with 30-minute cache
+ * Use this instead of getDocument('settings', 'admin') to reduce reads
+ */
+export async function getSettings(): Promise<any | null> {
+  return getDocument('settings', 'admin', CACHE_TTL.SETTINGS);
+}
+
+/**
+ * Invalidate settings cache (call after updating settings)
+ */
+export function invalidateSettingsCache(): void {
+  cache.delete('doc:settings:admin');
+  log.info('Settings cache invalidated');
 }
 
 // ==========================================
@@ -655,10 +678,17 @@ export async function updateDocument(
     throw new Error('Firebase configuration missing - ensure initFirebaseEnv() is called');
   }
 
-  // Quote field paths with backticks if they contain special characters, then URL-encode
+  // Build updateMask for Firestore REST API
+  // Dots indicate nested field paths (e.g., roles.artist) - pass these as-is
+  // Backticks are only for field names with special chars like hyphens in a segment
   const updateMask = Object.keys(data).map(key => {
-    // Firestore requires backticks around field names with special characters like hyphens
-    const quotedKey = /^[a-zA-Z_][a-zA-Z_0-9]*$/.test(key) ? key : `\`${key}\``;
+    // Check each segment of the field path
+    const segments = key.split('.');
+    const quotedSegments = segments.map(segment => {
+      // Only quote if segment has special characters (not just alphanumeric/underscore)
+      return /^[a-zA-Z_][a-zA-Z_0-9]*$/.test(segment) ? segment : `\`${segment}\``;
+    });
+    const quotedKey = quotedSegments.join('.');
     return `updateMask.fieldPaths=${encodeURIComponent(quotedKey)}`;
   }).join('&');
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?${updateMask}&key=${apiKey}`;

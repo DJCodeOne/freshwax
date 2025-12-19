@@ -852,6 +852,23 @@ export const prerender = false;
         throw new Error(result.error || 'Failed to save');
       }
 
+      // Check if user is still a partner (has artist or merch supplier role)
+      const isStillPartner = permissions.roles.artist || permissions.roles.merchSupplier;
+
+      if (!isStillPartner) {
+        // Remove from partners list - they should now appear in User Management
+        allUsers = allUsers.filter(u => u.id !== currentEditUser.id);
+        alert('User has been downgraded and moved to User Management.');
+        closeEditModal();
+        renderUsers();
+        // Update stats
+        document.getElementById('totalPartners').textContent = allUsers.length;
+        document.getElementById('totalArtists').textContent = allUsers.filter(u => u.isArtist).length;
+        document.getElementById('totalMerch').textContent = allUsers.filter(u => u.isMerchSupplier).length;
+        document.getElementById('pendingApproval').textContent = allUsers.filter(u => !u.isApproved).length;
+        return;
+      }
+
       // Update local data to match what was saved
       currentEditUser.phone = permissions.phone;
       currentEditUser.address = permissions.address;
@@ -866,9 +883,12 @@ export const prerender = false;
       currentEditUser.canComment = permissions.permissions.canComment;
       currentEditUser.canRate = permissions.permissions.canRate;
 
-      alert(`Partner updated!`);
+      alert('Partner updated!');
       closeEditModal();
       renderUsers();
+      // Update stats
+      document.getElementById('totalArtists').textContent = allUsers.filter(u => u.isArtist).length;
+      document.getElementById('totalMerch').textContent = allUsers.filter(u => u.isMerchSupplier).length;
     } catch (error) {
       console.error('Error saving permissions:', error);
       alert('Error saving: ' + error.message);

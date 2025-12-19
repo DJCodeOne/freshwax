@@ -12,7 +12,7 @@ import '../../styles/global.css';
 <body>
   <div class="page-container">
     <header class="page-header">
-      <a href="/account" class="back-link">← Back to Account</a>
+      <a href="/account/dashboard" class="back-link">← Back to Account</a>
       <h1>Request Pro Access</h1>
       <p>Apply for Artist or Merch Seller roles to access the Pro Dashboard</p>
     </header>
@@ -502,7 +502,7 @@ import '../../styles/global.css';
 
       if (roles.djEligible) {
         djStatus.className = 'request-status approved';
-        djStatus.innerHTML = '✓ You have DJ Lobby access. <a href="/dj-lobby">Go to DJ Lobby</a>';
+        djStatus.innerHTML = '✓ You have DJ Lobby access. <a href="/account/dj-lobby">Go to DJ Lobby</a>';
         document.getElementById('djRequirements').style.display = 'none';
         djBypassForm.style.display = 'none';
         return;

@@ -102,6 +102,7 @@ export const prerender = false;
       <div class="instructions-tabs">
         <button class="tab-btn active" data-tab="obs">OBS Studio</button>
         <button class="tab-btn butt-tab" data-tab="butt">BUTT</button>
+        <button class="tab-btn pro-tab" data-tab="pro">Pro Multi-Stream</button>
       </div>
       
       <!-- OBS Instructions -->
@@ -212,7 +213,7 @@ export const prerender = false;
             <p>Broadcast Using This Tool - for audio-only streaming</p>
           </div>
         </div>
-        
+
         <div class="steps-container">
           <div class="step">
             <div class="step-number">1</div>
@@ -227,7 +228,7 @@ export const prerender = false;
               </a>
             </div>
           </div>
-          
+
           <div class="step">
             <div class="step-number">2</div>
             <div class="step-content">
@@ -262,7 +263,7 @@ export const prerender = false;
               </div>
             </div>
           </div>
-          
+
           <div class="step">
             <div class="step-number">3</div>
             <div class="step-content">
@@ -288,13 +289,115 @@ export const prerender = false;
               </div>
             </div>
           </div>
-          
+
           <div class="step final">
             <div class="step-number">4</div>
             <div class="step-content">
               <h3>Start Streaming!</h3>
               <p>Click <strong>Save</strong>, then click the <strong>Play button</strong> to start streaming. Check the signal meter - aim for peaks around -6dB.</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pro Multi-Stream Panel -->
+      <div id="proContent" class="instructions-panel hidden">
+        <div class="panel-header">
+          <div class="pro-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32" class="pro-icon">
+              <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.06 13.54L7.4 12l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41-5.64 5.66z"/>
+            </svg>
+            <span class="pro-badge-header">PRO</span>
+          </div>
+          <div>
+            <h2>Pro <span class="red">Multi-Stream</span></h2>
+            <p>Broadcast to multiple platforms simultaneously</p>
+          </div>
+        </div>
+
+        <div class="pro-settings-grid">
+          <!-- Twitch Multi-streaming -->
+          <div class="settings-section">
+            <div class="section-title">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" class="twitch-icon">
+                <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+              </svg>
+              <h3>Twitch Multi-Stream</h3>
+            </div>
+            <p class="section-desc">Broadcast to your Twitch channel simultaneously</p>
+
+            <div class="settings-form">
+              <div class="form-row">
+                <label for="twitchUsername">Twitch Username</label>
+                <input type="text" id="twitchUsername" placeholder="your_twitch_username" autocomplete="off" />
+              </div>
+              <div class="form-row">
+                <label for="twitchStreamKey">Twitch Stream Key</label>
+                <input type="text" id="twitchStreamKey" placeholder="live_123456789_AbCdEfGhIjK..." autocomplete="off" />
+              </div>
+              <button type="button" class="save-btn" id="saveTwitchBtn">Save Twitch Settings</button>
+            </div>
+          </div>
+
+          <!-- Relay Settings -->
+          <div class="settings-section">
+            <div class="section-title">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" class="relay-icon">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+              </svg>
+              <h3>Stream Relay</h3>
+            </div>
+            <p class="section-desc">Relay from another radio station through Fresh Wax</p>
+
+            <div class="settings-form">
+              <div class="form-row">
+                <label for="relayUrl">Relay Source URL</label>
+                <div class="input-with-btn">
+                  <input type="text" id="relayUrl" placeholder="HLS or stream URL to relay" autocomplete="off" />
+                  <button type="button" class="select-btn" id="openRelayModal" title="Select from radio stations">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                      <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/>
+                    </svg>
+                  </button>
+                </div>
+                <span id="relaySourceName" class="source-hint"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Output URL -->
+          <div class="settings-section output-section">
+            <div class="section-title">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" class="output-icon">
+                <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9 8h2v8H9zm4 2h2v6h-2zm-8 4h2v2H5z"/>
+              </svg>
+              <h3>Fresh Wax Output</h3>
+            </div>
+            <p class="section-desc">Share this URL with radio stations to relay your Fresh Wax stream</p>
+
+            <div class="output-url-box">
+              <code id="outputUrl">https://rtmp.freshwax.co.uk/live/freshwax-main/index.m3u8</code>
+              <button class="copy-btn" id="copyOutputUrl">Copy URL</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Relay Sources Modal -->
+      <div id="relaySourcesModal" class="modal-overlay hidden">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Select Radio Station</h3>
+            <button class="modal-close-btn" id="closeRelayModal">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="modal-hint">Select a station you're currently streaming on to relay through Fresh Wax</p>
+            <div id="relaySourcesList" class="relay-sources-list">
+              <div class="loading-sources">Loading stations...</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="modal-btn secondary" id="clearRelaySource">Clear Selection</button>
           </div>
         </div>
       </div>
@@ -602,7 +705,24 @@ export const prerender = false;
   .tab-btn.butt-tab {
     border: 2px solid #111;
   }
-  
+
+  .tab-btn.pro-tab {
+    border: 2px solid #7c3aed;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(139, 92, 246, 0.1));
+    color: #a78bfa;
+  }
+
+  .tab-btn.pro-tab:hover {
+    border-color: #8b5cf6;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(139, 92, 246, 0.2));
+  }
+
+  .tab-btn.pro-tab.active {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    color: #fff;
+    border-color: #8b5cf6;
+  }
+
   /* Instructions Panel */
   .instructions-panel {
     background: linear-gradient(to bottom, #1f2937, #111827);
@@ -636,7 +756,42 @@ export const prerender = false;
     justify-content: center;
     font-size: 1.5rem;
   }
-  
+
+  .pro-icon-wrap {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pro-icon {
+    color: #fff;
+  }
+
+  .pro-badge-header {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #000;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  .pro-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    padding: 1.5rem;
+  }
+
   .panel-header h2 {
     font-family: 'Inter', sans-serif; font-weight: 700;
     font-size: 1.5rem;
@@ -782,7 +937,367 @@ export const prerender = false;
     background: #d1d5db;
     color: #fff;
   }
-  
+
+  /* Advanced Settings Card */
+  .advanced-settings-card {
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 2rem;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #374151, #1f2937);
+    border-bottom: 2px solid #374151;
+  }
+
+  .card-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+
+  .card-header h2 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: 0.05em;
+  }
+
+  .card-header p {
+    color: #9ca3af;
+    font-size: 0.9rem;
+  }
+
+  .pro-badge-lg {
+    margin-left: auto;
+    padding: 0.4rem 1rem;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.05em;
+  }
+
+  .settings-grid {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .settings-section {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid #374151;
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-title h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .twitch-icon { color: #9146ff; }
+  .relay-icon { color: #f59e0b; }
+  .output-icon { color: #3b82f6; }
+
+  .section-desc {
+    color: #9ca3af;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  .settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .form-row label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .form-row input {
+    padding: 0.75rem 1rem;
+    background: #111;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.95rem;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .form-row input:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
+  }
+
+  .form-row input::placeholder {
+    color: #6b7280;
+  }
+
+  .input-with-btn {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .input-with-btn input {
+    flex: 1;
+  }
+
+  .select-btn {
+    padding: 0 1rem;
+    background: rgba(245, 158, 11, 0.2);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: 8px;
+    color: #f59e0b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .select-btn:hover {
+    background: rgba(245, 158, 11, 0.3);
+    border-color: #f59e0b;
+  }
+
+  .source-hint {
+    font-size: 0.75rem;
+    color: #f59e0b;
+  }
+
+  .save-btn {
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #9146ff, #7c3aed);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    align-self: flex-start;
+    transition: all 0.2s;
+  }
+
+  .save-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(145, 70, 255, 0.3);
+  }
+
+  .output-section {
+    border-color: rgba(59, 130, 246, 0.3);
+    background: rgba(59, 130, 246, 0.05);
+  }
+
+  .output-url-box {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    background: #111;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+  }
+
+  .output-url-box code {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: #3b82f6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .copy-btn {
+    padding: 0.5rem 1rem;
+    background: #3b82f6;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .copy-btn:hover {
+    background: #2563eb;
+  }
+
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+
+  .modal-content {
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, #374151, #1f2937);
+    border-bottom: 1px solid #374151;
+  }
+
+  .modal-header h3 {
+    font-size: 1.1rem;
+    color: #fff;
+  }
+
+  .modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #9ca3af;
+    cursor: pointer;
+  }
+
+  .modal-close-btn:hover { color: #fff; }
+
+  .modal-body {
+    padding: 1.25rem;
+    overflow-y: auto;
+    max-height: 50vh;
+  }
+
+  .modal-hint {
+    color: #9ca3af;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  .relay-sources-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .loading-sources {
+    text-align: center;
+    color: #9ca3af;
+    padding: 2rem;
+  }
+
+  .relay-source-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: #111;
+    border: 2px solid #333;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .relay-source-item:hover {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+  }
+
+  .relay-source-item.selected {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.15);
+  }
+
+  .source-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #333;
+  }
+
+  .source-info {
+    flex: 1;
+  }
+
+  .source-name {
+    font-weight: 600;
+    color: #fff;
+    display: block;
+  }
+
+  .source-url-preview {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    display: block;
+  }
+
+  .modal-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid #374151;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+  }
+
+  .modal-btn {
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: none;
+  }
+
+  .modal-btn.secondary {
+    background: #374151;
+    color: #fff;
+  }
+
+  .modal-btn.secondary:hover {
+    background: #4b5563;
+  }
+
   /* Mobile */
   @media (max-width: 768px) {
     .page-header {
@@ -880,18 +1395,32 @@ export const prerender = false;
   });
   
   function initPage() {
+    // Check URL parameter for initial tab
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialTab = urlParams.get('tab');
+
+    if (initialTab && ['obs', 'butt', 'pro'].includes(initialTab)) {
+      // Switch to the specified tab
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector(`.tab-btn[data-tab="${initialTab}"]`)?.classList.add('active');
+      document.getElementById('obsContent').classList.toggle('hidden', initialTab !== 'obs');
+      document.getElementById('buttContent').classList.toggle('hidden', initialTab !== 'butt');
+      document.getElementById('proContent').classList.toggle('hidden', initialTab !== 'pro');
+    }
+
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
+
         const tab = btn.dataset.tab;
         document.getElementById('obsContent').classList.toggle('hidden', tab !== 'obs');
         document.getElementById('buttContent').classList.toggle('hidden', tab !== 'butt');
+        document.getElementById('proContent').classList.toggle('hidden', tab !== 'pro');
       });
     });
-    
+
     // Copy buttons
     document.querySelectorAll('.copy-small-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -901,12 +1430,106 @@ export const prerender = false;
         setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
       });
     });
-    
+
     // Speed test
     document.getElementById('speedTestBtn').addEventListener('click', runSpeedTest);
     document.getElementById('closeResultsBtn').addEventListener('click', () => {
       document.getElementById('speedResultsCard').classList.add('hidden');
     });
+
+    // Copy output URL button
+    document.getElementById('copyOutputUrl')?.addEventListener('click', () => {
+      const url = document.getElementById('outputUrl').textContent;
+      navigator.clipboard.writeText(url);
+      const btn = document.getElementById('copyOutputUrl');
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy URL'; }, 2000);
+    });
+
+    // Relay modal
+    const relayModal = document.getElementById('relaySourcesModal');
+    const relayUrlInput = document.getElementById('relayUrl');
+    const relaySourceName = document.getElementById('relaySourceName');
+
+    document.getElementById('openRelayModal')?.addEventListener('click', async () => {
+      relayModal.classList.remove('hidden');
+      loadRelaySources();
+    });
+
+    document.getElementById('closeRelayModal')?.addEventListener('click', () => {
+      relayModal.classList.add('hidden');
+    });
+
+    document.getElementById('clearRelaySource')?.addEventListener('click', () => {
+      relayUrlInput.value = '';
+      relaySourceName.textContent = '';
+      document.querySelectorAll('.relay-source-item').forEach(item => item.classList.remove('selected'));
+    });
+
+    // Close modal on backdrop click
+    relayModal?.addEventListener('click', (e) => {
+      if (e.target === relayModal) {
+        relayModal.classList.add('hidden');
+      }
+    });
+
+    // Save Twitch settings
+    document.getElementById('saveTwitchBtn')?.addEventListener('click', () => {
+      const username = document.getElementById('twitchUsername').value;
+      const streamKey = document.getElementById('twitchStreamKey').value;
+
+      // Save to localStorage for now
+      localStorage.setItem('freshwax_twitch_username', username);
+      localStorage.setItem('freshwax_twitch_key', streamKey);
+
+      const btn = document.getElementById('saveTwitchBtn');
+      btn.textContent = 'Saved!';
+      setTimeout(() => { btn.textContent = 'Save Twitch Settings'; }, 2000);
+    });
+
+    // Load saved Twitch settings
+    const savedUsername = localStorage.getItem('freshwax_twitch_username');
+    const savedKey = localStorage.getItem('freshwax_twitch_key');
+    if (savedUsername) document.getElementById('twitchUsername').value = savedUsername;
+    if (savedKey) document.getElementById('twitchStreamKey').value = savedKey;
+  }
+
+  async function loadRelaySources() {
+    const listEl = document.getElementById('relaySourcesList');
+    listEl.innerHTML = '<div class="loading-sources">Loading stations...</div>';
+
+    try {
+      const response = await fetch('/api/relay-sources');
+      const data = await response.json();
+
+      if (data.sources && data.sources.length > 0) {
+        listEl.innerHTML = data.sources.map(source => `
+          <div class="relay-source-item" data-url="${source.url}" data-name="${source.name}">
+            <img src="${source.logo || '/place-holder.webp'}" alt="${source.name}" class="source-logo" onerror="this.src='/place-holder.webp'" />
+            <div class="source-info">
+              <span class="source-name">${source.name}</span>
+              <span class="source-url-preview">${source.url.substring(0, 40)}...</span>
+            </div>
+          </div>
+        `).join('');
+
+        // Add click handlers
+        listEl.querySelectorAll('.relay-source-item').forEach(item => {
+          item.addEventListener('click', () => {
+            listEl.querySelectorAll('.relay-source-item').forEach(i => i.classList.remove('selected'));
+            item.classList.add('selected');
+            document.getElementById('relayUrl').value = item.dataset.url;
+            document.getElementById('relaySourceName').textContent = `Selected: ${item.dataset.name}`;
+            document.getElementById('relaySourcesModal').classList.add('hidden');
+          });
+        });
+      } else {
+        listEl.innerHTML = '<div class="loading-sources">No relay sources configured</div>';
+      }
+    } catch (e) {
+      console.error('Error loading relay sources:', e);
+      listEl.innerHTML = '<div class="loading-sources">Failed to load stations</div>';
+    }
   }
   
   async function runSpeedTest() {

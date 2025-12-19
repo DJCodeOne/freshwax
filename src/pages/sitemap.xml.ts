@@ -81,8 +81,8 @@ export const GET = async () => {
   // Fetch all dynamic content in parallel for performance
   const [releasesResult, djMixesResult, merchResult] = await Promise.allSettled([
     getLiveReleases(500),
-    queryCollection('djMixes', {
-      filters: [{ field: 'status', op: 'EQUAL', value: 'published' }],
+    queryCollection('dj-mixes', {
+      filters: [{ field: 'published', op: 'EQUAL', value: true }],
       limit: 500,
       cacheKey: 'sitemap-dj-mixes',
       cacheTTL: 60 * 60 * 1000

@@ -82,6 +82,7 @@ export const POST: APIRoute = async ({ request }) => {
       body: JSON.stringify({
         from: 'Fresh Wax <orders@freshwax.co.uk>',
         to: [order.customer.email],
+        bcc: ['davidhagon@gmail.com'],
         subject: `Order Confirmed - ${shortOrderNumber}`,
         html: emailHtml
       })

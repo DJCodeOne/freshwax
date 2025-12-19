@@ -108,22 +108,22 @@ export const prerender = false;
 
             <div class="subscription-upgrade" id="subscriptionUpgrade">
               <div class="upgrade-benefits">
-                <h4>Upgrade to Pro - £10/year</h4>
+                <h4>Go Plus - £10/year</h4>
                 <ul>
                   <li>Unlimited DJ mix uploads</li>
                   <li>2 hours live streaming per day</li>
                   <li>Stream long duration events</li>
                   <li>Record Live stream button enabled</li>
-                  <li>Pro badge on profile</li>
+                  <li>Plus badge on profile</li>
                 </ul>
               </div>
-              <button class="upgrade-btn" id="upgradeBtn">Upgrade to Pro</button>
+              <button class="upgrade-btn" id="upgradeBtn">Go Plus</button>
             </div>
 
             <div class="subscription-pro hidden" id="subscriptionPro">
               <div class="pro-active">
                 <span class="pro-icon-large">⚡</span>
-                <span class="pro-message">You're a Pro member!</span>
+                <span class="pro-message">You're a Plus member!</span>
               </div>
               <p class="pro-expires" id="proExpires"></p>
 
@@ -133,7 +133,7 @@ export const prerender = false;
                   <span class="referral-icon">🎁</span>
                   <span class="referral-title">Invite a Friend - 50% Off!</span>
                 </div>
-                <p class="referral-desc">Share your code with a friend and they'll get 50% off their Pro upgrade (just £5 instead of £10)!</p>
+                <p class="referral-desc">Share your code with a friend and they'll get 50% off Plus (just £5 instead of £10)!</p>
                 <div class="referral-code-box">
                   <code id="referralCodeDisplay" class="referral-code">Loading...</code>
                   <button class="copy-referral-btn" id="copyReferralBtn" title="Copy code">
@@ -329,8 +329,8 @@ export const prerender = false;
             </div>
             <div class="form-group">
               <label for="displayName">Display Name</label>
-              <input type="text" id="displayName" name="displayName" placeholder="How you appear on the site" maxlength="30">
-              <p class="field-hint">This is how you'll be known across Fresh <span style="color: #dc2626;">Wax</span></p>
+              <input type="text" id="displayName" name="displayName" placeholder="How you appear on the site" maxlength="15">
+              <p class="field-hint">This is how you'll be known across <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span> (max 15 characters)</p>
             </div>
             <div class="form-row">
               <div class="form-group">
@@ -339,7 +339,7 @@ export const prerender = false;
               </div>
               <div class="form-group">
                 <label for="phone">Phone</label>
-                <input type="tel" id="phone" name="phone">
+                <input type="tel" id="phone" name="phone" maxlength="20">
               </div>
             </div>
             
@@ -363,26 +363,26 @@ export const prerender = false;
               
               <div class="form-group" style="margin-bottom: 0.5rem;">
                 <label for="address1">Address Line 1</label>
-                <input type="text" id="address1" name="address1" placeholder="Street address">
+                <input type="text" id="address1" name="address1" placeholder="Street address" maxlength="100">
               </div>
               <div class="form-group">
                 <label for="address2">Address Line 2 (Optional)</label>
-                <input type="text" id="address2" name="address2" placeholder="Flat, unit, building, etc.">
+                <input type="text" id="address2" name="address2" placeholder="Flat, unit, building, etc." maxlength="100">
               </div>
               <div class="form-row">
                 <div class="form-group">
                   <label for="city">City</label>
-                  <input type="text" id="city" name="city">
+                  <input type="text" id="city" name="city" maxlength="50">
                 </div>
                 <div class="form-group">
                   <label for="county">County</label>
-                  <input type="text" id="county" name="county">
+                  <input type="text" id="county" name="county" maxlength="50">
                 </div>
               </div>
               <div class="form-row">
                 <div class="form-group">
                   <label for="postcode">Postcode</label>
-                  <input type="text" id="postcode" name="postcode" style="text-transform: uppercase;">
+                  <input type="text" id="postcode" name="postcode" style="text-transform: uppercase;" maxlength="10">
                 </div>
                 <div class="form-group">
                   <label for="country">Country</label>
@@ -1179,9 +1179,9 @@ export const prerender = false;
     // Prioritize displayName, then firstName, then name, then email
     let displayName = data?.displayName || data?.firstName || data?.name || user.email?.split('@')[0] || 'Customer';
     
-    // Truncate to 30 characters max
-    if (displayName.length > 30) {
-      displayName = displayName.substring(0, 27) + '...';
+    // Truncate to 15 characters max
+    if (displayName.length > 15) {
+      displayName = displayName.substring(0, 12) + '...';
     }
     
     const initial = displayName.charAt(0).toUpperCase();
@@ -2494,9 +2494,9 @@ export const prerender = false;
 
       // Update tier badge
       if (result.subscription.isPro) {
-        tierBadge.textContent = 'Pro';
+        tierBadge.textContent = 'Plus';
         tierBadge.classList.remove('free');
-        tierBadge.classList.add('pro');
+        tierBadge.classList.add('plus');
         tierName.textContent = 'Member';
 
         // Show pro section, hide upgrade
@@ -2506,7 +2506,7 @@ export const prerender = false;
         // Show expiry date
         if (proExpires && result.subscription.expiresAt) {
           const expDate = new Date(result.subscription.expiresAt);
-          proExpires.textContent = `Your Pro membership expires on ${expDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+          proExpires.textContent = `Your Plus membership expires on ${expDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`;
         }
 
         // Load referral code
@@ -2514,7 +2514,7 @@ export const prerender = false;
       } else {
         tierBadge.textContent = 'Standard';
         tierBadge.classList.add('free');
-        tierBadge.classList.remove('pro');
+        tierBadge.classList.remove('plus');
         tierName.textContent = 'Account';
 
         // Show upgrade section, hide pro
@@ -2621,7 +2621,7 @@ export const prerender = false;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'subscription',
-          priceId: 'pro_annual', // This will be mapped to actual Stripe price ID
+          priceId: 'plus_annual', // This will be mapped to actual Stripe price ID
           userId: currentUser.uid,
           email: currentUser.email,
           successUrl: `${window.location.origin}/account/dashboard?upgraded=true`,
@@ -2642,7 +2642,7 @@ export const prerender = false;
 
       if (upgradeBtn) {
         upgradeBtn.disabled = false;
-        upgradeBtn.textContent = 'Upgrade to Pro';
+        upgradeBtn.textContent = 'Go Plus';
       }
     }
   }
@@ -2652,7 +2652,7 @@ export const prerender = false;
     const params = new URLSearchParams(window.location.search);
     if (params.get('upgraded') === 'true') {
       // Show success message
-      alert('Welcome to Pro! Your subscription is now active.');
+      alert('Welcome to Plus! Your subscription is now active.');
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -2938,7 +2938,7 @@ export const prerender = false;
     color: #9ca3af;
   }
 
-  .tier-badge.pro {
+  .tier-badge.plus {
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     color: #000;
   }

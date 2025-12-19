@@ -8,13 +8,23 @@ import '../../styles/global.css';
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Book a Slot | DJ Lobby | Fresh Wax</title>
+  <script is:inline>
+    window.FIREBASE_CONFIG = {
+      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      authDomain: "freshwax-store.firebaseapp.com",
+      projectId: "freshwax-store",
+      storageBucket: "freshwax-store.firebasestorage.app",
+      messagingSenderId: "675435782973",
+      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+    };
+  </script>
 </head>
 <body>
   <div class="page-container">
     <!-- Header -->
     <header class="page-header">
       <div class="header-nav">
-        <a href="/dj-lobby" class="back-link">← Back to DJ Lobby</a>
+        <a href="/account/dj-lobby" class="back-link">← Back to DJ Lobby</a>
       </div>
       <h1>Book a Slot</h1>
     </header>
@@ -531,10 +541,10 @@ import '../../styles/global.css';
         const now = new Date();
         const isToday = currentDate.toDateString() === now.toDateString();
         const currentHour = now.getHours();
-        const startHour = 12, endHour = 24;
 
         let html = '';
-        for (let hour = startHour; hour < endHour; hour++) {
+        // Show all 24 hours (0-23)
+        for (let hour = 0; hour < 24; hour++) {
           const isPast = isToday && hour <= currentHour;
           const booking = dailyBookings.find(b => {
             const startH = b.startTime.toDate().getHours();
@@ -544,23 +554,22 @@ import '../../styles/global.css';
           const isYours = booking && booking.djId === user.uid;
 
           let slotClass = 'slot';
-          let statusText = 'Available';
+          let statusText = '';
           let bookedBy = '';
 
           if (isPast) { slotClass += ' past'; statusText = 'Past'; }
-          else if (isSelected) { slotClass += ' selected'; statusText = 'Selected'; }
-          else if (isYours) { slotClass += ' yours'; statusText = 'Your Slot'; }
-          else if (booking) { slotClass += ' booked'; statusText = 'Booked'; bookedBy = booking.djName; }
+          else if (isSelected) { slotClass += ' selected'; statusText = '✓'; }
+          else if (isYours) { slotClass += ' yours'; statusText = 'You'; }
+          else if (booking) { slotClass += ' booked'; bookedBy = booking.djName; }
           else { slotClass += ' available'; }
 
-          const displayHour = hour > 12 ? hour - 12 : hour;
-          const ampm = hour >= 12 ? 'PM' : 'AM';
+          const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+          const ampm = hour >= 12 ? 'p' : 'a';
 
           html += `
             <div class="${slotClass}" data-hour="${hour}">
-              <span class="slot-time">${displayHour}:00 ${ampm}</span>
-              <span class="slot-status">${statusText}</span>
-              ${bookedBy ? `<span class="booked-by">${bookedBy}</span>` : ''}
+              <span class="slot-time">${displayHour}${ampm}</span>
+              ${bookedBy ? `<span class="booked-by">${bookedBy}</span>` : (statusText ? `<span class="slot-status">${statusText}</span>` : '')}
             </div>
           `;
         }
@@ -800,7 +809,7 @@ import '../../styles/global.css';
 
   <style>
     /* Inline form styles */
-    .dj-booking { max-width: 600px; }
+    .dj-booking { max-width: 800px; }
     .booking-header { margin-bottom: 1.5rem; }
     .booking-header h2 { color: var(--text-primary, #fff); margin: 0 0 0.5rem; }
     .booking-header p { color: var(--text-secondary, #a3a3a3); margin: 0; font-size: 0.9rem; }
@@ -827,23 +836,24 @@ import '../../styles/global.css';
     .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
     .current-date { font-weight: 600; color: var(--text-primary, #fff); min-width: 150px; text-align: center; }
     .schedule-section { display: flex; flex-direction: column; gap: 0.5rem; }
-    .schedule-help { font-size: 0.8rem; color: var(--text-secondary, #a3a3a3); margin: 0; }
-    .daily-schedule { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; padding: 1rem; background: var(--bg-secondary, #141414); border: 1px solid var(--border-color, #262626); border-radius: 8px; }
-    @media (max-width: 400px) { .daily-schedule { grid-template-columns: repeat(3, 1fr); } }
-    .slot { padding: 0.75rem 0.5rem; text-align: center; border-radius: 6px; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .slot-time { font-weight: 600; color: var(--text-primary, #fff); display: block; margin-bottom: 0.25rem; text-align: center; width: 100%; }
-    .slot-status { font-size: 0.7rem; text-transform: uppercase; text-align: center; width: 100%; }
+    .schedule-help { font-size: 0.75rem; color: var(--text-secondary, #a3a3a3); margin: 0; }
+    .daily-schedule { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; padding: 0.5rem; background: var(--bg-secondary, #141414); border: 1px solid var(--border-color, #262626); border-radius: 8px; }
+    @media (max-width: 600px) { .daily-schedule { grid-template-columns: repeat(6, 1fr); } }
+    @media (max-width: 400px) { .daily-schedule { grid-template-columns: repeat(4, 1fr); } }
+    .slot { padding: 0.4rem 0.25rem; text-align: center; border-radius: 4px; font-size: 0.7rem; cursor: pointer; transition: all 0.15s; border: 1px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 42px; }
+    .slot-time { font-weight: 700; color: var(--text-primary, #fff); display: block; text-align: center; width: 100%; font-size: 0.75rem; }
+    .slot-status { font-size: 0.6rem; text-transform: uppercase; text-align: center; width: 100%; margin-top: 2px; }
     .slot.available { background: var(--bg-tertiary, #1a1a1a); border-color: var(--border-color, #262626); }
-    .slot.available:hover { border-color: var(--accent, #22c55e); background: rgba(34, 197, 94, 0.1); }
+    .slot.available:hover { border-color: var(--accent, #22c55e); background: rgba(34, 197, 94, 0.15); }
     .slot.available .slot-status { color: var(--accent, #22c55e); }
     .slot.selected { background: var(--accent, #22c55e); border-color: var(--accent, #22c55e); }
     .slot.selected .slot-time, .slot.selected .slot-status { color: #000; }
-    .slot.booked { background: var(--bg-tertiary, #1a1a1a); opacity: 0.5; cursor: not-allowed; }
-    .slot.booked .slot-status { color: var(--text-muted, #666); }
-    .slot.booked .booked-by { font-size: 0.65rem; color: var(--text-muted, #666); display: block; margin-top: 0.25rem; text-align: center; width: 100%; }
+    .slot.booked { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); cursor: not-allowed; }
+    .slot.booked .slot-time { color: #f87171; }
+    .slot.booked .booked-by { font-size: 0.55rem; color: #f87171; display: block; margin-top: 2px; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
     .slot.yours { background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; cursor: not-allowed; }
     .slot.yours .slot-status { color: #60a5fa; }
-    .slot.past { opacity: 0.3; cursor: not-allowed; }
+    .slot.past { opacity: 0.25; cursor: not-allowed; background: var(--bg-tertiary, #1a1a1a); }
     .selection-summary { padding: 0.75rem 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 6px; font-size: 0.9rem; color: var(--text-primary, #fff); }
     .allowance-info { display: flex; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-tertiary, #1a1a1a); border-radius: 6px; font-size: 0.875rem; }
     .allowance-label { color: var(--text-secondary, #a3a3a3); }

@@ -1,23 +1,17 @@
 ---
 // Privacy Policy page
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
 ---
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy | Fresh Wax</title>
-</head>
-<body>
-  <main class="legal-container">
-    <div class="legal-card">
+
+<Layout title="Privacy Policy" description="Fresh Wax privacy policy - how we collect, use, and protect your personal information.">
+  <Header />
+
+  <main class="legal-page">
+    <div class="legal-container">
       <div class="legal-header">
-        <a href="/" class="logo-link">
-          <div class="logo-wrapper">
-            <img src="/logo.webp" alt="Fresh Wax" class="logo-img">
-          </div>
-        </a>
-        <h1><span class="fresh">Fresh</span> <span class="wax">Wax</span></h1>
-        <h2>Privacy Policy</h2>
+        <h1>Privacy Policy</h1>
         <p class="last-updated">Last updated: December 2024</p>
       </div>
 
@@ -96,148 +90,89 @@
 
         <section>
           <h3>10. Contact</h3>
-          <p>For privacy-related questions, please contact us through the platform.</p>
+          <p>For privacy-related questions, please <a href="/contact">contact us</a> through the platform.</p>
         </section>
-      </div>
-
-      <div class="legal-footer">
-        <a href="/register" class="btn btn-primary">Back to Register</a>
       </div>
     </div>
   </main>
 
-  <style>
-    .legal-container {
-      min-height: 100vh;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 2rem;
-      background: var(--bg-primary, #0a0a0a);
-    }
+  <Footer />
+</Layout>
 
-    .legal-card {
-      width: 100%;
-      max-width: 700px;
-      background: var(--bg-secondary, #141414);
-      border-radius: 12px;
-      padding: 2.5rem;
-      border: 1px solid var(--border-color, #262626);
-      margin: 2rem 0;
-    }
+<style>
+  .legal-page {
+    min-height: calc(100vh - 200px);
+    padding: 2rem;
+    background: var(--bg-primary, #0a0a0a);
+  }
 
-    .legal-header {
-      text-align: center;
-      margin-bottom: 2rem;
-      padding-bottom: 1.5rem;
-      border-bottom: 1px solid var(--border-color, #262626);
-    }
+  .legal-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: var(--bg-secondary, #141414);
+    border-radius: 12px;
+    padding: 2.5rem;
+    border: 1px solid var(--border-color, #262626);
+  }
 
-    .logo-link {
-      display: inline-block;
-      margin-bottom: 1rem;
-    }
+  .legal-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color, #262626);
+  }
 
-    .logo-wrapper {
-      width: 80px;
-      height: 80px;
-      background: #fff;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto;
-      padding: 0.5rem;
-    }
+  .legal-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary, #fff);
+    margin: 0 0 0.5rem;
+  }
 
-    .logo-img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
+  .last-updated {
+    color: var(--text-muted, #666);
+    font-size: 0.9rem;
+    margin: 0;
+  }
 
-    .legal-header h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      margin: 1rem 0 0.5rem;
-    }
+  .legal-content {
+    color: var(--text-secondary, #a3a3a3);
+    line-height: 1.7;
+  }
 
-    .legal-header h1 .fresh {
-      color: #fff;
-    }
+  .legal-content section {
+    margin-bottom: 1.75rem;
+  }
 
-    .legal-header h1 .wax {
-      color: #ef4444;
-    }
+  .legal-content h3 {
+    color: var(--text-primary, #fff);
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+  }
 
-    .legal-header h2 {
-      font-size: 1.5rem;
-      color: var(--text-primary, #fff);
-      margin: 0.5rem 0;
-    }
+  .legal-content p {
+    margin-bottom: 0.75rem;
+  }
 
-    .last-updated {
-      color: var(--text-muted, #666);
-      font-size: 0.9rem;
-      margin: 0;
-    }
+  .legal-content ul {
+    margin: 0.75rem 0;
+    padding-left: 1.5rem;
+  }
 
-    .legal-content {
-      color: var(--text-secondary, #a3a3a3);
-      line-height: 1.7;
-    }
+  .legal-content li {
+    margin-bottom: 0.5rem;
+  }
 
-    .legal-content section {
-      margin-bottom: 1.75rem;
-    }
+  .legal-content strong {
+    color: var(--text-primary, #fff);
+  }
 
-    .legal-content h3 {
-      color: var(--text-primary, #fff);
-      font-size: 1.1rem;
-      margin-bottom: 0.75rem;
-    }
+  .legal-content a {
+    color: #ef4444;
+    text-decoration: none;
+  }
 
-    .legal-content p {
-      margin-bottom: 0.75rem;
-    }
-
-    .legal-content ul {
-      margin: 0.75rem 0;
-      padding-left: 1.5rem;
-    }
-
-    .legal-content li {
-      margin-bottom: 0.5rem;
-    }
-
-    .legal-content strong {
-      color: var(--text-primary, #fff);
-    }
-
-    .legal-footer {
-      text-align: center;
-      margin-top: 2rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--border-color, #262626);
-    }
-
-    .btn {
-      display: inline-block;
-      padding: 0.75rem 1.5rem;
-      border-radius: 8px;
-      font-weight: 600;
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-
-    .btn-primary {
-      background: #ef4444;
-      color: #fff;
-    }
-
-    .btn-primary:hover {
-      background: #dc2626;
-    }
-  </style>
-</body>
-</html>
+  .legal-content a:hover {
+    text-decoration: underline;
+  }
+</style>
