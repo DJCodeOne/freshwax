@@ -322,7 +322,6 @@ export const prerender = false;
     <script type="module">
       import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
       import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-      import { getFirestore, doc, updateDoc, deleteDoc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
       const firebaseConfig = {
         apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
@@ -335,13 +334,13 @@ export const prerender = false;
 
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
-      const db = getFirestore(app);
 
       let allUsers = [];
       let currentFilter = 'all';
       let currentUserId = null;
       let currentUserCollection = null;
       let currentAdminUid = null;
+      let currentUserData = null;
 
       onAuthStateChanged(auth, (user) => {
         if (!user) {
@@ -354,11 +353,8 @@ export const prerender = false;
 
       async function loadUsers() {
         try {
-          // Use server-side API to load users (bypasses Firestore rules)
           const response = await fetch('/api/admin/list-users', {
-            headers: {
-              'x-admin-uid': currentAdminUid
-            }
+            headers: { 'x-admin-uid': currentAdminUid }
           });
 
           const data = await response.json();
@@ -367,13 +363,11 @@ export const prerender = false;
             throw new Error(data.error || 'Failed to load users');
           }
 
-          // Convert date strings back to Date objects for sorting/display
           allUsers = data.users.map(u => ({
             ...u,
             registeredAt: u.registeredAt ? new Date(u.registeredAt) : null
           }));
 
-          // Update stats from API response
           document.getElementById('totalCount').textContent = data.stats.totalCount;
           document.getElementById('customerCount').textContent = data.stats.customerCount;
           document.getElementById('djCount').textContent = data.stats.djCount;
@@ -397,64 +391,44 @@ export const prerender = false;
         }
       }
 
-      function updateStats() {
-        // Filter to only show customers and DJs - EXCLUDE users with artist or merch roles
-        // Those users belong exclusively in Partner Management
-        const usersToShow = allUsers.filter(u => !u.roles.artist && !u.roles.merch && (u.roles.customer || u.roles.dj));
-        document.getElementById('totalCount').textContent = usersToShow.length;
-        document.getElementById('customerCount').textContent = usersToShow.filter(u => u.roles.customer && !u.roles.dj).length;
-        document.getElementById('djCount').textContent = usersToShow.filter(u => u.roles.dj).length;
-
-        // Calculate total revenue
-        const totalRevenue = usersToShow.reduce((sum, u) => sum + (u.totalSpent || 0), 0);
-        document.getElementById('totalRevenue').textContent = '£' + totalRevenue.toFixed(0);
-      }
-      
       function renderUsers() {
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-        
+
         let filtered = allUsers.filter(u => {
-          // First, exclude users with artist or merch roles - they belong in Partner Management
           if (u.roles.artist || u.roles.merch) return false;
-          
-          // Search filter
-          const matchesSearch = !searchTerm || 
+
+          const matchesSearch = !searchTerm ||
             u.displayName.toLowerCase().includes(searchTerm) ||
             u.email.toLowerCase().includes(searchTerm) ||
             u.fullName.toLowerCase().includes(searchTerm);
-          
+
           if (!matchesSearch) return false;
-          
-          // Tab filter
+
           switch (currentFilter) {
-            case 'customer':
-              return u.roles.customer && !u.roles.dj;
-            case 'dj':
-              return u.roles.dj;
-            default:
-              // Show customers and DJs only
-              return u.roles.customer || u.roles.dj;
+            case 'customer': return u.roles.customer && !u.roles.dj;
+            case 'dj': return u.roles.dj;
+            default: return u.roles.customer || u.roles.dj;
           }
         });
-        
+
         const tbody = document.getElementById('usersTableBody');
         const emptyState = document.getElementById('emptyState');
         const tableWrapper = document.getElementById('usersTable');
-        
+
         if (filtered.length === 0) {
           tableWrapper.style.display = 'none';
           emptyState.style.display = 'block';
           return;
         }
-        
+
         tableWrapper.style.display = 'block';
         emptyState.style.display = 'none';
-        
+
         tbody.innerHTML = filtered.map(u => {
           const roles = [];
           if (u.roles.customer) roles.push('<span class="badge badge-secondary">Customer</span>');
           if (u.roles.dj) roles.push('<span class="badge badge-info">🎧 DJ</span>');
-          
+
           let statusBadge = '<span class="badge badge-secondary">Basic</span>';
           if (u.suspended) {
             statusBadge = '<span class="badge badge-danger">Suspended</span>';
@@ -463,14 +437,12 @@ export const prerender = false;
           } else if (u.roles.artist || u.roles.merch) {
             statusBadge = '<span class="badge badge-pending">Pending Approval</span>';
           }
-          
+
           const dateStr = u.registeredAt ? u.registeredAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
-          
           const needsApproval = !u.approved && !u.suspended && (u.roles.artist || u.roles.merch);
-          
           const orderCount = u.orderCount || 0;
           const totalSpent = u.totalSpent || 0;
-          
+
           return `
             <tr data-id="${u.id}">
               <td>
@@ -493,9 +465,7 @@ export const prerender = false;
               <td class="text-muted">${dateStr}</td>
               <td class="text-right">
                 <div class="btn-group">
-                  ${needsApproval ? `
-                    <button class="btn btn-sm btn-success" onclick="quickApprove('${u.id}', '${u.displayName.replace(/'/g, "\\'")}', '${u.collection}')">Approve</button>
-                  ` : ''}
+                  ${needsApproval ? `<button class="btn btn-sm btn-success" onclick="quickApprove('${u.id}', '${u.displayName.replace(/'/g, "\\'")}', '${u.collection}')">Approve</button>` : ''}
                   <button class="btn btn-sm btn-secondary" onclick="editUser('${u.id}')">Edit</button>
                   <button class="btn btn-sm btn-outline" onclick="deleteUser('${u.id}', '${u.displayName.replace(/'/g, "\\'")}')">🗑️</button>
                 </div>
@@ -504,7 +474,7 @@ export const prerender = false;
           `;
         }).join('');
       }
-      
+
       // Filter tabs
       document.querySelectorAll('.filter-tab').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -514,29 +484,34 @@ export const prerender = false;
           renderUsers();
         });
       });
-      
+
       document.getElementById('searchInput').addEventListener('input', () => renderUsers());
-      
+
       // Delete confirmation checkbox
       document.getElementById('deleteConfirmCheck')?.addEventListener('change', (e) => {
         document.getElementById('confirmDeleteBtn').disabled = !e.target.checked;
       });
-      
-      // Edit user
+
+      // Edit user - populate modal with user data
       window.editUser = function(id) {
         const user = allUsers.find(u => u.id === id);
-        if (!user) return;
-        
+        if (!user) {
+          showToast('User not found', 'error');
+          return;
+        }
+
         currentUserId = id;
         currentUserCollection = user.collection;
-        
+        currentUserData = user;
+
+        // Populate form fields
         document.getElementById('editUserId').value = id;
         document.getElementById('editUserCollection').value = user.collection;
-        document.getElementById('editDisplayName').value = user.displayName;
-        document.getElementById('editFullName').value = user.fullName;
-        document.getElementById('editEmail').value = user.email;
-        document.getElementById('editPhone').value = user.phone;
-        
+        document.getElementById('editDisplayName').value = user.displayName || '';
+        document.getElementById('editFullName').value = user.fullName || '';
+        document.getElementById('editEmail').value = user.email || '';
+        document.getElementById('editPhone').value = user.phone || '';
+
         // Address
         const addr = user.address || {};
         document.getElementById('editAddressLine1').value = addr.line1 || addr.address1 || '';
@@ -544,146 +519,125 @@ export const prerender = false;
         document.getElementById('editCity').value = addr.city || '';
         document.getElementById('editPostcode').value = addr.postcode || addr.postalCode || '';
         document.getElementById('editCountry').value = addr.country || 'United Kingdom';
-        
-        // Roles (Customer/DJ always true, Artist/Merch are upgrades)
-        document.getElementById('editRoleCustomer').checked = true;  // Always on
-        document.getElementById('editRoleDJ').checked = true;  // Always on
-        document.getElementById('editRoleArtist').checked = user.roles.artist || false;
-        document.getElementById('editRoleMerch').checked = user.roles.merch || false;
-        
-        // Status - only Active or Suspended
-        if (user.suspended) document.getElementById('statusSuspended').checked = true;
-        else document.getElementById('statusApproved').checked = true;
-        
+
+        // Roles
+        document.getElementById('editRoleCustomer').checked = true;
+        document.getElementById('editRoleDJ').checked = true;
+        document.getElementById('editRoleArtist').checked = user.roles?.artist || false;
+        document.getElementById('editRoleMerch').checked = user.roles?.merch || false;
+
+        // Status
+        if (user.suspended) {
+          document.getElementById('statusSuspended').checked = true;
+        } else {
+          document.getElementById('statusApproved').checked = true;
+        }
+
         // Permissions
         document.getElementById('editPermBuy').checked = user.permissions?.canBuy !== false;
         document.getElementById('editPermComment').checked = user.permissions?.canComment !== false;
         document.getElementById('editPermRate').checked = user.permissions?.canRate !== false;
         document.getElementById('editPermAdmin').checked = user.isAdmin === true;
-        
+
         // Notes
-        document.getElementById('editNotes').value = user.notes;
-        
+        document.getElementById('editNotes').value = user.notes || '';
+
         openModal('editModal');
       };
-      
-      // Save user
+
+      // Save user - uses server-side API
       window.saveUser = async function() {
-        if (!currentUserId) return;
-        
-        const status = document.querySelector('input[name="editStatus"]:checked')?.value;
-        const displayName = document.getElementById('editDisplayName').value;
-        const fullName = document.getElementById('editFullName').value;
-        
-        const address = {
-          line1: document.getElementById('editAddressLine1').value,
-          line2: document.getElementById('editAddressLine2').value,
-          city: document.getElementById('editCity').value,
-          postcode: document.getElementById('editPostcode').value,
-          country: document.getElementById('editCountry').value
-        };
-        
-        const roles = {
-          customer: true,  // Always true
-          dj: true,  // Always true
-          artist: document.getElementById('editRoleArtist').checked,
-          merchSupplier: document.getElementById('editRoleMerch').checked,
-          admin: document.getElementById('editPermAdmin').checked
-        };
-        
-        const permissions = {
-          canBuy: document.getElementById('editPermBuy').checked,
-          canComment: document.getElementById('editPermComment').checked,
-          canRate: document.getElementById('editPermRate').checked
-        };
-        
-        const updates = {
-          displayName: displayName,
-          name: fullName || displayName,
-          fullName: fullName,
-          email: document.getElementById('editEmail').value,
-          phone: document.getElementById('editPhone').value,
-          address: address,
-          isDJ: roles.dj,
-          isArtist: roles.artist,
-          isMerchSupplier: roles.merchSupplier,
-          isAdmin: roles.admin,
-          roles: roles,
-          permissions: permissions,
-          approved: status === 'approved',
-          suspended: status === 'suspended',
-          adminNotes: document.getElementById('editNotes').value,
-          updatedAt: new Date().toISOString()
-        };
-        
+        if (!currentUserId) {
+          showToast('No user selected', 'error');
+          return;
+        }
+
+        const saveBtn = document.querySelector('#editModal .btn-primary');
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = 'Saving...';
+        saveBtn.disabled = true;
+
         try {
-          // Update customers collection
-          try {
-            await updateDoc(doc(db, 'customers', currentUserId), updates);
-          } catch (e) {
-            // If doesn't exist, create it
-            if (e.code === 'not-found') {
-              await setDoc(doc(db, 'customers', currentUserId), { ...updates, createdAt: new Date() });
-            }
+          const status = document.querySelector('input[name="editStatus"]:checked')?.value;
+          const displayName = document.getElementById('editDisplayName').value.trim();
+          const fullName = document.getElementById('editFullName').value.trim();
+
+          if (!displayName) {
+            showToast('Display name is required', 'error');
+            return;
           }
-          
-          // Update users collection
-          try {
-            await updateDoc(doc(db, 'users', currentUserId), {
-              displayName: displayName,
-              approved: updates.approved,
-              isAdmin: updates.isAdmin,
-              roles: roles,
-              permissions: permissions
-            });
-          } catch (e) {}
-          
-          // If artist/merch role, update artists collection
-          if (roles.artist || roles.merchSupplier) {
-            try {
-              const artistDoc = await getDoc(doc(db, 'artists', currentUserId));
-              if (artistDoc.exists()) {
-                await updateDoc(doc(db, 'artists', currentUserId), {
-                  artistName: displayName,
-                  name: fullName || displayName,
-                  email: updates.email,
-                  phone: updates.phone,
-                  isArtist: roles.artist,
-                  isMerchSupplier: roles.merchSupplier,
-                  approved: updates.approved,
-                  suspended: updates.suspended,
-                  adminNotes: updates.adminNotes,
-                  updatedAt: new Date().toISOString()
-                });
-              } else {
-                // Create artist record
-                await setDoc(doc(db, 'artists', currentUserId), {
-                  artistName: displayName,
-                  name: fullName || displayName,
-                  email: updates.email,
-                  phone: updates.phone,
-                  isArtist: roles.artist,
-                  isMerchSupplier: roles.merchSupplier,
-                  approved: updates.approved,
-                  suspended: updates.suspended,
-                  adminNotes: updates.adminNotes,
-                  registeredAt: new Date(),
-                  createdAt: new Date()
-                });
-              }
-            } catch (e) {
-            }
+
+          const updates = {
+            displayName: displayName,
+            fullName: fullName,
+            email: document.getElementById('editEmail').value.trim(),
+            phone: document.getElementById('editPhone').value.trim(),
+            address: {
+              line1: document.getElementById('editAddressLine1').value.trim(),
+              line2: document.getElementById('editAddressLine2').value.trim(),
+              city: document.getElementById('editCity').value.trim(),
+              postcode: document.getElementById('editPostcode').value.trim(),
+              country: document.getElementById('editCountry').value.trim()
+            },
+            roles: {
+              customer: true,
+              dj: true,
+              artist: document.getElementById('editRoleArtist').checked,
+              merchSupplier: document.getElementById('editRoleMerch').checked,
+              admin: document.getElementById('editPermAdmin').checked
+            },
+            permissions: {
+              canBuy: document.getElementById('editPermBuy').checked,
+              canComment: document.getElementById('editPermComment').checked,
+              canRate: document.getElementById('editPermRate').checked
+            },
+            isAdmin: document.getElementById('editPermAdmin').checked,
+            approved: status === 'approved',
+            suspended: status === 'suspended',
+            adminNotes: document.getElementById('editNotes').value.trim()
+          };
+
+          // Call server-side API
+          const response = await fetch('/api/admin/update-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-admin-uid': currentAdminUid
+            },
+            body: JSON.stringify({
+              userId: currentUserId,
+              sourceCollection: currentUserCollection,
+              updates: updates
+            })
+          });
+
+          const result = await response.json();
+
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to update user');
           }
-          
+
           closeModal('editModal');
-          showToast('User updated successfully');
-          loadUsers();
+
+          const isBeingUpgraded = updates.roles.artist || updates.roles.merchSupplier;
+          if (isBeingUpgraded) {
+            showToast('User upgraded to Partner!', 'success');
+          } else {
+            showToast('User updated successfully', 'success');
+          }
+
+          // Reload users to show updated data
+          await loadUsers();
+
         } catch (error) {
           console.error('Save error:', error);
-          showToast('Error updating user: ' + error.message, 'error');
+          showToast('Error: ' + error.message, 'error');
+        } finally {
+          saveBtn.textContent = originalText;
+          saveBtn.disabled = false;
         }
       };
-      
+
       // Quick approve
       window.quickApprove = function(id, name, collection) {
         currentUserId = id;
@@ -691,31 +645,40 @@ export const prerender = false;
         document.getElementById('approveUserName').textContent = name;
         openModal('approveModal');
       };
-      
+
       window.confirmApprove = async function() {
         if (!currentUserId) return;
+
         try {
-          // Update all relevant collections
-          try {
-            await updateDoc(doc(db, 'customers', currentUserId), { approved: true, approvedAt: new Date().toISOString() });
-          } catch (e) {}
-          
-          try {
-            await updateDoc(doc(db, 'users', currentUserId), { approved: true });
-          } catch (e) {}
-          
-          try {
-            await updateDoc(doc(db, 'artists', currentUserId), { approved: true, approvedAt: new Date().toISOString() });
-          } catch (e) {}
-          
+          const response = await fetch('/api/admin/update-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-admin-uid': currentAdminUid
+            },
+            body: JSON.stringify({
+              userId: currentUserId,
+              sourceCollection: currentUserCollection,
+              updates: { approved: true }
+            })
+          });
+
+          const result = await response.json();
+
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to approve user');
+          }
+
           closeModal('approveModal');
           showToast('User approved!', 'success');
-          loadUsers();
+          await loadUsers();
+
         } catch (error) {
-          showToast('Error approving user: ' + error.message, 'error');
+          console.error('Approve error:', error);
+          showToast('Error: ' + error.message, 'error');
         }
       };
-      
+
       // Delete user
       window.deleteUser = function(id, name) {
         currentUserId = id;
@@ -724,23 +687,45 @@ export const prerender = false;
         document.getElementById('confirmDeleteBtn').disabled = true;
         openModal('deleteModal');
       };
-      
+
       window.confirmDelete = async function() {
         if (!currentUserId) return;
+
+        const deleteBtn = document.getElementById('confirmDeleteBtn');
+        const originalText = deleteBtn.textContent;
+        deleteBtn.textContent = 'Deleting...';
+        deleteBtn.disabled = true;
+
         try {
-          // Delete from all collections
-          try { await deleteDoc(doc(db, 'customers', currentUserId)); } catch (e) {}
-          try { await deleteDoc(doc(db, 'users', currentUserId)); } catch (e) {}
-          try { await deleteDoc(doc(db, 'artists', currentUserId)); } catch (e) {}
-          
+          // Use server-side API to delete user
+          const response = await fetch('/api/admin/delete-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-admin-uid': currentAdminUid
+            },
+            body: JSON.stringify({ userId: currentUserId })
+          });
+
+          const result = await response.json();
+
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to delete user');
+          }
+
           closeModal('deleteModal');
-          showToast('User deleted');
-          loadUsers();
+          showToast('User deleted successfully', 'success');
+          await loadUsers();
+
         } catch (error) {
-          showToast('Error deleting user: ' + error.message, 'error');
+          console.error('Delete error:', error);
+          showToast('Error: ' + error.message, 'error');
+        } finally {
+          deleteBtn.textContent = originalText;
+          deleteBtn.disabled = false;
         }
       };
-      
+
       // Export users
       window.exportUsers = function() {
         const headers = ['Display Name', 'Full Name', 'Email', 'Phone', 'Roles', 'Status', 'Registered'];
@@ -750,12 +735,12 @@ export const prerender = false;
           if (u.roles.dj) roles.push('DJ');
           if (u.roles.artist) roles.push('Artist');
           if (u.roles.merch) roles.push('Merch');
-          
+
           let status = 'Basic';
           if (u.suspended) status = 'Suspended';
           else if (u.approved) status = 'Approved';
           else if (u.roles.artist || u.roles.merch) status = 'Pending';
-          
+
           return [
             u.displayName,
             u.fullName,
@@ -766,7 +751,7 @@ export const prerender = false;
             u.registeredAt?.toISOString() || ''
           ];
         });
-        
+
         const csv = [headers, ...rows].map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
@@ -775,7 +760,7 @@ export const prerender = false;
         a.download = `freshwax-users-${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         URL.revokeObjectURL(url);
-        showToast('Users exported');
+        showToast('Users exported', 'success');
       };
     </script>
   </Fragment>

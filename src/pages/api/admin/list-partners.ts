@@ -73,9 +73,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Helper to get first non-empty value
     const firstNonEmpty = (...values: any[]) => values.find(v => v && String(v).trim() !== '') || '';
 
-    // Load from users collection
+    // Load from users collection (skip deleted users)
     const users = await queryCollection('users', { skipCache: true });
     users.forEach(user => {
+      if (user.deleted === true) return;
       const roles = user.roles || {};
 
       // Only include if they have artist or merch role
@@ -103,46 +104,60 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
 
-    // Load from artists collection (legacy)
+    // Load from artists collection (skip deleted users)
     const artists = await queryCollection('artists', { skipCache: true });
     artists.forEach(artist => {
+      if (artist.deleted === true) return;
+      // Check if this artist record has partner roles
+      // Only include if isArtist is explicitly true, or if it's a legacy record without the flag but with artist data
+      const hasArtistRole = artist.isArtist === true;
+      const hasMerchRole = artist.isMerchSupplier === true;
+
       if (userMap.has(artist.id)) {
-        // Merge data
+        // Merge data - but respect role flags
         const existing = userMap.get(artist.id);
-        existing.isArtist = true;
+        existing.isArtist = existing.isArtist || hasArtistRole;
         existing.isDJ = existing.isDJ || artist.isDJ || false;
-        existing.isMerchSupplier = existing.isMerchSupplier || artist.isMerchSupplier || false;
+        existing.isMerchSupplier = existing.isMerchSupplier || hasMerchRole;
         existing.isApproved = existing.isApproved || artist.approved || false;
         existing.name = firstNonEmpty(existing.name, artist.artistName, artist.name);
         existing.displayName = firstNonEmpty(existing.displayName, artist.artistName, artist.name);
         if (!existing.email && artist.email) existing.email = artist.email;
         if (!existing.address && artist.address) existing.address = artist.address;
       } else {
-        userMap.set(artist.id, {
-          id: artist.id,
-          email: artist.email || '',
-          name: artist.artistName || artist.name || '',
-          displayName: artist.artistName || artist.name || '',
-          phone: artist.phone || '',
-          address: artist.address || null,
-          isAdmin: artist.isAdmin || artist.role === 'admin' || false,
-          isCustomer: true,
-          isArtist: true,
-          isDJ: artist.isDJ || false,
-          isMerchSupplier: artist.isMerchSupplier || false,
-          isApproved: artist.approved || false,
-          isDisabled: artist.disabled || false,
-          canBuy: true,
-          canComment: true,
-          canRate: true,
-          createdAt: artist.createdAt || null,
-          source: 'artists'
-        });
+        // Only add if they have at least one partner role
+        if (hasArtistRole || hasMerchRole) {
+          userMap.set(artist.id, {
+            id: artist.id,
+            email: artist.email || '',
+            name: artist.artistName || artist.name || '',
+            displayName: artist.artistName || artist.name || '',
+            phone: artist.phone || '',
+            address: artist.address || null,
+            isAdmin: artist.isAdmin || artist.role === 'admin' || false,
+            isCustomer: true,
+            isArtist: hasArtistRole,
+            isDJ: artist.isDJ || false,
+            isMerchSupplier: hasMerchRole,
+            isApproved: artist.approved || false,
+            isDisabled: artist.disabled || false,
+            canBuy: true,
+            canComment: true,
+            canRate: true,
+            createdAt: artist.createdAt || null,
+            source: 'artists'
+          });
+        }
       }
     });
 
-    // Convert map to array
-    userMap.forEach(user => partners.push(user));
+    // Convert map to array and filter to only include actual partners
+    userMap.forEach(user => {
+      // Only include users who have at least one partner role
+      if (user.isArtist || user.isMerchSupplier) {
+        partners.push(user);
+      }
+    });
 
     // Sort by name
     partners.sort((a, b) => (a.name || '').localeCompare(b.name || ''));

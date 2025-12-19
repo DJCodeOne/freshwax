@@ -247,7 +247,7 @@ export const prerender = false;
     <script type="module">
       import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
       import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-      import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+      import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
       
       const firebaseConfig = {
         apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
@@ -265,7 +265,17 @@ export const prerender = false;
       let allPartners = [];
       let currentFilter = 'all';
       let currentPartnerId = null;
-      
+
+      // Helper function to get a comparable date value from various formats
+      function getDateValue(dateField) {
+        if (!dateField) return 0;
+        // Firestore Timestamp has toDate()
+        if (dateField.toDate) return dateField.toDate().getTime();
+        // ISO string or Date object
+        const date = new Date(dateField);
+        return isNaN(date.getTime()) ? 0 : date.getTime();
+      }
+
       onAuthStateChanged(auth, (user) => {
         if (!user) {
           window.location.href = '/admin/login';
@@ -273,16 +283,27 @@ export const prerender = false;
         }
         loadPartners();
       });
-      
+
       async function loadPartners() {
         try {
-          const INITIAL_LIMIT = 50;
-          const snapshot = await getDocs(query(collection(db, 'artists'), orderBy('registeredAt', 'desc'), limit(INITIAL_LIMIT)));
-          const hasMore = snapshot.size >= INITIAL_LIMIT;
+          // Don't use orderBy - it causes issues with mixed timestamp/string dates
+          // Load all and sort client-side instead
+          const snapshot = await getDocs(collection(db, 'artists'));
           allPartners = [];
-          
+
           snapshot.forEach(doc => {
             const data = doc.data();
+
+            // Only include users who have at least one partner role (artist or merch supplier)
+            const isArtist = data.isArtist === true;
+            const isMerchSupplier = data.isMerchSupplier === true;
+
+            // Skip users who don't have any partner roles
+            if (!isArtist && !isMerchSupplier) {
+              console.log('[manage] Skipping non-partner:', doc.id, data.artistName || data.name);
+              return;
+            }
+
             allPartners.push({
               id: doc.id,
               name: data.artistName || data.name || 'Unknown',
@@ -290,26 +311,31 @@ export const prerender = false;
               email: data.email || '',
               phone: data.phone || data.whatsapp || '',
               avatarUrl: data.avatarUrl || data.photoURL || data.imageUrl || null,
-              isArtist: data.isArtist === true,
-              isMerchSupplier: data.isMerchSupplier === true,
+              isArtist: isArtist,
+              isMerchSupplier: isMerchSupplier,
               approved: data.approved === true,
               suspended: data.suspended === true,
               notes: data.adminNotes || '',
-              registeredAt: data.registeredAt?.toDate?.() || new Date(data.registeredAt) || null
+              registeredAt: data.registeredAt?.toDate?.() || (data.registeredAt ? new Date(data.registeredAt) : null),
+              _rawRegisteredAt: data.registeredAt // Keep raw for sorting
             });
           });
-          
+
+          // Sort by registeredAt descending (newest first), handling mixed formats
+          allPartners.sort((a, b) => {
+            const dateA = getDateValue(a._rawRegisteredAt);
+            const dateB = getDateValue(b._rawRegisteredAt);
+            return dateB - dateA; // Descending order
+          });
+
+          console.log('[manage] Loaded', allPartners.length, 'partners:', allPartners.map(p => p.name));
+
           updateStats();
           renderPartners();
-          
+
           document.getElementById('loadingState').style.display = 'none';
           document.getElementById('partnersTable').style.display = 'block';
-          
-          // Show Load All button if there's more data
-          if (hasMore) {
-            showLoadAllPartnersButton();
-          }
-          
+
         } catch (error) {
           console.error('Error loading partners:', error);
           document.getElementById('loadingState').innerHTML = `
@@ -319,60 +345,6 @@ export const prerender = false;
               <p>${error.message}</p>
             </div>
           `;
-        }
-      }
-      
-      function showLoadAllPartnersButton() {
-        const toolbar = document.querySelector('.toolbar');
-        if (toolbar && !document.getElementById('loadAllBtn')) {
-          const loadAllBtn = document.createElement('button');
-          loadAllBtn.id = 'loadAllBtn';
-          loadAllBtn.className = 'btn btn-outline';
-          loadAllBtn.innerHTML = '<span>📥</span> Load All';
-          loadAllBtn.onclick = loadAllPartners;
-          loadAllBtn.style.marginLeft = 'auto';
-          toolbar.appendChild(loadAllBtn);
-        }
-      }
-      
-      async function loadAllPartners() {
-        const btn = document.getElementById('loadAllBtn');
-        if (btn) {
-          btn.disabled = true;
-          btn.innerHTML = '<span>⏳</span> Loading...';
-        }
-        
-        try {
-          const snapshot = await getDocs(query(collection(db, 'artists'), orderBy('registeredAt', 'desc')));
-          allPartners = [];
-          
-          snapshot.forEach(doc => {
-            const data = doc.data();
-            allPartners.push({
-              id: doc.id,
-              name: data.artistName || data.name || 'Unknown',
-              fullName: data.name || data.fullName || '',
-              email: data.email || '',
-              phone: data.phone || data.whatsapp || '',
-              avatarUrl: data.avatarUrl || data.photoURL || data.imageUrl || null,
-              isArtist: data.isArtist === true,
-              isMerchSupplier: data.isMerchSupplier === true,
-              approved: data.approved === true,
-              suspended: data.suspended === true,
-              notes: data.adminNotes || '',
-              registeredAt: data.registeredAt?.toDate?.() || new Date(data.registeredAt) || null
-            });
-          });
-          
-          updateStats();
-          renderPartners();
-          if (btn) btn.remove();
-        } catch (error) {
-          console.error('Error loading all partners:', error);
-          if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<span>📥</span> Load All';
-          }
         }
       }
       
@@ -505,38 +477,80 @@ export const prerender = false;
       };
       
       window.savePartner = async function() {
-        if (!currentPartnerId) return;
-        
-        const status = document.querySelector('input[name="editStatus"]:checked')?.value;
-        const updates = {
-          artistName: document.getElementById('editName').value,
-          name: document.getElementById('editFullName').value || document.getElementById('editName').value,
-          email: document.getElementById('editEmail').value,
-          phone: document.getElementById('editPhone').value,
-          isArtist: document.getElementById('editRoleArtist').checked,
-          isMerchSupplier: document.getElementById('editRoleMerch').checked,
-          approved: status === 'approved',
-          suspended: status === 'suspended',
-          adminNotes: document.getElementById('editNotes').value,
-          updatedAt: new Date().toISOString()
-        };
-        
+        if (!currentPartnerId) {
+          showToast('No partner selected', 'error');
+          return;
+        }
+
+        const adminUid = auth.currentUser?.uid;
+        if (!adminUid) {
+          showToast('Not authenticated', 'error');
+          return;
+        }
+
+        const saveBtn = document.querySelector('#editModal .btn-primary');
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = 'Saving...';
+        saveBtn.disabled = true;
+
         try {
-          await updateDoc(doc(db, 'artists', currentPartnerId), updates);
-          try {
-            await updateDoc(doc(db, 'users', currentPartnerId), {
-              displayName: updates.artistName,
-              approved: updates.approved,
-              'roles.artist': updates.isArtist,
-              'roles.merchSupplier': updates.isMerchSupplier
-            });
-          } catch (e) {}
-          
+          const status = document.querySelector('input[name="editStatus"]:checked')?.value;
+          const newIsArtist = document.getElementById('editRoleArtist').checked;
+          const newIsMerchSupplier = document.getElementById('editRoleMerch').checked;
+          const name = document.getElementById('editName').value.trim();
+
+          if (!name) {
+            showToast('Name is required', 'error');
+            return;
+          }
+
+          // Call server-side API with simplified updates object
+          const response = await fetch('/api/admin/update-partner', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              adminUid: adminUid,
+              partnerId: currentPartnerId,
+              updates: {
+                name: name,
+                email: document.getElementById('editEmail').value.trim(),
+                phone: document.getElementById('editPhone').value.trim(),
+                adminNotes: document.getElementById('editNotes').value.trim(),
+                isArtist: newIsArtist,
+                isMerchSupplier: newIsMerchSupplier,
+                approved: status === 'approved',
+                suspended: status === 'suspended'
+              }
+            })
+          });
+
+          const result = await response.json();
+
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to update partner');
+          }
+
           closeModal('editModal');
-          showToast('Partner updated successfully');
-          loadPartners();
+
+          // Check if user is still a partner
+          const isStillPartner = newIsArtist || newIsMerchSupplier;
+
+          if (!isStillPartner) {
+            allPartners = allPartners.filter(p => p.id !== currentPartnerId);
+            showToast('Partner downgraded and moved to User Management', 'success');
+            updateStats();
+            renderPartners();
+          } else {
+            showToast('Partner updated successfully', 'success');
+            await loadPartners();
+          }
+
         } catch (error) {
-          showToast('Error updating partner: ' + error.message, 'error');
+          console.error('[manage] Save error:', error);
+          showToast('Error: ' + error.message, 'error');
+        } finally {
+          saveBtn.textContent = originalText;
+          saveBtn.disabled = false;
         }
       };
       
