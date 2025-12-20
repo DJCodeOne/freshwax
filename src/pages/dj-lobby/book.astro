@@ -252,41 +252,46 @@ export const prerender = false;
     .grid-container {
       background: #0a0a0a;
       border-radius: 6px;
-      padding: 3px;
+      padding: 4px;
     }
 
-    /* Compact 24-hour grid: 8 columns x 3 rows */
+    /* Ultra-compact 24-hour grid: 6 columns x 4 rows */
     .hour-grid {
       display: grid;
-      grid-template-columns: repeat(8, 1fr);
-      gap: 2px;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 3px;
     }
 
     .hour-cell {
       background: #1a1a1a;
-      border: 1px solid transparent;
-      border-radius: 3px;
-      padding: 4px 2px;
+      border: 2px solid transparent;
+      border-radius: 4px;
+      padding: 6px 4px;
       text-align: center;
       cursor: pointer;
-      transition: all 0.1s;
-      min-height: 44px;
+      transition: all 0.15s;
+      min-height: 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
     }
 
     .hour-cell:hover:not(.past):not(.booked):not(.yours) {
       border-color: #dc2626;
-      background: rgba(220, 38, 38, 0.15);
+      background: rgba(220, 38, 38, 0.2);
+      transform: scale(1.02);
     }
 
-    .hour-cell.past { opacity: 0.25; cursor: default; }
-    .hour-cell.open { background: #0d1f0d; border-color: rgba(34, 197, 94, 0.2); }
-    .hour-cell.booked { background: #1f0d0d; border-color: rgba(220, 38, 38, 0.3); cursor: default; }
-    .hour-cell.yours { background: #0d0d1f; border-color: rgba(59, 130, 246, 0.5); cursor: default; }
-    .hour-cell.selected { background: #dc2626; border-color: #dc2626; }
+    .hour-cell.past { opacity: 0.3; cursor: default; }
+    .hour-cell.open { background: #0d1f0d; border-color: rgba(34, 197, 94, 0.3); }
+    .hour-cell.booked { background: #1f0d0d; border-color: rgba(220, 38, 38, 0.4); cursor: default; }
+    .hour-cell.yours { background: #0d0d1f; border-color: rgba(59, 130, 246, 0.6); cursor: default; }
+    .hour-cell.selected { background: #dc2626; border-color: #fff; }
 
     .hour-cell .time {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 0.75rem;
+      font-size: 0.85rem;
       color: #666;
       line-height: 1;
     }
@@ -297,17 +302,18 @@ export const prerender = false;
     .hour-cell.selected .time { color: #fff; }
 
     .hour-cell .dj {
-      font-size: 0.5rem;
+      font-size: 0.55rem;
       font-weight: 600;
       color: #fff;
-      margin-top: 1px;
+      margin-top: 2px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      line-height: 1.1;
+      max-width: 100%;
+      line-height: 1;
     }
 
-    .hour-cell.open .dj { color: #22c55e; font-weight: 400; font-size: 0.45rem; }
+    .hour-cell.open .dj { display: none; }
 
     .legend {
       display: flex;
@@ -569,7 +575,20 @@ export const prerender = false;
 
     @media (max-width: 600px) {
       .hour-grid {
-        grid-template-columns: repeat(6, 1fr);
+        grid-template-columns: repeat(4, 1fr);
+      }
+
+      .hour-cell {
+        min-height: 32px;
+        padding: 4px 2px;
+      }
+
+      .hour-cell .time {
+        font-size: 0.75rem;
+      }
+
+      .hour-cell .dj {
+        font-size: 0.5rem;
       }
 
       .layout {
@@ -819,7 +838,7 @@ export const prerender = false;
           djText = booking.djName || 'Booked';
         } else {
           cellClass += ' open';
-          djText = 'Open';
+          djText = ''; // No text for open slots - just color indicator
         }
 
         const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
@@ -828,7 +847,7 @@ export const prerender = false;
         html += `
           <div class="${cellClass}" data-hour="${hour}">
             <div class="time">${displayHour}${ampm}</div>
-            <div class="dj">${djText}</div>
+            ${djText ? `<div class="dj">${djText}</div>` : ''}
           </div>
         `;
       }
