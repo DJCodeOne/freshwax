@@ -208,24 +208,24 @@ export const prerender = false;
     padding: 8px;
   }
 
-  /* 24-hour compact grid - 6 columns x 4 rows */
+  /* 24-hour compact grid - 8 columns x 3 rows */
   .hourly-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
   }
 
   .hour-cell {
     background: #1a1a1a;
-    border: 2px solid transparent;
-    border-radius: 6px;
-    padding: 0.4rem 0.3rem;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 4px 2px;
     text-align: center;
-    min-height: 60px;
+    min-height: 44px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    transition: all 0.15s;
+    transition: all 0.1s;
     cursor: default;
   }
 
@@ -267,10 +267,9 @@ export const prerender = false;
 
   .hour-time {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 0.95rem;
+    font-size: 0.75rem;
     color: #666;
     line-height: 1;
-    margin-bottom: 2px;
   }
 
   .hour-cell.available .hour-time { color: #22c55e; }
@@ -279,19 +278,20 @@ export const prerender = false;
   .hour-cell.lobby .hour-time { color: #fbbf24; }
 
   .hour-dj {
-    font-size: 0.65rem;
+    font-size: 0.5rem;
     font-weight: 600;
     color: #fff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    line-height: 1.2;
+    line-height: 1.1;
+    margin-top: 1px;
   }
 
   .hour-cell.available .hour-dj {
     color: #22c55e;
     font-weight: 400;
-    font-size: 0.55rem;
+    font-size: 0.45rem;
   }
 
   .hour-status {
@@ -433,7 +433,7 @@ export const prerender = false;
 
   @media (max-width: 800px) {
     .hourly-grid {
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(6, 1fr);
     }
 
     .day-selector {
@@ -441,9 +441,9 @@ export const prerender = false;
     }
 
     .day-btn {
-      min-width: 60px;
+      min-width: 55px;
       padding: 0.4rem 0.5rem;
-      font-size: 0.7rem;
+      font-size: 0.65rem;
     }
   }
 
@@ -457,31 +457,31 @@ export const prerender = false;
     }
 
     .hourly-grid {
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(6, 1fr);
     }
 
     .hour-cell {
-      min-height: 50px;
-      padding: 0.3rem 0.2rem;
+      min-height: 40px;
+      padding: 3px 2px;
     }
 
     .hour-time {
-      font-size: 0.8rem;
+      font-size: 0.65rem;
     }
 
     .hour-dj {
-      font-size: 0.55rem;
+      font-size: 0.4rem;
     }
 
     .day-btn {
-      min-width: 45px;
-      padding: 0.35rem 0.35rem;
-      font-size: 0.6rem;
+      min-width: 40px;
+      padding: 0.3rem 0.3rem;
+      font-size: 0.55rem;
     }
 
     .nav-btn {
-      width: 30px;
-      height: 30px;
+      width: 28px;
+      height: 28px;
     }
 
     .dj-steps {
