@@ -4,10 +4,20 @@
 User-agent: *
 Allow: /
 
-# Block admin and account areas from indexing
+# Allow static assets for proper rendering
+Allow: /_astro/
+Allow: /assets/
+Allow: /*.css
+Allow: /*.js
+Allow: /*.webp
+Allow: /*.jpg
+Allow: /*.png
+Allow: /*.svg
+Allow: /*.woff2
+
+# Block admin and private areas from indexing
 Disallow: /admin/
 Disallow: /account/
-Disallow: /artist/
 Disallow: /api/
 Disallow: /login
 Disallow: /register
@@ -15,22 +25,14 @@ Disallow: /checkout
 Disallow: /cart
 Disallow: /order-confirmation
 Disallow: /upload-mix
+Disallow: /dj-lobby/
 
 # Block search and filter pages to avoid duplicate content
-Disallow: /*?*search=
-Disallow: /*?*filter=
-Disallow: /*?*sort=
-Disallow: /*?*page=
-
-# Allow CSS and JS for rendering
-Allow: /*.css$
-Allow: /*.js$
-Allow: /*.webp$
-Allow: /*.jpg$
-Allow: /*.png$
-
-# Crawl delay (optional - be nice to server)
-Crawl-delay: 1
+Disallow: /*?search=
+Disallow: /*?filter=
+Disallow: /*?sort=
+Disallow: /*?page=
+Disallow: /*?_t=
 
 # Sitemap location
 Sitemap: https://freshwax.co.uk/sitemap.xml
