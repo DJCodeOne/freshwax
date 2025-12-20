@@ -222,6 +222,7 @@ function setupPrivateEvents() {
   // Takeover declined
   privateChannel.bind('takeover-declined', (data) => {
     console.log('[DJLobby] Your takeover was declined');
+    stopTakeoverCountdown();
     alert('Your takeover request was declined.');
     document.getElementById('takeoverPending')?.classList.add('hidden');
     document.getElementById('requestTakeoverBtn')?.classList.remove('hidden');
@@ -230,6 +231,8 @@ function setupPrivateEvents() {
   // Takeover cancelled
   privateChannel.bind('takeover-cancelled', (data) => {
     console.log('[DJLobby] Takeover request cancelled');
+    stopTakeoverCountdown();
+    stopIncomingTakeoverCountdown();
     hideIncomingTakeover();
   });
   
@@ -551,9 +554,14 @@ export async function sendChatMessage(text) {
 // TAKEOVER
 // ==========================================
 
+// Takeover countdown state
+let takeoverCountdownInterval = null;
+let incomingTakeoverCountdownInterval = null;
+const TAKEOVER_TIMEOUT_SECONDS = 300; // 5 minutes
+
 export async function requestTakeover(targetDjId, targetDjName) {
   if (!currentUser || !userInfo) return false;
-  
+
   try {
     const response = await fetch('/api/dj-lobby/takeover', {
       method: 'POST',
@@ -567,12 +575,16 @@ export async function requestTakeover(targetDjId, targetDjName) {
         targetDjName
       })
     });
-    
+
     const result = await response.json();
-    
+
     if (result.success) {
       document.getElementById('takeoverPending')?.classList.remove('hidden');
       document.getElementById('requestTakeoverBtn')?.classList.add('hidden');
+
+      // Start countdown timer
+      startTakeoverCountdown();
+
       return true;
     } else {
       alert(result.error || 'Failed to request takeover');
@@ -582,6 +594,48 @@ export async function requestTakeover(targetDjId, targetDjName) {
     console.error('[DJLobby] Takeover request error:', error);
     return false;
   }
+}
+
+function startTakeoverCountdown() {
+  // Clear any existing countdown
+  if (takeoverCountdownInterval) {
+    clearInterval(takeoverCountdownInterval);
+  }
+
+  let secondsRemaining = TAKEOVER_TIMEOUT_SECONDS;
+  const countdownEl = document.getElementById('takeoverCountdown');
+
+  const updateCountdown = () => {
+    if (countdownEl) {
+      const mins = Math.floor(secondsRemaining / 60);
+      const secs = secondsRemaining % 60;
+      countdownEl.textContent = `(${mins}:${secs.toString().padStart(2, '0')})`;
+    }
+
+    secondsRemaining--;
+
+    if (secondsRemaining < 0) {
+      // Timeout - reset UI
+      clearInterval(takeoverCountdownInterval);
+      takeoverCountdownInterval = null;
+      document.getElementById('takeoverPending')?.classList.add('hidden');
+      document.getElementById('requestTakeoverBtn')?.classList.remove('hidden');
+      if (countdownEl) countdownEl.textContent = '';
+      alert('Takeover request timed out. The DJ did not respond.');
+    }
+  };
+
+  updateCountdown();
+  takeoverCountdownInterval = setInterval(updateCountdown, 1000);
+}
+
+function stopTakeoverCountdown() {
+  if (takeoverCountdownInterval) {
+    clearInterval(takeoverCountdownInterval);
+    takeoverCountdownInterval = null;
+  }
+  const countdownEl = document.getElementById('takeoverCountdown');
+  if (countdownEl) countdownEl.textContent = '';
 }
 
 export async function approveTakeover(requesterId, streamKey, serverUrl) {
@@ -637,31 +691,91 @@ export async function declineTakeover(requesterId) {
 function showIncomingTakeover(data) {
   const div = document.getElementById('incomingTakeover');
   if (!div) return;
-  
+
   const nameEl = document.getElementById('incomingDjName');
   const avatarEl = document.getElementById('incomingDjAvatar');
-  
+
   if (nameEl) nameEl.textContent = data.requesterName || 'A DJ';
   if (avatarEl) avatarEl.src = data.requesterAvatar || '/logo.webp';
-  
+
   div.dataset.requesterId = data.requesterId;
   div.classList.remove('hidden');
+
+  // Start countdown for incoming request
+  startIncomingTakeoverCountdown();
+}
+
+function startIncomingTakeoverCountdown() {
+  // Clear any existing countdown
+  if (incomingTakeoverCountdownInterval) {
+    clearInterval(incomingTakeoverCountdownInterval);
+  }
+
+  let secondsRemaining = TAKEOVER_TIMEOUT_SECONDS;
+
+  // Create or find countdown element
+  let countdownEl = document.getElementById('incomingTakeoverCountdown');
+  if (!countdownEl) {
+    const badge = document.querySelector('.incoming-badge');
+    if (badge) {
+      countdownEl = document.createElement('span');
+      countdownEl.id = 'incomingTakeoverCountdown';
+      countdownEl.style.marginLeft = '8px';
+      countdownEl.style.fontSize = '0.85em';
+      countdownEl.style.opacity = '0.8';
+      badge.appendChild(countdownEl);
+    }
+  }
+
+  const updateCountdown = () => {
+    if (countdownEl) {
+      const mins = Math.floor(secondsRemaining / 60);
+      const secs = secondsRemaining % 60;
+      countdownEl.textContent = `(${mins}:${secs.toString().padStart(2, '0')})`;
+    }
+
+    secondsRemaining--;
+
+    if (secondsRemaining < 0) {
+      // Timeout - auto-decline
+      clearInterval(incomingTakeoverCountdownInterval);
+      incomingTakeoverCountdownInterval = null;
+      hideIncomingTakeover();
+    }
+  };
+
+  updateCountdown();
+  incomingTakeoverCountdownInterval = setInterval(updateCountdown, 1000);
+}
+
+function stopIncomingTakeoverCountdown() {
+  if (incomingTakeoverCountdownInterval) {
+    clearInterval(incomingTakeoverCountdownInterval);
+    incomingTakeoverCountdownInterval = null;
+  }
+  const countdownEl = document.getElementById('incomingTakeoverCountdown');
+  if (countdownEl) countdownEl.textContent = '';
 }
 
 function hideIncomingTakeover() {
   document.getElementById('incomingTakeover')?.classList.add('hidden');
+  stopIncomingTakeoverCountdown();
 }
 
 function showTakeoverApproved(data) {
+  // Stop any running countdowns
+  stopTakeoverCountdown();
+  stopIncomingTakeoverCountdown();
+
   const div = document.getElementById('takeoverApproved');
   if (!div) return;
-  
+
   const serverEl = document.getElementById('takeoverServerUrl');
   const keyEl = document.getElementById('takeoverStreamKey');
-  
+
   if (serverEl) serverEl.textContent = data.serverUrl || 'rtmp://stream.freshwax.co.uk/live';
   if (keyEl) keyEl.textContent = data.streamKey || '-';
-  
+
   div.classList.remove('hidden');
   document.getElementById('takeoverRequest')?.classList.add('hidden');
   document.getElementById('takeoverPending')?.classList.add('hidden');

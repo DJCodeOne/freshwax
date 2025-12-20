@@ -585,7 +585,7 @@ export const prerender = false;
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
-    import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy, Timestamp, addDoc, deleteDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 
     const app = initializeApp(window.FIREBASE_CONFIG);
     const auth = getAuth(app);
@@ -609,16 +609,6 @@ export const prerender = false;
     if (cachedUid) {
       // Show content immediately while we verify
       loadingGate.querySelector('p').textContent = 'Verifying...';
-    }
-
-    // Generate unique stream key
-    function generateStreamKey() {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-      let key = 'fw-';
-      for (let i = 0; i < 16; i++) {
-        key += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return key;
     }
 
     onAuthStateChanged(auth, async (user) => {
@@ -755,25 +745,36 @@ export const prerender = false;
       endOfDay.setHours(23, 59, 59, 999);
 
       try {
-        const q = query(
-          collection(db, 'livestream-bookings'),
-          where('startTime', '>=', Timestamp.fromDate(startOfDay)),
-          where('startTime', '<=', Timestamp.fromDate(endOfDay))
-        );
+        // Use the unified livestreamSlots collection via API
+        const response = await fetch(`/api/livestream/slots?start=${startOfDay.toISOString()}&end=${endOfDay.toISOString()}&_t=${Date.now()}`);
+        const result = await response.json();
 
-        const snapshot = await getDocs(q);
         dayBookings = [];
         userDailyHours = 0;
 
-        snapshot.forEach(docSnap => {
-          const booking = { id: docSnap.id, ...docSnap.data() };
-          if (booking.status !== 'cancelled') {
-            dayBookings.push(booking);
-            if (booking.djId === currentUser.uid) {
-              userDailyHours += booking.duration || 1;
+        if (result.success && result.slots) {
+          result.slots.forEach(slot => {
+            if (slot.status !== 'cancelled') {
+              // Convert API format to local format
+              const booking = {
+                id: slot.id,
+                djId: slot.djId,
+                djName: slot.djName,
+                streamTitle: slot.title,
+                genre: slot.genre,
+                startTime: { toDate: () => new Date(slot.startTime) },
+                endTime: { toDate: () => new Date(slot.endTime) },
+                duration: Math.round(slot.duration / 60), // API returns minutes, we use hours
+                streamKey: slot.streamKey,
+                status: slot.status
+              };
+              dayBookings.push(booking);
+              if (slot.djId === currentUser.uid) {
+                userDailyHours += Math.round(slot.duration / 60);
+              }
             }
-          }
-        });
+          });
+        }
 
         updateAllowance();
         renderGrid();
@@ -925,47 +926,61 @@ export const prerender = false;
 
       try {
         const sortedHours = [...selectedHours].sort((a, b) => a - b);
-        const streamKey = generateStreamKey();
+        const idToken = await currentUser.getIdToken();
 
         if (selectedDuration === 2) {
+          // 2-hour block booking
           const startTime = new Date(currentDate);
           startTime.setHours(sortedHours[0], 0, 0, 0);
-          const endTime = new Date(startTime);
-          endTime.setHours(endTime.getHours() + 2);
 
-          await addDoc(collection(db, 'livestream-bookings'), {
-            djId: currentUser.uid,
-            djName,
-            streamTitle,
-            genre,
-            startTime: Timestamp.fromDate(startTime),
-            endTime: Timestamp.fromDate(endTime),
-            duration: 2,
-            streamKey,
-            keyActive: true,
-            status: 'confirmed',
-            createdAt: serverTimestamp()
+          const response = await fetch('/api/livestream/slots', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+              action: 'book',
+              djId: currentUser.uid,
+              djName,
+              title: streamTitle,
+              genre,
+              startTime: startTime.toISOString(),
+              duration: 120 // API expects minutes
+            })
           });
+
+          const result = await response.json();
+          if (!result.success) {
+            throw new Error(result.error || 'Booking failed');
+          }
         } else {
+          // Individual 1-hour slots
           for (const hour of sortedHours) {
             const startTime = new Date(currentDate);
             startTime.setHours(hour, 0, 0, 0);
-            const endTime = new Date(startTime);
-            endTime.setHours(endTime.getHours() + 1);
 
-            await addDoc(collection(db, 'livestream-bookings'), {
-              djId: currentUser.uid,
-              djName,
-              streamTitle,
-              genre,
-              startTime: Timestamp.fromDate(startTime),
-              endTime: Timestamp.fromDate(endTime),
-              duration: 1,
-              streamKey: generateStreamKey(),
-              keyActive: true,
-              status: 'confirmed',
-              createdAt: serverTimestamp()
+            const response = await fetch('/api/livestream/slots', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+              },
+              body: JSON.stringify({
+                action: 'book',
+                djId: currentUser.uid,
+                djName,
+                title: streamTitle,
+                genre,
+                startTime: startTime.toISOString(),
+                duration: 60 // API expects minutes
+              })
             });
+
+            const result = await response.json();
+            if (!result.success) {
+              throw new Error(result.error || 'Booking failed');
+            }
           }
         }
 
@@ -992,16 +1007,13 @@ export const prerender = false;
       const now = new Date();
 
       try {
-        const q = query(
-          collection(db, 'livestream-bookings'),
-          where('djId', '==', currentUser.uid),
-          where('startTime', '>=', Timestamp.fromDate(new Date(now.getTime() - 2 * 3600000))),
-          orderBy('startTime', 'asc')
-        );
+        // Fetch user's bookings via API
+        const startDate = new Date(now.getTime() - 2 * 3600000);
+        const endDate = new Date(now.getTime() + 30 * 24 * 3600000); // Next 30 days
+        const response = await fetch(`/api/livestream/slots?djId=${currentUser.uid}&start=${startDate.toISOString()}&end=${endDate.toISOString()}&_t=${Date.now()}`);
+        const result = await response.json();
 
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) {
+        if (!result.success || !result.slots || result.slots.length === 0) {
           container.innerHTML = '<p class="empty">No bookings yet</p>';
           keyPanel.classList.add('hidden');
           return;
@@ -1010,27 +1022,30 @@ export const prerender = false;
         let html = '';
         let activeBooking = null;
 
-        snapshot.forEach(docSnap => {
-          const b = docSnap.data();
-          if (b.status === 'cancelled') return;
+        // Sort by start time
+        const sortedSlots = result.slots
+          .filter(s => s.status !== 'cancelled')
+          .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-          const startTime = b.startTime.toDate();
-          const endTime = b.endTime?.toDate() || new Date(startTime.getTime() + (b.duration || 1) * 3600000);
+        sortedSlots.forEach(slot => {
+          const startTime = new Date(slot.startTime);
+          const endTime = new Date(slot.endTime);
           const dateStr = startTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
           const timeStr = startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+          const durationHours = Math.round(slot.duration / 60);
 
           // Check if this is the active/upcoming slot
           if (!activeBooking && now < endTime) {
-            activeBooking = { ...b, id: docSnap.id, startTime, endTime };
+            activeBooking = { ...slot, startTime, endTime };
           }
 
           html += `
             <div class="booking-item">
               <div class="booking-info">
-                <div class="booking-title">${b.streamTitle}</div>
-                <div class="booking-time">${dateStr} • ${timeStr} (${b.duration || 1}hr)</div>
+                <div class="booking-title">${slot.title}</div>
+                <div class="booking-time">${dateStr} • ${timeStr} (${durationHours}hr)</div>
               </div>
-              <button class="cancel-btn" data-id="${docSnap.id}">Cancel</button>
+              <button class="cancel-btn" data-id="${slot.id}">Cancel</button>
             </div>
           `;
         });
@@ -1049,18 +1064,37 @@ export const prerender = false;
           keyPanel.classList.add('hidden');
         }
 
-        // Cancel handlers
+        // Cancel handlers - use API
         container.querySelectorAll('.cancel-btn').forEach(btn => {
           btn.addEventListener('click', async () => {
             if (confirm('Cancel this booking? The stream key will be invalidated.')) {
-              await updateDoc(doc(db, 'livestream-bookings', btn.dataset.id), {
-                status: 'cancelled',
-                keyActive: false,
-                cancelledAt: serverTimestamp()
-              });
-              showMsg('Booking cancelled', 'success');
-              loadMyBookings();
-              loadDayBookings();
+              try {
+                const idToken = await currentUser.getIdToken();
+                const cancelResponse = await fetch('/api/livestream/slots', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`
+                  },
+                  body: JSON.stringify({
+                    action: 'cancel',
+                    slotId: btn.dataset.id,
+                    djId: currentUser.uid
+                  })
+                });
+
+                const cancelResult = await cancelResponse.json();
+                if (cancelResult.success) {
+                  showMsg('Booking cancelled', 'success');
+                  loadMyBookings();
+                  loadDayBookings();
+                } else {
+                  showMsg('Error: ' + cancelResult.error, 'error');
+                }
+              } catch (err) {
+                console.error('Cancel error:', err);
+                showMsg('Error cancelling booking', 'error');
+              }
             }
           });
         });
