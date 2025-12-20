@@ -5,6 +5,10 @@
 import type { APIRoute } from 'astro';
 import { AwsClient } from 'aws4fetch';
 import { setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { createLogger, errorResponse, successResponse, getEnv, ApiErrors } from '../../lib/api-utils';
+import type { Track } from '../../lib/types';
+
+const log = createLogger('process-release');
 
 // Get R2 configuration
 function getR2Config(env: any) {
@@ -27,7 +31,7 @@ function createReleaseFolderName(artistName: string, releaseName: string): strin
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase
-  const env = (locals as any)?.runtime?.env;
+  const env = getEnv(locals);
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
@@ -37,10 +41,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let { submissionId } = await request.json();
 
     if (!submissionId) {
-      return new Response(JSON.stringify({ error: 'submissionId required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('submissionId required');
     }
 
     // Check if submission is from root level (prefixed with "root:")
@@ -49,16 +50,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       submissionId = submissionId.replace('root:', '');
     }
 
-    console.log(`[process-release] Processing: ${submissionId} (root: ${isRootLevel})`);
+    log.info(`Processing: ${submissionId} (root: ${isRootLevel})`);
 
     // Initialize R2 client
     const R2_CONFIG = getR2Config(env);
 
     if (!R2_CONFIG.accessKeyId || !R2_CONFIG.secretAccessKey) {
-      return new Response(JSON.stringify({ error: 'R2 not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notConfigured('R2');
     }
 
     const awsClient = new AwsClient({
@@ -78,14 +76,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const metadataResponse = await awsClient.fetch(metadataUrl);
     if (!metadataResponse.ok) {
-      return new Response(JSON.stringify({ error: 'Metadata not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Metadata not found');
     }
 
     const metadata = await metadataResponse.json() as any;
-    console.log(`[process-release] Loaded metadata: ${metadata.artistName} - ${metadata.releaseName}`);
+    log.info(`Loaded metadata: ${metadata.artistName} - ${metadata.releaseName}`);
 
     // List all files in submission folder
     const listUrl = `${bucketUrl}?list-type=2&prefix=${submissionPrefix}/`;
@@ -102,7 +97,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let artworkKey: string | null = null;
     let audioFiles: string[] = [];
 
-    console.log(`[process-release] Files in submission:`, files);
+    log.debug(`Files in submission:`, files);
 
     for (const file of files) {
       const lower = file.toLowerCase();
@@ -113,14 +108,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.webp')) {
         artworkKey = file;
-        console.log(`[process-release] Found artwork: ${file}`);
+        log.debug(`Found artwork: ${file}`);
       } else if (lower.endsWith('.wav') || lower.endsWith('.mp3') || lower.endsWith('.flac')) {
         audioFiles.push(file);
-        console.log(`[process-release] Found audio: ${file}`);
+        log.debug(`Found audio: ${file}`);
       }
     }
 
-    console.log(`[process-release] Found ${audioFiles.length} audio files, artwork: ${artworkKey || 'none'}`);
+    log.info(`Found ${audioFiles.length} audio files, artwork: ${artworkKey || 'none'}`);
 
     // Generate release ID and folder name
     const timestamp = Date.now();
@@ -129,7 +124,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const releaseFolderName = createReleaseFolderName(metadata.artistName, metadata.releaseName);
     const releaseFolder = `releases/${releaseFolderName}`;
 
-    console.log(`[process-release] Target folder: ${releaseFolder}`);
+    log.info(`Target folder: ${releaseFolder}`);
 
     // Copy files from submissions/ to releases/ folder
     const copiedFiles: { oldKey: string; newKey: string }[] = [];
@@ -153,7 +148,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
         copiedFiles.push({ oldKey: artworkKey, newKey: newArtworkKey });
         artworkUrl = `${R2_CONFIG.publicDomain}/${newArtworkKey}`;
-        console.log(`[process-release] Copied artwork: ${artworkFilename}`);
+        log.debug(`Copied artwork: ${artworkFilename}`);
       }
     }
 
@@ -181,11 +176,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           newKey: newAudioKey,
           url: `${R2_CONFIG.publicDomain}/${newAudioKey}`
         });
-        console.log(`[process-release] Copied audio: ${audioFilename}`);
+        log.debug(`Copied audio: ${audioFilename}`);
       }
     }
 
-    console.log(`[process-release] Copied ${copiedFiles.length} files to ${releaseFolder}`);
+    log.info(`Copied ${copiedFiles.length} files to ${releaseFolder}`);
 
     // Update audioFiles reference to use new keys
     audioFiles = newAudioFiles.map(f => f.newKey);
@@ -194,8 +189,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const tracks: any[] = [];
     const metadataTracks = metadata.tracks || [];
 
-    console.log(`[process-release] Metadata tracks:`, metadataTracks);
-    console.log(`[process-release] Audio files:`, audioFiles);
+    log.debug(`Metadata tracks:`, metadataTracks);
+    log.debug(`Audio files:`, audioFiles);
 
     // Helper to normalize names for matching (lowercase, remove special chars)
     const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -206,7 +201,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const trackName = metaTrack.title || metaTrack.trackName || '';
       const normalizedTrackName = normalize(trackName);
 
-      console.log(`[process-release] Looking for audio file matching: "${trackName}"`);
+      log.debug(`Looking for audio file matching: "${trackName}"`);
 
       // Find audio file that contains this track name (from copied files)
       let matchedAudio = newAudioFiles.find(audioFile => {
@@ -218,18 +213,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // If no match found, use first remaining audio file as fallback
       if (!matchedAudio && newAudioFiles.length > 0) {
         matchedAudio = newAudioFiles[0];
-        console.log(`[process-release] No name match, using first remaining file: ${matchedAudio.newKey}`);
+        log.debug(`No name match, using first remaining file: ${matchedAudio.newKey}`);
       }
 
       if (!matchedAudio) {
-        console.log(`[process-release] No audio file found for track ${i + 1}: ${trackName}`);
+        log.warn(`No audio file found for track ${i + 1}: ${trackName}`);
         continue;
       }
 
       // Use the URL from the copied file (already in releases folder)
       const audioUrl = matchedAudio.url;
 
-      console.log(`[process-release] Track ${i + 1}: "${trackName}" -> ${matchedAudio.newKey}`);
+      log.debug(`Track ${i + 1}: "${trackName}" -> ${matchedAudio.newKey}`);
 
       tracks.push({
         trackNumber: metaTrack.trackNumber || i + 1,
@@ -262,7 +257,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const audioUrl = audioFile.url;
 
-      console.log(`[process-release] Unmatched track: "${trackNameFromFile}" -> ${filename}`);
+      log.debug(`Unmatched track: "${trackNameFromFile}" -> ${filename}`);
 
       tracks.push({
         trackNumber: tracks.length + 1,
@@ -281,7 +276,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    console.log(`[process-release] Built ${tracks.length} tracks`);
+    log.info(`Built ${tracks.length} tracks`);
 
     const now = new Date().toISOString();
 
@@ -352,30 +347,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Save to Firebase
     await setDocument('releases', releaseId, releaseData);
 
-    console.log(`[process-release] Created release: ${releaseId}`);
+    log.info(`Created release: ${releaseId}`);
 
     // Optionally delete submission files (or keep for review)
     // For now, keep them
 
-    return new Response(JSON.stringify({
-      success: true,
+    return successResponse({
       releaseId,
       artist: metadata.artistName,
       title: metadata.releaseName,
       tracks: tracks.length,
       coverUrl: artworkUrl
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('[process-release] Error:', error);
-    return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Processing failed'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    log.error('Error:', error);
+    return errorResponse(error instanceof Error ? error.message : 'Processing failed');
   }
 };
