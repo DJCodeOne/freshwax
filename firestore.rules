@@ -121,10 +121,18 @@ service cloud.firestore {
     }
 
     // Releases collection - public read, admin write
+    // Server-side processing allowed for new submissions (has submissionId + pending status)
     match /releases/{releaseId} {
       allow read: if true;
-      allow create: if isAdmin() || isAuthenticated();
-      allow update, delete: if isAdmin();
+      allow create: if isAdmin() || isAuthenticated() ||
+                      // Allow server-side release processing (from process-release API)
+                      (request.resource.data.submissionId != null && request.resource.data.status == 'pending');
+      allow update: if isAdmin() ||
+                      // Allow stat updates from REST API
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['plays', 'downloads', 'views', 'likes', 'ratings', 'updatedAt',
+                                  'status', 'published', 'approved', 'adminNotes']);
+      allow delete: if isAdmin();
     }
 
     // DJ Mixes collection (hyphenated) - public read
