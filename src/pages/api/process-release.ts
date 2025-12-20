@@ -1,6 +1,6 @@
 // src/pages/api/process-release.ts
 // Process a release submission from R2 - creates Firebase entry
-// Similar to upload-mix.ts but for releases
+// Copies files from submissions/ to releases/ folder for organization
 
 import type { APIRoute } from 'astro';
 import { AwsClient } from 'aws4fetch';
@@ -15,6 +15,14 @@ function getR2Config(env: any) {
     bucketName: 'freshwax-releases',
     publicDomain: env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
   };
+}
+
+// Create a clean folder name from artist and release name
+function createReleaseFolderName(artistName: string, releaseName: string): string {
+  const cleanArtist = artistName.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30);
+  const cleanRelease = releaseName.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30);
+  const timestamp = Date.now();
+  return `${cleanArtist}_${cleanRelease}_${timestamp}`;
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -107,15 +115,73 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     console.log(`[process-release] Found ${audioFiles.length} audio files, artwork: ${artworkKey || 'none'}`);
 
-    // Generate release ID
+    // Generate release ID and folder name
     const timestamp = Date.now();
     const sanitizedArtist = metadata.artistName.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30);
     const releaseId = `${sanitizedArtist}_FW-${timestamp}`;
+    const releaseFolderName = createReleaseFolderName(metadata.artistName, metadata.releaseName);
+    const releaseFolder = `releases/${releaseFolderName}`;
 
-    // Build artwork URL (URL-encode path for spaces/special chars)
-    const artworkUrl = artworkKey
-      ? `${R2_CONFIG.publicDomain}/${encodeURIComponent(artworkKey).replace(/%2F/g, '/')}`
-      : `${R2_CONFIG.publicDomain}/place-holder.webp`;
+    console.log(`[process-release] Target folder: ${releaseFolder}`);
+
+    // Copy files from submissions/ to releases/ folder
+    const copiedFiles: { oldKey: string; newKey: string }[] = [];
+
+    // Copy artwork
+    let artworkUrl = `${R2_CONFIG.publicDomain}/place-holder.webp`;
+    if (artworkKey) {
+      const artworkFilename = artworkKey.split('/').pop() || 'cover.webp';
+      const newArtworkKey = `${releaseFolder}/${artworkFilename}`;
+
+      // Copy the file
+      const sourceUrl = `${bucketUrl}/${encodeURIComponent(artworkKey)}`;
+      const artworkData = await awsClient.fetch(sourceUrl);
+      if (artworkData.ok) {
+        const artworkBuffer = await artworkData.arrayBuffer();
+        const destUrl = `${bucketUrl}/${encodeURIComponent(newArtworkKey)}`;
+        await awsClient.fetch(destUrl, {
+          method: 'PUT',
+          body: artworkBuffer,
+          headers: { 'Content-Type': 'image/webp' }
+        });
+        copiedFiles.push({ oldKey: artworkKey, newKey: newArtworkKey });
+        artworkUrl = `${R2_CONFIG.publicDomain}/${newArtworkKey}`;
+        console.log(`[process-release] Copied artwork: ${artworkFilename}`);
+      }
+    }
+
+    // Copy audio files and build new URLs
+    const newAudioFiles: { oldKey: string; newKey: string; url: string }[] = [];
+    for (const audioFile of audioFiles) {
+      const audioFilename = audioFile.split('/').pop() || 'track.wav';
+      const newAudioKey = `${releaseFolder}/${audioFilename}`;
+
+      const sourceUrl = `${bucketUrl}/${encodeURIComponent(audioFile)}`;
+      const audioData = await awsClient.fetch(sourceUrl);
+      if (audioData.ok) {
+        const audioBuffer = await audioData.arrayBuffer();
+        const contentType = audioFilename.toLowerCase().endsWith('.mp3') ? 'audio/mpeg' :
+                           audioFilename.toLowerCase().endsWith('.flac') ? 'audio/flac' : 'audio/wav';
+        const destUrl = `${bucketUrl}/${encodeURIComponent(newAudioKey)}`;
+        await awsClient.fetch(destUrl, {
+          method: 'PUT',
+          body: audioBuffer,
+          headers: { 'Content-Type': contentType }
+        });
+        copiedFiles.push({ oldKey: audioFile, newKey: newAudioKey });
+        newAudioFiles.push({
+          oldKey: audioFile,
+          newKey: newAudioKey,
+          url: `${R2_CONFIG.publicDomain}/${newAudioKey}`
+        });
+        console.log(`[process-release] Copied audio: ${audioFilename}`);
+      }
+    }
+
+    console.log(`[process-release] Copied ${copiedFiles.length} files to ${releaseFolder}`);
+
+    // Update audioFiles reference to use new keys
+    audioFiles = newAudioFiles.map(f => f.newKey);
 
     // Build tracks - match metadata tracks to audio files by name
     const tracks: any[] = [];
@@ -127,7 +193,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Helper to normalize names for matching (lowercase, remove special chars)
     const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-    // For each metadata track, find the matching audio file
+    // For each metadata track, find the matching audio file from newAudioFiles
     for (let i = 0; i < metadataTracks.length; i++) {
       const metaTrack = metadataTracks[i];
       const trackName = metaTrack.title || metaTrack.trackName || '';
@@ -135,28 +201,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       console.log(`[process-release] Looking for audio file matching: "${trackName}"`);
 
-      // Find audio file that contains this track name
-      let matchedAudioFile = audioFiles.find(audioFile => {
-        const filename = audioFile.split('/').pop() || '';
+      // Find audio file that contains this track name (from copied files)
+      let matchedAudio = newAudioFiles.find(audioFile => {
+        const filename = audioFile.newKey.split('/').pop() || '';
         const normalizedFilename = normalize(filename);
         return normalizedFilename.includes(normalizedTrackName) && normalizedTrackName.length > 2;
       });
 
       // If no match found, use first remaining audio file as fallback
-      if (!matchedAudioFile && audioFiles.length > 0) {
-        matchedAudioFile = audioFiles[0];
-        console.log(`[process-release] No name match, using first remaining file: ${matchedAudioFile}`);
+      if (!matchedAudio && newAudioFiles.length > 0) {
+        matchedAudio = newAudioFiles[0];
+        console.log(`[process-release] No name match, using first remaining file: ${matchedAudio.newKey}`);
       }
 
-      if (!matchedAudioFile) {
+      if (!matchedAudio) {
         console.log(`[process-release] No audio file found for track ${i + 1}: ${trackName}`);
         continue;
       }
 
-      // URL-encode the path (but not the slashes)
-      const audioUrl = `${R2_CONFIG.publicDomain}/${encodeURIComponent(matchedAudioFile).replace(/%2F/g, '/')}`;
+      // Use the URL from the copied file (already in releases folder)
+      const audioUrl = matchedAudio.url;
 
-      console.log(`[process-release] Track ${i + 1}: "${trackName}" -> ${matchedAudioFile}`);
+      console.log(`[process-release] Track ${i + 1}: "${trackName}" -> ${matchedAudio.newKey}`);
 
       tracks.push({
         trackNumber: metaTrack.trackNumber || i + 1,
@@ -175,19 +241,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
       // Remove matched file from list to prevent duplicates
-      audioFiles = audioFiles.filter(f => f !== matchedAudioFile);
+      newAudioFiles = newAudioFiles.filter(f => f !== matchedAudio);
     }
 
     // Add any remaining unmatched audio files
-    for (let i = 0; i < audioFiles.length; i++) {
-      const audioFile = audioFiles[i];
-      const filename = audioFile.split('/').pop() || '';
+    for (let i = 0; i < newAudioFiles.length; i++) {
+      const audioFile = newAudioFiles[i];
+      const filename = audioFile.newKey.split('/').pop() || '';
       const trackNameFromFile = filename
         .replace(/\.(wav|mp3|flac)$/i, '')
         .replace(/^\d+[\s._-]+/, '')
         .trim();
 
-      const audioUrl = `${R2_CONFIG.publicDomain}/${encodeURIComponent(audioFile).replace(/%2F/g, '/')}`;
+      const audioUrl = audioFile.url;
 
       console.log(`[process-release] Unmatched track: "${trackNameFromFile}" -> ${filename}`);
 
@@ -219,6 +285,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artist: metadata.artistName,
       artistName: metadata.artistName,
       releaseName: metadata.releaseName,
+      r2FolderName: releaseFolderName,
+      r2FolderPath: releaseFolder,
       // Include all artwork field variations used by different pages
       coverUrl: artworkUrl,
       coverArtUrl: artworkUrl,
