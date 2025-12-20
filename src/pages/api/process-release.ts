@@ -151,7 +151,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Copy audio files and build new URLs
-    const newAudioFiles: { oldKey: string; newKey: string; url: string }[] = [];
+    let newAudioFiles: { oldKey: string; newKey: string; url: string }[] = [];
     for (const audioFile of audioFiles) {
       const audioFilename = audioFile.split('/').pop() || 'track.wav';
       const newAudioKey = `${releaseFolder}/${audioFilename}`;
