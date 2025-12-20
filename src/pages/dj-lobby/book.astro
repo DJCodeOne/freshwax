@@ -1,13 +1,18 @@
 ---
 // DJ Lobby - Book a Slot
-// Protected page for DJ eligible users to book livestream slots
+// Protected page for DJs to book livestream slots
+// Compact 24-hour grid showing all hours at once
 import '../../styles/global.css';
+export const prerender = false;
 ---
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Book a Slot | DJ Lobby | Fresh Wax</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script is:inline>
     window.FIREBASE_CONFIG = {
       apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
@@ -20,289 +25,627 @@ import '../../styles/global.css';
   </script>
 </head>
 <body>
-  <div class="page-container">
-    <!-- Header -->
+  <!-- Loading Gate -->
+  <div id="loadingGate" class="loading-gate">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>Loading DJ Lobby...</p>
+    </div>
+  </div>
+
+  <!-- Main Content (hidden until auth) -->
+  <div id="mainContent" class="main-content hidden">
     <header class="page-header">
-      <div class="header-nav">
-        <a href="/account/dj-lobby" class="back-link">← Back to DJ Lobby</a>
+      <div class="header-left">
+        <a href="/account/dj-lobby" class="back-link">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+          </svg>
+          DJ Lobby
+        </a>
       </div>
-      <h1>Book a Slot</h1>
+      <h1>BOOK A <span class="red">SLOT</span></h1>
+      <div class="header-right">
+        <span id="userName" class="user-name"></span>
+      </div>
     </header>
 
-    <!-- Main content with DJ Guard -->
-    <main class="page-content">
-      <!-- Loading state -->
-      <div id="loadingState" class="loading-state">
-        <div class="spinner"></div>
-        <p>Checking DJ access...</p>
-      </div>
-
-      <!-- Access denied -->
-      <div id="accessDenied" class="access-denied" style="display: none;">
-        <div class="denied-icon">🎧</div>
-        <h2>DJ Access Required</h2>
-        <p>You need to be DJ eligible to book livestream slots.</p>
-        <a href="/account/request-role" class="btn btn-primary">Learn How to Get Access</a>
-      </div>
-
-      <!-- Booking content -->
-      <div id="bookingContent" class="booking-content" style="display: none;">
-        <!-- Booking Form Section -->
-        <section class="booking-section">
-          <div class="booking-form-container" id="bookingFormContainer">
-            <!-- Form will be injected here -->
-          </div>
-        </section>
-
-        <!-- Today's Schedule Sidebar -->
-        <aside class="schedule-sidebar">
-          <div class="sidebar-section">
-            <h3>Today's Schedule</h3>
-            <div id="todaySchedule" class="today-schedule">
-              <div class="loading-small">Loading...</div>
+    <main class="page-main">
+      <!-- Left: Booking Form -->
+      <div class="form-column">
+        <form id="bookingForm" class="booking-form">
+          <div class="form-section">
+            <div class="form-row">
+              <div class="form-group">
+                <label>DJ Name *</label>
+                <input type="text" id="djName" required placeholder="Your DJ name" maxlength="30">
+              </div>
+              <div class="form-group">
+                <label>Stream Title *</label>
+                <input type="text" id="streamTitle" required placeholder="e.g. Sunday Sessions" maxlength="60">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Description <span class="optional">(optional)</span></label>
+              <textarea id="description" placeholder="What will you be playing?" maxlength="150" rows="2"></textarea>
             </div>
           </div>
 
-          <div class="sidebar-section">
-            <h3>Your Bookings</h3>
-            <div id="myBookings" class="my-bookings-mini">
-              <div class="loading-small">Loading...</div>
+          <div class="form-section">
+            <div class="duration-selector">
+              <label>Duration:</label>
+              <div class="duration-btns">
+                <button type="button" class="dur-btn" data-dur="1">1hr</button>
+                <button type="button" class="dur-btn active" data-dur="2">2hr</button>
+              </div>
             </div>
           </div>
-        </aside>
+
+          <div class="form-section">
+            <div id="selectionInfo" class="selection-info hidden">
+              <span id="selectionText">No slot selected</span>
+              <button type="button" id="clearSelection" class="clear-btn">Clear</button>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <div class="allowance-info">
+              <span id="allowanceText">2 hours remaining today</span>
+            </div>
+            <button type="submit" id="submitBtn" class="submit-btn" disabled>Book Slot</button>
+          </div>
+
+          <div id="formMessage" class="form-message hidden"></div>
+        </form>
+
+        <!-- My Upcoming Bookings -->
+        <div class="my-bookings-section">
+          <h3>Your Bookings</h3>
+          <div id="myBookings" class="my-bookings">
+            <p class="empty-state">No upcoming bookings</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Schedule Grid -->
+      <div class="schedule-column">
+        <div class="schedule-header">
+          <button type="button" id="prevDay" class="nav-btn">&lt;</button>
+          <h2 id="dateTitle">Today</h2>
+          <button type="button" id="nextDay" class="nav-btn">&gt;</button>
+        </div>
+        <p id="dateFull" class="date-subtitle">Loading...</p>
+
+        <div class="schedule-grid" id="scheduleGrid">
+          <!-- 24 hour cells rendered by JS -->
+        </div>
+
+        <div class="schedule-legend">
+          <span class="legend-item"><span class="legend-dot available"></span> Available</span>
+          <span class="legend-item"><span class="legend-dot booked"></span> Booked</span>
+          <span class="legend-item"><span class="legend-dot yours"></span> Your slot</span>
+          <span class="legend-item"><span class="legend-dot selected"></span> Selected</span>
+        </div>
       </div>
     </main>
   </div>
 
   <style>
-    .page-container {
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0a;
+      color: #fff;
       min-height: 100vh;
-      background: var(--bg-primary, #0a0a0a);
     }
 
-    .page-header {
-      padding: 1.5rem 2rem;
-      border-bottom: 1px solid var(--border-color, #262626);
-      background: var(--bg-secondary, #141414);
-    }
-
-    .back-link {
-      color: var(--text-secondary, #a3a3a3);
-      text-decoration: none;
-      font-size: 0.875rem;
-      display: inline-block;
-      margin-bottom: 0.5rem;
-    }
-
-    .back-link:hover {
-      color: var(--accent, #22c55e);
-    }
-
-    .page-header h1 {
-      color: var(--text-primary, #fff);
-      margin: 0;
-    }
-
-    .page-content {
-      padding: 2rem;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .loading-state {
+    .loading-gate {
+      position: fixed;
+      inset: 0;
+      background: #0a0a0a;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 50vh;
-      color: var(--text-secondary, #a3a3a3);
+      z-index: 1000;
+    }
+
+    .loading-content {
+      text-align: center;
+      color: #888;
     }
 
     .spinner {
       width: 40px;
       height: 40px;
-      border: 3px solid var(--border-color, #262626);
-      border-top-color: var(--accent, #22c55e);
+      border: 3px solid #333;
+      border-top-color: #dc2626;
       border-radius: 50%;
       animation: spin 1s linear infinite;
-      margin-bottom: 1rem;
+      margin: 0 auto 1rem;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none !important; }
+
+    .main-content {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
-    .access-denied {
-      text-align: center;
-      padding: 4rem 2rem;
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.5rem;
+      background: #111;
+      border-bottom: 1px solid #222;
     }
 
-    .denied-icon {
-      font-size: 4rem;
-      margin-bottom: 1rem;
-    }
-
-    .access-denied h2 {
-      color: var(--text-primary, #fff);
-      margin-bottom: 0.5rem;
-    }
-
-    .access-denied p {
-      color: var(--text-secondary, #a3a3a3);
-      margin-bottom: 1.5rem;
-    }
-
-    .btn {
-      display: inline-block;
-      padding: 0.75rem 1.5rem;
-      border-radius: 8px;
-      font-weight: 600;
+    .back-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #888;
       text-decoration: none;
-      transition: all 0.2s;
+      font-size: 0.85rem;
     }
 
-    .btn-primary {
-      background: var(--accent, #22c55e);
-      color: #000;
+    .back-link:hover { color: #dc2626; }
+
+    .page-header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.75rem;
+      letter-spacing: 0.02em;
     }
 
-    .booking-content {
+    .red { color: #dc2626; }
+
+    .user-name {
+      font-size: 0.85rem;
+      color: #888;
+    }
+
+    .page-main {
       display: grid;
-      grid-template-columns: 1fr 320px;
-      gap: 2rem;
+      grid-template-columns: 380px 1fr;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      flex: 1;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
     }
 
-    @media (max-width: 900px) {
-      .booking-content {
+    @media (max-width: 1000px) {
+      .page-main {
         grid-template-columns: 1fr;
       }
-
-      .schedule-sidebar {
-        order: -1;
-      }
+      .schedule-column { order: -1; }
     }
 
-    .booking-section {
-      min-width: 0;
-    }
-
-    .schedule-sidebar {
+    /* Form Column */
+    .form-column {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
     }
 
-    .sidebar-section {
-      background: var(--bg-secondary, #141414);
-      border: 1px solid var(--border-color, #262626);
+    .booking-form {
+      background: #141414;
+      border: 1px solid #262626;
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .form-section {
+      margin-bottom: 1rem;
+    }
+
+    .form-section:last-of-type { margin-bottom: 0; }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #ccc;
+    }
+
+    .optional { color: #666; font-weight: 400; }
+
+    .form-group input,
+    .form-group textarea {
+      padding: 0.6rem 0.75rem;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.9rem;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #dc2626;
+    }
+
+    .duration-selector {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .duration-selector label {
+      font-size: 0.8rem;
+      color: #888;
+    }
+
+    .duration-btns {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .dur-btn {
+      padding: 0.5rem 1rem;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .dur-btn:hover { border-color: #dc2626; }
+    .dur-btn.active {
+      background: #dc2626;
+      border-color: #dc2626;
+      color: #fff;
+    }
+
+    .selection-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: rgba(220, 38, 38, 0.1);
+      border: 1px solid rgba(220, 38, 38, 0.3);
+      border-radius: 6px;
+    }
+
+    #selectionText {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .clear-btn {
+      padding: 0.35rem 0.75rem;
+      background: transparent;
+      border: 1px solid #dc2626;
+      border-radius: 4px;
+      color: #dc2626;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .form-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 1rem;
+      border-top: 1px solid #262626;
+    }
+
+    .allowance-info {
+      font-size: 0.8rem;
+      color: #22c55e;
+    }
+
+    .allowance-info.warning { color: #fbbf24; }
+    .allowance-info.empty { color: #ef4444; }
+
+    .submit-btn {
+      padding: 0.65rem 1.5rem;
+      background: #dc2626;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .submit-btn:hover:not(:disabled) { background: #b91c1c; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .form-message {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+
+    .form-message.success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #22c55e;
+    }
+
+    .form-message.error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+
+    /* My Bookings */
+    .my-bookings-section {
+      background: #141414;
+      border: 1px solid #262626;
       border-radius: 8px;
       padding: 1rem;
     }
 
-    .sidebar-section h3 {
-      color: var(--text-primary, #fff);
+    .my-bookings-section h3 {
       font-size: 0.9rem;
-      margin: 0 0 0.75rem;
+      color: #fff;
+      margin-bottom: 0.75rem;
       padding-bottom: 0.5rem;
-      border-bottom: 1px solid var(--border-color, #262626);
+      border-bottom: 1px solid #262626;
     }
 
-    .loading-small {
-      text-align: center;
-      padding: 1rem;
-      color: var(--text-muted, #666);
-      font-size: 0.85rem;
-    }
-
-    .today-schedule {
+    .my-bookings {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
-      max-height: 300px;
-      overflow-y: auto;
     }
 
-    .schedule-item {
+    .booking-item {
       display: flex;
-      gap: 0.75rem;
-      padding: 0.5rem;
-      background: var(--bg-tertiary, #1a1a1a);
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 0.75rem;
+      background: #1a1a1a;
       border-radius: 6px;
+    }
+
+    .booking-item-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .booking-item-title {
+      font-weight: 600;
       font-size: 0.85rem;
     }
 
-    .schedule-item.live {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.3);
+    .booking-item-time {
+      font-size: 0.75rem;
+      color: #dc2626;
     }
 
-    .schedule-time {
-      color: var(--accent, #22c55e);
+    .cancel-booking-btn {
+      padding: 0.3rem 0.6rem;
+      background: transparent;
+      border: 1px solid #ef4444;
+      border-radius: 4px;
+      color: #ef4444;
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #666;
+      font-size: 0.85rem;
+      padding: 1rem;
+    }
+
+    /* Schedule Column */
+    .schedule-column {
+      background: #141414;
+      border: 1px solid #262626;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+
+    .schedule-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .schedule-header h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.5rem;
+      min-width: 140px;
+      text-align: center;
+    }
+
+    .nav-btn {
+      width: 32px;
+      height: 32px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover { border-color: #dc2626; }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .date-subtitle {
+      text-align: center;
+      color: #666;
+      font-size: 0.8rem;
+      margin-bottom: 1rem;
+    }
+
+    /* 24-hour Grid - 6 columns x 4 rows */
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      background: #0a0a0a;
+      padding: 4px;
+      border-radius: 6px;
+    }
+
+    .hour-cell {
+      background: #1a1a1a;
+      border: 2px solid transparent;
+      border-radius: 4px;
+      padding: 0.35rem 0.25rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      min-height: 52px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+
+    .hour-cell:hover:not(.past):not(.booked):not(.yours) {
+      border-color: #dc2626;
+      background: rgba(220, 38, 38, 0.1);
+    }
+
+    .hour-cell.past {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .hour-cell.available {
+      background: #1a2e1a;
+      border-color: #22c55e33;
+    }
+
+    .hour-cell.booked {
+      background: #2e1a1a;
+      border-color: #dc262633;
+      cursor: not-allowed;
+    }
+
+    .hour-cell.yours {
+      background: #1a1a2e;
+      border-color: #3b82f6;
+      cursor: not-allowed;
+    }
+
+    .hour-cell.selected {
+      background: #dc2626;
+      border-color: #dc2626;
+    }
+
+    .hour-cell.selected .hour-time,
+    .hour-cell.selected .hour-dj {
+      color: #fff;
+    }
+
+    .hour-time {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 0.9rem;
+      color: #888;
+      line-height: 1;
+    }
+
+    .hour-cell.available .hour-time { color: #22c55e; }
+    .hour-cell.booked .hour-time { color: #f87171; }
+    .hour-cell.yours .hour-time { color: #60a5fa; }
+
+    .hour-dj {
+      font-size: 0.6rem;
       font-weight: 600;
-      min-width: 50px;
-    }
-
-    .schedule-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .schedule-dj {
-      color: var(--text-primary, #fff);
+      color: #fff;
+      margin-top: 2px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.2;
     }
 
-    .my-bookings-mini {
+    .hour-cell.available .hour-dj {
+      color: #22c55e;
+      font-size: 0.55rem;
+      font-weight: 400;
+    }
+
+    /* Legend */
+    .schedule-legend {
       display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
     }
 
-    .booking-mini {
-      padding: 0.75rem;
-      background: var(--bg-tertiary, #1a1a1a);
-      border-radius: 6px;
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.7rem;
+      color: #888;
     }
 
-    .booking-mini-title {
-      font-weight: 600;
-      color: var(--text-primary, #fff);
-      font-size: 0.85rem;
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
     }
 
-    .booking-mini-time {
-      font-size: 0.8rem;
-      color: var(--accent, #22c55e);
-    }
+    .legend-dot.available { background: #22c55e; }
+    .legend-dot.booked { background: #dc2626; }
+    .legend-dot.yours { background: #3b82f6; }
+    .legend-dot.selected { background: #dc2626; border: 2px solid #fff; }
 
-    .no-bookings-mini {
-      text-align: center;
-      padding: 1rem;
-      color: var(--text-muted, #666);
-      font-size: 0.85rem;
+    @media (max-width: 600px) {
+      .page-main { padding: 1rem; }
+      .form-row { grid-template-columns: 1fr; }
+      .schedule-grid { grid-template-columns: repeat(4, 1fr); }
+      .page-header h1 { font-size: 1.25rem; }
     }
   </style>
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
-    import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy, Timestamp, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+    import { getFirestore, doc, getDoc, collection, query, where, getDocs, orderBy, Timestamp, addDoc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 
-    const firebaseConfig = window.FIREBASE_CONFIG || {};
-    const app = initializeApp(firebaseConfig);
+    const app = initializeApp(window.FIREBASE_CONFIG);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const loadingState = document.getElementById('loadingState');
-    const accessDenied = document.getElementById('accessDenied');
-    const bookingContent = document.getElementById('bookingContent');
-    const bookingFormContainer = document.getElementById('bookingFormContainer');
-    const todaySchedule = document.getElementById('todaySchedule');
-    const myBookingsEl = document.getElementById('myBookings');
-
     let currentUser = null;
+    let currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    let selectedDuration = 2;
+    let selectedHours = [];
+    let dayBookings = [];
+    let userDailyHours = 0;
+    const MAX_DAILY_HOURS = 2;
+
+    const loadingGate = document.getElementById('loadingGate');
+    const mainContent = document.getElementById('mainContent');
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -312,563 +655,420 @@ import '../../styles/global.css';
 
       currentUser = user;
 
-      // Check DJ eligibility
+      // Check DJ role - all registered users have DJ role by default
       const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const roles = userDoc.data()?.roles || {};
+      const userData = userDoc.data() || {};
+      const roles = userData.roles || {};
 
-      if (!roles.djEligible) {
-        loadingState.style.display = 'none';
-        accessDenied.style.display = 'block';
+      // User is a DJ if they have roles.dj OR if they're in the customers/users collection (all users are DJs by default)
+      const isDJ = roles.dj === true || userDoc.exists();
+
+      if (!isDJ) {
+        loadingGate.innerHTML = `
+          <div class="loading-content">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">🎧</div>
+            <h2 style="margin-bottom: 0.5rem;">DJ Access Required</h2>
+            <p style="color: #888; margin-bottom: 1.5rem;">You need DJ access to book slots.</p>
+            <a href="/account/request-role" style="color: #dc2626;">Request Access →</a>
+          </div>
+        `;
         return;
       }
 
-      // User is eligible, show booking content
-      loadingState.style.display = 'none';
-      bookingContent.style.display = 'grid';
+      // Show main content
+      loadingGate.classList.add('hidden');
+      mainContent.classList.remove('hidden');
 
-      // Initialize booking form
-      initBookingForm(user);
+      // Set user info
+      document.getElementById('userName').textContent = userData.displayName || user.email;
+      document.getElementById('djName').value = userData.displayName || '';
 
-      // Load sidebar data
-      loadTodaySchedule();
-      loadMyBookings(user.uid);
+      // Initialize
+      initForm();
+      updateDateDisplay();
+      loadDayBookings();
+      loadMyBookings();
     });
 
-    function initBookingForm(user) {
-      // Create the booking form HTML
-      bookingFormContainer.innerHTML = createBookingFormHTML();
-
-      // Initialize form handlers
-      initFormHandlers(user);
-    }
-
-    function createBookingFormHTML() {
-      return `
-        <div class="dj-booking">
-          <div class="booking-header">
-            <h2>Book a Slot</h2>
-            <p>Select your slot on the schedule. You can book up to 2 hours per day.</p>
-          </div>
-
-          <form id="bookingForm" class="booking-form">
-            <div class="form-row">
-              <div class="form-group">
-                <label for="djName">DJ Name <span class="required">*</span></label>
-                <input type="text" id="djName" name="djName" required placeholder="Your DJ name">
-              </div>
-              <div class="form-group">
-                <label for="streamTitle">Stream Title <span class="required">*</span></label>
-                <input type="text" id="streamTitle" name="streamTitle" required placeholder="e.g. Sunday Sessions">
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="description">Description <span class="optional">(optional)</span></label>
-              <textarea id="description" name="description" rows="2" placeholder="What will you be playing? Shows on scroller when no shoutouts." maxlength="200"></textarea>
-              <span class="char-count"><span id="descCount">0</span>/200</span>
-            </div>
-
-            <div class="form-group">
-              <label>How do you want to use your 2 hours? <span class="required">*</span></label>
-              <div class="duration-options">
-                <label class="duration-option">
-                  <input type="radio" name="durationType" value="2hr" checked>
-                  <div class="option-content">
-                    <span class="option-title">2 Hour Block</span>
-                    <span class="option-desc">One continuous session</span>
-                  </div>
-                </label>
-                <label class="duration-option">
-                  <input type="radio" name="durationType" value="split">
-                  <div class="option-content">
-                    <span class="option-title">Split Sessions</span>
-                    <span class="option-desc">Two 1-hour slots today</span>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label>Select Date</label>
-              <div class="date-nav">
-                <button type="button" id="prevDay" class="nav-btn" disabled>←</button>
-                <span id="selectedDate" class="current-date">Today</span>
-                <button type="button" id="nextDay" class="nav-btn">→</button>
-              </div>
-            </div>
-
-            <div class="schedule-section">
-              <label>Select Your Slot(s) <span class="required">*</span></label>
-              <p class="schedule-help" id="scheduleHelp">Click an available slot to select it</p>
-              <div class="daily-schedule" id="dailySchedule"></div>
-              <div class="selection-summary" id="selectionSummary" style="display: none;">
-                <strong>Selected:</strong> <span id="selectedSlots"></span>
-              </div>
-            </div>
-
-            <div class="allowance-info">
-              <span class="allowance-label">Daily allowance:</span>
-              <span class="allowance-value" id="allowanceValue">2 hours remaining</span>
-            </div>
-
-            <div class="form-actions">
-              <button type="button" id="clearSelection" class="btn btn-secondary">Clear</button>
-              <button type="submit" id="submitBooking" class="btn btn-primary" disabled>Book Slot</button>
-            </div>
-
-            <div id="formMessage" class="form-message" style="display: none;"></div>
-          </form>
-        </div>
-      `;
-    }
-
-    function initFormHandlers(user) {
-      let currentDate = new Date();
-      let selectedSlots = [];
-      let durationType = '2hr';
-      let dailyBookings = [];
-      let userDailyHours = 0;
-      const MAX_DAILY_HOURS = 2;
-
-      const form = document.getElementById('bookingForm');
-      const dailySchedule = document.getElementById('dailySchedule');
-      const selectedDateEl = document.getElementById('selectedDate');
-      const prevDayBtn = document.getElementById('prevDay');
-      const nextDayBtn = document.getElementById('nextDay');
-      const submitBtn = document.getElementById('submitBooking');
-      const clearBtn = document.getElementById('clearSelection');
-      const descriptionInput = document.getElementById('description');
-      const descCountEl = document.getElementById('descCount');
-
-      // Character count
-      descriptionInput.addEventListener('input', () => {
-        descCountEl.textContent = descriptionInput.value.length;
-      });
-
-      // Duration type
-      document.querySelectorAll('input[name="durationType"]').forEach(radio => {
-        radio.addEventListener('change', (e) => {
-          durationType = e.target.value;
-          selectedSlots = [];
-          updateScheduleHelp();
-          renderSchedule();
+    function initForm() {
+      // Duration buttons
+      document.querySelectorAll('.dur-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.dur-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          selectedDuration = parseInt(btn.dataset.dur);
+          selectedHours = [];
+          renderGrid();
+          updateSelection();
         });
       });
 
-      function updateScheduleHelp() {
-        const help = document.getElementById('scheduleHelp');
-        help.textContent = durationType === '2hr' 
-          ? 'Click an available slot for your 2-hour block'
-          : 'Click two available slots for your 1-hour sessions';
-      }
-
       // Date navigation
-      prevDayBtn.addEventListener('click', () => {
-        currentDate.setDate(currentDate.getDate() - 1);
-        selectedSlots = [];
+      document.getElementById('prevDay').addEventListener('click', () => {
+        currentDate = new Date(currentDate.getTime() - 86400000);
+        selectedHours = [];
         updateDateDisplay();
         loadDayBookings();
       });
 
-      nextDayBtn.addEventListener('click', () => {
-        currentDate.setDate(currentDate.getDate() + 1);
-        selectedSlots = [];
+      document.getElementById('nextDay').addEventListener('click', () => {
+        currentDate = new Date(currentDate.getTime() + 86400000);
+        selectedHours = [];
         updateDateDisplay();
         loadDayBookings();
       });
 
-      function updateDateDisplay() {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const compareDate = new Date(currentDate);
-        compareDate.setHours(0, 0, 0, 0);
+      // Clear selection
+      document.getElementById('clearSelection').addEventListener('click', () => {
+        selectedHours = [];
+        renderGrid();
+        updateSelection();
+      });
 
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+      // Form submission
+      document.getElementById('bookingForm').addEventListener('submit', handleSubmit);
 
-        if (compareDate.getTime() === today.getTime()) {
-          selectedDateEl.textContent = 'Today';
-        } else if (compareDate.getTime() === tomorrow.getTime()) {
-          selectedDateEl.textContent = 'Tomorrow';
-        } else {
-          selectedDateEl.textContent = currentDate.toLocaleDateString('en-GB', {
-            weekday: 'short', day: 'numeric', month: 'short'
-          });
-        }
+      // Form input validation
+      document.getElementById('djName').addEventListener('input', updateSubmitButton);
+      document.getElementById('streamTitle').addEventListener('input', updateSubmitButton);
+    }
 
-        prevDayBtn.disabled = compareDate.getTime() <= today.getTime();
-        const maxDate = new Date(today);
-        maxDate.setDate(maxDate.getDate() + 7);
-        nextDayBtn.disabled = compareDate.getTime() >= maxDate.getTime();
+    function updateDateDisplay() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today.getTime() + 86400000);
+
+      let title = '';
+      if (currentDate.getTime() === today.getTime()) {
+        title = 'Today';
+      } else if (currentDate.getTime() === tomorrow.getTime()) {
+        title = 'Tomorrow';
+      } else {
+        title = currentDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
       }
 
-      async function loadDayBookings() {
-        const startOfDay = new Date(currentDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date(currentDate);
-        endOfDay.setHours(23, 59, 59, 999);
+      document.getElementById('dateTitle').textContent = title;
+      document.getElementById('dateFull').textContent = currentDate.toLocaleDateString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+      });
 
-        const bookingsQuery = query(
+      // Disable prev if today
+      document.getElementById('prevDay').disabled = currentDate.getTime() <= today.getTime();
+
+      // Disable next if 7 days ahead
+      const maxDate = new Date(today.getTime() + 7 * 86400000);
+      document.getElementById('nextDay').disabled = currentDate.getTime() >= maxDate.getTime();
+    }
+
+    async function loadDayBookings() {
+      const startOfDay = new Date(currentDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(currentDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      try {
+        const q = query(
           collection(db, 'livestream-bookings'),
           where('startTime', '>=', Timestamp.fromDate(startOfDay)),
           where('startTime', '<=', Timestamp.fromDate(endOfDay))
         );
 
-        const snapshot = await getDocs(bookingsQuery);
-        dailyBookings = [];
+        const snapshot = await getDocs(q);
+        dayBookings = [];
         userDailyHours = 0;
 
-        snapshot.forEach(doc => {
-          const booking = { id: doc.id, ...doc.data() };
-          dailyBookings.push(booking);
-          if (booking.djId === user.uid) {
-            userDailyHours += booking.duration || 1;
+        snapshot.forEach(docSnap => {
+          const booking = { id: docSnap.id, ...docSnap.data() };
+          if (booking.status !== 'cancelled') {
+            dayBookings.push(booking);
+            if (booking.djId === currentUser.uid) {
+              userDailyHours += booking.duration || 1;
+            }
           }
         });
 
         updateAllowance();
-        renderSchedule();
+        renderGrid();
+      } catch (err) {
+        console.error('Error loading bookings:', err);
       }
+    }
 
-      function updateAllowance() {
-        const remaining = MAX_DAILY_HOURS - userDailyHours;
-        const allowanceEl = document.getElementById('allowanceValue');
-        allowanceEl.textContent = `${remaining} hour${remaining !== 1 ? 's' : ''} remaining`;
-        allowanceEl.className = 'allowance-value' + (remaining === 0 ? ' empty' : remaining === 1 ? ' warning' : '');
-      }
+    function updateAllowance() {
+      const remaining = MAX_DAILY_HOURS - userDailyHours;
+      const el = document.querySelector('.allowance-info');
+      el.textContent = `${remaining} hour${remaining !== 1 ? 's' : ''} remaining today`;
+      el.className = 'allowance-info' + (remaining === 0 ? ' empty' : remaining === 1 ? ' warning' : '');
+    }
 
-      function renderSchedule() {
-        const now = new Date();
-        const isToday = currentDate.toDateString() === now.toDateString();
-        const currentHour = now.getHours();
+    function renderGrid() {
+      const grid = document.getElementById('scheduleGrid');
+      const now = new Date();
+      const isToday = currentDate.toDateString() === now.toDateString();
+      const currentHour = now.getHours();
 
-        let html = '';
-        // Show all 24 hours (0-23)
-        for (let hour = 0; hour < 24; hour++) {
-          const isPast = isToday && hour <= currentHour;
-          const booking = dailyBookings.find(b => {
-            const startH = b.startTime.toDate().getHours();
-            return hour >= startH && hour < startH + (b.duration || 1);
-          });
-          const isSelected = selectedSlots.includes(hour);
-          const isYours = booking && booking.djId === user.uid;
+      let html = '';
 
-          let slotClass = 'slot';
-          let statusText = '';
-          let bookedBy = '';
+      for (let hour = 0; hour < 24; hour++) {
+        const isPast = isToday && hour <= currentHour;
+        const booking = getBookingForHour(hour);
+        const isSelected = selectedHours.includes(hour);
+        const isYours = booking && booking.djId === currentUser.uid;
 
-          if (isPast) { slotClass += ' past'; statusText = 'Past'; }
-          else if (isSelected) { slotClass += ' selected'; statusText = '✓'; }
-          else if (isYours) { slotClass += ' yours'; statusText = 'You'; }
-          else if (booking) { slotClass += ' booked'; bookedBy = booking.djName; }
-          else { slotClass += ' available'; }
+        let cellClass = 'hour-cell';
+        let djText = '';
 
-          const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-          const ampm = hour >= 12 ? 'p' : 'a';
-
-          html += `
-            <div class="${slotClass}" data-hour="${hour}">
-              <span class="slot-time">${displayHour}${ampm}</span>
-              ${bookedBy ? `<span class="booked-by">${bookedBy}</span>` : (statusText ? `<span class="slot-status">${statusText}</span>` : '')}
-            </div>
-          `;
-        }
-        dailySchedule.innerHTML = html;
-
-        // Add click handlers
-        dailySchedule.querySelectorAll('.slot.available').forEach(slot => {
-          slot.addEventListener('click', () => selectSlot(parseInt(slot.dataset.hour)));
-        });
-
-        updateSelectionSummary();
-        updateSubmitButton();
-      }
-
-      function selectSlot(hour) {
-        const remaining = MAX_DAILY_HOURS - userDailyHours;
-
-        if (durationType === '2hr') {
-          const nextBooking = dailyBookings.find(b => {
-            const startH = b.startTime.toDate().getHours();
-            return hour + 1 >= startH && hour + 1 < startH + (b.duration || 1);
-          });
-          if (nextBooking) {
-            showMessage('Cannot book 2-hour block - next slot is taken', 'error');
-            return;
-          }
-          if (remaining < 2) {
-            showMessage('Not enough hours remaining today', 'error');
-            return;
-          }
-          selectedSlots = selectedSlots.includes(hour) ? [] : [hour, hour + 1];
+        if (isPast) {
+          cellClass += ' past';
+        } else if (isSelected) {
+          cellClass += ' selected';
+        } else if (isYours) {
+          cellClass += ' yours';
+          djText = 'Your slot';
+        } else if (booking) {
+          cellClass += ' booked';
+          djText = booking.djName || 'Booked';
         } else {
-          if (selectedSlots.includes(hour)) {
-            selectedSlots = selectedSlots.filter(h => h !== hour);
-          } else {
-            if (selectedSlots.length >= 2) {
-              showMessage('You can only select 2 slots', 'error');
-              return;
-            }
-            if (selectedSlots.length + 1 > remaining) {
-              showMessage('Not enough hours remaining today', 'error');
-              return;
-            }
-            selectedSlots.push(hour);
-          }
+          cellClass += ' available';
+          djText = 'Open';
         }
-        renderSchedule();
+
+        const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+
+        html += `
+          <div class="${cellClass}" data-hour="${hour}">
+            <div class="hour-time">${displayHour}${ampm}</div>
+            <div class="hour-dj">${djText}</div>
+          </div>
+        `;
       }
 
-      function updateSelectionSummary() {
-        const summary = document.getElementById('selectionSummary');
-        const slotsEl = document.getElementById('selectedSlots');
+      grid.innerHTML = html;
 
-        if (selectedSlots.length === 0) {
-          summary.style.display = 'none';
+      // Add click handlers to available cells
+      grid.querySelectorAll('.hour-cell.available, .hour-cell.selected').forEach(cell => {
+        cell.addEventListener('click', () => handleCellClick(parseInt(cell.dataset.hour)));
+      });
+
+      updateSelection();
+    }
+
+    function getBookingForHour(hour) {
+      return dayBookings.find(b => {
+        const startH = b.startTime.toDate().getHours();
+        const duration = b.duration || 1;
+        return hour >= startH && hour < startH + duration;
+      });
+    }
+
+    function handleCellClick(hour) {
+      const remaining = MAX_DAILY_HOURS - userDailyHours;
+
+      if (selectedDuration === 2) {
+        // 2-hour block - check if next hour is available
+        const nextHourBooking = getBookingForHour(hour + 1);
+        if (nextHourBooking && nextHourBooking.djId !== currentUser.uid) {
+          showMessage('Cannot book 2-hour block - next hour is taken', 'error');
+          return;
+        }
+        if (hour >= 23) {
+          showMessage('Cannot book 2-hour block starting at 11PM', 'error');
+          return;
+        }
+        if (remaining < 2) {
+          showMessage('Not enough hours remaining today', 'error');
           return;
         }
 
-        summary.style.display = 'block';
-        const sorted = [...selectedSlots].sort((a, b) => a - b);
-        const formatHour = h => `${h > 12 ? h - 12 : h}:00 ${h >= 12 ? 'PM' : 'AM'}`;
-
-        if (durationType === '2hr' && sorted.length === 2) {
-          slotsEl.textContent = `${formatHour(sorted[0])} - ${formatHour(sorted[1] + 1)} (2 hours)`;
+        // Toggle selection
+        if (selectedHours.includes(hour)) {
+          selectedHours = [];
         } else {
-          slotsEl.textContent = sorted.map(formatHour).join(' and ') + ` (${sorted.length} hour${sorted.length > 1 ? 's' : ''})`;
+          selectedHours = [hour, hour + 1];
+        }
+      } else {
+        // 1-hour slot
+        if (selectedHours.includes(hour)) {
+          selectedHours = selectedHours.filter(h => h !== hour);
+        } else {
+          if (selectedHours.length + 1 > remaining) {
+            showMessage('Not enough hours remaining today', 'error');
+            return;
+          }
+          selectedHours.push(hour);
         }
       }
 
-      function updateSubmitButton() {
-        const djName = document.getElementById('djName').value.trim();
-        const streamTitle = document.getElementById('streamTitle').value.trim();
-        const hasSlots = durationType === '2hr' ? selectedSlots.length === 2 : selectedSlots.length > 0;
-        submitBtn.disabled = !djName || !streamTitle || !hasSlots;
+      renderGrid();
+    }
+
+    function updateSelection() {
+      const info = document.getElementById('selectionInfo');
+      const text = document.getElementById('selectionText');
+
+      if (selectedHours.length === 0) {
+        info.classList.add('hidden');
+      } else {
+        info.classList.remove('hidden');
+        const sorted = [...selectedHours].sort((a, b) => a - b);
+        const formatH = h => `${h > 12 ? h - 12 : h === 0 ? 12 : h}:00 ${h >= 12 ? 'PM' : 'AM'}`;
+
+        if (selectedDuration === 2 && sorted.length === 2) {
+          text.textContent = `${formatH(sorted[0])} - ${formatH(sorted[1] + 1)} (2 hours)`;
+        } else {
+          text.textContent = sorted.map(formatH).join(' & ') + ` (${sorted.length}hr)`;
+        }
       }
 
-      document.getElementById('djName').addEventListener('input', updateSubmitButton);
-      document.getElementById('streamTitle').addEventListener('input', updateSubmitButton);
+      updateSubmitButton();
+    }
 
-      clearBtn.addEventListener('click', () => {
-        selectedSlots = [];
-        renderSchedule();
-      });
+    function updateSubmitButton() {
+      const djName = document.getElementById('djName').value.trim();
+      const streamTitle = document.getElementById('streamTitle').value.trim();
+      const hasSelection = selectedHours.length > 0;
 
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
+      document.getElementById('submitBtn').disabled = !djName || !streamTitle || !hasSelection;
+    }
 
-        const djName = document.getElementById('djName').value.trim();
-        const streamTitle = document.getElementById('streamTitle').value.trim();
-        const description = document.getElementById('description').value.trim();
+    async function handleSubmit(e) {
+      e.preventDefault();
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Booking...';
+      const djName = document.getElementById('djName').value.trim();
+      const streamTitle = document.getElementById('streamTitle').value.trim();
+      const description = document.getElementById('description').value.trim();
+      const submitBtn = document.getElementById('submitBtn');
 
-        try {
-          const slots = selectedSlots.map(hour => {
-            const d = new Date(currentDate);
-            d.setHours(hour, 0, 0, 0);
-            return d;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Booking...';
+
+      try {
+        const sortedHours = [...selectedHours].sort((a, b) => a - b);
+
+        if (selectedDuration === 2) {
+          // Single 2-hour booking
+          const startTime = new Date(currentDate);
+          startTime.setHours(sortedHours[0], 0, 0, 0);
+
+          await addDoc(collection(db, 'livestream-bookings'), {
+            djId: currentUser.uid,
+            djName,
+            streamTitle,
+            description,
+            startTime: Timestamp.fromDate(startTime),
+            duration: 2,
+            status: 'confirmed',
+            createdAt: serverTimestamp()
           });
+        } else {
+          // Individual 1-hour bookings
+          for (const hour of sortedHours) {
+            const startTime = new Date(currentDate);
+            startTime.setHours(hour, 0, 0, 0);
 
-          if (durationType === '2hr') {
-            const startTime = new Date(Math.min(...slots.map(d => d.getTime())));
             await addDoc(collection(db, 'livestream-bookings'), {
-              djId: user.uid,
+              djId: currentUser.uid,
               djName,
               streamTitle,
               description,
               startTime: Timestamp.fromDate(startTime),
-              duration: 2,
+              duration: 1,
               status: 'confirmed',
               createdAt: serverTimestamp()
             });
-          } else {
-            for (const slotDate of slots) {
-              await addDoc(collection(db, 'livestream-bookings'), {
-                djId: user.uid,
-                djName,
-                streamTitle,
-                description,
-                startTime: Timestamp.fromDate(slotDate),
-                duration: 1,
-                status: 'confirmed',
-                createdAt: serverTimestamp()
-              });
-            }
           }
-
-          showMessage('Slot booked successfully!', 'success');
-          selectedSlots = [];
-          document.getElementById('streamTitle').value = '';
-          document.getElementById('description').value = '';
-          descCountEl.textContent = '0';
-          await loadDayBookings();
-          loadTodaySchedule();
-          loadMyBookings(user.uid);
-
-        } catch (error) {
-          showMessage('Error: ' + error.message, 'error');
         }
 
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Book Slot';
-      });
+        showMessage('Slot booked successfully!', 'success');
+        selectedHours = [];
+        document.getElementById('streamTitle').value = '';
+        document.getElementById('description').value = '';
 
-      function showMessage(text, type) {
-        const msg = document.getElementById('formMessage');
-        msg.textContent = text;
-        msg.className = `form-message ${type}`;
-        msg.style.display = 'block';
-        if (type === 'success') setTimeout(() => msg.style.display = 'none', 5000);
+        await loadDayBookings();
+        await loadMyBookings();
+
+      } catch (error) {
+        console.error('Booking error:', error);
+        showMessage('Error: ' + error.message, 'error');
       }
 
-      // Initialize
-      updateDateDisplay();
-      updateScheduleHelp();
-      loadDayBookings();
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Book Slot';
     }
 
-    async function loadTodaySchedule() {
-      const now = new Date();
-      const startOfDay = new Date(now);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(now);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      const bookingsQuery = query(
-        collection(db, 'livestream-bookings'),
-        where('startTime', '>=', Timestamp.fromDate(startOfDay)),
-        where('startTime', '<=', Timestamp.fromDate(endOfDay)),
-        orderBy('startTime', 'asc')
-      );
-
-      const snapshot = await getDocs(bookingsQuery);
-
-      if (snapshot.empty) {
-        todaySchedule.innerHTML = '<div class="no-bookings-mini">No shows scheduled</div>';
-        return;
-      }
-
-      let html = '';
-      snapshot.forEach(doc => {
-        const b = doc.data();
-        const startTime = b.startTime.toDate();
-        const endTime = new Date(startTime);
-        endTime.setHours(endTime.getHours() + (b.duration || 1));
-        const isLive = now >= startTime && now < endTime;
-        const formatHour = h => `${h > 12 ? h - 12 : h}${h >= 12 ? 'pm' : 'am'}`;
-
-        html += `
-          <div class="schedule-item ${isLive ? 'live' : ''}">
-            <span class="schedule-time">${formatHour(startTime.getHours())}</span>
-            <div class="schedule-info">
-              <div class="schedule-dj">${b.djName}</div>
-            </div>
-          </div>
-        `;
-      });
-      todaySchedule.innerHTML = html;
-    }
-
-    async function loadMyBookings(uid) {
+    async function loadMyBookings() {
+      const container = document.getElementById('myBookings');
       const now = new Date();
       now.setHours(now.getHours() - 2);
 
-      const bookingsQuery = query(
-        collection(db, 'livestream-bookings'),
-        where('djId', '==', uid),
-        where('startTime', '>=', Timestamp.fromDate(now)),
-        orderBy('startTime', 'asc')
-      );
+      try {
+        const q = query(
+          collection(db, 'livestream-bookings'),
+          where('djId', '==', currentUser.uid),
+          where('startTime', '>=', Timestamp.fromDate(now)),
+          orderBy('startTime', 'asc')
+        );
 
-      const snapshot = await getDocs(bookingsQuery);
+        const snapshot = await getDocs(q);
 
-      if (snapshot.empty) {
-        myBookingsEl.innerHTML = '<div class="no-bookings-mini">No upcoming bookings</div>';
-        return;
+        if (snapshot.empty) {
+          container.innerHTML = '<p class="empty-state">No upcoming bookings</p>';
+          return;
+        }
+
+        let html = '';
+        snapshot.forEach(docSnap => {
+          const b = docSnap.data();
+          if (b.status === 'cancelled') return;
+
+          const startTime = b.startTime.toDate();
+          const dateStr = startTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+          const timeStr = startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+          html += `
+            <div class="booking-item">
+              <div class="booking-item-info">
+                <div class="booking-item-title">${b.streamTitle || 'Untitled'}</div>
+                <div class="booking-item-time">${dateStr} at ${timeStr} (${b.duration || 1}hr)</div>
+              </div>
+              <button class="cancel-booking-btn" data-id="${docSnap.id}">Cancel</button>
+            </div>
+          `;
+        });
+
+        container.innerHTML = html || '<p class="empty-state">No upcoming bookings</p>';
+
+        // Add cancel handlers
+        container.querySelectorAll('.cancel-booking-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            if (confirm('Cancel this booking?')) {
+              await deleteDoc(doc(db, 'livestream-bookings', btn.dataset.id));
+              showMessage('Booking cancelled', 'success');
+              loadMyBookings();
+              loadDayBookings();
+            }
+          });
+        });
+
+      } catch (error) {
+        console.error('Error loading bookings:', error);
+        container.innerHTML = '<p class="empty-state">Error loading bookings</p>';
       }
+    }
 
-      let html = '';
-      snapshot.forEach(doc => {
-        const b = doc.data();
-        const startTime = b.startTime.toDate();
-        const dateStr = startTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-        const formatHour = h => `${h > 12 ? h - 12 : h}:00 ${h >= 12 ? 'PM' : 'AM'}`;
+    function showMessage(text, type) {
+      const msg = document.getElementById('formMessage');
+      msg.textContent = text;
+      msg.className = `form-message ${type}`;
+      msg.classList.remove('hidden');
 
-        html += `
-          <div class="booking-mini">
-            <div class="booking-mini-title">${b.streamTitle}</div>
-            <div class="booking-mini-time">${dateStr} • ${formatHour(startTime.getHours())}</div>
-          </div>
-        `;
-      });
-      myBookingsEl.innerHTML = html;
+      if (type === 'success') {
+        setTimeout(() => msg.classList.add('hidden'), 4000);
+      } else {
+        setTimeout(() => msg.classList.add('hidden'), 6000);
+      }
     }
   </script>
-
-  <style>
-    /* Inline form styles */
-    .dj-booking { max-width: 800px; }
-    .booking-header { margin-bottom: 1.5rem; }
-    .booking-header h2 { color: var(--text-primary, #fff); margin: 0 0 0.5rem; }
-    .booking-header p { color: var(--text-secondary, #a3a3a3); margin: 0; font-size: 0.9rem; }
-    .booking-form { display: flex; flex-direction: column; gap: 1.25rem; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
-    .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
-    .form-group label { font-size: 0.9rem; color: var(--text-primary, #fff); font-weight: 500; }
-    .required { color: #ef4444; }
-    .optional { color: var(--text-muted, #666); font-weight: 400; }
-    .form-group input, .form-group textarea { padding: 0.75rem 1rem; background: var(--bg-tertiary, #1a1a1a); border: 1px solid var(--border-color, #262626); border-radius: 8px; color: var(--text-primary, #fff); font-size: 1rem; }
-    .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--accent, #22c55e); }
-    .char-count { font-size: 0.75rem; color: var(--text-muted, #666); text-align: right; }
-    .duration-options { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-    .duration-option { display: block; cursor: pointer; }
-    .duration-option input { display: none; }
-    .duration-option .option-content { padding: 1rem; background: var(--bg-tertiary, #1a1a1a); border: 2px solid var(--border-color, #262626); border-radius: 8px; transition: all 0.2s; }
-    .duration-option input:checked + .option-content { border-color: var(--accent, #22c55e); background: rgba(34, 197, 94, 0.1); }
-    .option-title { display: block; font-weight: 600; color: var(--text-primary, #fff); margin-bottom: 0.25rem; }
-    .option-desc { font-size: 0.8rem; color: var(--text-secondary, #a3a3a3); }
-    .date-nav { display: flex; align-items: center; justify-content: center; gap: 1rem; padding: 0.75rem; background: var(--bg-tertiary, #1a1a1a); border-radius: 8px; }
-    .nav-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--bg-secondary, #141414); border: 1px solid var(--border-color, #262626); border-radius: 6px; color: var(--text-primary, #fff); cursor: pointer; }
-    .nav-btn:hover:not(:disabled) { border-color: var(--accent, #22c55e); }
-    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .current-date { font-weight: 600; color: var(--text-primary, #fff); min-width: 150px; text-align: center; }
-    .schedule-section { display: flex; flex-direction: column; gap: 0.5rem; }
-    .schedule-help { font-size: 0.75rem; color: var(--text-secondary, #a3a3a3); margin: 0; }
-    .daily-schedule { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; padding: 0.5rem; background: var(--bg-secondary, #141414); border: 1px solid var(--border-color, #262626); border-radius: 8px; }
-    @media (max-width: 600px) { .daily-schedule { grid-template-columns: repeat(6, 1fr); } }
-    @media (max-width: 400px) { .daily-schedule { grid-template-columns: repeat(4, 1fr); } }
-    .slot { padding: 0.4rem 0.25rem; text-align: center; border-radius: 4px; font-size: 0.7rem; cursor: pointer; transition: all 0.15s; border: 1px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 42px; }
-    .slot-time { font-weight: 700; color: var(--text-primary, #fff); display: block; text-align: center; width: 100%; font-size: 0.75rem; }
-    .slot-status { font-size: 0.6rem; text-transform: uppercase; text-align: center; width: 100%; margin-top: 2px; }
-    .slot.available { background: var(--bg-tertiary, #1a1a1a); border-color: var(--border-color, #262626); }
-    .slot.available:hover { border-color: var(--accent, #22c55e); background: rgba(34, 197, 94, 0.15); }
-    .slot.available .slot-status { color: var(--accent, #22c55e); }
-    .slot.selected { background: var(--accent, #22c55e); border-color: var(--accent, #22c55e); }
-    .slot.selected .slot-time, .slot.selected .slot-status { color: #000; }
-    .slot.booked { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); cursor: not-allowed; }
-    .slot.booked .slot-time { color: #f87171; }
-    .slot.booked .booked-by { font-size: 0.55rem; color: #f87171; display: block; margin-top: 2px; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-    .slot.yours { background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; cursor: not-allowed; }
-    .slot.yours .slot-status { color: #60a5fa; }
-    .slot.past { opacity: 0.25; cursor: not-allowed; background: var(--bg-tertiary, #1a1a1a); }
-    .selection-summary { padding: 0.75rem 1rem; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 6px; font-size: 0.9rem; color: var(--text-primary, #fff); }
-    .allowance-info { display: flex; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-tertiary, #1a1a1a); border-radius: 6px; font-size: 0.875rem; }
-    .allowance-label { color: var(--text-secondary, #a3a3a3); }
-    .allowance-value { color: var(--accent, #22c55e); font-weight: 600; }
-    .allowance-value.warning { color: #fbbf24; }
-    .allowance-value.empty { color: #ef4444; }
-    .form-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
-    .btn { padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
-    .btn-primary { background: var(--accent, #22c55e); color: #000; }
-    .btn-primary:hover:not(:disabled) { background: var(--accent-hover, #16a34a); }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-secondary { background: var(--bg-tertiary, #1a1a1a); color: var(--text-primary, #fff); border: 1px solid var(--border-color, #262626); }
-    .form-message { padding: 0.75rem 1rem; border-radius: 6px; text-align: center; }
-    .form-message.success { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; }
-    .form-message.error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; }
-  </style>
 </body>
 </html>

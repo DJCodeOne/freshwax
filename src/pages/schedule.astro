@@ -1,6 +1,6 @@
 ---
 // src/pages/schedule.astro
-// Public streaming schedule page - Daily calendar view
+// Public streaming schedule page - Compact 24-hour daily grid
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
@@ -10,81 +10,88 @@ export const prerender = false;
 
 <Layout title="Stream Schedule - Fresh Wax">
   <Header />
-  
+
   <main class="schedule-main">
     <div class="container">
       <div class="schedule-header">
         <h1>📅 STREAM <span class="red">SCHEDULE</span></h1>
         <p>See who's going live on Fresh Wax</p>
       </div>
-      
+
       <!-- Day Navigation -->
       <div class="day-nav">
-        <button id="prevDay" class="nav-btn">← Previous</button>
+        <button id="prevDay" class="nav-btn">←</button>
         <div class="day-selector">
-          <button id="dayMinus2" class="day-btn" data-offset="-2"></button>
-          <button id="dayMinus1" class="day-btn" data-offset="-1"></button>
-          <button id="dayToday" class="day-btn active" data-offset="0"></button>
-          <button id="dayPlus1" class="day-btn" data-offset="1"></button>
-          <button id="dayPlus2" class="day-btn" data-offset="2"></button>
-          <button id="dayPlus3" class="day-btn" data-offset="3"></button>
-          <button id="dayPlus4" class="day-btn" data-offset="4"></button>
+          <button class="day-btn" data-offset="-1">Yesterday</button>
+          <button class="day-btn active today-marker" data-offset="0">Today</button>
+          <button class="day-btn" data-offset="1">Tomorrow</button>
+          <button class="day-btn" data-offset="2"></button>
+          <button class="day-btn" data-offset="3"></button>
+          <button class="day-btn" data-offset="4"></button>
+          <button class="day-btn" data-offset="5"></button>
         </div>
-        <button id="nextDay" class="nav-btn">Next →</button>
+        <button id="nextDay" class="nav-btn">→</button>
       </div>
-      
+
       <!-- Selected Date Display -->
       <div class="selected-date">
-        <h2 id="selectedDateTitle">Today</h2>
+        <h2 id="selectedDateTitle">Today's Schedule</h2>
         <p id="selectedDateFull">Loading...</p>
       </div>
-      
-      <!-- Daily Calendar Grid -->
+
+      <!-- 24-Hour Grid -->
       <div class="calendar-container">
         <div id="noShows" class="no-shows-banner hidden">
           <span class="no-shows-icon">📻</span>
-          <span>No shows scheduled - slots available!</span>
+          <span>No shows scheduled yet - slots available!</span>
         </div>
-        <div id="dailyCalendar" class="daily-calendar">
-          <!-- Calendar rendered by JS -->
+        <div id="hourlyGrid" class="hourly-grid">
+          <!-- Grid rendered by JS -->
         </div>
       </div>
-      
+
+      <!-- Legend -->
+      <div class="schedule-legend">
+        <span class="legend-item"><span class="legend-dot live"></span> Live Now</span>
+        <span class="legend-item"><span class="legend-dot booked"></span> Scheduled</span>
+        <span class="legend-item"><span class="legend-dot lobby"></span> In Lobby</span>
+        <span class="legend-item"><span class="legend-dot available"></span> Available</span>
+      </div>
+
       <!-- DJ CTA -->
       <div class="dj-cta">
         <h3>Want to go live?</h3>
         <div class="dj-steps">
           <div class="dj-step">
             <span class="step-num">1</span>
-            <span class="step-text">Upload a mix</span>
+            <span class="step-text">Register & login</span>
           </div>
           <div class="dj-step">
             <span class="step-num">2</span>
-            <span class="step-text">Get 10 likes</span>
+            <span class="step-text">Book a slot</span>
           </div>
           <div class="dj-step">
             <span class="step-num">3</span>
-            <span class="step-text">Book a slot</span>
+            <span class="step-text">Go live!</span>
           </div>
         </div>
-        <p>Prove yourself to the community and earn your spot on the schedule</p>
         <a href="/dj-lobby/book" class="cta-btn">Book a Slot →</a>
       </div>
     </div>
   </main>
-  
+
   <Footer />
 </Layout>
 
 <style is:global>
   .schedule-main {
     min-height: 100vh;
-    background: linear-gradient(to bottom, #000 0%, #111 100%);
+    background: linear-gradient(to bottom, #000 0%, #0a0a0a 100%);
     padding: 1rem;
   }
 
   .container {
-    max-width: 1400px;
+    max-width: 1200px;
     margin: 0 auto;
   }
 
@@ -95,7 +102,7 @@ export const prerender = false;
 
   .schedule-header h1 {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 3.5rem;
+    font-size: 2.5rem;
     color: #fff;
     margin: 0 0 0.25rem 0;
     letter-spacing: 0.02em;
@@ -106,8 +113,8 @@ export const prerender = false;
   }
 
   .schedule-header p {
-    color: #888;
-    font-size: 1rem;
+    color: #666;
+    font-size: 0.9rem;
   }
 
   .day-nav {
@@ -123,12 +130,13 @@ export const prerender = false;
     background: #dc2626;
     color: #fff;
     border: none;
-    padding: 0.5rem 1rem;
+    width: 36px;
+    height: 36px;
     font-weight: 700;
-    font-size: 0.75rem;
+    font-size: 1rem;
     cursor: pointer;
     transition: background 0.2s;
-    border-radius: 4px;
+    border-radius: 6px;
   }
 
   .nav-btn:hover {
@@ -137,26 +145,29 @@ export const prerender = false;
 
   .day-selector {
     display: flex;
-    gap: 0.25rem;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .day-btn {
-    background: #1f2937;
-    border: 2px solid #374151;
+    background: #1a1a1a;
+    border: 2px solid #333;
     padding: 0.5rem 0.75rem;
     font-weight: 600;
-    font-size: 0.7rem;
-    color: #fff;
+    font-size: 0.75rem;
+    color: #888;
     cursor: pointer;
     transition: all 0.2s;
-    min-width: 70px;
+    min-width: 75px;
     text-align: center;
-    border-radius: 4px;
+    border-radius: 6px;
   }
 
   .day-btn:hover {
-    background: #374151;
-    border-color: #4b5563;
+    background: #222;
+    border-color: #444;
+    color: #fff;
   }
 
   .day-btn.active {
@@ -165,7 +176,7 @@ export const prerender = false;
     border-color: #dc2626;
   }
 
-  .day-btn.today-marker {
+  .day-btn.today-marker:not(.active) {
     border-color: #dc2626;
   }
 
@@ -176,182 +187,132 @@ export const prerender = false;
 
   .selected-date h2 {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     color: #fff;
     margin: 0;
     letter-spacing: 0.02em;
   }
 
   .selected-date p {
-    color: #888;
-    font-size: 0.875rem;
+    color: #666;
+    font-size: 0.8rem;
     margin: 0.125rem 0 0 0;
   }
 
   .calendar-container {
-    background: #1a1a1a;
-    border: 2px solid #333;
+    background: #111;
+    border: 1px solid #262626;
     border-radius: 8px;
     overflow: hidden;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
+    padding: 8px;
   }
 
-  .daily-calendar {
+  /* 24-hour compact grid - 6 columns x 4 rows */
+  .hourly-grid {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 2px;
-    background: #333;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
   }
 
-  /* Each hour cell */
-  .hour-row {
+  .hour-cell {
     background: #1a1a1a;
-    display: flex;
-    flex-direction: column;
-    min-height: 55px;
-  }
-
-  .hour-row:nth-child(even) {
-    background: #151515;
-  }
-
-  /* Time label at top of cell */
-  .hour-time {
+    border: 2px solid transparent;
+    border-radius: 6px;
+    padding: 0.4rem 0.3rem;
     text-align: center;
-    padding: 0.25rem 0.15rem;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 0.85rem;
-    letter-spacing: 0.02em;
-    color: #dc2626;
-    background: rgba(220, 38, 38, 0.1);
-    border-bottom: 1px solid #333;
-    line-height: 1;
-  }
-
-  /* Booking area below time */
-  .hour-content {
-    flex: 1;
-    position: relative;
-    padding: 0.2rem;
+    min-height: 60px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    min-height: 28px;
+    justify-content: flex-start;
+    transition: all 0.15s;
+    cursor: default;
   }
 
-  /* Slot blocks inside booking area */
-  .slot-block {
-    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-    color: #fff;
-    border-radius: 4px;
-    overflow: hidden;
+  .hour-cell.available {
+    background: #0f1f0f;
+    border-color: rgba(34, 197, 94, 0.2);
+  }
+
+  .hour-cell.booked {
+    background: linear-gradient(135deg, #1a1a3e 0%, #1a1a2e 100%);
+    border-color: rgba(99, 102, 241, 0.4);
     cursor: pointer;
-    transition: transform 0.1s, box-shadow 0.1s;
-    position: relative;
-    flex: 1;
   }
 
-  .slot-block:hover {
+  .hour-cell.booked:hover {
+    border-color: rgba(99, 102, 241, 0.8);
     transform: scale(1.02);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-    z-index: 10;
   }
 
-  .slot-block.live {
-    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-    animation: pulse-glow 2s infinite;
+  .hour-cell.live {
+    background: linear-gradient(135deg, #3e1a1a 0%, #2e1a1a 100%);
+    border-color: #dc2626;
+    animation: pulse-border 2s infinite;
   }
 
-  .slot-block.in_lobby {
-    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-    color: #000;
+  .hour-cell.lobby {
+    background: linear-gradient(135deg, #3e3a1a 0%, #2e2a1a 100%);
+    border-color: rgba(251, 191, 36, 0.5);
   }
 
-  .slot-block.completed {
-    background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
-    opacity: 0.6;
+  .hour-cell.past {
+    opacity: 0.35;
   }
 
-  .slot-inner {
-    padding: 0.2rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    text-align: center;
-    height: 100%;
+  @keyframes pulse-border {
+    0%, 100% { border-color: #dc2626; }
+    50% { border-color: #ef4444; }
   }
 
-  .slot-dj {
-    font-weight: 700;
-    font-size: 0.6rem;
-    line-height: 1.1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+  .hour-time {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.95rem;
+    color: #666;
+    line-height: 1;
+    margin-bottom: 2px;
   }
 
-  .slot-title {
-    font-size: 0.5rem;
-    opacity: 0.85;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.1;
-    max-width: 100%;
-    display: none;
-  }
+  .hour-cell.available .hour-time { color: #22c55e; }
+  .hour-cell.booked .hour-time { color: #818cf8; }
+  .hour-cell.live .hour-time { color: #f87171; }
+  .hour-cell.lobby .hour-time { color: #fbbf24; }
 
-  .slot-time {
-    font-size: 0.45rem;
+  .hour-dj {
+    font-size: 0.65rem;
     font-weight: 600;
-    opacity: 0.8;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    gap: 0.15rem;
+    color: #fff;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
   }
 
-  .slot-duration {
-    background: rgba(255,255,255,0.2);
-    padding: 0.05rem 0.15rem;
-    border-radius: 2px;
-    font-size: 0.45rem;
+  .hour-cell.available .hour-dj {
+    color: #22c55e;
+    font-weight: 400;
+    font-size: 0.55rem;
   }
 
-  .slot-block.in_lobby .slot-duration {
-    background: rgba(0,0,0,0.15);
-  }
-
-  .slot-status {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    font-size: 0.4rem;
+  .hour-status {
+    font-size: 0.5rem;
     font-weight: 700;
     text-transform: uppercase;
-    padding: 1px 3px;
-    border-radius: 2px;
-    background: rgba(255,255,255,0.25);
+    margin-top: 2px;
   }
 
-  .slot-block.live .slot-status {
-    background: #fff;
+  .hour-cell.live .hour-status {
     color: #dc2626;
-    animation: pulse 1s infinite;
+    animation: blink 1s infinite;
   }
 
-  @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 8px rgba(220, 38, 38, 0.3); }
-    50% { box-shadow: 0 0 16px rgba(220, 38, 38, 0.5); }
+  .hour-cell.lobby .hour-status {
+    color: #fbbf24;
   }
 
-  @keyframes pulse {
+  @keyframes blink {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    50% { opacity: 0.5; }
   }
 
   .no-shows-banner {
@@ -359,35 +320,64 @@ export const prerender = false;
     align-items: center;
     justify-content: center;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
-    color: #888;
-    font-size: 0.85rem;
+    padding: 1rem;
+    background: #0a0a0a;
+    color: #666;
+    font-size: 0.9rem;
     font-weight: 500;
-    grid-column: 1 / -1;
-    border-bottom: 1px solid #333;
+    border-radius: 6px;
+    margin-bottom: 8px;
   }
 
   .no-shows-banner.hidden {
     display: none;
   }
 
-  .no-shows-banner .no-shows-icon {
+  .no-shows-icon {
     font-size: 1.25rem;
   }
 
+  /* Legend */
+  .schedule-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: #888;
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  .legend-dot.live { background: #dc2626; }
+  .legend-dot.booked { background: #6366f1; }
+  .legend-dot.lobby { background: #fbbf24; }
+  .legend-dot.available { background: #22c55e; }
+
+  /* DJ CTA */
   .dj-cta {
-    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
     color: #fff;
     padding: 1.5rem;
     text-align: center;
-    border: 2px solid #374151;
+    border: 1px solid #262626;
     border-radius: 8px;
   }
 
   .dj-cta h3 {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     margin: 0 0 1rem 0;
     letter-spacing: 0.02em;
   }
@@ -397,6 +387,7 @@ export const prerender = false;
     justify-content: center;
     gap: 1.5rem;
     margin-bottom: 1rem;
+    flex-wrap: wrap;
   }
 
   .dj-step {
@@ -406,8 +397,8 @@ export const prerender = false;
   }
 
   .step-num {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
     background: #dc2626;
     color: #fff;
     border-radius: 50%;
@@ -415,18 +406,12 @@ export const prerender = false;
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
   }
 
   .step-text {
-    color: #fff;
-    font-weight: 600;
-    font-size: 0.9rem;
-  }
-
-  .dj-cta p {
-    color: #888;
-    margin: 0 0 1rem 0;
+    color: #ccc;
+    font-weight: 500;
     font-size: 0.85rem;
   }
 
@@ -434,11 +419,11 @@ export const prerender = false;
     display: inline-block;
     background: #dc2626;
     color: #fff;
-    padding: 0.6rem 1.25rem;
+    padding: 0.6rem 1.5rem;
     font-weight: 700;
     text-decoration: none;
     transition: background 0.2s;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 0.9rem;
   }
 
@@ -446,68 +431,57 @@ export const prerender = false;
     background: #b91c1c;
   }
 
-  /* Grid time indicators */
-  .daily-calendar .late-night .hour-time {
-    color: #6b7280;
-    background: rgba(107, 114, 128, 0.1);
-  }
+  @media (max-width: 800px) {
+    .hourly-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
 
-  @media (max-width: 1200px) {
-    .daily-calendar {
-      grid-template-columns: repeat(6, 1fr);
+    .day-selector {
+      gap: 3px;
+    }
+
+    .day-btn {
+      min-width: 60px;
+      padding: 0.4rem 0.5rem;
+      font-size: 0.7rem;
     }
   }
 
-  @media (max-width: 900px) {
-    .daily-calendar {
-      grid-template-columns: repeat(6, 1fr);
-    }
-
-    .hour-row {
-      min-height: 50px;
-    }
-  }
-
-  @media (max-width: 600px) {
+  @media (max-width: 500px) {
     .schedule-main {
       padding: 0.5rem;
     }
 
-    .day-nav {
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .day-selector {
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .day-btn {
-      min-width: 50px;
-      padding: 0.35rem 0.4rem;
-      font-size: 0.6rem;
-    }
-
     .schedule-header h1 {
-      font-size: 2rem;
+      font-size: 1.75rem;
     }
 
-    .daily-calendar {
+    .hourly-grid {
       grid-template-columns: repeat(4, 1fr);
     }
 
-    .hour-row {
-      min-height: 45px;
+    .hour-cell {
+      min-height: 50px;
+      padding: 0.3rem 0.2rem;
     }
 
     .hour-time {
-      font-size: 0.7rem;
-      padding: 0.2rem;
+      font-size: 0.8rem;
     }
 
-    .slot-dj {
-      font-size: 0.5rem;
+    .hour-dj {
+      font-size: 0.55rem;
+    }
+
+    .day-btn {
+      min-width: 45px;
+      padding: 0.35rem 0.35rem;
+      font-size: 0.6rem;
+    }
+
+    .nav-btn {
+      width: 30px;
+      height: 30px;
     }
 
     .dj-steps {
@@ -516,26 +490,12 @@ export const prerender = false;
       align-items: center;
     }
 
-    .dj-step {
-      gap: 0.375rem;
-    }
-
-    .step-num {
-      width: 22px;
-      height: 22px;
-      font-size: 0.7rem;
-    }
-
-    .step-text {
-      font-size: 0.8rem;
-    }
-
     .dj-cta {
       padding: 1rem;
     }
 
     .dj-cta h3 {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
     }
   }
 </style>
@@ -546,26 +506,21 @@ export const prerender = false;
   selectedDate.setHours(0, 0, 0, 0);
   let refreshInterval = null;
 
-  // Handle both initial load and View Transitions navigation
   function initSchedule() {
-    // Reset state for fresh page load
     allSlots = [];
     selectedDate = new Date();
     selectedDate.setHours(0, 0, 0, 0);
 
     updateDayButtons();
-    renderDailyCalendar(); // Render empty calendar immediately
-    loadSchedule(); // Then load slots
+    renderGrid();
+    loadSchedule();
     setupNavigation();
 
-    // Auto-refresh every 30 seconds to catch new bookings
+    // Auto-refresh every 30 seconds
     if (refreshInterval) clearInterval(refreshInterval);
-    refreshInterval = setInterval(() => {
-      loadSchedule();
-    }, 30000);
+    refreshInterval = setInterval(loadSchedule, 30000);
   }
 
-  // Cleanup on page leave
   function cleanupSchedule() {
     if (refreshInterval) {
       clearInterval(refreshInterval);
@@ -573,41 +528,34 @@ export const prerender = false;
     }
   }
 
-  // DOMContentLoaded for initial page load
   document.addEventListener('DOMContentLoaded', initSchedule);
-
-  // astro:page-load for View Transitions navigation
   document.addEventListener('astro:page-load', initSchedule);
-
-  // Cleanup on page navigation
   document.addEventListener('astro:before-swap', cleanupSchedule);
-  
+
   function setupNavigation() {
-    // Remove existing listeners to prevent duplicates
     const prevBtn = document.getElementById('prevDay');
     const nextBtn = document.getElementById('nextDay');
-    
+
     if (prevBtn) {
       const newPrevBtn = prevBtn.cloneNode(true);
       prevBtn.parentNode.replaceChild(newPrevBtn, prevBtn);
       newPrevBtn.addEventListener('click', () => {
-        selectedDate = new Date(selectedDate.getTime() - 24 * 60 * 60 * 1000);
+        selectedDate = new Date(selectedDate.getTime() - 86400000);
         updateDayButtons();
-        renderDailyCalendar();
+        renderGrid();
       });
     }
-    
+
     if (nextBtn) {
       const newNextBtn = nextBtn.cloneNode(true);
       nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
       newNextBtn.addEventListener('click', () => {
-        selectedDate = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000);
+        selectedDate = new Date(selectedDate.getTime() + 86400000);
         updateDayButtons();
-        renderDailyCalendar();
+        renderGrid();
       });
     }
-    
-    // Day button clicks - clone to remove old listeners
+
     document.querySelectorAll('.day-btn').forEach(btn => {
       const newBtn = btn.cloneNode(true);
       btn.parentNode.replaceChild(newBtn, btn);
@@ -615,22 +563,21 @@ export const prerender = false;
         const offset = parseInt(newBtn.dataset.offset);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        selectedDate = new Date(today.getTime() + offset * 24 * 60 * 60 * 1000);
+        selectedDate = new Date(today.getTime() + offset * 86400000);
         updateDayButtons();
-        renderDailyCalendar();
+        renderGrid();
       });
     });
   }
-  
+
   function updateDayButtons() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     document.querySelectorAll('.day-btn').forEach(btn => {
       const offset = parseInt(btn.dataset.offset);
-      const btnDate = new Date(today.getTime() + offset * 24 * 60 * 60 * 1000);
-      
-      // Set button text
+      const btnDate = new Date(today.getTime() + offset * 86400000);
+
       if (offset === 0) {
         btn.textContent = 'Today';
       } else if (offset === 1) {
@@ -640,121 +587,136 @@ export const prerender = false;
       } else {
         btn.textContent = btnDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
       }
-      
-      // Set active state
+
       btn.classList.toggle('active', btnDate.getTime() === selectedDate.getTime());
       btn.classList.toggle('today-marker', offset === 0);
     });
-    
-    // Update selected date display
+
     const isToday = selectedDate.getTime() === today.getTime();
-    const isTomorrow = selectedDate.getTime() === today.getTime() + 24 * 60 * 60 * 1000;
-    const isYesterday = selectedDate.getTime() === today.getTime() - 24 * 60 * 60 * 1000;
-    
+    const isTomorrow = selectedDate.getTime() === today.getTime() + 86400000;
+    const isYesterday = selectedDate.getTime() === today.getTime() - 86400000;
+
     let titleText = '';
     if (isToday) titleText = "Today's Schedule";
     else if (isTomorrow) titleText = "Tomorrow's Schedule";
     else if (isYesterday) titleText = "Yesterday's Schedule";
     else titleText = selectedDate.toLocaleDateString('en-GB', { weekday: 'long' }) + "'s Schedule";
-    
+
     document.getElementById('selectedDateTitle').textContent = titleText;
-    document.getElementById('selectedDateFull').textContent = 
+    document.getElementById('selectedDateFull').textContent =
       selectedDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   }
-  
+
   async function loadSchedule() {
     try {
       const start = new Date();
       start.setDate(start.getDate() - 7);
       const end = new Date();
       end.setDate(end.getDate() + 14);
-      
+
       const response = await fetch(`/api/livestream/slots?start=${start.toISOString()}&end=${end.toISOString()}`);
       const data = await response.json();
-      
+
       if (data.success) {
         allSlots = (data.slots || []).filter(s => s.status !== 'cancelled');
       }
     } catch (error) {
       console.error('Failed to load schedule:', error);
     }
-    // Always render calendar after attempting to load
-    renderDailyCalendar();
+    renderGrid();
   }
-  
-  function renderDailyCalendar() {
-    const calendar = document.getElementById('dailyCalendar');
+
+  function renderGrid() {
+    const grid = document.getElementById('hourlyGrid');
     const noShows = document.getElementById('noShows');
-    
-    if (!calendar) {
-      console.error('Calendar element not found');
-      return;
-    }
-    
+
+    if (!grid) return;
+
+    const now = new Date();
+    const isToday = selectedDate.toDateString() === now.toDateString();
+    const currentHour = now.getHours();
+
     const dayStart = new Date(selectedDate);
     dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-    
-    // Filter slots for selected day
+    const dayEnd = new Date(dayStart.getTime() + 86400000);
+
+    // Get slots for this day
     const daySlots = allSlots.filter(slot => {
       const slotStart = new Date(slot.startTime);
       return slotStart >= dayStart && slotStart < dayEnd;
-    }).sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-    
-    // Group slots by hour
+    });
+
+    // Map slots by hour
     const slotsByHour = {};
     daySlots.forEach(slot => {
-      const hour = new Date(slot.startTime).getHours();
-      if (!slotsByHour[hour]) slotsByHour[hour] = [];
-      slotsByHour[hour].push(slot);
+      const startHour = new Date(slot.startTime).getHours();
+      const duration = slot.duration || 1;
+      for (let h = startHour; h < startHour + duration && h < 24; h++) {
+        if (!slotsByHour[h]) slotsByHour[h] = slot;
+      }
     });
-    
-    // Build hour rows - all 24 hours starting from midnight
-    let html = '';
 
-    // Helper to format hour label compactly
     const formatHour = (h) => {
       const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
-      const ampm = h >= 12 ? 'p' : 'a';
+      const ampm = h >= 12 ? 'PM' : 'AM';
       return `${displayHour}${ampm}`;
     };
 
-    // All 24 hours (0-23)
+    let html = '';
+    let hasBookings = false;
+
     for (let hour = 0; hour < 24; hour++) {
-      const hourLabel = formatHour(hour);
-      const hourSlots = slotsByHour[hour] || [];
-      const isLateNight = hour < 9;
+      const isPast = isToday && hour < currentHour;
+      const slot = slotsByHour[hour];
 
-      html += `<div class="hour-row${isLateNight ? ' late-night' : ''}" data-hour="${hour}">`;
-      html += `  <div class="hour-time">${hourLabel}</div>`;
-      html += `  <div class="hour-content">`;
+      let cellClass = 'hour-cell';
+      let djText = '';
+      let statusText = '';
 
-      // Add slots for this hour
-      hourSlots.forEach(slot => {
-        html += `
-          <div class="slot-block ${slot.status || ''}">
-            <div class="slot-inner">
-              <div class="slot-dj">${slot.djName || 'TBA'}</div>
-            </div>
-            ${slot.status === 'live' ? '<span class="slot-status">LIVE</span>' : ''}
-            ${slot.status === 'in_lobby' ? '<span class="slot-status">LOBBY</span>' : ''}
-          </div>
-        `;
-      });
-
-      html += `  </div>`;
-      html += `</div>`;
-    }
-    
-    calendar.innerHTML = html;
-    
-    // Show/hide no shows message but always show calendar
-    if (noShows) {
-      if (daySlots.length === 0) {
-        noShows.classList.remove('hidden');
+      if (slot) {
+        hasBookings = true;
+        if (slot.status === 'live') {
+          cellClass += ' live';
+          djText = slot.djName || 'Live';
+          statusText = '● LIVE';
+        } else if (slot.status === 'in_lobby') {
+          cellClass += ' lobby';
+          djText = slot.djName || 'DJ';
+          statusText = 'LOBBY';
+        } else {
+          cellClass += ' booked';
+          djText = slot.djName || 'Booked';
+        }
       } else {
-        noShows.classList.add('hidden');
+        cellClass += ' available';
+        djText = 'Open';
       }
+
+      if (isPast) {
+        cellClass += ' past';
+      }
+
+      html += `
+        <div class="${cellClass}" data-hour="${hour}">
+          <div class="hour-time">${formatHour(hour)}</div>
+          <div class="hour-dj">${djText}</div>
+          ${statusText ? `<div class="hour-status">${statusText}</div>` : ''}
+        </div>
+      `;
     }
+
+    grid.innerHTML = html;
+
+    // Show/hide no shows banner
+    if (noShows) {
+      noShows.classList.toggle('hidden', hasBookings);
+    }
+
+    // Add click handlers to booked/live slots
+    grid.querySelectorAll('.hour-cell.booked, .hour-cell.live').forEach(cell => {
+      cell.addEventListener('click', () => {
+        window.location.href = '/live';
+      });
+    });
   }
 </script>
