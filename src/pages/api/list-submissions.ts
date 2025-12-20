@@ -33,25 +33,44 @@ export const GET: APIRoute = async ({ locals }) => {
     });
 
     const endpoint = `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`;
-    const listUrl = `${endpoint}/${R2_CONFIG.bucketName}?list-type=2&prefix=submissions/&delimiter=/`;
-
-    const response = await awsClient.fetch(listUrl);
-
-    if (!response.ok) {
-      throw new Error('Failed to list bucket');
-    }
-
-    const xmlText = await response.text();
-
-    // Parse common prefixes (folders) from XML
-    const prefixMatches = xmlText.matchAll(/<Prefix>submissions\/([^<]+)\/<\/Prefix>/g);
     const submissions: string[] = [];
 
-    for (const match of prefixMatches) {
-      const folder = match[1];
-      // Skip test folders
-      if (!folder.startsWith('test-')) {
-        submissions.push(folder);
+    // Check submissions/ folder first
+    const submissionsUrl = `${endpoint}/${R2_CONFIG.bucketName}?list-type=2&prefix=submissions/&delimiter=/`;
+    const submissionsResponse = await awsClient.fetch(submissionsUrl);
+
+    if (submissionsResponse.ok) {
+      const xmlText = await submissionsResponse.text();
+      const prefixMatches = xmlText.matchAll(/<Prefix>submissions\/([^<]+)\/<\/Prefix>/g);
+
+      for (const match of prefixMatches) {
+        const folder = match[1];
+        if (!folder.startsWith('test-')) {
+          submissions.push(folder);
+        }
+      }
+    }
+
+    // Also check root level for submission-like folders (Artist-timestamp pattern)
+    const rootUrl = `${endpoint}/${R2_CONFIG.bucketName}?list-type=2&delimiter=/`;
+    const rootResponse = await awsClient.fetch(rootUrl);
+
+    if (rootResponse.ok) {
+      const rootXml = await rootResponse.text();
+      // Look for folders at root level that match submission pattern
+      const rootPrefixes = rootXml.matchAll(/<Prefix>([^<\/]+)\/<\/Prefix>/g);
+
+      for (const match of rootPrefixes) {
+        const folder = match[1];
+        // Match pattern like "Artist_Name-1234567890" (name + timestamp)
+        if (/^[A-Za-z0-9_]+-\d{10,}$/.test(folder) && !folder.startsWith('test-')) {
+          // Check if this folder has a metadata.json (confirms it's a submission)
+          const metaCheckUrl = `${endpoint}/${R2_CONFIG.bucketName}/${folder}/metadata.json`;
+          const metaCheck = await awsClient.fetch(metaCheckUrl, { method: 'HEAD' });
+          if (metaCheck.ok) {
+            submissions.push(`root:${folder}`); // Prefix with root: to indicate location
+          }
+        }
       }
     }
 

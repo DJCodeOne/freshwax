@@ -34,7 +34,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const { submissionId } = await request.json();
+    let { submissionId } = await request.json();
 
     if (!submissionId) {
       return new Response(JSON.stringify({ error: 'submissionId required' }), {
@@ -43,7 +43,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    console.log(`[process-release] Processing: ${submissionId}`);
+    // Check if submission is from root level (prefixed with "root:")
+    const isRootLevel = submissionId.startsWith('root:');
+    if (isRootLevel) {
+      submissionId = submissionId.replace('root:', '');
+    }
+
+    console.log(`[process-release] Processing: ${submissionId} (root: ${isRootLevel})`);
 
     // Initialize R2 client
     const R2_CONFIG = getR2Config(env);
@@ -65,8 +71,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const endpoint = `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`;
     const bucketUrl = `${endpoint}/${R2_CONFIG.bucketName}`;
 
-    // Get metadata.json from submission
-    const metadataKey = `submissions/${submissionId}/metadata.json`;
+    // Get metadata.json from submission (handle root vs submissions folder)
+    const submissionPrefix = isRootLevel ? submissionId : `submissions/${submissionId}`;
+    const metadataKey = `${submissionPrefix}/metadata.json`;
     const metadataUrl = `${bucketUrl}/${encodeURIComponent(metadataKey)}`;
 
     const metadataResponse = await awsClient.fetch(metadataUrl);
@@ -81,7 +88,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.log(`[process-release] Loaded metadata: ${metadata.artistName} - ${metadata.releaseName}`);
 
     // List all files in submission folder
-    const listUrl = `${bucketUrl}?list-type=2&prefix=submissions/${submissionId}/`;
+    const listUrl = `${bucketUrl}?list-type=2&prefix=${submissionPrefix}/`;
     const listResponse = await awsClient.fetch(listUrl);
     const listXml = await listResponse.text();
 
