@@ -1,6 +1,16 @@
 ---
 // src/components/Header.astro
 // OPTIMIZED: Minimal API calls with aggressive caching + debounced search
+
+// Firebase config for client-side auth
+const firebaseConfig = {
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+  authDomain: "freshwax-store.firebaseapp.com",
+  projectId: "freshwax-store",
+  storageBucket: "freshwax-store.firebasestorage.app",
+  messagingSenderId: "675435782973",
+  appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+};
 ---
 
 <header id="freshwax-header">
@@ -382,19 +392,9 @@
   }
 </style>
 
-<script type="module">
+<script type="module" define:vars={{ firebaseConfig }}>
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-
-  // Firebase config - matches working admin login
-  const firebaseConfig = {
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
-    authDomain: "freshwax-store.firebaseapp.com",
-    projectId: "freshwax-store",
-    storageBucket: "freshwax-store.firebasestorage.app",
-    messagingSenderId: "675435782973",
-    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-  };
 
   // Initialize Firebase only once
   let app;
