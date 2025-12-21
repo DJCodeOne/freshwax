@@ -10,6 +10,16 @@ response.headers.set('Expires', '0');
 
 // Get redirect URL from query params - always default to customer dashboard
 const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard';
+
+// Firebase config for client-side auth
+const firebaseConfig = {
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+  authDomain: "freshwax-store.firebaseapp.com",
+  projectId: "freshwax-store",
+  storageBucket: "freshwax-store.firebasestorage.app",
+  messagingSenderId: "675435782973",
+  appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+};
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -180,20 +190,11 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
   </script>
 
   <!-- Firebase SDK -->
-  <script type="module" define:vars={{ redirectTo }}>
+  <script type="module" define:vars={{ redirectTo, firebaseConfig }}>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
     import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-    
-    const firebaseConfig = {
-      apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
-      authDomain: "freshwax-store.firebaseapp.com",
-      projectId: "freshwax-store",
-      storageBucket: "freshwax-store.firebasestorage.app",
-      messagingSenderId: "675435782973",
-      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-    };
-    
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
