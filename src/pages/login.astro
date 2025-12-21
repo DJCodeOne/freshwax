@@ -11,9 +11,9 @@ response.headers.set('Expires', '0');
 // Get redirect URL from query params - always default to customer dashboard
 const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard';
 
-// Firebase config for client-side auth
+// Firebase config for client-side auth (with fallback)
 const firebaseConfig = {
-  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
   authDomain: "freshwax-store.firebaseapp.com",
   projectId: "freshwax-store",
   storageBucket: "freshwax-store.firebasestorage.app",
