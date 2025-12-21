@@ -286,6 +286,9 @@ export class PlaylistManager {
     if (!currentItem) return;
 
     try {
+      // Directly show the video player and hide overlays
+      this.showVideoPlayer();
+
       await this.player.loadItem(currentItem);
       this.renderUI();
     } catch (error) {
@@ -293,6 +296,42 @@ export class PlaylistManager {
       // Try next track
       await this.playNext();
     }
+  }
+
+  /**
+   * Show video player and hide overlays
+   */
+  private showVideoPlayer(): void {
+    const offlineOverlay = document.getElementById('offlineOverlay');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const playlistPlayer = document.getElementById('playlistPlayer');
+    const hlsVideo = document.getElementById('hlsVideoElement');
+
+    // Hide overlays
+    if (offlineOverlay) {
+      offlineOverlay.classList.add('hidden');
+      offlineOverlay.style.display = 'none';
+    }
+    if (audioPlayer) {
+      audioPlayer.classList.add('hidden');
+    }
+    if (hlsVideo) {
+      hlsVideo.classList.add('hidden');
+    }
+
+    // Show video player
+    if (videoPlayer) {
+      videoPlayer.classList.remove('hidden');
+      videoPlayer.style.display = 'block';
+      videoPlayer.style.opacity = '1';
+    }
+    if (playlistPlayer) {
+      playlistPlayer.classList.remove('hidden');
+      playlistPlayer.style.display = 'block';
+    }
+
+    console.log('[PlaylistManager] Video player shown, overlays hidden');
   }
 
   /**
