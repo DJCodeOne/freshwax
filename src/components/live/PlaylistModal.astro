@@ -66,11 +66,8 @@
             </svg>
           </button>
 
-          <button id="playPauseBtn" class="control-btn control-btn-large" title="Play/Pause">
-            <svg id="playIcon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-            <svg id="pauseIcon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="hidden">
+          <button id="pauseBtn" class="control-btn control-btn-large" title="Pause">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
               <rect x="6" y="4" width="4" height="16"></rect>
               <rect x="14" y="4" width="4" height="16"></rect>
             </svg>
@@ -193,20 +190,13 @@
   });
 
   // Playback controls
-  const playPauseBtn = document.getElementById('playPauseBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
   const prevBtn = document.getElementById('prevTrackBtn');
   const nextBtn = document.getElementById('nextTrackBtn');
-  const playIcon = document.getElementById('playIcon');
-  const pauseIcon = document.getElementById('pauseIcon');
 
-  playPauseBtn?.addEventListener('click', async () => {
+  pauseBtn?.addEventListener('click', async () => {
     if (!playlistManager) return;
-
-    if (playlistManager.isPlaying) {
-      await playlistManager.pause();
-    } else {
-      await playlistManager.play();
-    }
+    await playlistManager.pause();
   });
 
   prevBtn?.addEventListener('click', async () => {
@@ -226,21 +216,12 @@
     // Update queue display
     renderQueue(queue, currentIndex);
 
-    // Update controls
+    // Update controls visibility
     const controlsDiv = document.getElementById('playlistControls');
     if (queueSize > 0) {
       controlsDiv?.classList.remove('hidden');
     } else {
       controlsDiv?.classList.add('hidden');
-    }
-
-    // Update play/pause icon
-    if (isPlaying) {
-      playIcon?.classList.add('hidden');
-      pauseIcon?.classList.remove('hidden');
-    } else {
-      playIcon?.classList.remove('hidden');
-      pauseIcon?.classList.add('hidden');
     }
 
     // Update status text

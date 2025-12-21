@@ -279,9 +279,34 @@ function setupMobileFeatures() {
   
   // Handle orientation changes
   window.addEventListener('orientationchange', handleOrientationChange);
-  
+
   // Handle visibility changes (tab switching, screen lock)
   document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  // Setup inline playlist controls
+  setupPlaylistControls();
+}
+
+// Setup inline playlist control buttons
+function setupPlaylistControls() {
+  const pauseBtn = document.getElementById('playlistPauseBtn');
+  const prevBtn = document.getElementById('playlistPrevBtn');
+  const nextBtn = document.getElementById('playlistNextBtn');
+
+  pauseBtn?.addEventListener('click', async () => {
+    const pm = window.playlistManager;
+    if (pm) await pm.pause();
+  });
+
+  prevBtn?.addEventListener('click', async () => {
+    const pm = window.playlistManager;
+    if (pm) await pm.playPrevious();
+  });
+
+  nextBtn?.addEventListener('click', async () => {
+    const pm = window.playlistManager;
+    if (pm) await pm.playNext();
+  });
 }
 
 // Touch volume control for mobile
