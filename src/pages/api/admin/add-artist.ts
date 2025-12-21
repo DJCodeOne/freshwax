@@ -34,7 +34,7 @@ function toFirestoreValue(value: any): any {
 // Direct Firestore write (bypasses SDK restrictions)
 async function writeToFirestore(collection: string, docId: string, data: Record<string, any>) {
   const projectId = import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-  const apiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+  const apiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY;
 
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?key=${apiKey}`;
 

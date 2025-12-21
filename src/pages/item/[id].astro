@@ -1049,7 +1049,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       
       // Firebase config
       const firebaseConfig = {
-        apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+        apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
         authDomain: "freshwax-store.firebaseapp.com",
         projectId: "freshwax-store",
         storageBucket: "freshwax-store.firebasestorage.app",

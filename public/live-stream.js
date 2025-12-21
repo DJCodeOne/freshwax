@@ -111,7 +111,7 @@ function rememberAutoplay() {
 // FIREBASE CONFIGURATION
 // ==========================================
 const firebaseConfig = {
-  apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
   authDomain: "freshwax-store.firebaseapp.com",
   projectId: "freshwax-store",
   storageBucket: "freshwax-store.firebasestorage.app",

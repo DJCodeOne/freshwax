@@ -39,7 +39,7 @@ async function checkFirebase(): Promise<ServiceStatus> {
   const start = Date.now();
   try {
     const response = await fetch(
-      `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/system/health?key=AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g`,
+      `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/system/health?key=${import.meta.env.PUBLIC_FIREBASE_API_KEY}`,
       { signal: AbortSignal.timeout(5000) }
     );
     const latency = Date.now() - start;
@@ -122,7 +122,7 @@ async function checkStreaming(): Promise<ServiceStatus> {
 async function getLivestreamInfo(): Promise<HealthCheckResponse['livestream']> {
   try {
     const response = await fetch(
-      `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/livestreamSlots?key=AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g`,
+      `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/livestreamSlots?key=${import.meta.env.PUBLIC_FIREBASE_API_KEY}`,
       { signal: AbortSignal.timeout(5000) }
     );
 
@@ -165,7 +165,7 @@ async function getQuickStats(): Promise<HealthCheckResponse['stats']> {
     today.setHours(0, 0, 0, 0);
 
     const ordersResponse = await fetch(
-      `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/orders?key=AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g&pageSize=100`,
+      `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/orders?key=${import.meta.env.PUBLIC_FIREBASE_API_KEY}&pageSize=100`,
       { signal: AbortSignal.timeout(5000) }
     );
 

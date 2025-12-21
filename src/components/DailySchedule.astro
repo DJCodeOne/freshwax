@@ -53,18 +53,24 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     )}
   </div>
 
-  <!-- Time Grid - Two Column Layout -->
+  <!-- Time Grid - Three Column Layout -->
   <div class="schedule-grid-wrapper">
     <div class="schedule-columns">
       <div class="schedule-column">
-        <div class="column-header">09:00 - 20:00</div>
-        <div class="schedule-grid schedule-grid-left">
+        <div class="column-header">00:00 - 07:00</div>
+        <div class="schedule-grid schedule-grid-col1">
           <!-- Rendered by JS -->
         </div>
       </div>
       <div class="schedule-column">
-        <div class="column-header">21:00 - 08:00</div>
-        <div class="schedule-grid schedule-grid-right">
+        <div class="column-header">08:00 - 15:00</div>
+        <div class="schedule-grid schedule-grid-col2">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+      <div class="schedule-column">
+        <div class="column-header">16:00 - 23:00</div>
+        <div class="schedule-grid schedule-grid-col3">
           <!-- Rendered by JS -->
         </div>
       </div>
@@ -410,10 +416,10 @@ const { mode, id = 'dailySchedule' } = Astro.props;
 
   .schedule-columns {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
     height: 100%;
-    min-height: 500px;
+    min-height: 400px;
   }
 
   .schedule-column {
@@ -443,20 +449,36 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     flex: 1;
   }
 
-  /* Mobile: Stack columns vertically */
-  @media (max-width: 900px) {
+  /* Tablet: 3 columns with smaller gap */
+  @media (max-width: 1024px) {
     .schedule-columns {
-      grid-template-columns: 1fr;
-      gap: 1rem;
+      gap: 0.5rem;
     }
 
     .schedule-grid {
-      grid-template-columns: 60px 1fr;
+      grid-template-columns: 50px 1fr;
     }
 
     .column-header {
-      font-size: 1.125rem;
-      padding: 0.875rem 1rem;
+      font-size: 1rem;
+      padding: 0.75rem 0.5rem;
+    }
+  }
+
+  /* Mobile: Stack columns vertically */
+  @media (max-width: 768px) {
+    .schedule-columns {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+
+    .schedule-grid {
+      grid-template-columns: 55px 1fr;
+    }
+
+    .column-header {
+      font-size: 1rem;
+      padding: 0.75rem 1rem;
     }
   }
 
@@ -1063,8 +1085,9 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     if (!container) return;
 
     const scheduleMode = mode;
-    const gridLeft = container.querySelector('.schedule-grid-left');
-    const gridRight = container.querySelector('.schedule-grid-right');
+    const gridCol1 = container.querySelector('.schedule-grid-col1');
+    const gridCol2 = container.querySelector('.schedule-grid-col2');
+    const gridCol3 = container.querySelector('.schedule-grid-col3');
     const dateLabel = container.querySelector('.date-label');
     
     // State
@@ -1265,16 +1288,20 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     }
 
     function renderGrid() {
-      if (!gridLeft || !gridRight) return;
+      if (!gridCol1 || !gridCol2 || !gridCol3) return;
 
       const now = new Date();
-      gridLeft.innerHTML = '';
-      gridRight.innerHTML = '';
+      gridCol1.innerHTML = '';
+      gridCol2.innerHTML = '';
+      gridCol3.innerHTML = '';
 
-      // Left column: hours 9-20 (12 hours)
-      // Right column: hours 21-8 (12 hours, wrapping to next day)
-      const leftHours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
-      const rightHours = [21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7, 8];
+      // Three columns of 8 hours each for a clean 3x8 grid
+      // Column 1: 00:00 - 07:00 (8 hours)
+      // Column 2: 08:00 - 15:00 (8 hours)
+      // Column 3: 16:00 - 23:00 (8 hours)
+      const col1Hours = [0, 1, 2, 3, 4, 5, 6, 7];
+      const col2Hours = [8, 9, 10, 11, 12, 13, 14, 15];
+      const col3Hours = [16, 17, 18, 19, 20, 21, 22, 23];
 
       function renderSlotToGrid(grid, hour, isNextDay) {
         const slotDate = new Date(currentDate);
@@ -1395,16 +1422,10 @@ const { mode, id = 'dailySchedule' } = Astro.props;
         grid.appendChild(cell);
       }
 
-      // Render left column (09:00 - 20:00, same day)
-      leftHours.forEach(hour => {
-        renderSlotToGrid(gridLeft, hour, false);
-      });
-
-      // Render right column (21:00 - 08:00, hours 0-8 are next day)
-      rightHours.forEach(hour => {
-        const isNextDay = hour < 9; // Hours 0-8 are next day
-        renderSlotToGrid(gridRight, hour, isNextDay);
-      });
+      // Render all 3 columns (all same day, sequential hours)
+      col1Hours.forEach(hour => renderSlotToGrid(gridCol1, hour, false));
+      col2Hours.forEach(hour => renderSlotToGrid(gridCol2, hour, false));
+      col3Hours.forEach(hour => renderSlotToGrid(gridCol3, hour, false));
     }
 
     function createBookingBlock(booking, isSelected, isMyBooking = false, isCurrentHour = false) {

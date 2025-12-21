@@ -1922,56 +1922,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     document.getElementById('queueSection').classList.remove('hidden');
   });
   
-  // Booking modal - check login first
-  document.getElementById('bookSlotBtn')?.addEventListener('click', () => {
-    console.log('[Live] Book Slot button clicked');
-
-    // Check if user is logged in by looking for auth state
-    const checkAuth = async () => {
-      console.log('[Live] Checking auth state...');
-
-      // Wait for auth to be ready
-      let user = null;
-      try {
-        if (window.authReady) {
-          console.log('[Live] Using window.authReady');
-          user = await window.authReady;
-        } else {
-          console.log('[Live] Importing Firebase Auth...');
-          const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-          const auth = getAuth();
-          user = auth.currentUser;
-        }
-      } catch (err) {
-        console.error('[Live] Auth check error:', err);
-      }
-
-      console.log('[Live] User:', user ? { uid: user.uid, displayName: user.displayName, email: user.email } : null);
-
-      if (!user) {
-        // Not logged in - redirect to login
-        console.log('[Live] No user, redirecting to login');
-        window.location.href = '/login?redirect=/live';
-        return;
-      }
-
-      // Logged in - open booking schedule modal
-      const displayName = user.displayName || user.email?.split('@')[0] || 'DJ';
-      console.log('[Live] Opening booking schedule with:', { uid: user.uid, displayName });
-      window.openBookingSchedule(user.uid, displayName);
-    };
-
-    checkAuth();
-  });
-  
-  // View Full Schedule - open public schedule modal (read-only)
-  document.getElementById('viewScheduleBtn')?.addEventListener('click', () => {
-    window.openPublicSchedule();
-  });
-  
-  document.getElementById('closeBookingModal')?.addEventListener('click', () => {
-    document.getElementById('bookingModal')?.classList.add('hidden');
-  });
+  // NOTE: Booking button listeners moved to setupBookingButtons() for View Transitions support
   
   // Close modals on overlay click
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
@@ -2296,6 +2247,85 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   
   // Store user info globally for shoutout access
   window.currentUserInfo = { loggedIn: false, name: 'Anonymous', displayName: 'Anonymous', id: null };
+
+  // Function to setup booking button - needs to be re-attached on View Transitions
+  function setupBookingButtons() {
+    console.log('[Live] Setting up booking buttons...');
+
+    const bookSlotBtn = document.getElementById('bookSlotBtn');
+    if (bookSlotBtn && !bookSlotBtn._listenerAttached) {
+      bookSlotBtn._listenerAttached = true;
+      bookSlotBtn.addEventListener('click', () => {
+        console.log('[Live] Book Slot button clicked');
+
+        const checkAuth = async () => {
+          console.log('[Live] Checking auth state...');
+          let user = null;
+          try {
+            if (window.authReady) {
+              console.log('[Live] Using window.authReady');
+              user = await window.authReady;
+            } else if (window.firebaseAuth) {
+              user = window.firebaseAuth.currentUser;
+            } else {
+              const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+              const auth = getAuth();
+              user = auth.currentUser;
+            }
+          } catch (err) {
+            console.error('[Live] Auth check error:', err);
+          }
+
+          console.log('[Live] User:', user ? { uid: user.uid, displayName: user.displayName } : null);
+
+          if (!user) {
+            console.log('[Live] No user, redirecting to login');
+            window.location.href = '/login?redirect=/live';
+            return;
+          }
+
+          const displayName = user.displayName || user.email?.split('@')[0] || 'DJ';
+          console.log('[Live] Opening booking schedule with:', { uid: user.uid, displayName });
+          window.openBookingSchedule(user.uid, displayName);
+        };
+
+        checkAuth();
+      });
+      console.log('[Live] Book Slot button listener attached');
+    }
+
+    const viewScheduleBtn = document.getElementById('viewScheduleBtn');
+    if (viewScheduleBtn && !viewScheduleBtn._listenerAttached) {
+      viewScheduleBtn._listenerAttached = true;
+      viewScheduleBtn.addEventListener('click', () => {
+        window.openPublicSchedule();
+      });
+    }
+
+    const closeBookingModal = document.getElementById('closeBookingModal');
+    if (closeBookingModal && !closeBookingModal._listenerAttached) {
+      closeBookingModal._listenerAttached = true;
+      closeBookingModal.addEventListener('click', () => {
+        document.getElementById('bookingModal')?.classList.add('hidden');
+      });
+    }
+  }
+
+  // Initial setup
+  setupBookingButtons();
+
+  // Re-setup on View Transitions navigation
+  document.addEventListener('astro:page-load', () => {
+    console.log('[Live] astro:page-load - re-setting up booking buttons');
+    // Reset listener flags since View Transitions may have replaced elements
+    const bookSlotBtn = document.getElementById('bookSlotBtn');
+    const viewScheduleBtn = document.getElementById('viewScheduleBtn');
+    const closeBookingModal = document.getElementById('closeBookingModal');
+    if (bookSlotBtn) bookSlotBtn._listenerAttached = false;
+    if (viewScheduleBtn) viewScheduleBtn._listenerAttached = false;
+    if (closeBookingModal) closeBookingModal._listenerAttached = false;
+    setupBookingButtons();
+  });
 </script>
 
 <script type="module">
@@ -2304,7 +2334,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
   const firebaseConfig = {
-    apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store",
     storageBucket: "freshwax-store.firebasestorage.app",

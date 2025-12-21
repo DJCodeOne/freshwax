@@ -3,18 +3,24 @@
 // Compact 24-hour booking grid with stream key generation
 import '../../styles/global.css';
 export const prerender = false;
+
+// Prevent caching to ensure fresh script execution
+Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+Astro.response.headers.set('Pragma', 'no-cache');
 ---
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
   <title>Book a Slot | Fresh Wax</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script is:inline>
     window.FIREBASE_CONFIG = {
-      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
       authDomain: "freshwax-store.firebaseapp.com",
       projectId: "freshwax-store",
       storageBucket: "freshwax-store.firebasestorage.app",
@@ -255,11 +261,11 @@ export const prerender = false;
       padding: 4px;
     }
 
-    /* Ultra-compact 24-hour grid: 6 columns x 4 rows */
+    /* 24-hour grid: 3 columns x 8 rows for full visibility */
     .hour-grid {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 3px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
     }
 
     .hour-cell {
@@ -575,16 +581,16 @@ export const prerender = false;
 
     @media (max-width: 600px) {
       .hour-grid {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
       }
 
       .hour-cell {
-        min-height: 32px;
-        padding: 4px 2px;
+        min-height: 38px;
+        padding: 6px 4px;
       }
 
       .hour-cell .time {
-        font-size: 0.75rem;
+        font-size: 0.8rem;
       }
 
       .hour-cell .dj {
@@ -602,13 +608,27 @@ export const prerender = false;
   </style>
 
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
-    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+    import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-    const app = initializeApp(window.FIREBASE_CONFIG);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    // Use shared auth from Header if available (for consistent state across navigation)
+    // Otherwise initialize our own Firebase instance
+    let auth, db;
+
+    if (window.firebaseAuth) {
+      // Use existing auth from Header component
+      auth = window.firebaseAuth;
+      const app = getApps()[0];
+      db = getFirestore(app);
+      console.log('[Book] Using shared auth from Header');
+    } else {
+      // Initialize our own Firebase (standalone page load)
+      const app = getApps().length ? getApps()[0] : initializeApp(window.FIREBASE_CONFIG);
+      auth = getAuth(app);
+      db = getFirestore(app);
+      console.log('[Book] Initialized own Firebase instance');
+    }
 
     // State
     let currentUser = null;
@@ -620,19 +640,53 @@ export const prerender = false;
     let userDailyHours = 0;
     const MAX_HOURS = 2;
 
-    const loadingGate = document.getElementById('loadingGate');
-    const mainContent = document.getElementById('mainContent');
+    let loadingGate, mainContent;
+    let formInitialized = false;
 
-    // Check for cached auth first (faster UX on navigation)
-    const cachedUid = localStorage.getItem('fw_uid');
-    if (cachedUid) {
-      // Show content immediately while we verify
-      loadingGate.querySelector('p').textContent = 'Verifying...';
+    // Wait for auth state - use Header's authReady if available for consistency
+    async function waitForAuth() {
+      // If navigating from a page with Header, use its auth promise
+      if (window.authReady) {
+        console.log('[Book] Using window.authReady from Header');
+        const user = await window.authReady;
+        // Also check current state in case it changed
+        return auth.currentUser || user;
+      }
+
+      // Otherwise wait for auth state ourselves
+      return new Promise((resolve) => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+          unsubscribe(); // Only need first result
+          resolve(user);
+        });
+      });
     }
 
-    onAuthStateChanged(auth, async (user) => {
+    // Main initialization function
+    async function initPage() {
+      console.log('[Book] initPage called');
+
+      // Get DOM elements fresh each time
+      loadingGate = document.getElementById('loadingGate');
+      mainContent = document.getElementById('mainContent');
+
+      if (!loadingGate || !mainContent) {
+        console.error('[Book] DOM elements not found');
+        return;
+      }
+
+      // Reset form state for fresh initialization
+      formInitialized = false;
+      currentUser = null;
+      selectedHours = [];
+      dayBookings = [];
+
+      // Wait for auth state
+      const user = await waitForAuth();
+      console.log('[Book] Auth resolved, user:', user?.uid);
+
       if (!user) {
-        // Clear cache and redirect
+        // No user - redirect to login
         localStorage.removeItem('fw_uid');
         localStorage.removeItem('fw_displayName');
         window.location.href = '/login?redirect=/dj-lobby/book';
@@ -676,11 +730,24 @@ export const prerender = false;
       document.getElementById('userName').textContent = displayName;
       document.getElementById('djName').value = displayName;
 
-      // Initialize
-      initForm();
+      // Initialize form and load data
+      if (!formInitialized) {
+        initForm();
+        formInitialized = true;
+      }
       updateDateDisplay();
       loadDayBookings();
       loadMyBookings();
+      console.log('[Book] Page fully initialized');
+    }
+
+    // Start initialization immediately
+    initPage();
+
+    // Also handle View Transitions navigation
+    document.addEventListener('astro:page-load', () => {
+      console.log('[Book] astro:page-load fired');
+      initPage();
     });
 
     function initForm() {
@@ -811,6 +878,11 @@ export const prerender = false;
 
     function renderGrid() {
       const grid = document.getElementById('hourGrid');
+      if (!grid || !currentUser) {
+        console.error('[Book] renderGrid called but grid or currentUser missing');
+        return;
+      }
+
       const now = new Date();
       const isToday = currentDate.toDateString() === now.toDateString();
       const currentHour = now.getHours();
@@ -821,7 +893,7 @@ export const prerender = false;
         const isPast = isToday && hour <= currentHour;
         const booking = getBookingForHour(hour);
         const isSelected = selectedHours.includes(hour);
-        const isYours = booking && booking.djId === currentUser.uid;
+        const isYours = booking && currentUser && booking.djId === currentUser.uid;
 
         let cellClass = 'hour-cell';
         let djText = '';
@@ -871,6 +943,11 @@ export const prerender = false;
     }
 
     function handleCellClick(hour) {
+      if (!currentUser) {
+        showMsg('Please wait, loading...', 'error');
+        return;
+      }
+
       const remaining = MAX_HOURS - userDailyHours;
 
       if (selectedDuration === 2) {

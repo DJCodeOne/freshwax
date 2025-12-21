@@ -278,8 +278,8 @@ const { userId } = Astro.props;
 </style>
 
 <script type="module" define:vars={{ userId }}>
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-  import { getFirestore, collection, query, where, getDocs, deleteDoc, doc, orderBy, Timestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getFirestore, collection, query, where, getDocs, deleteDoc, doc, orderBy, Timestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
   const firebaseConfig = window.FIREBASE_CONFIG || {};
   const app = initializeApp(firebaseConfig);

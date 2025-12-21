@@ -151,18 +151,18 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
           }
         });
         
-        // Clear localStorage items (except remember me preferences)
+        // Clear localStorage items (except remember me preferences and Firebase auth)
         const localKeys = Object.keys(localStorage);
         localKeys.forEach(key => {
           // Preserve remember me settings
           if (key === 'fw_remember_me' || key === 'fw_saved_email') {
             return;
           }
-          if (key.startsWith('fw_') || key.includes('fresh')) {
-            localStorage.removeItem(key);
+          // Never clear Firebase auth - let Firebase handle its own state
+          if (key.includes('firebase')) {
+            return;
           }
-          // Clear firebase auth if remember me was NOT set
-          if (key.includes('firebase') && !rememberMe) {
+          if (key.startsWith('fw_') || key.includes('fresh')) {
             localStorage.removeItem(key);
           }
         });
@@ -182,11 +182,11 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
   <!-- Firebase SDK -->
   <script type="module" define:vars={{ redirectTo }}>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-    import { getAuth, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+    import { getAuth, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
     import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
     
     const firebaseConfig = {
-      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
       authDomain: "freshwax-store.firebaseapp.com",
       projectId: "freshwax-store",
       storageBucket: "freshwax-store.firebasestorage.app",
@@ -197,7 +197,15 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    
+
+    // Check if user is already logged in - redirect them immediately
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log('[Login] User already logged in, redirecting to:', redirectTo);
+        window.location.href = redirectTo;
+      }
+    });
+
     // Restore remember me preference
     const rememberMeCheckbox = document.getElementById('rememberMe');
     if (localStorage.getItem('fw_remember_me') === 'true') {
@@ -261,9 +269,8 @@ const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard
           await auth.signOut();
         }
         
-        // Set persistence based on remember me
-        const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-        await setPersistence(auth, persistence);
+        // Always use local persistence for reliability (session persistence causes issues)
+        await setPersistence(auth, browserLocalPersistence);
         
         // Save remember me preference
         if (rememberMe) {

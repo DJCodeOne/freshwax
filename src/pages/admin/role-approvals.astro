@@ -277,7 +277,7 @@ import '../../styles/global.css';
     import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 
     const firebaseConfig = {
-      apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
+      apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
       authDomain: "freshwax-store.firebaseapp.com",
       projectId: "freshwax-store",
       storageBucket: "freshwax-store.firebasestorage.app",
