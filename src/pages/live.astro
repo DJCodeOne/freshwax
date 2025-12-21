@@ -15,6 +15,16 @@ export const prerender = false;
 // GIPHY API key - use env var if set, otherwise fallback to public key
 const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6SfraYr';
 
+// Firebase config for client-side scripts
+const firebaseConfig = {
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+  authDomain: "freshwax-store.firebaseapp.com",
+  projectId: "freshwax-store",
+  storageBucket: "freshwax-store.firebasestorage.app",
+  messagingSenderId: "675435782973",
+  appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+};
+
 // Dynamic thumbnail URL for social sharing - shows current stream or DJ image when live
 const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 ---
@@ -2343,19 +2353,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   });
 </script>
 
-<script type="module">
+<script type="module" define:vars={{ firebaseConfig }}>
   import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
   import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-
-  const firebaseConfig = {
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
-    authDomain: "freshwax-store.firebaseapp.com",
-    projectId: "freshwax-store",
-    storageBucket: "freshwax-store.firebasestorage.app",
-    messagingSenderId: "675435782973",
-    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-  };
 
   // Prevent duplicate app initialization
   const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
