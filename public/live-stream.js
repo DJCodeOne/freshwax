@@ -245,12 +245,18 @@ function setupPlaylistListener() {
     const videoPlayer = document.getElementById('videoPlayer');
     const hlsVideo = document.getElementById('hlsVideoElement');
     const playlistPlayer = document.getElementById('playlistPlayer');
+    const offlineOverlay = document.getElementById('offlineOverlay');
+    const audioPlayer = document.getElementById('audioPlayer');
 
     console.log('[Playlist] Update received:', { queueLength: queue.length, isPlaying });
 
     if (queue.length > 0) {
-      // Show video player with playlist content
+      // Hide offline overlay and audio player - playlist takes priority
+      if (offlineOverlay) offlineOverlay.classList.add('hidden');
+      if (audioPlayer) audioPlayer.classList.add('hidden');
       if (hlsVideo) hlsVideo.classList.add('hidden');
+
+      // Show video player with playlist content
       if (playlistPlayer) {
         playlistPlayer.classList.remove('hidden');
         playlistPlayer.style.display = 'block';
@@ -269,6 +275,11 @@ function setupPlaylistListener() {
     } else {
       // No playlist items - hide playlist player
       if (playlistPlayer) playlistPlayer.classList.add('hidden');
+
+      // Show offline overlay if no live stream is active
+      if (!window.isLiveStreamActive && offlineOverlay) {
+        offlineOverlay.classList.remove('hidden');
+      }
 
       // Disable emojis if no live stream either
       if (!window.isLiveStreamActive) {

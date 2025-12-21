@@ -5944,6 +5944,8 @@
   #fsOfflineOverlay.hidden,
   #audioPlayer.hidden,
   #videoPlayer.hidden,
+  #playlistPlayer.hidden,
+  .playlist-player.hidden,
   .pause-icon.hidden,
   .modal.hidden,
   .selected-time-info.hidden,
@@ -6608,7 +6610,7 @@
   height: 100%;
   min-height: 400px;
   background: #000;
-  z-index: 5;
+  z-index: 15;
 }
 
 /* YouTube player wrapper */
