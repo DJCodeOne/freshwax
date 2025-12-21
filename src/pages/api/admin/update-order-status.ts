@@ -3,11 +3,18 @@
 
 import type { APIRoute } from 'astro';
 import { updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
+import { parseJsonBody } from '../../../lib/api-utils';
 
 // Valid status transitions
 const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication
+  const body = await parseJsonBody(request);
+  const authError = requireAdminAuth(request, locals, body);
+  if (authError) return authError;
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -16,7 +23,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const { orderId, status, tracking } = await request.json();
+    const { orderId, status, tracking } = body;
 
     if (!orderId || !status) {
       return new Response(JSON.stringify({ error: 'Order ID and status required' }), {

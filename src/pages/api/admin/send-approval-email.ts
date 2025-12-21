@@ -2,12 +2,20 @@
 // Sends approval confirmation email to artists/partners
 
 import type { APIRoute } from 'astro';
+import { requireAdminAuth } from '../../../lib/admin';
+import { parseJsonBody } from '../../../lib/api-utils';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const { email, name, type } = await request.json();
+    const body = await parseJsonBody<{ email?: string; name?: string; type?: string }>(request);
+
+    // Check admin authentication
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
+    const { email, name, type } = body || {};
 
     if (!email) {
       return new Response(JSON.stringify({

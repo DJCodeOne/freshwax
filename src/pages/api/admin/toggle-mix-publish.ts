@@ -2,10 +2,17 @@
 // Toggle DJ mix publish status
 import type { APIRoute } from 'astro';
 import { updateDocument, initFirebaseEnv, invalidateMixesCache } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
+import { parseJsonBody } from '../../../lib/api-utils';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication
+  const body = await parseJsonBody(request);
+  const authError = requireAdminAuth(request, locals, body);
+  if (authError) return authError;
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -14,7 +21,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const { mixId, published } = await request.json();
+    const { mixId, published } = body;
 
     if (!mixId) {
       return new Response(JSON.stringify({

@@ -2,10 +2,10 @@
 // Syncs users with artist roles to the artists collection
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
+import { parseJsonBody } from '../../../lib/api-utils';
 
 export const prerender = false;
-
-const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase
@@ -16,18 +16,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const { adminUid } = await request.json();
+    const body = await parseJsonBody(request);
 
-    // Verify admin
-    if (!adminUid || !ADMIN_UIDS.includes(adminUid)) {
-      const adminDoc = await getDocument('admins', adminUid);
-      if (!adminDoc) {
-        return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-    }
+    // Check admin authentication
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
 
     // Get all users
     const users = await queryCollection('users', { skipCache: true });

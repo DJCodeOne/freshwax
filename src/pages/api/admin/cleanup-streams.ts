@@ -6,6 +6,8 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
+import { requireAdminAuth } from '../../../lib/admin';
+import { parseJsonBody } from '../../../lib/api-utils';
 
 function initServices(locals: any) {
   const env = (locals as any)?.runtime?.env;
@@ -36,6 +38,10 @@ async function checkStreamHealth(streamKey: string): Promise<{ isLive: boolean; 
 // GET: List all slots marked as "live" with health check
 export const GET: APIRoute = async ({ request, locals }) => {
   initServices(locals);
+
+  // Check admin authentication
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
 
   const url = new URL(request.url);
   const checkHealth = url.searchParams.get('checkHealth') === 'true';
@@ -118,15 +124,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let cleanDisconnected = false; // Also clean disconnected streams
     let disconnectThreshold = 2; // Minutes without signal before marking disconnected
 
-    try {
-      const body = await request.json();
-      if (body.maxAgeHours) maxAgeHours = body.maxAgeHours;
-      if (body.ids && Array.isArray(body.ids)) specificIds = body.ids;
-      if (body.cleanDisconnected) cleanDisconnected = true;
-      if (body.disconnectThreshold) disconnectThreshold = body.disconnectThreshold;
-    } catch {
-      // No body - use defaults
-    }
+    const body = await parseJsonBody<{
+      maxAgeHours?: number;
+      ids?: string[];
+      cleanDisconnected?: boolean;
+      disconnectThreshold?: number;
+    }>(request);
+
+    // Check admin authentication
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
+    // Parse body parameters
+    if (body?.maxAgeHours) maxAgeHours = body.maxAgeHours;
+    if (body?.ids && Array.isArray(body.ids)) specificIds = body.ids;
+    if (body?.cleanDisconnected) cleanDisconnected = true;
+    if (body?.disconnectThreshold) disconnectThreshold = body.disconnectThreshold;
 
     const liveSlots = await queryCollection('livestreamSlots', {
       filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],

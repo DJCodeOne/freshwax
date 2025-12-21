@@ -2,6 +2,8 @@
 // Handle DJ bypass requests - DJs can request immediate access to go live
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
+import { parseJsonBody } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -26,6 +28,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const url = new URL(request.url);
     const action = url.searchParams.get('action');
     const userId = url.searchParams.get('userId');
+
+    // Admin authentication required for listing all requests
+    // User status checks (action=status with userId) are allowed without auth
+    if (action !== 'status' || !userId) {
+      const authError = requireAdminAuth(request, locals);
+      if (authError) return authError;
+    }
 
     // Check status for a specific user
     if (action === 'status' && userId) {

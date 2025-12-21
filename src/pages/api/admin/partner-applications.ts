@@ -1,6 +1,8 @@
 // src/pages/api/admin/partner-applications.ts
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
+import { parseJsonBody } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -64,7 +66,12 @@ function convertToFirestoreValue(value: any): any {
 }
 
 // GET - List pending partner applications
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Admin authentication
+  const body = await parseJsonBody(request);
+  const authError = requireAdminAuth(request, locals, body);
+  if (authError) return authError;
+
   try {
     const applications = await queryCollection('partnerApplications', {
       filters: [
@@ -95,9 +102,13 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST - Approve or deny application
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication
+  const body = await parseJsonBody(request);
+  const authError = requireAdminAuth(request, locals, body);
+  if (authError) return authError;
+
   try {
-    const body = await request.json();
     const { action, applicationId } = body;
 
     if (!applicationId) {

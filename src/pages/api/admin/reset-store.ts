@@ -5,6 +5,8 @@ import '../../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Wo
 import type { APIRoute } from 'astro';
 import { queryCollection, deleteDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
+import { requireAdminAuth } from '../../../lib/admin';
+import { parseJsonBody } from '../../../lib/api-utils';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -97,12 +99,17 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   const env = (locals as any)?.runtime?.env;
   initFirebase(locals);
 
+  // CRITICAL: Require admin authentication
+  const body = await parseJsonBody(request);
+  const authError = requireAdminAuth(request, locals, body);
+  if (authError) return authError;
+
   // Initialize R2 client for Cloudflare runtime
   const r2Config = getR2Config(env);
   const r2Client = createR2Client(r2Config);
 
   try {
-    log.info('[reset-store] Starting store reset...');
+    log.info('[reset-store] ⚠️  ADMIN AUTHORIZED - Starting store reset...');
 
     // Find admin account to preserve
     const adminEmail = import.meta.env.ADMIN_EMAIL || 'admin@freshwax.com';

@@ -5,6 +5,8 @@ import '../../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Wo
 import type { APIRoute } from 'astro';
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getDocument, deleteDocument, initFirebaseEnv, invalidateMixesCache } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
+import { parseJsonBody } from '../../../lib/api-utils';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -35,6 +37,11 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication
+  const body = await parseJsonBody(request);
+  const authError = requireAdminAuth(request, locals, body);
+  if (authError) return authError;
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -47,7 +54,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const s3Client = createS3Client(R2_CONFIG);
 
   try {
-    const { mixId, folderPath } = await request.json();
+    const { mixId, folderPath } = body;
 
     if (!mixId) {
       return new Response(JSON.stringify({

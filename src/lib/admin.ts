@@ -1,6 +1,8 @@
 // src/lib/admin.ts
 // Shared admin utilities for API routes
 import { getDocument } from './firebase-rest';
+import { ApiErrors } from './api-utils';
+import type { APIContext } from 'astro';
 
 // Hardcoded admin UIDs for verification
 export const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
@@ -17,6 +19,41 @@ export function verifyAdminKey(key: string, locals: any): boolean {
   const expectedKey = getAdminKey(locals);
   if (!expectedKey) return false;
   return key === expectedKey;
+}
+
+/**
+ * Centralized admin authentication check
+ * Validates admin key from request body, Authorization header, or query params
+ * Returns error response if auth fails, null if auth succeeds
+ */
+export function requireAdminAuth(request: Request, locals: any, bodyData?: any): Response | null {
+  const expectedKey = getAdminKey(locals);
+  if (!expectedKey) {
+    return ApiErrors.serverError('Admin key not configured');
+  }
+
+  // Check body
+  if (bodyData?.adminKey === expectedKey) {
+    return null; // Auth successful
+  }
+
+  // Check Authorization header
+  const authHeader = request.headers.get('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    if (token === expectedKey) {
+      return null; // Auth successful
+    }
+  }
+
+  // Check query params (for GET requests)
+  const url = new URL(request.url);
+  const queryKey = url.searchParams.get('adminKey');
+  if (queryKey === expectedKey) {
+    return null; // Auth successful
+  }
+
+  return ApiErrors.unauthorized('Invalid or missing admin credentials');
 }
 
 // Check if user is admin by UID

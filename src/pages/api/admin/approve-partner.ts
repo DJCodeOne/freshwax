@@ -3,8 +3,15 @@
 
 import type { APIRoute } from 'astro';
 import { updateDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
+import { parseJsonBody } from '../../../lib/api-utils';
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication
+  const body = await parseJsonBody(request);
+  const authError = requireAdminAuth(request, locals, body);
+  if (authError) return authError;
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -13,7 +20,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const { partnerId } = await request.json();
+    const { partnerId } = body;
 
     if (!partnerId) {
       return new Response(JSON.stringify({ error: 'Partner ID required' }), {

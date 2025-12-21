@@ -3,6 +3,8 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
+import { parseJsonBody } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -16,6 +18,11 @@ function initFirebase(locals: any) {
 
 // GET - List all blog posts or get single post
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Admin authentication
+  const body = await parseJsonBody(request);
+  const authError = requireAdminAuth(request, locals, body);
+  if (authError) return authError;
+
   initFirebase(locals);
 
   try {
@@ -69,10 +76,15 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST - Create new blog post
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication
+  const body = await parseJsonBody(request);
+  const authError = requireAdminAuth(request, locals, body);
+  if (authError) return authError;
+
   initFirebase(locals);
 
   try {
-    const data = await request.json();
+    const data = body;
     const { title, slug, content, excerpt, featuredImage, category, tags, status, author, seoTitle, seoDescription } = data;
 
     if (!title) {
@@ -128,10 +140,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // PUT - Update blog post
 export const PUT: APIRoute = async ({ request, locals }) => {
+  // Admin authentication
+  const body = await parseJsonBody(request);
+  const authError = requireAdminAuth(request, locals, body);
+  if (authError) return authError;
+
   initFirebase(locals);
 
   try {
-    const data = await request.json();
+    const data = body;
     const { id, ...updateData } = data;
 
     if (!id) {
@@ -176,6 +193,11 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
 // DELETE - Delete blog post
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  // Admin authentication
+  const body = await parseJsonBody(request);
+  const authError = requireAdminAuth(request, locals, body);
+  if (authError) return authError;
+
   initFirebase(locals);
 
   try {

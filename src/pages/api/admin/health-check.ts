@@ -1,6 +1,7 @@
 // src/pages/api/admin/health-check.ts
 // Real-time health check for all services
 import type { APIRoute } from 'astro';
+import { requireAdminAuth } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -195,7 +196,13 @@ async function getQuickStats(): Promise<HealthCheckResponse['stats']> {
   }
 }
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Require admin authentication
+  const authError = requireAdminAuth(request, locals);
+  if (authError) {
+    return authError;
+  }
+
   const timestamp = new Date().toISOString();
 
   // Run all health checks in parallel
