@@ -325,36 +325,11 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
             <audio id="audioElement" crossorigin="anonymous" preload="auto"></audio>
           </div>
 
+          <!-- Video Player (for both live stream and playlist) -->
           <div id="videoPlayer" class="video-player hidden">
             <video id="hlsVideoElement" class="hls-video" controls playsinline preload="auto"></video>
-          </div>
-
-          <!-- Playlist Player Container -->
-          <div id="playlistPlayerContainer" class="playlist-player-container hidden">
-            <div id="playlistPlayer" class="playlist-player"></div>
-            <div class="playlist-info">
-              <div id="currentPlaylistTitle" class="current-playlist-title">No track playing</div>
-              <div class="playlist-quick-controls">
-                <button id="playlistPrevBtn" class="playlist-control-btn" title="Previous">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="19 20 9 12 19 4 19 20"></polygon>
-                    <line x1="5" y1="19" x2="5" y2="5"></line>
-                  </svg>
-                </button>
-                <button id="playlistPauseBtn" class="playlist-control-btn" title="Pause">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="6" y="4" width="4" height="16"></rect>
-                    <rect x="14" y="4" width="4" height="16"></rect>
-                  </svg>
-                </button>
-                <button id="playlistNextBtn" class="playlist-control-btn" title="Next">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="5 4 15 12 5 20 5 4"></polygon>
-                    <line x1="19" y1="5" x2="19" y2="19"></line>
-                  </svg>
-                </button>
-              </div>
-            </div>
+            <!-- Playlist embeds will be injected here when active -->
+            <div id="playlistPlayer" class="playlist-player hidden"></div>
           </div>
 
         </div>

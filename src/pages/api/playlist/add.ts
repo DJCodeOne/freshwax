@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { parseMediaUrl, sanitizeUrl } from '../../../lib/url-parser';
 import { parseJsonBody } from '../../../lib/api-utils';
-import type { UserPlaylist, PlaylistItem } from '../../../lib/types';
+import type { UserPlaylist, PlaylistItem, MediaPlatform } from '../../../lib/types';
 
 export const prerender = false;
 
@@ -12,6 +12,41 @@ const MAX_QUEUE_SIZE = 10;
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
+}
+
+// Get thumbnail URL for a video
+function getThumbnailUrl(platform: MediaPlatform, embedId?: string, url?: string): string {
+  switch (platform) {
+    case 'youtube':
+      return embedId ? `https://img.youtube.com/vi/${embedId}/mqdefault.jpg` : '';
+    case 'vimeo':
+      // Vimeo thumbnails require API call, return placeholder
+      return '';
+    case 'soundcloud':
+      // SoundCloud thumbnails require API call, return placeholder
+      return '';
+    case 'direct':
+      return '';
+    default:
+      return '';
+  }
+}
+
+// Fetch video metadata using noembed.com (free oEmbed proxy)
+async function fetchVideoMetadata(url: string): Promise<{ title?: string; thumbnail?: string }> {
+  try {
+    const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
+    if (!response.ok) return {};
+
+    const data = await response.json();
+    return {
+      title: data.title || undefined,
+      thumbnail: data.thumbnail_url || undefined
+    };
+  } catch (error) {
+    console.warn('[playlist/add] Failed to fetch metadata:', error);
+    return {};
+  }
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -74,12 +109,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // Fetch video metadata (title, thumbnail)
+    const metadata = await fetchVideoMetadata(sanitizedUrl);
+
+    // Get thumbnail - prefer oEmbed, fallback to direct URL construction
+    const thumbnail = metadata.thumbnail || getThumbnailUrl(parsed.platform, parsed.embedId, sanitizedUrl);
+
     // Create new playlist item
     const newItem: PlaylistItem = {
       id: generateId(),
       url: sanitizedUrl,
       platform: parsed.platform,
       embedId: parsed.embedId,
+      title: metadata.title,
+      thumbnail: thumbnail || undefined,
       addedAt: new Date().toISOString()
     };
 

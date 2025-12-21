@@ -283,30 +283,6 @@ function setupMobileFeatures() {
   // Handle visibility changes (tab switching, screen lock)
   document.addEventListener('visibilitychange', handleVisibilityChange);
 
-  // Setup inline playlist controls
-  setupPlaylistControls();
-}
-
-// Setup inline playlist control buttons
-function setupPlaylistControls() {
-  const pauseBtn = document.getElementById('playlistPauseBtn');
-  const prevBtn = document.getElementById('playlistPrevBtn');
-  const nextBtn = document.getElementById('playlistNextBtn');
-
-  pauseBtn?.addEventListener('click', async () => {
-    const pm = window.playlistManager;
-    if (pm) await pm.pause();
-  });
-
-  prevBtn?.addEventListener('click', async () => {
-    const pm = window.playlistManager;
-    if (pm) await pm.playPrevious();
-  });
-
-  nextBtn?.addEventListener('click', async () => {
-    const pm = window.playlistManager;
-    if (pm) await pm.playNext();
-  });
 }
 
 // Touch volume control for mobile
@@ -439,17 +415,16 @@ async function checkLiveStatus() {
         console.log('[Playlist] Paused for live stream');
       }
 
-      // Hide playlist player, show live stream
-      const playlistContainer = document.getElementById('playlistPlayerContainer');
-      const videoContainer = document.getElementById('playerContainer');
+      // Switch to live stream view
+      const videoPlayer = document.getElementById('videoPlayer');
+      const hlsVideo = document.getElementById('hlsVideoElement');
+      const playlistPlayer = document.getElementById('playlistPlayer');
 
-      if (playlistContainer) {
-        playlistContainer.classList.add('hidden');
-        playlistContainer.style.opacity = '0';
-      }
-      if (videoContainer) {
-        videoContainer.classList.remove('hidden');
-        videoContainer.style.opacity = '1';
+      if (playlistPlayer) playlistPlayer.classList.add('hidden');
+      if (hlsVideo) hlsVideo.classList.remove('hidden');
+      if (videoPlayer) {
+        videoPlayer.classList.remove('hidden');
+        videoPlayer.style.opacity = '1';
       }
 
       showLiveStream(result.primaryStream);
@@ -461,21 +436,25 @@ async function checkLiveStatus() {
         console.log('[Playlist] Resumed after stream ended');
       }
 
-      // Show playlist if queue has items
-      const playlistContainer = document.getElementById('playlistPlayerContainer');
-      const videoContainer = document.getElementById('playerContainer');
+      // Show playlist in main player if queue has items
+      const videoPlayer = document.getElementById('videoPlayer');
+      const hlsVideo = document.getElementById('hlsVideoElement');
+      const playlistPlayer = document.getElementById('playlistPlayer');
 
-      if (playlistManager?.queue.length > 0 && playlistContainer) {
-        playlistContainer.classList.remove('hidden');
-        playlistContainer.style.opacity = '1';
-      }
-
-      // Hide video container when offline
-      if (videoContainer) {
-        videoContainer.style.opacity = '0';
-        setTimeout(() => {
-          videoContainer.classList.add('hidden');
-        }, 300);
+      if (playlistManager?.queue.length > 0) {
+        // Show video player container with playlist content
+        if (hlsVideo) hlsVideo.classList.add('hidden');
+        if (playlistPlayer) playlistPlayer.classList.remove('hidden');
+        if (videoPlayer) {
+          videoPlayer.classList.remove('hidden');
+          videoPlayer.style.opacity = '1';
+        }
+      } else {
+        // No playlist - hide video container
+        if (videoPlayer) {
+          videoPlayer.style.opacity = '0';
+          setTimeout(() => videoPlayer.classList.add('hidden'), 300);
+        }
       }
 
       showOfflineState(result.scheduled || []);

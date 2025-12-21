@@ -104,11 +104,22 @@ export class PlaylistManager {
           return { success: false, error: parsed.error || 'Invalid URL' };
         }
 
+        // Fetch metadata for thumbnail/title
+        const metadata = await this.fetchMetadata(url.trim());
+
+        // Get thumbnail - prefer oEmbed, fallback to YouTube direct
+        let thumbnail = metadata.thumbnail;
+        if (!thumbnail && parsed.platform === 'youtube' && parsed.embedId) {
+          thumbnail = `https://img.youtube.com/vi/${parsed.embedId}/mqdefault.jpg`;
+        }
+
         const newItem: PlaylistItem = {
           id: this.generateId(),
           url: url.trim(),
           platform: parsed.platform,
           embedId: parsed.embedId,
+          title: metadata.title,
+          thumbnail,
           addedAt: new Date().toISOString()
         };
 
@@ -415,6 +426,25 @@ export class PlaylistManager {
       }
     });
     window.dispatchEvent(event);
+  }
+
+  /**
+   * Fetch video metadata using noembed.com
+   */
+  private async fetchMetadata(url: string): Promise<{ title?: string; thumbnail?: string }> {
+    try {
+      const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
+      if (!response.ok) return {};
+
+      const data = await response.json();
+      return {
+        title: data.title || undefined,
+        thumbnail: data.thumbnail_url || undefined
+      };
+    } catch (error) {
+      console.warn('[PlaylistManager] Failed to fetch metadata:', error);
+      return {};
+    }
   }
 
   /**
