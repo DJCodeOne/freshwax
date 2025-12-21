@@ -225,6 +225,9 @@ async function init() {
   // Get playlist manager from window (set by PlaylistModal.astro)
   getPlaylistManager();
 
+  // Listen for playlist updates to show/hide video player
+  setupPlaylistListener();
+
   // Check live status
   await checkLiveStatus();
 
@@ -233,6 +236,33 @@ async function init() {
 
   // Setup mobile-specific features
   setupMobileFeatures();
+}
+
+// Listen for playlist updates to show video player when items are added
+function setupPlaylistListener() {
+  window.addEventListener('playlistUpdate', (event) => {
+    const { queue, isPlaying } = event.detail;
+    const videoPlayer = document.getElementById('videoPlayer');
+    const hlsVideo = document.getElementById('hlsVideoElement');
+    const playlistPlayer = document.getElementById('playlistPlayer');
+
+    console.log('[Playlist] Update received:', { queueLength: queue.length, isPlaying });
+
+    if (queue.length > 0) {
+      // Show video player with playlist content
+      if (hlsVideo) hlsVideo.classList.add('hidden');
+      if (playlistPlayer) playlistPlayer.classList.remove('hidden');
+      if (videoPlayer) {
+        videoPlayer.classList.remove('hidden');
+        videoPlayer.style.opacity = '1';
+      }
+      console.log('[Playlist] Showing video player for playlist');
+    } else {
+      // No playlist items - hide playlist player
+      if (playlistPlayer) playlistPlayer.classList.add('hidden');
+      console.log('[Playlist] Queue empty, hiding playlist player');
+    }
+  });
 }
 
 // Get playlist manager from window (initialized by PlaylistModal.astro)

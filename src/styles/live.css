@@ -6590,6 +6590,14 @@
   color: #9ca3af;
 }
 
+/* Video Player container - needs position relative for playlist player */
+.video-player {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
 /* Playlist Player (inside main video player) */
 .playlist-player {
   position: absolute;
@@ -6598,6 +6606,7 @@
   width: 100%;
   height: 100%;
   background: #000;
+  z-index: 5;
 }
 
 .playlist-player.hidden {
