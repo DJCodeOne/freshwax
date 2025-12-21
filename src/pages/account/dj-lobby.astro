@@ -13,6 +13,10 @@ const pusherConfig = {
 
 // HLS URL for preview player (from env or default to production)
 const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk';
+
+// Get admin key from environment (server-side only) for bypass requests
+const runtime = (Astro.locals as any).runtime;
+const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 ---
 
 <!DOCTYPE html>
@@ -29,9 +33,10 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
   <!-- Pusher configuration - must be set before dj-lobby-pusher.js loads -->
-  <script define:vars={{ pusherConfig, hlsBaseUrl }}>
+  <script define:vars={{ pusherConfig, hlsBaseUrl, ADMIN_KEY }}>
     window.PUSHER_CONFIG = pusherConfig;
     window.HLS_BASE_URL = hlsBaseUrl;
+    window.ADMIN_KEY = ADMIN_KEY;
   </script>
 </head>
 <body class="dj-lobby-page">
@@ -508,9 +513,9 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
           </div>
         </div>
 
-        <!-- Multi Streaming Section -->
+        <!-- Multi Streaming Section (Collapsible) -->
         <div class="multi-stream-section">
-          <div class="multi-stream-header">
+          <button class="multi-stream-header" id="toggleMultiStream" type="button">
             <div class="multi-stream-icon-lg">
               <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
                 <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9 8h2v8H9zm4 2h2v6h-2z"/>
@@ -520,8 +525,14 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
               <h3>Multi Streaming</h3>
               <p>Broadcast to multiple platforms</p>
             </div>
-          </div>
+            <div class="multi-stream-toggle">
+              <svg class="toggle-chevron" viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+              </svg>
+            </div>
+          </button>
 
+          <div class="multi-stream-content hidden" id="multiStreamContent">
           <div class="pro-stream-grid">
             <!-- Twitch Section -->
             <div class="pro-stream-card">
@@ -581,26 +592,16 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
             </div>
           </div>
 
-          <!-- Capture & Share Row -->
-          <div class="capture-share-row">
-            <button id="captureThumbBtn" class="capture-btn-compact" title="Capture thumbnail">
-              <span>📸</span>
-              <span>Capture</span>
+          <!-- Share Button -->
+          <div class="share-btn-row">
+            <button id="openShareModal" class="share-btn-main">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
+              </svg>
+              <span>Share Stream</span>
             </button>
-            <div id="thumbnailPreview" class="thumb-preview-sm hidden">
-              <img id="capturedThumb" src="" alt="Thumbnail" />
-              <button id="clearThumbBtn" class="clear-btn-sm">✕</button>
-            </div>
-            <div class="share-input-row">
-              <input type="text" id="socialPostText" class="share-text-input" placeholder="Write your post..." maxlength="280" />
-              <button id="shareTwitterBtn" class="share-icon-btn" title="Share to X" disabled>
-                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-              </button>
-              <button id="shareFacebookBtn" class="share-icon-btn" title="Share to Facebook" disabled>
-                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-              </button>
-            </div>
           </div>
+          </div><!-- End multi-stream-content -->
         </div>
       </div>
 
@@ -627,6 +628,68 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
           <div class="modal-footer">
             <button class="modal-btn secondary" id="clearRelaySource">Clear Selection</button>
             <button class="modal-btn primary" id="confirmRelaySource">Confirm</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Share Stream Modal -->
+      <div id="shareStreamModal" class="modal-overlay hidden">
+        <div class="modal-content share-modal">
+          <div class="modal-header">
+            <h3>Share Your Stream</h3>
+            <button class="modal-close-btn" id="closeShareModal">&times;</button>
+          </div>
+          <div class="modal-body">
+            <!-- Stream Info Preview -->
+            <div class="share-stream-info">
+              <div class="share-stream-details">
+                <span class="share-dj-name" id="shareDjName">DJ Name</span>
+                <span class="share-stream-title" id="shareStreamTitle">Live Session</span>
+                <span class="share-stream-genre" id="shareStreamGenre">Jungle / D&B</span>
+              </div>
+            </div>
+
+            <!-- Thumbnail Section -->
+            <div class="share-thumbnail-section">
+              <div class="share-thumb-preview" id="shareThumbPreview">
+                <div class="share-thumb-placeholder" id="shareThumbPlaceholder">
+                  <span>📸</span>
+                  <span>No thumbnail</span>
+                </div>
+                <img id="shareThumbImg" src="" alt="Stream thumbnail" class="hidden" />
+              </div>
+              <div class="share-thumb-actions">
+                <button id="shareCaptureBtn" class="share-action-btn capture">
+                  <span>📸</span> Capture from Stream
+                </button>
+                <button id="shareClearThumbBtn" class="share-action-btn clear hidden">
+                  <span>✕</span> Clear
+                </button>
+              </div>
+            </div>
+
+            <!-- Post Text -->
+            <div class="share-post-section">
+              <label for="sharePostText">Your message</label>
+              <textarea id="sharePostText" class="share-post-input" placeholder="🎧 I'm live on Fresh Wax! Tune in now..." maxlength="280" rows="3"></textarea>
+              <span class="share-char-count"><span id="shareCharCount">0</span>/280</span>
+            </div>
+
+            <!-- Share Platforms -->
+            <div class="share-platforms">
+              <button id="shareToTwitter" class="share-platform-btn twitter">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                <span>Post to X</span>
+              </button>
+              <button id="shareToFacebook" class="share-platform-btn facebook">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                <span>Share on Facebook</span>
+              </button>
+              <button id="shareCopyLink" class="share-platform-btn copy-link">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                <span>Copy Link</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1244,7 +1307,7 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
   // Cancel bypass request
   document.getElementById('cancelBypassRequest')?.addEventListener('click', async () => {
     if (!confirm('Cancel your bypass request?')) return;
-    
+
     try {
       const response = await fetch('/api/admin/bypass-requests', {
         method: 'POST',
@@ -1252,7 +1315,7 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
         body: JSON.stringify({
           action: 'cancel',
           userId: userInfo.uid,
-          adminKey: 'fresh-wax-admin-2024'
+          adminKey: window.ADMIN_KEY
         })
       });
       
@@ -1281,7 +1344,7 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
         body: JSON.stringify({
           action: 'cancel',
           userId: userInfo.uid,
-          adminKey: 'fresh-wax-admin-2024'
+          adminKey: window.ADMIN_KEY
         })
       });
       await checkBypassStatus(currentBypassStatus || {});
@@ -2285,6 +2348,167 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=550,height=420');
   }
 
+  // ========== SHARE MODAL FUNCTIONS ==========
+
+  // Store share modal thumbnail data
+  let shareThumbBlob = null;
+  let shareThumbUrl = null;
+
+  function openShareModal() {
+    const modal = document.getElementById('shareStreamModal');
+    if (!modal) return;
+
+    // Populate stream info
+    const djNameEl = document.getElementById('shareDjName');
+    const titleEl = document.getElementById('shareStreamTitle');
+    const genreEl = document.getElementById('shareStreamGenre');
+    const postTextEl = document.getElementById('sharePostText');
+
+    if (djNameEl) djNameEl.textContent = userInfo?.name || 'DJ';
+    if (titleEl) titleEl.textContent = document.getElementById('inlineStreamTitle')?.value || 'Live Session';
+    if (genreEl) genreEl.textContent = document.getElementById('inlineStreamGenre')?.value || 'Jungle / D&B';
+
+    // Set default post text
+    if (postTextEl && !postTextEl.value) {
+      const djName = userInfo?.name || 'DJ';
+      const title = document.getElementById('inlineStreamTitle')?.value || 'Live Session';
+      postTextEl.value = `🎧 I'm live on Fresh Wax!\n\n${title}\n\nTune in now 🔊`;
+      updateCharCount();
+    }
+
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeShareModal() {
+    const modal = document.getElementById('shareStreamModal');
+    if (modal) {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  }
+
+  function captureShareThumbnail() {
+    const video = document.getElementById('hlsVideo');
+    const previewEl = document.getElementById('shareThumbPreview');
+    const placeholder = document.getElementById('shareThumbPlaceholder');
+    const imgEl = document.getElementById('shareThumbImg');
+    const captureBtn = document.getElementById('shareCaptureBtn');
+    const clearBtn = document.getElementById('shareClearThumbBtn');
+
+    if (!video || video.paused || !video.videoWidth) {
+      alert('No video stream available to capture');
+      return;
+    }
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert('Failed to capture thumbnail');
+          return;
+        }
+
+        // Clean up previous URL
+        if (shareThumbUrl) {
+          URL.revokeObjectURL(shareThumbUrl);
+        }
+
+        shareThumbBlob = blob;
+        shareThumbUrl = URL.createObjectURL(blob);
+
+        // Update UI
+        if (imgEl) {
+          imgEl.src = shareThumbUrl;
+          imgEl.classList.remove('hidden');
+        }
+        if (placeholder) placeholder.classList.add('hidden');
+        if (previewEl) previewEl.classList.add('has-image');
+        if (clearBtn) clearBtn.classList.remove('hidden');
+
+        // Visual feedback
+        if (captureBtn) {
+          const originalText = captureBtn.innerHTML;
+          captureBtn.innerHTML = '<span>✓</span> Captured!';
+          setTimeout(() => {
+            captureBtn.innerHTML = '<span>📸</span> Capture from Stream';
+          }, 1500);
+        }
+      }, 'image/jpeg', 0.9);
+    } catch (e) {
+      console.error('Share thumbnail capture failed:', e);
+      alert('Failed to capture thumbnail');
+    }
+  }
+
+  function clearShareThumbnail() {
+    const previewEl = document.getElementById('shareThumbPreview');
+    const placeholder = document.getElementById('shareThumbPlaceholder');
+    const imgEl = document.getElementById('shareThumbImg');
+    const clearBtn = document.getElementById('shareClearThumbBtn');
+
+    if (shareThumbUrl) {
+      URL.revokeObjectURL(shareThumbUrl);
+      shareThumbUrl = null;
+    }
+    shareThumbBlob = null;
+
+    if (imgEl) {
+      imgEl.src = '';
+      imgEl.classList.add('hidden');
+    }
+    if (placeholder) placeholder.classList.remove('hidden');
+    if (previewEl) previewEl.classList.remove('has-image');
+    if (clearBtn) clearBtn.classList.add('hidden');
+  }
+
+  function updateCharCount() {
+    const textEl = document.getElementById('sharePostText');
+    const countEl = document.getElementById('shareCharCount');
+    if (textEl && countEl) {
+      countEl.textContent = textEl.value.length.toString();
+    }
+  }
+
+  function shareToTwitterFromModal() {
+    const postText = document.getElementById('sharePostText')?.value || '';
+    const text = encodeURIComponent(postText || 'Live now on Fresh Wax! 🎧🔊');
+    const url = encodeURIComponent('https://freshwax.co.uk/live');
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'width=550,height=420');
+  }
+
+  function shareToFacebookFromModal() {
+    const url = encodeURIComponent('https://freshwax.co.uk/live');
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=550,height=420');
+  }
+
+  function copyStreamLink() {
+    const btn = document.getElementById('shareCopyLink');
+    const url = 'https://freshwax.co.uk/live';
+
+    navigator.clipboard.writeText(url).then(() => {
+      if (btn) {
+        btn.classList.add('copied');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg><span>Copied!</span>';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = originalHTML;
+        }, 2000);
+      }
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+      alert('Failed to copy link');
+    });
+  }
+
+  // ========== END SHARE MODAL FUNCTIONS ==========
+
   // Cleanup HLS player
   function cleanupHlsPlayer() {
     stopHealthMonitoring();
@@ -2328,12 +2552,12 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
           initLivestreamChat(streamId);
         }
 
-        statusDot.classList.remove('offline');
-        statusDot.classList.add('live');
-        statusText.textContent = `${currentStream.djName} is LIVE`;
+        statusDot?.classList.remove('offline');
+        statusDot?.classList.add('live');
+        if (statusText) statusText.textContent = `${currentStream.djName} is LIVE`;
 
-        offlineState.classList.add('hidden');
-        timeRemaining.classList.remove('hidden');
+        offlineState?.classList.add('hidden');
+        timeRemaining?.classList.remove('hidden');
 
         // Check if this is a new DJ (for seamless transitions)
         const isNewDj = previousStreamDjId && previousStreamDjId !== currentStream.djId;
@@ -2385,10 +2609,13 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
         const eventMode = isInEventMode();
         log(`[Stream] End time: ${streamEndTime.toLocaleTimeString()} | Event mode: ${eventMode} | Base: ${baseEndTime.toLocaleTimeString()}`);
 
-        document.getElementById('currentDjName').textContent = currentStream.djName || 'DJ';
-        document.getElementById('currentStreamTitle').textContent = currentStream.title || 'Live Stream';
-        if (currentStream.djAvatar) {
-          document.getElementById('currentDjAvatar').src = currentStream.djAvatar;
+        const currentDjName = document.getElementById('currentDjName');
+        const currentStreamTitle = document.getElementById('currentStreamTitle');
+        const currentDjAvatar = document.getElementById('currentDjAvatar');
+        if (currentDjName) currentDjName.textContent = currentStream.djName || 'DJ';
+        if (currentStreamTitle) currentStreamTitle.textContent = currentStream.title || 'Live Stream';
+        if (currentStream.djAvatar && currentDjAvatar) {
+          currentDjAvatar.src = currentStream.djAvatar;
         }
 
         // Check if this is a video stream (HLS/Red5) or audio-only (Icecast)
@@ -2396,15 +2623,16 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
                              (currentStream.streamType !== 'audio' && !currentStream.audioStreamUrl?.includes('8000'));
 
         if (isVideoStream) {
-          videoPreview.classList.remove('hidden');
-          audioPreview.classList.add('hidden');
+          videoPreview?.classList.remove('hidden');
+          audioPreview?.classList.add('hidden');
           // Setup HLS video player (includes auto-play)
           setupHlsPlayer(currentStream);
         } else {
-          audioPreview.classList.remove('hidden');
-          videoPreview.classList.add('hidden');
+          audioPreview?.classList.remove('hidden');
+          videoPreview?.classList.add('hidden');
           cleanupHlsPlayer();
-          if (currentStream.djAvatar) document.getElementById('streamCover').src = currentStream.djAvatar;
+          const streamCover = document.getElementById('streamCover');
+          if (currentStream.djAvatar && streamCover) streamCover.src = currentStream.djAvatar;
           // Setup audio stream with auto-play
           const audioEl = document.getElementById('audioElement');
           const audioUrl = currentStream.audioStreamUrl || currentStream.streamUrl;
@@ -2418,14 +2646,15 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
 
         // Handle takeover UI and End Stream button based on who is streaming
         if (currentStream.djId === currentUser?.uid) {
-          takeoverRequest.classList.add('hidden');
-          noStreamTakeover.classList.add('hidden');
+          takeoverRequest?.classList.add('hidden');
+          noStreamTakeover?.classList.add('hidden');
           // Enable End Stream button for current streamer
           updateEndStreamButton(true, true);
         } else {
-          takeoverRequest.classList.remove('hidden');
-          noStreamTakeover.classList.add('hidden');
-          document.getElementById('takeoverFromName').textContent = currentStream.djName || 'current DJ';
+          takeoverRequest?.classList.remove('hidden');
+          noStreamTakeover?.classList.add('hidden');
+          const takeoverFromName = document.getElementById('takeoverFromName');
+          if (takeoverFromName) takeoverFromName.textContent = currentStream.djName || 'current DJ';
           // Disable End Stream button - not your stream (unless admin)
           updateEndStreamButton(true, false);
         }
@@ -2454,22 +2683,25 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
         // Cleanup livestream chat when stream ends
         cleanupLivestreamChat();
 
-        statusDot.classList.add('offline');
-        statusDot.classList.remove('live');
-        statusText.textContent = 'No one streaming';
-        offlineState.classList.remove('hidden');
-        videoPreview.classList.add('hidden');
-        audioPreview.classList.add('hidden');
-        timeRemaining.classList.add('hidden');
-        takeoverRequest.classList.add('hidden');
-        noStreamTakeover.classList.remove('hidden');
+        statusDot?.classList.add('offline');
+        statusDot?.classList.remove('live');
+        if (statusText) statusText.textContent = 'No one streaming';
+        offlineState?.classList.remove('hidden');
+        videoPreview?.classList.add('hidden');
+        audioPreview?.classList.add('hidden');
+        timeRemaining?.classList.add('hidden');
+        takeoverRequest?.classList.add('hidden');
+        noStreamTakeover?.classList.remove('hidden');
 
         // Cleanup HLS player when stream ends
         cleanupHlsPlayer();
 
-        document.getElementById('currentDjName').textContent = '-';
-        document.getElementById('currentStreamTitle').textContent = 'No stream';
-        document.getElementById('currentDjAvatar').src = '/place-holder.webp';
+        const offlineDjName = document.getElementById('currentDjName');
+        const offlineStreamTitle = document.getElementById('currentStreamTitle');
+        const offlineDjAvatar = document.getElementById('currentDjAvatar');
+        if (offlineDjName) offlineDjName.textContent = '-';
+        if (offlineStreamTitle) offlineStreamTitle.textContent = 'No stream';
+        if (offlineDjAvatar) offlineDjAvatar.src = '/place-holder.webp';
 
         // Disable End Stream button - no active stream
         updateEndStreamButton(false, false);
@@ -3195,12 +3427,14 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
 
       // If slot has a stream key, use it
       if (mySlot.streamKey) {
-        if (streamKeyEl) {
+        currentStreamKey = mySlot.streamKey;
+        // Only animate if not already displayed
+        if (!streamKeyDisplayed && streamKeyEl) {
           streamKeyEl.classList.remove('key-loading');
           streamKeyEl.classList.add('key-reveal');
           streamKeyEl.innerHTML = `<span class="key-text">${mySlot.streamKey}</span>`;
+          streamKeyDisplayed = true;
         }
-        currentStreamKey = mySlot.streamKey;
         // Start checking for OBS preview stream
         startObsPreviewCheck();
       }
@@ -3212,12 +3446,13 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
     // Always generate a stream key if we don't have one
     if (!currentStreamKey) {
       loadStreamKeyForGoLive();
-    } else {
-      // Display existing key
+    } else if (!streamKeyDisplayed) {
+      // Display existing key only if not already shown
       if (streamKeyEl) {
         streamKeyEl.classList.remove('key-loading');
         streamKeyEl.classList.add('key-reveal');
         streamKeyEl.innerHTML = `<span class="key-text">${currentStreamKey}</span>`;
+        streamKeyDisplayed = true;
       }
       // Start checking for OBS preview stream
       startObsPreviewCheck();
@@ -3539,6 +3774,7 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
 
   // currentStreamKey is now initialized earlier (line ~820) with test mode support
   let streamKeyValidUntil = null;
+  let streamKeyDisplayed = false; // Flag to prevent re-animation of stream key
   let currentStreamSource = 'obs'; // 'obs' or 'relay'
   let approvedRelayData = null;
 
@@ -3567,6 +3803,12 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
   async function loadStreamKeyForGoLive() {
     const inlineKeyEl = document.getElementById('myStreamKey');
 
+    // If key is already displayed, don't re-animate
+    if (streamKeyDisplayed && currentStreamKey) {
+      log('[GoLive] Stream key already displayed, skipping animation');
+      return;
+    }
+
     // Check if we already have a valid stream key in memory
     if (currentStreamKey && streamKeyValidUntil) {
       const validUntil = new Date(streamKeyValidUntil);
@@ -3574,10 +3816,11 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
       // If key is still valid (with 2 min buffer), reuse it
       if (validUntil.getTime() - now.getTime() > 2 * 60 * 1000) {
         log('[GoLive] Reusing existing stream key, valid until:', streamKeyValidUntil);
-        if (inlineKeyEl) {
+        if (inlineKeyEl && !streamKeyDisplayed) {
           inlineKeyEl.classList.remove('key-loading');
           inlineKeyEl.classList.add('key-reveal');
           inlineKeyEl.innerHTML = `<span class="key-text">${currentStreamKey}</span>`;
+          streamKeyDisplayed = true;
         }
         return;
       }
@@ -3594,10 +3837,11 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
         log('[GoLive] Using saved stream key from localStorage, valid until:', savedValidUntil);
         currentStreamKey = savedKey;
         streamKeyValidUntil = savedValidUntil;
-        if (inlineKeyEl) {
+        if (inlineKeyEl && !streamKeyDisplayed) {
           inlineKeyEl.classList.remove('key-loading');
           inlineKeyEl.classList.add('key-reveal');
           inlineKeyEl.innerHTML = `<span class="key-text">${savedKey}</span>`;
+          streamKeyDisplayed = true;
         }
         startObsPreviewCheck();
         return;
@@ -3614,8 +3858,8 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
       inlineKeyEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
     }
 
-    // Minimum animation duration (1.5 seconds) for visual effect
-    const minAnimationTime = 1500;
+    // Minimum animation duration (5 seconds) for visual effect
+    const minAnimationTime = 5000;
     const animationStart = Date.now();
 
     try {
@@ -3655,6 +3899,7 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
           inlineKeyEl.classList.remove('key-loading');
           inlineKeyEl.classList.add('key-reveal');
           inlineKeyEl.innerHTML = `<span class="key-text">${result.streamKey}</span>`;
+          streamKeyDisplayed = true; // Mark as displayed to prevent re-animation
         }
         log('[GoLive] New stream key generated and saved, valid until:', result.validUntil);
         // Start checking for OBS preview stream
@@ -3848,11 +4093,28 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
   }
   
   function setupEventListeners() {
-    // Thumbnail capture and share buttons
-    document.getElementById('captureThumbBtn')?.addEventListener('click', captureVideoThumbnail);
-    document.getElementById('clearThumbBtn')?.addEventListener('click', clearThumbnail);
-    document.getElementById('shareTwitterBtn')?.addEventListener('click', shareToTwitter);
-    document.getElementById('shareFacebookBtn')?.addEventListener('click', shareToFacebook);
+    // Multi Streaming Dropdown Toggle
+    document.getElementById('toggleMultiStream')?.addEventListener('click', () => {
+      const section = document.querySelector('.multi-stream-section');
+      const content = document.getElementById('multiStreamContent');
+      if (section && content) {
+        section.classList.toggle('expanded');
+        content.classList.toggle('hidden');
+      }
+    });
+
+    // Share Stream Modal
+    document.getElementById('openShareModal')?.addEventListener('click', openShareModal);
+    document.getElementById('closeShareModal')?.addEventListener('click', closeShareModal);
+    document.getElementById('shareStreamModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'shareStreamModal') closeShareModal();
+    });
+    document.getElementById('shareCaptureBtn')?.addEventListener('click', captureShareThumbnail);
+    document.getElementById('shareClearThumbBtn')?.addEventListener('click', clearShareThumbnail);
+    document.getElementById('shareToTwitter')?.addEventListener('click', shareToTwitterFromModal);
+    document.getElementById('shareToFacebook')?.addEventListener('click', shareToFacebookFromModal);
+    document.getElementById('shareCopyLink')?.addEventListener('click', copyStreamLink);
+    document.getElementById('sharePostText')?.addEventListener('input', updateCharCount);
 
     // Twitch save button
     document.getElementById('saveTwitchBtn')?.addEventListener('click', saveTwitchSettings);
@@ -3887,25 +4149,25 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
     }
 
     // DM Modal
-    document.getElementById('openDmBtn').addEventListener('click', openDmModal);
-    document.getElementById('closeDmBtn').addEventListener('click', closeDmModal);
-    document.querySelector('.dm-modal-overlay').addEventListener('click', closeDmModal);
-    document.getElementById('dmBackBtn').addEventListener('click', goBackToDmList);
-    
-    document.getElementById('dmSendBtn').addEventListener('click', sendDmMessage);
-    document.getElementById('dmInput').addEventListener('keypress', (e) => {
+    document.getElementById('openDmBtn')?.addEventListener('click', openDmModal);
+    document.getElementById('closeDmBtn')?.addEventListener('click', closeDmModal);
+    document.querySelector('.dm-modal-overlay')?.addEventListener('click', closeDmModal);
+    document.getElementById('dmBackBtn')?.addEventListener('click', goBackToDmList);
+
+    document.getElementById('dmSendBtn')?.addEventListener('click', sendDmMessage);
+    document.getElementById('dmInput')?.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendDmMessage();
     });
-    
+
     // DM Notification
-    document.getElementById('dmNotifOpenBtn').addEventListener('click', openDmFromNotification);
-    document.getElementById('dmNotifDismissBtn').addEventListener('click', () => {
-      document.getElementById('dmNotification').classList.add('hidden');
+    document.getElementById('dmNotifOpenBtn')?.addEventListener('click', openDmFromNotification);
+    document.getElementById('dmNotifDismissBtn')?.addEventListener('click', () => {
+      document.getElementById('dmNotification')?.classList.add('hidden');
     });
 
 
     // Sign out
-    document.getElementById('signOutBtn').addEventListener('click', async () => {
+    document.getElementById('signOutBtn')?.addEventListener('click', async () => {
       try {
         if (presenceRef) {
           await deleteDoc(presenceRef);
@@ -3919,10 +4181,11 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
     });
     
     // Lobby End Stream button
-    document.getElementById('lobbyEndStreamBtn').addEventListener('click', async () => {
+    const lobbyEndStreamBtn = document.getElementById('lobbyEndStreamBtn');
+    lobbyEndStreamBtn?.addEventListener('click', async () => {
       const btn = document.getElementById('lobbyEndStreamBtn');
       const status = document.getElementById('endStreamStatus');
-      if (btn.classList.contains('disabled')) return;
+      if (!btn || btn.classList.contains('disabled')) return;
 
       if (!confirm('Are you sure you want to end your stream?')) return;
 
@@ -3991,13 +4254,13 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
     });
     
     // Chat
-    document.getElementById('sendBtn').addEventListener('click', sendMessage);
-    document.getElementById('chatInput').addEventListener('keypress', (e) => {
+    document.getElementById('sendBtn')?.addEventListener('click', sendMessage);
+    document.getElementById('chatInput')?.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendMessage();
     });
-    
+
     // Play/Pause - handles both audio and video
-    document.getElementById('playPauseBtn').addEventListener('click', () => {
+    document.getElementById('playPauseBtn')?.addEventListener('click', () => {
       const audio = document.getElementById('audioElement');
       const video = document.getElementById('hlsVideo');
       const playIcon = document.getElementById('playIcon');
@@ -4032,13 +4295,15 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
     });
 
     // Volume - controls both audio and video
-    document.getElementById('volumeSlider').addEventListener('input', (e) => {
+    document.getElementById('volumeSlider')?.addEventListener('input', (e) => {
       const volume = e.target.value / 100;
-      document.getElementById('audioElement').volume = volume;
-      document.getElementById('hlsVideo').volume = volume;
+      const audioEl = document.getElementById('audioElement');
+      const videoEl = document.getElementById('hlsVideo');
+      if (audioEl) audioEl.volume = volume;
+      if (videoEl) videoEl.volume = volume;
     });
 
-    document.getElementById('muteBtn').addEventListener('click', () => {
+    document.getElementById('muteBtn')?.addEventListener('click', () => {
       const audio = document.getElementById('audioElement');
       const video = document.getElementById('hlsVideo');
       const isVideoStream = currentStream && currentStream.streamType !== 'audio' && !currentStream.streamUrl?.includes('8000');
@@ -4046,7 +4311,8 @@ const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk'
 
       if (media) {
         media.muted = !media.muted;
-        document.getElementById('volumeSlider').value = media.muted ? 0 : media.volume * 100;
+        const volumeSlider = document.getElementById('volumeSlider');
+        if (volumeSlider) volumeSlider.value = media.muted ? 0 : media.volume * 100;
       }
     });
 

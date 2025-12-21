@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { successResponse, errorResponse, ApiErrors, getEnv, parseJsonBody } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -122,22 +123,21 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // POST: Save settings
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase env from Cloudflare runtime
-  const env = (locals as any).runtime?.env;
+  const env = getEnv(locals);
   if (env) initFirebaseEnv(env);
 
   try {
-    const data = await request.json();
+    const data = await parseJsonBody<{ action?: string; settings?: any; adminKey?: string; section?: string; sectionData?: any }>(request);
+    if (!data) {
+      return ApiErrors.badRequest('Invalid request body');
+    }
+
     const { action, settings, adminKey, section, sectionData } = data;
 
-    // Basic admin key validation
-    if (adminKey !== 'fresh-wax-admin-2024') {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    // Validate admin key from environment
+    const expectedKey = env?.ADMIN_KEY;
+    if (!expectedKey || adminKey !== expectedKey) {
+      return ApiErrors.unauthorized('Invalid or missing admin key');
     }
 
     if (action === 'save') {
@@ -148,12 +148,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({
-          success: true,
+        return successResponse({
           message: `${section} settings saved`
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
         });
       }
 
@@ -164,22 +160,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({
-          success: true,
+        return successResponse({
           message: 'All settings saved successfully'
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
         });
       }
 
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'No settings provided'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('No settings provided');
     }
 
     if (action === 'reset') {
@@ -190,12 +176,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({
-          success: true,
+        return successResponse({
           message: `${section} reset to defaults`
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
         });
       }
 
@@ -205,31 +187,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updatedAt: new Date().toISOString()
       });
 
-      return new Response(JSON.stringify({
-        success: true,
+      return successResponse({
         message: 'All settings reset to defaults'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid action'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid action');
 
   } catch (error) {
     console.error('[update-settings] POST Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to save settings'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to save settings');
   }
 };

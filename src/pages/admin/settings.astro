@@ -4,6 +4,10 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 
 export const prerender = false;
+
+// Get admin key from environment (server-side only)
+const runtime = (Astro.locals as any).runtime;
+const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 ---
 
 <AdminLayout title="Admin Settings">
@@ -664,9 +668,9 @@ export const prerender = false;
   }
 </style>
 
-<script>
-  const ADMIN_KEY = 'fresh-wax-admin-2024';
-  
+<script define:vars={{ ADMIN_KEY }}>
+  // Admin key passed from server-side environment
+
   // Default values
   const defaultSettings = {
     artistEditableFields: {
