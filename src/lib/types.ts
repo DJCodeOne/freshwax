@@ -288,6 +288,30 @@ export interface StreamReaction {
 }
 
 // ============================================
+// PLAYLIST
+// ============================================
+
+export type MediaPlatform = 'youtube' | 'vimeo' | 'soundcloud' | 'direct';
+
+export interface PlaylistItem {
+  id: string;
+  url: string;
+  platform: MediaPlatform;
+  embedId?: string;
+  title?: string;
+  thumbnail?: string;
+  addedAt: string;
+}
+
+export interface UserPlaylist {
+  userId: string;
+  queue: PlaylistItem[];
+  currentIndex: number;
+  isPlaying: boolean;
+  lastUpdated: string;
+}
+
+// ============================================
 // ORDERS & COMMERCE
 // ============================================
 

@@ -10,6 +10,9 @@ import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase
 let pusher = null;
 let chatChannel = null;
 
+// Playlist manager for media queue when stream is offline
+let playlistManager = null;
+
 // Emoji/GIF pickers are now handled by inline script in LiveChat.astro
 
 // Register view when entering stream (increments totalViews)
@@ -218,15 +221,32 @@ const EMOJI_CATEGORIES = {
 async function init() {
   // Check device type for optimizations
   detectMobileDevice();
-  
+
+  // Get playlist manager from window (set by PlaylistModal.astro)
+  getPlaylistManager();
+
   // Check live status
   await checkLiveStatus();
-  
+
   // Setup auth listener
   setupAuthListener();
-  
+
   // Setup mobile-specific features
   setupMobileFeatures();
+}
+
+// Get playlist manager from window (initialized by PlaylistModal.astro)
+function getPlaylistManager() {
+  // PlaylistModal.astro initializes and exposes the manager to window
+  playlistManager = window.playlistManager || null;
+
+  if (playlistManager) {
+    console.log('[Playlist] Using manager from PlaylistModal');
+  } else {
+    console.log('[Playlist] Manager not yet available, will retry later');
+  }
+
+  return playlistManager;
 }
 
 // Detect mobile device
@@ -376,14 +396,63 @@ async function refreshViewerCount(streamId) {
 // ==========================================
 async function checkLiveStatus() {
   try {
+    // Refresh playlist manager reference (in case it wasn't ready during init)
+    if (!playlistManager) {
+      getPlaylistManager();
+    }
+
     // Add cache buster to avoid Cloudflare caching stale responses
     const cacheBuster = Date.now();
     const response = await fetch(`/api/livestream/status?_t=${cacheBuster}`);
     const result = await response.json();
-    
+
     if (result.success && result.isLive && result.primaryStream) {
+      // LIVE STREAM ACTIVE - Pause playlist
+      if (playlistManager?.isPlaying) {
+        await playlistManager.pause();
+        playlistManager.wasPausedForStream = true;
+        console.log('[Playlist] Paused for live stream');
+      }
+
+      // Hide playlist player, show live stream
+      const playlistContainer = document.getElementById('playlistPlayerContainer');
+      const videoContainer = document.getElementById('playerContainer');
+
+      if (playlistContainer) {
+        playlistContainer.classList.add('hidden');
+        playlistContainer.style.opacity = '0';
+      }
+      if (videoContainer) {
+        videoContainer.classList.remove('hidden');
+        videoContainer.style.opacity = '1';
+      }
+
       showLiveStream(result.primaryStream);
     } else {
+      // NO LIVE STREAM - Resume playlist if it was playing
+      if (playlistManager?.wasPausedForStream && playlistManager.queue.length > 0) {
+        await playlistManager.resume();
+        playlistManager.wasPausedForStream = false;
+        console.log('[Playlist] Resumed after stream ended');
+      }
+
+      // Show playlist if queue has items
+      const playlistContainer = document.getElementById('playlistPlayerContainer');
+      const videoContainer = document.getElementById('playerContainer');
+
+      if (playlistManager?.queue.length > 0 && playlistContainer) {
+        playlistContainer.classList.remove('hidden');
+        playlistContainer.style.opacity = '1';
+      }
+
+      // Hide video container when offline
+      if (videoContainer) {
+        videoContainer.style.opacity = '0';
+        setTimeout(() => {
+          videoContainer.classList.add('hidden');
+        }, 300);
+      }
+
       showOfflineState(result.scheduled || []);
     }
   } catch (error) {

@@ -1,0 +1,309 @@
+---
+// src/components/live/PlaylistModal.astro
+// Playlist modal for adding and managing media queue
+---
+
+<div id="playlistModal" class="playlist-modal hidden">
+  <div class="playlist-modal-backdrop"></div>
+  <div class="playlist-modal-content">
+    <div class="playlist-modal-header">
+      <h2>Playlist</h2>
+      <button id="closePlaylistModal" class="close-btn" aria-label="Close playlist">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="playlist-modal-body">
+      <!-- URL Input -->
+      <div class="playlist-add-section">
+        <div class="playlist-input-group">
+          <input
+            type="url"
+            id="playlistUrlInput"
+            class="playlist-url-input"
+            placeholder="Paste YouTube, Vimeo, SoundCloud, or direct video URL..."
+            autocomplete="off"
+          />
+          <button id="addToPlaylistBtn" class="add-to-playlist-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Add
+          </button>
+        </div>
+        <div id="playlistError" class="playlist-error hidden"></div>
+        <div id="playlistSuccess" class="playlist-success hidden"></div>
+      </div>
+
+      <!-- Queue Status -->
+      <div class="playlist-queue-header">
+        <h3>Queue <span id="queueCount" class="queue-count">0/10</span></h3>
+        <button id="clearQueueBtn" class="clear-queue-btn">Clear All</button>
+      </div>
+
+      <!-- Queue List -->
+      <div id="playlistQueue" class="playlist-queue">
+        <div class="playlist-empty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <p>Your playlist is empty</p>
+          <p class="playlist-empty-hint">Add a URL above to get started</p>
+        </div>
+      </div>
+
+      <!-- Playback Controls -->
+      <div id="playlistControls" class="playlist-controls hidden">
+        <div class="playlist-controls-inner">
+          <button id="prevTrackBtn" class="control-btn" title="Previous">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="19 20 9 12 19 4 19 20"></polygon>
+              <line x1="5" y1="19" x2="5" y2="5"></line>
+            </svg>
+          </button>
+
+          <button id="playPauseBtn" class="control-btn control-btn-large" title="Play/Pause">
+            <svg id="playIcon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <svg id="pauseIcon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="hidden">
+              <rect x="6" y="4" width="4" height="16"></rect>
+              <rect x="14" y="4" width="4" height="16"></rect>
+            </svg>
+          </button>
+
+          <button id="nextTrackBtn" class="control-btn" title="Next">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 4 15 12 5 20 5 4"></polygon>
+              <line x1="19" y1="5" x2="19" y2="19"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="playlist-status">
+          <span id="playlistStatusText">0 of 0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { PlaylistManager } from '../../lib/playlist-manager';
+  import { getPlatformName } from '../../lib/url-parser';
+
+  // Global playlist manager instance
+  let playlistManager: PlaylistManager | null = null;
+
+  // Initialize playlist on page load
+  async function initPlaylist() {
+    if (playlistManager) return;
+
+    // @ts-ignore - Assuming user auth is available globally
+    const user = window.currentUser || null;
+    playlistManager = new PlaylistManager('playlistPlayer');
+    await playlistManager.initialize(user?.uid);
+
+    // Expose globally for live-stream.js
+    (window as any).playlistManager = playlistManager;
+    console.log('[PlaylistModal] Manager initialized and exposed to window');
+  }
+
+  // Initialize immediately
+  initPlaylist();
+
+  // Re-initialize on auth state change (in case user logs in/out)
+  document.addEventListener('authStateChanged', (e: any) => {
+    if (playlistManager && e.detail?.user) {
+      playlistManager.initialize(e.detail.user.uid);
+    }
+  });
+
+  // Open modal
+  const playlistBtn = document.getElementById('playlistBtn');
+  const modal = document.getElementById('playlistModal');
+  const closeBtn = document.getElementById('closePlaylistModal');
+  const backdrop = modal?.querySelector('.playlist-modal-backdrop');
+
+  playlistBtn?.addEventListener('click', () => {
+    modal?.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  });
+
+  // Close modal
+  function closeModal() {
+    modal?.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  closeBtn?.addEventListener('click', closeModal);
+  backdrop?.addEventListener('click', closeModal);
+
+  // Add to playlist
+  const urlInput = document.getElementById('playlistUrlInput') as HTMLInputElement;
+  const addBtn = document.getElementById('addToPlaylistBtn');
+  const errorDiv = document.getElementById('playlistError');
+  const successDiv = document.getElementById('playlistSuccess');
+
+  async function addToPlaylist() {
+    if (!playlistManager || !urlInput) return;
+
+    const url = urlInput.value.trim();
+    if (!url) return;
+
+    // Hide previous messages
+    errorDiv?.classList.add('hidden');
+    successDiv?.classList.add('hidden');
+
+    const result = await playlistManager.addItem(url);
+
+    if (result.success) {
+      urlInput.value = '';
+      if (successDiv) {
+        successDiv.textContent = result.message || 'Added to queue';
+        successDiv.classList.remove('hidden');
+        setTimeout(() => successDiv.classList.add('hidden'), 3000);
+      }
+    } else {
+      if (errorDiv) {
+        errorDiv.textContent = result.error || 'Failed to add';
+        errorDiv.classList.remove('hidden');
+      }
+    }
+  }
+
+  addBtn?.addEventListener('click', addToPlaylist);
+  urlInput?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      addToPlaylist();
+    }
+  });
+
+  // Clear queue
+  const clearQueueBtn = document.getElementById('clearQueueBtn');
+  clearQueueBtn?.addEventListener('click', async () => {
+    if (!playlistManager) return;
+    if (confirm('Clear all items from the queue?')) {
+      await playlistManager.clearQueue();
+    }
+  });
+
+  // Playback controls
+  const playPauseBtn = document.getElementById('playPauseBtn');
+  const prevBtn = document.getElementById('prevTrackBtn');
+  const nextBtn = document.getElementById('nextTrackBtn');
+  const playIcon = document.getElementById('playIcon');
+  const pauseIcon = document.getElementById('pauseIcon');
+
+  playPauseBtn?.addEventListener('click', async () => {
+    if (!playlistManager) return;
+
+    if (playlistManager.isPlaying) {
+      await playlistManager.pause();
+    } else {
+      await playlistManager.play();
+    }
+  });
+
+  prevBtn?.addEventListener('click', async () => {
+    if (!playlistManager) return;
+    await playlistManager.playPrevious();
+  });
+
+  nextBtn?.addEventListener('click', async () => {
+    if (!playlistManager) return;
+    await playlistManager.playNext();
+  });
+
+  // Listen for playlist updates
+  window.addEventListener('playlistUpdate', (event: any) => {
+    const { queue, currentIndex, isPlaying, queueSize } = event.detail;
+
+    // Update queue display
+    renderQueue(queue, currentIndex);
+
+    // Update controls
+    const controlsDiv = document.getElementById('playlistControls');
+    if (queueSize > 0) {
+      controlsDiv?.classList.remove('hidden');
+    } else {
+      controlsDiv?.classList.add('hidden');
+    }
+
+    // Update play/pause icon
+    if (isPlaying) {
+      playIcon?.classList.add('hidden');
+      pauseIcon?.classList.remove('hidden');
+    } else {
+      playIcon?.classList.remove('hidden');
+      pauseIcon?.classList.add('hidden');
+    }
+
+    // Update status text
+    const statusText = document.getElementById('playlistStatusText');
+    if (statusText && queueSize > 0) {
+      statusText.textContent = `${currentIndex + 1} of ${queueSize}`;
+    }
+
+    // Update queue count
+    const queueCount = document.getElementById('queueCount');
+    if (queueCount) {
+      queueCount.textContent = `${queueSize}/10`;
+    }
+  });
+
+  // Render queue items
+  function renderQueue(queue: any[], currentIndex: number) {
+    const queueDiv = document.getElementById('playlistQueue');
+    if (!queueDiv) return;
+
+    if (queue.length === 0) {
+      queueDiv.innerHTML = `
+        <div class="playlist-empty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <p>Your playlist is empty</p>
+          <p class="playlist-empty-hint">Add a URL above to get started</p>
+        </div>
+      `;
+      return;
+    }
+
+    queueDiv.innerHTML = queue.map((item, index) => `
+      <div class="playlist-item ${index === currentIndex ? 'active' : ''}" data-id="${item.id}">
+        <div class="playlist-item-number">${index + 1}</div>
+        <div class="playlist-item-info">
+          <div class="playlist-item-platform">${getPlatformName(item.platform)}</div>
+          <div class="playlist-item-url">${truncateUrl(item.url)}</div>
+        </div>
+        <button class="playlist-item-remove" data-id="${item.id}" title="Remove">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    `).join('');
+
+    // Add remove button listeners
+    queueDiv.querySelectorAll('.playlist-item-remove').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const itemId = (e.currentTarget as HTMLElement).dataset.id;
+        if (itemId && playlistManager) {
+          await playlistManager.removeItem(itemId);
+        }
+      });
+    });
+  }
+
+  function truncateUrl(url: string, maxLength: number = 50): string {
+    if (url.length <= maxLength) return url;
+    return url.substring(0, maxLength) + '...';
+  }
+
+</script>
