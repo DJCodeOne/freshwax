@@ -442,7 +442,7 @@ const { title, activeSection } = Astro.props;
     console.log('[ProDashboard] Script loaded, activeSection:', activeSection);
 
     const firebaseConfig = window.FIREBASE_CONFIG || {
-      apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+      apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
       authDomain: "freshwax-store.firebaseapp.com",
       projectId: "freshwax-store"
     };

@@ -20,7 +20,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script is:inline>
     window.FIREBASE_CONFIG = {
-      apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+      apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
       authDomain: "freshwax-store.firebaseapp.com",
       projectId: "freshwax-store",
       storageBucket: "freshwax-store.firebasestorage.app",

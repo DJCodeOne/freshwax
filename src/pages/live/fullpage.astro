@@ -789,7 +789,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
       
       const app = initializeApp({
-        apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+        apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
         authDomain: "freshwax-store.firebaseapp.com",
         projectId: "freshwax-store"
       });

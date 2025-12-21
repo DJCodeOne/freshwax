@@ -807,7 +807,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   } from '/dj-lobby-pusher.js?v=3';
   
   const app = initializeApp({
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store"
   });

@@ -1359,7 +1359,7 @@ export const prerender = false;
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
   
   const app = initializeApp({
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store"
   });
