@@ -20,13 +20,14 @@ import {
 } from 'firebase/firestore';
 
 // Your Firebase config (client-side, these are safe to expose)
+// Use environment variables with fallbacks for production
 const firebaseConfig = {
-  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
   authDomain: import.meta.env.PUBLIC_FIREBASE_AUTH_DOMAIN || 'freshwax-store.firebaseapp.com',
   projectId: import.meta.env.PUBLIC_FIREBASE_PROJECT_ID || 'freshwax-store',
-  storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET || 'freshwax-store.appspot.com',
-  messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.PUBLIC_FIREBASE_APP_ID
+  storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET || 'freshwax-store.firebasestorage.app',
+  messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '675435782973',
+  appId: import.meta.env.PUBLIC_FIREBASE_APP_ID || '1:675435782973:web:e8459c2ec4a5f6d683db54'
 };
 
 let app: FirebaseApp;
