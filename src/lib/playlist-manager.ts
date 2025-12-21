@@ -5,7 +5,21 @@ import type { PlaylistItem, UserPlaylist } from './types';
 import { EmbedPlayerManager } from './embed-player';
 
 const PLAYLIST_STORAGE_KEY = 'freshwax_playlist';
+const PLAYLIST_HISTORY_KEY = 'freshwax_playlist_history';
 const MAX_QUEUE_SIZE = 10;
+const MAX_HISTORY_SIZE = 100;
+
+// History entry for offline playlist creation
+interface PlaylistHistoryEntry {
+  id: string;
+  url: string;
+  platform: string;
+  embedId?: string;
+  title?: string;
+  thumbnail?: string;
+  playedAt: string;
+  duration?: number;
+}
 
 export class PlaylistManager {
   private userId: string | null = null;
@@ -13,6 +27,7 @@ export class PlaylistManager {
   private player: EmbedPlayerManager;
   private isAuthenticated: boolean = false;
   public wasPausedForStream: boolean = false;
+  private playHistory: PlaylistHistoryEntry[] = [];
 
   constructor(containerId: string) {
     this.playlist = {
@@ -29,6 +44,9 @@ export class PlaylistManager {
       onReady: () => this.handlePlayerReady(),
       onStateChange: (state) => this.handleStateChange(state)
     });
+
+    // Load play history
+    this.loadPlayHistory();
   }
 
   /**
@@ -86,14 +104,13 @@ export class PlaylistManager {
 
         // Reload from server
         await this.loadFromFirebase();
-        this.renderUI();
 
-        // If this is the first item and nothing is playing, start playback
-        if (this.playlist.queue.length === 1 && !this.playlist.isPlaying) {
-          await this.play();
-        }
+        // Jump to the newly added item (last in queue) and start playing
+        const newIndex = this.playlist.queue.length - 1;
+        this.playlist.currentIndex = newIndex;
+        await this.play();
 
-        return { success: true, message: 'Added to queue' };
+        return { success: true, message: 'Now playing' };
       } else {
         // Add to localStorage
         // Parse URL locally
@@ -126,14 +143,13 @@ export class PlaylistManager {
         this.playlist.queue.push(newItem);
         this.playlist.lastUpdated = new Date().toISOString();
         this.saveToLocalStorage();
-        this.renderUI();
 
-        // If this is the first item and nothing is playing, start playback
-        if (this.playlist.queue.length === 1 && !this.playlist.isPlaying) {
-          await this.play();
-        }
+        // Jump to the newly added item (last in queue) and start playing
+        const newIndex = this.playlist.queue.length - 1;
+        this.playlist.currentIndex = newIndex;
+        await this.play();
 
-        return { success: true, message: 'Added to queue' };
+        return { success: true, message: 'Now playing' };
       }
     } catch (error: any) {
       console.error('[PlaylistManager] Error adding item:', error);
@@ -272,6 +288,21 @@ export class PlaylistManager {
 
       await this.player.destroy();
       this.saveToLocalStorage();
+
+      // Disable emojis when queue is cleared
+      this.disableEmojis();
+
+      // Show offline overlay again
+      const offlineOverlay = document.getElementById('offlineOverlay');
+      const videoPlayer = document.getElementById('videoPlayer');
+      if (offlineOverlay) {
+        offlineOverlay.classList.remove('hidden');
+        offlineOverlay.style.display = '';
+      }
+      if (videoPlayer) {
+        videoPlayer.classList.add('hidden');
+      }
+
       this.renderUI();
     } catch (error) {
       console.error('[PlaylistManager] Error clearing queue:', error);
@@ -289,13 +320,123 @@ export class PlaylistManager {
       // Directly show the video player and hide overlays
       this.showVideoPlayer();
 
+      // Log to play history
+      this.logToHistory(currentItem);
+
+      // Enable emoji reactions
+      this.enableEmojis();
+
       await this.player.loadItem(currentItem);
       this.renderUI();
+
+      console.log('[PlaylistManager] Now playing:', currentItem.title || currentItem.url);
     } catch (error) {
       console.error('[PlaylistManager] Error playing current:', error);
       // Try next track
       await this.playNext();
     }
+  }
+
+  /**
+   * Log item to play history for offline playlist creation
+   */
+  private logToHistory(item: PlaylistItem): void {
+    const historyEntry: PlaylistHistoryEntry = {
+      id: item.id,
+      url: item.url,
+      platform: item.platform,
+      embedId: item.embedId,
+      title: item.title,
+      thumbnail: item.thumbnail,
+      playedAt: new Date().toISOString()
+    };
+
+    // Add to beginning of history
+    this.playHistory.unshift(historyEntry);
+
+    // Trim to max size
+    if (this.playHistory.length > MAX_HISTORY_SIZE) {
+      this.playHistory = this.playHistory.slice(0, MAX_HISTORY_SIZE);
+    }
+
+    // Save to localStorage
+    this.savePlayHistory();
+
+    console.log('[PlaylistManager] Logged to history:', historyEntry.title || historyEntry.url);
+    console.log('[PlaylistManager] History size:', this.playHistory.length);
+  }
+
+  /**
+   * Enable emoji reactions
+   */
+  private enableEmojis(): void {
+    // Enable emoji animations globally
+    (window as any).emojiAnimationsEnabled = true;
+
+    // Enable reaction buttons
+    const reactionButtons = document.querySelectorAll('.reaction-btn, .emoji-btn, [data-reaction]');
+    reactionButtons.forEach(btn => {
+      (btn as HTMLButtonElement).disabled = false;
+      btn.classList.remove('disabled');
+    });
+
+    console.log('[PlaylistManager] Emoji reactions enabled');
+  }
+
+  /**
+   * Disable emoji reactions
+   */
+  private disableEmojis(): void {
+    (window as any).emojiAnimationsEnabled = false;
+
+    const reactionButtons = document.querySelectorAll('.reaction-btn, .emoji-btn, [data-reaction]');
+    reactionButtons.forEach(btn => {
+      (btn as HTMLButtonElement).disabled = true;
+      btn.classList.add('disabled');
+    });
+  }
+
+  /**
+   * Load play history from localStorage
+   */
+  private loadPlayHistory(): void {
+    try {
+      const stored = localStorage.getItem(PLAYLIST_HISTORY_KEY);
+      if (stored) {
+        this.playHistory = JSON.parse(stored);
+        console.log('[PlaylistManager] Loaded play history:', this.playHistory.length, 'items');
+      }
+    } catch (error) {
+      console.error('[PlaylistManager] Error loading play history:', error);
+      this.playHistory = [];
+    }
+  }
+
+  /**
+   * Save play history to localStorage
+   */
+  private savePlayHistory(): void {
+    try {
+      localStorage.setItem(PLAYLIST_HISTORY_KEY, JSON.stringify(this.playHistory));
+    } catch (error) {
+      console.error('[PlaylistManager] Error saving play history:', error);
+    }
+  }
+
+  /**
+   * Get play history for offline playlist creation
+   */
+  getPlayHistory(): PlaylistHistoryEntry[] {
+    return [...this.playHistory];
+  }
+
+  /**
+   * Clear play history
+   */
+  clearPlayHistory(): void {
+    this.playHistory = [];
+    this.savePlayHistory();
+    console.log('[PlaylistManager] Play history cleared');
   }
 
   /**
