@@ -251,15 +251,31 @@ function setupPlaylistListener() {
     if (queue.length > 0) {
       // Show video player with playlist content
       if (hlsVideo) hlsVideo.classList.add('hidden');
-      if (playlistPlayer) playlistPlayer.classList.remove('hidden');
+      if (playlistPlayer) {
+        playlistPlayer.classList.remove('hidden');
+        playlistPlayer.style.display = 'block';
+      }
       if (videoPlayer) {
         videoPlayer.classList.remove('hidden');
+        videoPlayer.style.display = 'block';
         videoPlayer.style.opacity = '1';
       }
-      console.log('[Playlist] Showing video player for playlist');
+
+      // Enable emoji reactions when playlist is active
+      window.emojiAnimationsEnabled = true;
+      setReactionButtonsEnabled(true);
+
+      console.log('[Playlist] Showing video player for playlist, emojis enabled');
     } else {
       // No playlist items - hide playlist player
       if (playlistPlayer) playlistPlayer.classList.add('hidden');
+
+      // Disable emojis if no live stream either
+      if (!window.isLiveStreamActive) {
+        window.emojiAnimationsEnabled = false;
+        setReactionButtonsEnabled(false);
+      }
+
       console.log('[Playlist] Queue empty, hiding playlist player');
     }
   });
@@ -512,8 +528,15 @@ function setReactionButtonsEnabled(enabled) {
 
 // Show offline state
 function showOfflineState(scheduled) {
-  window.emojiAnimationsEnabled = false; // Disable emoji animations when offline
-  setReactionButtonsEnabled(false); // Grey out reaction buttons
+  window.isLiveStreamActive = false;
+
+  // Only disable emojis if playlist is also empty
+  const pm = window.playlistManager;
+  if (!pm || pm.queue.length === 0) {
+    window.emojiAnimationsEnabled = false;
+    setReactionButtonsEnabled(false);
+  }
+
   document.getElementById('offlineState')?.classList.remove('hidden');
   document.getElementById('liveState')?.classList.add('hidden');
   
@@ -549,6 +572,7 @@ function showOfflineState(scheduled) {
 // ==========================================
 function showLiveStream(stream) {
   currentStream = stream;
+  window.isLiveStreamActive = true;
   window.liveStreamState.currentStream = stream; // Expose for LiveChat
   window.emojiAnimationsEnabled = true; // Enable emoji animations when live
   setReactionButtonsEnabled(true); // Enable reaction buttons
