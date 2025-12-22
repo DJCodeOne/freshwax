@@ -6,6 +6,144 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { BOT_USER, isBotCommand, processBotCommand, getRandomTuneComment, getWelcomeMessage, shouldCommentOnTune, shouldWelcomeUser } from '../../../lib/chatbot';
 
+// ============================================
+// CONTENT MODERATION
+// ============================================
+
+// Common profanity list (lowercase) - catches most variations
+// Words marked with _exact require exact word match (not substring)
+const PROFANITY_EXACT = [
+  // Short words that could be substrings of legitimate words
+  'ass', 'arse', 'fag', 'piss', 'cock', 'dick', 'cum', 'tit', 'fuk',
+];
+
+const PROFANITY_SUBSTRING = [
+  // Longer words safe to check as substrings
+  'fuck', 'fucker', 'fucking', 'fuckin', 'motherfuck',
+  'shit', 'shite', 'shitty', 'bullshit',
+  'cunt',
+  'bitch', 'bitches',
+  'bastard',
+  'asshole', 'arsehole',
+  'dickhead',
+  'wanker', 'wank',
+  'twat',
+  'slut', 'whore',
+  'nigger', 'nigga',
+  'faggot',
+  'retard', 'retarded',
+  // Spam/scam keywords
+  'scam', 'free money', 'click here', 'buy now',
+  // Drug references
+  'cocaine', 'heroin',
+];
+
+// Normalize text for comparison (handle leetspeak and symbol substitutions)
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/0/g, 'o')
+    .replace(/1/g, 'i')
+    .replace(/3/g, 'e')
+    .replace(/4/g, 'a')
+    .replace(/5/g, 's')
+    .replace(/7/g, 't')
+    .replace(/8/g, 'b')
+    .replace(/@/g, 'a')
+    .replace(/\$/g, 's')
+    .replace(/\!/g, 'i')
+    .replace(/\*/g, '')
+    .replace(/[_\-\.]/g, '');
+}
+
+// Check if message contains profanity
+function containsProfanity(message: string): boolean {
+  const normalized = normalizeText(message);
+  const words = normalized.split(/\s+/);
+
+  // Check exact word matches (for short words that could be substrings)
+  for (const word of words) {
+    if (PROFANITY_EXACT.includes(word)) {
+      return true;
+    }
+  }
+
+  // Check substring matches (for longer, distinct profanity)
+  for (const profane of PROFANITY_SUBSTRING) {
+    if (normalized.includes(profane)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Check for spam patterns
+function isSpamMessage(message: string): { isSpam: boolean; reason?: string } {
+  // Check for excessive caps (more than 70% uppercase and length > 10)
+  if (message.length > 10) {
+    const upperCount = (message.match(/[A-Z]/g) || []).length;
+    const letterCount = (message.match(/[a-zA-Z]/g) || []).length;
+    if (letterCount > 0 && upperCount / letterCount > 0.7) {
+      return { isSpam: true, reason: 'Please turn off caps lock' };
+    }
+  }
+
+  // Check for repeated characters (aaaaaaa, !!!!!!!)
+  if (/(.)\1{5,}/.test(message)) {
+    return { isSpam: true, reason: 'Message contains too many repeated characters' };
+  }
+
+  // Check for repeated words (hello hello hello hello)
+  const words = message.toLowerCase().split(/\s+/);
+  if (words.length >= 4) {
+    const wordCounts: Record<string, number> = {};
+    for (const word of words) {
+      wordCounts[word] = (wordCounts[word] || 0) + 1;
+      if (wordCounts[word] >= 4) {
+        return { isSpam: true, reason: 'Message contains too many repeated words' };
+      }
+    }
+  }
+
+  // Check for URLs (except common music platforms which are allowed in moderation)
+  const urlPattern = /https?:\/\/[^\s]+/gi;
+  const urls = message.match(urlPattern) || [];
+  for (const url of urls) {
+    const lowerUrl = url.toLowerCase();
+    // Allow certain music/video platforms
+    const allowedDomains = ['youtube.com', 'youtu.be', 'soundcloud.com', 'vimeo.com', 'mixcloud.com', 'spotify.com'];
+    const isAllowed = allowedDomains.some(domain => lowerUrl.includes(domain));
+    if (!isAllowed) {
+      return { isSpam: true, reason: 'Links are not allowed in chat' };
+    }
+  }
+
+  return { isSpam: false };
+}
+
+// Main moderation function
+function moderateMessage(message: string): { allowed: boolean; reason?: string } {
+  // Trim and check minimum length
+  const trimmed = message.trim();
+  if (trimmed.length === 0) {
+    return { allowed: false, reason: 'Message cannot be empty' };
+  }
+
+  // Check for profanity
+  if (containsProfanity(trimmed)) {
+    return { allowed: false, reason: 'Please keep the chat friendly and respectful' };
+  }
+
+  // Check for spam
+  const spamCheck = isSpamMessage(trimmed);
+  if (spamCheck.isSpam) {
+    return { allowed: false, reason: spamCheck.reason };
+  }
+
+  return { allowed: true };
+}
+
 // Helper to initialize Firebase and return env
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
@@ -333,16 +471,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
     
-    // Basic content moderation (can be expanded)
-    const bannedWords = ['spam', 'scam', 'http://', 'https://'];
-    const lowerMessage = message.toLowerCase();
-    const isSpam = bannedWords.some(word => lowerMessage.includes(word));
-    
-    if (isSpam && type !== 'giphy') {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Message contains prohibited content'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    // Content moderation - profanity filter and spam detection
+    if (type !== 'giphy') {
+      const moderationResult = moderateMessage(message);
+      if (!moderationResult.allowed) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: moderationResult.reason
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
     }
     
     // Rate limiting - max 1 message per second per user (skip if query fails)
