@@ -390,6 +390,15 @@ service cloud.firestore {
       allow update, delete: if isAdmin() || request.resource.data.status != 'pending';
     }
 
+    // User Playlists - personal saved playlists
+    // Document ID is the userId, allowing users to manage their own playlist
+    match /userPlaylists/{userId} {
+      allow read: if true;  // Allow REST API reads
+      // Allow writes from authenticated owner OR REST API with items array
+      allow create, update: if isOwner(userId) || request.resource.data.items != null;
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;
