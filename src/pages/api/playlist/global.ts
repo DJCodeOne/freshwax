@@ -36,6 +36,7 @@ interface GlobalPlaylist {
   currentIndex: number;
   isPlaying: boolean;
   lastUpdated: string;
+  trackStartedAt?: string | null;
 }
 
 // Convert Firestore document fields to JSON
@@ -168,7 +169,8 @@ export async function POST({ request, locals }: APIContext) {
       queue: [],
       currentIndex: 0,
       isPlaying: false,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
+      trackStartedAt: null
     };
 
     const doc = await getDocument('liveSettings', GLOBAL_PLAYLIST_DOC);
@@ -177,7 +179,8 @@ export async function POST({ request, locals }: APIContext) {
         queue: doc.queue || [],
         currentIndex: doc.currentIndex || 0,
         isPlaying: doc.isPlaying || false,
-        lastUpdated: doc.lastUpdated || new Date().toISOString()
+        lastUpdated: doc.lastUpdated || new Date().toISOString(),
+        trackStartedAt: doc.trackStartedAt || null
       };
     }
 
