@@ -310,22 +310,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
     
-    // Verify stream exists and is live
-    // Check both livestreamSlots (new system) and livestreams (legacy)
-    let streamDoc = await getDocument('livestreamSlots', streamId);
-    let isStreamLive = streamDoc?.status === 'live';
+    // Special case: playlist-global is always allowed for DJ waitlist chat
+    const isPlaylistMode = streamId === 'playlist-global';
 
-    // Fall back to legacy livestreams collection
-    if (!streamDoc) {
-      streamDoc = await getDocument('livestreams', streamId);
-      isStreamLive = streamDoc?.isLive === true;
-    }
+    if (!isPlaylistMode) {
+      // Verify stream exists and is live
+      // Check both livestreamSlots (new system) and livestreams (legacy)
+      let streamDoc = await getDocument('livestreamSlots', streamId);
+      let isStreamLive = streamDoc?.status === 'live';
 
-    if (!streamDoc || !isStreamLive) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stream is not live'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      // Fall back to legacy livestreams collection
+      if (!streamDoc) {
+        streamDoc = await getDocument('livestreams', streamId);
+        isStreamLive = streamDoc?.isLive === true;
+      }
+
+      if (!streamDoc || !isStreamLive) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Stream is not live'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
     }
     
     // Basic content moderation (can be expanded)
