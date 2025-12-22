@@ -598,6 +598,20 @@
       font-size: 8px;
       width: 10px;
     }
+
+    .player-column {
+      gap: 0.35rem;
+    }
+
+    .player-container {
+      min-height: 350px;
+    }
+
+    /* Ensure video maintains aspect ratio */
+    .video-player,
+    .playlist-player {
+      min-height: 350px;
+    }
   }
 
   @media (max-width: 1500px) {
