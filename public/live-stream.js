@@ -332,9 +332,10 @@ function handlePlaylistUpdate(event) {
       }
     }
 
-    // Enable emoji reactions when playlist is active
+    // Enable emoji reactions and chat when playlist is active
     window.emojiAnimationsEnabled = true;
     setReactionButtonsEnabled(true);
+    setChatEnabled(true);
 
     // Update live badge to show playlist active state (blue with glow)
     if (!window.isLiveStreamActive) {
@@ -391,10 +392,11 @@ function handlePlaylistUpdate(event) {
       playBtn.classList.remove('playing');
     }
 
-    // Disable emojis if no live stream either
+    // Disable emojis and chat if no live stream either
     if (!window.isLiveStreamActive) {
       window.emojiAnimationsEnabled = false;
       setReactionButtonsEnabled(false);
+      setChatEnabled(false);
       // Clear global stream ID if it was set for playlist mode
       if (window.currentStreamId === 'playlist-global') {
         window.currentStreamId = null;
