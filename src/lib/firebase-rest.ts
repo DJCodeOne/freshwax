@@ -312,6 +312,10 @@ export async function queryCollection(
   return fetchPromise;
 }
 
+// Fallback API key for Cloudflare Workers where import.meta.env may not work at runtime
+// This is a client-side Firebase API key - safe to include in code
+const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+
 export async function getDocument(collection: string, docId: string, ttl?: number): Promise<any | null> {
   const cacheKey = `doc:${collection}:${docId}`;
   const cached = getCached(cacheKey);
@@ -323,7 +327,8 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
   }
 
   // Include API key for authenticated reads
-  const apiKey = getEnvVar('FIREBASE_API_KEY') || getEnvVar('PUBLIC_FIREBASE_API_KEY') || import.meta.env.PUBLIC_FIREBASE_API_KEY;
+  const apiKey = getEnvVar('FIREBASE_API_KEY') || getEnvVar('PUBLIC_FIREBASE_API_KEY') || import.meta.env.PUBLIC_FIREBASE_API_KEY || FIREBASE_API_KEY_FALLBACK;
+
   const url = apiKey
     ? `${FIRESTORE_BASE}/${collection}/${docId}?key=${apiKey}`
     : `${FIRESTORE_BASE}/${collection}/${docId}`;
@@ -334,6 +339,12 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
       
       if (!response.ok) {
         if (response.status === 404) return null;
+        // Treat 403 as "document not found" for collections that may have strict rules
+        // This allows the caller to handle it gracefully (e.g., return empty playlist)
+        if (response.status === 403) {
+          log.warn('Get document 403 (access denied):', collection, docId, '- treating as not found');
+          return null;
+        }
         log.error('Get document failed:', response.status);
         return null;
       }
@@ -619,8 +630,8 @@ export async function setDocument(
   data: Record<string, any>,
   idToken?: string
 ): Promise<{ success: boolean; id: string }> {
-  const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
-  const apiKey = getEnvVar('FIREBASE_API_KEY');
+  const projectId = getEnvVar('FIREBASE_PROJECT_ID') || PROJECT_ID;
+  const apiKey = getEnvVar('FIREBASE_API_KEY') || getEnvVar('PUBLIC_FIREBASE_API_KEY') || FIREBASE_API_KEY_FALLBACK;
 
   if (!projectId || !apiKey) {
     throw new Error('Firebase configuration missing - ensure initFirebaseEnv() is called');

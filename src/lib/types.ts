@@ -311,6 +311,18 @@ export interface UserPlaylist {
   lastUpdated: string;
 }
 
+export interface GlobalPlaylist {
+  queue: GlobalPlaylistItem[];
+  currentIndex: number;
+  isPlaying: boolean;
+  lastUpdated: string;
+}
+
+export interface GlobalPlaylistItem extends PlaylistItem {
+  addedBy?: string;
+  addedByName?: string;
+}
+
 // ============================================
 // ORDERS & COMMERCE
 // ============================================

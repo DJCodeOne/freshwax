@@ -101,6 +101,8 @@
 
   let currentCategory = 'music';
   let gifSearchTimeout = null;
+  let documentClickListenerSet = false;
+  let onlineUsersIntervalId = null;
 
   // Send GIF using existing globals from live-stream.js
   async function sendGifToChat(giphyUrl, giphyId) {
@@ -290,14 +292,19 @@
       }
     }
 
-    // Click outside emoji panel to close
-    document.addEventListener('click', (e) => {
-      if (emojiPanel.style.display !== 'none' &&
-          !emojiPanel.contains(e.target) &&
-          e.target !== emojiBtn) {
-        emojiPanel.style.display = 'none';
-      }
-    });
+    // Click outside emoji panel to close (only add once to prevent duplicates on View Transitions)
+    if (!documentClickListenerSet) {
+      document.addEventListener('click', (e) => {
+        const panel = document.getElementById('emojiPanel');
+        const btn = document.getElementById('openEmojiPanel');
+        if (panel && panel.style.display !== 'none' &&
+            !panel.contains(e.target) &&
+            e.target !== btn) {
+          panel.style.display = 'none';
+        }
+      });
+      documentClickListenerSet = true;
+    }
 
     // Initialize with music emojis
     renderEmojis('music');
@@ -397,7 +404,11 @@
     };
 
     // Poll for online users (connected to existing viewer system)
-    setInterval(() => {
+    // Clear any existing interval to prevent duplicates on View Transitions
+    if (onlineUsersIntervalId) {
+      clearInterval(onlineUsersIntervalId);
+    }
+    onlineUsersIntervalId = setInterval(() => {
       if (window.getOnlineViewers) {
         const viewers = window.getOnlineViewers();
         window.updateOnlineUsers(viewers);

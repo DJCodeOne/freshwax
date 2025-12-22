@@ -112,9 +112,10 @@ function rememberAutoplay() {
 
 // ==========================================
 // FIREBASE CONFIGURATION
+// Note: Firebase client API keys are safe to be public - they're used for client identification
 // ==========================================
 const firebaseConfig = {
-  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+  apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
   authDomain: "freshwax-store.firebaseapp.com",
   projectId: "freshwax-store",
   storageBucket: "freshwax-store.firebasestorage.app",
@@ -231,6 +232,9 @@ async function init() {
   // Check live status
   await checkLiveStatus();
 
+  // Setup playlist control on play button (after live status check)
+  setupPlaylistPlayButton();
+
   // Setup auth listener
   setupAuthListener();
 
@@ -238,58 +242,134 @@ async function init() {
   setupMobileFeatures();
 }
 
+// Named handler for playlist updates (allows removal to prevent duplicates)
+function handlePlaylistUpdate(event) {
+  const { queue, isPlaying } = event.detail;
+  const videoPlayer = document.getElementById('videoPlayer');
+  const hlsVideo = document.getElementById('hlsVideoElement');
+  const playlistPlayer = document.getElementById('playlistPlayer');
+  const offlineOverlay = document.getElementById('offlineOverlay');
+  const audioPlayer = document.getElementById('audioPlayer');
+  const playBtn = document.getElementById('playBtn');
+  const playIcon = document.getElementById('playIcon');
+  const pauseIcon = document.getElementById('pauseIcon');
+
+  console.log('[Playlist] Update received:', { queueLength: queue.length, isPlaying });
+
+  // Store playlist state globally
+  window.isPlaylistActive = queue.length > 0;
+  window.isPlaylistPlaying = isPlaying;
+
+  if (queue.length > 0) {
+    // Hide offline overlay and audio player - playlist takes priority
+    if (offlineOverlay) offlineOverlay.classList.add('hidden');
+    if (audioPlayer) audioPlayer.classList.add('hidden');
+    if (hlsVideo) hlsVideo.classList.add('hidden');
+
+    // Show video player with playlist content
+    if (playlistPlayer) {
+      playlistPlayer.classList.remove('hidden');
+      playlistPlayer.style.display = 'block';
+    }
+    if (videoPlayer) {
+      videoPlayer.classList.remove('hidden');
+      videoPlayer.style.display = 'block';
+      videoPlayer.style.opacity = '1';
+    }
+
+    // Enable play button for playlist control (only if not live streaming)
+    if (playBtn && !window.isLiveStreamActive) {
+      playBtn.disabled = false;
+      // Update play/pause icons based on playlist state
+      if (isPlaying) {
+        playIcon?.classList.add('hidden');
+        pauseIcon?.classList.remove('hidden');
+        playBtn.classList.add('playing');
+      } else {
+        playIcon?.classList.remove('hidden');
+        pauseIcon?.classList.add('hidden');
+        playBtn.classList.remove('playing');
+      }
+    }
+
+    // Enable emoji reactions when playlist is active
+    window.emojiAnimationsEnabled = true;
+    setReactionButtonsEnabled(true);
+
+    console.log('[Playlist] Showing video player for playlist, emojis enabled');
+  } else {
+    // No playlist items - hide playlist player
+    if (playlistPlayer) playlistPlayer.classList.add('hidden');
+
+    // Show offline overlay if no live stream is active
+    if (!window.isLiveStreamActive && offlineOverlay) {
+      offlineOverlay.classList.remove('hidden');
+    }
+
+    // Disable play button if no playlist and no live stream
+    if (playBtn && !window.isLiveStreamActive) {
+      playBtn.disabled = true;
+      playIcon?.classList.remove('hidden');
+      pauseIcon?.classList.add('hidden');
+      playBtn.classList.remove('playing');
+    }
+
+    // Disable emojis if no live stream either
+    if (!window.isLiveStreamActive) {
+      window.emojiAnimationsEnabled = false;
+      setReactionButtonsEnabled(false);
+    }
+
+    console.log('[Playlist] Queue empty, hiding playlist player');
+  }
+}
+
 // Listen for playlist updates to show video player when items are added
 function setupPlaylistListener() {
-  window.addEventListener('playlistUpdate', (event) => {
-    const { queue, isPlaying } = event.detail;
-    const videoPlayer = document.getElementById('videoPlayer');
-    const hlsVideo = document.getElementById('hlsVideoElement');
-    const playlistPlayer = document.getElementById('playlistPlayer');
-    const offlineOverlay = document.getElementById('offlineOverlay');
-    const audioPlayer = document.getElementById('audioPlayer');
+  // Remove any existing listener to prevent duplicates on View Transitions
+  window.removeEventListener('playlistUpdate', handlePlaylistUpdate);
+  window.addEventListener('playlistUpdate', handlePlaylistUpdate);
+}
 
-    console.log('[Playlist] Update received:', { queueLength: queue.length, isPlaying });
+// Set up play button to control playlist when no live stream
+function setupPlaylistPlayButton() {
+  const playBtn = document.getElementById('playBtn');
+  if (!playBtn) return;
 
-    if (queue.length > 0) {
-      // Hide offline overlay and audio player - playlist takes priority
-      if (offlineOverlay) offlineOverlay.classList.add('hidden');
-      if (audioPlayer) audioPlayer.classList.add('hidden');
-      if (hlsVideo) hlsVideo.classList.add('hidden');
+  // Store original onclick if exists
+  const originalOnclick = playBtn.onclick;
 
-      // Show video player with playlist content
-      if (playlistPlayer) {
-        playlistPlayer.classList.remove('hidden');
-        playlistPlayer.style.display = 'block';
-      }
-      if (videoPlayer) {
-        videoPlayer.classList.remove('hidden');
-        videoPlayer.style.display = 'block';
-        videoPlayer.style.opacity = '1';
-      }
-
-      // Enable emoji reactions when playlist is active
-      window.emojiAnimationsEnabled = true;
-      setReactionButtonsEnabled(true);
-
-      console.log('[Playlist] Showing video player for playlist, emojis enabled');
-    } else {
-      // No playlist items - hide playlist player
-      if (playlistPlayer) playlistPlayer.classList.add('hidden');
-
-      // Show offline overlay if no live stream is active
-      if (!window.isLiveStreamActive && offlineOverlay) {
-        offlineOverlay.classList.remove('hidden');
-      }
-
-      // Disable emojis if no live stream either
-      if (!window.isLiveStreamActive) {
-        window.emojiAnimationsEnabled = false;
-        setReactionButtonsEnabled(false);
-      }
-
-      console.log('[Playlist] Queue empty, hiding playlist player');
+  playBtn.onclick = async () => {
+    // If live stream is active, use original behavior
+    if (window.isLiveStreamActive && originalOnclick) {
+      originalOnclick();
+      return;
     }
-  });
+
+    // If playlist is active, control playlist
+    if (window.isPlaylistActive && window.playlistManager) {
+      const playIcon = document.getElementById('playIcon');
+      const pauseIcon = document.getElementById('pauseIcon');
+
+      if (window.isPlaylistPlaying) {
+        // Pause playlist
+        await window.playlistManager.pause();
+        playIcon?.classList.remove('hidden');
+        pauseIcon?.classList.add('hidden');
+        playBtn.classList.remove('playing');
+        console.log('[Playlist] Paused via play button');
+      } else {
+        // Resume playlist
+        await window.playlistManager.resume();
+        playIcon?.classList.add('hidden');
+        pauseIcon?.classList.remove('hidden');
+        playBtn.classList.add('playing');
+        console.log('[Playlist] Resumed via play button');
+      }
+    }
+  };
+
+  console.log('[Playlist] Play button control set up');
 }
 
 // Get playlist manager from window (initialized by PlaylistModal.astro)
@@ -2194,11 +2274,41 @@ function setupChatInput(streamId) {
   const input = document.getElementById('chatInput');
   const sendBtn = document.getElementById('sendBtn');
 
+  // Admin UIDs for chat commands
+  const ADMIN_UIDS = [
+    '8WmxYeCp4PSym5iWHahgizokn5F2',
+    'davidhagon'
+  ];
+
   async function sendMessage() {
     if (!currentUser || !input?.value.trim()) return;
 
     const message = input.value.trim();
     input.value = '';
+
+    // Check for !skip command (admin only)
+    if (message.toLowerCase() === '!skip') {
+      if (ADMIN_UIDS.includes(currentUser.uid)) {
+        if (window.playlistManager && window.isPlaylistActive) {
+          window.playlistManager.skipTrack();
+          console.log('[Chat] Admin used !skip command');
+          // Show confirmation in chat area (local only)
+          const chatMessages = document.getElementById('chatMessages');
+          if (chatMessages) {
+            const skipNotice = document.createElement('div');
+            skipNotice.className = 'chat-system-message';
+            skipNotice.textContent = '⏭️ Track skipped by admin';
+            chatMessages.appendChild(skipNotice);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+          }
+        } else {
+          console.log('[Chat] !skip: No playlist active');
+        }
+      } else {
+        console.log('[Chat] !skip command attempted by non-admin');
+      }
+      return; // Don't send !skip to chat
+    }
 
     // Get reply data and clear it
     const replyData = window.replyingTo ? {

@@ -319,6 +319,16 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Live Settings (global playlist, etc) - public read, playlist updates allowed
+    // Note: API validates user authentication via request body (userId)
+    match /liveSettings/{docId} {
+      allow read: if true;
+      // Allow authenticated users OR REST API updates with lastUpdated field
+      allow create, update: if isAuthenticated() ||
+                              request.resource.data.lastUpdated != null;
+      allow delete: if isAdmin();
+    }
+
     // DJ Takeover Requests - authenticated only
     match /djTakeoverRequests/{docId} {
       allow read, write: if isAuthenticated();

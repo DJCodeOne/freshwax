@@ -17,9 +17,17 @@
     </div>
 
     <div class="playlist-modal-body">
-      <!-- URL Input -->
+      <!-- URL Input - Only for logged in users -->
       <div class="playlist-add-section">
-        <div class="playlist-input-group">
+        <div id="playlistAuthNotice" class="playlist-auth-notice hidden">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>Sign in to add videos to the playlist</span>
+        </div>
+        <div id="playlistInputGroup" class="playlist-input-group">
           <input
             type="url"
             id="playlistUrlInput"
@@ -86,11 +94,13 @@
 </div>
 
 <style>
-  /* Large modal for 2-column grid */
+  /* Full page modal */
   .playlist-modal-large {
-    width: 95%;
-    max-width: 900px;
-    max-height: 90vh;
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
     overflow: hidden;
   }
 
@@ -103,17 +113,17 @@
 
   .playlist-modal-large .playlist-queue-header h3 {
     margin: 0;
-    font-size: 1rem;
+    font-size: 1.25rem;
     color: #fff;
   }
 
-  /* 2-column grid for queue items */
+  /* 2-column grid for queue items - fills available space */
   .playlist-queue-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-    padding: 0.5rem 0;
-    max-height: 55vh;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    padding: 1rem 0;
+    flex: 1;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(139, 92, 246, 0.5) transparent;
@@ -132,38 +142,70 @@
     border-radius: 3px;
   }
 
-  /* Queue item card style */
-  .playlist-grid-item {
+  /* Modal body fills available space */
+  .playlist-modal-large .playlist-modal-body {
+    flex: 1;
     display: flex;
     flex-direction: column;
+    padding: 1.5rem 2rem;
+    overflow: hidden;
+  }
+
+  /* Queue item card style - non-active items are compact */
+  .playlist-grid-item {
+    display: flex;
+    flex-direction: row;
     background: rgba(20, 20, 35, 0.9);
-    border: 1px solid rgba(139, 92, 246, 0.25);
-    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
     overflow: hidden;
     transition: all 0.2s ease;
+    height: 80px;
   }
 
   .playlist-grid-item:hover {
-    border-color: rgba(139, 92, 246, 0.5);
+    border-color: rgba(255, 255, 255, 0.3);
     background: rgba(30, 30, 50, 0.95);
   }
 
+  /* Compact thumbnail for non-active items */
+  .playlist-grid-item .playlist-grid-thumb {
+    width: 120px;
+    min-width: 120px;
+    aspect-ratio: auto;
+    height: 100%;
+  }
+
+  /* Active/now playing item - full size with red border */
   .playlist-grid-item.active {
-    border-color: #8b5cf6;
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.25);
-    background: rgba(139, 92, 246, 0.1);
+    flex-direction: column;
+    grid-column: 1 / -1;
+    height: auto;
+    max-width: 500px;
+    margin: 0 auto 1rem;
+    border-color: #dc2626;
+    border-width: 3px;
+    box-shadow: 0 0 30px rgba(220, 38, 38, 0.5);
+    background: rgba(220, 38, 38, 0.1);
+  }
+
+  .playlist-grid-item.active .playlist-grid-thumb {
+    width: 100%;
+    min-width: 100%;
+    aspect-ratio: 16/9;
+    height: auto;
   }
 
   .playlist-grid-item.active::before {
     content: 'NOW PLAYING';
     display: block;
-    background: linear-gradient(90deg, #8b5cf6, #6366f1);
+    background: linear-gradient(90deg, #dc2626, #b91c1c);
     color: white;
-    font-size: 0.6rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
     text-align: center;
-    padding: 3px 8px;
+    padding: 8px 12px;
   }
 
   .playlist-grid-thumb {
@@ -196,53 +238,102 @@
   }
 
   .playlist-grid-info {
-    padding: 0.6rem;
+    padding: 0.5rem 0.75rem;
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    justify-content: center;
+    gap: 0.25rem;
     flex: 1;
+    overflow: hidden;
+  }
+
+  /* Active item has centered text */
+  .playlist-grid-item.active .playlist-grid-info {
+    padding: 1rem;
+    text-align: center;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .playlist-grid-title {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    color: #fff;
-    line-height: 1.3;
+    color: #ffffff;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .playlist-grid-item.active .playlist-grid-title {
+    font-size: 1rem;
+    white-space: normal;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    overflow: hidden;
-    min-height: 2.1em;
   }
 
   .playlist-grid-platform {
-    font-size: 0.65rem;
-    color: rgba(139, 92, 246, 0.7);
+    font-size: 0.6rem;
+    color: #dc2626;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    font-weight: 500;
+    font-weight: 700;
   }
 
+  .playlist-grid-item.active .playlist-grid-platform {
+    font-size: 0.75rem;
+  }
+
+  .playlist-grid-addedby {
+    font-size: 0.6rem;
+    color: #22c55e;
+  }
+
+  .playlist-grid-item.active .playlist-grid-addedby {
+    font-size: 0.75rem;
+  }
+
+  .playlist-grid-addedby strong {
+    font-weight: 700;
+    color: #4ade80;
+  }
+
+  /* Hide actions for compact items, show on hover */
   .playlist-grid-actions {
-    display: flex;
-    gap: 0.4rem;
+    display: none;
+    gap: 0.3rem;
     margin-top: auto;
-    padding-top: 0.4rem;
+    padding-top: 0.3rem;
+  }
+
+  .playlist-grid-item:hover .playlist-grid-actions,
+  .playlist-grid-item.active .playlist-grid-actions {
+    display: flex;
+  }
+
+  .playlist-grid-item.active .playlist-grid-actions {
+    justify-content: center;
+    padding-top: 0.5rem;
   }
 
   .playlist-action-btn {
-    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.3rem;
-    padding: 0.4rem 0.5rem;
+    gap: 0.25rem;
+    padding: 0.3rem 0.5rem;
     border: none;
     border-radius: 5px;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
+  }
+
+  .playlist-grid-item.active .playlist-action-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
   }
 
   .playlist-action-btn svg {
@@ -386,6 +477,35 @@
     opacity: 0.6;
   }
 
+  /* Auth notice for non-logged in users */
+  .playlist-auth-notice {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 8px;
+    color: #fbbf24;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .playlist-auth-notice svg {
+    flex-shrink: 0;
+  }
+
+  /* Added by name */
+  .playlist-grid-addedby {
+    font-size: 0.6rem;
+    color: rgba(139, 92, 246, 0.5);
+    margin-top: 0.2rem;
+  }
+
+  .playlist-grid-addedby strong {
+    color: rgba(139, 92, 246, 0.7);
+  }
+
   /* Mobile: single column */
   @media (max-width: 640px) {
     .playlist-queue-grid {
@@ -423,99 +543,321 @@
   // Global playlist manager instance
   let playlistManager: PlaylistManager | null = null;
   let isStopped = false;
+  let currentUserId: string | null = null;
+  let isAuthenticated = false;
+  let hasInitializedThisPage = false; // Prevent duplicate initialization
+  let listenersAttached = false; // Prevent duplicate event listeners
+  let isAddingToPlaylist = false; // Prevent duplicate add submissions
 
   // Initialize playlist on page load
   async function initPlaylist() {
     if (playlistManager) return;
 
-    // @ts-ignore - Assuming user auth is available globally
-    const user = window.currentUser || null;
+    // Get user from window.currentUserInfo (set by live.astro auth)
+    const userInfo = (window as any).currentUserInfo;
+    currentUserId = userInfo?.id || null;
+    isAuthenticated = userInfo?.loggedIn || false;
+
+    console.log('[PlaylistModal] Init with userInfo:', userInfo);
+
     playlistManager = new PlaylistManager('playlistPlayer');
-    await playlistManager.initialize(user?.uid);
+    await playlistManager.initialize(currentUserId || undefined, userInfo?.displayName || userInfo?.name);
+
+    // Update UI based on auth state
+    updateAuthUI();
 
     // Expose globally for live-stream.js
     (window as any).playlistManager = playlistManager;
-    console.log('[PlaylistModal] Manager initialized and exposed to window');
+    console.log('[PlaylistModal] Manager initialized, authenticated:', isAuthenticated);
   }
 
-  // Initialize immediately
-  initPlaylist();
+  // Update UI based on authentication state
+  function updateAuthUI() {
+    const authNotice = document.getElementById('playlistAuthNotice');
+    const inputGroup = document.getElementById('playlistInputGroup');
 
-  // Re-initialize on auth state change (in case user logs in/out)
-  document.addEventListener('authStateChanged', (e: any) => {
-    if (playlistManager && e.detail?.user) {
-      playlistManager.initialize(e.detail.user.uid);
-    }
-  });
+    console.log('[PlaylistModal] updateAuthUI, isAuthenticated:', isAuthenticated, 'authNotice:', !!authNotice, 'inputGroup:', !!inputGroup);
 
-  // Open modal
-  const playlistBtn = document.getElementById('playlistBtn');
-  const modal = document.getElementById('playlistModal');
-  const closeBtn = document.getElementById('closePlaylistModal');
-  const backdrop = modal?.querySelector('.playlist-modal-backdrop');
-
-  playlistBtn?.addEventListener('click', () => {
-    modal?.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-  });
-
-  // Close modal
-  function closeModal() {
-    modal?.classList.add('hidden');
-    document.body.style.overflow = '';
-  }
-
-  closeBtn?.addEventListener('click', closeModal);
-  backdrop?.addEventListener('click', closeModal);
-
-  // Add to playlist
-  const urlInput = document.getElementById('playlistUrlInput') as HTMLInputElement;
-  const addBtn = document.getElementById('addToPlaylistBtn');
-  const errorDiv = document.getElementById('playlistError');
-  const successDiv = document.getElementById('playlistSuccess');
-
-  async function addToPlaylist() {
-    if (!playlistManager || !urlInput) return;
-
-    const url = urlInput.value.trim();
-    if (!url) return;
-
-    // Hide previous messages
-    errorDiv?.classList.add('hidden');
-    successDiv?.classList.add('hidden');
-
-    const result = await playlistManager.addItem(url);
-
-    if (result.success) {
-      urlInput.value = '';
-      isStopped = false;
-      updateStopPlayButton();
-      if (successDiv) {
-        successDiv.textContent = result.message || 'Added to queue';
-        successDiv.classList.remove('hidden');
-        setTimeout(() => successDiv.classList.add('hidden'), 3000);
+    if (isAuthenticated) {
+      if (authNotice) {
+        authNotice.classList.add('hidden');
+        authNotice.style.display = 'none';
+      }
+      if (inputGroup) {
+        inputGroup.classList.remove('hidden');
+        inputGroup.style.display = '';
       }
     } else {
-      if (errorDiv) {
-        errorDiv.textContent = result.error || 'Failed to add';
-        errorDiv.classList.remove('hidden');
+      if (authNotice) {
+        authNotice.classList.remove('hidden');
+        authNotice.style.display = '';
+      }
+      if (inputGroup) {
+        inputGroup.classList.add('hidden');
+        inputGroup.style.display = 'none';
       }
     }
   }
 
-  addBtn?.addEventListener('click', addToPlaylist);
-  urlInput?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      addToPlaylist();
+  // Session storage key for persisting auth state
+  const AUTH_STORAGE_KEY = 'freshwax_playlist_auth';
+
+  // Save auth state to sessionStorage
+  function saveAuthState() {
+    if (isAuthenticated && currentUserId) {
+      const userInfo = (window as any).currentUserInfo;
+      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
+        id: currentUserId,
+        name: userInfo?.displayName || userInfo?.name || 'User',
+        loggedIn: true
+      }));
+    }
+  }
+
+  // Check if auth is already ready (from window or sessionStorage)
+  function checkExistingAuth() {
+    // First check window.currentUserInfo
+    const userInfo = (window as any).currentUserInfo;
+    if (userInfo && userInfo.loggedIn === true && userInfo.id) {
+      console.log('[PlaylistModal] Auth from window.currentUserInfo:', userInfo);
+      currentUserId = userInfo.id;
+      isAuthenticated = true;
+      saveAuthState();
+      return true;
+    }
+
+    // Fallback: check sessionStorage (for View Transitions navigation)
+    try {
+      const stored = sessionStorage.getItem(AUTH_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.loggedIn && parsed.id) {
+          console.log('[PlaylistModal] Auth from sessionStorage:', parsed);
+          currentUserId = parsed.id;
+          isAuthenticated = true;
+          // Also restore to window for other components
+          (window as any).currentUserInfo = {
+            loggedIn: true,
+            id: parsed.id,
+            name: parsed.name,
+            displayName: parsed.name
+          };
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn('[PlaylistModal] Could not read auth from sessionStorage:', e);
+    }
+
+    return false;
+  }
+
+  // Listen for userAuthReady event from live.astro
+  document.addEventListener('userAuthReady', (e: any) => {
+    const { userInfo } = e.detail;
+    console.log('[PlaylistModal] userAuthReady event received:', userInfo);
+
+    if (userInfo && userInfo.loggedIn) {
+      currentUserId = userInfo.id;
+      isAuthenticated = true;
+      saveAuthState(); // Persist for View Transitions
+
+      // Always update UI when auth changes
+      updateAuthUI();
+
+      if (!playlistManager) {
+        initPlaylist();
+      } else {
+        playlistManager.initialize(currentUserId || undefined, userInfo.displayName || userInfo.name);
+      }
     }
   });
 
-  // Stop/Play toggle
-  const stopPlayBtn = document.getElementById('stopPlayBtn');
-  const stopIcon = document.getElementById('stopIcon');
-  const playIcon = document.getElementById('playIcon');
+  // Initialize - check existing auth first, then wait if needed
+  function startInitialization() {
+    // Prevent duplicate initialization on same page
+    if (hasInitializedThisPage) {
+      console.log('[PlaylistModal] Already initialized, skipping');
+      return;
+    }
+    hasInitializedThisPage = true;
+    console.log('[PlaylistModal] startInitialization called');
 
+    // First check if auth is already available (from sessionStorage or window)
+    if (checkExistingAuth()) {
+      console.log('[PlaylistModal] Using existing auth from storage/window');
+      updateAuthUI(); // Update UI immediately with cached auth
+      initPlaylist();
+      return;
+    }
+
+    // Auth not ready yet, wait for it with shorter timeout
+    let attempts = 0;
+    const maxAttempts = 30; // 3 seconds max wait (View Transitions should be fast)
+
+    function checkAuth() {
+      attempts++;
+      const userInfo = (window as any).currentUserInfo;
+
+      // Check if user is logged in
+      if (userInfo && userInfo.loggedIn === true && userInfo.id) {
+        console.log('[PlaylistModal] Auth ready after', attempts * 100, 'ms:', userInfo);
+        currentUserId = userInfo.id;
+        isAuthenticated = true;
+        saveAuthState(); // Persist for View Transitions
+        updateAuthUI();
+        initPlaylist();
+        return;
+      }
+
+      // If we've waited long enough, initialize as anonymous
+      if (attempts >= maxAttempts) {
+        console.log('[PlaylistModal] Auth timeout after 3s, initializing as anonymous');
+        currentUserId = null;
+        isAuthenticated = false;
+        updateAuthUI();
+        initPlaylist();
+        return;
+      }
+
+      // Keep checking
+      setTimeout(checkAuth, 100);
+    }
+
+    checkAuth();
+  }
+
+  // Setup all DOM event listeners - called on every page load including View Transitions
+  function setupEventListeners() {
+    console.log('[PlaylistModal] Setting up event listeners');
+
+    // Open modal
+    const playlistBtn = document.getElementById('playlistBtn');
+    const modal = document.getElementById('playlistModal');
+    const closeBtn = document.getElementById('closePlaylistModal');
+    const backdrop = modal?.querySelector('.playlist-modal-backdrop') as HTMLElement;
+
+    // Close modal function
+    function closeModal() {
+      modal?.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    // Use data attributes to prevent duplicate listeners on same elements
+    if (playlistBtn && !playlistBtn.dataset.listenerAttached) {
+      playlistBtn.dataset.listenerAttached = 'true';
+      playlistBtn.addEventListener('click', () => {
+        console.log('[PlaylistModal] Playlist button clicked');
+        modal?.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      });
+    }
+
+    if (closeBtn && !closeBtn.dataset.listenerAttached) {
+      closeBtn.dataset.listenerAttached = 'true';
+      closeBtn.addEventListener('click', closeModal);
+    }
+
+    if (backdrop && !backdrop.dataset.listenerAttached) {
+      backdrop.dataset.listenerAttached = 'true';
+      backdrop.addEventListener('click', closeModal);
+    }
+
+    // Add to playlist
+    const urlInput = document.getElementById('playlistUrlInput') as HTMLInputElement;
+    const addBtn = document.getElementById('addToPlaylistBtn');
+    const errorDiv = document.getElementById('playlistError');
+    const successDiv = document.getElementById('playlistSuccess');
+
+    async function addToPlaylist() {
+      if (!playlistManager || !urlInput) return;
+      if (isAddingToPlaylist) {
+        console.log('[PlaylistModal] Already adding, ignoring duplicate request');
+        return;
+      }
+
+      const url = urlInput.value.trim();
+      if (!url) return;
+
+      isAddingToPlaylist = true;
+
+      // Hide previous messages
+      errorDiv?.classList.add('hidden');
+      successDiv?.classList.add('hidden');
+
+      try {
+        const result = await playlistManager.addItem(url);
+
+        if (result.success) {
+          urlInput.value = '';
+          isStopped = false;
+          updateStopPlayButton();
+          if (successDiv) {
+            successDiv.textContent = result.message || 'Added to queue';
+            successDiv.classList.remove('hidden');
+            setTimeout(() => successDiv.classList.add('hidden'), 3000);
+          }
+        } else {
+          if (errorDiv) {
+            errorDiv.textContent = result.error || 'Failed to add';
+            errorDiv.classList.remove('hidden');
+          }
+        }
+      } finally {
+        isAddingToPlaylist = false;
+      }
+    }
+
+    if (addBtn && !addBtn.dataset.listenerAttached) {
+      addBtn.dataset.listenerAttached = 'true';
+      addBtn.addEventListener('click', addToPlaylist);
+    }
+
+    if (urlInput && !urlInput.dataset.listenerAttached) {
+      urlInput.dataset.listenerAttached = 'true';
+      urlInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          addToPlaylist();
+        }
+      });
+    }
+
+    // Stop/Play toggle
+    const stopPlayBtn = document.getElementById('stopPlayBtn');
+
+    if (stopPlayBtn && !stopPlayBtn.dataset.listenerAttached) {
+      stopPlayBtn.dataset.listenerAttached = 'true';
+      stopPlayBtn.addEventListener('click', async () => {
+        if (!playlistManager) return;
+
+        if (isStopped) {
+          await playlistManager.resume();
+          isStopped = false;
+        } else {
+          await playlistManager.pause();
+          isStopped = true;
+        }
+        updateStopPlayButton();
+      });
+    }
+
+    // Volume control
+    const volumeSlider = document.getElementById('volumeSlider') as HTMLInputElement;
+    if (volumeSlider && !volumeSlider.dataset.listenerAttached) {
+      volumeSlider.dataset.listenerAttached = 'true';
+      volumeSlider.addEventListener('input', () => {
+        const volume = parseInt(volumeSlider.value);
+        if (playlistManager) {
+          playlistManager.setVolume(volume);
+        }
+      });
+    }
+  }
+
+  // Stop/Play button UI update
   function updateStopPlayButton() {
+    const stopIcon = document.getElementById('stopIcon');
+    const playIcon = document.getElementById('playIcon');
     if (isStopped) {
       stopIcon?.classList.add('hidden');
       playIcon?.classList.remove('hidden');
@@ -525,33 +867,16 @@
     }
   }
 
-  stopPlayBtn?.addEventListener('click', async () => {
-    if (!playlistManager) return;
+  // Listen for playlist updates (only add once, not per page load)
+  function handlePlaylistUpdate(event: any) {
+    const { queue, currentIndex, isPlaying, queueSize, isAuthenticated: authState, userId } = event.detail;
 
-    if (isStopped) {
-      // Resume playback
-      await playlistManager.resume();
-      isStopped = false;
-    } else {
-      // Stop playback
-      await playlistManager.pause();
-      isStopped = true;
+    // Update auth state from event
+    if (authState !== undefined) {
+      isAuthenticated = authState;
+      currentUserId = userId || null;
+      updateAuthUI();
     }
-    updateStopPlayButton();
-  });
-
-  // Volume control
-  const volumeSlider = document.getElementById('volumeSlider') as HTMLInputElement;
-  volumeSlider?.addEventListener('input', () => {
-    const volume = parseInt(volumeSlider.value);
-    if (playlistManager) {
-      playlistManager.setVolume(volume);
-    }
-  });
-
-  // Listen for playlist updates
-  window.addEventListener('playlistUpdate', (event: any) => {
-    const { queue, currentIndex, isPlaying, queueSize } = event.detail;
 
     // Update queue display
     renderQueue(queue, currentIndex);
@@ -580,7 +905,33 @@
     // Update stop/play state
     isStopped = !isPlaying;
     updateStopPlayButton();
-  });
+  }
+
+  // Add playlist update listener once
+  window.removeEventListener('playlistUpdate', handlePlaylistUpdate);
+  window.addEventListener('playlistUpdate', handlePlaylistUpdate);
+
+  // Use Astro's page-load event for View Transitions compatibility
+  // This fires on initial load AND after every View Transition navigation
+  // Use a named function to prevent duplicate listeners
+  function handlePageLoad() {
+    console.log('[PlaylistModal] astro:page-load event fired');
+    // Reset flags for fresh initialization on new page
+    hasInitializedThisPage = false;
+    listenersAttached = false;
+    playlistManager = null;
+    startInitialization();
+    setupEventListeners();
+  }
+
+  // Remove existing listener before adding (prevents duplicates across script reloads)
+  document.removeEventListener('astro:page-load', handlePageLoad);
+  document.addEventListener('astro:page-load', handlePageLoad);
+
+  // Run initialization immediately (astro:page-load may have already fired)
+  // The flags will prevent duplicate work
+  startInitialization();
+  setupEventListeners();
 
   // Copy to clipboard function
   async function copyToClipboard(url: string, btn: HTMLElement) {
@@ -607,47 +958,55 @@
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <polygon points="5 3 19 12 5 21 5 3"></polygon>
           </svg>
-          <p>Your playlist is empty</p>
-          <p class="playlist-empty-hint">Add a URL above to get started</p>
+          <p>Playlist is empty</p>
+          <p class="playlist-empty-hint">${isAuthenticated ? 'Add a URL above to get started' : 'Sign in to add videos'}</p>
         </div>
       `;
       return;
     }
 
-    queueDiv.innerHTML = queue.map((item, index) => `
-      <div class="playlist-grid-item ${index === currentIndex ? 'active' : ''}" data-id="${item.id}">
-        <div class="playlist-grid-thumb">
-          ${item.thumbnail
-            ? `<img src="${item.thumbnail}" alt="${item.title || 'Video thumbnail'}" loading="lazy" />`
-            : `<div class="playlist-grid-thumb-placeholder">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+    queueDiv.innerHTML = queue.map((item, index) => {
+      const canRemove = isAuthenticated && currentUserId && item.addedBy === currentUserId;
+      const addedByName = item.addedByName || 'Anonymous';
+
+      return `
+        <div class="playlist-grid-item ${index === currentIndex ? 'active' : ''}" data-id="${item.id}">
+          <div class="playlist-grid-thumb">
+            ${item.thumbnail
+              ? `<img src="${item.thumbnail}" alt="${item.title || 'Video thumbnail'}" loading="lazy" />`
+              : `<div class="playlist-grid-thumb-placeholder">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                </div>`
+            }
+          </div>
+          <div class="playlist-grid-info">
+            <div class="playlist-grid-title">${item.title || 'Untitled'}</div>
+            <div class="playlist-grid-platform">${getPlatformName(item.platform)}</div>
+            <div class="playlist-grid-addedby">Added by <strong>${addedByName}</strong></div>
+            <div class="playlist-grid-actions">
+              <button class="playlist-action-btn playlist-copy-btn" data-url="${item.url}" title="Copy link">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                 </svg>
-              </div>`
-          }
-        </div>
-        <div class="playlist-grid-info">
-          <div class="playlist-grid-title">${item.title || 'Untitled'}</div>
-          <div class="playlist-grid-platform">${getPlatformName(item.platform)}</div>
-          <div class="playlist-grid-actions">
-            <button class="playlist-action-btn playlist-copy-btn" data-url="${item.url}" title="Copy link">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-              Copy
-            </button>
-            <button class="playlist-action-btn playlist-remove-btn" data-id="${item.id}" title="Remove">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-              Remove
-            </button>
+                Copy Link
+              </button>
+              ${canRemove ? `
+                <button class="playlist-action-btn playlist-remove-btn" data-id="${item.id}" title="Remove">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  Remove
+                </button>
+              ` : ''}
+            </div>
           </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     // Add copy button listeners
     queueDiv.querySelectorAll('.playlist-copy-btn').forEach(btn => {

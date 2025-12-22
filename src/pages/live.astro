@@ -2459,13 +2459,18 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         // Store Pro status globally for live-stream.js to access
         window.userIsPro = userInfo.isPro;
         
-        // Update global user info for shoutouts
+        // Update global user info for shoutouts and playlist
         window.currentUserInfo = {
           loggedIn: true,
           name: displayName,
           displayName: displayName,
           id: userId
         };
+
+        // Dispatch event for components waiting for auth (like PlaylistModal)
+        document.dispatchEvent(new CustomEvent('userAuthReady', {
+          detail: { user: currentUser, userInfo: window.currentUserInfo }
+        }));
         
         const djNameField = document.getElementById('bookingDjName');
         if (djNameField) {
