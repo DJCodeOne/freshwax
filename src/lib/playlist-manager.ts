@@ -367,33 +367,96 @@ export class PlaylistManager {
   }
 
   /**
-   * Enable emoji reactions
+   * Enable emoji reactions and audio meters
    */
   private enableEmojis(): void {
     // Enable emoji animations globally
     (window as any).emojiAnimationsEnabled = true;
 
     // Enable reaction buttons
-    const reactionButtons = document.querySelectorAll('.reaction-btn, .emoji-btn, [data-reaction]');
+    const reactionButtons = document.querySelectorAll('.reaction-btn, .emoji-btn, [data-reaction], .anim-toggle-btn, .fs-reaction-btn');
     reactionButtons.forEach(btn => {
       (btn as HTMLButtonElement).disabled = false;
-      btn.classList.remove('disabled');
+      btn.classList.remove('disabled', 'reactions-disabled');
     });
 
-    console.log('[PlaylistManager] Emoji reactions enabled');
+    // Hide "Sign in to chat" prompt
+    const loginPrompt = document.getElementById('loginPrompt');
+    if (loginPrompt) {
+      loginPrompt.style.display = 'none';
+    }
+
+    // Start audio LED meters
+    if (typeof (window as any).startGlobalMeters === 'function') {
+      (window as any).startGlobalMeters();
+    }
+
+    // Simulate audio activity for LEDs when playlist is playing
+    this.startPlaylistMeters();
+
+    console.log('[PlaylistManager] Emoji reactions and audio meters enabled');
   }
 
   /**
-   * Disable emoji reactions
+   * Disable emoji reactions and audio meters
    */
   private disableEmojis(): void {
     (window as any).emojiAnimationsEnabled = false;
 
-    const reactionButtons = document.querySelectorAll('.reaction-btn, .emoji-btn, [data-reaction]');
+    const reactionButtons = document.querySelectorAll('.reaction-btn, .emoji-btn, [data-reaction], .anim-toggle-btn, .fs-reaction-btn');
     reactionButtons.forEach(btn => {
       (btn as HTMLButtonElement).disabled = true;
-      btn.classList.add('disabled');
+      btn.classList.add('disabled', 'reactions-disabled');
     });
+
+    // Stop audio LED meters
+    this.stopPlaylistMeters();
+  }
+
+  private playlistMeterInterval: number | null = null;
+
+  /**
+   * Start simulated audio meters for playlist playback
+   */
+  private startPlaylistMeters(): void {
+    if (this.playlistMeterInterval) return;
+
+    const leftLeds = document.querySelectorAll('#leftMeter .led');
+    const rightLeds = document.querySelectorAll('#rightMeter .led');
+
+    if (leftLeds.length === 0 || rightLeds.length === 0) return;
+
+    // Animate LEDs based on simulated audio levels
+    this.playlistMeterInterval = window.setInterval(() => {
+      if (!this.playlist.isPlaying) {
+        this.stopPlaylistMeters();
+        return;
+      }
+
+      // Generate random levels that look like music (weighted toward middle)
+      const baseLevel = 4 + Math.random() * 5;
+      const leftLevel = Math.floor(baseLevel + (Math.random() - 0.5) * 4);
+      const rightLevel = Math.floor(baseLevel + (Math.random() - 0.5) * 4);
+
+      leftLeds.forEach((led, i) => led.classList.toggle('active', i < leftLevel));
+      rightLeds.forEach((led, i) => led.classList.toggle('active', i < rightLevel));
+    }, 100);
+
+    console.log('[PlaylistManager] Audio meters started');
+  }
+
+  /**
+   * Stop simulated audio meters
+   */
+  private stopPlaylistMeters(): void {
+    if (this.playlistMeterInterval) {
+      clearInterval(this.playlistMeterInterval);
+      this.playlistMeterInterval = null;
+    }
+
+    // Clear all LEDs
+    document.querySelectorAll('.led-strip .led').forEach(led => led.classList.remove('active'));
+    console.log('[PlaylistManager] Audio meters stopped');
   }
 
   /**
