@@ -612,23 +612,28 @@ Astro.response.headers.set('Pragma', 'no-cache');
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
     import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
-    // Use shared auth from Header if available (for consistent state across navigation)
-    // Otherwise initialize our own Firebase instance
+    // Initialize Firebase - use existing app if available (from Header or previous load)
+    // This ensures consistent auth state during View Transitions
     let auth, db;
 
-    if (window.firebaseAuth) {
-      // Use existing auth from Header component
-      auth = window.firebaseAuth;
-      const app = getApps()[0];
-      db = getFirestore(app);
-      console.log('[Book] Using shared auth from Header');
-    } else {
-      // Initialize our own Firebase (standalone page load)
+    function initFirebase() {
+      // First check if Header has shared its auth instance
+      if (window.firebaseAuth) {
+        auth = window.firebaseAuth;
+        const app = getApps()[0];
+        db = getFirestore(app);
+        console.log('[Book] Using shared auth from Header');
+        return;
+      }
+
+      // Otherwise use existing app or create new one
       const app = getApps().length ? getApps()[0] : initializeApp(window.FIREBASE_CONFIG);
       auth = getAuth(app);
       db = getFirestore(app);
-      console.log('[Book] Initialized own Firebase instance');
+      console.log('[Book] Initialized Firebase (apps:', getApps().length, ')');
     }
+
+    initFirebase();
 
     // State
     let currentUser = null;
@@ -643,21 +648,42 @@ Astro.response.headers.set('Pragma', 'no-cache');
     let loadingGate, mainContent;
     let formInitialized = false;
 
-    // Wait for auth state - use Header's authReady if available for consistency
+    // Wait for auth state - always use onAuthStateChanged to ensure Firebase has synced
     async function waitForAuth() {
-      // If navigating from a page with Header, use its auth promise
-      if (window.authReady) {
-        console.log('[Book] Using window.authReady from Header');
-        const user = await window.authReady;
-        // Also check current state in case it changed
-        return auth.currentUser || user;
-      }
+      // Check if we have cached auth info first (for faster initial check)
+      const cachedUid = localStorage.getItem('fw_uid');
 
-      // Otherwise wait for auth state ourselves
+      // Always wait for Firebase onAuthStateChanged to ensure proper sync
+      // This is more reliable than window.authReady during View Transitions
       return new Promise((resolve) => {
+        // If auth.currentUser is already set, use it immediately
+        if (auth.currentUser) {
+          console.log('[Book] Auth already available:', auth.currentUser.uid);
+          resolve(auth.currentUser);
+          return;
+        }
+
+        // Wait for auth state change
         const unsubscribe = onAuthStateChanged(auth, (user) => {
           unsubscribe(); // Only need first result
-          resolve(user);
+          console.log('[Book] onAuthStateChanged resolved:', user?.uid);
+
+          // If Firebase says no user but we have cached UID, wait a bit more
+          // This handles View Transitions timing issues
+          if (!user && cachedUid) {
+            console.log('[Book] No user but have cached UID, waiting for sync...');
+            setTimeout(() => {
+              if (auth.currentUser) {
+                console.log('[Book] Auth synced after delay:', auth.currentUser.uid);
+                resolve(auth.currentUser);
+              } else {
+                console.log('[Book] Still no user after delay');
+                resolve(null);
+              }
+            }, 500);
+          } else {
+            resolve(user);
+          }
         });
       });
     }
@@ -747,6 +773,8 @@ Astro.response.headers.set('Pragma', 'no-cache');
     // Also handle View Transitions navigation
     document.addEventListener('astro:page-load', () => {
       console.log('[Book] astro:page-load fired');
+      // Re-init Firebase in case Header's auth is now available
+      initFirebase();
       initPage();
     });
 
