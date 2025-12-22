@@ -141,6 +141,14 @@
             <div class="my-playlist-header">
               <h3>My Playlist <span id="myPlaylistCount" class="queue-count">0</span></h3>
               <div class="my-playlist-actions">
+                <button id="exportPlaylistBtn" class="export-playlist-btn" title="Export playlist">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  Export
+                </button>
                 <button id="clearMyPlaylistBtn" class="clear-playlist-btn" title="Clear all">Clear</button>
                 <button id="backToStreamBtn" class="back-to-stream-btn" title="Back to stream">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -148,6 +156,25 @@
                   </svg>
                   Back
                 </button>
+              </div>
+            </div>
+
+            <!-- Clear Playlist Confirmation Modal -->
+            <div id="clearPlaylistModal" class="clear-playlist-modal hidden">
+              <div class="clear-modal-backdrop"></div>
+              <div class="clear-modal-content">
+                <div class="clear-modal-icon">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </div>
+                <h3>Clear Playlist?</h3>
+                <p>This will remove all <span id="clearItemCount">0</span> tracks from your playlist. This action cannot be undone.</p>
+                <div class="clear-modal-actions">
+                  <button id="cancelClearBtn" class="cancel-clear-btn">Cancel</button>
+                  <button id="confirmClearBtn" class="confirm-clear-btn">Clear All</button>
+                </div>
               </div>
             </div>
             <!-- Pagination tabs for large playlists (20+ items) -->
@@ -1063,6 +1090,133 @@
     background: rgba(239, 68, 68, 0.25);
   }
 
+  .export-playlist-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 6px;
+    color: #4ade80;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .export-playlist-btn:hover {
+    background: rgba(34, 197, 94, 0.25);
+  }
+
+  .export-playlist-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Clear Playlist Confirmation Modal */
+  .clear-playlist-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .clear-playlist-modal.hidden {
+    display: none;
+  }
+
+  .clear-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+  }
+
+  .clear-modal-content {
+    position: relative;
+    background: #1a1a2e;
+    border: 2px solid #333;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 380px;
+    text-align: center;
+    animation: modalSlideIn 0.2s ease;
+  }
+
+  @keyframes modalSlideIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .clear-modal-icon {
+    color: #ef4444;
+    margin-bottom: 1rem;
+  }
+
+  .clear-modal-content h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.25rem;
+    color: #fff;
+  }
+
+  .clear-modal-content p {
+    margin: 0 0 1.5rem 0;
+    font-size: 0.9rem;
+    color: #9ca3af;
+    line-height: 1.5;
+  }
+
+  .clear-modal-content p span {
+    color: #f87171;
+    font-weight: 600;
+  }
+
+  .clear-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+  }
+
+  .cancel-clear-btn {
+    padding: 0.6rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background: rgba(75, 85, 99, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: #e5e7eb;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .cancel-clear-btn:hover {
+    background: rgba(75, 85, 99, 0.7);
+  }
+
+  .confirm-clear-btn {
+    padding: 0.6rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background: #dc2626;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .confirm-clear-btn:hover {
+    background: #b91c1c;
+  }
+
   .back-to-stream-btn {
     display: flex;
     align-items: center;
@@ -1717,13 +1871,135 @@
       });
     }
 
-    // Clear My Playlist button
+    // Clear My Playlist button - opens confirmation modal
     const clearMyPlaylistBtn = document.getElementById('clearMyPlaylistBtn');
+    const clearPlaylistModal = document.getElementById('clearPlaylistModal');
+    const cancelClearBtn = document.getElementById('cancelClearBtn');
+    const confirmClearBtn = document.getElementById('confirmClearBtn');
+    const clearModalBackdrop = clearPlaylistModal?.querySelector('.clear-modal-backdrop');
+    const clearItemCountEl = document.getElementById('clearItemCount');
+
     if (clearMyPlaylistBtn && !clearMyPlaylistBtn.dataset.listenerAttached) {
       clearMyPlaylistBtn.dataset.listenerAttached = 'true';
       clearMyPlaylistBtn.addEventListener('click', () => {
-        if (playlistManager && confirm('Clear all tracks from your playlist?')) {
+        if (clearPlaylistModal && cachedPersonalItems.length > 0) {
+          // Update the count in the modal
+          if (clearItemCountEl) {
+            clearItemCountEl.textContent = cachedPersonalItems.length.toString();
+          }
+          clearPlaylistModal.classList.remove('hidden');
+        }
+      });
+    }
+
+    // Cancel clear button
+    if (cancelClearBtn && !cancelClearBtn.dataset.listenerAttached) {
+      cancelClearBtn.dataset.listenerAttached = 'true';
+      cancelClearBtn.addEventListener('click', () => {
+        clearPlaylistModal?.classList.add('hidden');
+      });
+    }
+
+    // Confirm clear button
+    if (confirmClearBtn && !confirmClearBtn.dataset.listenerAttached) {
+      confirmClearBtn.dataset.listenerAttached = 'true';
+      confirmClearBtn.addEventListener('click', () => {
+        if (playlistManager) {
           playlistManager.clearPersonalPlaylist();
+          clearPlaylistModal?.classList.add('hidden');
+        }
+      });
+    }
+
+    // Close modal on backdrop click
+    if (clearModalBackdrop && !clearModalBackdrop.dataset.listenerAttached) {
+      (clearModalBackdrop as HTMLElement).dataset.listenerAttached = 'true';
+      clearModalBackdrop.addEventListener('click', () => {
+        clearPlaylistModal?.classList.add('hidden');
+      });
+    }
+
+    // Export Playlist button
+    const exportPlaylistBtn = document.getElementById('exportPlaylistBtn');
+    if (exportPlaylistBtn && !exportPlaylistBtn.dataset.listenerAttached) {
+      exportPlaylistBtn.dataset.listenerAttached = 'true';
+      exportPlaylistBtn.addEventListener('click', () => {
+        if (cachedPersonalItems.length === 0) {
+          const errorDiv = document.getElementById('playlistError');
+          if (errorDiv) {
+            errorDiv.textContent = 'No tracks to export';
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => errorDiv.classList.add('hidden'), 3000);
+          }
+          return;
+        }
+
+        // Generate export content
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-GB', {
+          day: '2-digit', month: 'short', year: 'numeric'
+        });
+        const timeStr = now.toLocaleTimeString('en-GB', {
+          hour: '2-digit', minute: '2-digit'
+        });
+
+        let content = `FRESH WAX - MY PLAYLIST\n`;
+        content += `========================\n`;
+        content += `Exported: ${dateStr} at ${timeStr}\n`;
+        content += `Total Tracks: ${cachedPersonalItems.length}\n`;
+        content += `========================\n\n`;
+
+        // Group by platform
+        const byPlatform: Record<string, any[]> = {};
+        cachedPersonalItems.forEach(item => {
+          const platform = item.platform || 'Other';
+          if (!byPlatform[platform]) byPlatform[platform] = [];
+          byPlatform[platform].push(item);
+        });
+
+        // Sort items by most recently added (reverse order since we reversed for display)
+        const sortedItems = [...cachedPersonalItems].reverse();
+
+        sortedItems.forEach((item, index) => {
+          const num = (index + 1).toString().padStart(2, '0');
+          const platform = getPlatformName(item.platform);
+          const title = item.title || 'Untitled';
+          const addedDate = item.addedAt
+            ? new Date(item.addedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+            : 'Unknown';
+
+          content += `${num}. ${title}\n`;
+          content += `    Platform: ${platform}\n`;
+          content += `    URL: ${item.url}\n`;
+          content += `    Added: ${addedDate}\n`;
+          content += `\n`;
+        });
+
+        content += `========================\n`;
+        content += `Platform Summary:\n`;
+        Object.entries(byPlatform).forEach(([platform, items]) => {
+          content += `  ${getPlatformName(platform)}: ${items.length} tracks\n`;
+        });
+        content += `========================\n`;
+        content += `\nExported from Fresh Wax - https://freshwax.co.uk\n`;
+
+        // Create and download file
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `freshwax-playlist-${now.toISOString().split('T')[0]}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        // Show success message
+        const successDiv = document.getElementById('playlistSuccess');
+        if (successDiv) {
+          successDiv.textContent = `Exported ${cachedPersonalItems.length} tracks`;
+          successDiv.classList.remove('hidden');
+          setTimeout(() => successDiv.classList.add('hidden'), 3000);
         }
       });
     }
