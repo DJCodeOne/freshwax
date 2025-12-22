@@ -50,8 +50,11 @@ export class PlaylistManager {
   private trackTimer: number | null = null; // Timer for max track duration
   private recentlyPlayed: Map<string, number> = new Map(); // URL -> timestamp
   private countdownInterval: number | null = null; // Countdown display interval
+  private consecutiveErrors: number = 0; // Track errors to prevent infinite loops
+  private containerId: string; // Store container ID for existence check
 
   constructor(containerId: string) {
+    this.containerId = containerId;
     this.playlist = {
       queue: [],
       currentIndex: 0,
@@ -595,6 +598,14 @@ export class PlaylistManager {
   private async playCurrent(): Promise<void> {
     const currentItem = this.playlist.queue[this.playlist.currentIndex];
     if (!currentItem) return;
+
+    // Check if container exists before trying to play
+    // (prevents errors when playlist manager exists but player isn't on page)
+    const container = document.getElementById(this.containerId);
+    if (!container) {
+      console.warn('[PlaylistManager] Player container not found - skipping playback');
+      return;
+    }
 
     try {
       // Show video player and hide overlays
@@ -1339,6 +1350,27 @@ export class PlaylistManager {
    */
   private async handlePlaybackError(error: string): Promise<void> {
     console.error('[PlaylistManager] Playback error:', error);
+
+    // Increment consecutive error counter
+    this.consecutiveErrors++;
+
+    // Check if container exists - if not, stop trying
+    const container = document.getElementById(this.containerId);
+    if (!container) {
+      console.warn('[PlaylistManager] Container not found - player may not be on this page. Stopping playback attempts.');
+      this.consecutiveErrors = 0;
+      return;
+    }
+
+    // Prevent infinite loops - max 3 consecutive errors
+    if (this.consecutiveErrors >= 3) {
+      console.warn('[PlaylistManager] Too many consecutive errors, stopping playback');
+      this.consecutiveErrors = 0;
+      this.playlist.isPlaying = false;
+      this.renderUI();
+      return;
+    }
+
     if (this.playlist.queue.length > 1) {
       await this.playNext();
     } else {
@@ -1352,6 +1384,8 @@ export class PlaylistManager {
    */
   private handlePlayerReady(): void {
     console.log('[PlaylistManager] Player ready');
+    // Reset error counter on successful playback
+    this.consecutiveErrors = 0;
   }
 
   /**
@@ -1359,6 +1393,10 @@ export class PlaylistManager {
    */
   private handleStateChange(state: string): void {
     console.log('[PlaylistManager] State changed:', state);
+    // Reset error counter on successful state changes
+    if (state === 'playing') {
+      this.consecutiveErrors = 0;
+    }
   }
 
   /**
