@@ -114,7 +114,8 @@ export async function GET({ request, locals }: APIContext) {
           queue: [],
           currentIndex: 0,
           isPlaying: false,
-          lastUpdated: new Date().toISOString()
+          lastUpdated: new Date().toISOString(),
+          trackStartedAt: null
         }
       }), {
         headers: { 'Content-Type': 'application/json' }
@@ -127,7 +128,8 @@ export async function GET({ request, locals }: APIContext) {
         queue: doc.queue || [],
         currentIndex: doc.currentIndex || 0,
         isPlaying: doc.isPlaying || false,
-        lastUpdated: doc.lastUpdated || new Date().toISOString()
+        lastUpdated: doc.lastUpdated || new Date().toISOString(),
+        trackStartedAt: doc.trackStartedAt || null
       }
     }), {
       headers: { 'Content-Type': 'application/json' }
@@ -201,9 +203,10 @@ export async function POST({ request, locals }: APIContext) {
     playlist.queue.push(newItem);
     playlist.lastUpdated = new Date().toISOString();
 
-    // If first item, start playing
+    // If first item, start playing and set track start time
     if (playlist.queue.length === 1 && !playlist.isPlaying) {
       playlist.isPlaying = true;
+      playlist.trackStartedAt = new Date().toISOString();
     }
 
     // Save to Firebase using the fields format
@@ -211,7 +214,8 @@ export async function POST({ request, locals }: APIContext) {
       queue: playlist.queue,
       currentIndex: playlist.currentIndex,
       isPlaying: playlist.isPlaying,
-      lastUpdated: playlist.lastUpdated
+      lastUpdated: playlist.lastUpdated,
+      trackStartedAt: playlist.trackStartedAt || null
     });
 
     // Trigger Pusher broadcast
@@ -269,7 +273,8 @@ export async function DELETE({ request, locals }: APIContext) {
       queue: doc.queue || [],
       currentIndex: doc.currentIndex || 0,
       isPlaying: doc.isPlaying || false,
-      lastUpdated: doc.lastUpdated || new Date().toISOString()
+      lastUpdated: doc.lastUpdated || new Date().toISOString(),
+      trackStartedAt: doc.trackStartedAt || null
     };
 
     // Find and remove item (only if user owns it or is admin)
@@ -296,6 +301,7 @@ export async function DELETE({ request, locals }: APIContext) {
       });
     }
 
+    const wasCurrentlyPlaying = itemIndex === playlist.currentIndex;
     playlist.queue.splice(itemIndex, 1);
 
     // Adjust currentIndex
@@ -309,6 +315,10 @@ export async function DELETE({ request, locals }: APIContext) {
     if (playlist.queue.length === 0) {
       playlist.isPlaying = false;
       playlist.currentIndex = 0;
+      playlist.trackStartedAt = null;
+    } else if (wasCurrentlyPlaying) {
+      // Reset track start time if we removed the current track (new track starts)
+      playlist.trackStartedAt = new Date().toISOString();
     }
 
     playlist.lastUpdated = new Date().toISOString();
@@ -318,7 +328,8 @@ export async function DELETE({ request, locals }: APIContext) {
       queue: playlist.queue,
       currentIndex: playlist.currentIndex,
       isPlaying: playlist.isPlaying,
-      lastUpdated: playlist.lastUpdated
+      lastUpdated: playlist.lastUpdated,
+      trackStartedAt: playlist.trackStartedAt || null
     });
 
     // Trigger Pusher broadcast
@@ -367,7 +378,8 @@ export async function PUT({ request, locals }: APIContext) {
         queue: syncPlaylist.queue || [],
         currentIndex: syncPlaylist.currentIndex || 0,
         isPlaying: syncPlaylist.isPlaying || false,
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
+        trackStartedAt: syncPlaylist.trackStartedAt || null
       };
     } else {
       // For other actions, load from Firestore first
@@ -387,27 +399,38 @@ export async function PUT({ request, locals }: APIContext) {
         queue: doc.queue || [],
         currentIndex: doc.currentIndex || 0,
         isPlaying: doc.isPlaying || false,
-        lastUpdated: doc.lastUpdated || new Date().toISOString()
+        lastUpdated: doc.lastUpdated || new Date().toISOString(),
+        trackStartedAt: doc.trackStartedAt || null
       };
+
+      const now = new Date().toISOString();
 
       switch (action) {
         case 'next':
           if (playlist.queue.length > 0) {
             playlist.currentIndex = (playlist.currentIndex + 1) % playlist.queue.length;
+            // Reset track start time for new track
+            playlist.trackStartedAt = now;
           }
           break;
         case 'play':
           playlist.isPlaying = true;
+          // Set track start time when resuming/starting
+          playlist.trackStartedAt = now;
           break;
         case 'pause':
           playlist.isPlaying = false;
+          // Clear track start time when paused
+          playlist.trackStartedAt = null;
           break;
         case 'toggle':
           playlist.isPlaying = !playlist.isPlaying;
+          // Update track start time based on new state
+          playlist.trackStartedAt = playlist.isPlaying ? now : null;
           break;
       }
 
-      playlist.lastUpdated = new Date().toISOString();
+      playlist.lastUpdated = now;
     }
 
     // Save to Firebase
@@ -415,7 +438,8 @@ export async function PUT({ request, locals }: APIContext) {
       queue: playlist.queue,
       currentIndex: playlist.currentIndex,
       isPlaying: playlist.isPlaying,
-      lastUpdated: playlist.lastUpdated
+      lastUpdated: playlist.lastUpdated,
+      trackStartedAt: playlist.trackStartedAt || null
     });
 
     // Trigger Pusher broadcast

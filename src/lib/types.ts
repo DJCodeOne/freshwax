@@ -316,6 +316,9 @@ export interface GlobalPlaylist {
   currentIndex: number;
   isPlaying: boolean;
   lastUpdated: string;
+  // Sync fields for real-time playback synchronization
+  trackStartedAt?: string;  // ISO timestamp when current track started
+  trackPosition?: number;   // Current position in seconds (for sync accuracy)
 }
 
 export interface GlobalPlaylistItem extends PlaylistItem {

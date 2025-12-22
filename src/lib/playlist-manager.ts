@@ -406,19 +406,44 @@ export class PlaylistManager {
   }
 
   /**
-   * Pause playlist
+   * Pause playlist (LOCAL ONLY - doesn't affect other users)
    */
   async pause(): Promise<void> {
     this.clearTrackTimer();
-    await this.sendControlAction('pause');
+    await this.player.pause();
+    this.disableEmojis();
+    console.log('[PlaylistManager] Paused locally');
   }
 
   /**
-   * Resume playback
+   * Resume playback (LOCAL ONLY - syncs to current global position)
    */
   async resume(): Promise<void> {
     if (this.playlist.queue.length === 0) return;
-    await this.sendControlAction('play');
+
+    // Fetch latest playlist state to get current trackStartedAt
+    try {
+      const response = await fetch('/api/playlist/global');
+      const result = await response.json();
+      if (result.success && result.playlist) {
+        this.playlist = result.playlist;
+      }
+    } catch (error) {
+      console.warn('[PlaylistManager] Could not fetch latest state:', error);
+    }
+
+    // Resume and sync to current global position
+    await this.player.play();
+    this.enableEmojis();
+
+    // Seek to current global position
+    const syncPosition = this.calculateSyncPosition();
+    if (syncPosition > 2) {
+      console.log('[PlaylistManager] Resuming at position:', syncPosition, 'seconds');
+      await this.player.seekTo(syncPosition);
+    }
+
+    console.log('[PlaylistManager] Resumed locally, synced to global position');
   }
 
   /**
@@ -491,6 +516,21 @@ export class PlaylistManager {
   }
 
   /**
+   * Calculate sync position based on trackStartedAt timestamp
+   */
+  private calculateSyncPosition(): number {
+    if (!this.playlist.trackStartedAt) return 0;
+
+    const startedAt = new Date(this.playlist.trackStartedAt).getTime();
+    const now = Date.now();
+    const elapsedSeconds = Math.floor((now - startedAt) / 1000);
+
+    // Cap at 10 minutes (max track duration)
+    const maxSeconds = MAX_TRACK_DURATION_MS / 1000;
+    return Math.min(Math.max(0, elapsedSeconds), maxSeconds);
+  }
+
+  /**
    * Play current track
    */
   private async playCurrent(): Promise<void> {
@@ -517,6 +557,17 @@ export class PlaylistManager {
       this.updateNowPlayingDisplay(currentItem);
 
       await this.player.loadItem(currentItem);
+
+      // Sync to global position if trackStartedAt is set
+      const syncPosition = this.calculateSyncPosition();
+      if (syncPosition > 2) { // Only seek if more than 2 seconds in
+        console.log('[PlaylistManager] Syncing to position:', syncPosition, 'seconds');
+        // Wait a moment for player to be ready, then seek
+        setTimeout(async () => {
+          await this.player.seekTo(syncPosition);
+        }, 500);
+      }
+
       this.renderUI();
 
       console.log('[PlaylistManager] Now playing:', currentItem.title || currentItem.url);
@@ -641,6 +692,22 @@ export class PlaylistManager {
   }
 
   /**
+   * Format seconds as MM:SS or H:MM:SS
+   */
+  private formatDuration(seconds: number): string {
+    if (!seconds || seconds <= 0) return '--:--';
+
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  /**
    * Update NOW PLAYING display at bottom of screen
    */
   private updateNowPlayingDisplay(item: GlobalPlaylistItem | null): void {
@@ -648,8 +715,13 @@ export class PlaylistManager {
     const djAvatarEl = document.getElementById('djAvatar') as HTMLImageElement;
     const genreEl = document.getElementById('streamGenre');
     const labelEl = document.querySelector('.dj-info-label');
+    const djInfoBar = document.querySelector('.dj-info-bar');
 
     if (item) {
+      // Add playlist mode class for red text styling
+      if (djInfoBar) {
+        djInfoBar.classList.add('playlist-mode');
+      }
       if (djNameEl) {
         djNameEl.textContent = item.title || 'Untitled Video';
       }
@@ -660,15 +732,16 @@ export class PlaylistManager {
         djAvatarEl.src = item.thumbnail;
       }
       if (genreEl) {
-        const platformNames: Record<string, string> = {
-          youtube: 'YouTube',
-          vimeo: 'Vimeo',
-          soundcloud: 'SoundCloud',
-          direct: 'Direct Video'
-        };
-        genreEl.textContent = platformNames[item.platform] || item.platform;
+        // Show loading initially, then update with duration
+        genreEl.textContent = '--:--';
+        // Fetch duration after player is ready
+        this.updateDurationDisplay();
       }
     } else {
+      // Remove playlist mode class
+      if (djInfoBar) {
+        djInfoBar.classList.remove('playlist-mode');
+      }
       if (djNameEl) {
         djNameEl.textContent = '--';
       }
@@ -681,6 +754,26 @@ export class PlaylistManager {
       if (genreEl) {
         genreEl.textContent = 'Jungle / D&B';
       }
+    }
+  }
+
+  /**
+   * Update duration display after player is ready
+   */
+  private async updateDurationDisplay(): Promise<void> {
+    const genreEl = document.getElementById('streamGenre');
+    if (!genreEl) return;
+
+    // Wait a moment for player to be ready and have duration info
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    try {
+      const duration = await this.player.getDuration();
+      if (duration > 0) {
+        genreEl.textContent = this.formatDuration(duration);
+      }
+    } catch (error) {
+      console.warn('[PlaylistManager] Could not get duration:', error);
     }
   }
 

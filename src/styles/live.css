@@ -2602,7 +2602,18 @@
     background: rgba(220, 38, 38, 0.2);
     color: #f87171;
   }
-  
+
+  /* Playlist mode - red text for NOW PLAYING bar */
+  .dj-info-bar.playlist-mode .dj-info-name {
+    color: #dc2626;
+  }
+
+  .dj-info-bar.playlist-mode .stream-genre {
+    background: rgba(220, 38, 38, 0.2);
+    color: #dc2626;
+    font-weight: 600;
+  }
+
   /* Inline Reactions Styles */
   .inline-reactions {
     display: flex;

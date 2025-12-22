@@ -337,6 +337,80 @@ export class EmbedPlayerManager {
   }
 
   /**
+   * Seek to position in seconds (for sync)
+   */
+  async seekTo(seconds: number): Promise<void> {
+    try {
+      const position = Math.max(0, seconds);
+      console.log('[EmbedPlayerManager] Seeking to:', position, 'seconds');
+
+      if (this.currentPlatform === 'youtube' && this.youtubePlayer) {
+        // YouTube: seekTo(seconds, allowSeekAhead)
+        this.youtubePlayer.seekTo(position, true);
+      } else if (this.currentPlatform === 'vimeo' && this.vimeoPlayer) {
+        // Vimeo: setCurrentTime(seconds)
+        await this.vimeoPlayer.setCurrentTime(position);
+      } else if (this.currentPlatform === 'soundcloud' && this.soundcloudWidget) {
+        // SoundCloud: seekTo(milliseconds)
+        this.soundcloudWidget.seekTo(position * 1000);
+      } else if (this.currentPlatform === 'direct' && this.directVideo) {
+        // HTML5 video: currentTime in seconds
+        this.directVideo.currentTime = position;
+      }
+    } catch (error) {
+      console.error('[EmbedPlayerManager] Seek error:', error);
+    }
+  }
+
+  /**
+   * Get current playback position in seconds
+   */
+  async getCurrentTime(): Promise<number> {
+    try {
+      if (this.currentPlatform === 'youtube' && this.youtubePlayer) {
+        return this.youtubePlayer.getCurrentTime() || 0;
+      } else if (this.currentPlatform === 'vimeo' && this.vimeoPlayer) {
+        return await this.vimeoPlayer.getCurrentTime() || 0;
+      } else if (this.currentPlatform === 'soundcloud' && this.soundcloudWidget) {
+        return new Promise((resolve) => {
+          this.soundcloudWidget.getPosition((position: number) => {
+            resolve(position / 1000); // Convert ms to seconds
+          });
+        });
+      } else if (this.currentPlatform === 'direct' && this.directVideo) {
+        return this.directVideo.currentTime || 0;
+      }
+    } catch (error) {
+      console.error('[EmbedPlayerManager] GetCurrentTime error:', error);
+    }
+    return 0;
+  }
+
+  /**
+   * Get total duration in seconds
+   */
+  async getDuration(): Promise<number> {
+    try {
+      if (this.currentPlatform === 'youtube' && this.youtubePlayer) {
+        return this.youtubePlayer.getDuration() || 0;
+      } else if (this.currentPlatform === 'vimeo' && this.vimeoPlayer) {
+        return await this.vimeoPlayer.getDuration() || 0;
+      } else if (this.currentPlatform === 'soundcloud' && this.soundcloudWidget) {
+        return new Promise((resolve) => {
+          this.soundcloudWidget.getDuration((duration: number) => {
+            resolve(duration / 1000); // Convert ms to seconds
+          });
+        });
+      } else if (this.currentPlatform === 'direct' && this.directVideo) {
+        return this.directVideo.duration || 0;
+      }
+    } catch (error) {
+      console.error('[EmbedPlayerManager] GetDuration error:', error);
+    }
+    return 0;
+  }
+
+  /**
    * Clean up current player
    */
   private async cleanup(): Promise<void> {
