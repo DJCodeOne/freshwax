@@ -104,13 +104,15 @@ export class PlaylistManager {
 
         // Reload from server
         await this.loadFromFirebase();
+        this.renderUI();
 
-        // Jump to the newly added item (last in queue) and start playing
-        const newIndex = this.playlist.queue.length - 1;
-        this.playlist.currentIndex = newIndex;
-        await this.play();
+        // Only auto-play if nothing is currently playing
+        if (!this.playlist.isPlaying) {
+          await this.play();
+          return { success: true, message: 'Now playing' };
+        }
 
-        return { success: true, message: 'Now playing' };
+        return { success: true, message: 'Added to queue' };
       } else {
         // Add to localStorage
         // Parse URL locally
@@ -143,13 +145,15 @@ export class PlaylistManager {
         this.playlist.queue.push(newItem);
         this.playlist.lastUpdated = new Date().toISOString();
         this.saveToLocalStorage();
+        this.renderUI();
 
-        // Jump to the newly added item (last in queue) and start playing
-        const newIndex = this.playlist.queue.length - 1;
-        this.playlist.currentIndex = newIndex;
-        await this.play();
+        // Only auto-play if nothing is currently playing
+        if (!this.playlist.isPlaying) {
+          await this.play();
+          return { success: true, message: 'Now playing' };
+        }
 
-        return { success: true, message: 'Now playing' };
+        return { success: true, message: 'Added to queue' };
       }
     } catch (error: any) {
       console.error('[PlaylistManager] Error adding item:', error);
