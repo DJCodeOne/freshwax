@@ -674,14 +674,8 @@ export class PlaylistManager {
     }
 
     // Enable chat for playlist mode
-    const chatInput = document.getElementById('chatInput') as HTMLInputElement;
-    const chatSend = document.getElementById('sendChat');
-    if (chatInput) {
-      chatInput.disabled = false;
-      chatInput.placeholder = 'Type a message...';
-    }
-    if (chatSend) {
-      (chatSend as HTMLButtonElement).disabled = false;
+    if (typeof (window as any).setChatEnabled === 'function') {
+      (window as any).setChatEnabled(true);
     }
 
     // Setup chat channel for playlist mode if not already done
@@ -701,7 +695,7 @@ export class PlaylistManager {
   }
 
   /**
-   * Disable emoji reactions and audio meters
+   * Disable emoji reactions, audio meters, and chat (only if no live stream active)
    */
   private disableEmojis(): void {
     (window as any).emojiAnimationsEnabled = false;
@@ -711,6 +705,18 @@ export class PlaylistManager {
       (btn as HTMLButtonElement).disabled = true;
       btn.classList.add('disabled', 'reactions-disabled');
     });
+
+    // Only disable chat if no live stream is active
+    const isLiveStreamActive = (window as any).isLiveStreamActive;
+    if (!isLiveStreamActive) {
+      if (typeof (window as any).setChatEnabled === 'function') {
+        (window as any).setChatEnabled(false);
+      }
+
+      // Reset playlist chat setup flag
+      (window as any).playlistChatSetup = false;
+      console.log('[PlaylistManager] Chat disabled (no active stream or playlist)');
+    }
 
     this.stopPlaylistMeters();
   }

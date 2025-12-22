@@ -736,15 +736,36 @@ function setReactionButtonsEnabled(enabled) {
   console.log('[Reactions] Buttons ' + (enabled ? 'enabled' : 'disabled'));
 }
 
+// Enable/disable chat input
+function setChatEnabled(enabled) {
+  const chatInput = document.getElementById('chatInput');
+  const chatSend = document.getElementById('sendChat');
+  const loginPrompt = document.getElementById('loginPrompt');
+
+  if (chatInput) {
+    chatInput.disabled = !enabled;
+    chatInput.placeholder = enabled ? 'Type a message...' : 'Chat available when stream is live...';
+  }
+  if (chatSend) {
+    chatSend.disabled = !enabled;
+  }
+  if (loginPrompt) {
+    loginPrompt.style.display = enabled ? 'none' : '';
+  }
+  console.log('[Chat] Input ' + (enabled ? 'enabled' : 'disabled'));
+}
+
 // Show offline state
 function showOfflineState(scheduled) {
   window.isLiveStreamActive = false;
 
-  // Only disable emojis if playlist is also empty
+  // Only disable emojis and chat if playlist is also not playing
   const pm = window.playlistManager;
-  if (!pm || pm.queue.length === 0) {
+  const isPlaylistPlaying = pm && pm.isPlaying && pm.queue.length > 0;
+  if (!isPlaylistPlaying) {
     window.emojiAnimationsEnabled = false;
     setReactionButtonsEnabled(false);
+    setChatEnabled(false);
   }
 
   document.getElementById('offlineState')?.classList.remove('hidden');
@@ -786,6 +807,7 @@ function showLiveStream(stream) {
   window.liveStreamState.currentStream = stream; // Expose for LiveChat
   window.emojiAnimationsEnabled = true; // Enable emoji animations when live
   setReactionButtonsEnabled(true); // Enable reaction buttons
+  setChatEnabled(true); // Enable chat when live
 
   // Expose stream ID globally for reaction buttons
   window.currentStreamId = stream.id;
