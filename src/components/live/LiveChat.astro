@@ -252,6 +252,7 @@
     // Load GIFs from Giphy
     async function loadGifs(category, searchQuery = null) {
       const apiKey = window.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6SfraYr';
+      console.log('[GIF] Loading GIFs, apiKey available:', !!apiKey, 'category:', category, 'query:', searchQuery);
       gifResults.innerHTML = '<p class="gif-modal-loading">Loading GIFs...</p>';
 
       try {
@@ -264,8 +265,19 @@
           url = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(category)}&limit=24&rating=pg-13`;
         }
 
+        console.log('[GIF] Fetching:', url.replace(apiKey, 'KEY'));
         const res = await fetch(url);
+        console.log('[GIF] Response status:', res.status);
+
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error('[GIF] API error:', res.status, errText);
+          gifResults.innerHTML = `<p class="gif-modal-loading">API error: ${res.status}</p>`;
+          return;
+        }
+
         const data = await res.json();
+        console.log('[GIF] Got', data.data?.length || 0, 'results');
 
         if (data.data?.length > 0) {
           gifResults.innerHTML = data.data.map(gif => `

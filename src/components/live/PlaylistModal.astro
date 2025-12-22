@@ -818,6 +818,31 @@
     border-color: rgba(239, 68, 68, 0.4);
   }
 
+  .playlist-save-btn {
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+  }
+
+  .playlist-save-btn:hover {
+    background: rgba(139, 92, 246, 0.3);
+    border-color: rgba(139, 92, 246, 0.4);
+  }
+
+  .playlist-save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .playlist-save-btn .spinning {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
   /* Controls section */
   .playlist-controls {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -2005,6 +2030,13 @@
             <div class="dj-name-display">🎧 ${djName}${isUsersTrack ? ' (You)' : ''}</div>
           </div>
           <div class="playlist-grid-actions">
+            ${isAuthenticated ? `
+              <button class="playlist-action-btn playlist-save-btn" data-url="${item.url}" data-title="${(item.title || '').replace(/"/g, '&quot;')}" title="Save to My Playlist">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </button>
+            ` : ''}
             ${canRemove ? `
               <button class="playlist-action-btn playlist-remove-btn" data-id="${item.id}" title="Leave Queue">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2034,6 +2066,41 @@
         const itemId = (e.currentTarget as HTMLElement).dataset.id;
         if (itemId && playlistManager) {
           await playlistManager.removeItem(itemId);
+        }
+      });
+    });
+
+    // Add save to personal playlist button listeners
+    queueDiv.querySelectorAll('.playlist-save-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const url = (e.currentTarget as HTMLElement).dataset.url;
+        if (url && playlistManager) {
+          const button = e.currentTarget as HTMLButtonElement;
+          const originalHTML = button.innerHTML;
+          button.disabled = true;
+          button.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinning"><circle cx="12" cy="12" r="10"></circle></svg>';
+
+          const result = await playlistManager.addToPersonalPlaylist(url);
+
+          if (result.success) {
+            button.innerHTML = '<svg viewBox="0 0 24 24" fill="#22c55e" stroke="#22c55e" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>';
+            button.title = 'Saved!';
+            const successDiv = document.getElementById('playlistSuccess');
+            if (successDiv) {
+              successDiv.textContent = result.message || 'Saved to your playlist!';
+              successDiv.classList.remove('hidden');
+              setTimeout(() => successDiv.classList.add('hidden'), 3000);
+            }
+          } else {
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+            const errorDiv = document.getElementById('playlistError');
+            if (errorDiv) {
+              errorDiv.textContent = result.error || 'Failed to save';
+              errorDiv.classList.remove('hidden');
+              setTimeout(() => errorDiv.classList.add('hidden'), 4000);
+            }
+          }
         }
       });
     });
@@ -2082,7 +2149,9 @@
       return;
     }
 
-    grid.innerHTML = personalItems.map(item => `
+    // Reverse to show most recent first
+    const reversedItems = [...personalItems].reverse();
+    grid.innerHTML = reversedItems.map(item => `
       <div class="personal-playlist-item" data-id="${item.id}">
         <div class="personal-item-thumb">
           ${item.thumbnail
