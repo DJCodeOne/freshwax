@@ -192,12 +192,12 @@ export async function POST({ request, locals }: APIContext) {
       });
     }
 
-    // DJ Waitlist: Check if user already has a track in queue (one track per DJ)
-    const userAlreadyInQueue = playlist.queue.some(item => item.addedBy === userId);
-    if (userAlreadyInQueue) {
+    // DJ Waitlist: Check if user already has max tracks in queue (2 tracks per DJ)
+    const userTracksInQueue = playlist.queue.filter(item => item.addedBy === userId).length;
+    if (userTracksInQueue >= 2) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'You already have a track in the queue. Wait for your turn or remove it first.'
+        error: 'You already have 2 tracks in the queue. Wait for one to play or remove it first.'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }

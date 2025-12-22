@@ -1497,6 +1497,7 @@
       isAuthenticated: authState,
       userId,
       userQueuePosition,
+      userTracksInQueue,
       isUsersTurn,
       currentDj,
       personalPlaylist
@@ -1544,8 +1545,8 @@
     isStopped = !isPlaying;
     updateStopPlayButton();
 
-    // Update personal playlist
-    renderPersonalPlaylist(personalPlaylist || [], userQueuePosition !== null);
+    // Update personal playlist (pass count of user's tracks in queue)
+    renderPersonalPlaylist(personalPlaylist || [], userTracksInQueue || 0);
   }
 
   // Update position indicator based on user's queue position
@@ -1718,7 +1719,7 @@
   }
 
   // Render personal playlist items
-  function renderPersonalPlaylist(personalItems: any[], userAlreadyInQueue: boolean) {
+  function renderPersonalPlaylist(personalItems: any[], userTracksInQueue: number) {
     const section = document.getElementById('myPlaylistSection');
     const grid = document.getElementById('myPlaylistGrid');
     const countEl = document.getElementById('myPlaylistCount');
@@ -1773,7 +1774,7 @@
           <div class="personal-item-platform">${getPlatformName(item.platform)}</div>
         </div>
         <div class="personal-item-actions">
-          <button class="personal-add-btn" data-id="${item.id}" ${userAlreadyInQueue ? 'disabled title="You already have a track in the queue"' : 'title="Add to DJ Queue"'}>
+          <button class="personal-add-btn" data-id="${item.id}" ${userTracksInQueue >= 2 ? 'disabled title="You already have 2 tracks in the queue"' : 'title="Add to DJ Queue"'}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>

@@ -323,10 +323,10 @@ export class PlaylistManager {
       return { success: false, error: 'This track is already in the queue' };
     }
 
-    // DJ Waitlist: Check if user already has a track in queue (one track per DJ)
-    const userAlreadyInQueue = this.playlist.queue.some(item => item.addedBy === this.userId);
-    if (userAlreadyInQueue) {
-      return { success: false, error: 'You already have a track in the queue. Wait for your turn or remove it first.' };
+    // DJ Waitlist: Check if user already has max tracks in queue (2 tracks per DJ)
+    const userTracksInQueue = this.playlist.queue.filter(item => item.addedBy === this.userId).length;
+    if (userTracksInQueue >= 2) {
+      return { success: false, error: 'You already have 2 tracks in the queue. Wait for one to play or remove it first.' };
     }
 
     try {
@@ -1378,6 +1378,7 @@ export class PlaylistManager {
         userId: this.userId,
         // DJ Waitlist info
         userQueuePosition: this.getUserQueuePosition(),
+        userTracksInQueue: this.getUserTracksInQueue(),
         isUsersTurn: this.isUsersTurn(),
         currentDj: this.getCurrentDj(),
         // Personal playlist
@@ -1477,6 +1478,14 @@ export class PlaylistManager {
     if (!this.userId) return null;
     const index = this.playlist.queue.findIndex(item => item.addedBy === this.userId);
     return index >= 0 ? index + 1 : null;
+  }
+
+  /**
+   * Get count of user's tracks currently in queue
+   */
+  getUserTracksInQueue(): number {
+    if (!this.userId) return 0;
+    return this.playlist.queue.filter(item => item.addedBy === this.userId).length;
   }
 
   /**
