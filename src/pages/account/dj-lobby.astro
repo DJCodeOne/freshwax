@@ -11,6 +11,16 @@ const pusherConfig = {
   cluster: import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu'
 };
 
+// Firebase config for client-side
+const firebaseConfig = {
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+  authDomain: "freshwax-store.firebaseapp.com",
+  projectId: "freshwax-store",
+  storageBucket: "freshwax-store.firebasestorage.app",
+  messagingSenderId: "675435782973",
+  appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+};
+
 // HLS URL for preview player (from env or default to production)
 const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk';
 
@@ -32,11 +42,12 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   <!-- HLS.js for video playback -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
-  <!-- Pusher configuration - must be set before dj-lobby-pusher.js loads -->
-  <script define:vars={{ pusherConfig, hlsBaseUrl, ADMIN_KEY }}>
+  <!-- Configuration - must be set before scripts load -->
+  <script define:vars={{ pusherConfig, hlsBaseUrl, ADMIN_KEY, firebaseConfig }}>
     window.PUSHER_CONFIG = pusherConfig;
     window.HLS_BASE_URL = hlsBaseUrl;
     window.ADMIN_KEY = ADMIN_KEY;
+    window.FIREBASE_CONFIG = firebaseConfig;
   </script>
 </head>
 <body class="dj-lobby-page">
@@ -806,11 +817,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     getOnlineDjs
   } from '/dj-lobby-pusher.js?v=3';
   
-  const app = initializeApp({
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-    authDomain: "freshwax-store.firebaseapp.com",
-    projectId: "freshwax-store"
-  });
+  const app = initializeApp(window.FIREBASE_CONFIG);
 
   const auth = getAuth(app);
   // Expose auth globally for pusher module to get idToken
