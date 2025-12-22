@@ -296,14 +296,41 @@ function handlePlaylistUpdate(event) {
     window.emojiAnimationsEnabled = true;
     setReactionButtonsEnabled(true);
 
-    // Set up global channel for playlist mode reactions (if no livestream)
-    if (!window.isLiveStreamActive && !window.currentStreamId) {
-      window.currentStreamId = 'playlist-global';
-      // Setup chat/Pusher for global reactions
-      if (typeof setupChat === 'function') {
-        setupChat('playlist-global');
+    // Update live badge to show playlist active state (blue with glow)
+    if (!window.isLiveStreamActive) {
+      const liveBadge = document.getElementById('liveBadge');
+      const liveStatusText = document.getElementById('liveStatusText');
+      const fsLiveBadge = document.getElementById('fsLiveBadge');
+      const fsLiveStatus = document.getElementById('fsLiveStatus');
+
+      if (liveBadge) {
+        liveBadge.classList.remove('is-live', 'is-loading');
+        liveBadge.classList.add('is-playlist');
       }
-      console.log('[Playlist] Set up global channel for reactions');
+      if (liveStatusText) {
+        liveStatusText.textContent = 'PLAYLIST ACTIVE';
+      }
+      if (fsLiveBadge) {
+        fsLiveBadge.classList.remove('is-live', 'is-loading');
+        fsLiveBadge.classList.add('is-playlist');
+      }
+      if (fsLiveStatus) {
+        fsLiveStatus.textContent = 'PLAYLIST ACTIVE';
+      }
+    }
+
+    // Set up global channel for playlist mode reactions (if no livestream)
+    // Always set up if not on a livestream, even if currentStreamId was set before
+    if (!window.isLiveStreamActive) {
+      // Only setup chat if we haven't already for playlist-global
+      if (window.currentStreamId !== 'playlist-global') {
+        window.currentStreamId = 'playlist-global';
+        // Setup chat/Pusher for global reactions
+        if (typeof setupChat === 'function') {
+          setupChat('playlist-global');
+        }
+        console.log('[Playlist] Set up global channel for reactions');
+      }
     }
 
     console.log('[Playlist] Showing video player for playlist, emojis enabled');
@@ -331,6 +358,44 @@ function handlePlaylistUpdate(event) {
       // Clear global stream ID if it was set for playlist mode
       if (window.currentStreamId === 'playlist-global') {
         window.currentStreamId = null;
+      }
+
+      // Reset live badge to offline state
+      const liveBadge = document.getElementById('liveBadge');
+      const liveStatusText = document.getElementById('liveStatusText');
+      const fsLiveBadge = document.getElementById('fsLiveBadge');
+      const fsLiveStatus = document.getElementById('fsLiveStatus');
+
+      if (liveBadge) {
+        liveBadge.classList.remove('is-live', 'is-playlist', 'is-loading');
+      }
+      if (liveStatusText) {
+        liveStatusText.textContent = 'OFFLINE';
+      }
+      if (fsLiveBadge) {
+        fsLiveBadge.classList.remove('is-live', 'is-playlist', 'is-loading');
+      }
+      if (fsLiveStatus) {
+        fsLiveStatus.textContent = 'OFFLINE';
+      }
+
+      // Update offline overlay text
+      const offlineOverlay = document.getElementById('offlineOverlay');
+      const offlineIconText = document.getElementById('offlineIconText');
+      const offlineMainText = document.getElementById('offlineMainText');
+      const offlineSubText = document.getElementById('offlineSubText');
+
+      if (offlineOverlay) {
+        offlineOverlay.classList.remove('is-loading');
+      }
+      if (offlineIconText) {
+        offlineIconText.textContent = 'OFFLINE';
+      }
+      if (offlineMainText) {
+        offlineMainText.textContent = 'No one is streaming right now';
+      }
+      if (offlineSubText) {
+        offlineSubText.textContent = 'Check the schedule for upcoming shows';
       }
     }
 

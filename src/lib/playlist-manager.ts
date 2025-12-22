@@ -230,16 +230,37 @@ export class PlaylistManager {
   private async handleRemoteUpdate(newPlaylist: GlobalPlaylist): Promise<void> {
     const wasPlaying = this.playlist.isPlaying;
     const oldCurrentItem = this.playlist.queue[this.playlist.currentIndex];
+    const hadItems = this.playlist.queue.length > 0;
 
     // Update local playlist
     this.playlist = newPlaylist;
 
     const newCurrentItem = this.playlist.queue[this.playlist.currentIndex];
+    const hasItems = this.playlist.queue.length > 0;
+
+    // Case 1: Queue became empty (all tracks finished)
+    if (hadItems && !hasItems) {
+      console.log('[PlaylistManager] Queue is now empty, stopping playback');
+      this.clearTrackTimer();
+      this.stopCountdown();
+      await this.player.destroy();
+      this.disableEmojis();
+      this.updateNowPlayingDisplay(null);
+      this.showOfflineOverlay();
+      this.renderUI();
+      return;
+    }
+
+    // Case 2: Queue is empty and was already empty
+    if (!hasItems) {
+      this.renderUI();
+      return;
+    }
 
     // Determine if we need to change what's playing:
     // 1. We weren't playing but should start now (first item added)
-    // 2. The actual item at currentIndex changed (e.g., "next" was triggered)
-    const shouldStartPlaying = !wasPlaying && this.playlist.isPlaying && this.playlist.queue.length > 0;
+    // 2. The actual item at currentIndex changed (e.g., "next" was triggered or track was removed)
+    const shouldStartPlaying = !wasPlaying && this.playlist.isPlaying && hasItems;
     const currentItemChanged = oldCurrentItem?.id !== newCurrentItem?.id && newCurrentItem != null;
 
     if (shouldStartPlaying) {
@@ -250,6 +271,7 @@ export class PlaylistManager {
       await this.playCurrent();
     } else if (!this.playlist.isPlaying && wasPlaying) {
       // Playlist was paused remotely
+      this.stopCountdown();
       await this.player.pause();
       this.disableEmojis();
     }
@@ -1010,9 +1032,72 @@ export class PlaylistManager {
       if (result.success && result.playlist) {
         this.playlist = result.playlist;
         console.log('[PlaylistManager] Loaded global playlist:', this.playlist.queue.length, 'items');
+
+        // Check for stale or invalid playlist states
+        let shouldClear = false;
+
+        // Case 1: isPlaying is true but queue is empty
+        if (this.playlist.isPlaying && this.playlist.queue.length === 0) {
+          console.log('[PlaylistManager] isPlaying but queue is empty - clearing stale state');
+          shouldClear = true;
+        }
+
+        // Case 2: isPlaying but no trackStartedAt (missing sync data)
+        if (this.playlist.isPlaying && this.playlist.queue.length > 0 && !this.playlist.trackStartedAt) {
+          console.log('[PlaylistManager] isPlaying but no trackStartedAt - resetting track start');
+          // Don't clear, just set trackStartedAt to now (assume track just started)
+          this.playlist.trackStartedAt = new Date().toISOString();
+        }
+
+        // Case 3: trackStartedAt is more than 15 minutes old (track should have ended)
+        if (this.playlist.isPlaying && this.playlist.trackStartedAt) {
+          const startedAt = new Date(this.playlist.trackStartedAt).getTime();
+          const now = Date.now();
+          const elapsedMs = now - startedAt;
+          const maxTrackMs = 15 * 60 * 1000; // 15 minutes max (buffer over 10 min limit)
+
+          if (elapsedMs > maxTrackMs) {
+            console.log('[PlaylistManager] Track has been playing for too long - clearing stale data');
+            shouldClear = true;
+          }
+        }
+
+        if (shouldClear) {
+          await this.clearStalePlaylist();
+        }
       }
     } catch (error) {
       console.error('[PlaylistManager] Error loading from server:', error);
+    }
+  }
+
+  /**
+   * Clear stale playlist data from server
+   */
+  private async clearStalePlaylist(): Promise<void> {
+    try {
+      // Reset to empty playlist
+      this.playlist = {
+        queue: [],
+        currentIndex: 0,
+        isPlaying: false,
+        lastUpdated: new Date().toISOString(),
+        trackStartedAt: null
+      };
+
+      // Sync empty state to server
+      await fetch('/api/playlist/global', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sync',
+          playlist: this.playlist
+        })
+      });
+
+      console.log('[PlaylistManager] Cleared stale playlist');
+    } catch (error) {
+      console.error('[PlaylistManager] Error clearing stale playlist:', error);
     }
   }
 

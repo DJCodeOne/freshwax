@@ -52,9 +52,9 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   <div id="fullscreenMode" class="fullscreen-mode hidden">
     <div class="fullscreen-header">
       <div class="fs-info">
-        <div class="fs-live-badge" id="fsLiveBadge">
+        <div class="fs-live-badge is-loading" id="fsLiveBadge">
           <span class="fs-live-dot"></span>
-          <span id="fsLiveStatus">OFFLINE</span>
+          <span id="fsLiveStatus">LOADING...</span>
         </div>
         <h1 id="fsStreamTitle">No Live Streams</h1>
         <div class="fs-dj-info">
@@ -257,9 +257,9 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
                 </svg>
               </a>
             </div>
-            <div class="live-badge" id="liveBadge">
+            <div class="live-badge is-loading" id="liveBadge">
               <span class="live-dot"></span>
-              <span id="liveStatusText">OFFLINE</span>
+              <span id="liveStatusText">LOADING...</span>
               <span id="onAirText" class="on-air-text hidden">On Air</span>
             </div>
           </div>
@@ -268,11 +268,11 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         <div class="player-container" id="playerContainer">
 
           <!-- Offline Overlay - shown by default, hidden when stream is active -->
-          <div id="offlineOverlay" class="offline-overlay">
+          <div id="offlineOverlay" class="offline-overlay is-loading">
             <div class="offline-overlay-content">
-              <div class="offline-icon-large">OFFLINE</div>
-              <p class="offline-text">No one is streaming right now</p>
-              <p class="offline-subtext">Check the schedule for upcoming shows</p>
+              <div class="offline-icon-large" id="offlineIconText">LOADING...</div>
+              <p class="offline-text" id="offlineMainText">Checking for active streams</p>
+              <p class="offline-subtext" id="offlineSubText">Please wait...</p>
             </div>
           </div>
           
