@@ -34,6 +34,7 @@ export class PlaylistManager {
   private isSubscribed: boolean = false;
   private trackTimer: number | null = null; // Timer for max track duration
   private recentlyPlayed: Map<string, number> = new Map(); // URL -> timestamp
+  private countdownInterval: number | null = null; // Countdown display interval
 
   constructor(containerId: string) {
     this.playlist = {
@@ -410,6 +411,7 @@ export class PlaylistManager {
    */
   async pause(): Promise<void> {
     this.clearTrackTimer();
+    this.stopCountdown();
     await this.player.pause();
     this.disableEmojis();
     console.log('[PlaylistManager] Paused locally');
@@ -442,6 +444,9 @@ export class PlaylistManager {
       console.log('[PlaylistManager] Resuming at position:', syncPosition, 'seconds');
       await this.player.seekTo(syncPosition);
     }
+
+    // Restart countdown display
+    this.updateDurationDisplay();
 
     console.log('[PlaylistManager] Resumed locally, synced to global position');
   }
@@ -758,11 +763,14 @@ export class PlaylistManager {
   }
 
   /**
-   * Update duration display after player is ready
+   * Update duration display after player is ready - shows countdown
    */
   private async updateDurationDisplay(): Promise<void> {
     const genreEl = document.getElementById('streamGenre');
     if (!genreEl) return;
+
+    // Clear any existing countdown
+    this.stopCountdown();
 
     // Wait a moment for player to be ready and have duration info
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -770,10 +778,45 @@ export class PlaylistManager {
     try {
       const duration = await this.player.getDuration();
       if (duration > 0) {
-        genreEl.textContent = this.formatDuration(duration);
+        // Start countdown interval
+        this.startCountdown(duration);
       }
     } catch (error) {
       console.warn('[PlaylistManager] Could not get duration:', error);
+    }
+  }
+
+  /**
+   * Start countdown display that updates every second
+   */
+  private async startCountdown(totalDuration: number): Promise<void> {
+    const genreEl = document.getElementById('streamGenre');
+    if (!genreEl) return;
+
+    // Update display immediately
+    const updateDisplay = async () => {
+      try {
+        const currentTime = await this.player.getCurrentTime();
+        const remaining = Math.max(0, totalDuration - currentTime);
+        genreEl.textContent = this.formatDuration(remaining);
+      } catch (error) {
+        // Silently fail if player not ready
+      }
+    };
+
+    await updateDisplay();
+
+    // Update every second
+    this.countdownInterval = window.setInterval(updateDisplay, 1000);
+  }
+
+  /**
+   * Stop countdown display
+   */
+  private stopCountdown(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
     }
   }
 
@@ -874,8 +917,9 @@ export class PlaylistManager {
    * Handle track ended - remove finished track and play next
    */
   private async handleTrackEnded(): Promise<void> {
-    // Clear the track timer first
+    // Clear timers first
     this.clearTrackTimer();
+    this.stopCountdown();
 
     console.log('[PlaylistManager] Track ended, removing and playing next');
 
@@ -1050,6 +1094,7 @@ export class PlaylistManager {
    */
   destroy(): void {
     this.clearTrackTimer();
+    this.stopCountdown();
     if (this.pusherChannel) {
       this.pusherChannel.unbind_all();
       const pusher = (window as any).pusherInstance;
