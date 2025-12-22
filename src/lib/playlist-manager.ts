@@ -6,7 +6,9 @@ import { EmbedPlayerManager } from './embed-player';
 
 const PLAYLIST_HISTORY_KEY = 'freshwax_playlist_history';
 const RECENTLY_PLAYED_KEY = 'freshwax_recently_played';
+const PERSONAL_PLAYLIST_KEY = 'freshwax_personal_playlist';
 const MAX_HISTORY_SIZE = 100;
+const MAX_PERSONAL_PLAYLIST_SIZE = 50;
 const TRACK_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour cooldown between same tracks
 const MAX_TRACK_DURATION_MS = 10 * 60 * 1000; // 10 minutes max per track
 
@@ -22,6 +24,17 @@ interface PlaylistHistoryEntry {
   duration?: number;
 }
 
+// Personal playlist item (user's saved tracks)
+interface PersonalPlaylistItem {
+  id: string;
+  url: string;
+  platform: string;
+  embedId?: string;
+  title?: string;
+  thumbnail?: string;
+  addedAt: string;
+}
+
 export class PlaylistManager {
   private userId: string | null = null;
   private userName: string | null = null;
@@ -30,6 +43,7 @@ export class PlaylistManager {
   private isAuthenticated: boolean = false;
   public wasPausedForStream: boolean = false;
   private playHistory: PlaylistHistoryEntry[] = [];
+  private personalPlaylist: PersonalPlaylistItem[] = []; // User's saved tracks
   private pusherChannel: any = null;
   private isSubscribed: boolean = false;
   private trackTimer: number | null = null; // Timer for max track duration
@@ -51,9 +65,10 @@ export class PlaylistManager {
       onStateChange: (state) => this.handleStateChange(state)
     });
 
-    // Load play history and recently played
+    // Load play history, recently played, and personal playlist
     this.loadPlayHistory();
     this.loadRecentlyPlayed();
+    this.loadPersonalPlaylist();
   }
 
   /**
@@ -305,6 +320,12 @@ export class PlaylistManager {
     const alreadyInQueue = this.playlist.queue.some(item => item.url === url.trim());
     if (alreadyInQueue) {
       return { success: false, error: 'This track is already in the queue' };
+    }
+
+    // DJ Waitlist: Check if user already has a track in queue (one track per DJ)
+    const userAlreadyInQueue = this.playlist.queue.some(item => item.addedBy === this.userId);
+    if (userAlreadyInQueue) {
+      return { success: false, error: 'You already have a track in the queue. Wait for your turn or remove it first.' };
     }
 
     try {
@@ -964,6 +985,144 @@ export class PlaylistManager {
     console.log('[PlaylistManager] Play history cleared');
   }
 
+  // ============================================
+  // PERSONAL PLAYLIST METHODS
+  // ============================================
+
+  /**
+   * Load personal playlist from localStorage
+   */
+  private loadPersonalPlaylist(): void {
+    try {
+      const stored = localStorage.getItem(PERSONAL_PLAYLIST_KEY);
+      if (stored) {
+        this.personalPlaylist = JSON.parse(stored);
+        console.log('[PlaylistManager] Loaded personal playlist:', this.personalPlaylist.length, 'items');
+      }
+    } catch (error) {
+      console.error('[PlaylistManager] Error loading personal playlist:', error);
+      this.personalPlaylist = [];
+    }
+  }
+
+  /**
+   * Save personal playlist to localStorage
+   */
+  private savePersonalPlaylist(): void {
+    try {
+      localStorage.setItem(PERSONAL_PLAYLIST_KEY, JSON.stringify(this.personalPlaylist));
+    } catch (error) {
+      console.error('[PlaylistManager] Error saving personal playlist:', error);
+    }
+  }
+
+  /**
+   * Add a track to personal playlist (for later use)
+   */
+  async addToPersonalPlaylist(url: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    if (!url || !url.trim()) {
+      return { success: false, error: 'Please enter a URL' };
+    }
+
+    // Check if already in personal playlist
+    const alreadyInPlaylist = this.personalPlaylist.some(item => item.url === url.trim());
+    if (alreadyInPlaylist) {
+      return { success: false, error: 'This track is already in your playlist' };
+    }
+
+    // Check max size
+    if (this.personalPlaylist.length >= MAX_PERSONAL_PLAYLIST_SIZE) {
+      return { success: false, error: `Personal playlist is full (${MAX_PERSONAL_PLAYLIST_SIZE} items max)` };
+    }
+
+    try {
+      // Parse URL
+      const { parseMediaUrl } = await import('./url-parser');
+      const parsed = parseMediaUrl(url.trim());
+
+      if (!parsed.isValid) {
+        return { success: false, error: parsed.error || 'Invalid URL' };
+      }
+
+      // Fetch metadata
+      const metadata = await this.fetchMetadata(url.trim());
+
+      // Get thumbnail
+      let thumbnail = metadata.thumbnail;
+      if (!thumbnail && parsed.platform === 'youtube' && parsed.embedId) {
+        thumbnail = `https://img.youtube.com/vi/${parsed.embedId}/mqdefault.jpg`;
+      }
+
+      const item: PersonalPlaylistItem = {
+        id: this.generateId(),
+        url: url.trim(),
+        platform: parsed.platform,
+        embedId: parsed.embedId,
+        title: metadata.title,
+        thumbnail,
+        addedAt: new Date().toISOString()
+      };
+
+      this.personalPlaylist.push(item);
+      this.savePersonalPlaylist();
+      this.renderUI();
+
+      console.log('[PlaylistManager] Added to personal playlist:', item.title || item.url);
+      return { success: true, message: 'Added to your playlist' };
+    } catch (error: any) {
+      console.error('[PlaylistManager] Error adding to personal playlist:', error);
+      return { success: false, error: error.message || 'Failed to add to playlist' };
+    }
+  }
+
+  /**
+   * Remove a track from personal playlist
+   */
+  removeFromPersonalPlaylist(itemId: string): void {
+    const index = this.personalPlaylist.findIndex(item => item.id === itemId);
+    if (index >= 0) {
+      const removed = this.personalPlaylist.splice(index, 1)[0];
+      this.savePersonalPlaylist();
+      this.renderUI();
+      console.log('[PlaylistManager] Removed from personal playlist:', removed.title || removed.url);
+    }
+  }
+
+  /**
+   * Add a track from personal playlist to the main DJ queue
+   */
+  async addPersonalItemToQueue(itemId: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    const item = this.personalPlaylist.find(i => i.id === itemId);
+    if (!item) {
+      return { success: false, error: 'Track not found in your playlist' };
+    }
+
+    // Use the existing addItem method which handles all validation
+    const result = await this.addItem(item.url);
+
+    // If successfully added to queue, optionally remove from personal playlist
+    // (keeping it for now - user can manually remove if they want)
+
+    return result;
+  }
+
+  /**
+   * Get personal playlist items
+   */
+  getPersonalPlaylist(): PersonalPlaylistItem[] {
+    return [...this.personalPlaylist];
+  }
+
+  /**
+   * Clear personal playlist
+   */
+  clearPersonalPlaylist(): void {
+    this.personalPlaylist = [];
+    this.savePersonalPlaylist();
+    this.renderUI();
+    console.log('[PlaylistManager] Personal playlist cleared');
+  }
+
   /**
    * Show video player and hide overlays
    */
@@ -1191,7 +1350,13 @@ export class PlaylistManager {
         isPlaying: this.playlist.isPlaying,
         queueSize: this.playlist.queue.length,
         isAuthenticated: this.isAuthenticated,
-        userId: this.userId
+        userId: this.userId,
+        // DJ Waitlist info
+        userQueuePosition: this.getUserQueuePosition(),
+        isUsersTurn: this.isUsersTurn(),
+        currentDj: this.getCurrentDj(),
+        // Personal playlist
+        personalPlaylist: this.getPersonalPlaylist()
       }
     });
     window.dispatchEvent(event);
@@ -1251,6 +1416,37 @@ export class PlaylistManager {
    */
   setVolume(volume: number): void {
     this.player.setVolume(volume);
+  }
+
+  /**
+   * Get user's position in the DJ waitlist (1-based)
+   * Returns null if user is not in the queue
+   */
+  getUserQueuePosition(): number | null {
+    if (!this.userId) return null;
+    const index = this.playlist.queue.findIndex(item => item.addedBy === this.userId);
+    return index >= 0 ? index + 1 : null;
+  }
+
+  /**
+   * Check if it's currently the user's turn (their track is playing)
+   */
+  isUsersTurn(): boolean {
+    if (!this.userId) return false;
+    const currentItem = this.playlist.queue[0];
+    return currentItem?.addedBy === this.userId;
+  }
+
+  /**
+   * Get current DJ info (who's track is playing)
+   */
+  getCurrentDj(): { userId: string; userName: string } | null {
+    const currentItem = this.playlist.queue[0];
+    if (!currentItem) return null;
+    return {
+      userId: currentItem.addedBy || '',
+      userName: currentItem.addedByName || 'Anonymous'
+    };
   }
 
   /**
