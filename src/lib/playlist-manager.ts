@@ -605,17 +605,14 @@ export class PlaylistManager {
       // Update NOW PLAYING display
       this.updateNowPlayingDisplay(currentItem);
 
-      await this.player.loadItem(currentItem);
-
-      // Sync to global position if trackStartedAt is set
+      // Calculate sync position BEFORE loading the item
       const syncPosition = this.calculateSyncPosition();
       if (syncPosition > 2) { // Only seek if more than 2 seconds in
-        console.log('[PlaylistManager] Syncing to position:', syncPosition, 'seconds');
-        // Wait a moment for player to be ready, then seek
-        setTimeout(async () => {
-          await this.player.seekTo(syncPosition);
-        }, 500);
+        console.log('[PlaylistManager] Setting pending seek to:', syncPosition, 'seconds');
+        this.player.setPendingSeek(syncPosition);
       }
+
+      await this.player.loadItem(currentItem);
 
       this.renderUI();
 

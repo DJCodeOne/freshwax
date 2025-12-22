@@ -24,10 +24,23 @@ export class EmbedPlayerManager {
     vimeo: false,
     soundcloud: false
   };
+  private pendingSeekPosition: number | null = null;
+  private hasInitialSeekExecuted: boolean = false;
 
   constructor(containerId: string, callbacks: PlayerCallbacks = {}) {
     this.containerId = containerId;
     this.callbacks = callbacks;
+  }
+
+  /**
+   * Set a pending seek position to be executed when player starts playing
+   */
+  setPendingSeek(seconds: number): void {
+    this.pendingSeekPosition = seconds > 2 ? seconds : null;
+    this.hasInitialSeekExecuted = false;
+    if (this.pendingSeekPosition) {
+      console.log('[EmbedPlayerManager] Pending seek set to:', seconds, 'seconds');
+    }
   }
 
   /**
@@ -37,6 +50,9 @@ export class EmbedPlayerManager {
     try {
       // Clean up current player
       await this.cleanup();
+
+      // Reset initial seek flag (but keep pendingSeekPosition if set)
+      this.hasInitialSeekExecuted = false;
 
       // Load the appropriate player
       switch (item.platform) {
@@ -106,6 +122,17 @@ export class EmbedPlayerManager {
           }
           // @ts-ignore
           if (event.data === YT.PlayerState.PLAYING) {
+            // Execute pending seek when video first starts playing
+            if (this.pendingSeekPosition && !this.hasInitialSeekExecuted) {
+              this.hasInitialSeekExecuted = true;
+              const seekPos = this.pendingSeekPosition;
+              this.pendingSeekPosition = null;
+              console.log('[EmbedPlayerManager] Executing pending seek to:', seekPos, 'seconds');
+              // Small delay to ensure player is truly ready
+              setTimeout(() => {
+                this.youtubePlayer?.seekTo(seekPos, true);
+              }, 100);
+            }
             this.callbacks.onStateChange?.('playing');
           }
         },
@@ -146,7 +173,19 @@ export class EmbedPlayerManager {
       this.callbacks.onError?.('Vimeo player error: ' + error.message);
     });
 
-    this.vimeoPlayer.on('play', () => {
+    this.vimeoPlayer.on('play', async () => {
+      // Execute pending seek when video first starts playing
+      if (this.pendingSeekPosition && !this.hasInitialSeekExecuted) {
+        this.hasInitialSeekExecuted = true;
+        const seekPos = this.pendingSeekPosition;
+        this.pendingSeekPosition = null;
+        console.log('[EmbedPlayerManager] Executing pending seek to:', seekPos, 'seconds');
+        try {
+          await this.vimeoPlayer?.setCurrentTime(seekPos);
+        } catch (e) {
+          console.warn('[Vimeo] Seek error:', e);
+        }
+      }
       this.callbacks.onStateChange?.('playing');
     });
 
@@ -192,6 +231,14 @@ export class EmbedPlayerManager {
     });
 
     this.soundcloudWidget.bind(SC.Widget.Events.PLAY, () => {
+      // Execute pending seek when track first starts playing
+      if (this.pendingSeekPosition && !this.hasInitialSeekExecuted) {
+        this.hasInitialSeekExecuted = true;
+        const seekPos = this.pendingSeekPosition;
+        this.pendingSeekPosition = null;
+        console.log('[EmbedPlayerManager] Executing pending seek to:', seekPos, 'seconds');
+        this.soundcloudWidget?.seekTo(seekPos * 1000); // SoundCloud uses ms
+      }
       this.callbacks.onStateChange?.('playing');
     });
   }
@@ -272,6 +319,14 @@ export class EmbedPlayerManager {
       });
 
       this.directVideo.addEventListener('play', () => {
+        // Execute pending seek when video first starts playing
+        if (this.pendingSeekPosition && !this.hasInitialSeekExecuted && this.directVideo) {
+          this.hasInitialSeekExecuted = true;
+          const seekPos = this.pendingSeekPosition;
+          this.pendingSeekPosition = null;
+          console.log('[EmbedPlayerManager] Executing pending seek to:', seekPos, 'seconds');
+          this.directVideo.currentTime = seekPos;
+        }
         this.callbacks.onStateChange?.('playing');
       });
     }
