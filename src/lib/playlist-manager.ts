@@ -173,6 +173,11 @@ export class PlaylistManager {
     // Load global playlist from server
     await this.loadFromServer();
 
+    // Load personal playlist from Firebase if authenticated
+    if (this.isAuthenticated && this.userId) {
+      await this.loadPersonalPlaylistFromServer();
+    }
+
     // Subscribe to Pusher for real-time updates
     await this.subscribeToPusher();
 
@@ -1017,18 +1022,60 @@ export class PlaylistManager {
   // ============================================
 
   /**
-   * Load personal playlist from localStorage
+   * Load personal playlist from localStorage (initial/fallback)
    */
   private loadPersonalPlaylist(): void {
     try {
       const stored = localStorage.getItem(PERSONAL_PLAYLIST_KEY);
       if (stored) {
         this.personalPlaylist = JSON.parse(stored);
-        console.log('[PlaylistManager] Loaded personal playlist:', this.personalPlaylist.length, 'items');
+        console.log('[PlaylistManager] Loaded personal playlist from localStorage:', this.personalPlaylist.length, 'items');
       }
     } catch (error) {
       console.error('[PlaylistManager] Error loading personal playlist:', error);
       this.personalPlaylist = [];
+    }
+  }
+
+  /**
+   * Load personal playlist from Firebase (called when user authenticates)
+   */
+  async loadPersonalPlaylistFromServer(): Promise<void> {
+    if (!this.userId) {
+      console.log('[PlaylistManager] No userId, skipping Firebase playlist load');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/playlist/personal?userId=${encodeURIComponent(this.userId)}`);
+      const result = await response.json();
+
+      if (result.success && Array.isArray(result.playlist)) {
+        // Merge with localStorage (Firebase takes priority for duplicates)
+        const firebaseItems = result.playlist;
+        const localItems = this.personalPlaylist;
+
+        // Create a map of existing URLs from Firebase
+        const firebaseUrls = new Set(firebaseItems.map((item: any) => item.url));
+
+        // Add local items that aren't in Firebase
+        const mergedItems = [...firebaseItems];
+        for (const localItem of localItems) {
+          if (!firebaseUrls.has(localItem.url)) {
+            mergedItems.push(localItem);
+          }
+        }
+
+        this.personalPlaylist = mergedItems;
+        console.log('[PlaylistManager] Loaded personal playlist from Firebase:', firebaseItems.length, 'items, merged total:', mergedItems.length);
+
+        // Save merged list back to both localStorage and Firebase
+        this.savePersonalPlaylist();
+        this.savePersonalPlaylistToServer();
+      }
+    } catch (error) {
+      console.error('[PlaylistManager] Error loading personal playlist from Firebase:', error);
+      // Keep using localStorage data
     }
   }
 
@@ -1039,7 +1086,28 @@ export class PlaylistManager {
     try {
       localStorage.setItem(PERSONAL_PLAYLIST_KEY, JSON.stringify(this.personalPlaylist));
     } catch (error) {
-      console.error('[PlaylistManager] Error saving personal playlist:', error);
+      console.error('[PlaylistManager] Error saving personal playlist to localStorage:', error);
+    }
+  }
+
+  /**
+   * Save personal playlist to Firebase (async, non-blocking)
+   */
+  private async savePersonalPlaylistToServer(): Promise<void> {
+    if (!this.userId) return;
+
+    try {
+      await fetch('/api/playlist/personal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: this.userId,
+          items: this.personalPlaylist
+        })
+      });
+      console.log('[PlaylistManager] Personal playlist saved to Firebase');
+    } catch (error) {
+      console.error('[PlaylistManager] Error saving personal playlist to Firebase:', error);
     }
   }
 
@@ -1092,6 +1160,7 @@ export class PlaylistManager {
 
       this.personalPlaylist.push(item);
       this.savePersonalPlaylist();
+      this.savePersonalPlaylistToServer(); // Save to Firebase for persistence
       this.renderUI();
 
       console.log('[PlaylistManager] Added to personal playlist:', item.title || item.url);
@@ -1110,6 +1179,7 @@ export class PlaylistManager {
     if (index >= 0) {
       const removed = this.personalPlaylist.splice(index, 1)[0];
       this.savePersonalPlaylist();
+      this.savePersonalPlaylistToServer(); // Save to Firebase for persistence
       this.renderUI();
       console.log('[PlaylistManager] Removed from personal playlist:', removed.title || removed.url);
     }
@@ -1146,6 +1216,7 @@ export class PlaylistManager {
   clearPersonalPlaylist(): void {
     this.personalPlaylist = [];
     this.savePersonalPlaylist();
+    this.savePersonalPlaylistToServer(); // Save to Firebase for persistence
     this.renderUI();
     console.log('[PlaylistManager] Personal playlist cleared');
   }
