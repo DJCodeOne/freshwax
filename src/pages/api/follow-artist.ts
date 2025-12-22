@@ -155,8 +155,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         currentFollowed.push(artistIdentifier);
       }
 
-      await setDocument('customers', userId, {
-        ...customerDoc,
+      // Only update followedArtists fields to comply with Firestore rules
+      await updateDocument('customers', userId, {
         followedArtists: currentFollowed,
         followedArtistsUpdatedAt: now
       });
@@ -210,8 +210,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       } else {
         currentFollowed.push(artistIdentifier);
-        await setDocument('customers', userId, {
-          ...customerDoc,
+        // Only update followedArtists fields to comply with Firestore rules
+        await updateDocument('customers', userId, {
           followedArtists: currentFollowed,
           followedArtistsUpdatedAt: now
         });

@@ -78,7 +78,10 @@ service cloud.firestore {
                         .hasOnly(['roles', 'isArtist', 'isMerchSupplier', 'approved', 'updatedAt']) ||
                       // Allow wishlist updates from REST API
                       request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['wishlist', 'wishlistUpdatedAt']);
+                        .hasOnly(['wishlist', 'wishlistUpdatedAt']) ||
+                      // Allow followedArtists updates from REST API
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['followedArtists', 'followedArtistsUpdatedAt']);
       allow delete: if isAdmin();
     }
 
