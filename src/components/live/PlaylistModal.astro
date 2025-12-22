@@ -751,6 +751,8 @@
     margin-top: 1.5rem;
     padding-top: 1rem;
     border-top: 1px solid rgba(139, 92, 246, 0.2);
+    width: 100%;
+    text-align: left;
   }
 
   .my-playlist-header {
@@ -758,12 +760,14 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 0.75rem;
+    width: 100%;
   }
 
   .my-playlist-header h3 {
     margin: 0;
     font-size: 1rem;
     color: #a78bfa;
+    text-align: left;
   }
 
   .clear-playlist-btn {
@@ -787,6 +791,18 @@
     gap: 0.5rem;
     max-height: 200px;
     overflow-y: auto;
+    width: 100%;
+  }
+
+  .my-playlist-grid .playlist-empty {
+    grid-column: unset;
+    text-align: center;
+    padding: 1.5rem;
+    color: #666;
+  }
+
+  .my-playlist-grid .playlist-empty p {
+    margin: 0.25rem 0;
   }
 
   /* Personal playlist item - horizontal compact style */
@@ -813,6 +829,9 @@
     overflow: hidden;
     flex-shrink: 0;
     background: #0a0a15;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .personal-item-thumb img {
@@ -821,9 +840,15 @@
     object-fit: cover;
   }
 
+  .personal-item-thumb svg {
+    width: 24px;
+    height: 24px;
+  }
+
   .personal-item-info {
     flex: 1;
     min-width: 0;
+    text-align: left;
   }
 
   .personal-item-title {
@@ -833,12 +858,14 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: left;
   }
 
   .personal-item-platform {
     font-size: 0.65rem;
     color: rgba(139, 92, 246, 0.7);
     text-transform: uppercase;
+    text-align: left;
   }
 
   .personal-item-actions {
