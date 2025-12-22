@@ -296,6 +296,16 @@ function handlePlaylistUpdate(event) {
     window.emojiAnimationsEnabled = true;
     setReactionButtonsEnabled(true);
 
+    // Set up global channel for playlist mode reactions (if no livestream)
+    if (!window.isLiveStreamActive && !window.currentStreamId) {
+      window.currentStreamId = 'playlist-global';
+      // Setup chat/Pusher for global reactions
+      if (typeof setupChat === 'function') {
+        setupChat('playlist-global');
+      }
+      console.log('[Playlist] Set up global channel for reactions');
+    }
+
     console.log('[Playlist] Showing video player for playlist, emojis enabled');
   } else {
     // No playlist items - hide playlist player
@@ -318,6 +328,10 @@ function handlePlaylistUpdate(event) {
     if (!window.isLiveStreamActive) {
       window.emojiAnimationsEnabled = false;
       setReactionButtonsEnabled(false);
+      // Clear global stream ID if it was set for playlist mode
+      if (window.currentStreamId === 'playlist-global') {
+        window.currentStreamId = null;
+      }
     }
 
     console.log('[Playlist] Queue empty, hiding playlist player');
