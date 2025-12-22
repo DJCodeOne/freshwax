@@ -114,6 +114,20 @@ export class EmbedPlayerManager {
       events: {
         onReady: () => {
           this.callbacks.onReady?.();
+          // Fallback: if pending seek is set, execute it after player is ready
+          if (this.pendingSeekPosition && !this.hasInitialSeekExecuted) {
+            const seekPos = this.pendingSeekPosition;
+            console.log('[EmbedPlayerManager] onReady: Will seek to', seekPos, 'seconds after delay');
+            setTimeout(() => {
+              // Double-check we haven't already seeked
+              if (!this.hasInitialSeekExecuted && this.youtubePlayer) {
+                this.hasInitialSeekExecuted = true;
+                this.pendingSeekPosition = null;
+                console.log('[EmbedPlayerManager] onReady fallback: Seeking to', seekPos, 'seconds');
+                this.youtubePlayer.seekTo(seekPos, true);
+              }
+            }, 500);
+          }
         },
         onStateChange: (event: any) => {
           // @ts-ignore
