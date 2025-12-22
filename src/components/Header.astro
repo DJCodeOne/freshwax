@@ -763,6 +763,10 @@ const firebaseConfig = {
         newBtn.addEventListener('click', async () => {
           try {
             sessionStorage.removeItem(USER_CACHE_KEY);
+            // Clear auth cookies
+            document.cookie = 'userId=; path=/; max-age=0';
+            document.cookie = 'customerId=; path=/; max-age=0';
+            document.cookie = 'partnerId=; path=/; max-age=0';
             await signOut(auth);
             window.location.href = '/';
           } catch (e) {
@@ -784,6 +788,12 @@ const firebaseConfig = {
   // Auth state change listener (only set once)
   onAuthStateChanged(auth, async (user) => {
     if (user) {
+      // Always ensure userId and customerId cookies are set for authenticated users
+      // This enables wishlist and other features that check cookies
+      const cookieMaxAge = 30 * 24 * 60 * 60; // 30 days
+      document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
+      document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
+
       let cachedData = getCachedUserType();
       // Force refresh if no cache OR cache has no avatarUrl (might have been uploaded since)
       const needsFresh = !cachedData || !cachedData.avatarUrl;
