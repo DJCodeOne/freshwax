@@ -444,36 +444,49 @@
 
   /* Queue item card style - compact rows for all items */
   .playlist-grid-item {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    background: rgba(20, 20, 35, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 6px;
-    overflow: hidden;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    background: rgba(20, 20, 35, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
     transition: all 0.2s ease;
-    height: 50px;
-    padding: 0;
+    height: 50px !important;
+    padding: 0 !important;
+  }
+
+  .playlist-grid-item::before {
+    display: none !important;
+    content: none !important;
   }
 
   .playlist-grid-item:hover {
-    border-color: rgba(255, 255, 255, 0.3);
-    background: rgba(30, 30, 50, 0.95);
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    background: rgba(30, 30, 50, 0.95) !important;
   }
 
   /* Compact thumbnail for all items */
   .playlist-grid-item .playlist-grid-thumb {
-    width: 70px;
-    min-width: 70px;
-    height: 50px;
-    aspect-ratio: auto;
+    width: 70px !important;
+    min-width: 70px !important;
+    max-width: 70px !important;
+    height: 50px !important;
+    aspect-ratio: auto !important;
   }
 
   /* Active/now playing item - highlight but keep compact */
   .playlist-grid-item.active {
-    border-color: #dc2626;
-    border-width: 2px;
-    background: rgba(220, 38, 38, 0.15);
+    border-color: #dc2626 !important;
+    border-width: 2px !important;
+    background: rgba(220, 38, 38, 0.15) !important;
+    height: 50px !important;
+    flex-direction: row !important;
+  }
+
+  .playlist-grid-item.active::before {
+    display: none !important;
+    content: none !important;
   }
 
   .playlist-grid-thumb {
