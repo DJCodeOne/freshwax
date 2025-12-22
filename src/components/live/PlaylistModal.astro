@@ -142,7 +142,15 @@
           <div id="myPlaylistSection" class="my-playlist-section" style="display: flex;">
             <div class="my-playlist-header">
               <h3>My Playlist <span id="myPlaylistCount" class="queue-count">0</span></h3>
-              <button id="clearMyPlaylistBtn" class="clear-playlist-btn" title="Clear all">Clear</button>
+              <div class="my-playlist-actions">
+                <button id="clearMyPlaylistBtn" class="clear-playlist-btn" title="Clear all">Clear</button>
+                <button id="backToStreamBtn" class="back-to-stream-btn" title="Back to stream">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                  Back
+                </button>
+              </div>
             </div>
             <div id="myPlaylistGrid" class="my-playlist-grid">
               <div class="playlist-empty">
@@ -392,13 +400,82 @@
     width: 100%;
     height: 100%;
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .preview-player-container iframe {
+  .preview-thumbnail-wrapper {
     width: 100%;
     height: 100%;
-    border: none;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
     border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .preview-thumbnail-wrapper img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .preview-playing-indicator {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 20px;
+    padding: 6px 10px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+  }
+
+  .playing-bar {
+    width: 4px;
+    background: #22c55e;
+    border-radius: 2px;
+    animation: playingBars 0.8s ease-in-out infinite;
+  }
+
+  .playing-bar:nth-child(1) {
+    height: 8px;
+    animation-delay: 0s;
+  }
+
+  .playing-bar:nth-child(2) {
+    height: 14px;
+    animation-delay: 0.2s;
+  }
+
+  .playing-bar:nth-child(3) {
+    height: 10px;
+    animation-delay: 0.4s;
+  }
+
+  @keyframes playingBars {
+    0%, 100% {
+      transform: scaleY(0.5);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+
+  .preview-no-thumb {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.3);
   }
 
   .preview-track-info {
@@ -966,6 +1043,12 @@
     text-align: left;
   }
 
+  .my-playlist-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
   .clear-playlist-btn {
     padding: 0.4rem 0.8rem;
     font-size: 0.75rem;
@@ -979,6 +1062,28 @@
 
   .clear-playlist-btn:hover {
     background: rgba(239, 68, 68, 0.25);
+  }
+
+  .back-to-stream-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 6px;
+    color: #60a5fa;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .back-to-stream-btn:hover {
+    background: rgba(59, 130, 246, 0.25);
+  }
+
+  .back-to-stream-btn svg {
+    flex-shrink: 0;
   }
 
   .my-playlist-grid {
@@ -1579,6 +1684,18 @@
       });
     }
 
+    // Back to Stream button - closes modal and returns to live stream
+    const backToStreamBtn = document.getElementById('backToStreamBtn');
+    if (backToStreamBtn && !backToStreamBtn.dataset.listenerAttached) {
+      backToStreamBtn.dataset.listenerAttached = 'true';
+      backToStreamBtn.addEventListener('click', () => {
+        const modal = document.getElementById('playlistModal');
+        if (modal) {
+          modal.classList.add('hidden');
+        }
+      });
+    }
+
     if (urlInput && !urlInput.dataset.listenerAttached) {
       urlInput.dataset.listenerAttached = 'true';
       urlInput.addEventListener('keypress', (e) => {
@@ -1750,7 +1867,7 @@
     updateVideoPreview(currentItem, currentDj);
   }
 
-  // Update the video preview player
+  // Update the video preview - thumbnail only, no interactive player
   function updateVideoPreview(currentItem: any, currentDj: any) {
     const previewContainer = document.getElementById('previewPlayerContainer');
     const previewEmpty = document.querySelector('.queue-video-preview .preview-empty') as HTMLElement;
@@ -1769,7 +1886,7 @@
       return;
     }
 
-    // Hide empty state, show player
+    // Hide empty state, show preview
     if (previewEmpty) previewEmpty.style.display = 'none';
     previewContainer.classList.remove('hidden');
 
@@ -1780,47 +1897,28 @@
       previewDjName.textContent = `DJ: ${currentDj?.userName || currentItem.addedByName || 'Unknown'}`;
     }
 
-    // Create embed URL based on platform
-    let embedUrl = '';
-    const embedId = currentItem.embedId || currentItem.id;
-
-    switch (currentItem.platform) {
-      case 'youtube':
-        embedUrl = `https://www.youtube.com/embed/${embedId}?autoplay=0&mute=1&controls=1&modestbranding=1`;
-        break;
-      case 'vimeo':
-        embedUrl = `https://player.vimeo.com/video/${embedId}?muted=1&controls=1`;
-        break;
-      case 'soundcloud':
-        embedUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(currentItem.url)}&auto_play=false&visual=true`;
-        break;
-      default:
-        // For direct URLs or unknown, show thumbnail as fallback
-        if (currentItem.thumbnail) {
-          previewContainer.innerHTML = `
-            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#000;">
-              <img src="${currentItem.thumbnail}" alt="${currentItem.title}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;" />
-            </div>
-          `;
-        } else {
-          previewContainer.innerHTML = `
-            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#111;color:#666;">
-              <span>Preview not available</span>
-            </div>
-          `;
-        }
-        return;
+    // Show thumbnail only - no interactive player
+    if (currentItem.thumbnail) {
+      previewContainer.innerHTML = `
+        <div class="preview-thumbnail-wrapper">
+          <img src="${currentItem.thumbnail}" alt="${currentItem.title || 'Now Playing'}" />
+          <div class="preview-playing-indicator">
+            <span class="playing-bar"></span>
+            <span class="playing-bar"></span>
+            <span class="playing-bar"></span>
+          </div>
+        </div>
+      `;
+    } else {
+      previewContainer.innerHTML = `
+        <div class="preview-no-thumb">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polygon points="10 8 16 12 10 16 10 8"></polygon>
+          </svg>
+        </div>
+      `;
     }
-
-    // Create iframe for supported platforms
-    previewContainer.innerHTML = `
-      <iframe
-        src="${embedUrl}"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen
-        loading="lazy"
-      ></iframe>
-    `;
   }
 
   // Add playlist update listener once
