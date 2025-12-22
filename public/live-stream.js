@@ -243,13 +243,44 @@ async function init() {
 
   // Always subscribe to reaction channel for emoji broadcasts
   // This ensures all users can see reactions even without active playlist
-  if (!window.isLiveStreamActive && !window.currentStreamId) {
-    window.currentStreamId = 'playlist-global';
-    window.emojiAnimationsEnabled = true; // Enable receiving emoji animations
-    setupChat('playlist-global');
-    console.log('[Init] Subscribed to playlist-global for reactions');
-  }
+  // Use a slight delay to ensure DOM and Pusher config are ready
+  setTimeout(() => {
+    console.log('[Init] Checking reaction subscription...', {
+      isLiveStreamActive: window.isLiveStreamActive,
+      currentStreamId: window.currentStreamId,
+      emojiAnimationsEnabled: window.emojiAnimationsEnabled
+    });
+
+    if (!window.isLiveStreamActive) {
+      // Always enable emoji animations when on the live page
+      window.emojiAnimationsEnabled = true;
+
+      // Subscribe to playlist-global if not already subscribed to a stream
+      if (!window.currentStreamId || window.currentStreamId === 'playlist-global') {
+        window.currentStreamId = 'playlist-global';
+        setupChat('playlist-global');
+        console.log('[Init] Subscribed to playlist-global for reactions');
+      } else {
+        console.log('[Init] Already subscribed to:', window.currentStreamId);
+      }
+    } else {
+      console.log('[Init] Live stream active, using live stream channel');
+    }
+  }, 500);
 }
+
+// Diagnostic function - run window.debugReactions() in console
+window.debugReactions = function() {
+  console.log('=== REACTION DEBUG INFO ===');
+  console.log('emojiAnimationsEnabled:', window.emojiAnimationsEnabled);
+  console.log('currentStreamId:', window.currentStreamId);
+  console.log('isLiveStreamActive:', window.isLiveStreamActive);
+  console.log('pusher connected:', !!window.Pusher);
+  console.log('chatChannel:', window.pusherChannel?.name || 'not subscribed');
+  console.log('PUSHER_CONFIG:', window.PUSHER_CONFIG);
+  console.log('===========================');
+  return 'Check values above';
+};
 
 // Named handler for playlist updates (allows removal to prevent duplicates)
 function handlePlaylistUpdate(event) {
@@ -1852,12 +1883,14 @@ async function setupChat(streamId) {
   // Add subscription state logging
   chatChannel.bind('pusher:subscription_succeeded', () => {
     console.log('[DEBUG] Successfully subscribed to channel:', channelName);
+    console.log('[Reaction] Channel ready to receive reactions');
   });
 
   chatChannel.bind('pusher:subscription_error', (error) => {
     console.error('[DEBUG] Channel subscription error:', channelName, error);
   });
 
+  // Bind event listeners immediately (Pusher queues them until subscription succeeds)
   chatChannel.bind('new-message', (message) => {
     console.log('[DEBUG] Received new-message event:', message);
     // Add new message to array
@@ -2476,21 +2509,25 @@ function setupReactions(streamId) {
 // Create floating emoji from broadcast (random position)
 function createFloatingEmojiFromBroadcast(emojiList) {
   // Skip if emoji animations are disabled (no active livestream)
-  if (!window.emojiAnimationsEnabled) return;
+  if (!window.emojiAnimationsEnabled) {
+    console.log('[Reaction] Emoji animations disabled, skipping');
+    return;
+  }
 
   console.log('[Reaction] createFloatingEmojiFromBroadcast called with:', emojiList);
-  const playerArea = document.querySelector('.player-wrapper') || document.querySelector('.player-column');
+  const playerArea = document.querySelector('.video-player') || document.querySelector('.player-wrapper') || document.querySelector('.player-column');
   let x, y;
 
   if (playerArea) {
     const rect = playerArea.getBoundingClientRect();
     x = rect.left + Math.random() * rect.width;
-    y = rect.top + rect.height * 0.6 + Math.random() * rect.height * 0.3;
+    y = rect.top + rect.height * 0.5 + Math.random() * rect.height * 0.3;
     console.log('[Reaction] Player area found, position:', { x, y, rect });
   } else {
-    x = window.innerWidth * 0.3 + Math.random() * window.innerWidth * 0.4;
-    y = window.innerHeight * 0.4 + Math.random() * window.innerHeight * 0.3;
-    console.log('[Reaction] No player area, using window position:', { x, y });
+    // Center of screen fallback
+    x = window.innerWidth * 0.25 + Math.random() * window.innerWidth * 0.5;
+    y = window.innerHeight * 0.3 + Math.random() * window.innerHeight * 0.4;
+    console.log('[Reaction] No player area, using centered window position:', { x, y });
   }
   
   // Create the floating emoji
