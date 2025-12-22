@@ -38,7 +38,7 @@
 
       <!-- Two Column Layout for Queue and My Playlist -->
       <div class="playlist-columns">
-        <!-- Left Column: Queue Section -->
+        <!-- Left Column: Queue Section (split into queue list + video preview) -->
         <div class="playlist-column queue-column">
           <!-- URL Input - Only for logged in users -->
           <div class="playlist-add-section">
@@ -88,19 +88,51 @@
             <span id="positionText"></span>
           </div>
 
-          <!-- Queue Status -->
-          <div class="playlist-queue-header">
-            <h3>DJ Queue <span id="queueCount" class="queue-count">0/10</span></h3>
-          </div>
+          <!-- Split container: Queue List + Video Preview -->
+          <div class="queue-split-container">
+            <!-- Queue List Side -->
+            <div class="queue-list-side">
+              <div class="playlist-queue-header">
+                <h3>DJ Queue <span id="queueCount" class="queue-count">0/10</span></h3>
+              </div>
+              <div id="playlistQueue" class="playlist-queue-grid">
+                <div class="playlist-empty">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                  <p>DJ Waitlist is empty</p>
+                  <p class="playlist-empty-hint">Add a track to join</p>
+                </div>
+              </div>
+            </div>
 
-          <!-- Queue Grid -->
-          <div id="playlistQueue" class="playlist-queue-grid">
-            <div class="playlist-empty">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-              <p>DJ Waitlist is empty</p>
-              <p class="playlist-empty-hint">Add a track to join the queue</p>
+            <!-- Video Preview Side -->
+            <div class="queue-preview-side">
+              <div class="preview-header">
+                <h3>Now Playing</h3>
+              </div>
+              <div id="queueVideoPreview" class="queue-video-preview">
+                <div class="preview-empty">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                    <line x1="7" y1="2" x2="7" y2="22"></line>
+                    <line x1="17" y1="2" x2="17" y2="22"></line>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <line x1="2" y1="7" x2="7" y2="7"></line>
+                    <line x1="2" y1="17" x2="7" y2="17"></line>
+                    <line x1="17" y1="17" x2="22" y2="17"></line>
+                    <line x1="17" y1="7" x2="22" y2="7"></line>
+                  </svg>
+                  <p>No video playing</p>
+                </div>
+                <div id="previewPlayerContainer" class="preview-player-container hidden">
+                  <!-- Video iframe will be inserted here -->
+                </div>
+              </div>
+              <div id="previewTrackInfo" class="preview-track-info hidden">
+                <div class="preview-track-title" id="previewTrackTitle">--</div>
+                <div class="preview-track-dj" id="previewTrackDj">DJ: --</div>
+              </div>
             </div>
           </div>
         </div>
@@ -284,6 +316,110 @@
 
   .my-playlist-column {
     padding-left: 0.5rem;
+  }
+
+  /* Split container for queue list + video preview */
+  .queue-split-container {
+    display: flex;
+    gap: 1rem;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .queue-list-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .queue-preview-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .preview-header {
+    margin-bottom: 0.75rem;
+  }
+
+  .preview-header h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+  }
+
+  .queue-video-preview {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    overflow: hidden;
+    min-height: 200px;
+  }
+
+  .preview-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.3);
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .preview-empty svg {
+    opacity: 0.4;
+  }
+
+  .preview-empty p {
+    font-size: 0.85rem;
+    margin: 0;
+  }
+
+  .preview-player-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+
+  .preview-player-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 8px;
+  }
+
+  .preview-track-info {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .preview-track-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.25rem;
+  }
+
+  .preview-track-dj {
+    font-size: 0.75rem;
+    color: #60a5fa;
   }
 
   /* Add section styling */
@@ -1026,6 +1162,16 @@
     .my-playlist-grid {
       max-height: 30vh;
     }
+
+    /* Stack queue list and preview vertically on tablet */
+    .queue-split-container {
+      flex-direction: column;
+    }
+
+    .queue-preview-side {
+      min-height: 250px;
+      max-height: 300px;
+    }
   }
 
   /* Mobile: single column */
@@ -1591,6 +1737,7 @@
 
     if (queue.length === 0 || currentIndex >= queue.length) {
       strip.classList.add('hidden');
+      updateVideoPreview(null, null);
       return;
     }
 
@@ -1598,6 +1745,82 @@
     strip.classList.remove('hidden');
     djName.textContent = currentDj?.userName || currentItem?.addedByName || 'Unknown';
     title.textContent = currentItem?.title || 'Unknown Track';
+
+    // Update video preview
+    updateVideoPreview(currentItem, currentDj);
+  }
+
+  // Update the video preview player
+  function updateVideoPreview(currentItem: any, currentDj: any) {
+    const previewContainer = document.getElementById('previewPlayerContainer');
+    const previewEmpty = document.querySelector('.queue-video-preview .preview-empty') as HTMLElement;
+    const previewTrackInfo = document.getElementById('previewTrackInfo');
+    const previewTitle = document.getElementById('previewTrackTitle');
+    const previewDjName = document.getElementById('previewTrackDj');
+
+    if (!previewContainer) return;
+
+    if (!currentItem) {
+      // No track playing - show empty state
+      previewContainer.classList.add('hidden');
+      previewContainer.innerHTML = '';
+      if (previewEmpty) previewEmpty.style.display = 'flex';
+      if (previewTrackInfo) previewTrackInfo.classList.add('hidden');
+      return;
+    }
+
+    // Hide empty state, show player
+    if (previewEmpty) previewEmpty.style.display = 'none';
+    previewContainer.classList.remove('hidden');
+
+    // Update track info
+    if (previewTrackInfo && previewTitle && previewDjName) {
+      previewTrackInfo.classList.remove('hidden');
+      previewTitle.textContent = currentItem.title || 'Unknown Track';
+      previewDjName.textContent = `DJ: ${currentDj?.userName || currentItem.addedByName || 'Unknown'}`;
+    }
+
+    // Create embed URL based on platform
+    let embedUrl = '';
+    const embedId = currentItem.embedId || currentItem.id;
+
+    switch (currentItem.platform) {
+      case 'youtube':
+        embedUrl = `https://www.youtube.com/embed/${embedId}?autoplay=0&mute=1&controls=1&modestbranding=1`;
+        break;
+      case 'vimeo':
+        embedUrl = `https://player.vimeo.com/video/${embedId}?muted=1&controls=1`;
+        break;
+      case 'soundcloud':
+        embedUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(currentItem.url)}&auto_play=false&visual=true`;
+        break;
+      default:
+        // For direct URLs or unknown, show thumbnail as fallback
+        if (currentItem.thumbnail) {
+          previewContainer.innerHTML = `
+            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#000;">
+              <img src="${currentItem.thumbnail}" alt="${currentItem.title}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;" />
+            </div>
+          `;
+        } else {
+          previewContainer.innerHTML = `
+            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#111;color:#666;">
+              <span>Preview not available</span>
+            </div>
+          `;
+        }
+        return;
+    }
+
+    // Create iframe for supported platforms
+    previewContainer.innerHTML = `
+      <iframe
+        src="${embedUrl}"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+        loading="lazy"
+      ></iframe>
+    `;
   }
 
   // Add playlist update listener once
