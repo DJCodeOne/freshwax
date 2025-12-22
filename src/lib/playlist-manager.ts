@@ -656,7 +656,7 @@ export class PlaylistManager {
   }
 
   /**
-   * Enable emoji reactions and audio meters
+   * Enable emoji reactions, audio meters, and chat
    */
   private enableEmojis(): void {
     (window as any).emojiAnimationsEnabled = true;
@@ -667,10 +667,28 @@ export class PlaylistManager {
       btn.classList.remove('disabled', 'reactions-disabled');
     });
 
-    // Hide "Sign in to chat" prompt
+    // Hide "Sign in to chat" prompt and show chat input
     const loginPrompt = document.getElementById('loginPrompt');
     if (loginPrompt) {
       loginPrompt.style.display = 'none';
+    }
+
+    // Enable chat for playlist mode
+    const chatInput = document.getElementById('chatInput') as HTMLInputElement;
+    const chatSend = document.getElementById('sendChat');
+    if (chatInput) {
+      chatInput.disabled = false;
+      chatInput.placeholder = 'Type a message...';
+    }
+    if (chatSend) {
+      (chatSend as HTMLButtonElement).disabled = false;
+    }
+
+    // Setup chat channel for playlist mode if not already done
+    if (typeof (window as any).setupChat === 'function' && !(window as any).playlistChatSetup) {
+      (window as any).setupChat('playlist-global');
+      (window as any).playlistChatSetup = true;
+      console.log('[PlaylistManager] Chat enabled for playlist mode');
     }
 
     // Start audio LED meters
@@ -679,7 +697,7 @@ export class PlaylistManager {
     }
 
     this.startPlaylistMeters();
-    console.log('[PlaylistManager] Emoji reactions and audio meters enabled');
+    console.log('[PlaylistManager] Emoji reactions, chat, and audio meters enabled');
   }
 
   /**
