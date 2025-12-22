@@ -675,46 +675,125 @@ export class PlaylistManager {
     this.stopPlaylistMeters();
   }
 
-  private playlistMeterInterval: number | null = null;
+  private playlistMeterAnimationId: number | null = null;
+  private meterState = {
+    leftLevel: 0,
+    rightLevel: 0,
+    targetLeft: 0,
+    targetRight: 0,
+    beatPhase: 0,
+    lastBeatTime: 0,
+    bpm: 140 + Math.random() * 40, // Random BPM between 140-180 for D&B feel
+  };
 
   /**
    * Start simulated audio meters for playlist playback
+   * Uses realistic decay, beat sync, and correlated stereo
    */
   private startPlaylistMeters(): void {
-    if (this.playlistMeterInterval) return;
+    if (this.playlistMeterAnimationId) return;
 
     const leftLeds = document.querySelectorAll('#leftMeter .led');
     const rightLeds = document.querySelectorAll('#rightMeter .led');
 
     if (leftLeds.length === 0 || rightLeds.length === 0) return;
 
-    this.playlistMeterInterval = window.setInterval(() => {
+    // Reset state
+    this.meterState.leftLevel = 0;
+    this.meterState.rightLevel = 0;
+    this.meterState.lastBeatTime = performance.now();
+    this.meterState.bpm = 140 + Math.random() * 40;
+
+    const updateMeters = () => {
       if (!this.playlist.isPlaying) {
         this.stopPlaylistMeters();
         return;
       }
 
-      const baseLevel = 4 + Math.random() * 5;
-      const leftLevel = Math.floor(baseLevel + (Math.random() - 0.5) * 4);
-      const rightLevel = Math.floor(baseLevel + (Math.random() - 0.5) * 4);
+      const now = performance.now();
+      const beatInterval = 60000 / this.meterState.bpm; // ms per beat
+      const timeSinceBeat = now - this.meterState.lastBeatTime;
 
-      leftLeds.forEach((led, i) => led.classList.toggle('active', i < leftLevel));
-      rightLeds.forEach((led, i) => led.classList.toggle('active', i < rightLevel));
-    }, 100);
+      // Check for beat hit
+      if (timeSinceBeat >= beatInterval) {
+        this.meterState.lastBeatTime = now;
+        // Strong beat - push levels up
+        const beatStrength = 0.7 + Math.random() * 0.3;
+        this.meterState.targetLeft = 8 + Math.random() * 6 * beatStrength;
+        this.meterState.targetRight = 8 + Math.random() * 6 * beatStrength;
 
-    console.log('[PlaylistManager] Audio meters started');
+        // Occasional big peak (like a drop or snare hit)
+        if (Math.random() < 0.15) {
+          this.meterState.targetLeft = Math.min(14, this.meterState.targetLeft + 3);
+          this.meterState.targetRight = Math.min(14, this.meterState.targetRight + 3);
+        }
+      } else {
+        // Between beats - decay with some variation
+        const decayProgress = timeSinceBeat / beatInterval;
+        const decay = 0.92 - decayProgress * 0.15; // Faster decay as we approach next beat
+
+        this.meterState.targetLeft *= decay;
+        this.meterState.targetRight *= decay;
+
+        // Add subtle random movement (hi-hats, cymbals)
+        if (Math.random() < 0.3) {
+          this.meterState.targetLeft += Math.random() * 2;
+          this.meterState.targetRight += Math.random() * 2;
+        }
+      }
+
+      // Smooth interpolation toward target (attack/release)
+      const attackSpeed = 0.4;
+      const releaseSpeed = 0.15;
+
+      if (this.meterState.targetLeft > this.meterState.leftLevel) {
+        this.meterState.leftLevel += (this.meterState.targetLeft - this.meterState.leftLevel) * attackSpeed;
+      } else {
+        this.meterState.leftLevel += (this.meterState.targetLeft - this.meterState.leftLevel) * releaseSpeed;
+      }
+
+      if (this.meterState.targetRight > this.meterState.rightLevel) {
+        this.meterState.rightLevel += (this.meterState.targetRight - this.meterState.rightLevel) * attackSpeed;
+      } else {
+        this.meterState.rightLevel += (this.meterState.targetRight - this.meterState.rightLevel) * releaseSpeed;
+      }
+
+      // Add slight stereo difference for realism
+      const stereoOffset = (Math.random() - 0.5) * 1.5;
+      const leftDisplay = Math.floor(Math.max(0, Math.min(14, this.meterState.leftLevel + stereoOffset)));
+      const rightDisplay = Math.floor(Math.max(0, Math.min(14, this.meterState.rightLevel - stereoOffset)));
+
+      // Update LED display
+      leftLeds.forEach((led, i) => led.classList.toggle('active', i < leftDisplay));
+      rightLeds.forEach((led, i) => led.classList.toggle('active', i < rightDisplay));
+
+      this.playlistMeterAnimationId = requestAnimationFrame(updateMeters);
+    };
+
+    this.playlistMeterAnimationId = requestAnimationFrame(updateMeters);
+    console.log('[PlaylistManager] Audio meters started (BPM:', Math.round(this.meterState.bpm), ')');
   }
 
   /**
    * Stop simulated audio meters
    */
   private stopPlaylistMeters(): void {
-    if (this.playlistMeterInterval) {
-      clearInterval(this.playlistMeterInterval);
-      this.playlistMeterInterval = null;
+    if (this.playlistMeterAnimationId) {
+      cancelAnimationFrame(this.playlistMeterAnimationId);
+      this.playlistMeterAnimationId = null;
     }
 
-    document.querySelectorAll('.led-strip .led').forEach(led => led.classList.remove('active'));
+    // Smooth fade out
+    const leftLeds = document.querySelectorAll('#leftMeter .led');
+    const rightLeds = document.querySelectorAll('#rightMeter .led');
+
+    leftLeds.forEach(led => led.classList.remove('active'));
+    rightLeds.forEach(led => led.classList.remove('active'));
+
+    // Reset state
+    this.meterState.leftLevel = 0;
+    this.meterState.rightLevel = 0;
+
     console.log('[PlaylistManager] Audio meters stopped');
   }
 
