@@ -2291,16 +2291,38 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         const checkAuth = async () => {
           console.log('[Live] Checking auth state...');
           let user = null;
+          const cachedUid = localStorage.getItem('fw_uid');
+
           try {
-            if (window.authReady) {
+            // First check if we already have a current user
+            if (window.firebaseAuth?.currentUser) {
+              user = window.firebaseAuth.currentUser;
+              console.log('[Live] Using firebaseAuth.currentUser');
+            } else if (window.authReady) {
               console.log('[Live] Using window.authReady');
               user = await window.authReady;
-            } else if (window.firebaseAuth) {
-              user = window.firebaseAuth.currentUser;
-            } else {
-              const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-              const auth = getAuth();
-              user = auth.currentUser;
+            }
+
+            // If no user but we have cached UID, wait for auth to sync
+            if (!user && cachedUid) {
+              console.log('[Live] No user but have cached UID, waiting for auth sync...');
+              const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+              const auth = window.firebaseAuth || getAuth();
+
+              // Wait up to 2 seconds for auth to sync
+              user = await new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                  console.log('[Live] Auth sync timeout');
+                  resolve(auth.currentUser);
+                }, 2000);
+
+                const unsubscribe = onAuthStateChanged(auth, (u) => {
+                  clearTimeout(timeout);
+                  unsubscribe();
+                  console.log('[Live] onAuthStateChanged resolved:', u?.uid);
+                  resolve(u);
+                });
+              });
             }
           } catch (err) {
             console.error('[Live] Auth check error:', err);
