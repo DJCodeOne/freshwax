@@ -129,7 +129,7 @@
               </div>
               <div id="previewTrackInfo" class="preview-track-info hidden">
                 <div class="preview-track-title" id="previewTrackTitle">--</div>
-                <div class="preview-track-dj" id="previewTrackDj">DJ: --</div>
+                <div class="preview-track-dj" id="previewTrackDj">Selecter: --</div>
               </div>
             </div>
           </div>
@@ -150,6 +150,8 @@
                 </button>
               </div>
             </div>
+            <!-- Pagination tabs for large playlists (20+ items) -->
+            <div id="myPlaylistPagination" class="my-playlist-pagination hidden"></div>
             <div id="myPlaylistGrid" class="my-playlist-grid">
               <div class="playlist-empty">
                 <p>Your playlist is empty</p>
@@ -1083,6 +1085,45 @@
     flex-shrink: 0;
   }
 
+  /* Playlist pagination tabs */
+  .my-playlist-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .my-playlist-pagination.hidden {
+    display: none;
+  }
+
+  .playlist-page-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: rgba(55, 65, 81, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .playlist-page-btn:hover {
+    background: rgba(75, 85, 99, 0.6);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #e5e7eb;
+  }
+
+  .playlist-page-btn.active {
+    background: rgba(139, 92, 246, 0.3);
+    border-color: rgba(139, 92, 246, 0.6);
+    color: #a78bfa;
+  }
+
   .my-playlist-grid {
     display: flex;
     flex-direction: column;
@@ -1346,6 +1387,13 @@
   let hasInitializedThisPage = false; // Prevent duplicate initialization
   let listenersAttached = false; // Prevent duplicate event listeners
   let isAddingToPlaylist = false; // Prevent duplicate add submissions
+
+  // Personal playlist pagination state
+  const ITEMS_PER_PAGE = 20;
+  const MAX_ITEMS = 500;
+  let currentPlaylistPage = 1;
+  let cachedPersonalItems: any[] = [];
+  let cachedUserTracksInQueue = 0;
 
   // Initialize playlist on page load
   async function initPlaylist() {
@@ -1745,7 +1793,7 @@
     if (statusText && queueSize > 0) {
       const currentItem = queue[currentIndex];
       const djName = currentDj?.userName || 'Unknown';
-      statusText.textContent = `DJ: ${djName}`;
+      statusText.textContent = `Selecter: ${djName}`;
     }
 
     // Update Now Playing Strip
@@ -1844,7 +1892,7 @@
     if (previewTrackInfo && previewTitle && previewDjName) {
       previewTrackInfo.classList.remove('hidden');
       previewTitle.textContent = currentItem.title || 'Unknown Track';
-      previewDjName.textContent = `DJ: ${currentDj?.userName || currentItem.addedByName || 'Unknown'}`;
+      previewDjName.textContent = `Selecter: ${currentDj?.userName || currentItem.addedByName || 'Unknown'}`;
     }
 
     // Show thumbnail only - no interactive player
@@ -1952,7 +2000,7 @@
           </div>
           <div class="playlist-grid-info">
             <div class="playlist-grid-title">${item.title || 'Untitled'}</div>
-            <div class="dj-name-display">🎧 ${djName}${isUsersTrack ? ' (You)' : ''}</div>
+            <div class="dj-name-display">Selecter: ${djName}${isUsersTrack ? ' (You)' : ''}</div>
           </div>
           <div class="playlist-grid-actions">
             ${isAuthenticated ? `
@@ -2031,13 +2079,18 @@
     });
   }
 
-  // Render personal playlist items
+  // Render personal playlist items with pagination
   function renderPersonalPlaylist(personalItems: any[], userTracksInQueue: number) {
     const section = document.getElementById('myPlaylistSection');
     const grid = document.getElementById('myPlaylistGrid');
     const countEl = document.getElementById('myPlaylistCount');
+    const paginationEl = document.getElementById('myPlaylistPagination');
 
     if (!section || !grid) return;
+
+    // Cache items for pagination
+    cachedPersonalItems = personalItems;
+    cachedUserTracksInQueue = userTracksInQueue;
 
     // Show section (always visible in column layout)
     section.classList.remove('hidden');
@@ -2049,6 +2102,7 @@
 
     // Show sign-in prompt if not authenticated
     if (!isAuthenticated) {
+      if (paginationEl) paginationEl.classList.add('hidden');
       grid.innerHTML = `
         <div class="playlist-empty">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.4; margin-bottom: 0.5rem;">
@@ -2062,6 +2116,7 @@
     }
 
     if (personalItems.length === 0) {
+      if (paginationEl) paginationEl.classList.add('hidden');
       grid.innerHTML = `
         <div class="playlist-empty">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.4; margin-bottom: 0.5rem;">
@@ -2076,7 +2131,65 @@
 
     // Reverse to show most recent first
     const reversedItems = [...personalItems].reverse();
-    grid.innerHTML = reversedItems.map(item => `
+    const totalItems = Math.min(reversedItems.length, MAX_ITEMS);
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+    // Ensure current page is valid
+    if (currentPlaylistPage > totalPages) {
+      currentPlaylistPage = totalPages;
+    }
+    if (currentPlaylistPage < 1) {
+      currentPlaylistPage = 1;
+    }
+
+    // Render pagination tabs if more than 20 items
+    if (paginationEl) {
+      if (totalItems > ITEMS_PER_PAGE) {
+        paginationEl.classList.remove('hidden');
+        let paginationHTML = '';
+        for (let i = 1; i <= totalPages; i++) {
+          const startItem = (i - 1) * ITEMS_PER_PAGE + 1;
+          const endItem = Math.min(i * ITEMS_PER_PAGE, totalItems);
+          paginationHTML += `
+            <button class="playlist-page-btn ${i === currentPlaylistPage ? 'active' : ''}" data-page="${i}">
+              ${startItem}-${endItem}
+            </button>
+          `;
+        }
+        paginationEl.innerHTML = paginationHTML;
+
+        // Add click listeners for pagination buttons
+        paginationEl.querySelectorAll('.playlist-page-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const page = parseInt((e.currentTarget as HTMLElement).dataset.page || '1', 10);
+            if (page !== currentPlaylistPage) {
+              currentPlaylistPage = page;
+              renderPersonalPlaylistPage(reversedItems, userTracksInQueue);
+              // Update active state
+              paginationEl.querySelectorAll('.playlist-page-btn').forEach(b => b.classList.remove('active'));
+              (e.currentTarget as HTMLElement).classList.add('active');
+            }
+          });
+        });
+      } else {
+        paginationEl.classList.add('hidden');
+      }
+    }
+
+    // Render the current page
+    renderPersonalPlaylistPage(reversedItems, userTracksInQueue);
+  }
+
+  // Render a specific page of the personal playlist
+  function renderPersonalPlaylistPage(reversedItems: any[], userTracksInQueue: number) {
+    const grid = document.getElementById('myPlaylistGrid');
+    if (!grid) return;
+
+    const startIndex = (currentPlaylistPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, reversedItems.length, MAX_ITEMS);
+    const pageItems = reversedItems.slice(startIndex, endIndex);
+
+    grid.innerHTML = pageItems.map(item => `
       <div class="personal-playlist-item" data-id="${item.id}">
         <div class="personal-item-thumb">
           ${item.thumbnail
