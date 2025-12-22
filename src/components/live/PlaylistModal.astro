@@ -23,80 +23,101 @@
     </div>
 
     <div class="playlist-modal-body">
-      <!-- URL Input - Only for logged in users -->
-      <div class="playlist-add-section">
-        <div id="playlistAuthNotice" class="playlist-auth-notice hidden">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-          <span>Sign in to add videos to the playlist</span>
+      <!-- Now Playing Strip - shows when a track is active -->
+      <div id="nowPlayingStrip" class="now-playing-strip hidden">
+        <div class="now-playing-label">
+          <span class="now-playing-pulse"></span>
+          NOW PLAYING
         </div>
-        <div id="playlistInputGroup" class="playlist-input-group">
-          <input
-            type="url"
-            id="playlistUrlInput"
-            class="playlist-url-input"
-            placeholder="Paste YouTube, Vimeo, SoundCloud, or direct video URL..."
-            autocomplete="off"
-          />
-          <button id="clearPlaylistInput" class="clear-input-btn hidden" title="Clear input">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-          <div class="input-button-group">
-            <button id="addToPlaylistBtn" class="add-to-playlist-btn" title="Join DJ Queue now">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div class="now-playing-info">
+          <span id="nowPlayingDj" class="now-playing-dj">--</span>
+          <span class="now-playing-separator">-</span>
+          <span id="nowPlayingTitle" class="now-playing-title">--</span>
+        </div>
+      </div>
+
+      <!-- Two Column Layout for Queue and My Playlist -->
+      <div class="playlist-columns">
+        <!-- Left Column: Queue Section -->
+        <div class="playlist-column queue-column">
+          <!-- URL Input - Only for logged in users -->
+          <div class="playlist-add-section">
+            <div id="playlistAuthNotice" class="playlist-auth-notice hidden">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>Sign in to add videos to the playlist</span>
+            </div>
+            <div id="playlistInputGroup" class="playlist-input-group">
+              <input
+                type="url"
+                id="playlistUrlInput"
+                class="playlist-url-input"
+                placeholder="Paste YouTube, Vimeo, SoundCloud, or direct URL..."
+                autocomplete="off"
+              />
+              <button id="clearPlaylistInput" class="clear-input-btn hidden" title="Clear input">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+              <div class="input-button-group">
+                <button id="addToPlaylistBtn" class="add-to-playlist-btn" title="Join DJ Queue now">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                  Queue
+                </button>
+                <button id="saveForLaterBtn" class="save-for-later-btn" title="Save to My Playlist for later">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  Save
+                </button>
+              </div>
+            </div>
+            <div id="playlistError" class="playlist-error hidden"></div>
+            <div id="playlistSuccess" class="playlist-success hidden"></div>
+          </div>
+
+          <!-- Position Indicator -->
+          <div id="positionIndicator" class="position-indicator hidden">
+            <span id="positionText"></span>
+          </div>
+
+          <!-- Queue Status -->
+          <div class="playlist-queue-header">
+            <h3>DJ Queue <span id="queueCount" class="queue-count">0/10</span></h3>
+          </div>
+
+          <!-- Queue Grid -->
+          <div id="playlistQueue" class="playlist-queue-grid">
+            <div class="playlist-empty">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <polygon points="5 3 19 12 5 21 5 3"></polygon>
               </svg>
-              Queue
-            </button>
-            <button id="saveForLaterBtn" class="save-for-later-btn" title="Save to My Playlist for later">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-              </svg>
-              Save
-            </button>
+              <p>DJ Waitlist is empty</p>
+              <p class="playlist-empty-hint">Add a track to join the queue</p>
+            </div>
           </div>
         </div>
-        <div id="playlistError" class="playlist-error hidden"></div>
-        <div id="playlistSuccess" class="playlist-success hidden"></div>
-      </div>
 
-      <!-- Position Indicator -->
-      <div id="positionIndicator" class="position-indicator hidden">
-        <span id="positionText"></span>
-      </div>
-
-      <!-- Queue Status -->
-      <div class="playlist-queue-header">
-        <h3>DJ Queue <span id="queueCount" class="queue-count">0/10</span></h3>
-      </div>
-
-      <!-- Queue Grid (2 columns) -->
-      <div id="playlistQueue" class="playlist-queue-grid">
-        <div class="playlist-empty">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-          </svg>
-          <p>Your playlist is empty</p>
-          <p class="playlist-empty-hint">Add a URL above to get started</p>
-        </div>
-      </div>
-
-      <!-- My Playlist Section -->
-      <div id="myPlaylistSection" class="my-playlist-section hidden">
-        <div class="my-playlist-header">
-          <h3>My Playlist <span id="myPlaylistCount" class="queue-count">0</span></h3>
-          <button id="clearMyPlaylistBtn" class="clear-playlist-btn" title="Clear all">Clear</button>
-        </div>
-        <div id="myPlaylistGrid" class="my-playlist-grid">
-          <div class="playlist-empty">
-            <p>Your playlist is empty</p>
-            <p class="playlist-empty-hint">Save tracks to build your queue</p>
+        <!-- Right Column: My Playlist Section -->
+        <div class="playlist-column my-playlist-column">
+          <div id="myPlaylistSection" class="my-playlist-section" style="display: flex;">
+            <div class="my-playlist-header">
+              <h3>My Playlist <span id="myPlaylistCount" class="queue-count">0</span></h3>
+              <button id="clearMyPlaylistBtn" class="clear-playlist-btn" title="Clear all">Clear</button>
+            </div>
+            <div id="myPlaylistGrid" class="my-playlist-grid">
+              <div class="playlist-empty">
+                <p>Your playlist is empty</p>
+                <p class="playlist-empty-hint">Save tracks for later</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -176,22 +197,111 @@
     background: rgba(255, 255, 255, 0.2);
   }
 
-  /* Centered add section with proper padding */
-  .playlist-modal-large .playlist-add-section {
+  /* Now Playing Strip */
+  .now-playing-strip {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    padding: 2rem 1rem;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(90deg, rgba(220, 38, 38, 0.15), rgba(220, 38, 38, 0.1));
+    border-bottom: 1px solid rgba(220, 38, 38, 0.3);
     margin-bottom: 1rem;
   }
 
-  /* Centered input group */
-  .playlist-modal-large .playlist-input-group {
+  .now-playing-strip.hidden {
+    display: none;
+  }
+
+  .now-playing-label {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #dc2626;
+    text-transform: uppercase;
+  }
+
+  .now-playing-pulse {
+    width: 8px;
+    height: 8px;
+    background: #dc2626;
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .now-playing-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #fff;
+  }
+
+  .now-playing-dj {
+    font-weight: 600;
+    color: #60a5fa;
+  }
+
+  .now-playing-separator {
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  .now-playing-title {
+    color: rgba(255, 255, 255, 0.8);
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Two Column Layout */
+  .playlist-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .playlist-column {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .queue-column {
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding-right: 1.5rem;
+  }
+
+  .my-playlist-column {
+    padding-left: 0.5rem;
+  }
+
+  /* Add section styling */
+  .playlist-modal-large .playlist-add-section {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem 0;
+    margin-bottom: 1rem;
+  }
+
+  /* Input group */
+  .playlist-modal-large .playlist-input-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     width: 100%;
-    max-width: 600px;
     position: relative;
   }
 
@@ -207,7 +317,7 @@
 
   .playlist-modal-large .playlist-url-input:focus {
     outline: none;
-    border-color: #8b5cf6;
+    border-color: #3b82f6;
   }
 
   .playlist-modal-large .playlist-url-input::placeholder {
@@ -268,7 +378,7 @@
     padding: 0.75rem 1rem;
     font-size: 0.9rem;
     border-radius: 10px;
-    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
     border: none;
     color: #fff;
     cursor: pointer;
@@ -281,14 +391,14 @@
 
   .save-for-later-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
   }
 
   /* Queue header styling */
   .playlist-modal-large .playlist-queue-header {
     margin-bottom: 0.5rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     text-align: center;
   }
 
@@ -307,7 +417,7 @@
     flex: 1;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: rgba(139, 92, 246, 0.5) transparent;
+    scrollbar-color: rgba(59, 130, 246, 0.5) transparent;
   }
 
   .playlist-queue-grid::-webkit-scrollbar {
@@ -319,7 +429,7 @@
   }
 
   .playlist-queue-grid::-webkit-scrollbar-thumb {
-    background: rgba(139, 92, 246, 0.5);
+    background: rgba(59, 130, 246, 0.5);
     border-radius: 3px;
   }
 
@@ -414,8 +524,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #0a0a15 0%, #1a1030 100%);
-    color: rgba(139, 92, 246, 0.4);
+    background: linear-gradient(135deg, #0a0a15 0%, #1f2937 100%);
+    color: rgba(59, 130, 246, 0.4);
   }
 
   .playlist-grid-info {
@@ -545,7 +655,7 @@
 
   /* Controls section */
   .playlist-controls {
-    border-top: 1px solid rgba(139, 92, 246, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     margin-top: 0.5rem;
     padding-top: 0.75rem;
   }
@@ -562,7 +672,7 @@
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
     border: none;
     color: white;
     cursor: pointer;
@@ -570,12 +680,12 @@
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
-    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
   }
 
   .control-btn-large:hover {
     transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
   }
 
   .volume-control {
@@ -605,11 +715,11 @@
     appearance: none;
     width: 14px;
     height: 14px;
-    background: #8b5cf6;
+    background: #3b82f6;
     border-radius: 50%;
     cursor: pointer;
     transition: transform 0.2s ease;
-    box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
   }
 
   .volume-slider::-webkit-slider-thumb:hover {
@@ -619,7 +729,7 @@
   .volume-slider::-moz-range-thumb {
     width: 14px;
     height: 14px;
-    background: #8b5cf6;
+    background: #3b82f6;
     border: none;
     border-radius: 50%;
     cursor: pointer;
@@ -632,7 +742,7 @@
 
   .playlist-status span {
     font-size: 0.75rem;
-    color: rgba(139, 92, 246, 0.8);
+    color: rgba(156, 163, 175, 0.8);
     font-weight: 500;
   }
 
@@ -682,8 +792,8 @@
     align-items: center;
     justify-content: center;
     padding: 0.75rem 1rem;
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(99, 102, 241, 0.15));
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(59, 130, 246, 0.15));
+    border: 1px solid rgba(59, 130, 246, 0.3);
     border-radius: 10px;
     margin: 0 auto 1rem;
     max-width: 400px;
@@ -692,7 +802,7 @@
   .position-indicator span {
     font-size: 1rem;
     font-weight: 600;
-    color: #a78bfa;
+    color: #60a5fa;
   }
 
   .position-indicator.your-turn {
@@ -708,13 +818,13 @@
   .dj-name-display {
     font-size: 0.85rem;
     font-weight: 700;
-    color: #a78bfa;
+    color: #60a5fa;
     margin-bottom: 0.25rem;
   }
 
   .playlist-grid-item.active .dj-name-display {
     font-size: 1rem;
-    color: #c4b5fd;
+    color: #93c5fd;
   }
 
   /* Position badge for non-active items */
@@ -723,7 +833,7 @@
     top: 4px;
     left: 4px;
     background: rgba(0, 0, 0, 0.8);
-    color: #a78bfa;
+    color: #60a5fa;
     font-size: 0.65rem;
     font-weight: 700;
     padding: 2px 6px;
@@ -738,19 +848,19 @@
 
   /* Highlight user's track in queue */
   .playlist-grid-item.your-track:not(.active) {
-    border-color: rgba(139, 92, 246, 0.5);
-    background: rgba(139, 92, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.5);
+    background: rgba(59, 130, 246, 0.1);
   }
 
   .playlist-grid-item.your-track .dj-name-display {
-    color: #c4b5fd;
+    color: #93c5fd;
   }
 
-  /* My Playlist Section */
+  /* My Playlist Section - Full height in right column */
   .my-playlist-section {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(139, 92, 246, 0.2);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     width: 100%;
     text-align: left;
   }
@@ -759,14 +869,17 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     width: 100%;
   }
 
   .my-playlist-header h3 {
     margin: 0;
-    font-size: 1rem;
-    color: #a78bfa;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
     text-align: left;
   }
 
@@ -789,9 +902,24 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    max-height: 200px;
+    flex: 1;
     overflow-y: auto;
     width: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(59, 130, 246, 0.5) transparent;
+  }
+
+  .my-playlist-grid::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .my-playlist-grid::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .my-playlist-grid::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.5);
+    border-radius: 3px;
   }
 
   .my-playlist-grid .playlist-empty {
@@ -811,15 +939,15 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.5rem;
-    background: rgba(139, 92, 246, 0.1);
-    border: 1px solid rgba(139, 92, 246, 0.2);
+    background: rgba(31, 41, 55, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     transition: all 0.2s ease;
   }
 
   .personal-playlist-item:hover {
-    background: rgba(139, 92, 246, 0.15);
-    border-color: rgba(139, 92, 246, 0.3);
+    background: rgba(55, 65, 81, 0.5);
+    border-color: rgba(255, 255, 255, 0.2);
   }
 
   .personal-item-thumb {
@@ -863,7 +991,7 @@
 
   .personal-item-platform {
     font-size: 0.65rem;
-    color: rgba(139, 92, 246, 0.7);
+    color: rgba(156, 163, 175, 0.8);
     text-transform: uppercase;
     text-align: left;
   }
@@ -918,19 +1046,46 @@
   /* Added by name */
   .playlist-grid-addedby {
     font-size: 0.6rem;
-    color: rgba(139, 92, 246, 0.5);
+    color: rgba(156, 163, 175, 0.6);
     margin-top: 0.2rem;
   }
 
   .playlist-grid-addedby strong {
-    color: rgba(139, 92, 246, 0.7);
+    color: rgba(156, 163, 175, 0.9);
+  }
+
+  /* Tablet: stack columns */
+  @media (max-width: 900px) {
+    .playlist-columns {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    .queue-column {
+      border-right: none;
+      padding-right: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 1.5rem;
+    }
+
+    .my-playlist-column {
+      padding-left: 0;
+    }
+
+    .playlist-queue-grid {
+      max-height: 40vh;
+    }
+
+    .my-playlist-grid {
+      max-height: 30vh;
+    }
   }
 
   /* Mobile: single column */
   @media (max-width: 640px) {
     .playlist-queue-grid {
       grid-template-columns: 1fr;
-      max-height: 45vh;
+      max-height: 35vh;
     }
 
     .playlist-modal-large {
@@ -939,6 +1094,10 @@
       height: 100vh;
       max-height: 100vh;
       border-radius: 0;
+    }
+
+    .playlist-modal-large .playlist-modal-body {
+      padding: 1rem;
     }
 
     .playlist-controls-simple {
@@ -952,6 +1111,30 @@
 
     .playlist-grid-title {
       font-size: 0.85rem;
+    }
+
+    .now-playing-strip {
+      flex-direction: column;
+      gap: 0.5rem;
+      text-align: center;
+    }
+
+    .now-playing-info {
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .now-playing-title {
+      max-width: 200px;
+    }
+
+    .input-button-group {
+      width: 100%;
+      justify-content: stretch;
+    }
+
+    .input-button-group button {
+      flex: 1;
     }
   }
 </style>
@@ -1401,6 +1584,9 @@
       statusText.textContent = `DJ: ${djName}`;
     }
 
+    // Update Now Playing Strip
+    updateNowPlayingStrip(queue, currentIndex, currentDj);
+
     // Update queue count
     const queueCount = document.getElementById('queueCount');
     if (queueCount) {
@@ -1445,6 +1631,25 @@
         positionText.textContent = `📍 You are #${position} - ${waitingCount} DJs ahead of you`;
       }
     }
+  }
+
+  // Update Now Playing Strip
+  function updateNowPlayingStrip(queue: any[], currentIndex: number, currentDj: any) {
+    const strip = document.getElementById('nowPlayingStrip');
+    const djName = document.getElementById('nowPlayingDj');
+    const title = document.getElementById('nowPlayingTitle');
+
+    if (!strip || !djName || !title) return;
+
+    if (queue.length === 0 || currentIndex >= queue.length) {
+      strip.classList.add('hidden');
+      return;
+    }
+
+    const currentItem = queue[currentIndex];
+    strip.classList.remove('hidden');
+    djName.textContent = currentDj?.userName || currentItem?.addedByName || 'Unknown';
+    title.textContent = currentItem?.title || 'Unknown Track';
   }
 
   // Add playlist update listener once
@@ -1591,22 +1796,34 @@
 
     if (!section || !grid) return;
 
-    // Show section if user is authenticated
-    if (isAuthenticated) {
-      section.classList.remove('hidden');
-    } else {
-      section.classList.add('hidden');
-      return;
-    }
+    // Show section (always visible in column layout)
+    section.classList.remove('hidden');
 
     // Update count
     if (countEl) {
-      countEl.textContent = personalItems.length.toString();
+      countEl.textContent = isAuthenticated ? personalItems.length.toString() : '0';
+    }
+
+    // Show sign-in prompt if not authenticated
+    if (!isAuthenticated) {
+      grid.innerHTML = `
+        <div class="playlist-empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.4; margin-bottom: 0.5rem;">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <p>Sign in to save tracks</p>
+          <p class="playlist-empty-hint">Build your playlist for later</p>
+        </div>
+      `;
+      return;
     }
 
     if (personalItems.length === 0) {
       grid.innerHTML = `
         <div class="playlist-empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.4; margin-bottom: 0.5rem;">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </svg>
           <p>Your playlist is empty</p>
           <p class="playlist-empty-hint">Click "Save" to add tracks for later</p>
         </div>
