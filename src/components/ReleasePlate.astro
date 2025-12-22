@@ -1806,36 +1806,51 @@ const totalDurationFormatted = totalDurationSeconds > 0
       return;
     }
     window._wishlistInitialized = true;
-    
+
     // Helper to get userId from cookie
     function getUserId() {
       var match = document.cookie.match(/(?:^|; )userId=([^;]*)/);
       return match ? match[1] : null;
     }
-    
+
     var wishlistButtons = document.querySelectorAll('.wishlist-btn');
     console.log('initWishlistSystem called, found buttons:', wishlistButtons.length);
-    
-    // Check initial wishlist state from server if logged in
-    var userId = getUserId();
-    if (userId && wishlistButtons.length > 0) {
-      // Fetch user's wishlist from server
-      fetch('/api/wishlist?userId=' + userId)
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-          if (data.success && data.wishlist) {
-            var wishlistIds = data.wishlist.map(function(r) { return r.id; });
-            wishlistButtons.forEach(function(btn) {
-              var releaseId = btn.getAttribute('data-release-id');
-              if (wishlistIds.includes(releaseId)) {
-                setWishlistState(btn, true);
-              }
-            });
-          }
-        })
-        .catch(function(err) {
-          console.log('Failed to load wishlist state:', err);
-        });
+
+    // Function to fetch and update wishlist state
+    function fetchWishlistState() {
+      var userId = getUserId();
+      if (userId && wishlistButtons.length > 0) {
+        fetch('/api/wishlist?userId=' + userId)
+          .then(function(res) { return res.json(); })
+          .then(function(data) {
+            if (data.success && data.wishlist) {
+              var wishlistIds = data.wishlist.map(function(r) { return r.id; });
+              wishlistButtons.forEach(function(btn) {
+                var releaseId = btn.getAttribute('data-release-id');
+                if (wishlistIds.includes(releaseId)) {
+                  setWishlistState(btn, true);
+                }
+              });
+            }
+          })
+          .catch(function(err) {
+            console.log('Failed to load wishlist state:', err);
+          });
+      }
+    }
+
+    // Wait for auth to be ready before checking wishlist state
+    // This ensures the userId cookie has been set by Header.astro
+    if (window.authReady) {
+      window.authReady.then(function(user) {
+        if (user) {
+          // Small delay to ensure cookie is set after auth state handler runs
+          setTimeout(fetchWishlistState, 50);
+        }
+      });
+    } else {
+      // Fallback: check immediately if authReady not available
+      fetchWishlistState();
     }
     
     // Use event delegation - one listener on document
