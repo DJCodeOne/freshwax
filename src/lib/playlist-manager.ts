@@ -652,4 +652,11 @@ export class PlaylistManager {
   get currentItem(): PlaylistItem | null {
     return this.playlist.queue[this.playlist.currentIndex] || null;
   }
+
+  /**
+   * Set volume (0-100)
+   */
+  setVolume(volume: number): void {
+    this.player.setVolume(volume);
+  }
 }

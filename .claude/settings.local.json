@@ -53,7 +53,19 @@
       "Bash(powershell -Command:*)",
       "Bash(npx tsc:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(\"https://firestore.googleapis.com/v1/projects/freshwax-store/databases/\\(default\\)/documents/livestreamSlots?documentId=test_mje50yzxiouzd&key=AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g\" )",
+      "Bash(npm audit:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm run)",
+      "Bash(cmd //c:*)",
+      "Bash(for file in src/pages/account/dashboard.astro src/pages/account/dj-lobby.astro src/pages/account/orders.astro src/pages/account/streaming-setup.astro src/pages/admin/account/manage.astro src/pages/admin/artists/manage.astro src/pages/admin/artists/pending.astro src/pages/admin/newsletter.astro src/pages/admin/role-approvals.astro src/pages/admin/users.astro src/pages/artist/dashboard.astro src/pages/dj-lobby/book.astro \"src/pages/dj-mix/[id].astro\" \"src/pages/item/[id].astro\" src/pages/live/fullpage.astro src/pages/pro/releases/new.astro)",
+      "Bash(do sed -i 's/apiKey: \"\"AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g\"\",/apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,/g' \"$file\")",
+      "Bash(for file in public/interaction-gate.js public/item-page.js public/live-stream.js)",
+      "Bash(npm run dev:*)",
+      "Bash(git restore:*)",
+      "Bash(xargs sed -i \"s/apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,/apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || ''AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g'',/g\")",
+      "Bash(git checkout:*)"
     ]
   }
 }

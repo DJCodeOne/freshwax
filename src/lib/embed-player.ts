@@ -87,9 +87,13 @@ export class EmbedPlayerManager {
       videoId: item.embedId,
       playerVars: {
         autoplay: 1,
-        controls: 1,
+        controls: 0,           // No YouTube controls
         modestbranding: 1,
-        rel: 0
+        rel: 0,
+        disablekb: 1,          // Disable keyboard controls
+        fs: 0,                 // No fullscreen button
+        iv_load_policy: 3,     // No annotations
+        showinfo: 0            // No video info
       },
       events: {
         onReady: () => {
@@ -126,8 +130,8 @@ export class EmbedPlayerManager {
     const container = document.getElementById(this.containerId);
     if (!container) throw new Error('Container not found');
 
-    // Clear container and create iframe
-    container.innerHTML = `<iframe id="vimeo-player" src="https://player.vimeo.com/video/${item.embedId}?autoplay=1" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
+    // Clear container and create iframe - no controls
+    container.innerHTML = `<iframe id="vimeo-player" src="https://player.vimeo.com/video/${item.embedId}?autoplay=1&controls=0&keyboard=0" width="100%" height="100%" frameborder="0" allow="autoplay" style="pointer-events: none;"></iframe>`;
 
     const iframe = document.getElementById('vimeo-player') as HTMLIFrameElement;
 
@@ -203,8 +207,8 @@ export class EmbedPlayerManager {
     const isHLS = item.url.includes('.m3u8');
 
     if (isHLS) {
-      // Use HLS.js for HLS streams
-      container.innerHTML = '<video id="direct-video" controls autoplay style="width: 100%; height: 100%;"></video>';
+      // Use HLS.js for HLS streams - no controls
+      container.innerHTML = '<video id="direct-video" autoplay style="width: 100%; height: 100%; pointer-events: none;"></video>';
       const video = document.getElementById('direct-video') as HTMLVideoElement;
       this.directVideo = video;
 
@@ -244,8 +248,8 @@ export class EmbedPlayerManager {
         return;
       }
     } else {
-      // Regular video formats (mp4, webm, ogg)
-      container.innerHTML = '<video id="direct-video" controls autoplay style="width: 100%; height: 100%;"></video>';
+      // Regular video formats (mp4, webm, ogg) - no controls
+      container.innerHTML = '<video id="direct-video" autoplay style="width: 100%; height: 100%; pointer-events: none;"></video>';
       const video = document.getElementById('direct-video') as HTMLVideoElement;
       this.directVideo = video;
 
@@ -308,6 +312,27 @@ export class EmbedPlayerManager {
       }
     } catch (error) {
       console.error('[EmbedPlayerManager] Pause error:', error);
+    }
+  }
+
+  /**
+   * Set volume (0-100)
+   */
+  setVolume(volume: number): void {
+    try {
+      const normalizedVolume = Math.max(0, Math.min(100, volume));
+
+      if (this.currentPlatform === 'youtube' && this.youtubePlayer) {
+        this.youtubePlayer.setVolume(normalizedVolume);
+      } else if (this.currentPlatform === 'vimeo' && this.vimeoPlayer) {
+        this.vimeoPlayer.setVolume(normalizedVolume / 100);
+      } else if (this.currentPlatform === 'soundcloud' && this.soundcloudWidget) {
+        this.soundcloudWidget.setVolume(normalizedVolume);
+      } else if (this.currentPlatform === 'direct' && this.directVideo) {
+        this.directVideo.volume = normalizedVolume / 100;
+      }
+    } catch (error) {
+      console.error('[EmbedPlayerManager] Volume error:', error);
     }
   }
 
