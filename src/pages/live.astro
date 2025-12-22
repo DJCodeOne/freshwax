@@ -415,7 +415,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         <!-- DJ Info Bar -->
         <div class="dj-info-bar">
           <img id="djAvatar" src="/place-holder.webp" alt="DJ" class="dj-avatar" />
-          <button id="nowPlayingSaveBtn" class="now-playing-save-btn" title="Save to My Playlist" style="display: none;">
+          <button id="nowPlayingSaveBtn" class="now-playing-save-btn" title="Save to My Playlist">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
             </svg>
@@ -4431,14 +4431,16 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     }
 
     try {
-      // Get the global playlist manager and add to personal playlist
-      const manager = window.globalPlaylistManager;
+      // Get the playlist manager and add to personal playlist
+      const manager = window.playlistManager;
       if (manager) {
         const result = await manager.addToPersonalPlaylist(currentPlaylistTrack);
         if (result.success) {
           nowPlayingSaveBtn.classList.add('saved');
           nowPlayingSaveBtn.title = 'Already in My Playlist';
         }
+      } else {
+        console.warn('[NowPlaying] Playlist manager not available');
       }
     } catch (err) {
       console.error('[NowPlaying] Error saving track:', err);
