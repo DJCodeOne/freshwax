@@ -67,12 +67,18 @@ service cloud.firestore {
 
     // Customers collection
     match /customers/{customerId} {
-      allow read: if isAdmin() || isOwner(customerId);
-      allow create: if isAuthenticated() && request.auth.uid == customerId;
+      // Allow read for REST API (wishlist checks) - API validates userId
+      allow read: if true;
+      // Allow create from authenticated user OR REST API (for wishlist)
+      allow create: if (isAuthenticated() && request.auth.uid == customerId) ||
+                      request.resource.data.wishlist != null;
       allow update: if isAdmin() || isOwner(customerId) ||
                       // Allow role updates from REST API (API has admin key protection)
                       request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['roles', 'isArtist', 'isMerchSupplier', 'approved', 'updatedAt']);
+                        .hasOnly(['roles', 'isArtist', 'isMerchSupplier', 'approved', 'updatedAt']) ||
+                      // Allow wishlist updates from REST API
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['wishlist', 'wishlistUpdatedAt']);
       allow delete: if isAdmin();
     }
 

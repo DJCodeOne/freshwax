@@ -120,8 +120,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         currentWishlist.push(releaseId);
       }
 
+      // Exclude 'id' field (added by parseDocument) - Firestore rules don't allow it in updates
+      const { id: _id, ...docWithoutId } = customerDoc || {};
       await setDocument('customers', userId, {
-        ...(customerDoc || {}),
+        ...docWithoutId,
         wishlist: currentWishlist,
         wishlistUpdatedAt: now
       });
@@ -141,9 +143,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const currentWishlist = Array.isArray(customerDoc?.wishlist) ? customerDoc.wishlist : [];
       const newWishlist = currentWishlist.filter((id: string) => id !== releaseId);
 
-      // Use setDocument to ensure doc exists
+      // Exclude 'id' field (added by parseDocument) - Firestore rules don't allow it in updates
+      const { id: _id, ...docWithoutId } = customerDoc || {};
       await setDocument('customers', userId, {
-        ...(customerDoc || {}),
+        ...docWithoutId,
         wishlist: newWishlist,
         wishlistUpdatedAt: now
       });
@@ -163,12 +166,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const currentWishlist = Array.isArray(customerDoc?.wishlist) ? customerDoc.wishlist : [];
       const isInWishlist = currentWishlist.includes(releaseId);
 
+      // Exclude 'id' field (added by parseDocument) - Firestore rules don't allow it in updates
+      const { id: _id, ...docWithoutId } = customerDoc || {};
+
       if (isInWishlist) {
         // Remove from wishlist
         const newWishlist = currentWishlist.filter((id: string) => id !== releaseId);
         // Use setDocument to ensure doc exists (updateDocument fails on non-existent docs)
         await setDocument('customers', userId, {
-          ...(customerDoc || {}),
+          ...docWithoutId,
           wishlist: newWishlist,
           wishlistUpdatedAt: now
         });
@@ -184,7 +190,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Add to wishlist
         currentWishlist.push(releaseId);
         await setDocument('customers', userId, {
-          ...(customerDoc || {}),
+          ...docWithoutId,
           wishlist: currentWishlist,
           wishlistUpdatedAt: now
         });
