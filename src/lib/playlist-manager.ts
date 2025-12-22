@@ -292,6 +292,9 @@ export class PlaylistManager {
       // Disable emojis when queue is cleared
       this.disableEmojis();
 
+      // Reset NOW PLAYING display
+      this.updateNowPlayingDisplay(null);
+
       // Show offline overlay again
       const offlineOverlay = document.getElementById('offlineOverlay');
       const videoPlayer = document.getElementById('videoPlayer');
@@ -325,6 +328,9 @@ export class PlaylistManager {
 
       // Enable emoji reactions
       this.enableEmojis();
+
+      // Update NOW PLAYING display
+      this.updateNowPlayingDisplay(currentItem);
 
       await this.player.loadItem(currentItem);
       this.renderUI();
@@ -457,6 +463,55 @@ export class PlaylistManager {
     // Clear all LEDs
     document.querySelectorAll('.led-strip .led').forEach(led => led.classList.remove('active'));
     console.log('[PlaylistManager] Audio meters stopped');
+  }
+
+  /**
+   * Update NOW PLAYING display at bottom of screen
+   */
+  private updateNowPlayingDisplay(item: PlaylistItem | null): void {
+    const djNameEl = document.getElementById('controlsDjName');
+    const djAvatarEl = document.getElementById('djAvatar') as HTMLImageElement;
+    const genreEl = document.getElementById('streamGenre');
+    const labelEl = document.querySelector('.dj-info-label');
+
+    if (item) {
+      // Show video title
+      if (djNameEl) {
+        djNameEl.textContent = item.title || 'Untitled Video';
+      }
+      // Update label to show PLAYLIST
+      if (labelEl) {
+        labelEl.textContent = 'PLAYLIST';
+      }
+      // Show thumbnail as avatar if available
+      if (djAvatarEl && item.thumbnail) {
+        djAvatarEl.src = item.thumbnail;
+      }
+      // Show platform as genre
+      if (genreEl) {
+        const platformNames: Record<string, string> = {
+          youtube: 'YouTube',
+          vimeo: 'Vimeo',
+          soundcloud: 'SoundCloud',
+          direct: 'Direct Video'
+        };
+        genreEl.textContent = platformNames[item.platform] || item.platform;
+      }
+    } else {
+      // Reset to default
+      if (djNameEl) {
+        djNameEl.textContent = '--';
+      }
+      if (labelEl) {
+        labelEl.textContent = 'NOW PLAYING';
+      }
+      if (djAvatarEl) {
+        djAvatarEl.src = '/place-holder.webp';
+      }
+      if (genreEl) {
+        genreEl.textContent = 'Jungle / D&B';
+      }
+    }
   }
 
   /**
