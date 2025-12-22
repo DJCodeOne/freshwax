@@ -1215,10 +1215,12 @@ export class PlaylistManager {
     this.playlist.queue.splice(this.playlist.currentIndex, 1);
 
     // Adjust currentIndex to stay in bounds
+    const now = new Date().toISOString();
     if (this.playlist.queue.length === 0) {
       // Queue is empty
       this.playlist.currentIndex = 0;
       this.playlist.isPlaying = false;
+      this.playlist.trackStartedAt = null; // Clear track start time
       await this.player.destroy();
       this.disableEmojis();
       this.updateNowPlayingDisplay(null);
@@ -1228,9 +1230,11 @@ export class PlaylistManager {
       if (this.playlist.currentIndex >= this.playlist.queue.length) {
         this.playlist.currentIndex = 0; // Wrap to start
       }
+      // Reset trackStartedAt for the new track - this is critical for sync!
+      this.playlist.trackStartedAt = now;
     }
 
-    this.playlist.lastUpdated = new Date().toISOString();
+    this.playlist.lastUpdated = now;
 
     // Sync to server
     try {
