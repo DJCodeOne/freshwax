@@ -240,6 +240,15 @@ async function init() {
 
   // Setup mobile-specific features
   setupMobileFeatures();
+
+  // Always subscribe to reaction channel for emoji broadcasts
+  // This ensures all users can see reactions even without active playlist
+  if (!window.isLiveStreamActive && !window.currentStreamId) {
+    window.currentStreamId = 'playlist-global';
+    window.emojiAnimationsEnabled = true; // Enable receiving emoji animations
+    setupChat('playlist-global');
+    console.log('[Init] Subscribed to playlist-global for reactions');
+  }
 }
 
 // Named handler for playlist updates (allows removal to prevent duplicates)
