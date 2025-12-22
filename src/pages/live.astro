@@ -415,6 +415,11 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         <!-- DJ Info Bar -->
         <div class="dj-info-bar">
           <img id="djAvatar" src="/place-holder.webp" alt="DJ" class="dj-avatar" />
+          <button id="nowPlayingSaveBtn" class="now-playing-save-btn" title="Save to My Playlist" style="display: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </button>
           <div class="dj-info-center">
             <span class="dj-info-label">NOW PLAYING</span>
             <span class="dj-info-name" id="controlsDjName">--</span>
@@ -4372,7 +4377,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     // Double tap to like
     // (handled by native dblclick)
   }, { passive: true });
-  
+
   // Double tap to trigger reaction
   let lastTap = 0;
   playerContainer?.addEventListener('touchend', (e) => {
@@ -4384,6 +4389,61 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     }
     lastTap = now;
   }, { passive: true });
+
+  // Now Playing Save Button - Add current track to personal playlist
+  const nowPlayingSaveBtn = document.getElementById('nowPlayingSaveBtn');
+  const djInfoBar = document.querySelector('.dj-info-bar');
+  let currentPlaylistTrack = null;
+
+  // Listen for playlist updates to show/hide the save button and track current song
+  window.addEventListener('playlistUpdate', (e) => {
+    const detail = e.detail;
+    const isPlaylistPlaying = detail.isPlaying && detail.queue && detail.queue.length > 0;
+
+    if (isPlaylistPlaying) {
+      // Add playlist-mode class to show the save button
+      djInfoBar?.classList.add('playlist-mode');
+
+      // Store current track for saving
+      const currentIndex = detail.currentIndex || 0;
+      currentPlaylistTrack = detail.queue[currentIndex];
+
+      // Update button state - check if track is already in personal playlist
+      if (nowPlayingSaveBtn && currentPlaylistTrack) {
+        const personalPlaylist = detail.personalPlaylist || [];
+        const isInPlaylist = personalPlaylist.some(item => item.url === currentPlaylistTrack.url);
+        nowPlayingSaveBtn.classList.toggle('saved', isInPlaylist);
+        nowPlayingSaveBtn.title = isInPlaylist ? 'Already in My Playlist' : 'Save to My Playlist';
+      }
+    } else {
+      djInfoBar?.classList.remove('playlist-mode');
+      currentPlaylistTrack = null;
+    }
+  });
+
+  // Handle save button click
+  nowPlayingSaveBtn?.addEventListener('click', async () => {
+    if (!currentPlaylistTrack) return;
+
+    // Check if already saved
+    if (nowPlayingSaveBtn.classList.contains('saved')) {
+      return; // Already saved
+    }
+
+    try {
+      // Get the global playlist manager and add to personal playlist
+      const manager = window.globalPlaylistManager;
+      if (manager) {
+        const result = await manager.addToPersonalPlaylist(currentPlaylistTrack);
+        if (result.success) {
+          nowPlayingSaveBtn.classList.add('saved');
+          nowPlayingSaveBtn.title = 'Already in My Playlist';
+        }
+      }
+    } catch (err) {
+      console.error('[NowPlaying] Error saving track:', err);
+    }
+  });
 </script>
 
 <script type="module" src="/live-stream.js?v=20251222-reactions"></script>

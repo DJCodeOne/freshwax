@@ -2623,6 +2623,41 @@
     border-color: #dc2626;
   }
 
+  .now-playing-save-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .now-playing-save-btn:hover {
+    background: #222;
+    border-color: #dc2626;
+    color: #dc2626;
+  }
+
+  .now-playing-save-btn.saved {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: white;
+  }
+
+  .now-playing-save-btn.saved svg {
+    fill: currentColor;
+  }
+
+  .dj-info-bar.playlist-mode .now-playing-save-btn {
+    display: flex;
+  }
+
   .dj-info-name {
     font-size: 16px;
     font-weight: 700;
