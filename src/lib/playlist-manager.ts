@@ -568,11 +568,16 @@ export class PlaylistManager {
    * Calculate sync position based on trackStartedAt timestamp
    */
   private calculateSyncPosition(): number {
-    if (!this.playlist.trackStartedAt) return 0;
+    console.log('[PlaylistManager] calculateSyncPosition called, trackStartedAt:', this.playlist.trackStartedAt);
+    if (!this.playlist.trackStartedAt) {
+      console.log('[PlaylistManager] No trackStartedAt, returning 0');
+      return 0;
+    }
 
     const startedAt = new Date(this.playlist.trackStartedAt).getTime();
     const now = Date.now();
     const elapsedSeconds = Math.floor((now - startedAt) / 1000);
+    console.log('[PlaylistManager] Calculated elapsed time:', elapsedSeconds, 'seconds');
 
     // Cap at 10 minutes (max track duration)
     const maxSeconds = MAX_TRACK_DURATION_MS / 1000;
@@ -1295,7 +1300,7 @@ export class PlaylistManager {
 
       if (result.success && result.playlist) {
         this.playlist = result.playlist;
-        console.log('[PlaylistManager] Loaded global playlist:', this.playlist.queue.length, 'items');
+        console.log('[PlaylistManager] Loaded global playlist:', this.playlist.queue.length, 'items, trackStartedAt:', this.playlist.trackStartedAt, 'isPlaying:', this.playlist.isPlaying);
 
         // Check for stale or invalid playlist states
         let shouldClear = false;
@@ -1307,10 +1312,10 @@ export class PlaylistManager {
         }
 
         // Case 2: isPlaying but no trackStartedAt (missing sync data)
+        // NOTE: Do NOT set trackStartedAt here - let the server be the source of truth
+        // If server doesn't have it, the track will play from the beginning which is safer
         if (this.playlist.isPlaying && this.playlist.queue.length > 0 && !this.playlist.trackStartedAt) {
-          console.log('[PlaylistManager] isPlaying but no trackStartedAt - resetting track start');
-          // Don't clear, just set trackStartedAt to now (assume track just started)
-          this.playlist.trackStartedAt = new Date().toISOString();
+          console.log('[PlaylistManager] isPlaying but no trackStartedAt from server - sync may not work');
         }
 
         // Case 3: trackStartedAt is more than 15 minutes old (track should have ended)
