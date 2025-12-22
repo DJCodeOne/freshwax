@@ -63,7 +63,7 @@
                 </svg>
               </button>
               <div class="input-button-group">
-                <button id="addToPlaylistBtn" class="add-to-playlist-btn" title="Join DJ Queue now">
+                <button id="addToPlaylistBtn" class="add-to-playlist-btn" title="Add to Playlist Queue">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polygon points="5 3 19 12 5 21 5 3"></polygon>
                   </svg>
@@ -91,7 +91,7 @@
             <!-- Queue List Side -->
             <div class="queue-list-side">
               <div class="playlist-queue-header">
-                <h3>DJ Queue <span id="queueCount" class="queue-count">0/10</span></h3>
+                <h3>Playlist Queue <span id="queueCount" class="queue-count">0/10</span></h3>
               </div>
               <div id="playlistQueue" class="playlist-queue-grid">
                 <div class="playlist-empty">
@@ -2202,7 +2202,7 @@
           <div class="personal-item-platform">${getPlatformName(item.platform)}</div>
         </div>
         <div class="personal-item-actions">
-          <button class="personal-add-btn" data-id="${item.id}" ${userTracksInQueue >= 2 ? 'disabled title="You already have 2 tracks in the queue"' : 'title="Add to DJ Queue"'}>
+          <button class="personal-add-btn" data-id="${item.id}" ${userTracksInQueue >= 2 ? 'disabled title="You already have 2 tracks in the queue"' : 'title="Add to Playlist Queue"'}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
