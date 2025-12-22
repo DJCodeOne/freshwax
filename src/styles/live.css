@@ -6883,22 +6883,12 @@
   z-index: 15;
 }
 
-/* Persistent player - when modal is open, show player above modal */
+/* Hide player when modal is open - audio continues in background */
 .playlist-modal:not(.hidden) ~ .live-grid .playlist-player,
 body:has(.playlist-modal:not(.hidden)) .playlist-player {
-  position: fixed !important;
-  top: 60px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  width: 90vw !important;
-  max-width: 500px !important;
-  height: auto !important;
-  min-height: 280px !important;
-  aspect-ratio: 16/9;
-  z-index: 10001 !important;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(220, 38, 38, 0.5);
-  border: 2px solid rgba(220, 38, 38, 0.6);
+  position: absolute !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 /* YouTube player wrapper */

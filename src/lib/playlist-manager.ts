@@ -8,9 +8,10 @@ const PLAYLIST_HISTORY_KEY = 'freshwax_playlist_history';
 const RECENTLY_PLAYED_KEY = 'freshwax_recently_played';
 const PERSONAL_PLAYLIST_KEY = 'freshwax_personal_playlist';
 const MAX_HISTORY_SIZE = 100;
-const MAX_PERSONAL_PLAYLIST_SIZE = 50;
+const MAX_PERSONAL_PLAYLIST_SIZE = 500; // Increased from 50
 const TRACK_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour cooldown between same tracks
 const MAX_TRACK_DURATION_MS = 10 * 60 * 1000; // 10 minutes max per track
+const MAX_TRACK_DURATION_SECONDS = 10 * 60; // 10 minutes in seconds for validation
 
 // History entry for offline playlist creation
 interface PlaylistHistoryEntry {
@@ -1365,7 +1366,7 @@ export class PlaylistManager {
   /**
    * Fetch video metadata using noembed.com
    */
-  private async fetchMetadata(url: string): Promise<{ title?: string; thumbnail?: string }> {
+  private async fetchMetadata(url: string): Promise<{ title?: string; thumbnail?: string; duration?: number }> {
     try {
       const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
       if (!response.ok) return {};
@@ -1373,12 +1374,38 @@ export class PlaylistManager {
       const data = await response.json();
       return {
         title: data.title || undefined,
-        thumbnail: data.thumbnail_url || undefined
+        thumbnail: data.thumbnail_url || undefined,
+        duration: data.duration || undefined // Some providers include duration
       };
     } catch (error) {
       console.warn('[PlaylistManager] Failed to fetch metadata:', error);
       return {};
     }
+  }
+
+  /**
+   * Fetch YouTube video duration via YouTube Data API proxy or oEmbed
+   * Returns duration in seconds, or null if unknown
+   */
+  private async fetchVideoDuration(url: string, platform: string, embedId?: string): Promise<number | null> {
+    // For YouTube, try to get duration from a proxy endpoint
+    if (platform === 'youtube' && embedId) {
+      try {
+        // Try our API endpoint that can check duration
+        const response = await fetch(`/api/youtube/duration?videoId=${embedId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.duration) {
+            return data.duration;
+          }
+        }
+      } catch (error) {
+        console.warn('[PlaylistManager] Could not fetch YouTube duration:', error);
+      }
+    }
+
+    // Duration check not available for this platform
+    return null;
   }
 
   /**

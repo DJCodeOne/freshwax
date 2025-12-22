@@ -408,12 +408,12 @@
     color: #fff;
   }
 
-  /* 2-column grid for queue items - fills available space */
+  /* Compact list for queue items - all 10 visible */
   .playlist-queue-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1rem;
-    padding: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.5rem 0;
     flex: 1;
     overflow-y: auto;
     scrollbar-width: thin;
@@ -421,7 +421,7 @@
   }
 
   .playlist-queue-grid::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
   }
 
   .playlist-queue-grid::-webkit-scrollbar-track {
@@ -430,7 +430,7 @@
 
   .playlist-queue-grid::-webkit-scrollbar-thumb {
     background: rgba(59, 130, 246, 0.5);
-    border-radius: 3px;
+    border-radius: 2px;
   }
 
   /* Modal body fills available space */
@@ -442,16 +442,18 @@
     overflow: hidden;
   }
 
-  /* Queue item card style - non-active items are compact */
+  /* Queue item card style - compact rows for all items */
   .playlist-grid-item {
     display: flex;
     flex-direction: row;
+    align-items: center;
     background: rgba(20, 20, 35, 0.9);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
+    border-radius: 6px;
     overflow: hidden;
     transition: all 0.2s ease;
-    height: 80px;
+    height: 50px;
+    padding: 0;
   }
 
   .playlist-grid-item:hover {
@@ -459,50 +461,23 @@
     background: rgba(30, 30, 50, 0.95);
   }
 
-  /* Compact thumbnail for non-active items */
+  /* Compact thumbnail for all items */
   .playlist-grid-item .playlist-grid-thumb {
-    width: 120px;
-    min-width: 120px;
+    width: 70px;
+    min-width: 70px;
+    height: 50px;
     aspect-ratio: auto;
-    height: 100%;
   }
 
-  /* Active/now playing item - full size with red border */
+  /* Active/now playing item - highlight but keep compact */
   .playlist-grid-item.active {
-    flex-direction: column;
-    grid-column: 1 / -1;
-    height: auto;
-    max-width: 500px;
-    margin: 0 auto 1rem;
     border-color: #dc2626;
-    border-width: 3px;
-    box-shadow: 0 0 30px rgba(220, 38, 38, 0.5);
-    background: rgba(220, 38, 38, 0.1);
-  }
-
-  .playlist-grid-item.active .playlist-grid-thumb {
-    width: 100%;
-    min-width: 100%;
-    aspect-ratio: 16/9;
-    height: auto;
-  }
-
-  .playlist-grid-item.active::before {
-    content: 'NOW PLAYING';
-    display: block;
-    background: linear-gradient(90deg, #dc2626, #b91c1c);
-    color: white;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-align: center;
-    padding: 8px 12px;
+    border-width: 2px;
+    background: rgba(220, 38, 38, 0.15);
   }
 
   .playlist-grid-thumb {
     position: relative;
-    width: 100%;
-    aspect-ratio: 16/9;
     background: #0a0a15;
     overflow: hidden;
   }
@@ -511,11 +486,6 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
-  }
-
-  .playlist-grid-item:hover .playlist-grid-thumb img {
-    transform: scale(1.05);
   }
 
   .playlist-grid-thumb-placeholder {
@@ -528,26 +498,24 @@
     color: rgba(59, 130, 246, 0.4);
   }
 
+  .playlist-grid-thumb-placeholder svg {
+    width: 24px;
+    height: 24px;
+  }
+
   .playlist-grid-info {
-    padding: 0.5rem 0.75rem;
+    padding: 0.25rem 0.5rem;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 0.25rem;
+    gap: 0;
     flex: 1;
     overflow: hidden;
-  }
-
-  /* Active item has centered text */
-  .playlist-grid-item.active .playlist-grid-info {
-    padding: 1rem;
-    text-align: center;
-    align-items: center;
-    gap: 0.5rem;
+    min-width: 0;
   }
 
   .playlist-grid-title {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
     color: #ffffff;
     line-height: 1.2;
@@ -556,33 +524,17 @@
     text-overflow: ellipsis;
   }
 
-  .playlist-grid-item.active .playlist-grid-title {
-    font-size: 1rem;
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-  }
-
   .playlist-grid-platform {
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     color: #dc2626;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     font-weight: 700;
   }
 
-  .playlist-grid-item.active .playlist-grid-platform {
-    font-size: 0.75rem;
-  }
-
   .playlist-grid-addedby {
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     color: #22c55e;
-  }
-
-  .playlist-grid-item.active .playlist-grid-addedby {
-    font-size: 0.75rem;
   }
 
   .playlist-grid-addedby strong {
@@ -590,45 +542,32 @@
     color: #4ade80;
   }
 
-  /* Hide actions for compact items, show on hover */
+  /* Actions - shown inline at end of row */
   .playlist-grid-actions {
-    display: none;
-    gap: 0.3rem;
-    margin-top: auto;
-    padding-top: 0.3rem;
-  }
-
-  .playlist-grid-item:hover .playlist-grid-actions,
-  .playlist-grid-item.active .playlist-grid-actions {
     display: flex;
-  }
-
-  .playlist-grid-item.active .playlist-grid-actions {
-    justify-content: center;
-    padding-top: 0.5rem;
+    gap: 0.25rem;
+    padding-right: 0.5rem;
+    flex-shrink: 0;
   }
 
   .playlist-action-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.25rem;
-    padding: 0.3rem 0.5rem;
+    gap: 0.15rem;
+    padding: 0.2rem 0.4rem;
     border: none;
-    border-radius: 5px;
-    font-size: 0.65rem;
+    border-radius: 4px;
+    font-size: 0.55rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
-  .playlist-grid-item.active .playlist-action-btn {
-    padding: 0.5rem 1rem;
-    font-size: 0.75rem;
-  }
-
   .playlist-action-btn svg {
     flex-shrink: 0;
+    width: 10px;
+    height: 10px;
   }
 
   .playlist-copy-btn {
@@ -814,30 +753,25 @@
     color: #4ade80;
   }
 
-  /* DJ name display - prominent */
+  /* DJ name display - inline */
   .dj-name-display {
-    font-size: 0.85rem;
-    font-weight: 700;
+    font-size: 0.6rem;
+    font-weight: 600;
     color: #60a5fa;
-    margin-bottom: 0.25rem;
+    white-space: nowrap;
   }
 
-  .playlist-grid-item.active .dj-name-display {
-    font-size: 1rem;
-    color: #93c5fd;
-  }
-
-  /* Position badge for non-active items */
+  /* Position badge for items */
   .dj-position-badge {
     position: absolute;
-    top: 4px;
-    left: 4px;
-    background: rgba(0, 0, 0, 0.8);
+    top: 2px;
+    left: 2px;
+    background: rgba(0, 0, 0, 0.85);
     color: #60a5fa;
-    font-size: 0.65rem;
+    font-size: 0.5rem;
     font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 1px 4px;
+    border-radius: 3px;
     z-index: 2;
   }
 
@@ -1692,19 +1626,19 @@
     }
   }
 
-  // Render queue items in DJ waitlist format
+  // Render queue items in compact DJ waitlist format
   function renderQueue(queue: any[], currentIndex: number) {
     const queueDiv = document.getElementById('playlistQueue');
     if (!queueDiv) return;
 
     if (queue.length === 0) {
       queueDiv.innerHTML = `
-        <div class="playlist-empty" style="grid-column: 1 / -1;">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <div class="playlist-empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <polygon points="5 3 19 12 5 21 5 3"></polygon>
           </svg>
           <p>DJ Waitlist is empty</p>
-          <p class="playlist-empty-hint">${isAuthenticated ? 'Add a track to join the queue' : 'Sign in to join the DJ queue'}</p>
+          <p class="playlist-empty-hint">${isAuthenticated ? 'Add a track to join' : 'Sign in to join'}</p>
         </div>
       `;
       return;
@@ -1717,51 +1651,33 @@
       const isUsersTrack = currentUserId && item.addedBy === currentUserId;
       const position = index + 1;
 
-      // Position label
-      let positionLabel = '';
-      if (isCurrentTrack) {
-        positionLabel = 'NOW PLAYING';
-      } else if (index === 1) {
-        positionLabel = '#2 UP NEXT';
-      } else {
-        positionLabel = `#${position}`;
-      }
+      // Position label - compact
+      let positionLabel = isCurrentTrack ? '▶' : `#${position}`;
 
       return `
         <div class="playlist-grid-item ${isCurrentTrack ? 'active' : ''} ${isUsersTrack ? 'your-track' : ''}" data-id="${item.id}">
-          ${!isCurrentTrack ? `<div class="dj-position-badge">${positionLabel}</div>` : ''}
+          <div class="dj-position-badge">${positionLabel}</div>
           <div class="playlist-grid-thumb">
             ${item.thumbnail
-              ? `<img src="${item.thumbnail}" alt="${item.title || 'Video thumbnail'}" loading="lazy" />`
+              ? `<img src="${item.thumbnail}" alt="${item.title || 'Video'}" loading="lazy" />`
               : `<div class="playlist-grid-thumb-placeholder">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
-                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                  </svg>
+                  <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                 </div>`
             }
           </div>
           <div class="playlist-grid-info">
-            <div class="dj-name-display">🎧 ${djName}${isUsersTrack ? ' (You)' : ''}</div>
             <div class="playlist-grid-title">${item.title || 'Untitled'}</div>
-            <div class="playlist-grid-platform">${getPlatformName(item.platform)}</div>
-            <div class="playlist-grid-actions">
-              <button class="playlist-action-btn playlist-copy-btn" data-url="${item.url}" title="Copy link">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            <div class="dj-name-display">🎧 ${djName}${isUsersTrack ? ' (You)' : ''}</div>
+          </div>
+          <div class="playlist-grid-actions">
+            ${canRemove ? `
+              <button class="playlist-action-btn playlist-remove-btn" data-id="${item.id}" title="Leave Queue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
-                Copy
               </button>
-              ${canRemove ? `
-                <button class="playlist-action-btn playlist-remove-btn" data-id="${item.id}" title="Remove">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                  </svg>
-                  Leave Queue
-                </button>
-              ` : ''}
-            </div>
+            ` : ''}
           </div>
         </div>
       `;
