@@ -192,7 +192,11 @@
     };
 
     window.toggleGifModal = function() {
-      console.log('[Picker] GIF toggle called');
+      console.log('[Picker] GIF toggle called, gifModal:', !!gifModal, 'gifResults:', !!gifResults);
+      if (!gifModal) {
+        console.error('[Picker] GIF modal element not found!');
+        return;
+      }
       gifModal.style.display = 'flex';
       document.body.style.overflow = 'hidden';
       loadGifs('trending');
@@ -252,7 +256,13 @@
     // Load GIFs from Giphy
     async function loadGifs(category, searchQuery = null) {
       const apiKey = window.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6SfraYr';
-      console.log('[GIF] Loading GIFs, apiKey available:', !!apiKey, 'category:', category, 'query:', searchQuery);
+      console.log('[GIF] Loading GIFs, apiKey available:', !!apiKey, 'category:', category, 'query:', searchQuery, 'gifResults:', !!gifResults);
+
+      if (!gifResults) {
+        console.error('[GIF] gifResults element not found!');
+        return;
+      }
+
       gifResults.innerHTML = '<p class="gif-modal-loading">Loading GIFs...</p>';
 
       try {

@@ -30,8 +30,6 @@
           NOW PLAYING
         </div>
         <div class="now-playing-info">
-          <span id="nowPlayingDj" class="now-playing-dj">--</span>
-          <span class="now-playing-separator">-</span>
           <span id="nowPlayingTitle" class="now-playing-title">--</span>
         </div>
       </div>
@@ -162,32 +160,6 @@
         </div>
       </div>
 
-      <!-- Playback Controls - Stop and Volume only -->
-      <div id="playlistControls" class="playlist-controls hidden">
-        <div class="playlist-controls-simple">
-          <button id="stopPlayBtn" class="control-btn control-btn-large" title="Stop/Resume">
-            <svg id="stopIcon" width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="6" y="6" width="12" height="12"></rect>
-            </svg>
-            <svg id="playIcon" class="hidden" width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-          </button>
-
-          <div class="volume-control">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-            </svg>
-            <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="80" />
-          </div>
-        </div>
-
-        <div class="playlist-status">
-          <span id="playlistStatusText">Playing</span>
-        </div>
-      </div>
     </div>
   </div>
 </div>
@@ -1730,49 +1702,6 @@
       });
     }
 
-    // Stop/Play toggle
-    const stopPlayBtn = document.getElementById('stopPlayBtn');
-
-    if (stopPlayBtn && !stopPlayBtn.dataset.listenerAttached) {
-      stopPlayBtn.dataset.listenerAttached = 'true';
-      stopPlayBtn.addEventListener('click', async () => {
-        if (!playlistManager) return;
-
-        if (isStopped) {
-          await playlistManager.resume();
-          isStopped = false;
-        } else {
-          await playlistManager.pause();
-          isStopped = true;
-        }
-        updateStopPlayButton();
-      });
-    }
-
-    // Volume control
-    const volumeSlider = document.getElementById('volumeSlider') as HTMLInputElement;
-    if (volumeSlider && !volumeSlider.dataset.listenerAttached) {
-      volumeSlider.dataset.listenerAttached = 'true';
-      volumeSlider.addEventListener('input', () => {
-        const volume = parseInt(volumeSlider.value);
-        if (playlistManager) {
-          playlistManager.setVolume(volume);
-        }
-      });
-    }
-  }
-
-  // Stop/Play button UI update
-  function updateStopPlayButton() {
-    const stopIcon = document.getElementById('stopIcon');
-    const playIcon = document.getElementById('playIcon');
-    if (isStopped) {
-      stopIcon?.classList.add('hidden');
-      playIcon?.classList.remove('hidden');
-    } else {
-      stopIcon?.classList.remove('hidden');
-      playIcon?.classList.add('hidden');
-    }
   }
 
   // Listen for playlist updates (only add once, not per page load)
@@ -1872,10 +1801,9 @@
   // Update Now Playing Strip
   function updateNowPlayingStrip(queue: any[], currentIndex: number, currentDj: any) {
     const strip = document.getElementById('nowPlayingStrip');
-    const djName = document.getElementById('nowPlayingDj');
     const title = document.getElementById('nowPlayingTitle');
 
-    if (!strip || !djName || !title) return;
+    if (!strip || !title) return;
 
     if (queue.length === 0 || currentIndex >= queue.length) {
       strip.classList.add('hidden');
@@ -1885,7 +1813,6 @@
 
     const currentItem = queue[currentIndex];
     strip.classList.remove('hidden');
-    djName.textContent = currentDj?.userName || currentItem?.addedByName || 'Unknown';
     title.textContent = currentItem?.title || 'Unknown Track';
 
     // Update video preview
