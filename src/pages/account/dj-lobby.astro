@@ -22,7 +22,7 @@ const firebaseConfig = {
 };
 
 // HLS URL for preview player (from env or default to production)
-const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://rtmp.freshwax.co.uk';
+const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://stream.freshwax.co.uk';
 
 // Get admin key from environment (server-side only) for bypass requests
 const runtime = (Astro.locals as any).runtime;
@@ -595,7 +595,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
               </div>
               <div class="pro-card-body">
                 <div class="output-url-row">
-                  <code id="outputUrl">https://rtmp.freshwax.co.uk/live/freshwax-main/index.m3u8</code>
+                  <code id="outputUrl">https://stream.freshwax.co.uk/live/freshwax-main/index.m3u8</code>
                   <button class="pro-copy-btn" id="copyOutputUrl">Copy</button>
                 </div>
                 <span class="output-hint">Share with stations to relay your stream</span>
@@ -1886,7 +1886,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
 
     // Check if user's OBS stream is available (preview before going live)
-    const obsPreviewUrl = `${window.HLS_BASE_URL || 'https://rtmp.freshwax.co.uk'}/live/${currentStreamKey}/index.m3u8`;
+    const obsPreviewUrl = `${window.HLS_BASE_URL || 'https://stream.freshwax.co.uk'}/live/${currentStreamKey}/index.m3u8`;
     console.log('[Preview] Checking URL:', obsPreviewUrl);
 
     // Force preview mode - skip availability check and just try to play
@@ -2083,32 +2083,36 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     if (currentLevel) {
       // Bitrate in Mbps
       const bitrate = currentLevel.bitrate ? (currentLevel.bitrate / 1000000).toFixed(1) : '--';
-      bitrateEl.textContent = bitrate !== '--' ? `${bitrate}Mb` : '--';
-      bitrateEl.className = 'stat-value' + (currentLevel.bitrate < 1000000 ? ' warn' : currentLevel.bitrate < 500000 ? ' bad' : '');
+      if (bitrateEl) {
+        bitrateEl.textContent = bitrate !== '--' ? `${bitrate}Mb` : '--';
+        bitrateEl.className = 'stat-value' + (currentLevel.bitrate < 1000000 ? ' warn' : currentLevel.bitrate < 500000 ? ' bad' : '');
+      }
 
       // Resolution
       const width = currentLevel.width || videoEl?.videoWidth || 0;
       const height = currentLevel.height || videoEl?.videoHeight || 0;
-      if (height > 0) {
-        qualityEl.textContent = `${width}x${height}`;
-        qualityEl.className = 'stat-value' + (height < 480 ? ' bad' : height < 720 ? ' warn' : '');
-      } else {
-        qualityEl.textContent = '--';
-        qualityEl.className = 'stat-value';
+      if (qualityEl) {
+        if (height > 0) {
+          qualityEl.textContent = `${width}x${height}`;
+          qualityEl.className = 'stat-value' + (height < 480 ? ' bad' : height < 720 ? ' warn' : '');
+        } else {
+          qualityEl.textContent = '--';
+          qualityEl.className = 'stat-value';
+        }
       }
     }
 
     // Dropped frames from video element
     if (videoEl) {
       const quality = videoEl.getVideoPlaybackQuality?.();
-      if (quality) {
+      if (quality && droppedEl) {
         const dropped = quality.droppedVideoFrames || 0;
         droppedEl.textContent = dropped.toString();
         droppedEl.className = 'stat-value' + (dropped > 100 ? ' bad' : dropped > 20 ? ' warn' : '');
       }
 
       // Buffer amount
-      if (videoEl.buffered?.length > 0) {
+      if (videoEl.buffered?.length > 0 && bufferEl) {
         const buffered = videoEl.buffered.end(videoEl.buffered.length - 1) - videoEl.currentTime;
         bufferEl.textContent = `${buffered.toFixed(1)}s`;
         bufferEl.className = 'stat-value' + (buffered < 2 ? ' bad' : buffered < 5 ? ' warn' : '');
@@ -2116,15 +2120,17 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
 
     // Latency estimate from HLS.js
-    if (hlsPlayer.latency !== undefined) {
-      const latency = hlsPlayer.latency;
-      latencyEl.textContent = `${latency.toFixed(1)}s`;
-      latencyEl.className = 'stat-value' + (latency > 15 ? ' bad' : latency > 8 ? ' warn' : '');
-    } else if (hlsPlayer.targetLatency !== undefined) {
-      latencyEl.textContent = `~${hlsPlayer.targetLatency.toFixed(0)}s`;
-      latencyEl.className = 'stat-value';
-    } else {
-      latencyEl.textContent = '--';
+    if (latencyEl) {
+      if (hlsPlayer.latency !== undefined) {
+        const latency = hlsPlayer.latency;
+        latencyEl.textContent = `${latency.toFixed(1)}s`;
+        latencyEl.className = 'stat-value' + (latency > 15 ? ' bad' : latency > 8 ? ' warn' : '');
+      } else if (hlsPlayer.targetLatency !== undefined) {
+        latencyEl.textContent = `~${hlsPlayer.targetLatency.toFixed(0)}s`;
+        latencyEl.className = 'stat-value';
+      } else {
+        latencyEl.textContent = '--';
+      }
     }
 
     // Uptime from stream start
