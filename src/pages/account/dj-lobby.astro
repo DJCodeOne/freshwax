@@ -5635,6 +5635,21 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       const message = chatInput.value.trim();
       if (!message || !currentUser) return;
 
+      const userName = userInfo?.displayName || userInfo?.firstName || currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
+      const userAvatar = userInfo?.photoURL || currentUser.photoURL || null;
+
+      // Optimistic UI - show message immediately
+      const tempMsg = {
+        id: 'temp_' + Date.now(),
+        userId: currentUser.uid,
+        userName: userName,
+        userAvatar: userAvatar,
+        message: message,
+        type: 'text',
+        createdAt: new Date().toISOString()
+      };
+      appendLivestreamMessage(tempMsg);
+
       chatInput.value = '';
       chatInput.disabled = true;
       sendBtn.disabled = true;
@@ -5646,8 +5661,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           body: JSON.stringify({
             streamId: streamId,
             userId: currentUser.uid,
-            userName: userInfo?.displayName || userInfo?.firstName || currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-            userAvatar: userInfo?.photoURL || currentUser.photoURL || null,
+            userName: userName,
+            userAvatar: userAvatar,
             message: message,
             type: 'text'
           })
