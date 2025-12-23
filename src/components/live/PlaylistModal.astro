@@ -106,6 +106,10 @@
 
             <!-- Video Preview Side -->
             <div class="queue-preview-side">
+              <!-- Position Indicator (Your Track Playing) - shown above Now Playing when it's your turn -->
+              <div id="yourTrackIndicator" class="your-track-indicator hidden">
+                <span id="yourTrackText">🎧 YOUR TRACK IS PLAYING</span>
+              </div>
               <div class="preview-header">
                 <h3>Now Playing</h3>
               </div>
@@ -996,6 +1000,10 @@
     color: #60a5fa;
   }
 
+  .position-indicator.hidden {
+    display: none;
+  }
+
   .position-indicator.your-turn {
     background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.2));
     border-color: rgba(34, 197, 94, 0.4);
@@ -1032,14 +1040,42 @@
     position: relative;
   }
 
-  /* Highlight user's track in queue */
+  /* Highlight user's track in queue - subtle indicator only */
   .playlist-grid-item.your-track:not(.active) {
-    border-color: rgba(59, 130, 246, 0.5);
-    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
   }
 
   .playlist-grid-item.your-track .dj-name-display {
     color: #93c5fd;
+  }
+
+  /* Your Track Playing indicator - above Now Playing preview */
+  .your-track-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1rem;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(22, 163, 74, 0.25));
+    border: 2px solid rgba(34, 197, 94, 0.5);
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+    animation: pulseGreen 2s ease-in-out infinite;
+  }
+
+  .your-track-indicator.hidden {
+    display: none;
+  }
+
+  .your-track-indicator span {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #4ade80;
+    letter-spacing: 0.5px;
+  }
+
+  @keyframes pulseGreen {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
   }
 
   /* My Playlist Section - Full height in right column */
@@ -2092,31 +2128,35 @@
   function updatePositionIndicator(position: number | null, isUsersTurn: boolean, queueSize: number) {
     const indicator = document.getElementById('positionIndicator');
     const positionText = document.getElementById('positionText');
+    const yourTrackIndicator = document.getElementById('yourTrackIndicator');
 
     if (!indicator || !positionText) return;
 
+    // Hide both indicators initially
+    indicator.classList.add('hidden');
+    indicator.classList.remove('your-turn');
+    yourTrackIndicator?.classList.add('hidden');
+
     if (!isAuthenticated || position === null) {
       // User not in queue
-      indicator.classList.add('hidden');
-      indicator.classList.remove('your-turn');
       return;
     }
 
-    indicator.classList.remove('hidden');
-
+    // If it's your turn, show the new indicator above Now Playing
     if (isUsersTurn) {
-      indicator.classList.add('your-turn');
-      positionText.textContent = '🎧 Your track is playing now!';
+      yourTrackIndicator?.classList.remove('hidden');
+      return;
+    }
+
+    // Otherwise show position indicator for waiting in queue
+    indicator.classList.remove('hidden');
+    const waitingCount = position - 1;
+    if (waitingCount === 0) {
+      positionText.textContent = '⏳ You are up next!';
+    } else if (waitingCount === 1) {
+      positionText.textContent = `📍 You are #${position} - 1 DJ ahead of you`;
     } else {
-      indicator.classList.remove('your-turn');
-      const waitingCount = position - 1;
-      if (waitingCount === 0) {
-        positionText.textContent = '⏳ You are up next!';
-      } else if (waitingCount === 1) {
-        positionText.textContent = `📍 You are #${position} - 1 DJ ahead of you`;
-      } else {
-        positionText.textContent = `📍 You are #${position} - ${waitingCount} DJs ahead of you`;
-      }
+      positionText.textContent = `📍 You are #${position} - ${waitingCount} DJs ahead of you`;
     }
   }
 

@@ -1052,6 +1052,7 @@ export class PlaylistManager {
   /**
    * Pick a random track from history that hasn't been played recently
    * Used for auto-play when queue is empty
+   * Uses a shorter cooldown (10 min) than user-added tracks (1 hour)
    */
   private async pickRandomFromHistory(): Promise<GlobalPlaylistItem | null> {
     if (this.playHistory.length === 0) {
@@ -1059,15 +1060,39 @@ export class PlaylistManager {
       return null;
     }
 
-    // Filter out tracks that were played recently (within cooldown)
+    // For auto-play, use a shorter cooldown (10 minutes instead of 1 hour)
+    // This allows continuous music while still avoiding immediate repeats
+    const AUTO_PLAY_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+    const now = Date.now();
+
+    // Filter out tracks played within the auto-play cooldown
     const availableTracks = this.playHistory.filter(entry => {
-      const recentCheck = this.wasPlayedRecently(entry.url);
-      return !recentCheck.recent;
+      const timestamp = this.recentlyPlayed.get(entry.url);
+      if (!timestamp) return true; // Never played recently, available
+      const elapsed = now - timestamp;
+      return elapsed >= AUTO_PLAY_COOLDOWN_MS; // Available if 10+ minutes since last play
     });
 
     if (availableTracks.length === 0) {
-      console.log('[PlaylistManager] All history tracks are on cooldown');
-      return null;
+      // If all tracks are on short cooldown, just pick any random track
+      // Better to repeat than have silence
+      console.log('[PlaylistManager] All history tracks recently played, picking any random track');
+      const randomIndex = Math.floor(Math.random() * this.playHistory.length);
+      const selected = this.playHistory[randomIndex];
+
+      const item: GlobalPlaylistItem = {
+        id: this.generateId(),
+        url: selected.url,
+        platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
+        embedId: selected.embedId,
+        title: selected.title,
+        thumbnail: selected.thumbnail,
+        addedAt: new Date().toISOString(),
+        addedBy: 'system',
+        addedByName: 'Auto-Play'
+      };
+
+      return item;
     }
 
     // Pick a random track

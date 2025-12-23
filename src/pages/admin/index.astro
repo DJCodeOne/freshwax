@@ -565,7 +565,75 @@ export const prerender = false;
     </div>
   </div>
 
+  <!-- Playlist History -->
+  <div class="card mt-4">
+    <div class="card-header">
+      <h2>🎵 Playlist History</h2>
+    </div>
+    <div class="card-body">
+      <p class="text-muted mb-3">View and download the master playlist history file (stored in browser localStorage)</p>
+      <div class="btn-group">
+        <button id="viewHistoryBtn" class="btn btn-secondary">View History</button>
+        <button id="downloadHistoryBtn" class="btn btn-primary">Download JSON</button>
+        <button id="clearHistoryBtn" class="btn btn-danger">Clear History</button>
+      </div>
+      <div id="historyCount" class="mt-2 text-muted"></div>
+      <div id="historyPreview" class="history-preview mt-3 hidden">
+        <h4>History Entries (<span id="historyTotal">0</span>)</h4>
+        <div id="historyList" class="history-list"></div>
+      </div>
+    </div>
+  </div>
+
 </AdminLayout>
+
+<style>
+  .history-preview {
+    background: #1a1a2e;
+    border-radius: 8px;
+    padding: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    background: #252540;
+    border-radius: 6px;
+  }
+  .history-item img {
+    width: 60px;
+    height: 45px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+  .history-item-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .history-item-title {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .history-item-meta {
+    font-size: 0.75rem;
+    color: #888;
+  }
+  .btn-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+</style>
 
 <script>
   // Feature toggle handling
@@ -593,6 +661,76 @@ export const prerender = false;
         });
       } catch (error) {
         console.error('Failed to save setting:', error);
+      }
+    });
+
+    // Playlist History handling
+    const HISTORY_KEY = 'freshwax_playlist_history';
+    const viewHistoryBtn = document.getElementById('viewHistoryBtn');
+    const downloadHistoryBtn = document.getElementById('downloadHistoryBtn');
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    const historyPreview = document.getElementById('historyPreview');
+    const historyList = document.getElementById('historyList');
+    const historyTotal = document.getElementById('historyTotal');
+    const historyCount = document.getElementById('historyCount');
+
+    function getHistory() {
+      try {
+        const data = localStorage.getItem(HISTORY_KEY);
+        return data ? JSON.parse(data) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function updateHistoryCount() {
+      const history = getHistory();
+      historyCount.textContent = `${history.length} tracks in history`;
+    }
+
+    updateHistoryCount();
+
+    viewHistoryBtn?.addEventListener('click', () => {
+      const history = getHistory();
+      historyTotal.textContent = history.length.toString();
+
+      if (history.length === 0) {
+        historyList.innerHTML = '<p class="text-muted">No history entries yet</p>';
+      } else {
+        historyList.innerHTML = history.map((item, i) => `
+          <div class="history-item">
+            <img src="${item.thumbnail || '/place-holder.webp'}" alt="" />
+            <div class="history-item-info">
+              <div class="history-item-title">${item.title || item.url}</div>
+              <div class="history-item-meta">
+                ${item.platform} • ${item.playedAt ? new Date(item.playedAt).toLocaleString() : 'Unknown date'}
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      historyPreview.classList.toggle('hidden');
+    });
+
+    downloadHistoryBtn?.addEventListener('click', () => {
+      const history = getHistory();
+      const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `playlist-history-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    clearHistoryBtn?.addEventListener('click', () => {
+      if (confirm('Are you sure you want to clear the playlist history? This cannot be undone.')) {
+        localStorage.removeItem(HISTORY_KEY);
+        updateHistoryCount();
+        historyList.innerHTML = '<p class="text-muted">No history entries yet</p>';
+        historyTotal.textContent = '0';
+        alert('History cleared');
       }
     });
   });
