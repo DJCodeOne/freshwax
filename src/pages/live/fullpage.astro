@@ -237,88 +237,147 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       </div>
     </div>
     
-    <!-- Chat Sidebar -->
-    <aside class="chat-section">
-      <div class="chat-header">
-        <div class="chat-tabs">
-          <button class="chat-tab active" data-chat="freshwax" id="fwChatTab">
-            <span class="tab-icon">💬</span>
+    <!-- Multi-Chat Section - 3 Columns -->
+    <aside class="chat-section multi-chat">
+      <!-- Fresh Wax Chat Column -->
+      <div class="chat-column" id="fwChatColumn" data-chat="freshwax">
+        <div class="chat-column-header">
+          <div class="chat-column-title">
+            <span class="chat-icon">💬</span>
             <span>Fresh Wax</span>
+          </div>
+          <button class="chat-expand-btn" data-target="freshwax" title="Expand Fresh Wax Chat">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+              <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+            </svg>
           </button>
-          <button class="chat-tab hidden" data-chat="twitch" id="twitchChatTab">
-            <svg class="twitch-tab-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+        </div>
+        <div class="chat-column-body">
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-welcome">
+              <p>Welcome to <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span> Live!</p>
+              <p class="chat-hint">Chat is active during live streams.</p>
+            </div>
+          </div>
+
+          <div id="chatInputSection" class="chat-input-section">
+            <div id="loginPrompt" class="login-prompt">
+              <p><a href="/login?redirect=/live/fullpage">Sign in</a> to chat</p>
+            </div>
+
+            <div id="chatForm" class="chat-form hidden">
+              <div class="chat-tools">
+                <button type="button" id="emojiBtn" class="tool-btn" title="Emojis">😊</button>
+                <button type="button" id="giphyBtn" class="tool-btn" title="GIFs">GIF</button>
+              </div>
+              <div class="chat-input-wrapper">
+                <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
+                <button type="submit" id="sendBtn">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="emojiPicker" class="emoji-picker hidden">
+            <div class="emoji-categories">
+              <button class="emoji-cat active" data-cat="music">Music</button>
+              <button class="emoji-cat" data-cat="reactions">Fire</button>
+              <button class="emoji-cat" data-cat="faces">Faces</button>
+              <button class="emoji-cat" data-cat="vibes">Vibes</button>
+            </div>
+            <div class="emoji-grid" id="emojiGrid"></div>
+          </div>
+
+          <div id="giphyPicker" class="giphy-picker hidden">
+            <div class="giphy-search">
+              <input type="text" id="giphySearch" placeholder="Search GIFs..." />
+            </div>
+            <div class="giphy-grid" id="giphyGrid">
+              <p class="giphy-hint">Search for a GIF above</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Twitch Chat Column -->
+      <div class="chat-column" id="twitchChatColumn" data-chat="twitch">
+        <div class="chat-column-header twitch-header">
+          <div class="chat-column-title">
+            <svg class="twitch-icon" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
               <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
             </svg>
             <span>Twitch</span>
+          </div>
+          <button class="chat-expand-btn" data-target="twitch" title="Expand Twitch Chat">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+              <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+            </svg>
           </button>
         </div>
-        <span class="chat-viewers" id="chatViewers">0 watching</span>
-      </div>
-      
-      <!-- Fresh Wax Chat Container -->
-      <div id="fwChatContainer" class="chat-container active">
-        <div class="chat-messages" id="chatMessages">
-          <div class="chat-welcome">
-            <p>Welcome to <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span> Live!</p>
-            <p class="chat-hint">Chat is active during live streams.</p>
+        <div class="chat-column-body">
+          <iframe
+            id="twitchChatFrame"
+            class="external-chat-frame"
+            allow="autoplay"
+            allowfullscreen
+          ></iframe>
+          <div class="external-chat-placeholder" id="twitchChatPlaceholder">
+            <svg class="placeholder-icon twitch-placeholder-icon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+              <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+            </svg>
+            <p>Twitch chat appears when streaming</p>
           </div>
         </div>
+      </div>
 
-        <div id="chatInputSection" class="chat-input-section">
-          <div id="loginPrompt" class="login-prompt">
-            <p><a href="/login?redirect=/live/fullpage">Sign in</a> to chat</p>
+      <!-- YouTube Chat Column -->
+      <div class="chat-column" id="youtubeChatColumn" data-chat="youtube">
+        <div class="chat-column-header youtube-header">
+          <div class="chat-column-title">
+            <svg class="youtube-icon" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+            <span>YouTube</span>
           </div>
-
-          <div id="chatForm" class="chat-form hidden">
-            <div class="chat-tools">
-              <button type="button" id="emojiBtn" class="tool-btn" title="Emojis">😊</button>
-              <button type="button" id="giphyBtn" class="tool-btn" title="GIFs">GIF</button>
-            </div>
-            <div class="chat-input-wrapper">
-              <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
-              <button type="submit" id="sendBtn">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-              </button>
-            </div>
+          <button class="chat-expand-btn" data-target="youtube" title="Expand YouTube Chat">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+              <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="chat-column-body">
+          <iframe
+            id="youtubeChatFrame"
+            class="external-chat-frame"
+            allow="autoplay"
+            allowfullscreen
+          ></iframe>
+          <div class="external-chat-placeholder" id="youtubeChatPlaceholder">
+            <svg class="placeholder-icon youtube-placeholder-icon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+            <p>YouTube chat appears when streaming</p>
           </div>
-        </div>
-
-        <div id="emojiPicker" class="emoji-picker hidden">
-        <div class="emoji-categories">
-          <button class="emoji-cat active" data-cat="music">Music</button>
-          <button class="emoji-cat" data-cat="reactions">Fire</button>
-          <button class="emoji-cat" data-cat="faces">Faces</button>
-          <button class="emoji-cat" data-cat="vibes">Vibes</button>
-        </div>
-        <div class="emoji-grid" id="emojiGrid"></div>
-      </div>
-      
-      <div id="giphyPicker" class="giphy-picker hidden">
-        <div class="giphy-search">
-          <input type="text" id="giphySearch" placeholder="Search GIFs..." />
-        </div>
-        <div class="giphy-grid" id="giphyGrid">
-          <p class="giphy-hint">Search for a GIF above</p>
-        </div>
-      </div>
-      </div>
-
-      <!-- Twitch Chat Container -->
-      <div id="twitchChatContainer" class="chat-container hidden">
-        <iframe
-          id="twitchChatFrame"
-          class="twitch-chat-frame"
-          allow="autoplay"
-          allowfullscreen
-        ></iframe>
-        <div class="twitch-chat-placeholder" id="twitchChatPlaceholder">
-          <svg class="twitch-placeholder-icon" viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
-            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
-          </svg>
-          <p>Twitch chat will appear when the DJ is streaming on Twitch</p>
         </div>
       </div>
     </aside>
+
+    <!-- Expanded Chat Modal -->
+    <div id="expandedChatModal" class="expanded-chat-modal hidden">
+      <div class="expanded-chat-backdrop"></div>
+      <div class="expanded-chat-content">
+        <div class="expanded-chat-header">
+          <div class="expanded-chat-title" id="expandedChatTitle">Chat</div>
+          <button class="expanded-chat-close" id="closeExpandedChat">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="expanded-chat-body" id="expandedChatBody"></div>
+      </div>
+    </div>
   </div>
 
 <style>
@@ -333,13 +392,24 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   
   .fullpage-container {
     display: grid;
-    grid-template-columns: 1fr 380px;
+    grid-template-columns: 1fr 720px;
     height: 100vh;
   }
-  
-  @media (max-width: 1000px) {
+
+  @media (max-width: 1400px) {
+    .fullpage-container { grid-template-columns: 1fr 540px; }
+  }
+
+  @media (max-width: 1200px) {
+    .fullpage-container { grid-template-columns: 1fr 400px; }
+    .chat-section.multi-chat { grid-template-columns: 1fr; }
+    .chat-column:nth-child(2), .chat-column:nth-child(3) { display: none; }
+  }
+
+  @media (max-width: 900px) {
     .fullpage-container { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
     .chat-section { height: 300px; }
+    .chat-section.multi-chat { grid-template-columns: 1fr; }
   }
   
   .player-section {
@@ -627,62 +697,213 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .np-set-title { font-size: 0.9375rem; color: #ccc; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .np-genre { font-size: 0.75rem; color: #dc2626; background: rgba(220, 38, 38, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px; }
   
+  /* Multi-Chat Section - 3 Columns */
   .chat-section { display: flex; flex-direction: column; background: #111; border-left: 2px solid #222; }
-  .chat-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: #0a0a0a; border-bottom: 2px solid #222; }
-  .chat-header h3 { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.125rem; letter-spacing: 1px; }
-  .chat-viewers { font-size: 0.75rem; color: #888; }
+  .chat-section.multi-chat {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+  }
 
-  /* Chat Tabs */
-  .chat-tabs { display: flex; gap: 0.5rem; }
-  .chat-tab { display: flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.75rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #888; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-  .chat-tab:hover { background: #333; color: #fff; }
-  .chat-tab.active { background: #dc2626; border-color: #dc2626; color: #fff; }
-  .chat-tab.hidden { display: none; }
-  .chat-tab[data-chat="twitch"].active { background: #9146ff; border-color: #9146ff; }
-  .twitch-tab-icon { fill: currentColor; }
+  /* Chat Columns */
+  .chat-column {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #222;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .chat-column:last-child { border-right: none; }
 
-  /* Chat Containers */
-  .chat-container { display: none; flex-direction: column; flex: 1; overflow: hidden; }
-  .chat-container.active { display: flex; }
+  .chat-column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background: #0a0a0a;
+    border-bottom: 2px solid #222;
+    min-height: 40px;
+  }
 
-  /* Twitch Chat */
-  .twitch-chat-frame { width: 100%; height: 100%; border: none; background: #18181b; }
-  .twitch-chat-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #666; text-align: center; padding: 2rem; }
-  .twitch-placeholder-icon { fill: #9146ff; opacity: 0.5; margin-bottom: 1rem; }
-  .twitch-chat-placeholder p { font-size: 0.875rem; }
-  .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
-  .chat-welcome { text-align: center; padding: 2rem; color: #9ca3af; }
-  .chat-welcome p { font-size: 0.875rem; margin-bottom: 0.5rem; }
-  .chat-hint { font-size: 0.75rem; color: #9ca3af; }
+  .chat-column-header.twitch-header { background: linear-gradient(135deg, #18181b 0%, #0a0a0a 100%); border-bottom-color: #9146ff40; }
+  .chat-column-header.youtube-header { background: linear-gradient(135deg, #1a0a0a 0%, #0a0a0a 100%); border-bottom-color: #ff000040; }
+
+  .chat-column-title {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+
+  .chat-icon { font-size: 0.875rem; }
+  .twitch-icon { fill: #9146ff; }
+  .youtube-icon { fill: #ff0000; }
+
+  .chat-expand-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: #888;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .chat-expand-btn:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.2); }
+  .chat-expand-btn svg { fill: currentColor; }
+
+  .chat-column-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* External Chat Frames (Twitch/YouTube) */
+  .external-chat-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #18181b;
+  }
+  #youtubeChatFrame { background: #0f0f0f; }
+
+  .external-chat-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    text-align: center;
+    padding: 1rem;
+    background: #111;
+  }
+  .external-chat-placeholder.hidden { display: none; }
+  .placeholder-icon { opacity: 0.3; margin-bottom: 0.75rem; }
+  .twitch-placeholder-icon { fill: #9146ff; }
+  .youtube-placeholder-icon { fill: #ff0000; }
+  .external-chat-placeholder p { font-size: 0.7rem; line-height: 1.4; }
+
+  /* Expanded Chat Modal */
+  .expanded-chat-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .expanded-chat-modal.hidden { display: none; }
+
+  .expanded-chat-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(4px);
+  }
+
+  .expanded-chat-content {
+    position: relative;
+    width: 90%;
+    max-width: 600px;
+    height: 80vh;
+    background: #111;
+    border: 2px solid #333;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .expanded-chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: #0a0a0a;
+    border-bottom: 2px solid #333;
+  }
+
+  .expanded-chat-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .expanded-chat-title.twitch { color: #9146ff; }
+  .expanded-chat-title.youtube { color: #ff0000; }
+  .expanded-chat-title.freshwax { color: #dc2626; }
+
+  .expanded-chat-close {
+    width: 36px;
+    height: 36px;
+    background: #333;
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .expanded-chat-close:hover { background: #dc2626; }
+
+  .expanded-chat-body {
+    flex: 1;
+    overflow: hidden;
+  }
+  .expanded-chat-body iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+  .chat-welcome { text-align: center; padding: 1rem 0.5rem; color: #9ca3af; }
+  .chat-welcome p { font-size: 0.7rem; margin-bottom: 0.25rem; }
+  .chat-hint { font-size: 0.65rem; color: #9ca3af; }
   
   /* Fresh Wax Branding */
   .brand-fresh { color: #fff; font-weight: 700; }
   .brand-wax { color: #dc2626; font-weight: 700; }
   .brand-fresh.dark { color: #000; }
   .brand-logo { font-family: 'Inter', sans-serif; font-weight: 700; letter-spacing: 1px; }
-  .chat-input-section { padding: 1rem; background: #0a0a0a; border-top: 2px solid #222; position: relative; }
-  .login-prompt { text-align: center; padding: 0.75rem; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.875rem; color: #888; }
+  .chat-input-section { padding: 0.5rem; background: #0a0a0a; border-top: 1px solid #222; position: relative; }
+  .login-prompt { text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 0.7rem; color: #888; }
   .login-prompt a { color: #dc2626; font-weight: 600; }
-  .chat-form { display: flex; flex-direction: column; gap: 0.5rem; }
-  .chat-tools { display: flex; gap: 0.5rem; }
-  .tool-btn { padding: 0.375rem 0.625rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #888; font-size: 0.75rem; cursor: pointer; transition: all 0.2s; }
+  .chat-form { display: flex; flex-direction: column; gap: 0.35rem; }
+  .chat-tools { display: flex; gap: 0.25rem; }
+  .tool-btn { padding: 0.25rem 0.5rem; background: #222; border: 1px solid #333; border-radius: 4px; color: #888; font-size: 0.65rem; cursor: pointer; transition: all 0.2s; }
   .tool-btn:hover { background: #333; color: #fff; }
-  .chat-input-wrapper { display: flex; gap: 0.5rem; }
-  .chat-input-wrapper input { flex: 1; padding: 0.75rem; background: #222; border: 1px solid #333; border-radius: 8px; color: #fff; font-size: 0.875rem; }
+  .chat-input-wrapper { display: flex; gap: 0.35rem; }
+  .chat-input-wrapper input { flex: 1; padding: 0.5rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 0.75rem; min-width: 0; }
   .chat-input-wrapper input:focus { outline: none; border-color: #dc2626; }
-  .chat-input-wrapper button { width: 44px; height: 44px; background: #dc2626; border: none; border-radius: 8px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .chat-input-wrapper button { width: 32px; height: 32px; background: #dc2626; border: none; border-radius: 6px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
   .chat-input-wrapper button:hover { background: #b91c1c; }
-  .chat-input-wrapper button svg { width: 20px; height: 20px; }
+  .chat-input-wrapper button svg { width: 14px; height: 14px; }
   
-  .emoji-picker, .giphy-picker { position: absolute; bottom: 100%; left: 1rem; right: 1rem; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; box-shadow: 0 -4px 20px rgba(0,0,0,0.3); z-index: 100; }
-  .emoji-categories { display: flex; gap: 0.25rem; padding: 0.5rem; border-bottom: 1px solid #333; }
-  .emoji-cat { padding: 0.4rem 0.75rem; background: #222; border: none; border-radius: 6px; font-size: 0.75rem; color: #888; cursor: pointer; transition: all 0.2s; }
+  .emoji-picker, .giphy-picker { position: absolute; bottom: 100%; left: 0; right: 0; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; box-shadow: 0 -4px 20px rgba(0,0,0,0.3); z-index: 100; }
+  .emoji-categories { display: flex; gap: 0.125rem; padding: 0.35rem; border-bottom: 1px solid #333; flex-wrap: wrap; }
+  .emoji-cat { padding: 0.25rem 0.5rem; background: #222; border: none; border-radius: 4px; font-size: 0.6rem; color: #888; cursor: pointer; transition: all 0.2s; }
   .emoji-cat.active { background: #dc2626; color: #fff; }
-  .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.25rem; padding: 0.75rem; max-height: 200px; overflow-y: auto; }
-  .giphy-search { padding: 0.75rem; border-bottom: 1px solid #333; }
-  .giphy-search input { width: 100%; padding: 0.5rem 0.75rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #fff; }
-  .giphy-grid { padding: 0.75rem; max-height: 200px; overflow-y: auto; }
-  .giphy-hint { text-align: center; color: #666; font-size: 0.875rem; padding: 1rem; }
+  .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.125rem; padding: 0.5rem; max-height: 150px; overflow-y: auto; }
+  .giphy-search { padding: 0.5rem; border-bottom: 1px solid #333; }
+  .giphy-search input { width: 100%; padding: 0.35rem 0.5rem; background: #222; border: 1px solid #333; border-radius: 4px; color: #fff; font-size: 0.7rem; }
+  .giphy-grid { padding: 0.5rem; max-height: 150px; overflow-y: auto; }
+  .giphy-hint { text-align: center; color: #666; font-size: 0.7rem; padding: 0.5rem; }
   
   /* Floating emojis handled via inline JS styles */
   
@@ -960,28 +1181,36 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
         // Register as listener if logged in
         registerAsListener();
 
-        // Setup Twitch chat if DJ has Twitch channel
-        setupTwitchChat(stream.twitchChannel || stream.twitchUsername);
+        // Setup external chats (Twitch & YouTube)
+        setupExternalChats(stream);
+      } else {
+        // No live stream - show placeholders
+        setupExternalChats(null);
       }
     } catch (e) { console.error('Error loading stream:', e); }
   }
 
-  // Twitch Chat Integration
+  // External Chat Integration (Twitch & YouTube)
   let currentTwitchChannel = null;
+  let currentYoutubeVideoId = null;
 
-  function setupTwitchChat(twitchChannel) {
-    const twitchTab = document.getElementById('twitchChatTab');
-    const twitchContainer = document.getElementById('twitchChatContainer');
+  // Fresh Wax Twitch channel (always active when streaming)
+  const FRESHWAX_TWITCH_CHANNEL = 'freshwaxuk';
+  // Fresh Wax YouTube channel handle for links
+  const FRESHWAX_YOUTUBE_CHANNEL = 'freshwaxlive';
+
+  function setupExternalChats(stream) {
+    const host = window.location.hostname;
+
+    // Setup Twitch Chat - Always use Fresh Wax channel when live
     const twitchFrame = document.getElementById('twitchChatFrame');
     const twitchPlaceholder = document.getElementById('twitchChatPlaceholder');
 
-    if (twitchChannel && twitchChannel.trim()) {
-      // Show Twitch tab
-      twitchTab?.classList.remove('hidden');
+    if (stream) {
+      // Use DJ's Twitch channel if available, otherwise Fresh Wax channel
+      const twitchChannel = stream.twitchChannel || stream.twitchUsername || FRESHWAX_TWITCH_CHANNEL;
       currentTwitchChannel = twitchChannel.trim().toLowerCase();
 
-      // Set up iframe URL with parent domain
-      const host = window.location.hostname;
       const twitchChatUrl = `https://www.twitch.tv/embed/${currentTwitchChannel}/chat?parent=${host}&darkpopout`;
 
       if (twitchFrame) {
@@ -989,48 +1218,168 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
         twitchPlaceholder?.classList.add('hidden');
       }
     } else {
-      // Hide Twitch tab if no channel
-      twitchTab?.classList.add('hidden');
+      // Show placeholder when offline
       currentTwitchChannel = null;
+      if (twitchFrame) twitchFrame.src = '';
+      twitchPlaceholder?.classList.remove('hidden');
+    }
 
-      // Switch to Fresh Wax chat if currently on Twitch
-      const activeTwitchTab = document.querySelector('.chat-tab[data-chat="twitch"].active');
-      if (activeTwitchTab) {
-        switchChat('freshwax');
+    // Setup YouTube Chat
+    const youtubeFrame = document.getElementById('youtubeChatFrame');
+    const youtubePlaceholder = document.getElementById('youtubeChatPlaceholder');
+
+    // Check for YouTube video ID in multiple locations
+    const youtubeVideoId = stream?.youtubeLiveId || stream?.youtubeIntegration?.videoId;
+
+    if (stream && youtubeVideoId) {
+      // We have a YouTube live video ID - load the chat
+      currentYoutubeVideoId = youtubeVideoId;
+      const youtubeChatUrl = `https://www.youtube.com/live_chat?v=${currentYoutubeVideoId}&embed_domain=${host}`;
+
+      if (youtubeFrame) {
+        youtubeFrame.src = youtubeChatUrl;
+        youtubePlaceholder?.classList.add('hidden');
       }
+    } else if (stream) {
+      // No YouTube video ID yet - try to fetch it
+      currentYoutubeVideoId = null;
+      if (youtubeFrame) youtubeFrame.src = '';
+
+      // Show loading state
+      if (youtubePlaceholder) {
+        youtubePlaceholder.innerHTML = `
+          <svg class="placeholder-icon youtube-placeholder-icon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+          <p style="font-size: 0.65rem;">Connecting to YouTube...</p>
+        `;
+        youtubePlaceholder.classList.remove('hidden');
+      }
+
+      // Try to fetch YouTube live ID from API
+      fetchYouTubeLiveId(stream.streamKey);
+    } else {
+      // Show placeholder when offline
+      currentYoutubeVideoId = null;
+      if (youtubeFrame) youtubeFrame.src = '';
+      youtubePlaceholder?.classList.remove('hidden');
     }
   }
 
-  function switchChat(chatType) {
-    const tabs = document.querySelectorAll('.chat-tab');
-    const containers = document.querySelectorAll('.chat-container');
+  // Fetch YouTube live video ID from API
+  async function fetchYouTubeLiveId(streamKey) {
+    try {
+      const response = await fetch('/api/livestream/youtube-live-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ streamKey })
+      });
 
-    tabs.forEach(tab => {
-      if (tab.dataset.chat === chatType) {
-        tab.classList.add('active');
-      } else {
-        tab.classList.remove('active');
-      }
-    });
+      const data = await response.json();
+      const host = window.location.hostname;
+      const youtubeFrame = document.getElementById('youtubeChatFrame');
+      const youtubePlaceholder = document.getElementById('youtubeChatPlaceholder');
 
-    containers.forEach(container => {
-      if (container.id === `${chatType}ChatContainer`) {
-        container.classList.add('active');
+      if (data.success && data.youtubeLiveId) {
+        currentYoutubeVideoId = data.youtubeLiveId;
+
+        if (youtubeFrame) {
+          youtubeFrame.src = `https://www.youtube.com/live_chat?v=${currentYoutubeVideoId}&embed_domain=${host}`;
+          youtubePlaceholder?.classList.add('hidden');
+        }
       } else {
-        container.classList.remove('active');
+        // Show YouTube channel link if no live video found
+        if (youtubePlaceholder) {
+          youtubePlaceholder.innerHTML = `
+            <svg class="placeholder-icon youtube-placeholder-icon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+            <p>YouTube chat</p>
+            <a href="https://www.youtube.com/@${FRESHWAX_YOUTUBE_CHANNEL}/live" target="_blank" style="color: #ff0000; font-size: 0.65rem; margin-top: 0.5rem;">Watch on YouTube</a>
+          `;
+        }
       }
-    });
+    } catch (error) {
+      console.error('[YouTube] Error fetching live ID:', error);
+    }
   }
 
-  // Chat tab click handlers
-  document.querySelectorAll('.chat-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      const chatType = tab.dataset.chat;
-      if (chatType) {
-        switchChat(chatType);
-      }
+  // Legacy function for backwards compatibility
+  function setupTwitchChat(twitchChannel) {
+    setupExternalChats(currentStream);
+  }
+
+  // Expand Chat Modal
+  const expandedChatModal = document.getElementById('expandedChatModal');
+  const expandedChatTitle = document.getElementById('expandedChatTitle');
+  const expandedChatBody = document.getElementById('expandedChatBody');
+  const closeExpandedChat = document.getElementById('closeExpandedChat');
+
+  function openExpandedChat(chatType) {
+    const host = window.location.hostname;
+    let title = '';
+    let content = '';
+    let titleClass = '';
+
+    switch(chatType) {
+      case 'freshwax':
+        title = '💬 Fresh Wax Chat';
+        titleClass = 'freshwax';
+        // Clone the Fresh Wax chat for the modal - simplified version
+        content = `<div style="padding: 2rem; text-align: center; color: #888;">
+          <p>Fresh Wax chat is in the main view</p>
+          <p style="font-size: 0.75rem; margin-top: 0.5rem;">Use the chat input below the stream</p>
+        </div>`;
+        break;
+
+      case 'twitch':
+        title = 'Twitch Chat';
+        titleClass = 'twitch';
+        if (currentTwitchChannel) {
+          content = `<iframe src="https://www.twitch.tv/embed/${currentTwitchChannel}/chat?parent=${host}&darkpopout" style="width:100%;height:100%;border:none;"></iframe>`;
+        } else {
+          content = `<div style="padding: 2rem; text-align: center; color: #888;">Twitch chat unavailable</div>`;
+        }
+        break;
+
+      case 'youtube':
+        title = 'YouTube Chat';
+        titleClass = 'youtube';
+        if (currentYoutubeVideoId) {
+          content = `<iframe src="https://www.youtube.com/live_chat?v=${currentYoutubeVideoId}&embed_domain=${host}" style="width:100%;height:100%;border:none;"></iframe>`;
+        } else {
+          const youtubeChannel = FRESHWAX_YOUTUBE_CHANNEL;
+          content = `<div style="padding: 2rem; text-align: center; color: #888;">
+            <p>YouTube chat requires an active live stream</p>
+            <a href="https://www.youtube.com/@${youtubeChannel}/live" target="_blank" style="color: #ff0000; display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: rgba(255,0,0,0.1); border-radius: 6px;">Watch on YouTube</a>
+          </div>`;
+        }
+        break;
+    }
+
+    if (expandedChatTitle) {
+      expandedChatTitle.textContent = title;
+      expandedChatTitle.className = 'expanded-chat-title ' + titleClass;
+    }
+    if (expandedChatBody) expandedChatBody.innerHTML = content;
+    expandedChatModal?.classList.remove('hidden');
+  }
+
+  function closeExpandedChatModal() {
+    expandedChatModal?.classList.add('hidden');
+    if (expandedChatBody) expandedChatBody.innerHTML = '';
+  }
+
+  // Expand button click handlers
+  document.querySelectorAll('.chat-expand-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.target;
+      if (target) openExpandedChat(target);
     });
   });
+
+  closeExpandedChat?.addEventListener('click', closeExpandedChatModal);
+  document.querySelector('.expanded-chat-backdrop')?.addEventListener('click', closeExpandedChatModal);
   
   document.getElementById('playPauseBtn')?.addEventListener('click', () => {
     const audio = document.getElementById('audioElement');
