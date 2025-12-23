@@ -478,10 +478,10 @@
   
   .live-main {
     height: calc(100vh - 80px - 40px); /* viewport minus header minus footer */
-    overflow: hidden;
+    overflow: auto;
     background: linear-gradient(180deg, #ffffff 0%, #e5e7eb 30%, #9ca3af 60%, #374151 85%, #111827 100%);
   }
-  
+
   .live-layout {
     display: grid;
     grid-template-columns: 260px 1fr 420px 182px;
@@ -490,7 +490,7 @@
     margin: 0 auto;
     padding: 1rem 2rem;
     height: 100%;
-    overflow: hidden;
+    overflow: visible;
   }
   
   /* Simple Footer */
@@ -1574,7 +1574,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    overflow: hidden;
+    overflow: visible;
     max-height: 100%;
     height: 100%;
   }
@@ -1673,17 +1673,25 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem 1.25rem;
+    padding: 0.625rem 1rem;
     background: linear-gradient(90deg, #1a1a1a 0%, #111 100%);
     border: 2px solid #333;
-    border-radius: 12px;
-    flex-wrap: wrap;
-    gap: 1rem;
+    border-radius: 10px;
+    flex-wrap: nowrap;
+    gap: 0.75rem;
     flex-shrink: 0;
   }
-  
+
   .stream-info-bar.is-live {
     border-color: #dc2626;
+  }
+
+  @media (max-width: 900px) {
+    .stream-info-bar {
+      flex-wrap: wrap;
+      padding: 0.5rem 0.75rem;
+      gap: 0.5rem;
+    }
   }
   
   /* Shoutout Bar */
@@ -1913,19 +1921,32 @@
   .stream-info-left {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.5rem;
   }
 
   .stream-info-right {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.5rem;
   }
 
   .stream-stats {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.25rem;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #333;
+  }
+
+  .stream-stats .stat {
+    padding: 0.25rem 0.5rem;
+    border-right: 1px solid #333;
+  }
+
+  .stream-stats .stat:last-child {
+    border-right: none;
   }
 
   .live-badge {
@@ -2145,23 +2166,20 @@
     border-left: 1px solid #444;
   }
   
-  .stream-stats {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-  }
-  
   .stat {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.35rem;
     color: #fff;
     font-weight: 600;
+    font-size: 0.8125rem;
   }
-  
-  .stat-icon { 
-    font-size: 0.75rem;
-    opacity: 0.7;
+
+  .stat-icon {
+    font-size: 0.6875rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
   
   .chat-column {
@@ -2187,7 +2205,7 @@
   
   .player-container {
     position: relative;
-    background: 
+    background:
       radial-gradient(ellipse at 20% 30%, rgba(88, 28, 135, 0.4) 0%, transparent 50%),
       radial-gradient(ellipse at 80% 70%, rgba(30, 58, 138, 0.4) 0%, transparent 50%),
       radial-gradient(ellipse at 50% 50%, rgba(76, 29, 149, 0.3) 0%, transparent 60%),
@@ -2196,7 +2214,7 @@
     border-radius: 12px;
     min-height: 150px;
     flex: 1;
-    overflow: hidden;
+    overflow: visible;
   }
   
   .player-container::before {
@@ -2602,6 +2620,13 @@
   }
   
   /* Stereo LED Meters */
+  .stereo-meters-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 1 auto;
+  }
+
   .stereo-meters {
     display: flex;
     flex-direction: column;
@@ -2609,8 +2634,42 @@
     flex: 0 1 auto;
     min-width: 180px;
     max-width: 280px;
+    transition: opacity 0.2s ease;
   }
-  
+
+  .stereo-meters.meters-hidden {
+    display: none;
+  }
+
+  .toggle-meters-btn {
+    background: transparent;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 4px;
+    cursor: pointer;
+    color: #888;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .toggle-meters-btn:hover {
+    border-color: #666;
+    color: #fff;
+    background: #222;
+  }
+
+  .toggle-meters-btn.meters-off {
+    color: #555;
+    border-color: #333;
+  }
+
+  .toggle-meters-btn .hidden {
+    display: none;
+  }
+
   .meter-row {
     display: flex;
     align-items: center;
@@ -5641,18 +5700,45 @@
     }
     
     .live-main {
+      height: auto !important;
+      overflow: visible !important;
       padding-bottom: 80px; /* Space for mini player */
     }
-    
+
     /* Player takes full width */
     .player-column {
       padding: 0.75rem;
+      overflow: visible !important;
+      height: auto !important;
+      max-height: none !important;
     }
-    
+
     .player-container {
       border-radius: 8px;
-      min-height: 220px;
+      min-height: 0 !important;
+      height: auto !important;
+      max-height: 50vh !important;
+      overflow: visible !important;
+      flex: none !important;
+      position: relative !important;
+    }
+
+    .player-container .audio-player,
+    .player-container .video-player {
+      position: relative !important;
+      inset: auto !important;
+      width: 100% !important;
+      height: auto !important;
+      max-height: 50vh !important;
+    }
+
+    .player-container .hls-video,
+    .player-container iframe {
+      width: 100% !important;
+      height: auto !important;
+      max-height: 50vh !important;
       aspect-ratio: 16/9;
+      object-fit: contain !important;
     }
     
     /* Stream info bar mobile */
@@ -5808,10 +5894,10 @@
     }
     
     /* LED meters simplified */
-    .stereo-meters {
+    .stereo-meters-wrapper {
       display: none;
     }
-    
+
     /* Volume full width at bottom */
     .volume-control {
       width: 100%;
@@ -6106,10 +6192,10 @@
     }
     
     /* Hide LED meters on very small screens, show simplified in mini player */
-    .stereo-meters {
+    .stereo-meters-wrapper {
       display: none;
     }
-    
+
     /* Volume at bottom full width */
     .volume-control {
       order: 3;

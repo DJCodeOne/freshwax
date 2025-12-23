@@ -348,43 +348,60 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           </button>
           
           <!-- Stereo LED Meters -->
-          <div class="stereo-meters">
-            <div class="meter-row">
-              <span class="meter-label">L</span>
-              <div class="led-strip" id="leftMeter">
-                <div class="led green"></div>
-                <div class="led green"></div>
-                <div class="led green"></div>
-                <div class="led green"></div>
-                <div class="led green"></div>
-                <div class="led green"></div>
-                <div class="led yellow"></div>
-                <div class="led yellow"></div>
-                <div class="led yellow"></div>
-                <div class="led orange"></div>
-                <div class="led orange"></div>
-                <div class="led red"></div>
-                <div class="led red"></div>
-                <div class="led red clip"></div>
+          <div class="stereo-meters-wrapper">
+            <button id="toggleMetersBtn" class="toggle-meters-btn" title="Toggle LED meters">
+              <svg class="meters-visible-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                <rect x="3" y="12" width="3" height="8" rx="1"/>
+                <rect x="8" y="8" width="3" height="12" rx="1"/>
+                <rect x="13" y="4" width="3" height="16" rx="1"/>
+                <rect x="18" y="10" width="3" height="10" rx="1"/>
+              </svg>
+              <svg class="meters-hidden-icon hidden" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                <rect x="3" y="12" width="3" height="8" rx="1" opacity="0.3"/>
+                <rect x="8" y="8" width="3" height="12" rx="1" opacity="0.3"/>
+                <rect x="13" y="4" width="3" height="16" rx="1" opacity="0.3"/>
+                <rect x="18" y="10" width="3" height="10" rx="1" opacity="0.3"/>
+                <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </button>
+            <div class="stereo-meters" id="stereoMeters">
+              <div class="meter-row">
+                <span class="meter-label">L</span>
+                <div class="led-strip" id="leftMeter">
+                  <div class="led green"></div>
+                  <div class="led green"></div>
+                  <div class="led green"></div>
+                  <div class="led green"></div>
+                  <div class="led green"></div>
+                  <div class="led green"></div>
+                  <div class="led yellow"></div>
+                  <div class="led yellow"></div>
+                  <div class="led yellow"></div>
+                  <div class="led orange"></div>
+                  <div class="led orange"></div>
+                  <div class="led red"></div>
+                  <div class="led red"></div>
+                  <div class="led red clip"></div>
+                </div>
               </div>
-            </div>
-            <div class="meter-row">
-              <span class="meter-label">R</span>
-              <div class="led-strip" id="rightMeter">
-                <div class="led green"></div>
-                <div class="led green"></div>
-                <div class="led green"></div>
-                <div class="led green"></div>
-                <div class="led green"></div>
-                <div class="led green"></div>
-                <div class="led yellow"></div>
-                <div class="led yellow"></div>
-                <div class="led yellow"></div>
-                <div class="led orange"></div>
-                <div class="led orange"></div>
-                <div class="led red"></div>
-                <div class="led red"></div>
-                <div class="led red clip"></div>
+              <div class="meter-row">
+                <span class="meter-label">R</span>
+                <div class="led-strip" id="rightMeter">
+                  <div class="led green"></div>
+                  <div class="led green"></div>
+                  <div class="led green"></div>
+                  <div class="led green"></div>
+                  <div class="led green"></div>
+                  <div class="led green"></div>
+                  <div class="led yellow"></div>
+                  <div class="led yellow"></div>
+                  <div class="led yellow"></div>
+                  <div class="led orange"></div>
+                  <div class="led orange"></div>
+                  <div class="led red"></div>
+                  <div class="led red"></div>
+                  <div class="led red clip"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -2400,7 +2417,57 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     if (viewScheduleBtn) viewScheduleBtn._listenerAttached = false;
     if (closeBookingModal) closeBookingModal._listenerAttached = false;
     setupBookingButtons();
+    setupMetersToggle();
   });
+
+  // LED meters toggle setup
+  function setupMetersToggle() {
+    const toggleBtn = document.getElementById('toggleMetersBtn');
+    const stereoMeters = document.getElementById('stereoMeters');
+
+    if (!toggleBtn || !stereoMeters) {
+      console.log('[Meters] Toggle elements not found');
+      return;
+    }
+
+    const visibleIcon = toggleBtn.querySelector('.meters-visible-icon');
+    const hiddenIcon = toggleBtn.querySelector('.meters-hidden-icon');
+
+    // Check localStorage for saved preference
+    const metersHidden = localStorage.getItem('fw_meters_hidden') === 'true';
+    if (metersHidden) {
+      stereoMeters.classList.add('meters-hidden');
+      toggleBtn.classList.add('meters-off');
+      if (visibleIcon) visibleIcon.classList.add('hidden');
+      if (hiddenIcon) hiddenIcon.classList.remove('hidden');
+    }
+
+    // Prevent duplicate listeners
+    if (toggleBtn._metersListenerAttached) return;
+    toggleBtn._metersListenerAttached = true;
+
+    toggleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('[Meters] Toggle clicked');
+
+      const isHidden = stereoMeters.classList.toggle('meters-hidden');
+      toggleBtn.classList.toggle('meters-off', isHidden);
+      if (visibleIcon) visibleIcon.classList.toggle('hidden', isHidden);
+      if (hiddenIcon) hiddenIcon.classList.toggle('hidden', !isHidden);
+      localStorage.setItem('fw_meters_hidden', isHidden ? 'true' : 'false');
+      console.log('[Meters] Meters hidden:', isHidden);
+    });
+
+    console.log('[Meters] Toggle setup complete');
+  }
+
+  // Initial LED meters toggle setup - wait for DOM
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupMetersToggle);
+  } else {
+    setupMetersToggle();
+  }
 </script>
 
 <script type="module" define:vars={{ firebaseConfig }}>
