@@ -1245,6 +1245,33 @@ Artist - Track Title
   let currentUser = null;
   let currentUserName = null;
   let currentUserAvatar = null;
+  let cachedUserId = null; // Store cached user ID for use before Firebase Auth initializes
+
+  // Try to restore from localStorage cache first (for instant auth on page reload)
+  // This matches the pattern used on live.astro for consistent auth across pages
+  try {
+    const cached = localStorage.getItem('fw_auth_cache');
+    if (cached) {
+      const cachedAuth = JSON.parse(cached);
+      // Only use cache if less than 24 hours old
+      if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt < 86400000 && cachedAuth.loggedIn) {
+        console.log('[Comments] Restored auth from cache:', cachedAuth.id);
+        // Store cached values for immediate use
+        currentUserName = cachedAuth.displayName || cachedAuth.name;
+        currentUserAvatar = cachedAuth.avatar || null;
+        cachedUserId = cachedAuth.id;
+        // Immediately update the username field
+        const commentUsername = document.getElementById('comment-username');
+        if (commentUsername && currentUserName) {
+          commentUsername.value = currentUserName;
+          commentUsername.classList.remove('cursor-not-allowed');
+          commentUsername.classList.add('cursor-default', 'bg-gray-700');
+        }
+      } else if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt >= 86400000) {
+        localStorage.removeItem('fw_auth_cache');
+      }
+    }
+  } catch (e) { /* Ignore cache errors */ }
 
   // Function to update UI based on auth state
   function updateCommentUI(user, userName, avatarUrl) {
@@ -1252,6 +1279,7 @@ Artist - Track Title
       currentUser = user;
       currentUserName = userName;
       currentUserAvatar = avatarUrl || null;
+      cachedUserId = user.uid; // Update cached ID when Firebase Auth confirms
       if (commentUsername) {
         commentUsername.value = userName;
         commentUsername.classList.remove('cursor-not-allowed');
@@ -1261,6 +1289,7 @@ Artist - Track Title
       currentUser = null;
       currentUserName = null;
       currentUserAvatar = null;
+      cachedUserId = null; // Clear cached ID on logout
       if (commentUsername) {
         commentUsername.value = '';
         commentUsername.placeholder = 'Login to comment';
@@ -1411,30 +1440,32 @@ Artist - Track Title
   let selectedGifUrl = null;
   
   submitCommentBtn?.addEventListener('click', function() {
-    if (!currentUser) {
+    // Check for either Firebase user or cached auth
+    const userId = currentUser?.uid || cachedUserId;
+    if (!userId) {
       alert('Please login to post a comment');
       return;
     }
-    
+
     const userName = currentUserName || commentUsername?.value?.trim();
     const comment = commentText?.value?.trim();
-    
+
     if (!userName) {
       alert('Please login to comment');
       return;
     }
-    
+
     // Allow GIF-only or text-only or both
     if (!comment && !selectedGifUrl) {
       alert('Please enter a comment or select a GIF');
       commentText?.focus();
       return;
     }
-    
+
     submitCommentBtn.disabled = true;
     submitCommentBtn.textContent = 'Posting...';
-    
-    
+
+
     fetch('/api/add-mix-comment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1443,7 +1474,7 @@ Artist - Track Title
         userName: userName,
         comment: comment || '',
         gifUrl: selectedGifUrl,
-        userId: currentUser.uid,
+        userId: userId,
         avatarUrl: currentUserAvatar || null
       })
     }).then(function(response) {
