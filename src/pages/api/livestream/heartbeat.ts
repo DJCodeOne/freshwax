@@ -1,50 +1,92 @@
 import type { APIRoute } from 'astro';
 
+// Viewer info structure
+interface ViewerInfo {
+  sessionId: string;
+  lastSeen: number;
+  userId?: string;
+  userName?: string;
+  userAvatar?: string;
+}
+
 // In-memory viewer tracking
-// Map structure: streamId -> Map<sessionId, lastSeen timestamp>
-const viewers = new Map<string, Map<string, number>>();
+// Map structure: streamId -> Map<sessionId, ViewerInfo>
+const viewers = new Map<string, Map<string, ViewerInfo>>();
 
 const SESSION_TIMEOUT = 60000; // 60 seconds - expire if no heartbeat
 
-// Clean up stale sessions
-function cleanupStaleSessions(streamId: string): number {
+// Clean up stale sessions and return active viewers
+function cleanupStaleSessions(streamId: string): ViewerInfo[] {
   const streamViewers = viewers.get(streamId);
-  if (!streamViewers) return 0;
-  
+  if (!streamViewers) return [];
+
   const now = Date.now();
-  let removed = 0;
-  
-  for (const [sessionId, lastSeen] of streamViewers) {
-    if (now - lastSeen > SESSION_TIMEOUT) {
+  const activeViewers: ViewerInfo[] = [];
+
+  for (const [sessionId, viewer] of streamViewers) {
+    if (now - viewer.lastSeen > SESSION_TIMEOUT) {
       streamViewers.delete(sessionId);
-      removed++;
+    } else {
+      activeViewers.push(viewer);
     }
   }
-  
+
   // Clean up empty stream entries
   if (streamViewers.size === 0) {
     viewers.delete(streamId);
   }
-  
-  return streamViewers?.size || 0;
+
+  return activeViewers;
 }
 
 // Get viewer count for a stream
 function getViewerCount(streamId: string): number {
-  return cleanupStaleSessions(streamId);
+  return cleanupStaleSessions(streamId).length;
+}
+
+// Get list of online users (logged-in viewers only)
+function getOnlineUsers(streamId: string): { id: string; name: string; avatar: string | null }[] {
+  const activeViewers = cleanupStaleSessions(streamId);
+
+  // Filter to logged-in users only, dedupe by userId
+  const userMap = new Map<string, { id: string; name: string; avatar: string | null }>();
+
+  for (const viewer of activeViewers) {
+    if (viewer.userId && viewer.userName) {
+      userMap.set(viewer.userId, {
+        id: viewer.userId,
+        name: viewer.userName,
+        avatar: viewer.userAvatar || null
+      });
+    }
+  }
+
+  return Array.from(userMap.values());
 }
 
 // Register/update a viewer heartbeat
-function registerHeartbeat(streamId: string, sessionId: string): number {
+function registerHeartbeat(
+  streamId: string,
+  sessionId: string,
+  userId?: string,
+  userName?: string,
+  userAvatar?: string
+): number {
   if (!viewers.has(streamId)) {
     viewers.set(streamId, new Map());
   }
-  
+
   const streamViewers = viewers.get(streamId)!;
-  streamViewers.set(sessionId, Date.now());
-  
+  streamViewers.set(sessionId, {
+    sessionId,
+    lastSeen: Date.now(),
+    userId,
+    userName,
+    userAvatar
+  });
+
   // Cleanup and return count
-  return cleanupStaleSessions(streamId);
+  return cleanupStaleSessions(streamId).length;
 }
 
 // Remove a viewer (on page unload)
@@ -53,32 +95,36 @@ function removeViewer(streamId: string, sessionId: string): number {
   if (streamViewers) {
     streamViewers.delete(sessionId);
   }
-  return cleanupStaleSessions(streamId);
+  return cleanupStaleSessions(streamId).length;
 }
 
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { streamId, sessionId, action } = body;
-    
+    const { streamId, sessionId, action, userId, userName, userAvatar } = body;
+
     if (!streamId || !sessionId) {
       return new Response(JSON.stringify({ error: 'Missing streamId or sessionId' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     let count: number;
-    
+    let onlineUsers: { id: string; name: string; avatar: string | null }[] = [];
+
     if (action === 'leave') {
       count = removeViewer(streamId, sessionId);
     } else {
-      count = registerHeartbeat(streamId, sessionId);
+      count = registerHeartbeat(streamId, sessionId, userId, userName, userAvatar);
     }
-    
-    return new Response(JSON.stringify({ count }), {
+
+    // Always return the list of online users
+    onlineUsers = getOnlineUsers(streamId);
+
+    return new Response(JSON.stringify({ count, onlineUsers }), {
       status: 200,
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store'
       }
@@ -94,19 +140,20 @@ export const POST: APIRoute = async ({ request }) => {
 
 export const GET: APIRoute = async ({ url }) => {
   const streamId = url.searchParams.get('streamId');
-  
+
   if (!streamId) {
     return new Response(JSON.stringify({ error: 'Missing streamId' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
   }
-  
+
   const count = getViewerCount(streamId);
-  
-  return new Response(JSON.stringify({ count }), {
+  const onlineUsers = getOnlineUsers(streamId);
+
+  return new Response(JSON.stringify({ count, onlineUsers }), {
     status: 200,
-    headers: { 
+    headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store'
     }

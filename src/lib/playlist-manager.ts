@@ -1060,9 +1060,9 @@ export class PlaylistManager {
       return null;
     }
 
-    // For auto-play, use a shorter cooldown (10 minutes instead of 1 hour)
-    // This allows continuous music while still avoiding immediate repeats
-    const AUTO_PLAY_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+    // For auto-play, use a 60-minute cooldown to avoid frequent repeats
+    // This allows continuous music while preventing the same tracks from playing too often
+    const AUTO_PLAY_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
     const now = Date.now();
 
     // Filter out tracks played within the auto-play cooldown
@@ -1070,7 +1070,7 @@ export class PlaylistManager {
       const timestamp = this.recentlyPlayed.get(entry.url);
       if (!timestamp) return true; // Never played recently, available
       const elapsed = now - timestamp;
-      return elapsed >= AUTO_PLAY_COOLDOWN_MS; // Available if 10+ minutes since last play
+      return elapsed >= AUTO_PLAY_COOLDOWN_MS; // Available if 60+ minutes since last play
     });
 
     if (availableTracks.length === 0) {

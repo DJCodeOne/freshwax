@@ -153,22 +153,44 @@ let viewerSessionId = null;
 let isPlaying = false;
 let chatMessages = []; // Store chat messages for Pusher updates
 let activeUsers = new Map(); // Track active users { odlId -> { id, name, avatar, lastSeen } }
+let heartbeatOnlineUsers = []; // Authoritative list from server heartbeat
 window.emojiAnimationsEnabled = false; // Only enable when livestream is active
 
 // Expose function to get online viewers for LiveChat sidebar
 window.getOnlineViewers = function() {
+  // Merge heartbeat users (authoritative) with local chat tracking
+  const mergedUsers = new Map();
+
+  // Add users from heartbeat first (authoritative)
+  for (const user of heartbeatOnlineUsers) {
+    if (user.id && user.id !== 'freshwax-bot') {
+      mergedUsers.set(user.id, {
+        id: user.id,
+        name: user.name || 'User',
+        avatar: user.avatar || null
+      });
+    }
+  }
+
+  // Add local tracked users (from chat messages) if not already in heartbeat list
   const now = Date.now();
   const fiveMinutesAgo = now - (5 * 60 * 1000);
-
-  // Filter to users active in last 5 minutes, exclude bots
-  const active = [];
   activeUsers.forEach((user, id) => {
-    if (user.lastSeen > fiveMinutesAgo && id !== 'freshwax-bot') {
-      active.push(user);
+    if (user.lastSeen > fiveMinutesAgo && id !== 'freshwax-bot' && !mergedUsers.has(id)) {
+      mergedUsers.set(id, {
+        id: user.id,
+        name: user.name,
+        avatar: user.avatar
+      });
     }
   });
 
-  return active;
+  return Array.from(mergedUsers.values());
+};
+
+// Update online users from heartbeat
+window.setHeartbeatOnlineUsers = function(users) {
+  heartbeatOnlineUsers = users || [];
 };
 
 // Track user from chat message
@@ -1825,13 +1847,23 @@ async function joinStream(streamId) {
 
 async function sendHeartbeat(streamId) {
   try {
+    // Include user info if logged in
+    const user = window.liveStreamState?.currentUser;
+    const heartbeatData = {
+      streamId,
+      sessionId: viewerSessionId
+    };
+
+    if (user) {
+      heartbeatData.userId = user.uid;
+      heartbeatData.userName = user.displayName || user.email?.split('@')[0] || 'User';
+      heartbeatData.userAvatar = user.photoURL || null;
+    }
+
     const response = await fetch('/api/livestream/heartbeat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        streamId,
-        sessionId: viewerSessionId
-      })
+      body: JSON.stringify(heartbeatData)
     });
 
     const data = await response.json();
@@ -1841,6 +1873,18 @@ async function sendHeartbeat(streamId) {
     const chatViewers = document.getElementById('chatViewers');
     if (chatViewers) {
       chatViewers.textContent = `${count} watching`;
+    }
+
+    // Update online users list from heartbeat response
+    if (data.onlineUsers) {
+      // Store in cache for getOnlineViewers to use
+      if (window.setHeartbeatOnlineUsers) {
+        window.setHeartbeatOnlineUsers(data.onlineUsers);
+      }
+      // Update UI
+      if (window.updateOnlineUsers) {
+        window.updateOnlineUsers(window.getOnlineViewers());
+      }
     }
   } catch (error) {
     console.warn('[Heartbeat] Failed:', error);

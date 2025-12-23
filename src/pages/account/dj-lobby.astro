@@ -5301,6 +5301,13 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         // Mark user as streaming - preview will persist until sign out
         userIsStreaming = true;
 
+        // Hide stream key info and show audio panel so DJ can preview OBS and check levels
+        document.getElementById('streamKeySection')?.classList.add('hidden');
+        document.getElementById('broadcastAudioPanel')?.classList.remove('hidden');
+        initBroadcastMeters();
+        // Expand video player to use the extra space
+        document.querySelector('.preview-section')?.classList.add('expanded');
+
         // Show success state
         btn.classList.add('is-ready');
         btn.style.background = '#10b981';
