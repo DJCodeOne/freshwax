@@ -3159,10 +3159,18 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
         // Set global stream ID for LiveChat component
         const streamId = currentStream.slotId || currentStream.id || currentStream.streamId;
+        const previousStreamId = window.currentStreamId;
         window.currentStreamId = streamId;
 
-        // Initialize livestream chat if not already done
-        if (streamId && !window.livestreamChatInitialized) {
+        // Initialize livestream chat if not done, or switch from playlist-global to actual stream
+        if (streamId && (!window.livestreamChatInitialized || previousStreamId !== streamId)) {
+          // Cleanup previous channel first (e.g., playlist-global)
+          if (livestreamChatChannel) {
+            livestreamChatChannel.unbind_all();
+            window.livestreamPusher?.unsubscribe(livestreamChatChannel.name);
+            livestreamChatChannel = null;
+          }
+          window.livestreamChatInitialized = false;
           initLivestreamChat(streamId);
         }
 
@@ -5661,16 +5669,21 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     });
   }
 
-  // Cleanup chat when stream ends
+  // Cleanup chat and switch to playlist-global when stream ends
   function cleanupLivestreamChat() {
-    window.currentStreamId = null;
-    window.livestreamChatInitialized = false;
-
+    // Unsubscribe from current stream channel
     if (livestreamChatChannel) {
       livestreamChatChannel.unbind_all();
       window.livestreamPusher?.unsubscribe(livestreamChatChannel.name);
       livestreamChatChannel = null;
     }
+
+    // Switch to playlist-global so DJs can monitor main page chat
+    // (the main live page uses playlist-global when no stream is active)
+    window.livestreamChatInitialized = false;
+    window.currentStreamId = 'playlist-global';
+    initLivestreamChat('playlist-global');
+    console.log('[LivestreamChat] Switched to playlist-global for DJ waitlist monitoring');
   }
 </script>
 </body>
