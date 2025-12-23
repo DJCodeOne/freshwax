@@ -52,6 +52,7 @@ export class PlaylistManager {
   private countdownInterval: number | null = null; // Countdown display interval
   private consecutiveErrors: number = 0; // Track errors to prevent infinite loops
   private containerId: string; // Store container ID for existence check
+  private lastPlayedUrl: string | null = null; // Track last played URL to avoid immediate repeats
 
   constructor(containerId: string) {
     this.containerId = containerId;
@@ -137,6 +138,7 @@ export class PlaylistManager {
    * Mark a URL as recently played
    */
   private markAsPlayed(url: string): void {
+    this.lastPlayedUrl = url; // Track for immediate repeat prevention
     this.recentlyPlayed.set(url, Date.now());
     this.saveRecentlyPlayed();
   }
@@ -1052,7 +1054,7 @@ export class PlaylistManager {
   /**
    * Pick a random track from history that hasn't been played recently
    * Used for auto-play when queue is empty
-   * Uses a shorter cooldown (10 min) than user-added tracks (1 hour)
+   * Uses 60-minute cooldown and never repeats the last played track
    */
   private async pickRandomFromHistory(): Promise<GlobalPlaylistItem | null> {
     if (this.playHistory.length === 0) {
@@ -1061,12 +1063,14 @@ export class PlaylistManager {
     }
 
     // For auto-play, use a 60-minute cooldown to avoid frequent repeats
-    // This allows continuous music while preventing the same tracks from playing too often
     const AUTO_PLAY_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
     const now = Date.now();
 
-    // Filter out tracks played within the auto-play cooldown
+    // Filter out tracks played within the auto-play cooldown AND the last played track
     const availableTracks = this.playHistory.filter(entry => {
+      // Never pick the track that just finished playing
+      if (entry.url === this.lastPlayedUrl) return false;
+
       const timestamp = this.recentlyPlayed.get(entry.url);
       if (!timestamp) return true; // Never played recently, available
       const elapsed = now - timestamp;
@@ -1074,13 +1078,45 @@ export class PlaylistManager {
     });
 
     if (availableTracks.length === 0) {
-      // If all tracks are on short cooldown, just pick any random track
-      // Better to repeat than have silence
-      console.log('[PlaylistManager] All history tracks recently played, picking any random track');
-      const randomIndex = Math.floor(Math.random() * this.playHistory.length);
-      const selected = this.playHistory[randomIndex];
+      // All tracks are on cooldown - pick the OLDEST played track (least recently played)
+      // This ensures maximum variety by playing what hasn't been heard longest
+      console.log('[PlaylistManager] All tracks on cooldown, picking least recently played');
 
-      const item: GlobalPlaylistItem = {
+      // Filter out the last played track, then sort by oldest timestamp
+      const candidateTracks = this.playHistory.filter(entry => entry.url !== this.lastPlayedUrl);
+
+      if (candidateTracks.length === 0) {
+        // Only one track in history, have to repeat it
+        console.log('[PlaylistManager] Only one track in history, must repeat');
+        const selected = this.playHistory[0];
+        return {
+          id: this.generateId(),
+          url: selected.url,
+          platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
+          embedId: selected.embedId,
+          title: selected.title,
+          thumbnail: selected.thumbnail,
+          addedAt: new Date().toISOString(),
+          addedBy: 'system',
+          addedByName: 'Auto-Play'
+        };
+      }
+
+      // Sort by play timestamp (oldest first) and pick from top candidates
+      const sortedByOldest = candidateTracks.sort((a, b) => {
+        const timeA = this.recentlyPlayed.get(a.url) || 0;
+        const timeB = this.recentlyPlayed.get(b.url) || 0;
+        return timeA - timeB; // Oldest (smallest timestamp) first
+      });
+
+      // Pick randomly from the oldest 3 tracks (or fewer if not enough tracks)
+      const topCandidates = sortedByOldest.slice(0, Math.min(3, sortedByOldest.length));
+      const randomIndex = Math.floor(Math.random() * topCandidates.length);
+      const selected = topCandidates[randomIndex];
+
+      console.log('[PlaylistManager] Selected oldest track:', selected.title || selected.url);
+
+      return {
         id: this.generateId(),
         url: selected.url,
         platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
@@ -1091,18 +1127,15 @@ export class PlaylistManager {
         addedBy: 'system',
         addedByName: 'Auto-Play'
       };
-
-      return item;
     }
 
-    // Pick a random track
+    // Pick a random track from available (not on cooldown) tracks
     const randomIndex = Math.floor(Math.random() * availableTracks.length);
     const selected = availableTracks[randomIndex];
 
     console.log('[PlaylistManager] Selected random track from history:', selected.title || selected.url);
 
-    // Convert history entry to GlobalPlaylistItem format
-    const item: GlobalPlaylistItem = {
+    return {
       id: this.generateId(),
       url: selected.url,
       platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
@@ -1113,8 +1146,6 @@ export class PlaylistManager {
       addedBy: 'system',
       addedByName: 'Auto-Play'
     };
-
-    return item;
   }
 
   /**
