@@ -3568,12 +3568,15 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       if (streamTitle) streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
       if (djAvatar) djAvatar.src = '/place-holder.webp';
       
-      // Update controls DJ info bar to offline state
+      // Update controls DJ info bar to offline state (only if playlist isn't playing)
       const controlsDjName = document.getElementById('controlsDjName');
       const controlsSetTitle = document.getElementById('controlsSetTitle');
       const djInfoBar = document.querySelector('.dj-info-bar');
-      if (controlsDjName) controlsDjName.textContent = '--';
-      if (controlsSetTitle) controlsSetTitle.textContent = 'Waiting for stream...';
+      const playlistIsPlaying = window.playlistManager?.isPlaying;
+      if (!playlistIsPlaying) {
+        if (controlsDjName) controlsDjName.textContent = '--';
+        if (controlsSetTitle) controlsSetTitle.textContent = 'Waiting for stream...';
+      }
       if (djInfoBar) djInfoBar.classList.remove('is-live');
       
       if (playBtn) playBtn.disabled = true;
