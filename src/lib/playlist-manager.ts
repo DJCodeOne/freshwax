@@ -392,6 +392,20 @@ export class PlaylistManager {
         }
       }
 
+      // Log to history immediately when URL is posted (for auto-play feature)
+      const historyItem: GlobalPlaylistItem = {
+        id: item.id,
+        url: item.url,
+        platform: item.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
+        embedId: item.embedId,
+        title: item.title,
+        thumbnail: item.thumbnail,
+        addedAt: item.addedAt,
+        addedBy: this.userId || 'unknown',
+        addedByName: this.userName || 'Anonymous'
+      };
+      this.logToHistory(historyItem);
+
       this.renderUI();
       return { success: true, message: result.message || 'Added to queue' };
     } catch (error: any) {
