@@ -5577,8 +5577,11 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           container.scrollTop = container.scrollHeight;
         }
       };
+      // Multiple scroll attempts to ensure it works after DOM paints
       scrollToBottom();
       requestAnimationFrame(scrollToBottom);
+      setTimeout(scrollToBottom, 50);
+      setTimeout(scrollToBottom, 150);
     }
   }
 
