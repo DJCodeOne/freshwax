@@ -5,6 +5,7 @@
 
 import type { APIRoute } from 'astro';
 import { deleteDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -14,7 +15,19 @@ const log = {
 
 export const prerender = false;
 
+// Max 10 orders to delete per account (prevent runaway)
+const MAX_ORDERS_TO_DELETE = 10;
+
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+
+  // Rate limit: destructive operation - 3 per hour
+  const rateCheck = checkRateLimit(`delete-account:${clientId}`, RateLimiters.destructive);
+  if (!rateCheck.allowed) {
+    log.error(`[delete-account] Rate limit exceeded for ${clientId}`);
+    return rateLimitResponse(rateCheck.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -54,17 +67,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       log.info('[delete-account] No users document to delete');
     }
 
-    // Delete orders associated with this user
+    // Delete orders associated with this user (with limit to prevent runaway)
     try {
       const orders = await queryCollection('orders', [
         { field: 'customer.userId', operator: '==', value: userId }
       ]);
 
       if (orders && orders.length > 0) {
-        for (const order of orders) {
+        const ordersToDelete = orders.slice(0, MAX_ORDERS_TO_DELETE);
+        for (const order of ordersToDelete) {
           await deleteDocument('orders', order.id);
         }
-        log.info('[delete-account] Deleted', orders.length, 'orders');
+        log.info('[delete-account] Deleted', ordersToDelete.length, 'orders');
+        if (orders.length > MAX_ORDERS_TO_DELETE) {
+          log.info('[delete-account] Note:', orders.length - MAX_ORDERS_TO_DELETE, 'orders remain (hit limit)');
+        }
       }
     } catch (e) {
       log.info('[delete-account] Error deleting orders:', e);

@@ -3,10 +3,27 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, addDocument, updateDocument, incrementField, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { Resend } from 'resend';
+import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
+// Max 500 subscribers per newsletter send (prevent massive sends)
+const MAX_SUBSCRIBERS_PER_SEND = 500;
+
 export const POST: APIRoute = async ({ request, cookies, locals }) => {
+  const clientId = getClientId(request);
+
+  // Rate limit: max 5 newsletter sends per hour
+  const rateCheck = checkRateLimit(`newsletter-send:${clientId}`, {
+    maxRequests: 5,
+    windowMs: 60 * 60 * 1000, // 1 hour
+    blockDurationMs: 60 * 60 * 1000
+  });
+  if (!rateCheck.allowed) {
+    console.warn(`[Newsletter] Rate limit exceeded for ${clientId}`);
+    return rateLimitResponse(rateCheck.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -92,6 +109,12 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // Limit subscribers per send to prevent massive operations
+    if (subscribers.length > MAX_SUBSCRIBERS_PER_SEND) {
+      console.warn(`[Newsletter] Limiting send from ${subscribers.length} to ${MAX_SUBSCRIBERS_PER_SEND} subscribers`);
+      subscribers = subscribers.slice(0, MAX_SUBSCRIBERS_PER_SEND);
     }
 
     // If preview email, send only to that

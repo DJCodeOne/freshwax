@@ -66,7 +66,19 @@
       "Bash(git restore:*)",
       "Bash(xargs sed -i \"s/apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,/apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || ''AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g'',/g\")",
       "Bash(git checkout:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(start //b C:\\\\cloudflared\\\\cloudflared.exe tunnel run)",
+      "Bash(\"https://firestore.googleapis.com/v1/projects/freshwax-store/databases/\\(default\\)/documents/livestreamSlots/mjhl085dv0kxl4m?updateMask.fieldPaths=hlsUrl&updateMask.fieldPaths=streamKey&key=AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g\" )",
+      "Bash(\"https://firestore.googleapis.com/v1/projects/freshwax-store/databases/\\(default\\)/documents/livestreamSlots/mjhoi79m7zziymw?updateMask.fieldPaths=hlsUrl&key=AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g\" )",
+      "WebFetch(domain:www.youtube.com)",
+      "Bash(ping:*)",
+      "Bash(git push:*)",
+      "Bash(xargs:*)",
+      "Bash(head:*)",
+      "Bash(wc:*)",
+      "Bash(while read doc)",
+      "Bash(do curl -s -X DELETE \"https://firestore.googleapis.com/v1/$doc?key=AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g\")",
+      "Bash(node clear-chat.js:*)"
     ]
   }
 }

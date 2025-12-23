@@ -5,12 +5,16 @@ import '../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Worke
 import type { APIRoute } from 'astro';
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
 const log = {
   info: (...args: any[]) => isDev && console.log(...args),
   error: (...args: any[]) => console.error(...args),
 };
+
+// Max files to delete from R2 per mix (prevent runaway)
+const MAX_R2_FILES_TO_DELETE = 50;
 
 // Get R2 configuration from Cloudflare runtime env
 function getR2Config(env: any) {
@@ -35,6 +39,15 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+
+  // Rate limit: destructive operation - 3 per hour
+  const rateCheck = checkRateLimit(`delete-mix:${clientId}`, RateLimiters.destructive);
+  if (!rateCheck.allowed) {
+    log.error(`[delete-mix] Rate limit exceeded for ${clientId}`);
+    return rateLimitResponse(rateCheck.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -78,19 +91,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('[delete-mix] R2 folder:', r2FolderPath);
 
-    // Delete files from R2
+    // Delete files from R2 (with limit to prevent runaway)
     try {
       const listCommand = new ListObjectsV2Command({
         Bucket: R2_CONFIG.bucketName,
         Prefix: r2FolderPath,
+        MaxKeys: MAX_R2_FILES_TO_DELETE, // Limit listed files
       });
 
       const listedObjects = await s3Client.send(listCommand);
 
       if (listedObjects.Contents && listedObjects.Contents.length > 0) {
-        log.info('[delete-mix] Found', listedObjects.Contents.length, 'files to delete');
+        const filesToDelete = listedObjects.Contents.slice(0, MAX_R2_FILES_TO_DELETE);
+        log.info('[delete-mix] Found', listedObjects.Contents.length, 'files, deleting up to', filesToDelete.length);
 
-        for (const object of listedObjects.Contents) {
+        let deleted = 0;
+        for (const object of filesToDelete) {
           if (object.Key) {
             await s3Client.send(
               new DeleteObjectCommand({
@@ -98,9 +114,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 Key: object.Key,
               })
             );
+            deleted++;
           }
         }
-        log.info('[delete-mix] R2 files deleted');
+        log.info('[delete-mix] Deleted', deleted, 'R2 files');
+
+        if (listedObjects.IsTruncated) {
+          log.info('[delete-mix] Note: More files may remain (hit limit)');
+        }
       }
     } catch (r2Error) {
       log.error('[delete-mix] R2 deletion error:', r2Error);
