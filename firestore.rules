@@ -276,7 +276,11 @@ service cloud.firestore {
       allow read: if true;
       // Allow creating chat messages if userId is provided (for REST API)
       allow create: if isAuthenticated() || request.resource.data.userId != null;
-      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      // Allow delete from admin, message owner, or REST API (API validates adminKey)
+      allow delete: if isAdmin() ||
+                      (isAuthenticated() && resource.data.userId == request.auth.uid) ||
+                      request.auth == null;
     }
 
     // Livestream slots (schedule) - public read, authenticated write

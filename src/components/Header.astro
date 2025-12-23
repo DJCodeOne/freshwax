@@ -767,6 +767,8 @@ const firebaseConfig = {
             document.cookie = 'userId=; path=/; max-age=0';
             document.cookie = 'customerId=; path=/; max-age=0';
             document.cookie = 'partnerId=; path=/; max-age=0';
+            // Clear auth cache for live page
+            localStorage.removeItem('fw_auth_cache');
             await signOut(auth);
             window.location.href = '/';
           } catch (e) {

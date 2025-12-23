@@ -2276,7 +2276,33 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   };
   
   // Store user info globally for shoutout access
-  window.currentUserInfo = { loggedIn: false, name: 'Anonymous', displayName: 'Anonymous', id: null };
+  // Try to restore from localStorage cache first (for instant auth on page reload)
+  let cachedAuth = null;
+  try {
+    const cached = localStorage.getItem('fw_auth_cache');
+    if (cached) {
+      cachedAuth = JSON.parse(cached);
+      // Only use cache if less than 24 hours old
+      if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt < 86400000) {
+        console.log('[Live] Restored auth from cache:', cachedAuth.id);
+      } else {
+        cachedAuth = null;
+        localStorage.removeItem('fw_auth_cache');
+      }
+    }
+  } catch (e) { /* Ignore cache errors */ }
+
+  window.currentUserInfo = cachedAuth || { loggedIn: false, name: 'Anonymous', displayName: 'Anonymous', id: null };
+
+  // If we have cached auth, dispatch event immediately for components like PlaylistModal
+  if (cachedAuth && cachedAuth.loggedIn) {
+    // Use setTimeout to ensure DOM is ready
+    setTimeout(() => {
+      document.dispatchEvent(new CustomEvent('userAuthReady', {
+        detail: { user: null, userInfo: window.currentUserInfo }
+      }));
+    }, 0);
+  }
 
   // Function to setup booking button - needs to be re-attached on View Transitions
   function setupBookingButtons() {
@@ -2493,6 +2519,17 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           displayName: displayName,
           id: userId
         };
+
+        // Cache auth state to localStorage for instant restore on page reload
+        try {
+          localStorage.setItem('fw_auth_cache', JSON.stringify({
+            loggedIn: true,
+            name: displayName,
+            displayName: displayName,
+            id: userId,
+            cachedAt: Date.now()
+          }));
+        } catch (e) { /* Ignore storage errors */ }
 
         // Dispatch event for components waiting for auth (like PlaylistModal)
         document.dispatchEvent(new CustomEvent('userAuthReady', {
