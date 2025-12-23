@@ -5544,7 +5544,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
   }
 
-  function renderLivestreamMessages(messages) {
+  function renderLivestreamMessages(messages, forceScrollToBottom = true) {
     const container = document.getElementById('chatMessages');
     if (!container) return;
 
@@ -5553,13 +5553,33 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       return;
     }
 
-    // Filter out bot messages for DJ Lobby
-    const filteredMessages = messages.filter(msg => msg.type !== 'bot');
-    container.innerHTML = filteredMessages.map(msg => formatLivestreamMessage(msg)).join('');
-    // Scroll to bottom after content renders
-    requestAnimationFrame(() => {
-      container.scrollTop = container.scrollHeight;
+    // Sort messages by createdAt - ascending (oldest first at top, newest last at bottom)
+    const sortedMessages = [...messages].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+      const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+      return dateA.getTime() - dateB.getTime();
     });
+
+    // Check if user was at bottom before rendering
+    const wasAtBottom = forceScrollToBottom || container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
+
+    // Filter out bot messages for DJ Lobby
+    const filteredMessages = sortedMessages.filter(msg => msg.type !== 'bot');
+    container.innerHTML = filteredMessages.map(msg => formatLivestreamMessage(msg)).join('');
+
+    // Scroll to bottom if user was already there
+    if (wasAtBottom) {
+      const scrollToBottom = () => {
+        const lastMessage = container.querySelector('.ls-chat-message:last-of-type');
+        if (lastMessage) {
+          lastMessage.scrollIntoView({ behavior: 'instant', block: 'end' });
+        } else {
+          container.scrollTop = container.scrollHeight;
+        }
+      };
+      scrollToBottom();
+      requestAnimationFrame(scrollToBottom);
+    }
   }
 
   function appendLivestreamMessage(msg) {
@@ -5569,16 +5589,29 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Skip bot messages in DJ Lobby
     if (msg.type === 'bot') return;
 
+    // Check if user was at bottom before adding
+    const wasAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
+
     // Remove welcome message if present
     const welcome = container.querySelector('.chat-welcome');
     if (welcome) welcome.remove();
 
     const msgHtml = formatLivestreamMessage(msg);
     container.insertAdjacentHTML('beforeend', msgHtml);
-    // Scroll to bottom after content renders
-    requestAnimationFrame(() => {
-      container.scrollTop = container.scrollHeight;
-    });
+
+    // Scroll to bottom if user was already there
+    if (wasAtBottom) {
+      const scrollToBottom = () => {
+        const lastMessage = container.querySelector('.ls-chat-message:last-of-type');
+        if (lastMessage) {
+          lastMessage.scrollIntoView({ behavior: 'instant', block: 'end' });
+        } else {
+          container.scrollTop = container.scrollHeight;
+        }
+      };
+      scrollToBottom();
+      requestAnimationFrame(scrollToBottom);
+    }
   }
 
   function formatLivestreamMessage(msg) {
