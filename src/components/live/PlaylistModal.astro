@@ -81,11 +81,6 @@
             <div id="playlistSuccess" class="playlist-success hidden"></div>
           </div>
 
-          <!-- Position Indicator -->
-          <div id="positionIndicator" class="position-indicator hidden">
-            <span id="positionText"></span>
-          </div>
-
           <!-- Split container: Queue List + Video Preview -->
           <div class="queue-split-container">
             <!-- Queue List Side -->
@@ -93,6 +88,12 @@
               <div class="playlist-queue-header">
                 <h3>Playlist Queue <span id="queueCount" class="queue-count">0/10</span></h3>
               </div>
+
+              <!-- Position Indicator - centered above the queue -->
+              <div id="positionIndicator" class="position-indicator hidden">
+                <span id="positionText"></span>
+              </div>
+
               <div id="playlistQueue" class="playlist-queue-grid">
                 <div class="playlist-empty">
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -2154,7 +2155,7 @@
     if (waitingCount === 0) {
       positionText.textContent = '⏳ You are up next!';
     } else if (waitingCount === 1) {
-      positionText.textContent = `📍 You are #${position} - 1 DJ ahead of you`;
+      positionText.textContent = '🔒 Your track is next, locked and loaded!';
     } else {
       positionText.textContent = `📍 You are #${position} - ${waitingCount} DJs ahead of you`;
     }

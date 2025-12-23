@@ -1001,23 +1001,64 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
 
 <script is:inline define:vars={{ releaseId: id }}>
   // Comments functionality - matching working dj-mix implementation
-  const commentUsername = document.getElementById('comment-username');
-  const commentText = document.getElementById('comment-text');
-  const charCount = document.getElementById('char-count');
-  const submitCommentBtn = document.getElementById('submit-comment-btn');
-  const commentsList = document.getElementById('comments-list');
+  // Get fresh DOM references (needed for View Transitions)
+  function getCommentElements() {
+    return {
+      commentUsername: document.getElementById('comment-username'),
+      commentText: document.getElementById('comment-text'),
+      charCount: document.getElementById('char-count'),
+      submitCommentBtn: document.getElementById('submit-comment-btn'),
+      commentsList: document.getElementById('comments-list')
+    };
+  }
 
   // Check for logged-in user
   let currentUser = null;
   let currentUserName = null;
   let currentUserAvatar = null;
+  let cachedUserId = null; // Store cached user ID for use before Firebase Auth initializes
+
+  // Try to restore from localStorage cache first (for instant auth on page reload)
+  // This matches the pattern used on live.astro for consistent auth across pages
+  function checkAuthCache() {
+    try {
+      const cached = localStorage.getItem('fw_auth_cache');
+      if (cached) {
+        const cachedAuth = JSON.parse(cached);
+        // Only use cache if less than 24 hours old
+        if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt < 86400000 && cachedAuth.loggedIn) {
+          console.log('[Comments] Restored auth from cache:', cachedAuth.id);
+          // Store cached values for immediate use
+          currentUserName = cachedAuth.displayName || cachedAuth.name;
+          currentUserAvatar = cachedAuth.avatar || null;
+          cachedUserId = cachedAuth.id;
+          // Immediately update the username field
+          const { commentUsername } = getCommentElements();
+          if (commentUsername && currentUserName) {
+            commentUsername.value = currentUserName;
+            commentUsername.classList.remove('cursor-not-allowed');
+            commentUsername.classList.add('cursor-default', 'bg-gray-700');
+          }
+          return true;
+        } else if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt >= 86400000) {
+          localStorage.removeItem('fw_auth_cache');
+        }
+      }
+    } catch (e) { /* Ignore cache errors */ }
+    return false;
+  }
+
+  // Run cache check immediately
+  checkAuthCache();
 
   // Function to update UI based on auth state
   function updateCommentUI(user, userName, avatarUrl) {
+    const { commentUsername } = getCommentElements();
     if (user && userName) {
       currentUser = user;
       currentUserName = userName;
       currentUserAvatar = avatarUrl || null;
+      cachedUserId = user.uid; // Update cached ID when Firebase Auth confirms
       if (commentUsername) {
         commentUsername.value = userName;
         commentUsername.classList.remove('cursor-not-allowed');
@@ -1049,7 +1090,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       
       // Firebase config
       const firebaseConfig = {
-        apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+        apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
         authDomain: "freshwax-store.firebaseapp.com",
         projectId: "freshwax-store",
         storageBucket: "freshwax-store.firebasestorage.app",
@@ -1135,54 +1176,82 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   
   // Initialize on page load
   initFirebaseAuth();
-  
+  setupCommentForm();
+
   // Re-check auth on Astro page transitions
   document.addEventListener('astro:page-load', function() {
+    // Check cache first for instant UI update, then verify with Firebase
+    checkAuthCache();
+    setupCommentForm();
     initFirebaseAuth();
   });
-  
+
   // Re-check auth on back/forward navigation (bfcache)
   window.addEventListener('pageshow', function(event) {
     if (event.persisted) {
+      checkAuthCache();
+      setupCommentForm();
       initFirebaseAuth();
     }
   });
 
-  // Character count
-  commentText?.addEventListener('input', function() {
-    if (charCount) {
-      charCount.textContent = commentText.value.length;
-    }
-  });
+  // Setup comment form event listeners
+  let selectedGifUrl = null;
 
-  // Emoji buttons
-  document.querySelectorAll('.emoji-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      const emoji = btn.getAttribute('data-emoji');
-      if (commentText && emoji) {
-        const start = commentText.selectionStart;
-        const end = commentText.selectionEnd;
-        const text = commentText.value;
-        commentText.value = text.substring(0, start) + emoji + text.substring(end);
-        commentText.focus();
-        commentText.selectionStart = commentText.selectionEnd = start + emoji.length;
+  function setupCommentForm() {
+    const { commentUsername, commentText, charCount, submitCommentBtn, commentsList } = getCommentElements();
+
+    // Prevent duplicate listeners
+    if (commentText && !commentText._listenersAttached) {
+      commentText._listenersAttached = true;
+
+      // Character count
+      commentText.addEventListener('input', function() {
+        const { charCount } = getCommentElements();
         if (charCount) {
           charCount.textContent = commentText.value.length;
         }
-      }
-    });
-  });
+      });
+    }
 
-  // Submit comment
-  let selectedGifUrl = null;
-  
-  submitCommentBtn?.addEventListener('click', function() {
-    if (!currentUser) {
+    // Emoji buttons (use event delegation to avoid duplicates)
+    document.querySelectorAll('.emoji-btn').forEach(function(btn) {
+      if (btn._listenerAttached) return;
+      btn._listenerAttached = true;
+      btn.addEventListener('click', function() {
+        const { commentText, charCount } = getCommentElements();
+        const emoji = btn.getAttribute('data-emoji');
+        if (commentText && emoji) {
+          const start = commentText.selectionStart;
+          const end = commentText.selectionEnd;
+          const text = commentText.value;
+          commentText.value = text.substring(0, start) + emoji + text.substring(end);
+          commentText.focus();
+          commentText.selectionStart = commentText.selectionEnd = start + emoji.length;
+          if (charCount) {
+            charCount.textContent = commentText.value.length;
+          }
+        }
+      });
+    });
+
+    // Submit comment
+    if (submitCommentBtn && !submitCommentBtn._listenerAttached) {
+      submitCommentBtn._listenerAttached = true;
+      submitCommentBtn.addEventListener('click', handleSubmitComment);
+    }
+  }
+
+  function handleSubmitComment() {
+    const { commentUsername, commentText, submitCommentBtn } = getCommentElements();
+
+    // Use cachedUserId if currentUser isn't set yet (during View Transition)
+    if (!currentUser && !cachedUserId) {
       alert('Please login to post a comment');
       window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
       return;
     }
-    
+
     const userName = currentUserName || commentUsername?.value?.trim();
     const comment = commentText?.value?.trim();
     
@@ -1197,11 +1266,15 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       commentText?.focus();
       return;
     }
-    
-    submitCommentBtn.disabled = true;
-    submitCommentBtn.textContent = 'Posting...';
-    
-    
+
+    if (submitCommentBtn) {
+      submitCommentBtn.disabled = true;
+      submitCommentBtn.textContent = 'Posting...';
+    }
+
+    // Use currentUser.uid if available, fallback to cachedUserId for View Transitions
+    const userId = currentUser ? currentUser.uid : cachedUserId;
+
     fetch('/api/add-comment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1210,7 +1283,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
         userName: userName,
         comment: comment || '',
         gifUrl: selectedGifUrl,
-        userId: currentUser.uid,
+        userId: userId,
         avatarUrl: currentUserAvatar || null
       })
     }).then(function(response) {
@@ -1256,17 +1329,18 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
           console.error('[Comments] Comments container not found!');
         }
         
-        // Clear input and GIF
-        if (commentText) {
-          commentText.value = '';
-          if (charCount) charCount.textContent = '0';
+        // Clear input and GIF - get fresh references
+        const { commentText: ct, charCount: cc } = getCommentElements();
+        if (ct) {
+          ct.value = '';
+          if (cc) cc.textContent = '0';
         }
-        
+
         // Clear selected GIF
         selectedGifUrl = null;
         const gifPreviewContainer = document.getElementById('gif-preview-container');
         if (gifPreviewContainer) gifPreviewContainer.classList.add('hidden');
-        
+
       } else {
         console.error('[Comments] API error:', data.error);
         alert(data.error || 'Failed to post comment');
@@ -1275,10 +1349,13 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       console.error('[Comments] Fetch error:', error);
       alert('Failed to post comment. Please try again.');
     }).finally(function() {
-      submitCommentBtn.disabled = false;
-      submitCommentBtn.textContent = 'Post Comment';
+      const { submitCommentBtn: btn } = getCommentElements();
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Post Comment';
+      }
     });
-  });
+  }
 
   // ============================================
   // GIPHY PICKER FUNCTIONALITY
@@ -1298,7 +1375,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   
   // Open Giphy modal
   gifPickerBtn?.addEventListener('click', function() {
-    if (!currentUser) {
+    if (!currentUser && !cachedUserId) {
       alert('Please login to add GIFs');
       return;
     }
