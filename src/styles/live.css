@@ -2807,6 +2807,9 @@
     background: #222;
     border-radius: 4px;
     flex-shrink: 0;
+    min-width: 55px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
   }
 
   .dj-info-title {
@@ -2843,6 +2846,9 @@
     background: rgba(220, 38, 38, 0.2);
     color: #dc2626;
     font-weight: 600;
+    min-width: 55px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
   }
 
   /* Inline Reactions Styles */

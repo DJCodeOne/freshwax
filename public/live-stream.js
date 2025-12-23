@@ -474,32 +474,54 @@ function setupPlaylistPlayButton() {
   const originalOnclick = playBtn.onclick;
 
   playBtn.onclick = async () => {
+    console.log('[Playlist] Play button clicked, state:', {
+      isLiveStreamActive: window.isLiveStreamActive,
+      isPlaylistActive: window.isPlaylistActive,
+      isPlaylistPlaying: window.isPlaylistPlaying,
+      hasPlaylistManager: !!window.playlistManager
+    });
+
     // If live stream is active, use original behavior
     if (window.isLiveStreamActive && originalOnclick) {
       originalOnclick();
       return;
     }
 
-    // If playlist is active, control playlist
-    if (window.isPlaylistActive && window.playlistManager) {
-      const playIcon = document.getElementById('playIcon');
-      const pauseIcon = document.getElementById('pauseIcon');
+    // Get playlist manager - it should exist if playlist was ever active
+    const pm = window.playlistManager;
+    if (!pm) {
+      console.warn('[Playlist] No playlist manager available');
+      return;
+    }
 
-      if (window.isPlaylistPlaying) {
+    const playIcon = document.getElementById('playIcon');
+    const pauseIcon = document.getElementById('pauseIcon');
+
+    // Check if currently playing by looking at both the flag AND the button state
+    const isCurrentlyPlaying = window.isPlaylistPlaying || playBtn.classList.contains('playing');
+
+    try {
+      if (isCurrentlyPlaying) {
         // Pause playlist
-        await window.playlistManager.pause();
+        await pm.pause();
+        window.isPlaylistPlaying = false;
+        window.isPlaylistActive = true; // Keep playlist active even when paused
         playIcon?.classList.remove('hidden');
         pauseIcon?.classList.add('hidden');
         playBtn.classList.remove('playing');
         console.log('[Playlist] Paused via play button');
       } else {
         // Resume playlist
-        await window.playlistManager.resume();
+        await pm.resume();
+        window.isPlaylistPlaying = true;
+        window.isPlaylistActive = true;
         playIcon?.classList.add('hidden');
         pauseIcon?.classList.remove('hidden');
         playBtn.classList.add('playing');
         console.log('[Playlist] Resumed via play button');
       }
+    } catch (error) {
+      console.error('[Playlist] Error toggling playback:', error);
     }
   };
 
