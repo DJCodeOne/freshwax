@@ -53,7 +53,7 @@
                 type="url"
                 id="playlistUrlInput"
                 class="playlist-url-input"
-                placeholder="Paste YouTube, Vimeo, SoundCloud, or direct URL..."
+                placeholder="Paste a YouTube Or SoundCloud Link Here..."
                 autocomplete="off"
               />
               <button id="clearPlaylistInput" class="clear-input-btn hidden" title="Clear input">
@@ -134,7 +134,13 @@
               </div>
               <div id="previewTrackInfo" class="preview-track-info hidden">
                 <div class="preview-track-title" id="previewTrackTitle">--</div>
-                <div class="preview-track-dj" id="previewTrackDj">Selecter: --</div>
+                <div class="preview-track-bottom">
+                  <div class="preview-track-dj" id="previewTrackDj">Selecter: --</div>
+                  <div class="preview-duration-box" id="previewDurationBox">
+                    <span class="preview-duration-value" id="previewDuration">--:--</span>
+                    <span class="preview-duration-label">LEFT</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -144,7 +150,10 @@
         <div class="playlist-column my-playlist-column">
           <div id="myPlaylistSection" class="my-playlist-section" style="display: flex;">
             <div class="my-playlist-header">
-              <h3>My Playlist <span id="myPlaylistCount" class="queue-count">0</span></h3>
+              <div class="my-playlist-title-group">
+                <h3>My Playlist</h3>
+                <span id="myPlaylistCount" class="my-playlist-count-box">0</span>
+              </div>
               <div class="my-playlist-actions">
                 <button id="exportPlaylistBtn" class="export-playlist-btn" title="Export playlist">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -500,9 +509,46 @@
     margin-bottom: 0.25rem;
   }
 
+  .preview-track-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
   .preview-track-dj {
     font-size: 0.75rem;
     color: #60a5fa;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .preview-duration-box {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .preview-duration-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+  }
+
+  .preview-duration-value {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #dc2626;
+    font-variant-numeric: tabular-nums;
+    min-width: 35px;
+    text-align: left;
   }
 
   /* Add section styling */
@@ -1098,12 +1144,33 @@
     width: 100%;
   }
 
+  .my-playlist-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
   .my-playlist-header h3 {
     margin: 0;
     font-size: 1.1rem;
     font-weight: 600;
     color: #fff;
     text-align: left;
+  }
+
+  .my-playlist-count-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 0.25rem 0.6rem;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #dc2626;
+    min-width: 28px;
   }
 
   .my-playlist-actions {
@@ -1578,6 +1645,99 @@
   let hasInitializedThisPage = false; // Prevent duplicate initialization
   let listenersAttached = false; // Prevent duplicate event listeners
   let isAddingToPlaylist = false; // Prevent duplicate add submissions
+
+  // Duration timer state
+  let durationInterval: ReturnType<typeof setInterval> | null = null;
+  let currentTrackStartTime: number | null = null;
+  let currentTrackDuration: number | null = null;
+  let lastTrackId: string | null = null;
+
+  // Format duration as mm:ss or h:mm:ss
+  function formatDuration(seconds: number): string {
+    if (seconds < 0) seconds = 0;
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  // Fetch video duration from YouTube API
+  async function fetchVideoDuration(platform: string, embedId: string): Promise<number | null> {
+    if (platform === 'youtube' && embedId) {
+      try {
+        const response = await fetch(`/api/youtube/duration?videoId=${embedId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.duration) {
+            return data.duration;
+          }
+        }
+      } catch (error) {
+        console.warn('[PlaylistModal] Could not fetch duration:', error);
+      }
+    }
+    return null;
+  }
+
+  // Update the duration display (countdown)
+  function updateDurationDisplay() {
+    const durationEl = document.getElementById('previewDuration');
+    if (!durationEl || !currentTrackStartTime) return;
+
+    const elapsed = Math.floor((Date.now() - currentTrackStartTime) / 1000);
+
+    if (currentTrackDuration) {
+      // Countdown mode
+      const remaining = currentTrackDuration - elapsed;
+      durationEl.textContent = formatDuration(remaining);
+    } else {
+      // Fallback: show elapsed if no duration available
+      durationEl.textContent = formatDuration(elapsed);
+    }
+  }
+
+  // Start the duration timer for a new track
+  async function startDurationTimer(trackId: string, platform?: string, embedId?: string) {
+    // If same track, don't restart
+    if (trackId === lastTrackId && durationInterval) return;
+
+    // Stop existing timer
+    stopDurationTimer();
+
+    lastTrackId = trackId;
+    currentTrackStartTime = Date.now();
+    currentTrackDuration = null;
+
+    // Show initial state
+    const durationEl = document.getElementById('previewDuration');
+    if (durationEl) durationEl.textContent = '--:--';
+
+    // Try to fetch duration
+    if (platform && embedId) {
+      const duration = await fetchVideoDuration(platform, embedId);
+      if (duration) {
+        currentTrackDuration = duration;
+      }
+    }
+
+    updateDurationDisplay();
+    durationInterval = setInterval(updateDurationDisplay, 1000);
+  }
+
+  // Stop the duration timer
+  function stopDurationTimer() {
+    if (durationInterval) {
+      clearInterval(durationInterval);
+      durationInterval = null;
+    }
+    currentTrackStartTime = null;
+    currentTrackDuration = null;
+    const durationEl = document.getElementById('previewDuration');
+    if (durationEl) durationEl.textContent = '--:--';
+  }
 
   // Personal playlist pagination state
   const ITEMS_PER_PAGE = 20;
@@ -2198,6 +2358,7 @@
       previewContainer.innerHTML = '';
       if (previewEmpty) previewEmpty.style.display = 'flex';
       if (previewTrackInfo) previewTrackInfo.classList.add('hidden');
+      stopDurationTimer();
       return;
     }
 
@@ -2211,6 +2372,10 @@
       previewTitle.textContent = currentItem.title || 'Unknown Track';
       previewDjName.textContent = `Selecter: ${currentDj?.userName || currentItem.addedByName || 'Unknown'}`;
     }
+
+    // Start duration timer for this track (with countdown support)
+    const trackId = currentItem.id || currentItem.url || `${currentItem.title}-${currentItem.addedByName}`;
+    startDurationTimer(trackId, currentItem.platform, currentItem.embedId);
 
     // Show thumbnail only - no interactive player
     if (currentItem.thumbnail) {

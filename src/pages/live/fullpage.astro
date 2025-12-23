@@ -76,7 +76,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
             <span class="stat-value" id="viewerCount">0</span>
             <span class="stat-label">Views</span>
           </div>
-          <div class="stat">
+          <div class="stat duration-stat">
             <span class="stat-value" id="streamDuration">0:00</span>
             <span class="stat-label">Duration</span>
           </div>
@@ -133,6 +133,9 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
         <div id="videoPlayer" class="video-player hidden" transition:persist="live-video-player">
           <video id="hlsVideoElement" class="hls-video" controls playsinline></video>
         </div>
+
+        <!-- Playlist Player Container -->
+        <div id="playlistPlayer" class="playlist-player"></div>
       </div>
       
       <!-- Controls Bar -->
@@ -221,17 +224,22 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       </div>
       
       <!-- Now Playing Bar -->
-      <div class="now-playing-bar">
+      <div class="now-playing-bar" id="nowPlayingBar">
         <div class="now-playing-left">
           <img id="djAvatar" src="/place-holder.webp" alt="" class="np-avatar" />
           <div class="np-info">
-            <span class="np-label">NOW PLAYING</span>
-            <span class="np-name" id="djName">--</span>
+            <span class="np-label" id="npLabel">NOW PLAYING</span>
+            <span class="np-name" id="djName">Waiting...</span>
           </div>
         </div>
+        <div class="now-playing-center">
+          <span class="np-track-title" id="npTrackTitle">No track playing</span>
+        </div>
         <div class="now-playing-right">
-          <span class="np-set-label">SET</span>
-          <span class="np-set-title" id="setTitle">Waiting for stream...</span>
+          <div class="np-duration-box">
+            <span class="np-duration-label">DURATION</span>
+            <span class="np-duration-value" id="npDuration">0:00</span>
+          </div>
           <span class="np-genre" id="streamGenre">Jungle / D&B</span>
         </div>
       </div>
@@ -383,6 +391,11 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
   body {
     font-family: 'Inter', sans-serif;
     background: linear-gradient(135deg, #0a0a0f 0%, #111118 50%, #0d0d12 100%);
@@ -393,7 +406,10 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .fullpage-container {
     display: grid;
     grid-template-columns: 1fr 720px;
+    grid-template-rows: 1fr;
     height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
   }
 
   @media (max-width: 1400px) {
@@ -505,6 +521,20 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .stat { display: flex; flex-direction: column; align-items: center; gap: 0.125rem; }
   .stat-value { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.25rem; color: #dc2626; }
   .stat-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+
+  /* Duration box - fixed width to prevent wobbling */
+  .stat.duration-stat {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    min-width: 80px;
+  }
+  .stat.duration-stat .stat-value {
+    font-variant-numeric: tabular-nums;
+    min-width: 50px;
+    text-align: center;
+  }
   
   .dj-lobby-btn {
     display: flex;
@@ -583,6 +613,21 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   
   .video-player { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .hls-video { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; background: #000; }
+
+  /* Playlist player - fullscreen embed */
+  .playlist-player {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+  }
+  .playlist-player:empty { display: none; }
+  .playlist-player iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border: none;
+  }
   
   .player-controls {
     display: flex;
@@ -687,22 +732,36 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   @keyframes shoutout-scroll { 0% { transform: translateY(-50%) translateX(0); } 100% { transform: translateY(-50%) translateX(calc(-100% - 100vw)); } }
   
   .now-playing-bar { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: #0a0a0a; border-top: 2px solid #222; }
-  .now-playing-left { display: flex; align-items: center; gap: 0.75rem; }
+  .now-playing-left { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
   .np-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #333; }
   .np-info { display: flex; flex-direction: column; gap: 0.125rem; }
   .np-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 1px; color: #dc2626; }
   .np-name { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.125rem; letter-spacing: 0.5px; }
-  .now-playing-right { display: flex; align-items: center; gap: 0.75rem; text-align: right; }
+  .now-playing-center { flex: 1; text-align: center; padding: 0 1rem; min-width: 0; }
+  .np-track-title { font-size: 1rem; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+  .now-playing-right { display: flex; align-items: center; gap: 0.75rem; text-align: right; flex-shrink: 0; }
+  .np-duration-box { display: flex; flex-direction: row; align-items: center; gap: 0.75rem; background: rgba(0, 0, 0, 0.5); border: 1px solid #333; border-radius: 8px; padding: 0.4rem 0.75rem; }
+  .np-duration-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+  .np-duration-value { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1rem; color: #dc2626; font-variant-numeric: tabular-nums; min-width: 50px; text-align: right; }
   .np-set-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 1px; color: #888; }
   .np-set-title { font-size: 0.9375rem; color: #ccc; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .np-genre { font-size: 0.75rem; color: #dc2626; background: rgba(220, 38, 38, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px; }
-  
+
+  /* Playlist mode styling */
+  .now-playing-bar.playlist-mode { background: linear-gradient(90deg, #0a0a0a 0%, rgba(220, 38, 38, 0.1) 50%, #0a0a0a 100%); }
+  .now-playing-bar.playlist-mode .np-label { color: #22c55e; }
+  .now-playing-bar.playlist-mode .np-track-title { color: #dc2626; }
+
   /* Multi-Chat Section - 3 Columns */
-  .chat-section { display: flex; flex-direction: column; background: #111; border-left: 2px solid #222; }
+  .chat-section { display: flex; flex-direction: column; background: #111; border-left: 2px solid #222; height: 100%; min-height: 0; overflow: hidden; }
   .chat-section.multi-chat {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr;
     gap: 0;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
   }
 
   /* Chat Columns */
@@ -712,6 +771,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     border-right: 1px solid #222;
     overflow: hidden;
     min-height: 0;
+    max-height: 100%;
   }
   .chat-column:last-child { border-right: none; }
 
@@ -764,6 +824,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    min-height: 0;
   }
 
   /* External Chat Frames (Twitch/YouTube) */
@@ -1132,6 +1193,113 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     window.emojiAnimationsEnabled = enabled;
   }
 
+  // Duration timer
+  let streamStartTime = null;
+  let durationInterval = null;
+  let trackTotalDuration = null;
+  let isCountdownMode = false;
+  let lastPlaylistTrackId = null;
+
+  function formatDuration(seconds) {
+    if (seconds < 0) seconds = 0;
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  function updateDurationDisplay() {
+    if (!streamStartTime) return;
+    const elapsed = Math.floor((Date.now() - streamStartTime) / 1000);
+    let formatted;
+
+    if (isCountdownMode && trackTotalDuration) {
+      // Countdown mode for playlist
+      const remaining = trackTotalDuration - elapsed;
+      formatted = formatDuration(remaining);
+    } else {
+      // Count up mode for live stream
+      formatted = formatDuration(elapsed);
+    }
+
+    const durationEl = document.getElementById('streamDuration');
+    const npDurationEl = document.getElementById('npDuration');
+    if (durationEl) durationEl.textContent = formatted;
+    if (npDurationEl) npDurationEl.textContent = formatted;
+  }
+
+  async function fetchVideoDuration(platform, embedId) {
+    if (platform === 'youtube' && embedId) {
+      try {
+        const response = await fetch(`/api/youtube/duration?videoId=${embedId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.duration) return data.duration;
+        }
+      } catch (e) {
+        console.warn('[Fullpage] Could not fetch duration:', e);
+      }
+    }
+    return null;
+  }
+
+  function startDurationTimer(startedAt) {
+    // Clear any existing interval
+    if (durationInterval) clearInterval(durationInterval);
+
+    // Set start time from stream data or use current time
+    streamStartTime = startedAt ? new Date(startedAt).getTime() : Date.now();
+    isCountdownMode = false;
+    trackTotalDuration = null;
+
+    // Update immediately and then every second
+    updateDurationDisplay();
+    durationInterval = setInterval(updateDurationDisplay, 1000);
+  }
+
+  async function startPlaylistDurationTimer(track) {
+    // Clear any existing interval
+    if (durationInterval) clearInterval(durationInterval);
+
+    const trackId = track.id || track.url;
+    if (trackId === lastPlaylistTrackId && durationInterval) return;
+    lastPlaylistTrackId = trackId;
+
+    streamStartTime = Date.now();
+    isCountdownMode = true;
+    trackTotalDuration = null;
+
+    // Show loading state
+    const npDurationEl = document.getElementById('npDuration');
+    if (npDurationEl) npDurationEl.textContent = '--:--';
+
+    // Fetch duration for countdown
+    if (track.platform && track.embedId) {
+      trackTotalDuration = await fetchVideoDuration(track.platform, track.embedId);
+    }
+
+    updateDurationDisplay();
+    durationInterval = setInterval(updateDurationDisplay, 1000);
+  }
+
+  function stopDurationTimer() {
+    if (durationInterval) {
+      clearInterval(durationInterval);
+      durationInterval = null;
+    }
+    streamStartTime = null;
+    trackTotalDuration = null;
+    isCountdownMode = false;
+    lastPlaylistTrackId = null;
+    const durationEl = document.getElementById('streamDuration');
+    const npDurationEl = document.getElementById('npDuration');
+    if (durationEl) durationEl.textContent = '0:00';
+    if (npDurationEl) npDurationEl.textContent = '0:00';
+  }
+
   async function loadStreamStatus() {
     try {
       // Add cache buster to prevent stale cached responses
@@ -1142,6 +1310,17 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       if (result.isLive && result.streams && result.streams.length > 0) {
         const stream = result.streams[0];
         currentStream = stream;
+
+        // Start duration timer if not already running
+        if (!durationInterval) {
+          startDurationTimer(stream.startedAt);
+        }
+
+        // Update track title in now playing
+        const npTrackTitle = document.getElementById('npTrackTitle');
+        if (npTrackTitle) {
+          npTrackTitle.textContent = stream.title || 'Live Set';
+        }
 
         // Enable reaction buttons when live
         setReactionButtonsEnabled(true);
@@ -1185,6 +1364,10 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
         setupExternalChats(stream);
       } else {
         // No live stream - show placeholders
+        stopDurationTimer();
+        const npTrackTitle = document.getElementById('npTrackTitle');
+        if (npTrackTitle) npTrackTitle.textContent = 'No track playing';
+        document.getElementById('djName').textContent = 'Waiting...';
         setupExternalChats(null);
       }
     } catch (e) { console.error('Error loading stream:', e); }
@@ -1903,6 +2086,53 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       loadListeners();
     }
   }, 10000); // Refresh listeners every 10 seconds when dropdown is open
+
+  // Listen for playlist updates to show current track
+  let isPlaylistActive = false;
+
+  window.addEventListener('playlistUpdate', (event) => {
+    const detail = event.detail;
+    const npLabel = document.getElementById('npLabel');
+    const djNameEl = document.getElementById('djName');
+    const npTrackTitle = document.getElementById('npTrackTitle');
+    const djAvatar = document.getElementById('djAvatar');
+    const nowPlayingBar = document.getElementById('nowPlayingBar');
+
+    if (detail.isPlaying && detail.queue && detail.queue.length > 0) {
+      // Playlist is active - show current track
+      const currentTrack = detail.queue[detail.currentIndex];
+      if (currentTrack) {
+        isPlaylistActive = true;
+        nowPlayingBar?.classList.add('playlist-mode');
+
+        if (npLabel) npLabel.textContent = 'PLAYLIST';
+        if (djNameEl) djNameEl.textContent = currentTrack.addedByName || 'DJ';
+        if (npTrackTitle) npTrackTitle.textContent = currentTrack.title || 'Unknown Track';
+        if (djAvatar && currentTrack.thumbnail) {
+          djAvatar.src = currentTrack.thumbnail;
+        }
+
+        // Start countdown timer for playlist track
+        startPlaylistDurationTimer(currentTrack);
+      }
+    } else if (isPlaylistActive) {
+      // Playlist stopped - revert to stream info
+      isPlaylistActive = false;
+      nowPlayingBar?.classList.remove('playlist-mode');
+
+      if (npLabel) npLabel.textContent = 'NOW PLAYING';
+      if (currentStream) {
+        if (djNameEl) djNameEl.textContent = currentStream.djName || 'DJ';
+        if (npTrackTitle) npTrackTitle.textContent = currentStream.title || 'Live Set';
+        if (djAvatar && currentStream.djAvatar) {
+          djAvatar.src = currentStream.djAvatar;
+        }
+      } else {
+        if (djNameEl) djNameEl.textContent = 'Waiting...';
+        if (npTrackTitle) npTrackTitle.textContent = 'No track playing';
+      }
+    }
+  });
 </script>
 </body>
 </html>
