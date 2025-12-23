@@ -5556,7 +5556,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Filter out bot messages for DJ Lobby
     const filteredMessages = messages.filter(msg => msg.type !== 'bot');
     container.innerHTML = filteredMessages.map(msg => formatLivestreamMessage(msg)).join('');
-    container.scrollTop = container.scrollHeight;
+    // Scroll to bottom after content renders
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+    });
   }
 
   function appendLivestreamMessage(msg) {
@@ -5572,7 +5575,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
     const msgHtml = formatLivestreamMessage(msg);
     container.insertAdjacentHTML('beforeend', msgHtml);
-    container.scrollTop = container.scrollHeight;
+    // Scroll to bottom after content renders
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+    });
   }
 
   function formatLivestreamMessage(msg) {
