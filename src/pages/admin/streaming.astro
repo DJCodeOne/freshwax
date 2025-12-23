@@ -545,11 +545,67 @@ const adminKey = import.meta.env.ADMIN_KEY || '';
     font-size: 0.8rem;
     color: var(--text-secondary, #6b7280);
   }
+
+  /* Chat Management */
+  .chat-management-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: var(--bg-secondary, #fff);
+    border: 2px solid var(--border-light, #e5e5e5);
+    border-radius: var(--radius-md, 8px);
+  }
+
+  .chat-stats {
+    font-size: 1rem;
+    color: var(--text-secondary, #666);
+  }
+
+  .chat-stats span {
+    font-weight: 700;
+    color: var(--text-primary, #000);
+  }
+
+  .clear-chat-btn {
+    padding: 0.75rem 1.5rem;
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md, 8px);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .clear-chat-btn:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+  }
+
+  .clear-chat-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+  }
 </style>
 
 <AdminLayout title="Streaming Management">
   <a slot="actions" href="/admin/streaming/schedule" class="schedule-link-btn">📅 View Full Schedule →</a>
   <div class="streaming-admin">
+    <!-- Chat Management -->
+    <div class="section">
+      <div class="section-header">
+        <h2>💬 Chat Management</h2>
+      </div>
+      <div class="chat-management-row">
+        <div class="chat-stats">
+          <span id="chatMessageCount">Loading...</span> messages in chat
+        </div>
+        <button id="clearChatBtn" class="clear-chat-btn">🗑️ Clear All Chat Messages</button>
+      </div>
+    </div>
+
     <!-- Current Live Streams -->
     <div class="section">
       <div class="section-header">
@@ -818,10 +874,71 @@ const adminKey = import.meta.env.ADMIN_KEY || '';
       loadModerationList(),
       loadBypassRequests(),
       loadEventRequests(),
-      loadQuickAccessKey()
+      loadQuickAccessKey(),
+      loadChatCount()
     ]);
 
     setupEventListeners();
+    setupChatManagement();
+  }
+
+  async function loadChatCount() {
+    const countEl = document.getElementById('chatMessageCount');
+    try {
+      const response = await fetch(`/api/admin/clear-chat?adminKey=${ADMIN_KEY}`);
+      const result = await response.json();
+      if (result.success) {
+        countEl.textContent = result.count.toString();
+      } else {
+        countEl.textContent = '?';
+      }
+    } catch (error) {
+      console.error('Error loading chat count:', error);
+      countEl.textContent = '?';
+    }
+  }
+
+  function setupChatManagement() {
+    const clearBtn = document.getElementById('clearChatBtn');
+    clearBtn?.addEventListener('click', async () => {
+      const countEl = document.getElementById('chatMessageCount');
+      const count = parseInt(countEl.textContent || '0', 10);
+
+      if (count === 0) {
+        alert('No messages to clear');
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to delete all ${count} chat messages? This cannot be undone.`)) {
+        return;
+      }
+
+      clearBtn.disabled = true;
+      clearBtn.textContent = '🗑️ Clearing...';
+
+      try {
+        const response = await fetch('/api/admin/clear-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminKey: ADMIN_KEY })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert(`Cleared ${result.deleted} chat messages`);
+          loadChatCount();
+        } else {
+          alert('Error: ' + result.error);
+        }
+      } catch (error) {
+        console.error('Error clearing chat:', error);
+        alert('Failed to clear chat');
+      } finally {
+        clearBtn.disabled = false;
+        clearBtn.textContent = '🗑️ Clear All Chat Messages';
+      }
+    });
   }
   
   async function loadLiveStreams() {
@@ -1575,7 +1692,7 @@ const adminKey = import.meta.env.ADMIN_KEY || '';
     const container = document.getElementById('bypassRequests');
     
     try {
-      const response = await fetch('/api/admin/bypass-requests?action=list');
+      const response = await fetch(`/api/admin/bypass-requests?action=list&adminKey=${ADMIN_KEY}`);
       const result = await response.json();
       
       if (result.success && result.requests?.length > 0) {

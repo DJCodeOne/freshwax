@@ -565,55 +565,12 @@ export const prerender = false;
     </div>
   </div>
 
-  <!-- Danger Zone -->
-  <div class="card mt-4 danger-zone">
-    <div class="card-header danger-header">
-      <h2>⚠️ Danger Zone</h2>
-    </div>
-    <div class="card-body">
-      <div class="danger-item">
-        <div class="danger-info">
-          <h3>Reset Store</h3>
-          <p>This will permanently delete all data from Firebase and R2 storage, except your admin account. This action cannot be undone.</p>
-        </div>
-        <button id="resetStoreBtn" class="btn-danger">Reset Store</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Reset Confirmation Modal -->
-  <div id="resetModal" class="modal-overlay hidden">
-    <div class="modal-content danger-modal">
-      <h2>⚠️ Confirm Store Reset</h2>
-      <p>This will permanently delete:</p>
-      <ul>
-        <li>All customers (except admin account)</li>
-        <li>All orders and order history</li>
-        <li>All releases and tracks</li>
-        <li>All DJ mixes</li>
-        <li>All merchandise</li>
-        <li>All partners/artists</li>
-        <li>All files in R2 storage</li>
-      </ul>
-      <p class="danger-warning">Type <strong>RESET</strong> to confirm:</p>
-      <input type="text" id="resetConfirmInput" class="reset-confirm-input" placeholder="Type RESET" />
-      <div class="modal-actions">
-        <button id="cancelResetBtn" class="btn-secondary">Cancel</button>
-        <button id="confirmResetBtn" class="btn-danger" disabled>Reset Everything</button>
-      </div>
-    </div>
-  </div>
 </AdminLayout>
 
 <script>
   // Feature toggle handling
   document.addEventListener('DOMContentLoaded', async function() {
     const toggleMixCharts = document.getElementById('toggleMixCharts');
-    const resetStoreBtn = document.getElementById('resetStoreBtn');
-    const resetModal = document.getElementById('resetModal');
-    const resetConfirmInput = document.getElementById('resetConfirmInput');
-    const confirmResetBtn = document.getElementById('confirmResetBtn');
-    const cancelResetBtn = document.getElementById('cancelResetBtn');
 
     // Load current settings
     try {
@@ -636,56 +593,6 @@ export const prerender = false;
         });
       } catch (error) {
         console.error('Failed to save setting:', error);
-      }
-    });
-
-    // Reset store modal
-    resetStoreBtn?.addEventListener('click', function() {
-      resetModal.classList.remove('hidden');
-      resetConfirmInput.value = '';
-      confirmResetBtn.disabled = true;
-    });
-
-    cancelResetBtn?.addEventListener('click', function() {
-      resetModal.classList.add('hidden');
-    });
-
-    resetConfirmInput?.addEventListener('input', function() {
-      confirmResetBtn.disabled = this.value !== 'RESET';
-    });
-
-    confirmResetBtn?.addEventListener('click', async function() {
-      if (resetConfirmInput.value !== 'RESET') return;
-      
-      this.disabled = true;
-      this.textContent = 'Resetting...';
-      
-      try {
-        const response = await fetch('/api/admin/reset-store', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-          alert('Store has been reset successfully. The page will now reload.');
-          window.location.reload();
-        } else {
-          alert('Reset failed: ' + (data.error || 'Unknown error'));
-          this.disabled = false;
-          this.textContent = 'Reset Everything';
-        }
-      } catch (error) {
-        alert('Reset failed: ' + error.message);
-        this.disabled = false;
-        this.textContent = 'Reset Everything';
-      }
-    });
-
-    // Close modal on overlay click
-    resetModal?.addEventListener('click', function(e) {
-      if (e.target === resetModal) {
-        resetModal.classList.add('hidden');
       }
     });
   });

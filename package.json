@@ -38,6 +38,9 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/adm-zip": "^0.5.7"
+    "@types/adm-zip": "^0.5.7",
+    "@vitest/coverage-v8": "^4.0.16",
+    "husky": "^9.1.7",
+    "vitest": "^4.0.16"
   }
 }

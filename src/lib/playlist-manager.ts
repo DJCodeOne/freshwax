@@ -647,8 +647,24 @@ export class PlaylistManager {
 
   /**
    * Log item to play history for offline playlist creation
+   * Prevents duplicate URLs - each URL only appears once in history
    */
   private logToHistory(item: GlobalPlaylistItem): void {
+    // Check if URL already exists in history - no duplicates allowed
+    const existingIndex = this.playHistory.findIndex(entry => entry.url === item.url);
+    if (existingIndex >= 0) {
+      // URL already in history - update playedAt timestamp and move to front
+      const existing = this.playHistory.splice(existingIndex, 1)[0];
+      existing.playedAt = new Date().toISOString();
+      // Update other fields in case they've changed
+      existing.title = item.title || existing.title;
+      existing.thumbnail = item.thumbnail || existing.thumbnail;
+      this.playHistory.unshift(existing);
+      this.savePlayHistory();
+      console.log('[PlaylistManager] URL already in history, moved to front:', existing.title || existing.url);
+      return;
+    }
+
     const historyEntry: PlaylistHistoryEntry = {
       id: item.id,
       url: item.url,
@@ -1020,6 +1036,49 @@ export class PlaylistManager {
   }
 
   /**
+   * Pick a random track from history that hasn't been played recently
+   * Used for auto-play when queue is empty
+   */
+  private async pickRandomFromHistory(): Promise<GlobalPlaylistItem | null> {
+    if (this.playHistory.length === 0) {
+      console.log('[PlaylistManager] No tracks in history for auto-play');
+      return null;
+    }
+
+    // Filter out tracks that were played recently (within cooldown)
+    const availableTracks = this.playHistory.filter(entry => {
+      const recentCheck = this.wasPlayedRecently(entry.url);
+      return !recentCheck.recent;
+    });
+
+    if (availableTracks.length === 0) {
+      console.log('[PlaylistManager] All history tracks are on cooldown');
+      return null;
+    }
+
+    // Pick a random track
+    const randomIndex = Math.floor(Math.random() * availableTracks.length);
+    const selected = availableTracks[randomIndex];
+
+    console.log('[PlaylistManager] Selected random track from history:', selected.title || selected.url);
+
+    // Convert history entry to GlobalPlaylistItem format
+    const item: GlobalPlaylistItem = {
+      id: this.generateId(),
+      url: selected.url,
+      platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
+      embedId: selected.embedId,
+      title: selected.title,
+      thumbnail: selected.thumbnail,
+      addedAt: new Date().toISOString(),
+      addedBy: 'system',
+      addedByName: 'Auto-Play'
+    };
+
+    return item;
+  }
+
+  /**
    * Clear play history
    */
   clearPlayHistory(): void {
@@ -1304,14 +1363,25 @@ export class PlaylistManager {
     // Adjust currentIndex to stay in bounds
     const now = new Date().toISOString();
     if (this.playlist.queue.length === 0) {
-      // Queue is empty
-      this.playlist.currentIndex = 0;
-      this.playlist.isPlaying = false;
-      this.playlist.trackStartedAt = null; // Clear track start time
-      await this.player.destroy();
-      this.disableEmojis();
-      this.updateNowPlayingDisplay(null);
-      this.showOfflineOverlay();
+      // Queue is empty - try to auto-play a random track from history
+      const randomTrack = await this.pickRandomFromHistory();
+      if (randomTrack) {
+        // Add the random track to queue and continue playing
+        this.playlist.queue.push(randomTrack);
+        this.playlist.currentIndex = 0;
+        this.playlist.isPlaying = true;
+        this.playlist.trackStartedAt = now;
+        console.log('[PlaylistManager] Queue empty - auto-playing from history:', randomTrack.title || randomTrack.url);
+      } else {
+        // No tracks available from history - stop playback
+        this.playlist.currentIndex = 0;
+        this.playlist.isPlaying = false;
+        this.playlist.trackStartedAt = null; // Clear track start time
+        await this.player.destroy();
+        this.disableEmojis();
+        this.updateNowPlayingDisplay(null);
+        this.showOfflineOverlay();
+      }
     } else {
       // Keep currentIndex in bounds (it now points to the next item)
       if (this.playlist.currentIndex >= this.playlist.queue.length) {
