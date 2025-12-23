@@ -12,9 +12,9 @@ interface CacheEntry {
 
 const statusCache = new Map<string, CacheEntry>();
 const CACHE_TTL = {
-  LIVE_STATUS: 10 * 1000,
-  SPECIFIC_STREAM: 15 * 1000,
-  OFFLINE_STATUS: 30 * 1000,
+  LIVE_STATUS: 30 * 1000,      // Increased from 10s to 30s
+  SPECIFIC_STREAM: 30 * 1000,  // Increased from 15s to 30s
+  OFFLINE_STATUS: 60 * 1000,   // Increased from 30s to 60s
 };
 
 function getCached(key: string): any | null {
@@ -105,8 +105,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Check livestreamSlots for slots with status='live' (new slot-based system)
     const liveSlots = await queryCollection('livestreamSlots', {
       filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-      limit: 5,
-      skipCache: true
+      limit: 5
+      // Removed skipCache: true - use cached data to reduce Firebase reads
     });
 
     // Convert slots to stream format for the player
@@ -136,8 +136,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (liveStreams.length === 0) {
       const legacyStreams = await queryCollection('livestreams', {
         filters: [{ field: 'isLive', op: 'EQUAL', value: true }],
-        limit: 5,
-        skipCache: true
+        limit: 5
+        // Removed skipCache: true - use cached data to reduce Firebase reads
       });
       liveStreams = legacyStreams;
     }
@@ -149,8 +149,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Check scheduled slots
       const scheduledSlots = await queryCollection('livestreamSlots', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'scheduled' }],
-        limit: 10,
-        skipCache: true
+        limit: 10
+        // Removed skipCache: true - use cached data to reduce Firebase reads
       });
 
       const scheduled = scheduledSlots

@@ -622,10 +622,10 @@ const firebaseConfig = {
       globalListenersSet = true;
     }
 
-    // Check live status
+    // Check live status (reduced frequency to minimize Firebase reads)
     checkLiveStatus();
     if (liveStatusInterval) clearInterval(liveStatusInterval);
-    liveStatusInterval = setInterval(checkLiveStatus, 30000);
+    liveStatusInterval = setInterval(checkLiveStatus, 60000); // 60s instead of 30s
 
     // Mobile burger menu functionality
     setupBurgerMenu();

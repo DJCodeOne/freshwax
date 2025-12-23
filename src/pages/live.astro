@@ -336,8 +336,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           </div>
 
           <!-- Video Player (for both live stream and playlist) -->
-          <div id="videoPlayer" class="video-player hidden">
-            <video id="hlsVideoElement" class="hls-video" controls playsinline preload="auto"></video>
+          <div id="videoPlayer" class="video-player hidden" transition:persist="live-video-player">
+            <video id="hlsVideoElement" class="hls-video" controls playsinline preload="auto" autoplay muted></video>
             <!-- Playlist embeds will be injected here when active -->
             <div id="playlistPlayer" class="playlist-player hidden"></div>
           </div>
@@ -3476,6 +3476,9 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 
       streamInfoBar?.classList.add('is-live');
       liveBadge?.classList.add('is-live');
+      // Grey out playlist button when livestream is active
+      const playlistBtn = document.getElementById('playlistBtn');
+      if (playlistBtn) playlistBtn.classList.add('livestream-active');
       // Hide status text when live and show "On Air"
       if (liveStatusText) liveStatusText.classList.add('hidden');
       const onAirText = document.getElementById('onAirText');
@@ -3515,6 +3518,9 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       
       streamInfoBar?.classList.remove('is-live');
       liveBadge?.classList.remove('is-live');
+      // Re-enable playlist button when offline
+      const playlistBtnOff = document.getElementById('playlistBtn');
+      if (playlistBtnOff) playlistBtnOff.classList.remove('livestream-active');
       // Show "OFFLINE" and hide "On Air"
       if (liveStatusText) {
         liveStatusText.textContent = 'OFFLINE';
@@ -4470,4 +4476,4 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   });
 </script>
 
-<script type="module" src="/live-stream.js?v=20251222-reactions"></script>
+<script type="module" src="/live-stream.js?v=20251222-autoplay3"></script>

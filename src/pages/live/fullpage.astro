@@ -1,6 +1,7 @@
 ---
 // src/pages/live/fullpage.astro
 // Full page live stream view - large player with chat and reactions
+import { ClientRouter } from 'astro:transitions';
 export const prerender = false;
 
 // GIPHY API key - use env var if set, otherwise fallback to public key
@@ -19,6 +20,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- HLS.js for video playback -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+  <ClientRouter />
 </head>
 <body>
   
@@ -128,7 +130,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
           <audio id="audioElement" crossorigin="anonymous"></audio>
         </div>
         
-        <div id="videoPlayer" class="video-player hidden">
+        <div id="videoPlayer" class="video-player hidden" transition:persist="live-video-player">
           <video id="hlsVideoElement" class="hls-video" controls playsinline></video>
         </div>
       </div>
@@ -397,11 +399,27 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     color: #888;
   }
   
-  .live-badge.is-live { background: rgba(220, 38, 38, 0.2); border: 1px solid #dc2626; color: #dc2626; }
+  .live-badge.is-live {
+    background: rgba(220, 38, 38, 0.2);
+    border: 1px solid #dc2626;
+    color: #dc2626;
+    animation: live-badge-glow 2s ease-in-out infinite;
+  }
   .live-dot { width: 8px; height: 8px; background: #888; border-radius: 50%; }
   .live-badge.is-live .live-dot { background: #dc2626; animation: pulse 1.5s ease-in-out infinite; }
-  
+  .live-badge.is-live #liveStatusText {
+    animation: live-text-pulse 2s ease-in-out infinite;
+  }
+
   @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
+  @keyframes live-text-pulse {
+    0%, 100% { opacity: 1; text-shadow: 0 0 5px rgba(220, 38, 38, 0.5); }
+    50% { opacity: 0.7; text-shadow: 0 0 10px rgba(220, 38, 38, 0.8); }
+  }
+  @keyframes live-badge-glow {
+    0%, 100% { box-shadow: 0 0 5px rgba(220, 38, 38, 0.3); }
+    50% { box-shadow: 0 0 15px rgba(220, 38, 38, 0.6), 0 0 25px rgba(220, 38, 38, 0.3); }
+  }
   
   .stream-info h1 {
     font-family: 'Inter', sans-serif; font-weight: 700;
@@ -442,6 +460,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     justify-content: center;
     background: #000;
     min-height: 0;
+    overflow: hidden;
   }
   
   .offline-overlay {
@@ -492,8 +511,8 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .audio-bar:nth-child(12) { height: 25%; animation-delay: 0.6s; }
   @keyframes barPulse { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.4); } }
   
-  .video-player { position: absolute; inset: 0; }
-  .hls-video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .video-player { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .hls-video { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; background: #000; }
   
   .player-controls {
     display: flex;
@@ -706,6 +725,15 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   let isVideoPlaying = false;
   let currentHlsUrl = null; // Track current URL to avoid re-initializing
 
+  // Autoplay preference - persisted across sessions
+  const AUTOPLAY_KEY = 'freshwax_autoplay';
+  function shouldAutoplay() {
+    return localStorage.getItem(AUTOPLAY_KEY) === 'true';
+  }
+  function rememberAutoplay() {
+    localStorage.setItem(AUTOPLAY_KEY, 'true');
+  }
+
   // Setup HLS player for video streams
   function setupHlsPlayer(stream) {
     const videoElement = document.getElementById('hlsVideoElement');
@@ -738,6 +766,8 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     if (nativeHlsSupport === 'probably') {
       console.log('[HLS] Using native HLS support');
       videoElement.src = hlsUrl;
+      // Attempt autoplay for native
+      attemptAutoplay(videoElement);
     } else if (window.Hls && Hls.isSupported()) {
       console.log('[HLS] Using HLS.js library');
       hlsPlayer = new Hls({
@@ -752,7 +782,8 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       hlsPlayer.attachMedia(videoElement);
 
       hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log('[HLS] Manifest parsed, ready to play');
+        console.log('[HLS] Manifest parsed, attempting autoplay');
+        attemptAutoplay(videoElement);
       });
 
       hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
@@ -781,6 +812,23 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       document.getElementById('playIcon')?.classList.remove('hidden');
       document.getElementById('pauseIcon')?.classList.add('hidden');
     });
+  }
+
+  // Always try unmuted autoplay first, fall back to play button if blocked
+  async function attemptAutoplay(videoElement) {
+    try {
+      videoElement.muted = false;
+      await videoElement.play();
+      isVideoPlaying = true;
+      document.getElementById('playIcon')?.classList.add('hidden');
+      document.getElementById('pauseIcon')?.classList.remove('hidden');
+      console.log('[HLS] Unmuted autoplay successful');
+      rememberAutoplay();
+    } catch (err) {
+      console.log('[HLS] Autoplay blocked, showing play button:', err.name);
+      document.getElementById('playIcon')?.classList.remove('hidden');
+      document.getElementById('pauseIcon')?.classList.add('hidden');
+    }
   }
 
   async function initAuth() {
@@ -990,8 +1038,10 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     const playIcon = document.getElementById('playIcon');
     const pauseIcon = document.getElementById('pauseIcon');
     const activePlayer = audio?.src ? audio : video;
-    
+
     if (activePlayer?.paused) {
+      rememberAutoplay();
+      activePlayer.muted = false;
       activePlayer.play();
       playIcon?.classList.add('hidden');
       pauseIcon?.classList.remove('hidden');
@@ -1069,20 +1119,19 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   }
   
   function triggerReactionBurst(element, emojiList) {
-    let x = window.innerWidth / 2;
-    let y = window.innerHeight / 2;
-    
-    if (element && element.getBoundingClientRect) {
-      const rect = element.getBoundingClientRect();
-      x = rect.left + rect.width / 2;
-      y = rect.top + rect.height / 2;
-    }
-    
+    // Always start from center of screen for consistent experience
+    const x = window.innerWidth / 2;
+    const y = window.innerHeight / 2;
+
     const numHearts = 6 + Math.floor(Math.random() * 5);
     for (let i = 0; i < numHearts; i++) {
       setTimeout(() => createFloatingEmoji(x, y, emojiList), i * 70);
     }
   }
+
+  // Expose for remote emoji broadcasts
+  window.triggerReactionBurst = triggerReactionBurst;
+  window.createFloatingEmoji = createFloatingEmoji;
   
   document.querySelectorAll('.reaction-btn[data-emoji]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -1206,7 +1255,54 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     sendShoutoutBtn.disabled = true;
     sendShoutoutBtn.innerHTML = '<span>Send Shoutout</span><span class="shoutout-cost">FREE</span>';
   });
-  
+
+  // Shoutout queue and animation
+  const shoutoutQueue = [];
+  let isShoutoutPlaying = false;
+  const shoutoutTrack = document.getElementById('shoutoutTrack');
+
+  function playNextShoutout() {
+    if (isShoutoutPlaying || shoutoutQueue.length === 0) return;
+
+    isShoutoutPlaying = true;
+    const shoutout = shoutoutQueue.shift();
+
+    if (shoutoutTrack) {
+      shoutoutTrack.innerHTML = `<span class="shoutout-item">📣 ${shoutout.name}: ${shoutout.message}</span>`;
+      shoutoutTrack.classList.remove('scrolling');
+
+      // Trigger reflow to restart animation
+      void shoutoutTrack.offsetWidth;
+      shoutoutTrack.classList.add('scrolling');
+
+      // After animation ends, check for more shoutouts
+      setTimeout(() => {
+        isShoutoutPlaying = false;
+        if (shoutoutQueue.length > 0) {
+          playNextShoutout();
+        } else {
+          // Reset to placeholder
+          shoutoutTrack.classList.remove('scrolling');
+          shoutoutTrack.innerHTML = '<span class="shoutout-placeholder">🎉 Send a shoutout to appear here!</span>';
+        }
+      }, 20000); // Match animation duration
+    }
+  }
+
+  // Listen for incoming shoutouts from Pusher
+  window.handleIncomingShoutout = function(data) {
+    shoutoutQueue.push({ name: data.name, message: data.message });
+    playNextShoutout();
+  };
+
+  // Listen for incoming emoji reactions from Pusher
+  window.handleIncomingEmoji = function(data) {
+    if (window.triggerReactionBurst && data.emoji) {
+      const emojis = data.emoji.split(',');
+      window.triggerReactionBurst(null, emojis);
+    }
+  };
+
   const emojiCategories = {
     music: ['🎵', '🎶', '🎧', '🎤', '🎹', '🥁', '🎸', '🎺', '🎷', '🎻', '🪘', '🎼', '📻', '💿', '📀', '🔊'],
     reactions: ['🔥', '💥', '⭐', '✨', '💫', '🌟', '⚡', '💯', '🚀', '💪', '👊', '🙌', '👏', '🤙', '🤘', '👆'],
@@ -1249,8 +1345,83 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   
   document.getElementById('giphyBtn')?.addEventListener('click', () => {
     document.getElementById('emojiPicker')?.classList.add('hidden');
-    document.getElementById('giphyPicker')?.classList.toggle('hidden');
+    const picker = document.getElementById('giphyPicker');
+    picker?.classList.toggle('hidden');
+    if (!picker?.classList.contains('hidden')) {
+      searchGiphy(''); // Load trending
+    }
   });
+
+  // Giphy search functionality
+  let giphySearchTimeout = null;
+  const giphySearch = document.getElementById('giphySearch');
+
+  giphySearch?.addEventListener('input', (e) => {
+    clearTimeout(giphySearchTimeout);
+    giphySearchTimeout = setTimeout(() => searchGiphy(e.target.value), 500);
+  });
+
+  async function searchGiphy(query) {
+    const giphyGrid = document.getElementById('giphyGrid');
+    if (!GIPHY_API_KEY || !giphyGrid) {
+      if (giphyGrid) giphyGrid.innerHTML = '<p class="giphy-hint">GIF search unavailable</p>';
+      return;
+    }
+
+    giphyGrid.innerHTML = '<p class="giphy-hint">Loading...</p>';
+
+    try {
+      const url = query.trim()
+        ? `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=20&rating=pg-13`
+        : `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=20&rating=pg-13`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.data && data.data.length > 0) {
+        giphyGrid.innerHTML = data.data.map(gif => `
+          <div class="giphy-item" style="cursor:pointer;margin:2px;display:inline-block;" onclick="selectGif('${gif.images.fixed_height.url}', '${gif.id}')">
+            <img src="${gif.images.fixed_height_small.url}" alt="${gif.title}" style="width:100px;height:auto;border-radius:4px;" />
+          </div>
+        `).join('');
+      } else {
+        giphyGrid.innerHTML = '<p class="giphy-hint">No GIFs found</p>';
+      }
+    } catch (error) {
+      console.error('[Giphy] Error:', error);
+      giphyGrid.innerHTML = '<p class="giphy-hint">Failed to load GIFs</p>';
+    }
+  }
+
+  window.selectGif = async function(giphyUrl, giphyId) {
+    console.log('[Picker] Select GIF:', giphyUrl);
+    document.getElementById('giphyPicker')?.classList.add('hidden');
+
+    // Send GIF as chat message
+    if (!currentUser) {
+      alert('Please sign in to send GIFs');
+      return;
+    }
+
+    try {
+      const { getFirestore, collection, addDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+      const db = getFirestore();
+      const streamId = currentStream?.slotId || currentStream?.id || window.currentStreamId;
+
+      if (streamId) {
+        await addDoc(collection(db, `livestreamChats/${streamId}/messages`), {
+          userId: currentUser.uid,
+          userName: userInfo?.displayName || currentUser.displayName || 'Anonymous',
+          type: 'giphy',
+          giphyUrl,
+          giphyId,
+          timestamp: serverTimestamp()
+        });
+      }
+    } catch (e) {
+      console.error('[GIF] Send error:', e);
+    }
+  };
   
   // Listeners dropdown
   const listenersToggle = document.getElementById('listenersToggle');

@@ -21,8 +21,8 @@ const firebaseConfig = {
   appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
 };
 
-// HLS URL for preview player (from env or default to production)
-const hlsBaseUrl = import.meta.env.RED5_HLS_URL || 'https://stream.freshwax.co.uk';
+// HLS URL for preview player - always use production stream URL
+const hlsBaseUrl = 'https://stream.freshwax.co.uk';
 
 // Get admin key from environment (server-side only) for bypass requests
 const runtime = (Astro.locals as any).runtime;
@@ -205,9 +205,12 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   <div id="mainLobby" class="lobby-container hidden">
     <header class="lobby-header">
       <div class="header-left">
-        <div id="headerTimeRemaining" class="header-time-remaining hidden">
-          <span id="headerTimeLeft" class="header-time-value">--:--</span>
-          <span class="header-time-label">remaining</span>
+        <div class="user-info">
+          <div class="header-avatar-container">
+            <img id="headerAvatar" src="/place-holder.webp" alt="" class="header-avatar" />
+            <div id="headerAvatarLetter" class="header-avatar-letter hidden">?</div>
+          </div>
+          <span id="headerName" class="header-name">Loading...</span>
         </div>
       </div>
       <div class="header-center">
@@ -215,12 +218,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         <p>Private space for Fresh Wax DJs</p>
       </div>
       <div class="header-right">
-        <div class="user-info">
-          <div class="header-avatar-container">
-            <img id="headerAvatar" src="/place-holder.webp" alt="" class="header-avatar" />
-            <div id="headerAvatarLetter" class="header-avatar-letter hidden">?</div>
-          </div>
-          <span id="headerName" class="header-name">Loading...</span>
+        <div id="headerTimeRemaining" class="header-time-remaining hidden">
+          <span id="headerTimeLeft" class="header-time-value">--:--</span>
+          <span class="header-time-label">remaining</span>
         </div>
         <a href="/live" class="back-link">
           <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
@@ -241,7 +241,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
             <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
               <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
             </svg>
-            <span id="readyBtnText">Go Live</span>
+            <span id="readyBtnText">I'm Ready!</span>
           </button>
           <div class="control-divider"></div>
           <button id="lobbyEndStreamBtn" class="lobby-end-stream-btn disabled" disabled>
@@ -331,53 +331,29 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         <!-- Split Video Players -->
         <div class="preview-section">
           <div class="split-players three-col">
-            <!-- Left: OBS Preview (User's Feed) -->
+            <!-- Left: Your Preview (DJ's own test stream) -->
             <div class="player-panel obs-panel">
               <div class="panel-header">
                 <span class="panel-title">Your Preview</span>
                 <div class="connection-indicators">
                   <div class="indicator" id="serverIndicator" title="Server Connection">
-                    <span class="indicator-dot disconnected"></span>
+                    <span class="indicator-dot disconnected" id="serverDot"></span>
                     <span class="indicator-label">Server</span>
                   </div>
-                  <div class="indicator" id="obsIndicator" title="OBS Connection">
-                    <span class="indicator-dot disconnected"></span>
+                  <div class="indicator" id="obsIndicator" title="OBS Stream">
+                    <span class="indicator-dot disconnected" id="obsDot"></span>
                     <span class="indicator-label">OBS</span>
                   </div>
                 </div>
               </div>
               <div class="player-wrapper" id="obsPlayerWrapper">
                 <div id="obsOfflineState" class="offline-state">
-                  <div class="offline-icon">🎬</div>
-                  <h3>No OBS Feed</h3>
-                  <p>Start streaming in OBS to preview</p>
-                  <input type="text" id="customHlsUrl" placeholder="HLS URL (optional)" style="margin-top:10px;padding:6px 10px;width:80%;border:1px solid #444;border-radius:4px;background:#1a1a2e;color:white;font-size:12px;">
-                  <button type="button" id="testPreviewBtn" style="margin-top:8px;padding:8px 16px;background:#7c3aed;color:white;border:none;border-radius:6px;cursor:pointer;">Test Preview</button>
+                  <div class="offline-icon">📺</div>
+                  <h3>Waiting for Stream</h3>
+                  <p>Start OBS and your stream will appear here</p>
                 </div>
                 <div id="obsVideoPreview" class="video-preview hidden">
                   <video id="obsVideo" playsinline autoplay muted></video>
-                  <button type="button" id="stopPreviewBtn" style="position:absolute;top:8px;right:8px;padding:4px 10px;background:rgba(220,38,38,0.9);color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">Stop</button>
-                </div>
-              </div>
-              <div class="player-controls-center" id="obsControls">
-                <button type="button" class="player-control-btn mute-btn" id="obsMuteBtn" title="Toggle Audio">
-                  <svg class="muted-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                    <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
-                  </svg>
-                  <svg class="unmuted-icon hidden" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-                  </svg>
-                </button>
-                <div class="volume-slider-wrapper">
-                  <input type="range" id="obsVolumeSlider" class="volume-slider" min="0" max="100" value="0" orient="vertical" />
-                </div>
-                <div class="stereo-meter" id="obsStereoMeter">
-                  <div class="meter-channel left">
-                    <div class="meter-bar" id="obsLeftMeter"></div>
-                  </div>
-                  <div class="meter-channel right">
-                    <div class="meter-bar" id="obsRightMeter"></div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -446,34 +422,290 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                   <span id="timeLeft" class="time-value">--:--</span>
                 </div>
 
-                <!-- Final Countdown Overlay -->
-                <div id="finalCountdown" class="final-countdown hidden">
-                  <div class="countdown-number-container">
-                    <span id="countdownNumber" class="countdown-number">5</span>
-                  </div>
-                </div>
-
               </div>
-              <div class="player-controls-center" id="liveControls">
-                <div class="stereo-meter" id="liveStereoMeter">
-                  <div class="meter-channel left">
-                    <div class="meter-bar" id="liveLeftMeter"></div>
-                  </div>
-                  <div class="meter-channel right">
-                    <div class="meter-bar" id="liveRightMeter"></div>
-                  </div>
+            </div>
+          </div>
+
+          <!-- Audio Controls Bar (Below Players) - LED indicators only -->
+          <div class="audio-controls-bar">
+            <!-- OBS Preview Meter -->
+            <div class="control-group obs-controls" id="obsControls">
+              <div class="led-meter" id="obsStereoMeter">
+                <div class="led-row left" id="obsLeftLeds">
+                  <span class="led led-red"></span>
+                  <span class="led led-red"></span>
+                  <span class="led led-orange"></span>
+                  <span class="led led-orange"></span>
+                  <span class="led led-yellow"></span>
+                  <span class="led led-yellow"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
                 </div>
-                <div class="volume-slider-wrapper">
-                  <input type="range" id="liveVolumeSlider" class="volume-slider" min="0" max="100" value="80" orient="vertical" />
+                <div class="led-center"></div>
+                <div class="led-row right" id="obsRightLeds">
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-yellow"></span>
+                  <span class="led led-yellow"></span>
+                  <span class="led led-orange"></span>
+                  <span class="led led-orange"></span>
+                  <span class="led led-red"></span>
+                  <span class="led led-red"></span>
                 </div>
-                <button type="button" class="player-control-btn mute-btn" id="liveMuteBtn" title="Toggle Audio">
-                  <svg class="muted-icon hidden" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                    <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
-                  </svg>
-                  <svg class="unmuted-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-                  </svg>
+              </div>
+            </div>
+
+            <!-- Live Stream Meter -->
+            <div class="control-group live-controls" id="liveControls">
+              <div class="led-meter" id="liveStereoMeter">
+                <div class="led-row left" id="liveLeftLeds">
+                  <span class="led led-red"></span>
+                  <span class="led led-red"></span>
+                  <span class="led led-orange"></span>
+                  <span class="led led-orange"></span>
+                  <span class="led led-yellow"></span>
+                  <span class="led led-yellow"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                </div>
+                <div class="led-center"></div>
+                <div class="led-row right" id="liveRightLeds">
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-green"></span>
+                  <span class="led led-yellow"></span>
+                  <span class="led led-yellow"></span>
+                  <span class="led led-orange"></span>
+                  <span class="led led-orange"></span>
+                  <span class="led led-red"></span>
+                  <span class="led led-red"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Professional Broadcast Audio Panel (visible only when streaming) -->
+          <div class="broadcast-audio-panel hidden" id="broadcastAudioPanel">
+            <div class="panel-header">
+              <span class="panel-title">BROADCAST AUDIO</span>
+              <div class="panel-controls">
+                <button type="button" class="panel-btn" id="audioSourceToggle" title="Toggle Source">
+                  <span class="source-label">PREVIEW</span>
                 </button>
+                <button type="button" class="panel-btn" id="panelMinimize" title="Minimize">−</button>
+              </div>
+            </div>
+
+            <div class="meters-container" id="metersContainer">
+              <!-- LEFT: Mute Button + LUFS -->
+              <div class="meter-column left-column">
+                <div class="mute-section">
+                  <button type="button" class="mute-btn-panel" id="obsMuteBtn" title="Toggle Preview Audio">
+                    <svg class="muted-icon" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                      <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                    </svg>
+                    <svg class="unmuted-icon hidden" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                    <span class="mute-label">PRV</span>
+                  </button>
+                </div>
+                <div class="lufs-container">
+                  <div class="lufs-header">LOUDNESS</div>
+                  <div class="lufs-content">
+                    <div class="lufs-main">
+                      <div class="lufs-value" id="lufsIntegrated">-23.0</div>
+                      <div class="lufs-unit">LUFS</div>
+                    </div>
+                    <div class="lufs-secondary">
+                      <div class="lufs-item">
+                        <span class="lufs-label">SHORT</span>
+                        <span class="lufs-val" id="lufsShort">-23.0</span>
+                      </div>
+                      <div class="lufs-item">
+                        <span class="lufs-label">MOM</span>
+                        <span class="lufs-val" id="lufsMomentary">-23.0</span>
+                      </div>
+                      <div class="lufs-item">
+                        <span class="lufs-label">RANGE</span>
+                        <span class="lufs-val" id="lufsRange">0.0 LU</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="lufs-bar-track">
+                    <div class="lufs-bar-fill" id="lufsBarFill"></div>
+                    <div class="lufs-target-marker" style="left: 38.5%;" title="-23 LUFS Target"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CENTER: True Peak | VU Meters | PPM (horizontal layout) -->
+              <div class="meter-column center-column">
+                <div class="center-meters-row">
+                  <!-- True Peak (Left of VU) -->
+                  <div class="meter-section peak-section">
+                    <div class="section-label">TRUE PEAK</div>
+                    <div class="peak-meters">
+                      <div class="vertical-meter">
+                        <div class="meter-channel-label">L</div>
+                        <div class="meter-track">
+                          <div class="meter-segments" id="truePeakL">
+                            <div class="segment seg-red"></div>
+                            <div class="segment seg-red"></div>
+                            <div class="segment seg-orange"></div>
+                            <div class="segment seg-orange"></div>
+                            <div class="segment seg-yellow"></div>
+                            <div class="segment seg-yellow"></div>
+                            <div class="segment seg-green"></div>
+                            <div class="segment seg-green"></div>
+                            <div class="segment seg-green"></div>
+                            <div class="segment seg-green"></div>
+                            <div class="segment seg-green-dark"></div>
+                            <div class="segment seg-green-dark"></div>
+                          </div>
+                          <div class="peak-hold" id="truePeakHoldL"></div>
+                        </div>
+                        <div class="meter-value" id="truePeakValL">-∞</div>
+                      </div>
+                      <div class="vertical-meter">
+                        <div class="meter-channel-label">R</div>
+                        <div class="meter-track">
+                          <div class="meter-segments" id="truePeakR">
+                            <div class="segment seg-red"></div>
+                            <div class="segment seg-red"></div>
+                            <div class="segment seg-orange"></div>
+                            <div class="segment seg-orange"></div>
+                            <div class="segment seg-yellow"></div>
+                            <div class="segment seg-yellow"></div>
+                            <div class="segment seg-green"></div>
+                            <div class="segment seg-green"></div>
+                            <div class="segment seg-green"></div>
+                            <div class="segment seg-green"></div>
+                            <div class="segment seg-green-dark"></div>
+                            <div class="segment seg-green-dark"></div>
+                          </div>
+                          <div class="peak-hold" id="truePeakHoldR"></div>
+                        </div>
+                        <div class="meter-value" id="truePeakValR">-∞</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- VU Meters (Center - Large) -->
+                  <div class="vu-meters">
+                    <div class="vu-meter" id="vuMeterL">
+                      <div class="vu-display">
+                        <div class="vu-scale-arc">
+                          <svg viewBox="0 0 120 70" class="vu-svg">
+                            <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="#333" stroke-width="2"/>
+                            <path d="M 85 25 A 50 50 0 0 1 110 60" fill="none" stroke="#dc2626" stroke-width="4"/>
+                            <text x="12" y="55" class="vu-text">-20</text>
+                            <text x="28" y="38" class="vu-text">-10</text>
+                            <text x="48" y="28" class="vu-text">-7</text>
+                            <text x="58" y="24" class="vu-text">-5</text>
+                            <text x="70" y="24" class="vu-text">-3</text>
+                            <text x="82" y="28" class="vu-text vu-zero">0</text>
+                            <text x="95" y="38" class="vu-text vu-red">+1</text>
+                            <text x="105" y="55" class="vu-text vu-red">+3</text>
+                          </svg>
+                          <div class="vu-needle" id="vuNeedleL"></div>
+                          <div class="vu-needle-pivot"></div>
+                        </div>
+                      </div>
+                      <div class="vu-label">L</div>
+                    </div>
+                    <div class="vu-meter" id="vuMeterR">
+                      <div class="vu-display">
+                        <div class="vu-scale-arc">
+                          <svg viewBox="0 0 120 70" class="vu-svg">
+                            <path d="M 10 60 A 50 50 0 0 1 110 60" fill="none" stroke="#333" stroke-width="2"/>
+                            <path d="M 85 25 A 50 50 0 0 1 110 60" fill="none" stroke="#dc2626" stroke-width="4"/>
+                            <text x="12" y="55" class="vu-text">-20</text>
+                            <text x="28" y="38" class="vu-text">-10</text>
+                            <text x="48" y="28" class="vu-text">-7</text>
+                            <text x="58" y="24" class="vu-text">-5</text>
+                            <text x="70" y="24" class="vu-text">-3</text>
+                            <text x="82" y="28" class="vu-text vu-zero">0</text>
+                            <text x="95" y="38" class="vu-text vu-red">+1</text>
+                            <text x="105" y="55" class="vu-text vu-red">+3</text>
+                          </svg>
+                          <div class="vu-needle" id="vuNeedleR"></div>
+                          <div class="vu-needle-pivot"></div>
+                        </div>
+                      </div>
+                      <div class="vu-label">R</div>
+                    </div>
+                  </div>
+
+                  <!-- PPM (Right of VU) -->
+                  <div class="meter-section ppm-section">
+                    <div class="section-label">PPM</div>
+                    <div class="ppm-meters">
+                      <div class="vertical-meter ppm-meter">
+                        <div class="meter-channel-label">L</div>
+                        <div class="meter-track ppm-track">
+                          <div class="ppm-fill" id="ppmFillL"></div>
+                          <div class="ppm-peak-hold" id="ppmPeakL"></div>
+                        </div>
+                        <div class="meter-value" id="ppmValL">-∞</div>
+                      </div>
+                      <div class="vertical-meter ppm-meter">
+                        <div class="meter-channel-label">R</div>
+                        <div class="meter-track ppm-track">
+                          <div class="ppm-fill" id="ppmFillR"></div>
+                          <div class="ppm-peak-hold" id="ppmPeakR"></div>
+                        </div>
+                        <div class="meter-value" id="ppmValR">-∞</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RIGHT: Stereo + Volume Fader -->
+              <div class="meter-column right-column">
+                <div class="stereo-container">
+                  <div class="stereo-header">STEREO</div>
+                  <div class="correlation-meter">
+                    <div class="correlation-scale">
+                      <span>-1</span><span>0</span><span>+1</span>
+                    </div>
+                    <div class="correlation-track">
+                      <div class="correlation-fill" id="correlationFill"></div>
+                      <div class="correlation-needle" id="correlationNeedle"></div>
+                      <div class="correlation-center"></div>
+                    </div>
+                  </div>
+                  <div class="stereo-scope">
+                    <canvas id="stereoCanvas" width="70" height="70"></canvas>
+                  </div>
+                </div>
+                <div class="mute-section">
+                  <button type="button" class="mute-btn-panel" id="liveMuteBtn" title="Toggle Live Audio">
+                    <svg class="muted-icon hidden" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                      <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                    </svg>
+                    <svg class="unmuted-icon" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                      <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                    <span class="mute-label">OUT</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -524,8 +756,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           </div>
         </div>
 
-        <!-- Multi Streaming Section (Collapsible) -->
-        <div class="multi-stream-section">
+        <!-- Multi Streaming Section (Collapsible) - Hidden when live -->
+        <div class="multi-stream-section" id="multiStreamSection">
           <button class="multi-stream-header" id="toggleMultiStream" type="button">
             <div class="multi-stream-icon-lg">
               <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
@@ -828,6 +1060,18 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   const DEBUG = false;
   const log = (...args) => DEBUG && console.log(...args);
 
+  // Normalize HLS URLs to use the correct base URL (handles old trycloudflare URLs)
+  function normalizeHlsUrl(url) {
+    if (!url) return url;
+    const correctBaseUrl = window.HLS_BASE_URL || 'https://stream.freshwax.co.uk';
+    // Extract the path after the domain (e.g., /live/stream_key/index.m3u8)
+    const match = url.match(/\/live\/[^\/]+\/index\.m3u8$/);
+    if (match) {
+      return correctBaseUrl + match[0];
+    }
+    return url;
+  }
+
   let currentUser = null;
   let userInfo = null;
   let currentStream = null;
@@ -848,11 +1092,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   // Stream info panel state
   let infoPanelDurationInterval = null;
 
-  // OBS Preview Player state
+  // OBS Preview Player state (DJ's own test stream)
   let obsHlsPlayer = null;
-  let obsStreamActive = false;
-  let obsCheckInterval = null;
-  let serverConnected = false;
+  let currentObsPreviewUrl = null;
+  let obsPreviewCheckInterval = null;
 
   // Stream key for preview (can be set via ?testPreview=key for testing)
   const urlParams = new URLSearchParams(window.location.search);
@@ -1256,7 +1499,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           stopBypassPolling();
         }
       }
-    }, 30000);
+    }, 60000); // 60s instead of 30s to reduce Firebase reads
   }
   
   function stopBypassPolling() {
@@ -1632,10 +1875,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Load saved Twitch settings
     loadTwitchSettings();
 
-    // Polling for non-realtime data
-    setInterval(loadStreamStatus, 10000);
-    setInterval(updateTimeRemaining, 1000);
-    setInterval(checkStreamKeyAvailability, 30000);
+    // Polling for non-realtime data (reduced frequency to minimize Firebase reads)
+    setInterval(loadStreamStatus, 60000); // 60s instead of 10s - saves ~84% reads
+    setInterval(updateTimeRemaining, 100); // Update every 100ms for tenths of a second
+    setInterval(checkStreamKeyAvailability, 60000); // 60s instead of 30s
     setInterval(loadAllSlots, 60000); // Refresh slots every minute for consecutive slot detection
   }
   
@@ -1743,7 +1986,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   function setupHlsPlayer(stream) {
     const videoElement = document.getElementById('hlsVideo');
     // Use hlsUrl (from status API) or fall back to videoStreamUrl/streamUrl
-    const hlsUrl = stream?.hlsUrl || stream?.videoStreamUrl || stream?.streamUrl;
+    // Normalize to correct base URL (fixes old trycloudflare.com URLs)
+    const rawHlsUrl = stream?.hlsUrl || stream?.videoStreamUrl || stream?.streamUrl;
+    const hlsUrl = normalizeHlsUrl(rawHlsUrl);
 
     if (!videoElement || !hlsUrl) {
       log('[HLS] No video element or stream URL. Stream:', stream);
@@ -1847,91 +2092,95 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   // Stream health monitoring interval
   let healthInterval = null;
 
-  // OBS Preview - Check and play user's stream before going live
-  function updateConnectionIndicators(serverStatus, obsStatus) {
-    const serverDot = document.querySelector('#serverIndicator .indicator-dot');
-    const obsDot = document.querySelector('#obsIndicator .indicator-dot');
-
-    if (serverDot) {
-      serverDot.className = 'indicator-dot ' + serverStatus;
-    }
-    if (obsDot) {
-      obsDot.className = 'indicator-dot ' + obsStatus;
+  // OBS Preview - Check and play DJ's own test stream before going live
+  function updateServerIndicator(isConnected) {
+    const dot = document.getElementById('serverDot');
+    if (dot) {
+      dot.className = 'indicator-dot ' + (isConnected ? 'connected' : 'disconnected');
     }
   }
 
+  function updateObsIndicator(isConnected) {
+    const dot = document.getElementById('obsDot');
+    if (dot) {
+      dot.className = 'indicator-dot ' + (isConnected ? 'connected' : 'disconnected');
+    }
+  }
+
+  let obsPreviewFailCount = 0;
+  const OBS_PREVIEW_MAX_FAILS = 30; // Very tolerant - keep trying for ~90 seconds before giving up
+  let userIsStreaming = false; // Set when user clicks "I'm Ready" - never destroy while streaming
+
   async function checkObsPreview() {
-    // Only check if user has a stream key
+    // Check if DJ's own stream is available at their stream key
     if (!currentStreamKey) {
-      updateConnectionIndicators('disconnected', 'disconnected');
+      console.log('[ObsPreview] No stream key yet, waiting...');
+      updateServerIndicator(false);
+      updateObsIndicator(false);
       return;
     }
 
-    // Check server connectivity
+    // Build the HLS URL for the DJ's own preview stream
+    const baseUrl = window.HLS_BASE_URL || 'https://stream.freshwax.co.uk';
+    const previewUrl = `${baseUrl}/live/${currentStreamKey}/index.m3u8`;
+
     try {
-      const response = await fetch('/api/livestream/status', {
+      // Check if server is reachable
+      updateServerIndicator(true);
+
+      // Try to fetch the HLS manifest to see if OBS stream is available
+      const response = await fetch(previewUrl, {
         method: 'GET',
-        signal: AbortSignal.timeout(3000)
+        signal: AbortSignal.timeout(5000)
       });
+
       if (response.ok) {
-        serverConnected = true;
-        updateConnectionIndicators('connected', obsStreamActive ? 'connected' : 'disconnected');
-      } else {
-        serverConnected = false;
-        updateConnectionIndicators('error', 'disconnected');
-      }
-    } catch (e) {
-      serverConnected = false;
-      updateConnectionIndicators('disconnected', 'disconnected');
-    }
+        console.log('[ObsPreview] Stream available at:', previewUrl);
+        updateObsIndicator(true);
+        obsPreviewFailCount = 0; // Reset fail counter on success
 
-    // Check if user's OBS stream is available (preview before going live)
-    const obsPreviewUrl = `${window.HLS_BASE_URL || 'https://stream.freshwax.co.uk'}/live/${currentStreamKey}/index.m3u8`;
-    console.log('[Preview] Checking URL:', obsPreviewUrl);
-
-    // Force preview mode - skip availability check and just try to play
-    if (forcePreview) {
-      if (!obsStreamActive) {
-        obsStreamActive = true;
-        updateConnectionIndicators(serverConnected ? 'connected' : 'disconnected', 'connected');
-        initObsPreviewPlayer(obsPreviewUrl);
-        document.querySelector('.obs-panel')?.classList.add('streaming');
-      }
-      return;
-    }
-
-    try {
-      // Use GET instead of HEAD - some servers/tunnels don't support HEAD with CORS
-      const obsResponse = await fetch(obsPreviewUrl, {
-        method: 'GET',
-        signal: AbortSignal.timeout(3000)
-      });
-
-      if (obsResponse.ok) {
-        // OBS stream is available - show preview
-        if (!obsStreamActive) {
-          obsStreamActive = true;
-          updateConnectionIndicators(serverConnected ? 'connected' : 'disconnected', 'connected');
-          initObsPreviewPlayer(obsPreviewUrl);
+        // Only initialize if URL changed
+        if (currentObsPreviewUrl !== previewUrl) {
+          currentObsPreviewUrl = previewUrl;
+          initObsPreviewPlayer(previewUrl);
           document.querySelector('.obs-panel')?.classList.add('streaming');
         }
       } else {
-        // OBS stream not available
-        if (obsStreamActive) {
-          obsStreamActive = false;
-          updateConnectionIndicators(serverConnected ? 'connected' : 'disconnected', 'disconnected');
-          destroyObsPreviewPlayer();
-          document.querySelector('.obs-panel')?.classList.remove('streaming');
-        }
+        handleObsPreviewFailure('HTTP ' + response.status);
       }
     } catch (e) {
-      // OBS stream not available
-      if (obsStreamActive) {
-        obsStreamActive = false;
-        updateConnectionIndicators(serverConnected ? 'connected' : 'disconnected', 'disconnected');
+      handleObsPreviewFailure(e.message);
+    }
+  }
+
+  function handleObsPreviewFailure(reason) {
+    console.log('[ObsPreview] Check failed:', reason);
+
+    // If user is actively streaming (clicked I'm Ready), never destroy - just keep trying
+    if (userIsStreaming) {
+      console.log('[ObsPreview] User is streaming, will keep trying to reconnect...');
+      updateObsIndicator(false);
+      // Keep currentObsPreviewUrl so we can recover
+      return;
+    }
+
+    // If player is already running, be tolerant of temporary failures
+    if (currentObsPreviewUrl && obsHlsPlayer) {
+      obsPreviewFailCount++;
+      console.log('[ObsPreview] Fail count:', obsPreviewFailCount, '/', OBS_PREVIEW_MAX_FAILS);
+
+      // Only destroy after many consecutive failures (and not actively streaming)
+      if (obsPreviewFailCount >= OBS_PREVIEW_MAX_FAILS) {
+        console.log('[ObsPreview] Too many failures, destroying player');
+        updateObsIndicator(false);
+        currentObsPreviewUrl = null;
+        obsPreviewFailCount = 0;
         destroyObsPreviewPlayer();
         document.querySelector('.obs-panel')?.classList.remove('streaming');
       }
+    } else {
+      // No player running yet, just update indicator
+      updateObsIndicator(false);
     }
   }
 
@@ -1962,7 +2211,22 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       });
       obsHlsPlayer.on(Hls.Events.ERROR, (event, data) => {
         if (data.fatal) {
-          destroyObsPreviewPlayer();
+          console.log('[ObsPreview] Fatal HLS error:', data.type, data.details);
+          // Try to recover from fatal errors
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.log('[ObsPreview] Network error, attempting recovery...');
+              obsHlsPlayer.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.log('[ObsPreview] Media error, attempting recovery...');
+              obsHlsPlayer.recoverMediaError();
+              break;
+            default:
+              console.log('[ObsPreview] Unrecoverable error, destroying player');
+              destroyObsPreviewPlayer();
+              break;
+          }
         }
       });
     } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
@@ -1989,14 +2253,14 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Check immediately
     checkObsPreview();
     // Then check every 3 seconds
-    if (obsCheckInterval) clearInterval(obsCheckInterval);
-    obsCheckInterval = setInterval(checkObsPreview, 3000);
+    if (obsPreviewCheckInterval) clearInterval(obsPreviewCheckInterval);
+    obsPreviewCheckInterval = setInterval(checkObsPreview, 3000);
   }
 
   function stopObsPreviewCheck() {
-    if (obsCheckInterval) {
-      clearInterval(obsCheckInterval);
-      obsCheckInterval = null;
+    if (obsPreviewCheckInterval) {
+      clearInterval(obsPreviewCheckInterval);
+      obsPreviewCheckInterval = null;
     }
     destroyObsPreviewPlayer();
   }
@@ -2537,6 +2801,343 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
   }
 
+  // Audio analyser references (initialized later when audio context is created)
+  let obsAnalyserL = null;
+  let obsAnalyserR = null;
+  let liveAnalyserL = null;
+  let liveAnalyserR = null;
+
+  // =============== BROADCAST AUDIO PANEL ===============
+  let broadcastMeterAnimationId = null;
+  let broadcastAudioSource = 'preview'; // 'preview' or 'live'
+  let lufsHistory = [];
+  let peakHoldL = -Infinity, peakHoldR = -Infinity;
+  let peakHoldTimer = null;
+  let stereoCanvasCtx = null;
+
+  function initBroadcastMeters() {
+    const canvas = document.getElementById('stereoCanvas');
+    if (canvas) {
+      stereoCanvasCtx = canvas.getContext('2d');
+    }
+
+    // Panel minimize button
+    document.getElementById('panelMinimize')?.addEventListener('click', () => {
+      const panel = document.getElementById('broadcastAudioPanel');
+      const btn = document.getElementById('panelMinimize');
+      if (panel?.classList.contains('minimized')) {
+        panel.classList.remove('minimized');
+        btn.textContent = '−';
+      } else {
+        panel?.classList.add('minimized');
+        btn.textContent = '+';
+      }
+    });
+
+    // Source toggle button
+    document.getElementById('audioSourceToggle')?.addEventListener('click', () => {
+      broadcastAudioSource = broadcastAudioSource === 'preview' ? 'live' : 'preview';
+      const label = document.querySelector('#audioSourceToggle .source-label');
+      if (label) label.textContent = broadcastAudioSource.toUpperCase();
+    });
+
+    // Start animation loop
+    if (!broadcastMeterAnimationId) {
+      animateBroadcastMeters();
+    }
+
+    // Reset peak hold every 2 seconds
+    peakHoldTimer = setInterval(() => {
+      peakHoldL = -Infinity;
+      peakHoldR = -Infinity;
+    }, 2000);
+  }
+
+  function stopBroadcastMeters() {
+    if (broadcastMeterAnimationId) {
+      cancelAnimationFrame(broadcastMeterAnimationId);
+      broadcastMeterAnimationId = null;
+    }
+    if (peakHoldTimer) {
+      clearInterval(peakHoldTimer);
+      peakHoldTimer = null;
+    }
+    lufsHistory = [];
+  }
+
+  function animateBroadcastMeters() {
+    // Get the active analyser based on source selection
+    const analyserL = broadcastAudioSource === 'preview' ? obsAnalyserL : liveAnalyserL;
+    const analyserR = broadcastAudioSource === 'preview' ? obsAnalyserR : liveAnalyserR;
+
+    if (analyserL && analyserR) {
+      // Get frequency data
+      const dataL = new Uint8Array(analyserL.frequencyBinCount);
+      const dataR = new Uint8Array(analyserR.frequencyBinCount);
+      analyserL.getByteFrequencyData(dataL);
+      analyserR.getByteFrequencyData(dataR);
+
+      // Calculate RMS levels
+      const rmsL = calculateRMS(dataL);
+      const rmsR = calculateRMS(dataR);
+
+      // Convert to dB
+      const dbL = 20 * Math.log10(Math.max(rmsL, 0.0001));
+      const dbR = 20 * Math.log10(Math.max(rmsR, 0.0001));
+
+      // Update True Peak meters
+      updateTruePeakMeter('L', dbL);
+      updateTruePeakMeter('R', dbR);
+
+      // Update PPM meters
+      updatePPMMeter('L', dbL);
+      updatePPMMeter('R', dbR);
+
+      // Update VU meters
+      updateVUMeter('L', rmsL);
+      updateVUMeter('R', rmsR);
+
+      // Update LUFS (simplified - using RMS as approximation)
+      updateLUFS(rmsL, rmsR);
+
+      // Update Correlation meter
+      updateCorrelation(dataL, dataR);
+
+      // Update Stereo Scope
+      updateStereoScope(dataL, dataR);
+    }
+
+    broadcastMeterAnimationId = requestAnimationFrame(animateBroadcastMeters);
+  }
+
+  function calculateRMS(data) {
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) {
+      const normalized = data[i] / 255;
+      sum += normalized * normalized;
+    }
+    return Math.sqrt(sum / data.length);
+  }
+
+  function updateTruePeakMeter(channel, db) {
+    const segments = document.querySelectorAll(`#truePeak${channel} .segment`);
+    const holdEl = document.getElementById(`truePeakHold${channel}`);
+    const valEl = document.getElementById(`truePeakVal${channel}`);
+
+    // Map dB to segments (16 segments, -60 to 0 dB range)
+    const normalizedLevel = Math.max(0, Math.min(1, (db + 60) / 60));
+    const litCount = Math.round(normalizedLevel * 16);
+
+    // Update peak hold
+    if (channel === 'L') {
+      if (db > peakHoldL) peakHoldL = db;
+      if (holdEl) holdEl.style.bottom = `${Math.max(0, (peakHoldL + 60) / 60 * 100)}%`;
+    } else {
+      if (db > peakHoldR) peakHoldR = db;
+      if (holdEl) holdEl.style.bottom = `${Math.max(0, (peakHoldR + 60) / 60 * 100)}%`;
+    }
+
+    // Light up segments from bottom to top
+    segments.forEach((seg, i) => {
+      const segIndex = 15 - i; // Reverse index (bottom = 15, top = 0)
+      if (segIndex < litCount) {
+        seg.classList.add('lit');
+      } else {
+        seg.classList.remove('lit');
+      }
+    });
+
+    // Update value display
+    if (valEl) {
+      valEl.textContent = db > -60 ? db.toFixed(1) : '-∞';
+    }
+  }
+
+  function updatePPMMeter(channel, db) {
+    const fillEl = document.getElementById(`ppmFill${channel}`);
+    const peakEl = document.getElementById(`ppmPeak${channel}`);
+    const valEl = document.getElementById(`ppmVal${channel}`);
+
+    // Map dB to percentage (PPM scale: -60 to +3 dB)
+    const normalizedLevel = Math.max(0, Math.min(1, (db + 60) / 63));
+    const percentage = normalizedLevel * 100;
+
+    if (fillEl) fillEl.style.height = `${percentage}%`;
+    if (peakEl) peakEl.style.bottom = `${percentage}%`;
+    if (valEl) valEl.textContent = db > -60 ? db.toFixed(1) : '-∞';
+  }
+
+  function updateVUMeter(channel, rms) {
+    const needleEl = document.getElementById(`vuNeedle${channel}`);
+    if (!needleEl) return;
+
+    // VU meter calibration: -6 dBFS digital should read around 0 VU
+    // At RMS 0.5 (-6 dBFS): 20 * log10(0.5) = -6, +6 offset = 0 VU
+    const vuDb = 20 * Math.log10(Math.max(rms, 0.0001)) + 6;
+    const clampedVu = Math.max(-20, Math.min(3, vuDb));
+
+    // Map -20 to +3 VU to -45 to +45 degrees
+    const angle = ((clampedVu + 20) / 23) * 90 - 45;
+    needleEl.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+  }
+
+  function updateLUFS(rmsL, rmsR) {
+    // Simplified LUFS approximation using RMS
+    const combinedRms = Math.sqrt((rmsL * rmsL + rmsR * rmsR) / 2);
+    const momentaryLufs = 20 * Math.log10(Math.max(combinedRms, 0.0001)) - 23;
+
+    // Store history for integrated calculation
+    lufsHistory.push(momentaryLufs);
+    if (lufsHistory.length > 300) lufsHistory.shift(); // Keep ~5 seconds at 60fps
+
+    // Calculate short-term (last 3 seconds)
+    const shortTermSamples = lufsHistory.slice(-180);
+    const shortTermLufs = shortTermSamples.reduce((a, b) => a + b, 0) / shortTermSamples.length;
+
+    // Calculate integrated (full history)
+    const integratedLufs = lufsHistory.reduce((a, b) => a + b, 0) / lufsHistory.length;
+
+    // Calculate range
+    const lufsRange = Math.max(...lufsHistory) - Math.min(...lufsHistory);
+
+    // Update display
+    const intEl = document.getElementById('lufsIntegrated');
+    const shortEl = document.getElementById('lufsShort');
+    const momEl = document.getElementById('lufsMomentary');
+    const rangeEl = document.getElementById('lufsRange');
+    const barEl = document.getElementById('lufsBarFill');
+
+    if (intEl) intEl.textContent = isFinite(integratedLufs) ? integratedLufs.toFixed(1) : '-∞';
+    if (shortEl) shortEl.textContent = isFinite(shortTermLufs) ? shortTermLufs.toFixed(1) : '-∞';
+    if (momEl) momEl.textContent = isFinite(momentaryLufs) ? momentaryLufs.toFixed(1) : '-∞';
+    if (rangeEl) rangeEl.textContent = isFinite(lufsRange) ? lufsRange.toFixed(1) + ' LU' : '0.0 LU';
+
+    // Update bar (map -60 to 0 LUFS to 0-100%)
+    if (barEl) {
+      const barPercent = Math.max(0, Math.min(100, ((integratedLufs + 60) / 60) * 100));
+      barEl.style.width = `${barPercent}%`;
+    }
+
+    // Color the main value based on target (-23 LUFS)
+    if (intEl) {
+      if (integratedLufs > -14) {
+        intEl.style.color = '#ef4444'; // Too loud
+      } else if (integratedLufs > -20) {
+        intEl.style.color = '#eab308'; // Getting loud
+      } else if (integratedLufs > -26) {
+        intEl.style.color = '#22c55e'; // Good range
+      } else {
+        intEl.style.color = '#666'; // Too quiet
+      }
+    }
+  }
+
+  function updateCorrelation(dataL, dataR) {
+    // Calculate correlation coefficient
+    let sumL = 0, sumR = 0, sumLR = 0, sumL2 = 0, sumR2 = 0;
+    const n = Math.min(dataL.length, dataR.length);
+
+    for (let i = 0; i < n; i++) {
+      sumL += dataL[i];
+      sumR += dataR[i];
+      sumLR += dataL[i] * dataR[i];
+      sumL2 += dataL[i] * dataL[i];
+      sumR2 += dataR[i] * dataR[i];
+    }
+
+    const meanL = sumL / n;
+    const meanR = sumR / n;
+    const stdL = Math.sqrt(sumL2 / n - meanL * meanL);
+    const stdR = Math.sqrt(sumR2 / n - meanR * meanR);
+    const covariance = sumLR / n - meanL * meanR;
+
+    let correlation = 0;
+    if (stdL > 0 && stdR > 0) {
+      correlation = covariance / (stdL * stdR);
+    }
+
+    // Update correlation needle (-1 to +1 maps to 0% to 100%)
+    const needleEl = document.getElementById('correlationNeedle');
+    const fillEl = document.getElementById('correlationFill');
+
+    if (needleEl) {
+      const percent = ((correlation + 1) / 2) * 100;
+      needleEl.style.left = `${percent}%`;
+    }
+
+    // Fill shows deviation from mono (center)
+    if (fillEl) {
+      const fillWidth = Math.abs(correlation) * 50;
+      fillEl.style.width = `${fillWidth}%`;
+      if (correlation >= 0) {
+        fillEl.style.left = '50%';
+        fillEl.style.background = '#22c55e';
+      } else {
+        fillEl.style.left = `${50 - fillWidth}%`;
+        fillEl.style.background = '#ef4444';
+      }
+    }
+  }
+
+  function updateStereoScope(dataL, dataR) {
+    if (!stereoCanvasCtx) return;
+
+    const canvas = stereoCanvasCtx.canvas;
+    const w = canvas.width;
+    const h = canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+
+    // Fade previous frame
+    stereoCanvasCtx.fillStyle = 'rgba(5, 5, 5, 0.3)';
+    stereoCanvasCtx.fillRect(0, 0, w, h);
+
+    // Draw crosshairs
+    stereoCanvasCtx.strokeStyle = '#222';
+    stereoCanvasCtx.lineWidth = 1;
+    stereoCanvasCtx.beginPath();
+    stereoCanvasCtx.moveTo(cx, 0);
+    stereoCanvasCtx.lineTo(cx, h);
+    stereoCanvasCtx.moveTo(0, cy);
+    stereoCanvasCtx.lineTo(w, cy);
+    stereoCanvasCtx.stroke();
+
+    // Draw Lissajous figure
+    stereoCanvasCtx.strokeStyle = '#22c55e';
+    stereoCanvasCtx.lineWidth = 1;
+    stereoCanvasCtx.beginPath();
+
+    const step = Math.max(1, Math.floor(dataL.length / 100));
+    for (let i = 0; i < dataL.length; i += step) {
+      const l = (dataL[i] / 255 - 0.5) * 2;
+      const r = (dataR[i] / 255 - 0.5) * 2;
+
+      // Rotate 45 degrees for M/S display
+      const x = cx + (l - r) * (w / 3);
+      const y = cy - (l + r) * (h / 3);
+
+      if (i === 0) {
+        stereoCanvasCtx.moveTo(x, y);
+      } else {
+        stereoCanvasCtx.lineTo(x, y);
+      }
+    }
+    stereoCanvasCtx.stroke();
+
+    // Draw glow dots at points
+    stereoCanvasCtx.fillStyle = 'rgba(34, 197, 94, 0.5)';
+    for (let i = 0; i < dataL.length; i += step * 2) {
+      const l = (dataL[i] / 255 - 0.5) * 2;
+      const r = (dataR[i] / 255 - 0.5) * 2;
+      const x = cx + (l - r) * (w / 3);
+      const y = cy - (l + r) * (h / 3);
+      stereoCanvasCtx.beginPath();
+      stereoCanvasCtx.arc(x, y, 2, 0, Math.PI * 2);
+      stereoCanvasCtx.fill();
+    }
+  }
+  // =============== END BROADCAST AUDIO PANEL ===============
+
   async function loadStreamStatus() {
     try {
       // Add cache buster to prevent stale cached responses
@@ -2567,6 +3168,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
         statusDot?.classList.remove('offline');
         statusDot?.classList.add('live');
+        document.querySelector('.live-panel')?.classList.add('streaming');
         if (statusText) statusText.textContent = `${currentStream.djName} is LIVE`;
 
         offlineState?.classList.add('hidden');
@@ -2674,6 +3276,11 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
         // Hide Go Live setup section when someone is streaming (gives more space to video)
         document.getElementById('streamKeySection')?.classList.add('hidden');
+        // Hide Multi Streaming section when live
+        document.getElementById('multiStreamSection')?.classList.add('hidden');
+        // Show Broadcast Audio Panel when live
+        document.getElementById('broadcastAudioPanel')?.classList.remove('hidden');
+        initBroadcastMeters();
         // Expand video player to use the extra space
         document.querySelector('.preview-section')?.classList.add('expanded');
         // Disable Go Live button when someone is streaming
@@ -2698,6 +3305,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
         statusDot?.classList.add('offline');
         statusDot?.classList.remove('live');
+        document.querySelector('.live-panel')?.classList.remove('streaming');
         if (statusText) statusText.textContent = 'No one streaming';
         offlineState?.classList.remove('hidden');
         videoPreview?.classList.add('hidden');
@@ -2721,6 +3329,11 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
         // Show Go Live setup section when no one is streaming
         document.getElementById('streamKeySection')?.classList.remove('hidden');
+        // Show Multi Streaming section when not live
+        document.getElementById('multiStreamSection')?.classList.remove('hidden');
+        // Hide Broadcast Audio Panel when not live
+        document.getElementById('broadcastAudioPanel')?.classList.add('hidden');
+        stopBroadcastMeters();
         // Shrink video player back to normal size
         document.querySelector('.preview-section')?.classList.remove('expanded');
         // Enable Go Live button when no one is streaming
@@ -2941,8 +3554,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     const headerTimeRemaining = document.getElementById('headerTimeRemaining');
 
     if (!streamEndTime) {
-      if (timeLeft) timeLeft.textContent = '--:--';
-      if (headerTimeLeft) headerTimeLeft.textContent = '--:--';
+      if (timeLeft) timeLeft.textContent = '--:--:--';
+      if (headerTimeLeft) headerTimeLeft.textContent = '--:--:--';
       if (headerTimeRemaining) headerTimeRemaining.classList.add('hidden');
       return;
     }
@@ -2958,7 +3571,6 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         const newEndTime = calculateContinuousEndTime(currentStream.djId, streamEndTime);
         if (newEndTime > streamEndTime) {
           streamEndTime = newEndTime;
-          hideFinalCountdown();
           // Reset fade state
           isFadingOut = false;
           const playerWrapper = document.querySelector('.preview-player');
@@ -2970,11 +3582,11 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       }
 
       if (timeLeft) {
-        timeLeft.textContent = '00:00';
+        timeLeft.textContent = '00:00:00.0';
         timeLeft.style.color = '#dc2626';
       }
       if (headerTimeLeft) {
-        headerTimeLeft.textContent = '00:00';
+        headerTimeLeft.textContent = '00:00:00.0';
         headerTimeLeft.classList.add('urgent');
       }
       // Trigger fade out when time is up (only if DJ is actually changing)
@@ -2982,14 +3594,16 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       return;
     }
 
-    const mins = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
     const secs = Math.floor((diff % 60000) / 1000);
-    const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const tenths = Math.floor((diff % 1000) / 100); // 1-digit tenths of a second
+    const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${tenths}`;
 
     if (timeLeft) timeLeft.textContent = timeStr;
     if (headerTimeLeft) {
       headerTimeLeft.textContent = timeStr;
-      if (mins < 5) {
+      if (hours === 0 && mins < 5) {
         headerTimeLeft.classList.add('urgent');
       } else {
         headerTimeLeft.classList.remove('urgent');
@@ -3004,14 +3618,6 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // In event mode, never show mid-session transitions (only at very end of entire event)
     const skipTransitions = sameDjContinues || inEventMode;
 
-    // Start final countdown animation in last 5 seconds (only if DJ changing and not in event mode mid-session)
-    if (diff <= 5000 && diff > 0 && !skipTransitions) {
-      const secondsLeft = Math.ceil(diff / 1000);
-      showFinalCountdown(secondsLeft);
-    } else {
-      hideFinalCountdown();
-    }
-
     // Start fade out in last 10 seconds (only if DJ changing and not in event mode mid-session)
     if (diff <= 10000 && diff > 0 && !skipTransitions) {
       startGradualFadeOut(diff / 10000);
@@ -3021,47 +3627,6 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       if (timeLeft) timeLeft.style.color = '#dc2626';
     } else {
       if (timeLeft) timeLeft.style.color = '#fff';
-    }
-  }
-
-  // Final countdown animation
-  let lastCountdownNumber = 0;
-  const countdownAnimations = ['anim-spin', 'anim-slam', 'anim-flip', 'anim-drop', 'anim-glitch'];
-
-  function showFinalCountdown(seconds) {
-    const container = document.getElementById('finalCountdown');
-    const numberEl = document.getElementById('countdownNumber');
-
-    if (!container || !numberEl) return;
-
-    // Only update if number changed
-    if (seconds === lastCountdownNumber) return;
-    lastCountdownNumber = seconds;
-
-    // Show container
-    container.classList.remove('hidden');
-
-    // Pick a random animation for each number
-    const randomAnim = countdownAnimations[Math.floor(Math.random() * countdownAnimations.length)];
-
-    // Reset animation by removing all animation classes
-    numberEl.className = 'countdown-number';
-
-    // Update number and trigger animation
-    numberEl.textContent = seconds.toString();
-
-    // Force reflow to restart animation
-    void numberEl.offsetWidth;
-
-    // Add the random animation class
-    numberEl.classList.add(randomAnim);
-  }
-
-  function hideFinalCountdown() {
-    const container = document.getElementById('finalCountdown');
-    if (container && !container.classList.contains('hidden')) {
-      container.classList.add('hidden');
-      lastCountdownNumber = 0;
     }
   }
 
@@ -3816,9 +4381,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   async function loadStreamKeyForGoLive() {
     const inlineKeyEl = document.getElementById('myStreamKey');
 
-    // If key is already displayed, don't re-animate
+    // If key is already displayed, don't re-animate but ensure preview check is running
     if (streamKeyDisplayed && currentStreamKey) {
       log('[GoLive] Stream key already displayed, skipping animation');
+      startObsPreviewCheck();
       return;
     }
 
@@ -3830,11 +4396,18 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       if (validUntil.getTime() - now.getTime() > 2 * 60 * 1000) {
         log('[GoLive] Reusing existing stream key, valid until:', streamKeyValidUntil);
         if (inlineKeyEl && !streamKeyDisplayed) {
+          // Show spawning animation first
+          inlineKeyEl.classList.add('key-loading');
+          inlineKeyEl.classList.remove('key-reveal');
+          inlineKeyEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
+          // Wait 5 seconds for animation before revealing
+          await new Promise(resolve => setTimeout(resolve, 5000));
           inlineKeyEl.classList.remove('key-loading');
           inlineKeyEl.classList.add('key-reveal');
           inlineKeyEl.innerHTML = `<span class="key-text">${currentStreamKey}</span>`;
           streamKeyDisplayed = true;
         }
+        startObsPreviewCheck();
         return;
       }
     }
@@ -3851,6 +4424,12 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         currentStreamKey = savedKey;
         streamKeyValidUntil = savedValidUntil;
         if (inlineKeyEl && !streamKeyDisplayed) {
+          // Show spawning animation first
+          inlineKeyEl.classList.add('key-loading');
+          inlineKeyEl.classList.remove('key-reveal');
+          inlineKeyEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
+          // Wait 5 seconds for animation before revealing
+          await new Promise(resolve => setTimeout(resolve, 5000));
           inlineKeyEl.classList.remove('key-loading');
           inlineKeyEl.classList.add('key-reveal');
           inlineKeyEl.innerHTML = `<span class="key-text">${savedKey}</span>`;
@@ -4135,7 +4714,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Copy output URL button
     document.getElementById('copyOutputUrl')?.addEventListener('click', copyOutputUrlToClipboard);
 
-    // Volume sliders
+    // Volume sliders (horizontal under video players)
     const obsVolumeSlider = document.getElementById('obsVolumeSlider');
     const liveVolumeSlider = document.getElementById('liveVolumeSlider');
     const obsVideo = document.getElementById('obsVideo');
@@ -4148,6 +4727,11 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           obsVideo.muted = false;
           updateMuteButtonState('obs', false);
         }
+        // Sync with vertical fader
+        const verticalFader = document.getElementById('obsVolumeFader');
+        const faderVal = document.getElementById('obsVolumeFaderVal');
+        if (verticalFader) verticalFader.value = e.target.value;
+        if (faderVal) faderVal.textContent = e.target.value;
       });
     }
 
@@ -4158,6 +4742,51 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           hlsVideo.muted = false;
           updateMuteButtonState('live', false);
         }
+        // Sync with vertical fader
+        const verticalFader = document.getElementById('liveVolumeFader');
+        const faderVal = document.getElementById('liveVolumeFaderVal');
+        if (verticalFader) verticalFader.value = e.target.value;
+        if (faderVal) faderVal.textContent = e.target.value;
+      });
+    }
+
+    // Vertical volume faders in broadcast panel
+    const obsVolumeFader = document.getElementById('obsVolumeFader');
+    const liveVolumeFader = document.getElementById('liveVolumeFader');
+
+    if (obsVolumeFader) {
+      obsVolumeFader.addEventListener('input', (e) => {
+        const val = e.target.value;
+        if (obsVideo) {
+          obsVideo.volume = val / 100;
+          if (val > 0) {
+            obsVideo.muted = false;
+            updateMuteButtonState('obs', false);
+          }
+        }
+        // Update value display
+        const faderVal = document.getElementById('obsVolumeFaderVal');
+        if (faderVal) faderVal.textContent = val;
+        // Sync with horizontal slider
+        if (obsVolumeSlider) obsVolumeSlider.value = val;
+      });
+    }
+
+    if (liveVolumeFader) {
+      liveVolumeFader.addEventListener('input', (e) => {
+        const val = e.target.value;
+        if (hlsVideo) {
+          hlsVideo.volume = val / 100;
+          if (val > 0) {
+            hlsVideo.muted = false;
+            updateMuteButtonState('live', false);
+          }
+        }
+        // Update value display
+        const faderVal = document.getElementById('liveVolumeFaderVal');
+        if (faderVal) faderVal.textContent = val;
+        // Sync with horizontal slider
+        if (liveVolumeSlider) liveVolumeSlider.value = val;
       });
     }
 
@@ -4182,6 +4811,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Sign out
     document.getElementById('signOutBtn')?.addEventListener('click', async () => {
       try {
+        // Stop streaming and cleanup preview
+        userIsStreaming = false;
+        stopObsPreviewCheck();
+
         if (presenceRef) {
           await deleteDoc(presenceRef);
         }
@@ -4244,6 +4877,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
               status.classList.remove('ending');
               updateEndStreamButton(false, false);
               status.textContent = 'Stream ended successfully';
+              // Stop streaming flag and cleanup preview
+              userIsStreaming = false;
               // Refresh stream status
               loadStreamStatus();
               recordStreamEnd();
@@ -4463,11 +5098,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
     // =============== STEREO AUDIO METERS ===============
     let obsAudioContext = null;
-    let obsAnalyserL = null;
-    let obsAnalyserR = null;
+    // Note: obsAnalyserL, obsAnalyserR, liveAnalyserL, liveAnalyserR declared earlier for broadcast panel
     let liveAudioContext = null;
-    let liveAnalyserL = null;
-    let liveAnalyserR = null;
     let obsMeterAnimationId = null;
     let liveMeterAnimationId = null;
 
@@ -4496,36 +5128,83 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       }
     }
 
-    function updateMeter(analyser, meterEl) {
-      if (!analyser || !meterEl) return 0;
+    // Store previous levels for smoothing
+    const meterLevels = new Map();
+
+    function updateLedMeter(analyser, ledRowEl, isLeftChannel) {
+      if (!analyser || !ledRowEl) return 0;
 
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       analyser.getByteFrequencyData(dataArray);
 
-      // Calculate RMS level
+      // Calculate RMS level - reduced sensitivity
       let sum = 0;
       for (let i = 0; i < dataArray.length; i++) {
         sum += dataArray[i] * dataArray[i];
       }
       const rms = Math.sqrt(sum / dataArray.length);
-      const level = Math.min(100, (rms / 128) * 100);
+      // Calibrated for -6dB peak to light ~8-10 of 12 LEDs
+      // At -6dB, RMS is roughly 128, so divide by 160 to get ~80% level
+      let level = Math.min(100, (rms / 160) * 100);
 
-      meterEl.style.width = level + '%';
+      // Get previous level for smoothing
+      const meterId = ledRowEl.id;
+      const prevLevel = meterLevels.get(meterId) || 0;
+
+      // Smooth decay (fast attack, slower release)
+      if (level > prevLevel) {
+        // Fast attack
+        level = level;
+      } else {
+        // Slower decay for smoother visuals
+        level = prevLevel * 0.85 + level * 0.15;
+      }
+
+      // Store for next frame
+      meterLevels.set(meterId, level);
+
+      // Get all LEDs in the row
+      const leds = ledRowEl.querySelectorAll('.led');
+      const numLeds = leds.length;
+
+      // Calculate how many LEDs should be lit (from center outward)
+      // Level 0-100 maps to 0-12 LEDs
+      const ledsToLight = Math.round((level / 100) * numLeds);
+
+      // For left channel: LEDs go from right to left (index 11 to 0, where 11 is closest to center)
+      // For right channel: LEDs go from left to right (index 0 to 11, where 0 is closest to center)
+      leds.forEach((led, index) => {
+        let shouldLight;
+        if (isLeftChannel) {
+          // Left channel: light from the end (closest to center) backwards
+          shouldLight = index >= (numLeds - ledsToLight);
+        } else {
+          // Right channel: light from the start (closest to center) forwards
+          shouldLight = index < ledsToLight;
+        }
+
+        if (shouldLight) {
+          led.classList.add('lit');
+        } else {
+          led.classList.remove('lit');
+        }
+      });
+
       return level;
     }
 
     function animateObsMeters() {
       if (obsAnalyserL && obsAnalyserR) {
-        updateMeter(obsAnalyserL, document.getElementById('obsLeftMeter'));
-        updateMeter(obsAnalyserR, document.getElementById('obsRightMeter'));
+        updateLedMeter(obsAnalyserL, document.getElementById('obsLeftLeds'), true);
+        updateLedMeter(obsAnalyserR, document.getElementById('obsRightLeds'), false);
       }
       obsMeterAnimationId = requestAnimationFrame(animateObsMeters);
     }
 
     function animateLiveMeters() {
       if (liveAnalyserL && liveAnalyserR) {
-        updateMeter(liveAnalyserL, document.getElementById('liveLeftMeter'));
-        updateMeter(liveAnalyserR, document.getElementById('liveRightMeter'));
+        updateLedMeter(liveAnalyserL, document.getElementById('liveLeftLeds'), true);
+        updateLedMeter(liveAnalyserR, document.getElementById('liveRightLeds'), false);
       }
       liveMeterAnimationId = requestAnimationFrame(animateLiveMeters);
     }
@@ -4552,8 +5231,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           cancelAnimationFrame(obsMeterAnimationId);
           obsMeterAnimationId = null;
         }
-        document.getElementById('obsLeftMeter')?.style.setProperty('width', '0%');
-        document.getElementById('obsRightMeter')?.style.setProperty('width', '0%');
+        // Clear all LEDs
+        document.querySelectorAll('#obsLeftLeds .led, #obsRightLeds .led').forEach(led => led.classList.remove('lit'));
       });
     }
 
@@ -4578,8 +5257,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           cancelAnimationFrame(liveMeterAnimationId);
           liveMeterAnimationId = null;
         }
-        document.getElementById('liveLeftMeter')?.style.setProperty('width', '0%');
-        document.getElementById('liveRightMeter')?.style.setProperty('width', '0%');
+        // Clear all LEDs
+        document.querySelectorAll('#liveLeftLeds .led, #liveRightLeds .led').forEach(led => led.classList.remove('lit'));
       });
     }
     // =============== END STEREO AUDIO METERS ===============
@@ -4611,6 +5290,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         // Then start the stream
         await handleGoLiveReady();
 
+        // Mark user as streaming - preview will persist until sign out
+        userIsStreaming = true;
+
         // Show success state
         btn.classList.add('is-ready');
         btn.style.background = '#10b981';
@@ -4620,7 +5302,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         // Show error message
         alert(e.message || 'Failed to go live. Please check OBS is streaming and try again.');
         // Reset button
-        btnText.textContent = 'Go Live';
+        btnText.textContent = 'I\'m Ready!';
         btn.disabled = false;
         btn.classList.add('glow');
       }

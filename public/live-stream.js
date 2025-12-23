@@ -10,6 +10,18 @@ import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase
 let pusher = null;
 let chatChannel = null;
 
+// Normalize HLS URLs to use the correct base URL (handles old trycloudflare URLs)
+function normalizeHlsUrl(url) {
+  if (!url) return url;
+  const correctBaseUrl = 'https://stream.freshwax.co.uk';
+  // Extract the path after the domain (e.g., /live/stream_key/index.m3u8)
+  const match = url.match(/\/live\/[^\/]+\/index\.m3u8$/);
+  if (match) {
+    return correctBaseUrl + match[0];
+  }
+  return url;
+}
+
 // Playlist manager for media queue when stream is offline
 let playlistManager = null;
 
@@ -103,11 +115,12 @@ function getPusherConfig() {
 // Persistent autoplay: Remember when user has interacted with player
 const AUTOPLAY_KEY = 'freshwax_autoplay';
 function shouldAutoplay() {
-  // Always try autoplay if user has previously played
-  return sessionStorage.getItem(AUTOPLAY_KEY) === 'true';
+  // Use localStorage for persistence across browser sessions
+  // User has previously clicked play, so try with sound
+  return localStorage.getItem(AUTOPLAY_KEY) === 'true';
 }
 function rememberAutoplay() {
-  sessionStorage.setItem(AUTOPLAY_KEY, 'true');
+  localStorage.setItem(AUTOPLAY_KEY, 'true');
 }
 
 // ==========================================
@@ -918,14 +931,16 @@ function setupHlsPlayer(stream) {
   if (videoElement) videoElement.classList.remove('hidden');
   if (twitchEmbed) twitchEmbed.classList.add('hidden');
   
-  const hlsUrl = stream.hlsUrl || stream.videoStreamUrl;
-  
+  // Normalize to correct base URL (fixes old trycloudflare.com URLs)
+  const rawHlsUrl = stream.hlsUrl || stream.videoStreamUrl;
+  const hlsUrl = normalizeHlsUrl(rawHlsUrl);
+
   if (!hlsUrl) {
     console.error('No HLS URL available');
     setupAudioPlayer(stream);
     return;
   }
-  
+
   console.log('[HLS] Setting up player with URL:', hlsUrl);
 
   // Video event handlers for LED meters
@@ -1028,35 +1043,25 @@ function setupHlsPlayer(stream) {
 
       hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
         console.log('[HLS] Manifest parsed, attempting autoplay');
-        // Always try to autoplay - modern browsers allow muted autoplay
-        // If user has previously played, we try with sound
+        // Always try unmuted autoplay first, fall back to play button if blocked
         const attemptAutoplay = async () => {
           try {
-            // First try playing with sound if user previously played
-            if (shouldAutoplay()) {
-              await videoElement.play();
-              isPlaying = true;
-              document.getElementById('playIcon')?.classList.add('hidden');
-              document.getElementById('pauseIcon')?.classList.remove('hidden');
-              document.getElementById('playBtn')?.classList.add('playing');
-              console.log('[HLS] Autoplay successful with sound');
-              return;
-            }
-            // Otherwise try muted autoplay
-            videoElement.muted = true;
+            videoElement.muted = false;
             await videoElement.play();
             isPlaying = true;
             document.getElementById('playIcon')?.classList.add('hidden');
             document.getElementById('pauseIcon')?.classList.remove('hidden');
             document.getElementById('playBtn')?.classList.add('playing');
-            console.log('[HLS] Muted autoplay successful');
-            // Unmute after a brief moment
-            setTimeout(() => {
-              videoElement.muted = false;
-            }, 100);
+            console.log('[HLS] Unmuted autoplay successful');
+            rememberAutoplay();
+            // Initialize audio analyzer for LED meters
+            initGlobalAudioAnalyzer(videoElement);
+            startGlobalMeters();
           } catch (err) {
-            console.log('[HLS] Autoplay blocked, waiting for user interaction:', err.name);
-            // Autoplay blocked - show play button
+            console.log('[HLS] Autoplay blocked, showing play button:', err.name);
+            // Autoplay blocked - show play button for user to click
+            document.getElementById('playIcon')?.classList.remove('hidden');
+            document.getElementById('pauseIcon')?.classList.add('hidden');
             document.getElementById('playBtn')?.classList.remove('playing');
           }
         };
@@ -1139,10 +1144,9 @@ function setupHlsPlayer(stream) {
           if (globalAudioContext?.state === 'suspended') {
             globalAudioContext.resume();
           }
-          videoElement.muted = false; // Ensure unmuted when user explicitly clicks
+          videoElement.muted = false;
           videoElement.play().catch(err => {
             console.error('[HLS] Play error:', err);
-            // On mobile, show tap to play message
             if (window.isMobileDevice) {
               showTapToPlay();
             }
