@@ -4324,6 +4324,39 @@
     transform: scale(1.03);
   }
 
+  /* GO LIVE Final Button - Red pulsing glow */
+  .go-live-btn.go-live-final {
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    border-color: #dc2626 !important;
+    animation: goLiveFinalGlow 1.5s ease-in-out infinite;
+    margin-top: 0.5rem;
+  }
+
+  @keyframes goLiveFinalGlow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(220, 38, 38, 0.6), 0 0 40px rgba(220, 38, 38, 0.3);
+      transform: scale(1);
+    }
+    50% {
+      box-shadow: 0 0 30px rgba(220, 38, 38, 0.9), 0 0 60px rgba(220, 38, 38, 0.5), 0 0 100px rgba(220, 38, 38, 0.3);
+      transform: scale(1.03);
+    }
+  }
+
+  .go-live-btn.go-live-final:hover {
+    animation: none;
+    box-shadow: 0 0 40px rgba(220, 38, 38, 1), 0 0 80px rgba(220, 38, 38, 0.6);
+    transform: scale(1.05);
+  }
+
+  /* Ready state for I'm Ready button */
+  .go-live-btn.is-ready-state {
+    background: linear-gradient(135deg, #059669, #047857) !important;
+    border-color: #059669 !important;
+    animation: none;
+    cursor: default;
+  }
+
   /* LIVE Badge - Breathing Effect When Streaming */
   .go-live-btn.is-ready {
     animation: liveBreathe 1.5s ease-in-out infinite;

@@ -243,6 +243,14 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
             </svg>
             <span id="readyBtnText">I'm Ready!</span>
           </button>
+          <!-- GO LIVE button - shown after I'm Ready is pressed -->
+          <button id="goLiveBtn" class="go-live-btn go-live-final hidden">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+              <circle cx="12" cy="12" r="8" fill="#dc2626"/>
+              <circle cx="12" cy="12" r="4" fill="#fff"/>
+            </svg>
+            <span id="goLiveBtnText">GO LIVE!</span>
+          </button>
           <div class="control-divider"></div>
           <button id="lobbyEndStreamBtn" class="lobby-end-stream-btn disabled" disabled>
             <span class="end-icon">⏹</span>
@@ -5271,20 +5279,21 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
     // =============== END STEREO AUDIO METERS ===============
 
-    // Ready button - Go Live! Sets ready status AND starts stream
+    // Ready button - Indicates DJ is ready and shows preview (does NOT go live yet)
     document.getElementById('setReadyBtn')?.addEventListener('click', async () => {
       if (!currentUser) return;
 
       const btn = document.getElementById('setReadyBtn');
       const btnText = document.getElementById('readyBtnText');
+      const goLiveBtn = document.getElementById('goLiveBtn');
 
       // Disable button and show processing
       btn.disabled = true;
       btn.classList.remove('glow');
-      btnText.textContent = '⏳ Going Live...';
+      btnText.textContent = '⏳ Preparing...';
 
       try {
-        // First set ready status
+        // Set ready status (but don't go live yet)
         await fetch('/api/dj-lobby/presence', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -5295,10 +5304,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           })
         });
 
-        // Then start the stream
-        await handleGoLiveReady();
-
-        // Mark user as streaming - preview will persist until sign out
+        // Mark user as preparing - preview will persist
         userIsStreaming = true;
 
         // Hide stream key info and show audio panel so DJ can preview OBS and check levels
@@ -5308,18 +5314,58 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         // Expand video player to use the extra space
         document.querySelector('.preview-section')?.classList.add('expanded');
 
-        // Show success state
-        btn.classList.add('is-ready');
-        btn.style.background = '#10b981';
-        btnText.textContent = '🔴 LIVE';
+        // Update I'm Ready button to show ready state
+        btn.classList.add('is-ready-state');
+        btnText.textContent = '✓ Ready';
+
+        // Show the GO LIVE button
+        goLiveBtn?.classList.remove('hidden');
+
+        // Show reminder popup
+        alert('🎧 Start your streaming software (OBS) now!\n\nCheck that:\n• Your audio levels are good\n• Your video preview is showing\n\nWhen everything looks good, press GO LIVE!');
+
       } catch (e) {
-        console.error('Go Live error:', e);
-        // Show error message
-        alert(e.message || 'Failed to go live. Please check OBS is streaming and try again.');
+        console.error('Ready error:', e);
+        alert(e.message || 'Failed to set ready status. Please try again.');
         // Reset button
         btnText.textContent = 'I\'m Ready!';
         btn.disabled = false;
         btn.classList.add('glow');
+      }
+    });
+
+    // GO LIVE button - Actually starts the stream
+    document.getElementById('goLiveBtn')?.addEventListener('click', async () => {
+      if (!currentUser) return;
+
+      const goLiveBtn = document.getElementById('goLiveBtn');
+      const goLiveBtnText = document.getElementById('goLiveBtnText');
+      const readyBtn = document.getElementById('setReadyBtn');
+      const readyBtnText = document.getElementById('readyBtnText');
+
+      // Disable button and show processing
+      goLiveBtn.disabled = true;
+      goLiveBtnText.textContent = '⏳ Going Live...';
+
+      try {
+        // Start the stream
+        await handleGoLiveReady();
+
+        // Hide GO LIVE button
+        goLiveBtn.classList.add('hidden');
+
+        // Update Ready button to show LIVE state
+        readyBtn.classList.remove('is-ready-state');
+        readyBtn.classList.add('is-ready');
+        readyBtn.style.background = '#dc2626';
+        readyBtnText.textContent = '🔴 LIVE';
+
+      } catch (e) {
+        console.error('Go Live error:', e);
+        alert(e.message || 'Failed to go live. Please check OBS is streaming and try again.');
+        // Reset GO LIVE button
+        goLiveBtnText.textContent = 'GO LIVE!';
+        goLiveBtn.disabled = false;
       }
     });
     
