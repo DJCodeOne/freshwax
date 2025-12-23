@@ -1,5 +1,5 @@
 // src/pages/api/releases/complete-upload.ts
-// Called after files are uploaded directly to R2 to create/update Firebase document
+// Called after files are uploaded to R2 - creates Firebase document with status: 'pending'
 
 import type { APIRoute } from 'astro';
 import { setDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
@@ -25,6 +25,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const {
       releaseId,
+      baseFolder,       // The folder where files were uploaded in R2
       artistName,
       releaseName,
       tracks,           // Array of { title, trackNumber, url, format, fileSize, duration? }

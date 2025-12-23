@@ -11,14 +11,21 @@ let releases: any[] = [];
 let errorMessage = '';
 
 try {
-  releases = await queryCollection('releases', { limit: 500 });
+  // Query ALL releases (no limit) to match admin dashboard - skipCache to ensure fresh data
+  releases = await queryCollection('releases', { skipCache: true });
 
-  // Sort by processedAt or createdAt (newest first)
+  // Sort by processedAt or createdAt (newest first), pending releases at top
   releases.sort((a, b) => {
+    // Put pending releases first
+    if (a.status === 'pending' && b.status !== 'pending') return -1;
+    if (b.status === 'pending' && a.status !== 'pending') return 1;
+
     const dateA = new Date(a.processedAt || a.createdAt || 0);
     const dateB = new Date(b.processedAt || b.createdAt || 0);
     return dateB.getTime() - dateA.getTime();
   });
+
+  console.log('[MANAGE] Loaded releases:', releases.length, 'Pending:', releases.filter(r => r.status === 'pending').length);
 
 } catch (error) {
   console.error('[MANAGE] Error loading releases:', error);

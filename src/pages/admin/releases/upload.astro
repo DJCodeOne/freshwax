@@ -455,8 +455,8 @@ uploadBtn.onclick = async () => {
       });
     }
 
-    // Create release record
-    debug("Creating release record in Firebase...");
+    // Create release record in Firebase (pending status)
+    debug("Creating release record...");
     setProgress(95, "Creating release record...");
 
     const completeRes = await fetch("/api/releases/complete-upload", {
@@ -464,6 +464,7 @@ uploadBtn.onclick = async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         releaseId: presignData.releaseId,
+        baseFolder: presignData.baseFolder,
         artistName,
         releaseName,
         tracks: trackData,
@@ -483,7 +484,7 @@ uploadBtn.onclick = async () => {
 
     debug("Upload complete!");
     setProgress(100, "Complete!");
-    setStatus(`Release uploaded successfully! <a href="/admin/releases/manage">View Releases</a>`);
+    setStatus(`Release uploaded successfully! <a href="/admin/releases/manage">Manage Releases</a> to review and approve.`);
 
     // Reset
     extractedData = null;
@@ -554,6 +555,7 @@ manualBtn.onclick = async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         releaseId: presignData.releaseId,
+        baseFolder: presignData.baseFolder,
         artistName,
         releaseName,
         tracks: trackData,
@@ -568,7 +570,7 @@ manualBtn.onclick = async () => {
     }
 
     setProgress(100, "Complete!");
-    setStatus(`Release uploaded successfully! <a href="/admin/releases/manage">View Releases</a>`);
+    setStatus(`Release uploaded successfully! <a href="/admin/releases/manage">Manage Releases</a> to review and approve.`);
 
     // Reset form
     artistInput.value = "";

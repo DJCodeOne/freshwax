@@ -92,8 +92,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // Generate or use provided release ID
+    // Generate release ID
     const finalReleaseId = releaseId || `${sanitize(artistName || 'upload')}_FW-${Date.now()}`;
+
+    // All releases go to releases/ folder with proper organization
+    const baseFolder = `releases/${finalReleaseId}`;
 
     // Create S3 client
     const s3Client = new S3Client({
@@ -118,16 +121,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const ext = ALLOWED_TYPES[file.contentType];
       const safeFilename = sanitizeFilename(file.filename.replace(/\.[^.]+$/, '')) + ext;
 
-      // Determine path based on upload type and file type
+      // Determine path based on file type - organized in subfolders
       let key: string;
       if (file.contentType.startsWith('image/')) {
-        key = `releases/${finalReleaseId}/artwork/${safeFilename}`;
+        key = `${baseFolder}/artwork/${safeFilename}`;
       } else if (file.contentType.startsWith('audio/')) {
-        key = `releases/${finalReleaseId}/tracks/${safeFilename}`;
+        key = `${baseFolder}/tracks/${safeFilename}`;
       } else if (file.contentType.includes('zip')) {
-        key = `releases/${finalReleaseId}/source/${safeFilename}`;
+        key = `${baseFolder}/source/${safeFilename}`;
       } else {
-        key = `releases/${finalReleaseId}/other/${safeFilename}`;
+        key = `${baseFolder}/other/${safeFilename}`;
       }
 
       const command = new PutObjectCommand({
@@ -153,6 +156,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: true,
       releaseId: finalReleaseId,
+      baseFolder,
       uploads: uploadUrls,
       expiresIn: 3600, // 1 hour
     }), {
