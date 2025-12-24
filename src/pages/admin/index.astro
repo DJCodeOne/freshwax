@@ -544,6 +544,108 @@ export const prerender = false;
     </div>
   </div>
 
+  <!-- Server Control Panel -->
+  <div class="card mt-4 server-control-card">
+    <div class="card-header">
+      <h2>🖥️ Server Control</h2>
+      <span id="serverStatus" class="server-status checking">Checking...</span>
+    </div>
+    <div class="card-body">
+      <div class="server-controls-grid">
+        <!-- Stream Server Controls -->
+        <div class="control-section">
+          <h4>Stream Server (MediaMTX)</h4>
+          <div class="control-buttons">
+            <button id="serverStartBtn" class="control-btn start" title="Start MediaMTX server">
+              <span class="btn-icon">▶</span>
+              <span class="btn-label">Start</span>
+            </button>
+            <button id="serverStopBtn" class="control-btn stop" title="Stop MediaMTX server">
+              <span class="btn-icon">■</span>
+              <span class="btn-label">Stop</span>
+            </button>
+            <button id="serverRestartBtn" class="control-btn restart" title="Restart MediaMTX server">
+              <span class="btn-icon">↻</span>
+              <span class="btn-label">Restart</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Stream Management -->
+        <div class="control-section">
+          <h4>Stream Management</h4>
+          <div class="control-buttons">
+            <button id="forceEndStreamBtn" class="control-btn danger" title="Force end all active streams">
+              <span class="btn-icon">⏹</span>
+              <span class="btn-label">End All Streams</span>
+            </button>
+            <button id="clearChatBtn" class="control-btn warning" title="Clear all chat messages">
+              <span class="btn-icon">🗑</span>
+              <span class="btn-label">Clear Chat</span>
+            </button>
+            <button id="kickAllViewersBtn" class="control-btn warning" title="Disconnect all viewers">
+              <span class="btn-icon">👥</span>
+              <span class="btn-label">Kick Viewers</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Maintenance Actions -->
+        <div class="control-section">
+          <h4>Maintenance</h4>
+          <div class="control-buttons">
+            <button id="clearCacheBtn" class="control-btn" title="Clear CDN and R2 cache">
+              <span class="btn-icon">🧹</span>
+              <span class="btn-label">Clear Cache</span>
+            </button>
+            <button id="syncDataBtn" class="control-btn" title="Sync data between services">
+              <span class="btn-icon">🔄</span>
+              <span class="btn-label">Sync Data</span>
+            </button>
+            <button id="cleanupDbBtn" class="control-btn" title="Clean expired sessions and stale data">
+              <span class="btn-icon">🗃</span>
+              <span class="btn-label">DB Cleanup</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Diagnostics -->
+        <div class="control-section">
+          <h4>Diagnostics</h4>
+          <div class="control-buttons">
+            <button id="testStreamBtn" class="control-btn" title="Send test stream signal">
+              <span class="btn-icon">📡</span>
+              <span class="btn-label">Test Stream</span>
+            </button>
+            <button id="viewLogsBtn" class="control-btn" title="View server logs">
+              <span class="btn-icon">📜</span>
+              <span class="btn-label">View Logs</span>
+            </button>
+            <button id="checkHealthBtn" class="control-btn" title="Run full health check">
+              <span class="btn-icon">💓</span>
+              <span class="btn-label">Health Check</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Server Logs Panel -->
+      <div id="serverLogsPanel" class="server-logs-panel hidden">
+        <div class="logs-header">
+          <h4>Server Logs</h4>
+          <button id="closeLogsBtn" class="btn btn-ghost btn-sm">✕ Close</button>
+        </div>
+        <pre id="serverLogsContent" class="logs-content">Loading logs...</pre>
+      </div>
+
+      <!-- Action Result -->
+      <div id="actionResult" class="action-result hidden">
+        <span id="actionResultIcon"></span>
+        <span id="actionResultText"></span>
+      </div>
+    </div>
+  </div>
+
   <!-- Feature Toggles -->
   <div class="card mt-4">
     <div class="card-header">
@@ -588,6 +690,139 @@ export const prerender = false;
 </AdminLayout>
 
 <style>
+  /* Server Control Panel Styles */
+  .server-control-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .server-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .server-status.checking { background: #374151; color: #9ca3af; }
+  .server-status.online { background: #065f46; color: #34d399; }
+  .server-status.offline { background: #7f1d1d; color: #fca5a5; }
+  .server-status.error { background: #78350f; color: #fcd34d; }
+
+  .server-controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .control-section h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.875rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .control-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .control-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid #374151;
+    background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+    border-radius: 6px;
+    color: #e5e7eb;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .control-btn:hover {
+    border-color: #4b5563;
+    background: linear-gradient(180deg, #374151 0%, #1f2937 100%);
+  }
+
+  .control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .control-btn.start:hover { border-color: #22c55e; color: #22c55e; }
+  .control-btn.stop:hover { border-color: #ef4444; color: #ef4444; }
+  .control-btn.restart:hover { border-color: #3b82f6; color: #3b82f6; }
+  .control-btn.danger { border-color: #dc2626; color: #fca5a5; }
+  .control-btn.danger:hover { background: #7f1d1d; border-color: #ef4444; }
+  .control-btn.warning { border-color: #d97706; color: #fcd34d; }
+  .control-btn.warning:hover { background: #78350f; border-color: #f59e0b; }
+
+  .btn-icon {
+    font-size: 1rem;
+  }
+
+  .server-logs-panel {
+    margin-top: 1.5rem;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    background: #0a0a0a;
+  }
+
+  .logs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #374151;
+  }
+
+  .logs-header h4 {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+
+  .logs-content {
+    padding: 1rem;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: #9ca3af;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .action-result {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .action-result.success {
+    background: #065f46;
+    color: #34d399;
+  }
+
+  .action-result.error {
+    background: #7f1d1d;
+    color: #fca5a5;
+  }
+
+  .action-result.info {
+    background: #1e3a5f;
+    color: #93c5fd;
+  }
+
   .history-preview {
     background: #1a1a2e;
     border-radius: 8px;
@@ -1050,4 +1285,157 @@ export const prerender = false;
     script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
     document.head.appendChild(script);
   }
+</script>
+
+<script>
+  // Server Control Panel
+  document.addEventListener('DOMContentLoaded', () => {
+    const serverStatus = document.getElementById('serverStatus');
+    const actionResult = document.getElementById('actionResult');
+    const actionResultIcon = document.getElementById('actionResultIcon');
+    const actionResultText = document.getElementById('actionResultText');
+    const logsPanel = document.getElementById('serverLogsPanel');
+    const logsContent = document.getElementById('serverLogsContent');
+
+    // Show action result
+    function showResult(type, message) {
+      actionResult.className = `action-result ${type}`;
+      actionResultIcon.textContent = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+      actionResultText.textContent = message;
+      actionResult.classList.remove('hidden');
+
+      // Auto-hide after 5 seconds
+      setTimeout(() => {
+        actionResult.classList.add('hidden');
+      }, 5000);
+    }
+
+    // Generic action handler
+    async function executeAction(action, confirmMessage) {
+      if (confirmMessage && !confirm(confirmMessage)) return;
+
+      try {
+        const response = await fetch('/api/admin/server-control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          showResult('success', result.message || `${action} completed successfully`);
+          // Refresh server status
+          checkServerStatus();
+        } else {
+          showResult('error', result.error || `${action} failed`);
+        }
+      } catch (error) {
+        showResult('error', `Failed to execute ${action}: ${error.message}`);
+      }
+    }
+
+    // Check server status
+    async function checkServerStatus() {
+      serverStatus.className = 'server-status checking';
+      serverStatus.textContent = 'Checking...';
+
+      try {
+        const response = await fetch('/api/admin/server-status');
+        const data = await response.json();
+
+        if (data.online) {
+          serverStatus.className = 'server-status online';
+          serverStatus.textContent = 'Online';
+        } else {
+          serverStatus.className = 'server-status offline';
+          serverStatus.textContent = 'Offline';
+        }
+      } catch (error) {
+        serverStatus.className = 'server-status error';
+        serverStatus.textContent = 'Unknown';
+      }
+    }
+
+    // Stream Server Controls
+    document.getElementById('serverStartBtn')?.addEventListener('click', () => {
+      executeAction('start-server', 'Start the MediaMTX stream server?');
+    });
+
+    document.getElementById('serverStopBtn')?.addEventListener('click', () => {
+      executeAction('stop-server', 'Stop the MediaMTX stream server? This will disconnect all active streams.');
+    });
+
+    document.getElementById('serverRestartBtn')?.addEventListener('click', () => {
+      executeAction('restart-server', 'Restart the MediaMTX stream server? Active streams will be briefly interrupted.');
+    });
+
+    // Stream Management
+    document.getElementById('forceEndStreamBtn')?.addEventListener('click', () => {
+      executeAction('force-end-streams', 'Force end ALL active streams? This cannot be undone.');
+    });
+
+    document.getElementById('clearChatBtn')?.addEventListener('click', () => {
+      executeAction('clear-chat', 'Clear all chat messages from the livestream? This cannot be undone.');
+    });
+
+    document.getElementById('kickAllViewersBtn')?.addEventListener('click', () => {
+      executeAction('kick-viewers', 'Disconnect all viewers from the stream?');
+    });
+
+    // Maintenance
+    document.getElementById('clearCacheBtn')?.addEventListener('click', () => {
+      executeAction('clear-cache', 'Clear CDN and storage cache?');
+    });
+
+    document.getElementById('syncDataBtn')?.addEventListener('click', () => {
+      executeAction('sync-data');
+    });
+
+    document.getElementById('cleanupDbBtn')?.addEventListener('click', () => {
+      executeAction('cleanup-db', 'Clean up expired sessions and stale data?');
+    });
+
+    // Diagnostics
+    document.getElementById('testStreamBtn')?.addEventListener('click', () => {
+      executeAction('test-stream');
+    });
+
+    document.getElementById('checkHealthBtn')?.addEventListener('click', async () => {
+      showResult('info', 'Running full health check...');
+      await executeAction('health-check');
+    });
+
+    // View Logs
+    document.getElementById('viewLogsBtn')?.addEventListener('click', async () => {
+      logsPanel.classList.toggle('hidden');
+
+      if (!logsPanel.classList.contains('hidden')) {
+        logsContent.textContent = 'Loading logs...';
+
+        try {
+          const response = await fetch('/api/admin/server-logs');
+          const data = await response.json();
+
+          if (data.logs) {
+            logsContent.textContent = data.logs;
+          } else {
+            logsContent.textContent = 'No logs available';
+          }
+        } catch (error) {
+          logsContent.textContent = 'Failed to load logs: ' + error.message;
+        }
+      }
+    });
+
+    document.getElementById('closeLogsBtn')?.addEventListener('click', () => {
+      logsPanel.classList.add('hidden');
+    });
+
+    // Initial status check
+    checkServerStatus();
+
+    // Refresh status every 30 seconds
+    setInterval(checkServerStatus, 30000);
+  });
 </script>

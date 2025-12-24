@@ -1484,14 +1484,18 @@
 
   .my-playlist-grid.grid-mode .personal-item-thumb {
     width: 100%;
-    height: 80px;
+    aspect-ratio: 16 / 9;
     margin-bottom: 0.5rem;
+    background: #111;
+    border-radius: 4px;
+    overflow: hidden;
   }
 
   .my-playlist-grid.grid-mode .personal-item-thumb img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    background: #111;
   }
 
   .my-playlist-grid.grid-mode .personal-item-info {
