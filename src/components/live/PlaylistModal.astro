@@ -3189,9 +3189,8 @@
       return;
     }
 
-    // Sort items based on current sort order
-    const sortedItems = sortPersonalItems(personalItems, currentSortOrder);
-    const totalItems = Math.min(sortedItems.length, MAX_ITEMS);
+    // Calculate total for pagination (before sorting, count is same)
+    const totalItems = Math.min(personalItems.length, MAX_ITEMS);
     const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
     // Ensure current page is valid
@@ -3219,12 +3218,15 @@
         paginationEl.innerHTML = paginationHTML;
 
         // Add click listeners for pagination buttons
+        // Important: Don't capture sortedItems in closure - recalculate on click
         paginationEl.querySelectorAll('.playlist-page-btn').forEach(btn => {
           btn.addEventListener('click', (e) => {
             const page = parseInt((e.currentTarget as HTMLElement).dataset.page || '1', 10);
             if (page !== currentPlaylistPage) {
               currentPlaylistPage = page;
-              renderPersonalPlaylistPage(sortedItems, userTracksInQueue);
+              // Re-sort items with current sort order to ensure consistency
+              const freshSortedItems = sortPersonalItems(cachedPersonalItems, currentSortOrder);
+              renderPersonalPlaylistPage(freshSortedItems, cachedUserTracksInQueue);
               // Update active state
               paginationEl.querySelectorAll('.playlist-page-btn').forEach(b => b.classList.remove('active'));
               (e.currentTarget as HTMLElement).classList.add('active');
@@ -3236,7 +3238,8 @@
       }
     }
 
-    // Render the current page
+    // Sort and render the current page
+    const sortedItems = sortPersonalItems(personalItems, currentSortOrder);
     renderPersonalPlaylistPage(sortedItems, userTracksInQueue);
   }
 
