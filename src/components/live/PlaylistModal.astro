@@ -1474,39 +1474,49 @@
   .my-playlist-grid.grid-mode {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
+    gap: 0.35rem;
   }
 
   .my-playlist-grid.grid-mode .personal-playlist-item {
-    padding: 0.5rem;
+    padding: 0.35rem;
+    gap: 0.35rem;
   }
 
   .my-playlist-grid.grid-mode .personal-item-thumb {
-    width: 50px;
-    height: 38px;
+    width: 40px;
+    height: 30px;
     flex-shrink: 0;
   }
 
   .my-playlist-grid.grid-mode .personal-item-info {
     flex: 1;
     min-width: 0;
+    gap: 0.1rem;
   }
 
   .my-playlist-grid.grid-mode .personal-item-title {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   .my-playlist-grid.grid-mode .personal-item-meta {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .my-playlist-grid.grid-mode .personal-item-actions {
-    gap: 0.25rem;
+    gap: 0.2rem;
+    flex-shrink: 0;
   }
 
   .my-playlist-grid.grid-mode .personal-item-actions button {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.65rem;
   }
 
   .my-playlist-grid::-webkit-scrollbar {
