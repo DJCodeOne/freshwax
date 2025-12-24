@@ -231,7 +231,7 @@
                         <input type="radio" name="exportFormat" value="pdf" />
                         <span class="format-label">
                           <span class="format-name">PDF</span>
-                          <span class="format-desc">Printable document</span>
+                          <span class="format-desc">Printable</span>
                         </span>
                       </label>
                     </div>
@@ -2565,7 +2565,7 @@
             content += `    Added: ${item.addedAt ? new Date(item.addedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Unknown'}\n\n`;
           });
 
-          content += `\nExported from Fresh Wax - https://freshwax.co.uk\n`;
+          content += `\n---\nExported from FRESH WAX\nhttps://freshwax.co.uk\n`;
           mimeType = 'text/plain;charset=utf-8';
           extension = 'txt';
 
@@ -2581,35 +2581,98 @@
           extension = 'csv';
 
         } else if (format === 'pdf') {
-          // Generate HTML for PDF printing
+          // Generate HTML for PDF printing with page-break control
           const pdfHTML = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <title>${title}</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
-    h1 { color: #8b5cf6; margin-bottom: 5px; }
-    .meta { color: #666; margin-bottom: 30px; font-size: 14px; }
-    .track { padding: 12px 0; border-bottom: 1px solid #eee; }
-    .track-title { font-weight: 600; margin-bottom: 4px; }
-    .track-meta { font-size: 12px; color: #888; }
-    .track-url { font-size: 11px; color: #666; word-break: break-all; }
-    .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #999; }
-    @media print { body { padding: 20px; } }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, sans-serif;
+      padding: 40px;
+      max-width: 800px;
+      margin: 0 auto;
+      color: #222;
+      line-height: 1.5;
+    }
+    .header { margin-bottom: 30px; }
+    .brand { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
+    .brand-fresh { color: #222; }
+    .brand-wax { color: #dc2626; }
+    .title { font-size: 22px; color: #8b5cf6; margin: 10px 0; }
+    .meta { color: #666; font-size: 13px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #8b5cf6; }
+    .tracks { }
+    .track {
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      background: #f9f9f9;
+      border-radius: 6px;
+      border-left: 3px solid #8b5cf6;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .track-num {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      background: #8b5cf6;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 28px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+    .track-title { font-weight: 600; display: inline; vertical-align: middle; }
+    .track-details { margin-top: 6px; padding-left: 38px; }
+    .track-meta { font-size: 12px; color: #666; }
+    .track-url { font-size: 11px; color: #888; word-break: break-all; margin-top: 3px; }
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 13px;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .footer-brand { font-weight: 600; }
+    .footer-fresh { color: #222; }
+    .footer-wax { color: #dc2626; }
+    .footer-url { color: #666; display: block; margin-top: 5px; }
+    @media print {
+      body { padding: 20px; }
+      .track { background: #f5f5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .track-num { background: #8b5cf6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
   </style>
 </head>
 <body>
-  <h1>${title}</h1>
-  <div class="meta">Exported from Fresh Wax • ${now.toLocaleDateString()} • ${sortedItems.length} tracks</div>
+  <div class="header">
+    <div class="brand"><span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
+    <div class="title">${title}</div>
+    <div class="meta">${now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} • ${sortedItems.length} tracks</div>
+  </div>
+  <div class="tracks">
   ${sortedItems.map((item, i) => `
     <div class="track">
-      <div class="track-title">${i + 1}. ${item.title || 'Untitled'}</div>
-      <div class="track-meta">${getPlatformName(item.platform)}${item.addedAt ? ' • Added ' + new Date(item.addedAt).toLocaleDateString() : ''}</div>
-      <div class="track-url">${item.url}</div>
+      <span class="track-num">${i + 1}</span>
+      <span class="track-title">${item.title || 'Untitled'}</span>
+      <div class="track-details">
+        <div class="track-meta">${getPlatformName(item.platform)}${item.addedAt ? ' • Added ' + new Date(item.addedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</div>
+        <div class="track-url">${item.url}</div>
+      </div>
     </div>
   `).join('')}
-  <div class="footer">Fresh Wax • freshwax.co.uk</div>
+  </div>
+  <div class="footer">
+    <div class="footer-brand"><span class="footer-fresh">Fresh</span> <span class="footer-wax">Wax</span></div>
+    <span class="footer-url">freshwax.co.uk</span>
+  </div>
 </body>
 </html>`;
 
