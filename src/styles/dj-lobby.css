@@ -941,9 +941,16 @@
   }
 
   /* Connection Indicators */
-  .connection-indicators {
+  .connection-indicators,
+  .relay-indicators {
     display: flex;
     gap: 0.6rem;
+  }
+
+  .relay-indicators {
+    margin-left: auto;
+    padding-left: 0.5rem;
+    border-left: 1px solid #333;
   }
 
   .indicator {
@@ -1413,6 +1420,70 @@
     color: #22c55e;
   }
 
+  /* Calibration Panel */
+  .calibration-panel {
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    padding: 0.75rem 1rem;
+  }
+
+  .calibration-panel.hidden {
+    display: none;
+  }
+
+  .cal-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .cal-row:last-child {
+    margin-bottom: 0;
+    margin-top: 0.75rem;
+  }
+
+  .cal-row label {
+    font-size: 0.75rem;
+    color: #888;
+    min-width: 100px;
+  }
+
+  .cal-row input[type="range"] {
+    flex: 1;
+    max-width: 200px;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    outline: none;
+    -webkit-appearance: none;
+  }
+
+  .cal-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #22c55e;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .cal-row select {
+    background: #222;
+    color: #fff;
+    border: 1px solid #444;
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+  }
+
+  .cal-row span {
+    font-size: 0.75rem;
+    color: #22c55e;
+    min-width: 50px;
+    font-family: monospace;
+  }
+
   /* 3-column layout: Left (Mute + LUFS) | Center (VU + Peak/PPM) | Right (Stereo + Mute) */
   .meters-container {
     display: grid;
@@ -1466,9 +1537,9 @@
     font-weight: 600;
   }
 
-  /* Mute Button Section */
+  /* Mute Button Section - Hidden */
   .mute-section {
-    display: flex;
+    display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -1567,87 +1638,104 @@
     font-weight: 600;
   }
 
-  /* LUFS Container Box */
+  /* LUFS Container Box - Premium Design */
   .lufs-container {
     flex: 1;
-    background: linear-gradient(180deg, #111 0%, #0a0a0a 100%);
-    border: 1px solid #1a1a1a;
-    border-radius: 6px;
-    padding: 0.5rem;
+    background: linear-gradient(180deg, #0d0d0d 0%, #080808 100%);
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 0.75rem;
     display: flex;
     flex-direction: column;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
   }
 
   .lufs-header {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
-    color: #555;
-    letter-spacing: 1.5px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.75rem;
+    color: #dc2626;
+    letter-spacing: 2px;
     text-align: center;
     text-transform: uppercase;
-    margin-bottom: 0.35rem;
-    font-weight: 600;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid #1a1a1a;
   }
 
   .lufs-content {
     display: flex;
-    gap: 0.75rem;
+    gap: 1rem;
     align-items: center;
     justify-content: center;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.5rem;
   }
 
   .lufs-main {
     text-align: center;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #1a1a1a;
   }
 
   .lufs-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1.5rem;
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 1.8rem;
     font-weight: 700;
     color: #22c55e;
-    text-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+    text-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
     line-height: 1;
+    font-variant-numeric: tabular-nums;
   }
 
   .lufs-unit {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
-    color: #666;
-    letter-spacing: 1px;
+    font-size: 0.55rem;
+    color: #555;
+    letter-spacing: 1.5px;
+    margin-top: 0.15rem;
   }
 
   .lufs-secondary {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.25rem;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.4rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #151515;
   }
 
   .lufs-item {
     display: flex;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: 0.75rem;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
+    font-size: 0.55rem;
   }
 
   .lufs-label {
-    color: #555;
+    color: #444;
+    font-weight: 500;
   }
 
   .lufs-val {
-    color: #999;
+    color: #888;
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 3.5ch;
+    text-align: right;
   }
 
   .lufs-bar-track {
-    height: 6px;
-    background: #111;
-    border-radius: 3px;
+    height: 8px;
+    background: linear-gradient(180deg, #0a0a0a 0%, #111 100%);
+    border-radius: 4px;
     position: relative;
     overflow: hidden;
-    border: 1px solid #222;
+    border: 1px solid #1a1a1a;
     margin-top: auto;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
   }
 
   .lufs-bar-fill {
@@ -1656,15 +1744,16 @@
     top: 0;
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #166534 0%, #22c55e 30%, #84cc16 50%, #eab308 70%, #f97316 85%, #ef4444 100%);
+    background: linear-gradient(90deg, #14532d 0%, #166534 20%, #22c55e 40%, #84cc16 55%, #eab308 70%, #f97316 85%, #dc2626 100%);
     transition: width 0.1s ease;
-    border-radius: 3px;
+    border-radius: 4px;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
   }
 
   .lufs-target-marker {
     position: absolute;
-    top: -1px;
-    bottom: -1px;
+    top: -2px;
+    bottom: -2px;
     width: 2px;
     background: #fff;
     box-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
@@ -1851,12 +1940,18 @@
   }
 
   .meter-value {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
     font-size: 0.55rem;
     color: #777;
     text-align: center;
-    min-width: 2.5ch;
+    width: 36px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #222;
+    border-radius: 2px;
+    padding: 1px 2px;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
   }
 
   /* PPM specific */
@@ -1887,32 +1982,38 @@
     transition: bottom 0.05s ease;
   }
 
-  /* Stereo Container - Right Side */
+  /* Stereo Container - Premium Design */
   .stereo-container {
     flex: 1;
-    background: linear-gradient(180deg, #111 0%, #0a0a0a 100%);
-    border: 1px solid #1a1a1a;
-    border-radius: 6px;
-    padding: 0.5rem;
+    background: linear-gradient(180deg, #0d0d0d 0%, #080808 100%);
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 0.75rem;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.5rem;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
   }
 
   .stereo-header {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
-    color: #555;
-    letter-spacing: 1.5px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.75rem;
+    color: #dc2626;
+    letter-spacing: 2px;
     text-align: center;
     text-transform: uppercase;
-    font-weight: 600;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid #1a1a1a;
   }
 
   .correlation-meter {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.2rem;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.4rem;
+    border-radius: 4px;
+    border: 1px solid #151515;
   }
 
   .correlation-scale {
@@ -1920,16 +2021,21 @@
     justify-content: space-between;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.5rem;
-    color: #555;
+    color: #444;
+    padding: 0 0.15rem;
   }
 
+  .correlation-scale span:first-child { color: #ef4444; }
+  .correlation-scale span:last-child { color: #22c55e; }
+
   .correlation-track {
-    height: 10px;
-    background: #111;
-    border: 1px solid #222;
-    border-radius: 5px;
+    height: 12px;
+    background: linear-gradient(180deg, #0a0a0a 0%, #111 100%);
+    border: 1px solid #1a1a1a;
+    border-radius: 6px;
     position: relative;
     overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
   }
 
   .correlation-fill {
@@ -1938,10 +2044,10 @@
     bottom: 2px;
     left: 50%;
     width: 0%;
-    background: #22c55e;
-    border-radius: 3px;
+    background: linear-gradient(90deg, #22c55e, #84cc16);
+    border-radius: 4px;
     transition: all 0.1s ease;
-    box-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
   }
 
   .correlation-center {
@@ -1949,8 +2055,8 @@
     top: 0;
     bottom: 0;
     left: 50%;
-    width: 1px;
-    background: #444;
+    width: 2px;
+    background: linear-gradient(180deg, #333 0%, #222 100%);
     transform: translateX(-50%);
   }
 
@@ -1959,11 +2065,11 @@
     top: 2px;
     bottom: 2px;
     left: 50%;
-    width: 3px;
-    background: #fff;
+    width: 4px;
+    background: linear-gradient(180deg, #fff 0%, #ccc 100%);
     border-radius: 2px;
     transform: translateX(-50%);
-    box-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
     transition: left 0.1s ease;
   }
 
@@ -1972,12 +2078,17 @@
     align-items: center;
     justify-content: center;
     flex: 1;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    border: 1px solid #151515;
+    padding: 0.25rem;
   }
 
   #stereoCanvas {
-    background: radial-gradient(circle, #0a0a0a 0%, #050505 100%);
-    border: 1px solid #222;
-    border-radius: 4px;
+    background: radial-gradient(circle at 50% 50%, #0d0d0d 0%, #050505 100%);
+    border: 1px solid #1a1a1a;
+    border-radius: 50%;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
   }
 
   /* Mobile responsive */
@@ -7783,4 +7894,520 @@
       width: 100%;
       order: 1;
     }
+  }
+
+  /* BUTT Audio Placeholder Styles - Fresh Wax Premium */
+  .butt-audio-preview {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  /* Ambient glow background */
+  .butt-audio-preview::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 300px;
+    height: 300px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(220, 38, 38, 0.12) 0%, transparent 70%);
+    animation: ambientPulse 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes ambientPulse {
+    0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.9); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  }
+
+  .butt-placeholder {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem;
+    text-align: center;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Twin turntables + mixer setup */
+  .butt-dj-setup {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  /* Individual turntable */
+  .butt-turntable {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(145deg, #1a1a1a 0%, #0a0a0a 100%);
+    border-radius: 6px;
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  /* Platter base */
+  .butt-platter {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #222 0%, #111 100%);
+    box-shadow:
+      inset 0 2px 8px rgba(0, 0, 0, 0.8),
+      0 0 0 2px #1a1a1a;
+  }
+
+  /* Vinyl record */
+  .butt-turntable .butt-vinyl-disc {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background:
+      /* Spindle hole */
+      radial-gradient(circle at 50% 50%, #080808 0%, #080808 5%, transparent 5.5%),
+      /* Red label */
+      radial-gradient(circle at 50% 50%, #dc2626 5.5%, #b91c1c 20%, transparent 20.5%),
+      /* Grooves */
+      repeating-radial-gradient(circle at 50% 50%,
+        rgba(30, 30, 30, 1) 0px,
+        rgba(18, 18, 18, 1) 1px,
+        rgba(28, 28, 28, 1) 2px
+      ),
+      linear-gradient(135deg, #1a1a1a, #0d0d0d);
+    animation: vinylSpin 1.8s linear infinite;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Right turntable spins opposite */
+  .butt-turntable.right .butt-vinyl-disc {
+    animation: vinylSpinReverse 1.8s linear infinite;
+  }
+
+  /* Label */
+  .butt-turntable .butt-vinyl-disc::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.12), transparent 50%),
+      linear-gradient(135deg, #ef4444 0%, #b91c1c 50%, #7f1d1d 100%);
+  }
+
+  /* Spindle */
+  .butt-turntable .butt-vinyl-disc::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #444 0%, #222 100%);
+  }
+
+  /* Sound waves on turntables */
+  .butt-turntable .butt-soundwaves {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70px;
+    height: 70px;
+    pointer-events: none;
+  }
+
+  .butt-turntable .butt-soundwaves .wave {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    animation: soundWaveExpand 2.5s ease-out infinite;
+  }
+
+  .butt-turntable .butt-soundwaves .wave:nth-child(1) { animation-delay: 0s; }
+  .butt-turntable .butt-soundwaves .wave:nth-child(2) { animation-delay: 0.8s; }
+  .butt-turntable .butt-soundwaves .wave:nth-child(3) { animation-delay: 1.6s; }
+
+  /* Mixer */
+  .butt-mixer {
+    width: 50px;
+    height: 100px;
+    background: linear-gradient(180deg, #1f1f1f 0%, #0f0f0f 100%);
+    border-radius: 4px;
+    padding: 6px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  /* Top knobs row */
+  .mixer-top {
+    display: flex;
+    justify-content: space-around;
+    padding: 2px 0;
+  }
+
+  .mixer-knob {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #444 0%, #222 100%);
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  .mixer-knob::after {
+    content: '';
+    position: absolute;
+    width: 1px;
+    height: 4px;
+    background: #888;
+    top: 1px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Channel faders */
+  .mixer-channels {
+    flex: 1;
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+  }
+
+  .mixer-channel {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+  }
+
+  .channel-fader {
+    width: 6px;
+    height: 40px;
+    background: linear-gradient(180deg, #333 0%, #1a1a1a 100%);
+    border-radius: 3px;
+    position: relative;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+  }
+
+  .channel-fader::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 6px;
+    background: linear-gradient(180deg, #666 0%, #333 100%);
+    border-radius: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    animation: faderMove 2s ease-in-out infinite;
+  }
+
+  .mixer-channel:nth-child(2) .channel-fader::after {
+    animation-delay: 0.5s;
+  }
+
+  @keyframes faderMove {
+    0%, 100% { top: 10px; }
+    50% { top: 24px; }
+  }
+
+  /* Channel meters */
+  .channel-meter {
+    width: 4px;
+    height: 40px;
+    background: #111;
+    border-radius: 2px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .meter-bar {
+    width: 100%;
+    background: linear-gradient(to top,
+      #4a3000 0%,
+      #7a5000 30%,
+      #b8860b 60%,
+      #daa520 80%,
+      #ffd700 100%
+    );
+    border-radius: 2px;
+    animation: meterPulse 0.6s ease-in-out infinite;
+    box-shadow: 0 0 4px rgba(218, 165, 32, 0.4);
+  }
+
+  .mixer-channel:nth-child(2) .meter-bar {
+    animation-delay: 0.15s;
+  }
+
+  @keyframes meterPulse {
+    0%, 100% { height: 65%; }
+    25% { height: 85%; }
+    50% { height: 70%; }
+    75% { height: 90%; }
+  }
+
+  /* Crossfader */
+  .mixer-crossfader {
+    height: 12px;
+    position: relative;
+    padding: 0 4px;
+  }
+
+  .crossfader-track {
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #333 0%, #222 100%);
+    border-radius: 2px;
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  .crossfader-knob {
+    width: 14px;
+    height: 8px;
+    background: linear-gradient(180deg, #666 0%, #333 100%);
+    border-radius: 2px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    animation: crossfaderSlide 3s ease-in-out infinite;
+  }
+
+  @keyframes crossfaderSlide {
+    0%, 100% { left: 30%; }
+    50% { left: 70%; }
+  }
+
+  @keyframes vinylSpin {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+
+  @keyframes vinylSpinReverse {
+    from { transform: translate(-50%, -50%) rotate(360deg); }
+    to { transform: translate(-50%, -50%) rotate(0deg); }
+  }
+
+  @keyframes soundWaveExpand {
+    0% { transform: scale(1); opacity: 0.4; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+
+  /* Audio spectrum - Waveform visualizer */
+  .butt-spectrum {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(5,5,5,0.95) 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(220, 38, 38, 0.15);
+    box-shadow:
+      inset 0 2px 10px rgba(0,0,0,0.5),
+      0 0 30px rgba(127, 29, 29, 0.4),
+      0 0 60px rgba(127, 29, 29, 0.2),
+      0 0 100px rgba(127, 29, 29, 0.1);
+  }
+
+  #buttWaveformCanvas {
+    display: block;
+    border-radius: 6px;
+  }
+
+  /* DJ info */
+  .butt-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    margin-top: 0.25rem;
+  }
+
+  .butt-dj-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .butt-headphones {
+    width: 20px;
+    height: 20px;
+    color: #dc2626;
+    flex-shrink: 0;
+  }
+
+  .butt-dj-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: #fff;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  }
+
+  .butt-stream-title {
+    font-size: 0.7rem;
+    color: #666;
+    font-weight: 500;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Fresh Wax branding */
+  .butt-branding {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    z-index: 2;
+  }
+
+  .butt-branding .fresh {
+    color: #fff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+
+  .butt-branding .wax {
+    color: #ef4444;
+    animation: waxGlow 1.5s ease-in-out infinite;
+    text-shadow: 0 0 10px #dc2626, 0 0 20px #dc2626, 0 0 30px rgba(220, 38, 38, 0.5);
+  }
+
+  @keyframes waxGlow {
+    0%, 100% {
+      text-shadow: 0 0 10px #dc2626, 0 0 20px #dc2626, 0 0 30px rgba(220, 38, 38, 0.5);
+      color: #ef4444;
+    }
+    50% {
+      text-shadow: 0 0 15px #ef4444, 0 0 30px #ef4444, 0 0 45px rgba(239, 68, 68, 0.6);
+      color: #f87171;
+    }
+  }
+
+  /* Live badge */
+  .butt-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(220, 38, 38, 0.1);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    color: #ef4444;
+    font-size: 0.55rem;
+    font-weight: 700;
+    padding: 0.25rem 0.6rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-top: 0.25rem;
+  }
+
+  .butt-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: #dc2626;
+    border-radius: 50%;
+    animation: livePulse 1.2s ease-in-out infinite;
+    box-shadow: 0 0 8px rgba(220, 38, 38, 0.8);
+  }
+
+  @keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.9); }
+  }
+
+  /* Corner accents - subtle tech feel */
+  .butt-audio-preview::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    border-top: 1px solid rgba(220, 38, 38, 0.2);
+    border-right: 1px solid rgba(220, 38, 38, 0.2);
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .butt-corner-bl {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    width: 24px;
+    height: 24px;
+    border-bottom: 1px solid rgba(220, 38, 38, 0.2);
+    border-left: 1px solid rgba(220, 38, 38, 0.2);
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* Togglable Source Indicators */
+  .indicator.source-toggle {
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+  }
+
+  .indicator.source-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .indicator.source-toggle.active {
+    background: rgba(220, 38, 38, 0.2);
+    border: 1px solid #dc2626;
+  }
+
+  .indicator.source-toggle.active .indicator-label {
+    color: #dc2626;
   }

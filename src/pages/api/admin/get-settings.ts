@@ -1,16 +1,12 @@
 // src/pages/api/admin/get-settings.ts
-// Get admin settings - uses Firebase REST API with 30-min cache
+// Get public settings (feature flags) - no auth required
 import type { APIRoute } from 'astro';
-import { requireAdminAuth } from '../../../lib/admin';
 import { getSettings } from '../../../lib/firebase-rest';
 
-export const GET: APIRoute = async ({ request, locals }) => {
-  // Require admin authentication
-  const authError = requireAdminAuth(request, locals);
-  if (authError) {
-    return authError;
-  }
+export const prerender = false;
 
+export const GET: APIRoute = async () => {
+  // No auth required - these are public feature flags
   try {
     const settingsData = await getSettings();
 

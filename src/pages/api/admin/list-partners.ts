@@ -74,7 +74,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const firstNonEmpty = (...values: any[]) => values.find(v => v && String(v).trim() !== '') || '';
 
     // Load from users collection (skip deleted users)
-    const users = await queryCollection('users', { skipCache: true });
+    const users = await queryCollection('users', { cacheTime: 300000 }); // 5 min cache
     users.forEach(user => {
       if (user.deleted === true) return;
       const roles = user.roles || {};
@@ -105,7 +105,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
     // Load from artists collection (skip deleted users)
-    const artists = await queryCollection('artists', { skipCache: true });
+    const artists = await queryCollection('artists', { cacheTime: 300000 }); // 5 min cache
     artists.forEach(artist => {
       if (artist.deleted === true) return;
       // Check if this artist record has partner roles

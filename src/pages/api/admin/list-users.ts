@@ -96,10 +96,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // OPTIMIZED: Load all collections in PARALLEL (saves 3 sequential round trips)
     const [customers, users, artists, orders] = await Promise.all([
-      queryCollection('customers', { limit: 500 }),
-      queryCollection('users', { limit: 500 }),
-      queryCollection('artists', { limit: 500 }),
-      queryCollection('orders', { limit: 1000 })
+      queryCollection('customers', { limit: 100, cacheTime: 300000 }), // 5 min cache
+      queryCollection('users', { limit: 100, cacheTime: 300000 }),
+      queryCollection('artists', { limit: 100, cacheTime: 300000 }),
+      queryCollection('orders', { limit: 200, cacheTime: 300000 })
     ]);
 
     // Process customers (skip deleted users)

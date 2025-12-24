@@ -303,7 +303,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Query all presence documents and filter client-side
     // (timestamp filters in REST API can be unreliable)
     const allDjs = await queryCollection('djLobbyPresence', {
-      skipCache: true,
+      cacheTime: 15000, // 15 second cache - presence doesn't need to be instant
       limit: 100
     });
 
@@ -505,8 +505,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const twoMinutesAgo = new Date(Date.now() - 120000);
 
     const staleDjs = await queryCollection('djLobbyPresence', {
-      filters: [{ field: 'lastSeen', op: 'LESS_THAN', value: twoMinutesAgo }],
-      skipCache: true
+      filters: [{ field: 'lastSeen', op: 'LESS_THAN', value: twoMinutesAgo }]
+      // No cache needed for cleanup - runs infrequently
     });
 
     const staleIds: string[] = staleDjs.map(dj => dj.id);

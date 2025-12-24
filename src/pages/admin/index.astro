@@ -7,6 +7,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import '../../styles/admin/index.css';
 
+// Get admin key from environment for client script
+const adminKey = import.meta.env.ADMIN_KEY || '';
+
 // Fetch all data using REST API with error handling
 let ordersData: any[] = [];
 let releasesData: any[] = [];
@@ -1121,8 +1124,9 @@ export const prerender = false;
   setInterval(updateRequestTimes, 1000); // Update every second
 </script>
 
-<script>
+<script define:vars={{ adminKey }}>
   // System Monitor - Real-time health checks
+  const ADMIN_KEY = adminKey;
   let monitorInterval = null;
   let streamDurationInterval = null;
   let currentStreamStartTime = null;
@@ -1140,7 +1144,7 @@ export const prerender = false;
 
   async function fetchHealthData() {
     try {
-      const response = await fetch('/api/admin/health-check');
+      const response = await fetch(`/api/admin/health-check?adminKey=${ADMIN_KEY}`);
       const data = await response.json();
 
       if (!data.success) return;

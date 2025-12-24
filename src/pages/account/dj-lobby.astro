@@ -348,9 +348,13 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                     <span class="indicator-dot disconnected" id="serverDot"></span>
                     <span class="indicator-label">Server</span>
                   </div>
-                  <div class="indicator" id="obsIndicator" title="OBS Stream">
+                  <div class="indicator source-toggle active" id="obsIndicator" title="OBS Stream - Click to select">
                     <span class="indicator-dot disconnected" id="obsDot"></span>
                     <span class="indicator-label">OBS</span>
+                  </div>
+                  <div class="indicator source-toggle" id="buttIndicator" title="BUTT Audio Stream - Click to select">
+                    <span class="indicator-dot disconnected" id="buttDot"></span>
+                    <span class="indicator-label">BUTT</span>
                   </div>
                 </div>
               </div>
@@ -362,6 +366,26 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                 </div>
                 <div id="obsVideoPreview" class="video-preview hidden">
                   <video id="obsVideo" playsinline autoplay muted></video>
+                </div>
+                <!-- BUTT Audio-Only Placeholder -->
+                <div id="buttAudioPreview" class="butt-audio-preview hidden">
+                  <div class="butt-placeholder">
+                    <div class="butt-branding"><span class="fresh">Fresh</span><span class="wax">Wax</span></div>
+                    <div class="butt-spectrum" id="buttSpectrum">
+                      <canvas id="buttWaveformCanvas" width="280" height="100"></canvas>
+                    </div>
+                    <div class="butt-info">
+                      <div class="butt-dj-row">
+                        <svg class="butt-headphones" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+                          <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3v5z"/>
+                          <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3v5z"/>
+                        </svg>
+                        <span class="butt-dj-name" id="buttDjName">DJ Name</span>
+                      </div>
+                      <span class="butt-stream-title" id="buttStreamTitle"></span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -401,6 +425,16 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                 <div class="stream-status" id="streamStatus">
                   <span class="status-dot offline"></span>
                   <span id="statusText">No one streaming</span>
+                </div>
+                <div class="relay-indicators hidden" id="relayIndicators">
+                  <div class="indicator" id="youtubeIndicator" title="YouTube Relay">
+                    <span class="indicator-dot disconnected" id="youtubeDot"></span>
+                    <span class="indicator-label">YT</span>
+                  </div>
+                  <div class="indicator" id="twitchIndicator" title="Twitch Relay">
+                    <span class="indicator-dot disconnected" id="twitchDot"></span>
+                    <span class="indicator-label">TW</span>
+                  </div>
                 </div>
               </div>
               <div class="player-wrapper preview-player" id="previewPlayer">
@@ -524,7 +558,29 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                 <button type="button" class="panel-btn" id="audioSourceToggle" title="Toggle Source">
                   <span class="source-label">PREVIEW</span>
                 </button>
+                <button type="button" class="panel-btn" id="calibrateBtn" title="Calibrate Meters">CAL</button>
                 <button type="button" class="panel-btn" id="panelMinimize" title="Minimize">−</button>
+              </div>
+            </div>
+            <!-- Calibration Panel (hidden by default) -->
+            <div id="calibrationPanel" class="calibration-panel hidden">
+              <div class="cal-row">
+                <label>Gain Offset (dB):</label>
+                <input type="range" id="calGainOffset" min="-12" max="12" value="0" step="0.5">
+                <span id="calGainValue">0 dB</span>
+              </div>
+              <div class="cal-row">
+                <label>Reference Level:</label>
+                <select id="calRefLevel">
+                  <option value="-23">-23 LUFS (EBU R128)</option>
+                  <option value="-24">-24 LUFS (ATSC A/85)</option>
+                  <option value="-16">-16 LUFS (Streaming)</option>
+                  <option value="-14">-14 LUFS (Podcast)</option>
+                </select>
+              </div>
+              <div class="cal-row">
+                <button type="button" class="panel-btn" id="calReset">Reset</button>
+                <button type="button" class="panel-btn" id="calClose">Close</button>
               </div>
             </div>
 
@@ -1113,6 +1169,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   let obsHlsPlayer = null;
   let currentObsPreviewUrl = null;
   let obsPreviewCheckInterval = null;
+
+  // Preview source state: 'obs' or 'butt' - for switching between OBS video and BUTT audio-only
+  let currentPreviewSource = 'obs';
+  let buttAudioSource = 'obs'; // Which audio source to use for BUTT spectrum: 'obs' or 'live'
 
   // Stream key for preview (can be set via ?testPreview=key for testing)
   const urlParams = new URLSearchParams(window.location.search);
@@ -1889,6 +1949,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Setup UI event listeners
     setupEventListeners();
 
+    // Initialize OBS/BUTT source toggle
+    initSourceToggle();
+
     // Load saved Twitch settings
     loadTwitchSettings();
 
@@ -2124,6 +2187,144 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
   }
 
+  function updateButtIndicator(isConnected) {
+    const dot = document.getElementById('buttDot');
+    if (dot) {
+      dot.className = 'indicator-dot ' + (isConnected ? 'connected' : 'disconnected');
+    }
+  }
+
+  function setPreviewSource(source) {
+    currentPreviewSource = source;
+    const obsIndicator = document.getElementById('obsIndicator');
+    const buttIndicator = document.getElementById('buttIndicator');
+    const obsVideoPreview = document.getElementById('obsVideoPreview');
+    const buttAudioPreview = document.getElementById('buttAudioPreview');
+    const obsOfflineState = document.getElementById('obsOfflineState');
+
+    if (source === 'obs') {
+      // OBS mode - show video or offline state
+      obsIndicator?.classList.add('active');
+      buttIndicator?.classList.remove('active');
+      buttAudioPreview?.classList.add('hidden');
+      // Show OBS content if streaming, otherwise show offline
+      if (currentObsPreviewUrl && obsHlsPlayer) {
+        obsVideoPreview?.classList.remove('hidden');
+        obsOfflineState?.classList.add('hidden');
+      } else {
+        obsVideoPreview?.classList.add('hidden');
+        obsOfflineState?.classList.remove('hidden');
+      }
+    } else if (source === 'butt') {
+      // BUTT mode - show audio-only placeholder
+      obsIndicator?.classList.remove('active');
+      buttIndicator?.classList.add('active');
+      obsVideoPreview?.classList.add('hidden');
+      obsOfflineState?.classList.add('hidden');
+      buttAudioPreview?.classList.remove('hidden');
+      // Update BUTT placeholder with DJ name and title
+      const buttDjName = document.getElementById('buttDjName');
+      const buttStreamTitle = document.getElementById('buttStreamTitle');
+      if (buttDjName && userInfo) {
+        buttDjName.textContent = userInfo.name || 'DJ';
+      }
+      if (buttStreamTitle) {
+        const titleInput = document.getElementById('inlineStreamTitle');
+        buttStreamTitle.textContent = titleInput?.value || '';
+      }
+    }
+    // Switch audio analyser source for meters
+    switchAudioSource(source);
+  }
+
+  function initSourceToggle() {
+    const obsIndicator = document.getElementById('obsIndicator');
+    const buttIndicator = document.getElementById('buttIndicator');
+
+    obsIndicator?.addEventListener('click', () => setPreviewSource('obs'));
+    buttIndicator?.addEventListener('click', () => setPreviewSource('butt'));
+
+    // Update BUTT placeholder when title changes
+    const titleInput = document.getElementById('inlineStreamTitle');
+    titleInput?.addEventListener('input', () => {
+      if (currentPreviewSource === 'butt') {
+        const buttStreamTitle = document.getElementById('buttStreamTitle');
+        if (buttStreamTitle) {
+          buttStreamTitle.textContent = titleInput.value || '';
+        }
+      }
+    });
+  }
+
+  function switchAudioSource(source) {
+    // Switch between OBS and BUTT audio analysers
+    // OBS uses the preview stream analysers, BUTT uses the live stream analysers
+    buttAudioSource = source;
+    console.log('[Audio] Switching BUTT placeholder audio source to:', source);
+  }
+
+  function updateYoutubeIndicator(status) {
+    const dot = document.getElementById('youtubeDot');
+    if (dot) {
+      // status: 'connected', 'connecting', 'disconnected', 'error'
+      dot.className = 'indicator-dot ' + status;
+    }
+  }
+
+  function updateTwitchIndicator(status) {
+    const dot = document.getElementById('twitchDot');
+    if (dot) {
+      dot.className = 'indicator-dot ' + status;
+    }
+  }
+
+  function showRelayIndicators(show) {
+    const relayIndicators = document.getElementById('relayIndicators');
+    if (relayIndicators) {
+      if (show) {
+        relayIndicators.classList.remove('hidden');
+      } else {
+        relayIndicators.classList.add('hidden');
+      }
+    }
+  }
+
+  // Check relay health by querying the streaming server API
+  async function checkRelayHealth() {
+    try {
+      // Check MediaMTX API for active relay paths
+      const response = await fetch('https://stream.freshwax.co.uk:9997/v3/paths/list', {
+        signal: AbortSignal.timeout(5000)
+      }).catch(() => null);
+
+      if (response && response.ok) {
+        const data = await response.json();
+        const paths = data.items || [];
+
+        // Check for YouTube relay (freshwax-main or youtube path)
+        const youtubeRelay = paths.find(p =>
+          p.name?.includes('youtube') || p.name?.includes('freshwax-main')
+        );
+        updateYoutubeIndicator(youtubeRelay?.ready ? 'connected' : 'disconnected');
+
+        // Check for Twitch relay
+        const twitchRelay = paths.find(p => p.name?.includes('twitch'));
+        updateTwitchIndicator(twitchRelay?.ready ? 'connected' : 'disconnected');
+      } else {
+        // API not available, assume relays are running if stream is live
+        updateYoutubeIndicator('connected');
+        updateTwitchIndicator('connected');
+      }
+    } catch (e) {
+      console.log('[RelayHealth] Check failed:', e.message);
+      // On error, assume connected if stream is live
+      if (currentStream) {
+        updateYoutubeIndicator('connected');
+        updateTwitchIndicator('connected');
+      }
+    }
+  }
+
   let obsPreviewFailCount = 0;
   const OBS_PREVIEW_MAX_FAILS = 30; // Very tolerant - keep trying for ~90 seconds before giving up
   let userIsStreaming = false; // Set when user clicks "I'm Ready" - never destroy while streaming
@@ -2205,12 +2406,19 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     const videoEl = document.getElementById('obsVideo');
     const offlineState = document.getElementById('obsOfflineState');
     const videoPreview = document.getElementById('obsVideoPreview');
+    const broadcastAudioPanel = document.getElementById('broadcastAudioPanel');
+    const buttAudioPreview = document.getElementById('buttAudioPreview');
 
     if (!videoEl) return;
 
-    // Show video, hide offline state
+    // Show video, hide offline state, show broadcast audio panel
+    // But only if OBS is the selected source (not BUTT mode)
     offlineState?.classList.add('hidden');
-    videoPreview?.classList.remove('hidden');
+    if (currentPreviewSource === 'obs') {
+      videoPreview?.classList.remove('hidden');
+      buttAudioPreview?.classList.add('hidden');
+    }
+    broadcastAudioPanel?.classList.remove('hidden');
 
     if (Hls.isSupported()) {
       if (obsHlsPlayer) {
@@ -2255,15 +2463,30 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   function destroyObsPreviewPlayer() {
     const offlineState = document.getElementById('obsOfflineState');
     const videoPreview = document.getElementById('obsVideoPreview');
+    const broadcastAudioPanel = document.getElementById('broadcastAudioPanel');
+    const buttAudioPreview = document.getElementById('buttAudioPreview');
 
     if (obsHlsPlayer) {
       obsHlsPlayer.destroy();
       obsHlsPlayer = null;
     }
 
-    // Show offline state, hide video
-    offlineState?.classList.remove('hidden');
+    // Hide video preview
     videoPreview?.classList.add('hidden');
+
+    // If in OBS mode, show offline state; if in BUTT mode, keep BUTT placeholder
+    if (currentPreviewSource === 'obs') {
+      offlineState?.classList.remove('hidden');
+      buttAudioPreview?.classList.add('hidden');
+    } else if (currentPreviewSource === 'butt') {
+      offlineState?.classList.add('hidden');
+      buttAudioPreview?.classList.remove('hidden');
+    }
+
+    // Only hide audio panel if not streaming/ready
+    if (!userIsStreaming) {
+      broadcastAudioPanel?.classList.add('hidden');
+    }
   }
 
   function startObsPreviewCheck() {
@@ -2832,6 +3055,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   let peakHoldTimer = null;
   let stereoCanvasCtx = null;
 
+  // Calibration settings (stored in localStorage)
+  let calGainOffset = parseFloat(localStorage.getItem('calGainOffset') || '0');
+  let calRefLevel = parseInt(localStorage.getItem('calRefLevel') || '-23');
+
   function initBroadcastMeters() {
     const canvas = document.getElementById('stereoCanvas');
     if (canvas) {
@@ -2856,6 +3083,58 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       broadcastAudioSource = broadcastAudioSource === 'preview' ? 'live' : 'preview';
       const label = document.querySelector('#audioSourceToggle .source-label');
       if (label) label.textContent = broadcastAudioSource.toUpperCase();
+    });
+
+    // Calibration button - toggle panel
+    document.getElementById('calibrateBtn')?.addEventListener('click', () => {
+      const calPanel = document.getElementById('calibrationPanel');
+      calPanel?.classList.toggle('hidden');
+    });
+
+    // Calibration gain offset slider
+    const gainSlider = document.getElementById('calGainOffset');
+    const gainValue = document.getElementById('calGainValue');
+    if (gainSlider) {
+      gainSlider.value = calGainOffset;
+      if (gainValue) gainValue.textContent = `${calGainOffset > 0 ? '+' : ''}${calGainOffset} dB`;
+      gainSlider.addEventListener('input', (e) => {
+        calGainOffset = parseFloat(e.target.value);
+        if (gainValue) gainValue.textContent = `${calGainOffset > 0 ? '+' : ''}${calGainOffset} dB`;
+        localStorage.setItem('calGainOffset', calGainOffset.toString());
+      });
+    }
+
+    // Reference level selector
+    const refSelect = document.getElementById('calRefLevel');
+    if (refSelect) {
+      refSelect.value = calRefLevel.toString();
+      refSelect.addEventListener('change', (e) => {
+        calRefLevel = parseInt(e.target.value);
+        localStorage.setItem('calRefLevel', calRefLevel.toString());
+        // Update LUFS target marker position
+        const marker = document.querySelector('.lufs-target-marker');
+        if (marker) {
+          const percent = ((calRefLevel + 59) / 59) * 100;
+          marker.style.left = `${Math.max(0, Math.min(100, percent))}%`;
+          marker.title = `${calRefLevel} LUFS Target`;
+        }
+      });
+    }
+
+    // Reset calibration
+    document.getElementById('calReset')?.addEventListener('click', () => {
+      calGainOffset = 0;
+      calRefLevel = -23;
+      localStorage.removeItem('calGainOffset');
+      localStorage.removeItem('calRefLevel');
+      if (gainSlider) gainSlider.value = 0;
+      if (gainValue) gainValue.textContent = '0 dB';
+      if (refSelect) refSelect.value = '-23';
+    });
+
+    // Close calibration panel
+    document.getElementById('calClose')?.addEventListener('click', () => {
+      document.getElementById('calibrationPanel')?.classList.add('hidden');
     });
 
     // Start animation loop
@@ -2898,9 +3177,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       const rmsL = calculateRMS(dataL);
       const rmsR = calculateRMS(dataR);
 
-      // Convert to dB
-      const dbL = 20 * Math.log10(Math.max(rmsL, 0.0001));
-      const dbR = 20 * Math.log10(Math.max(rmsR, 0.0001));
+      // Convert to dB and apply calibration offset
+      const dbL = 20 * Math.log10(Math.max(rmsL, 0.0001)) + calGainOffset;
+      const dbR = 20 * Math.log10(Math.max(rmsR, 0.0001)) + calGainOffset;
 
       // Update True Peak meters
       updateTruePeakMeter('L', dbL);
@@ -2922,6 +3201,22 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
       // Update Stereo Scope
       updateStereoScope(dataL, dataR);
+
+      // Update BUTT spectrum if visible (uses its own audio source based on OBS/BUTT toggle)
+      const buttPreview = document.getElementById('buttAudioPreview');
+      if (buttPreview && !buttPreview.classList.contains('hidden')) {
+        // Get the correct analysers based on buttAudioSource
+        const buttAnalyserL = buttAudioSource === 'obs' ? obsAnalyserL : liveAnalyserL;
+        const buttAnalyserR = buttAudioSource === 'obs' ? obsAnalyserR : liveAnalyserR;
+
+        if (buttAnalyserL && buttAnalyserR) {
+          const buttDataL = new Uint8Array(buttAnalyserL.frequencyBinCount);
+          const buttDataR = new Uint8Array(buttAnalyserR.frequencyBinCount);
+          buttAnalyserL.getByteFrequencyData(buttDataL);
+          buttAnalyserR.getByteFrequencyData(buttDataR);
+          updateButtSpectrum(buttDataL, buttDataR);
+        }
+      }
     }
 
     broadcastMeterAnimationId = requestAnimationFrame(animateBroadcastMeters);
@@ -2999,23 +3294,50 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   }
 
   function updateLUFS(rmsL, rmsR) {
-    // Simplified LUFS approximation using RMS
-    const combinedRms = Math.sqrt((rmsL * rmsL + rmsR * rmsR) / 2);
-    const momentaryLufs = 20 * Math.log10(Math.max(combinedRms, 0.0001)) - 23;
+    // Improved LUFS calculation using ITU-R BS.1770 approximation
+    // Apply K-weighting approximation: boost highs (+4dB at 2kHz), cut lows
+    // This is a simplified K-weighting factor (real K-weighting uses specific filters)
+    const kWeightingFactor = 1.2; // Approximate boost for presence frequencies
 
-    // Store history for integrated calculation
-    lufsHistory.push(momentaryLufs);
-    if (lufsHistory.length > 300) lufsHistory.shift(); // Keep ~5 seconds at 60fps
+    // Calculate mean square (not RMS) for proper loudness calculation
+    const msL = rmsL * rmsL * kWeightingFactor;
+    const msR = rmsR * rmsR * kWeightingFactor;
 
-    // Calculate short-term (last 3 seconds)
+    // Sum channels (mono compatibility) - no 0.707 reduction for stereo
+    const summedMs = msL + msR;
+
+    // Convert to LUFS: -0.691 + 10 * log10(sum) is the ITU formula
+    // Simplified: 10 * log10(ms) gives dB, then offset to LUFS scale
+    const momentaryLufs = summedMs > 0 ? 10 * Math.log10(Math.max(summedMs, 1e-10)) : -70;
+
+    // Apply calibration offset
+    const calibratedLufs = momentaryLufs + calGainOffset;
+
+    // Store mean-square values for proper integration (not LUFS values)
+    // Use power averaging, not linear averaging of dB values
+    lufsHistory.push(summedMs);
+    if (lufsHistory.length > 300) lufsHistory.shift(); // ~5 seconds at 60fps
+
+    // Calculate short-term (last 3 seconds) - power average then convert
     const shortTermSamples = lufsHistory.slice(-180);
-    const shortTermLufs = shortTermSamples.reduce((a, b) => a + b, 0) / shortTermSamples.length;
+    const shortTermMs = shortTermSamples.reduce((a, b) => a + b, 0) / shortTermSamples.length;
+    const shortTermLufs = shortTermMs > 0 ? 10 * Math.log10(Math.max(shortTermMs, 1e-10)) + calGainOffset : -70;
 
-    // Calculate integrated (full history)
-    const integratedLufs = lufsHistory.reduce((a, b) => a + b, 0) / lufsHistory.length;
+    // Calculate integrated (gated) - filter out quiet sections below -70 LUFS
+    const gateThreshold = 1e-7; // Approximately -70 LUFS
+    const gatedSamples = lufsHistory.filter(ms => ms > gateThreshold);
+    const integratedMs = gatedSamples.length > 0
+      ? gatedSamples.reduce((a, b) => a + b, 0) / gatedSamples.length
+      : 0;
+    const integratedLufs = integratedMs > 0 ? 10 * Math.log10(Math.max(integratedMs, 1e-10)) + calGainOffset : -70;
 
-    // Calculate range
-    const lufsRange = Math.max(...lufsHistory) - Math.min(...lufsHistory);
+    // Calculate loudness range (LRA) - difference between 95th and 10th percentile
+    const sortedMs = [...lufsHistory].sort((a, b) => a - b);
+    const p10 = sortedMs[Math.floor(sortedMs.length * 0.1)] || 0;
+    const p95 = sortedMs[Math.floor(sortedMs.length * 0.95)] || 0;
+    const p10Lufs = p10 > 0 ? 10 * Math.log10(Math.max(p10, 1e-10)) : -70;
+    const p95Lufs = p95 > 0 ? 10 * Math.log10(Math.max(p95, 1e-10)) : -70;
+    const lufsRange = Math.max(0, p95Lufs - p10Lufs);
 
     // Update display
     const intEl = document.getElementById('lufsIntegrated');
@@ -3024,10 +3346,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     const rangeEl = document.getElementById('lufsRange');
     const barEl = document.getElementById('lufsBarFill');
 
-    if (intEl) intEl.textContent = isFinite(integratedLufs) ? integratedLufs.toFixed(1) : '-∞';
-    if (shortEl) shortEl.textContent = isFinite(shortTermLufs) ? shortTermLufs.toFixed(1) : '-∞';
-    if (momEl) momEl.textContent = isFinite(momentaryLufs) ? momentaryLufs.toFixed(1) : '-∞';
-    if (rangeEl) rangeEl.textContent = isFinite(lufsRange) ? lufsRange.toFixed(1) + ' LU' : '0.0 LU';
+    if (intEl) intEl.textContent = integratedLufs > -60 ? integratedLufs.toFixed(1) : '-∞';
+    if (shortEl) shortEl.textContent = shortTermLufs > -60 ? shortTermLufs.toFixed(1) : '-∞';
+    if (momEl) momEl.textContent = calibratedLufs > -60 ? calibratedLufs.toFixed(1) : '-∞';
+    if (rangeEl) rangeEl.textContent = isFinite(lufsRange) && lufsRange < 40 ? lufsRange.toFixed(1) + ' LU' : '0.0 LU';
 
     // Update bar (map -60 to 0 LUFS to 0-100%)
     if (barEl) {
@@ -3035,13 +3357,14 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       barEl.style.width = `${barPercent}%`;
     }
 
-    // Color the main value based on target (-23 LUFS)
+    // Color the main value based on calibrated reference level
     if (intEl) {
-      if (integratedLufs > -14) {
+      const targetLufs = calRefLevel; // -23, -24, -16, or -14
+      if (integratedLufs > targetLufs + 6) {
         intEl.style.color = '#ef4444'; // Too loud
-      } else if (integratedLufs > -20) {
+      } else if (integratedLufs > targetLufs + 3) {
         intEl.style.color = '#eab308'; // Getting loud
-      } else if (integratedLufs > -26) {
+      } else if (integratedLufs > targetLufs - 3) {
         intEl.style.color = '#22c55e'; // Good range
       } else {
         intEl.style.color = '#666'; // Too quiet
@@ -3153,6 +3476,98 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       stereoCanvasCtx.fill();
     }
   }
+
+  // BUTT Waveform Visualizer
+  let buttWaveformCtx = null;
+  const buttWaveformSmoothed = new Array(64).fill(0);
+  const buttWaveformAttack = 0.08;
+  const buttWaveformDecay = 0.94;
+
+  function updateButtSpectrum(dataL, dataR) {
+    const canvas = document.getElementById('buttWaveformCanvas');
+    if (!canvas) return;
+
+    if (!buttWaveformCtx) {
+      buttWaveformCtx = canvas.getContext('2d');
+    }
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+
+    // Clear with fade effect
+    buttWaveformCtx.fillStyle = 'rgba(5, 5, 5, 0.3)';
+    buttWaveformCtx.fillRect(0, 0, w, h);
+
+    // Combine L+R channels
+    const combined = new Uint8Array(dataL.length);
+    for (let i = 0; i < dataL.length; i++) {
+      combined[i] = Math.max(dataL[i], dataR[i]);
+    }
+
+    const numBars = 16;
+    const gap = 4;
+    const barWidth = (w - (numBars - 1) * gap) / numBars;
+    const binCount = combined.length;
+
+    // Draw mirrored bars from center
+    for (let i = 0; i < numBars; i++) {
+      const startBin = Math.floor((i / numBars) * binCount * 0.5);
+      const endBin = Math.floor(((i + 1) / numBars) * binCount * 0.5);
+
+      let sum = 0;
+      let count = 0;
+      for (let j = startBin; j <= endBin && j < binCount; j++) {
+        sum += combined[j];
+        count++;
+      }
+      const avg = count > 0 ? sum / count : 0;
+      const normalized = Math.pow(avg / 255, 0.85) * 0.9;
+      const targetHeight = normalized * (h / 2 - 6);
+
+      // Smooth
+      const smoothIdx = i;
+      buttWaveformSmoothed[smoothIdx] += (targetHeight - buttWaveformSmoothed[smoothIdx]) * buttWaveformAttack;
+      if (buttWaveformSmoothed[smoothIdx] > targetHeight) {
+        buttWaveformSmoothed[smoothIdx] *= buttWaveformDecay;
+      }
+
+      const barHeight = buttWaveformSmoothed[smoothIdx];
+      const x = i * (barWidth + gap);
+
+      // Create gradient for each bar
+      const gradient = buttWaveformCtx.createLinearGradient(0, cy - barHeight, 0, cy + barHeight);
+      gradient.addColorStop(0, '#dc2626');
+      gradient.addColorStop(0.3, '#ea580c');
+      gradient.addColorStop(0.5, '#eab308');
+      gradient.addColorStop(0.7, '#ea580c');
+      gradient.addColorStop(1, '#dc2626');
+
+      buttWaveformCtx.fillStyle = gradient;
+
+      // Draw bar going up with rounded ends
+      buttWaveformCtx.beginPath();
+      buttWaveformCtx.roundRect(x, cy - barHeight, barWidth, barHeight, 2);
+      buttWaveformCtx.fill();
+      // Draw bar going down (mirror)
+      buttWaveformCtx.beginPath();
+      buttWaveformCtx.roundRect(x, cy, barWidth, barHeight, 2);
+      buttWaveformCtx.fill();
+    }
+
+    // Draw center line
+    buttWaveformCtx.strokeStyle = 'rgba(220, 38, 38, 0.3)';
+    buttWaveformCtx.lineWidth = 1;
+    buttWaveformCtx.beginPath();
+    buttWaveformCtx.moveTo(0, cy);
+    buttWaveformCtx.lineTo(w, cy);
+    buttWaveformCtx.stroke();
+
+    // Add glow effect
+    buttWaveformCtx.shadowColor = '#dc2626';
+    buttWaveformCtx.shadowBlur = 10;
+  }
   // =============== END BROADCAST AUDIO PANEL ===============
 
   async function loadStreamStatus() {
@@ -3195,6 +3610,13 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         statusDot?.classList.add('live');
         document.querySelector('.live-panel')?.classList.add('streaming');
         if (statusText) statusText.textContent = `${currentStream.djName} is LIVE`;
+
+        // Show relay indicators and set to connecting when stream goes live
+        showRelayIndicators(true);
+        updateYoutubeIndicator('connecting');
+        updateTwitchIndicator('connecting');
+        // Check relay health after a short delay (give relays time to start)
+        setTimeout(checkRelayHealth, 5000);
 
         offlineState?.classList.add('hidden');
         timeRemaining?.classList.remove('hidden');
@@ -3332,6 +3754,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         statusDot?.classList.remove('live');
         document.querySelector('.live-panel')?.classList.remove('streaming');
         if (statusText) statusText.textContent = 'No one streaming';
+
+        // Hide relay indicators when stream ends
+        showRelayIndicators(false);
+
         offlineState?.classList.remove('hidden');
         videoPreview?.classList.add('hidden');
         audioPreview?.classList.add('hidden');
@@ -3352,20 +3778,24 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         // Disable End Stream button - no active stream
         updateEndStreamButton(false, false);
 
-        // Show Go Live setup section when no one is streaming
-        document.getElementById('streamKeySection')?.classList.remove('hidden');
-        // Show Multi Streaming section when not live
-        document.getElementById('multiStreamSection')?.classList.remove('hidden');
-        // Hide Broadcast Audio Panel when not live
-        document.getElementById('broadcastAudioPanel')?.classList.add('hidden');
-        stopBroadcastMeters();
-        // Shrink video player back to normal size
-        document.querySelector('.preview-section')?.classList.remove('expanded');
-        // Enable Go Live button when no one is streaming
-        const goLiveBtn = document.getElementById('setReadyBtn');
-        if (goLiveBtn) {
-          goLiveBtn.disabled = false;
-          goLiveBtn.classList.remove('disabled');
+        // Only reset UI if user is NOT in "Ready" state (hasn't clicked I'm Ready)
+        // When userIsStreaming is true, keep the audio panel visible and key info hidden
+        if (!userIsStreaming) {
+          // Show Go Live setup section when no one is streaming
+          document.getElementById('streamKeySection')?.classList.remove('hidden');
+          // Show Multi Streaming section when not live
+          document.getElementById('multiStreamSection')?.classList.remove('hidden');
+          // Hide Broadcast Audio Panel when not live
+          document.getElementById('broadcastAudioPanel')?.classList.add('hidden');
+          stopBroadcastMeters();
+          // Shrink video player back to normal size
+          document.querySelector('.preview-section')?.classList.remove('expanded');
+          // Enable Go Live button when no one is streaming
+          const goLiveBtn = document.getElementById('setReadyBtn');
+          if (goLiveBtn) {
+            goLiveBtn.disabled = false;
+            goLiveBtn.classList.remove('disabled');
+          }
         }
 
         // Hide relay chat when no stream
@@ -5244,12 +5674,18 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
             obsAudioContext = result.audioContext;
             obsAnalyserL = result.analyserL;
             obsAnalyserR = result.analyserR;
+            console.log('[Audio] OBS analysers initialized');
           }
         }
         if (obsAudioContext?.state === 'suspended') {
           obsAudioContext.resume();
         }
         if (!obsMeterAnimationId) animateObsMeters();
+        // Also start broadcast meters if panel is visible
+        const panel = document.getElementById('broadcastAudioPanel');
+        if (panel && !panel.classList.contains('hidden') && !broadcastMeterAnimationId) {
+          initBroadcastMeters();
+        }
       });
       obsVid.addEventListener('pause', () => {
         if (obsMeterAnimationId) {
@@ -5270,12 +5706,18 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
             liveAudioContext = result.audioContext;
             liveAnalyserL = result.analyserL;
             liveAnalyserR = result.analyserR;
+            console.log('[Audio] Live analysers initialized');
           }
         }
         if (liveAudioContext?.state === 'suspended') {
           liveAudioContext.resume();
         }
         if (!liveMeterAnimationId) animateLiveMeters();
+        // Also start broadcast meters if panel is visible and source is live
+        const panel = document.getElementById('broadcastAudioPanel');
+        if (panel && !panel.classList.contains('hidden') && !broadcastMeterAnimationId) {
+          initBroadcastMeters();
+        }
       });
       liveVid.addEventListener('pause', () => {
         if (liveMeterAnimationId) {
