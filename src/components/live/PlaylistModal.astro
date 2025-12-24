@@ -153,6 +153,14 @@
               <div class="my-playlist-title-group">
                 <h3>My Playlist</h3>
                 <span id="myPlaylistCount" class="my-playlist-count-box">0</span>
+              </div>
+              <div class="my-playlist-actions">
+                <select id="playlistSortSelect" class="playlist-sort-select">
+                  <option value="recent">Recently Added</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="alpha-az">A-Z</option>
+                  <option value="alpha-za">Z-A</option>
+                </select>
                 <div class="playlist-layout-toggle">
                   <button id="layoutSingleBtn" class="layout-btn active" title="Single column">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -170,14 +178,6 @@
                     </svg>
                   </button>
                 </div>
-              </div>
-              <div class="my-playlist-actions">
-                <select id="playlistSortSelect" class="playlist-sort-select">
-                  <option value="recent">Recently Added</option>
-                  <option value="oldest">Oldest First</option>
-                  <option value="alpha-az">A-Z</option>
-                  <option value="alpha-za">Z-A</option>
-                </select>
                 <button id="exportPlaylistBtn" class="export-playlist-btn" title="Export playlist">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -1197,34 +1197,33 @@
   }
 
   .playlist-sort-select {
-    background: #1f1f1f;
-    border: 1px solid #666;
+    background: #1f1f1f !important;
+    border: 1px solid #666 !important;
     border-radius: 6px;
     padding: 0.25rem 0.5rem;
     font-size: 0.75rem;
-    color: #bbb;
+    color: #bbb !important;
     cursor: pointer;
     outline: none;
   }
 
   .playlist-sort-select:hover {
-    border-color: #777;
-    color: #ddd;
+    border-color: #777 !important;
+    color: #ddd !important;
   }
 
   .playlist-sort-select:focus {
-    border-color: #888;
+    border-color: #888 !important;
   }
 
   .playlist-sort-select option {
-    background: #1f1f1f;
-    color: #bbb;
+    background: #1f1f1f !important;
+    color: #bbb !important;
   }
 
   .playlist-layout-toggle {
     display: flex;
     gap: 0.25rem;
-    margin-left: 0.5rem;
   }
 
   .layout-btn {
