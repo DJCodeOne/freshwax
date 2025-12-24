@@ -144,8 +144,8 @@ const GTM_ID = ''; // Optional: Google Tag Manager ID
     <!-- Bing Webmaster Verification -->
     <meta name="msvalidate.01" content="C8E438BABBBCC1E7056C65D9DB7F4DD3" />
 
-    <!-- Mobile optimization -->
-    <meta name="theme-color" content="#000000" />
+    <!-- Mobile optimization & PWA -->
+    <meta name="theme-color" content="#8b5cf6" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="format-detection" content="telephone=no" />
@@ -309,5 +309,16 @@ const GTM_ID = ''; // Optional: Google Tag Manager ID
       }
     </script>
     -->
+
+    <!-- Service Worker Registration for PWA -->
+    <script is:inline>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((reg) => console.log('[PWA] Service worker registered'))
+            .catch((err) => console.log('[PWA] Service worker failed:', err));
+        });
+      }
+    </script>
   </body>
 </html>
