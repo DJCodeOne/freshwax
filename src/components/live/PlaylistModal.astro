@@ -1478,33 +1478,35 @@
   }
 
   .my-playlist-grid.grid-mode .personal-playlist-item {
-    flex-direction: column;
     padding: 0.5rem;
   }
 
   .my-playlist-grid.grid-mode .personal-item-thumb {
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    margin-bottom: 0.5rem;
-    background: #0a0a0a;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .my-playlist-grid.grid-mode .personal-item-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    width: 50px;
+    height: 38px;
+    flex-shrink: 0;
   }
 
   .my-playlist-grid.grid-mode .personal-item-info {
-    width: 100%;
-    margin-bottom: 0.5rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .my-playlist-grid.grid-mode .personal-item-title {
+    font-size: 0.75rem;
+  }
+
+  .my-playlist-grid.grid-mode .personal-item-meta {
+    font-size: 0.65rem;
   }
 
   .my-playlist-grid.grid-mode .personal-item-actions {
-    width: 100%;
-    justify-content: flex-start;
+    gap: 0.25rem;
+  }
+
+  .my-playlist-grid.grid-mode .personal-item-actions button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
   }
 
   .my-playlist-grid::-webkit-scrollbar {
