@@ -219,7 +219,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         <div class="stream-info-bar" id="streamInfoBar">
           <div class="stream-info-left">
             <div class="stream-meta">
-              <button id="playlistBtn" class="playlist-btn">
+              <button id="playlistBtn" class="playlist-btn hidden">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
                   <path d="M3 6h10v2H3V6zm0 4h10v2H3v-2zm0 4h7v2H3v-2zm13-4v8l6-4-6-4z"/>
                 </svg>
@@ -2605,9 +2605,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           djNameField.value = displayName;
         }
         
-        // Show chat form
+        // Show chat form and playlist button for logged-in users
         document.getElementById('loginPrompt')?.classList.add('hidden');
         document.getElementById('chatForm')?.classList.remove('hidden');
+        document.getElementById('playlistBtn')?.classList.remove('hidden');
         
         // Show DJ-only elements for approved DJs and admins
         if ((userInfo.isDj && userInfo.isApproved) || userInfo.isAdmin) {
