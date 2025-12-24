@@ -224,14 +224,14 @@
                         <input type="radio" name="exportFormat" value="csv" />
                         <span class="format-label">
                           <span class="format-name">CSV</span>
-                          <span class="format-desc">Spreadsheet compatible</span>
+                          <span class="format-desc">Spreadsheet</span>
                         </span>
                       </label>
                       <label class="format-option">
-                        <input type="radio" name="exportFormat" value="json" />
+                        <input type="radio" name="exportFormat" value="pdf" />
                         <span class="format-label">
-                          <span class="format-name">JSON</span>
-                          <span class="format-desc">Data format</span>
+                          <span class="format-name">PDF</span>
+                          <span class="format-desc">Printable document</span>
                         </span>
                       </label>
                     </div>
@@ -2580,21 +2580,57 @@
           mimeType = 'text/csv;charset=utf-8';
           extension = 'csv';
 
-        } else if (format === 'json') {
-          const exportData = {
-            title: title,
-            exportedAt: now.toISOString(),
-            totalTracks: sortedItems.length,
-            tracks: sortedItems.map(item => ({
-              title: item.title || 'Untitled',
-              platform: item.platform,
-              url: item.url,
-              addedAt: item.addedAt || null
-            }))
-          };
-          content = JSON.stringify(exportData, null, 2);
-          mimeType = 'application/json;charset=utf-8';
-          extension = 'json';
+        } else if (format === 'pdf') {
+          // Generate HTML for PDF printing
+          const pdfHTML = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${title}</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+    h1 { color: #8b5cf6; margin-bottom: 5px; }
+    .meta { color: #666; margin-bottom: 30px; font-size: 14px; }
+    .track { padding: 12px 0; border-bottom: 1px solid #eee; }
+    .track-title { font-weight: 600; margin-bottom: 4px; }
+    .track-meta { font-size: 12px; color: #888; }
+    .track-url { font-size: 11px; color: #666; word-break: break-all; }
+    .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #999; }
+    @media print { body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <h1>${title}</h1>
+  <div class="meta">Exported from Fresh Wax • ${now.toLocaleDateString()} • ${sortedItems.length} tracks</div>
+  ${sortedItems.map((item, i) => `
+    <div class="track">
+      <div class="track-title">${i + 1}. ${item.title || 'Untitled'}</div>
+      <div class="track-meta">${getPlatformName(item.platform)}${item.addedAt ? ' • Added ' + new Date(item.addedAt).toLocaleDateString() : ''}</div>
+      <div class="track-url">${item.url}</div>
+    </div>
+  `).join('')}
+  <div class="footer">Fresh Wax • freshwax.co.uk</div>
+</body>
+</html>`;
+
+          // Open in new window for printing/saving as PDF
+          const printWindow = window.open('', '_blank');
+          if (printWindow) {
+            printWindow.document.write(pdfHTML);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => printWindow.print(), 500);
+          }
+
+          // Close modal and show success
+          closeExportModalFn();
+          const successDivPdf = document.getElementById('playlistSuccess');
+          if (successDivPdf) {
+            successDivPdf.textContent = `Opened ${cachedPersonalItems.length} tracks for PDF export - use Print > Save as PDF`;
+            successDivPdf.classList.remove('hidden');
+            setTimeout(() => successDivPdf.classList.add('hidden'), 4000);
+          }
+          return; // Early return since we handled this case differently
         }
 
         // Create and download file
