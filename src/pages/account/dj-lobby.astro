@@ -789,11 +789,24 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         <div class="stream-key-section" id="streamKeySection">
           <div id="keyAvailable" class="key-available">
             <div class="go-live-grid-compact">
-              <div class="setup-row">
+              <!-- Software Toggle: OBS vs BUTT -->
+              <div class="software-toggle-row">
+                <button type="button" class="software-btn active" id="obsSettingsBtn" title="OBS / RTMP Settings">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                  OBS
+                </button>
+                <button type="button" class="software-btn" id="buttSettingsBtn" title="BUTT Audio Settings">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3v5z"/><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3v5z"/></svg>
+                  BUTT
+                </button>
+              </div>
+
+              <!-- OBS Settings (default) -->
+              <div class="setup-row obs-settings" id="obsSettings">
                 <div class="cred-box-compact">
                   <label>Server</label>
                   <div class="cred-value-compact">
-                    <code id="rtmpUrl" class="url-scrolling"><span class="url-text">rtmp://rtmp.freshwax.co.uk/live</span></code>
+                    <code id="rtmpUrl" class="url-scrolling"><span class="url-text">rtmp://stream.freshwax.co.uk/live</span></code>
                     <button class="copy-btn-sm" data-copy="rtmpUrl">Copy</button>
                   </div>
                 </div>
@@ -802,6 +815,38 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                   <div class="cred-value-compact">
                     <code id="myStreamKey" class="key-loading"><span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span></code>
                     <button class="copy-btn-sm" data-copy="myStreamKey">Copy</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- BUTT Settings (hidden by default) -->
+              <div class="setup-row butt-settings hidden" id="buttSettings">
+                <div class="cred-box-compact">
+                  <label>Server</label>
+                  <div class="cred-value-compact">
+                    <code id="icecastServer" class="url-scrolling"><span class="url-text">stream.freshwax.co.uk</span></code>
+                    <button class="copy-btn-sm" data-copy="icecastServer">Copy</button>
+                  </div>
+                </div>
+                <div class="cred-box-compact">
+                  <label>Port</label>
+                  <div class="cred-value-compact">
+                    <code id="icecastPort">8000</code>
+                    <button class="copy-btn-sm" data-copy="icecastPort">Copy</button>
+                  </div>
+                </div>
+                <div class="cred-box-compact">
+                  <label>Password</label>
+                  <div class="cred-value-compact">
+                    <code id="icecastPassword">freshwax-source-2024</code>
+                    <button class="copy-btn-sm" data-copy="icecastPassword">Copy</button>
+                  </div>
+                </div>
+                <div class="cred-box-compact">
+                  <label>Mount</label>
+                  <div class="cred-value-compact">
+                    <code id="icecastMount">/live</code>
+                    <button class="copy-btn-sm" data-copy="icecastMount">Copy</button>
                   </div>
                 </div>
               </div>
@@ -5148,6 +5193,21 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         section.classList.toggle('expanded');
         content.classList.toggle('hidden');
       }
+    });
+
+    // OBS/BUTT Settings Toggle
+    document.getElementById('obsSettingsBtn')?.addEventListener('click', () => {
+      document.getElementById('obsSettingsBtn')?.classList.add('active');
+      document.getElementById('buttSettingsBtn')?.classList.remove('active');
+      document.getElementById('obsSettings')?.classList.remove('hidden');
+      document.getElementById('buttSettings')?.classList.add('hidden');
+    });
+
+    document.getElementById('buttSettingsBtn')?.addEventListener('click', () => {
+      document.getElementById('buttSettingsBtn')?.classList.add('active');
+      document.getElementById('obsSettingsBtn')?.classList.remove('active');
+      document.getElementById('buttSettings')?.classList.remove('hidden');
+      document.getElementById('obsSettings')?.classList.add('hidden');
     });
 
     // Share Stream Modal

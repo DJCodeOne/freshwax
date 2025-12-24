@@ -2980,6 +2980,55 @@
     flex: 1;
   }
 
+  /* Software Toggle Row (OBS / BUTT) */
+  .software-toggle-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .software-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #888;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .software-btn:hover {
+    background: #252525;
+    border-color: #444;
+    color: #ccc;
+  }
+
+  .software-btn.active {
+    background: linear-gradient(135deg, #1a1a1a 0%, #222 100%);
+    border-color: #dc2626;
+    color: #fff;
+  }
+
+  .software-btn.active svg {
+    color: #dc2626;
+  }
+
+  .software-btn svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  /* BUTT Settings row - 4 columns */
+  .butt-settings {
+    grid-template-columns: 1.5fr 0.7fr 1.2fr 0.8fr;
+  }
+
   .key-available {
     flex: 1;
     display: flex;
