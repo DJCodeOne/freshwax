@@ -1945,7 +1945,58 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       console.error('[GIF] Send error:', e);
     }
   };
-  
+
+  // Send chat message function
+  async function sendChatMessage() {
+    const chatInput = document.getElementById('chatInput');
+    const message = chatInput?.value.trim();
+
+    if (!message || !currentUser) return;
+
+    const streamId = currentStream?.slotId || currentStream?.id || window.currentStreamId;
+    if (!streamId) {
+      console.error('[Chat] No stream ID');
+      return;
+    }
+
+    // Clear input immediately for better UX
+    chatInput.value = '';
+
+    try {
+      const response = await fetch('/api/livestream/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          streamId: streamId,
+          userId: currentUser.uid,
+          userName: userInfo?.displayName || currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          message: message,
+          type: 'text'
+        })
+      });
+
+      if (!response.ok) {
+        console.error('[Chat] Send failed:', response.status);
+      }
+    } catch (e) {
+      console.error('[Chat] Send error:', e);
+    }
+  }
+
+  // Send button click handler
+  document.getElementById('sendBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    sendChatMessage();
+  });
+
+  // Enter key to send
+  document.getElementById('chatInput')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      sendChatMessage();
+    }
+  });
+
   // Listeners dropdown
   const listenersToggle = document.getElementById('listenersToggle');
   const listenersDropdown = document.getElementById('listenersDropdown');
