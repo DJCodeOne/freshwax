@@ -2598,18 +2598,17 @@
       line-height: 1.5;
     }
     .header { margin-bottom: 30px; }
-    .brand { font-size: 28px; font-weight: 700; margin-bottom: 5px; }
+    .brand { font-size: 28px; font-weight: 700; margin-bottom: 10px; }
     .brand-fresh { color: #222; }
     .brand-wax { color: #dc2626; }
-    .title { font-size: 22px; color: #8b5cf6; margin: 10px 0; }
-    .meta { color: #666; font-size: 13px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #8b5cf6; }
+    .meta { color: #666; font-size: 13px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #dc2626; }
     .tracks { }
     .track {
       padding: 10px 12px;
       margin-bottom: 8px;
       background: #f9f9f9;
       border-radius: 6px;
-      border-left: 3px solid #8b5cf6;
+      border-left: 3px solid #dc2626;
       page-break-inside: avoid;
       break-inside: avoid;
     }
@@ -2617,7 +2616,7 @@
       display: inline-block;
       width: 28px;
       height: 28px;
-      background: #8b5cf6;
+      background: #dc2626;
       color: white;
       border-radius: 50%;
       text-align: center;
@@ -2647,14 +2646,13 @@
     @media print {
       body { padding: 20px; }
       .track { background: #f5f5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .track-num { background: #8b5cf6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .track-num { background: #dc2626 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
   </style>
 </head>
 <body>
   <div class="header">
     <div class="brand"><span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
-    <div class="title">${title}</div>
     <div class="meta">${now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} • ${sortedItems.length} tracks</div>
   </div>
   <div class="tracks">
