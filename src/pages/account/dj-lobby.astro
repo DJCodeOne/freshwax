@@ -434,10 +434,11 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
             </div>
           </div>
 
-          <!-- Audio Controls Bar (Below Players) - LED indicators only -->
+          <!-- Audio Controls Bar (Below Players) - LED indicators with audio toggle -->
           <div class="audio-controls-bar">
             <!-- OBS Preview Meter -->
             <div class="control-group obs-controls" id="obsControls">
+              <div class="meter-label">PREVIEW</div>
               <div class="led-meter" id="obsStereoMeter">
                 <div class="led-row left" id="obsLeftLeds">
                   <span class="led led-red"></span>
@@ -471,8 +472,16 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
               </div>
             </div>
 
+            <!-- Audio Toggle Button -->
+            <button type="button" class="audio-toggle-btn" id="audioToggleBtn" title="Switch Audio Source">
+              <span class="toggle-arrow left-arrow active">◀</span>
+              <span class="toggle-label">AUDIO</span>
+              <span class="toggle-arrow right-arrow">▶</span>
+            </button>
+
             <!-- Live Stream Meter -->
             <div class="control-group live-controls" id="liveControls">
+              <div class="meter-label">LIVE OUTPUT</div>
               <div class="led-meter" id="liveStereoMeter">
                 <div class="led-row left" id="liveLeftLeds">
                   <span class="led led-red"></span>
@@ -5278,6 +5287,48 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       });
     }
     // =============== END STEREO AUDIO METERS ===============
+
+    // =============== AUDIO SOURCE TOGGLE ===============
+    let activeAudioSource = 'preview'; // 'preview' or 'live'
+
+    function updateAudioSourceUI() {
+      const leftArrow = document.querySelector('.toggle-arrow.left-arrow');
+      const rightArrow = document.querySelector('.toggle-arrow.right-arrow');
+      const obsControls = document.getElementById('obsControls');
+      const liveControls = document.getElementById('liveControls');
+      const obsVid = document.getElementById('obsVideo');
+      const liveVid = document.getElementById('hlsVideo');
+
+      if (activeAudioSource === 'preview') {
+        // Preview active
+        leftArrow?.classList.add('active');
+        rightArrow?.classList.remove('active');
+        obsControls?.classList.remove('dimmed');
+        liveControls?.classList.add('dimmed');
+        // Unmute preview, mute live
+        if (obsVid) obsVid.muted = false;
+        if (liveVid) liveVid.muted = true;
+      } else {
+        // Live active
+        leftArrow?.classList.remove('active');
+        rightArrow?.classList.add('active');
+        obsControls?.classList.add('dimmed');
+        liveControls?.classList.remove('dimmed');
+        // Mute preview, unmute live
+        if (obsVid) obsVid.muted = true;
+        if (liveVid) liveVid.muted = false;
+      }
+    }
+
+    // Toggle button event
+    document.getElementById('audioToggleBtn')?.addEventListener('click', () => {
+      activeAudioSource = activeAudioSource === 'preview' ? 'live' : 'preview';
+      updateAudioSourceUI();
+    });
+
+    // Initialize audio source state
+    updateAudioSourceUI();
+    // =============== END AUDIO SOURCE TOGGLE ===============
 
     // Ready button - Indicates DJ is ready and shows preview (does NOT go live yet)
     document.getElementById('setReadyBtn')?.addEventListener('click', async () => {

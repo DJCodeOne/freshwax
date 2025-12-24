@@ -1158,23 +1158,96 @@
   /* Audio Controls Bar */
   .audio-controls-bar {
     display: flex;
-    gap: 1rem;
+    gap: 0.5rem;
     padding: 0.75rem 1rem;
     background: linear-gradient(180deg, #1a1a1a 0%, #111 100%);
     border-radius: 8px;
     margin-top: 0.5rem;
     border: 1px solid #333;
+    align-items: center;
+    justify-content: center;
   }
 
   .control-group {
     flex: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     background: #0a0a0a;
     border-radius: 6px;
     border: 1px solid #222;
+  }
+
+  .meter-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #666;
+    text-align: center;
+  }
+
+  /* Audio Toggle Button */
+  .audio-toggle-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+    border: 2px solid #333;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 60px;
+  }
+
+  .audio-toggle-btn:hover {
+    border-color: #dc2626;
+    background: linear-gradient(135deg, #222 0%, #111 100%);
+  }
+
+  .toggle-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+  }
+
+  .toggle-arrow {
+    font-size: 0.75rem;
+    color: #444;
+    transition: all 0.2s ease;
+  }
+
+  .toggle-arrow.active {
+    color: #22c55e;
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+  }
+
+  .audio-toggle-btn:hover .toggle-arrow {
+    color: #666;
+  }
+
+  .audio-toggle-btn:hover .toggle-arrow.active {
+    color: #22c55e;
+  }
+
+  /* Dimmed state for non-active audio source */
+  .control-group.dimmed {
+    opacity: 0.5;
+  }
+
+  .control-group.dimmed .led-meter {
+    opacity: 0.6;
+  }
+
+  .control-group.dimmed .meter-label {
+    color: #444;
   }
 
   .control-label {

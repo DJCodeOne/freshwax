@@ -76,10 +76,6 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
             <span class="stat-value" id="viewerCount">0</span>
             <span class="stat-label">Views</span>
           </div>
-          <div class="stat duration-stat">
-            <span class="stat-value" id="streamDuration">0:00</span>
-            <span class="stat-label">Duration</span>
-          </div>
           <a href="/account/dj-lobby" id="djLobbyBtn" class="dj-lobby-btn hidden">
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
               <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
@@ -237,10 +233,9 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
         </div>
         <div class="now-playing-right">
           <div class="np-duration-box">
-            <span class="np-duration-label">DURATION</span>
-            <span class="np-duration-value" id="npDuration">0:00</span>
+            <span class="np-duration-value" id="npDuration">--:--</span>
+            <span class="np-duration-label">LEFT</span>
           </div>
-          <span class="np-genre" id="streamGenre">Jungle / D&B</span>
         </div>
       </div>
     </div>
@@ -1225,9 +1220,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       formatted = formatDuration(elapsed);
     }
 
-    const durationEl = document.getElementById('streamDuration');
     const npDurationEl = document.getElementById('npDuration');
-    if (durationEl) durationEl.textContent = formatted;
     if (npDurationEl) npDurationEl.textContent = formatted;
   }
 
@@ -1294,10 +1287,8 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     trackTotalDuration = null;
     isCountdownMode = false;
     lastPlaylistTrackId = null;
-    const durationEl = document.getElementById('streamDuration');
     const npDurationEl = document.getElementById('npDuration');
-    if (durationEl) durationEl.textContent = '0:00';
-    if (npDurationEl) npDurationEl.textContent = '0:00';
+    if (npDurationEl) npDurationEl.textContent = '--:--';
   }
 
   async function loadStreamStatus() {
@@ -2077,15 +2068,36 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     }
   });
   
-  initAuth();
-  loadStreamStatus();
-  setInterval(loadStreamStatus, 30000);
-  setInterval(sendListenerHeartbeat, 30000); // Send heartbeat every 30 seconds
-  setInterval(() => {
-    if (!listenersDropdown?.classList.contains('hidden')) {
-      loadListeners();
-    }
-  }, 10000); // Refresh listeners every 10 seconds when dropdown is open
+  // Track initialization to prevent duplicate handlers
+  let intervalsSetup = false;
+
+  function setupIntervals() {
+    if (intervalsSetup) return;
+    intervalsSetup = true;
+    setInterval(loadStreamStatus, 30000);
+    setInterval(sendListenerHeartbeat, 30000);
+    setInterval(() => {
+      if (!listenersDropdown?.classList.contains('hidden')) {
+        loadListeners();
+      }
+    }, 10000);
+  }
+
+  function initPage() {
+    console.log('[Fullpage] Initializing page...');
+    initAuth();
+    loadStreamStatus();
+    setupIntervals();
+  }
+
+  // Initialize on first load
+  initPage();
+
+  // Re-initialize on View Transitions navigation
+  document.addEventListener('astro:page-load', () => {
+    console.log('[Fullpage] astro:page-load - re-initializing');
+    initPage();
+  });
 
   // Listen for playlist updates to show current track
   let isPlaylistActive = false;

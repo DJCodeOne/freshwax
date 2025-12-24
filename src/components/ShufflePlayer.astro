@@ -210,7 +210,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
   .status-dot {
     width: 8px;
     height: 8px;
-    background: #6b7280;
+    background: #dc2626;
     border-radius: 50%;
     transition: all 0.3s;
   }
@@ -222,7 +222,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
   }
 
   .shuffle-status.paused .status-dot {
-    background: #eab308;
+    background: #dc2626;
   }
 
   .status-text {
@@ -566,34 +566,10 @@ const validTracks = tracks.filter(t => t.previewUrl);
     display: none !important;
   }
 
-  /* Responsive */
-  @media (max-width: 640px) {
-    .shuffle-player {
-      padding: 1rem;
-    }
-
-    .shuffle-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.75rem;
-    }
-
-    .volume-control {
+  /* Responsive - Hide on mobile */
+  @media (max-width: 768px) {
+    .shuffle-player-wrapper {
       display: none;
-    }
-
-    .shuffle-now-playing {
-      flex-direction: column;
-      text-align: center;
-    }
-
-    .shuffle-artwork {
-      width: 80px;
-      height: 80px;
-    }
-
-    .queue-list {
-      flex-wrap: nowrap;
     }
   }
 </style>

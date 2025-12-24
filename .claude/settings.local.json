@@ -78,7 +78,8 @@
       "Bash(wc:*)",
       "Bash(while read doc)",
       "Bash(do curl -s -X DELETE \"https://firestore.googleapis.com/v1/$doc?key=AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g\")",
-      "Bash(node clear-chat.js:*)"
+      "Bash(node clear-chat.js:*)",
+      "Bash(git diff:*)"
     ]
   }
 }
