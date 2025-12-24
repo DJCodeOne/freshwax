@@ -387,6 +387,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                     </div>
                   </div>
                 </div>
+                <!-- Hidden audio element for Icecast/BUTT stream -->
+                <audio id="icecastAudio" crossorigin="anonymous" preload="none" style="display:none;"></audio>
               </div>
             </div>
 
@@ -554,6 +556,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           <div class="broadcast-audio-panel hidden" id="broadcastAudioPanel">
             <div class="panel-header">
               <span class="panel-title">BROADCAST AUDIO</span>
+              <span class="audio-source-indicator" id="audioSourceIndicator">
+                <span class="source-dot"></span>
+                <span class="source-name">OBS</span>
+              </span>
               <div class="panel-controls">
                 <button type="button" class="panel-btn" id="audioSourceToggle" title="Toggle Source">
                   <span class="source-label">PREVIEW</span>
@@ -1997,6 +2003,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Initialize OBS/BUTT source toggle
     initSourceToggle();
 
+    // Start Icecast connection status check
+    startIcecastCheck();
+
     // Load saved Twitch settings
     loadTwitchSettings();
 
@@ -2227,15 +2236,91 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
   function updateObsIndicator(isConnected) {
     const dot = document.getElementById('obsDot');
+    const box = document.getElementById('obsIndicator');
     if (dot) {
       dot.className = 'indicator-dot ' + (isConnected ? 'connected' : 'disconnected');
+    }
+    if (box) {
+      box.classList.toggle('connected', isConnected);
+      box.classList.toggle('disconnected', !isConnected);
     }
   }
 
   function updateButtIndicator(isConnected) {
     const dot = document.getElementById('buttDot');
+    const box = document.getElementById('buttIndicator');
     if (dot) {
       dot.className = 'indicator-dot ' + (isConnected ? 'connected' : 'disconnected');
+    }
+    if (box) {
+      box.classList.toggle('connected', isConnected);
+      box.classList.toggle('disconnected', !isConnected);
+    }
+  }
+
+  // Check Icecast connection status using audio element probe
+  let icecastCheckInterval = null;
+  let icecastStreamConnected = false;
+  let icecastProbeAudio = null;
+
+  async function checkIcecastStatus() {
+    // Use fetch to check Icecast status JSON - faster than audio probe
+    try {
+      const response = await fetch('https://icecast.freshwax.co.uk/status-json.xsl', {
+        cache: 'no-store'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        // Check if there's an active source (stream)
+        const hasSource = data.icestats?.source != null;
+        if (hasSource && !icecastStreamConnected) {
+          icecastStreamConnected = true;
+          updateButtIndicator(true);
+          console.log('[Icecast] Stream detected');
+        } else if (!hasSource && icecastStreamConnected) {
+          icecastStreamConnected = false;
+          updateButtIndicator(false);
+          console.log('[Icecast] No stream');
+        }
+
+        // Update BUTT stream title from Icecast metadata
+        if (hasSource && currentPreviewSource === 'butt') {
+          const icecastTitle = data.icestats.source.title;
+          const buttStreamTitle = document.getElementById('buttStreamTitle');
+          if (buttStreamTitle && icecastTitle) {
+            buttStreamTitle.textContent = icecastTitle;
+          }
+        }
+      } else {
+        if (icecastStreamConnected) {
+          icecastStreamConnected = false;
+          updateButtIndicator(false);
+        }
+      }
+    } catch (err) {
+      if (icecastStreamConnected) {
+        icecastStreamConnected = false;
+        updateButtIndicator(false);
+        console.log('[Icecast] Check failed:', err.message);
+      }
+    }
+  }
+
+  function startIcecastCheck() {
+    checkIcecastStatus();
+    if (!icecastCheckInterval) {
+      icecastCheckInterval = setInterval(checkIcecastStatus, 3000);
+    }
+  }
+
+  function stopIcecastCheck() {
+    if (icecastCheckInterval) {
+      clearInterval(icecastCheckInterval);
+      icecastCheckInterval = null;
+    }
+    if (icecastProbeAudio) {
+      icecastProbeAudio.src = '';
+      icecastProbeAudio = null;
     }
   }
 
@@ -2277,6 +2362,13 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         const titleInput = document.getElementById('inlineStreamTitle');
         buttStreamTitle.textContent = titleInput?.value || '';
       }
+      // Show broadcast audio panel for BUTT mode
+      const broadcastAudioPanel = document.getElementById('broadcastAudioPanel');
+      broadcastAudioPanel?.classList.remove('hidden');
+      // Start broadcast meters if not already running
+      if (!broadcastMeterAnimationId) {
+        initBroadcastMeters();
+      }
     }
     // Switch audio analyser source for meters
     switchAudioSource(source);
@@ -2299,13 +2391,177 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         }
       }
     });
+
+    // Setup Icecast audio event listeners for connection status
+    const icecastAudio = document.getElementById('icecastAudio');
+    if (icecastAudio) {
+      icecastAudio.addEventListener('error', () => {
+        console.log('[Icecast] Audio error - stream disconnected');
+        icecastConnected = false;
+        updateButtIndicator(false);
+      });
+      icecastAudio.addEventListener('ended', () => {
+        console.log('[Icecast] Audio ended - stream stopped');
+        icecastConnected = false;
+        updateButtIndicator(false);
+      });
+      icecastAudio.addEventListener('stalled', () => {
+        console.log('[Icecast] Audio stalled - connection issues');
+      });
+    }
   }
 
   function switchAudioSource(source) {
-    // Switch between OBS and BUTT audio analysers
-    // OBS uses the preview stream analysers, BUTT uses the live stream analysers
+    // Switch between OBS and BUTT audio sources for broadcast panel
     buttAudioSource = source;
-    console.log('[Audio] Switching BUTT placeholder audio source to:', source);
+    console.log('[Audio] Switching audio source to:', source);
+
+    const icecastAudio = document.getElementById('icecastAudio');
+
+    if (source === 'butt') {
+      // Switch to BUTT/Icecast audio
+      // Connect to Icecast stream if not already connected
+      if (icecastAudio && !icecastConnected) {
+        console.log('[Audio] Connecting to Icecast stream...');
+        icecastAudio.src = 'https://icecast.freshwax.co.uk/live';
+        icecastAudio.load();
+        icecastAudio.play().then(() => {
+          console.log('[Audio] Icecast stream playing');
+          icecastConnected = true;
+          updateButtIndicator(true);
+          // Setup analysers if not already done
+          if (!icecastAudioContext) {
+            setupIcecastAnalysers(icecastAudio);
+          }
+          // Start LED meter animation if not already running
+          if (window.startPreviewMeterAnimation) window.startPreviewMeterAnimation();
+        }).catch(err => {
+          console.log('[Audio] Icecast play error (normal if no stream):', err.message);
+          // Try again with muted (for autoplay policy)
+          icecastAudio.muted = true;
+          icecastAudio.play().then(() => {
+            icecastAudio.muted = false;
+            icecastConnected = true;
+            updateButtIndicator(true);
+            if (!icecastAudioContext) {
+              setupIcecastAnalysers(icecastAudio);
+            }
+            // Start LED meter animation if not already running
+            if (window.startPreviewMeterAnimation) window.startPreviewMeterAnimation();
+          }).catch(() => {
+            updateButtIndicator(false);
+          });
+        });
+      } else if (icecastAudio && icecastConnected) {
+        // Resume if already connected
+        icecastAudio.play().catch(() => {});
+      }
+    } else {
+      // Switch to OBS audio - pause Icecast stream
+      if (icecastAudio && icecastConnected) {
+        icecastAudio.pause();
+        console.log('[Audio] Paused Icecast stream');
+      }
+    }
+
+    // Update source toggle button label to reflect current mode
+    const label = document.querySelector('#audioSourceToggle .source-label');
+    if (label) {
+      if (source === 'butt') {
+        label.textContent = 'BUTT';
+      } else {
+        label.textContent = broadcastAudioSource.toUpperCase();
+      }
+    }
+
+    // Update audio source indicator in broadcast panel
+    updateAudioSourceIndicator(source);
+  }
+
+  function updateAudioSourceIndicator(source) {
+    const indicator = document.getElementById('audioSourceIndicator');
+    const sourceName = indicator?.querySelector('.source-name');
+    if (indicator && sourceName) {
+      if (source === 'butt') {
+        indicator.classList.add('butt');
+        sourceName.textContent = 'BUTT';
+      } else {
+        indicator.classList.remove('butt');
+        sourceName.textContent = 'OBS';
+      }
+    }
+  }
+
+  // K-weighted analysers for accurate LUFS measurement
+  let icecastKWeightedAnalyserL = null;
+  let icecastKWeightedAnalyserR = null;
+
+  function setupIcecastAnalysers(audioElement) {
+    try {
+      icecastAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = icecastAudioContext.createMediaElementSource(audioElement);
+      const splitter = icecastAudioContext.createChannelSplitter(2);
+
+      // Regular analysers for visualization (unfiltered)
+      icecastAnalyserL = icecastAudioContext.createAnalyser();
+      icecastAnalyserR = icecastAudioContext.createAnalyser();
+      icecastAnalyserL.fftSize = 256;
+      icecastAnalyserR.fftSize = 256;
+      icecastAnalyserL.smoothingTimeConstant = 0.5;
+      icecastAnalyserR.smoothingTimeConstant = 0.5;
+
+      // K-weighted analysers for accurate LUFS (ITU-R BS.1770-4)
+      icecastKWeightedAnalyserL = icecastAudioContext.createAnalyser();
+      icecastKWeightedAnalyserR = icecastAudioContext.createAnalyser();
+      icecastKWeightedAnalyserL.fftSize = 2048; // Larger for better low-freq resolution
+      icecastKWeightedAnalyserR.fftSize = 2048;
+      icecastKWeightedAnalyserL.smoothingTimeConstant = 0;
+      icecastKWeightedAnalyserR.smoothingTimeConstant = 0;
+
+      // K-weighting Stage 1: High shelf filter (+4dB at high frequencies)
+      // f0 = 1681.974450955533 Hz, Q = 0.7071752369554196, gain = +4dB
+      const highShelfL = icecastAudioContext.createBiquadFilter();
+      const highShelfR = icecastAudioContext.createBiquadFilter();
+      highShelfL.type = 'highshelf';
+      highShelfR.type = 'highshelf';
+      highShelfL.frequency.value = 1681.97;
+      highShelfR.frequency.value = 1681.97;
+      highShelfL.gain.value = 4;
+      highShelfR.gain.value = 4;
+
+      // K-weighting Stage 2: High-pass filter (remove low frequencies)
+      // f0 = 38.13547087602444 Hz, Q = 0.5003270373238773
+      const highPassL = icecastAudioContext.createBiquadFilter();
+      const highPassR = icecastAudioContext.createBiquadFilter();
+      highPassL.type = 'highpass';
+      highPassR.type = 'highpass';
+      highPassL.frequency.value = 38.14;
+      highPassR.frequency.value = 38.14;
+      highPassL.Q.value = 0.5;
+      highPassR.Q.value = 0.5;
+
+      // Connect audio chain
+      source.connect(splitter);
+
+      // Unfiltered path for visualization
+      splitter.connect(icecastAnalyserL, 0);
+      splitter.connect(icecastAnalyserR, 1);
+
+      // K-weighted path for LUFS: splitter -> highshelf -> highpass -> analyser
+      splitter.connect(highShelfL, 0);
+      splitter.connect(highShelfR, 1);
+      highShelfL.connect(highPassL);
+      highShelfR.connect(highPassR);
+      highPassL.connect(icecastKWeightedAnalyserL);
+      highPassR.connect(icecastKWeightedAnalyserR);
+
+      // Output to speakers (unfiltered)
+      source.connect(icecastAudioContext.destination);
+
+      console.log('[Audio] Icecast analysers initialized with K-weighting');
+    } catch (e) {
+      console.error('[Audio] Icecast analyser setup error:', e);
+    }
   }
 
   function updateYoutubeIndicator(status) {
@@ -3091,6 +3347,11 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   let obsAnalyserR = null;
   let liveAnalyserL = null;
   let liveAnalyserR = null;
+  // Icecast/BUTT audio analysers
+  let icecastAudioContext = null;
+  let icecastAnalyserL = null;
+  let icecastAnalyserR = null;
+  let icecastConnected = false;
 
   // =============== BROADCAST AUDIO PANEL ===============
   let broadcastMeterAnimationId = null;
@@ -3123,8 +3384,12 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       }
     });
 
-    // Source toggle button
+    // Source toggle button - only works in OBS mode, switches between preview and live
     document.getElementById('audioSourceToggle')?.addEventListener('click', () => {
+      // If BUTT mode is active, don't toggle - there's only one Icecast source
+      if (currentPreviewSource === 'butt') {
+        return;
+      }
       broadcastAudioSource = broadcastAudioSource === 'preview' ? 'live' : 'preview';
       const label = document.querySelector('#audioSourceToggle .source-label');
       if (label) label.textContent = broadcastAudioSource.toUpperCase();
@@ -3204,12 +3469,28 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       peakHoldTimer = null;
     }
     lufsHistory = [];
+    lufsBlockHistory = [];
+    lastLufsBlockTime = 0;
   }
 
   function animateBroadcastMeters() {
-    // Get the active analyser based on source selection
-    const analyserL = broadcastAudioSource === 'preview' ? obsAnalyserL : liveAnalyserL;
-    const analyserR = broadcastAudioSource === 'preview' ? obsAnalyserR : liveAnalyserR;
+    // Get the active analyser based on OBS/BUTT tab and preview/live toggle
+    let analyserL, analyserR;
+    let kWeightedL = null, kWeightedR = null;
+
+    if (currentPreviewSource === 'butt' && icecastAnalyserL && icecastAnalyserR) {
+      // BUTT tab selected - use Icecast audio
+      analyserL = icecastAnalyserL;
+      analyserR = icecastAnalyserR;
+      // Use K-weighted analysers for accurate LUFS when available
+      kWeightedL = icecastKWeightedAnalyserL;
+      kWeightedR = icecastKWeightedAnalyserR;
+    } else {
+      // OBS tab selected - use preview or live based on toggle
+      analyserL = broadcastAudioSource === 'preview' ? obsAnalyserL : liveAnalyserL;
+      analyserR = broadcastAudioSource === 'preview' ? obsAnalyserR : liveAnalyserR;
+      // OBS doesn't have K-weighted analysers yet - will use RMS fallback
+    }
 
     if (analyserL && analyserR) {
       // Get frequency data
@@ -3238,8 +3519,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       updateVUMeter('L', rmsL);
       updateVUMeter('R', rmsR);
 
-      // Update LUFS (simplified - using RMS as approximation)
-      updateLUFS(rmsL, rmsR);
+      // Update LUFS with K-weighted analysers for accurate measurement
+      updateLUFS(rmsL, rmsR, kWeightedL, kWeightedR);
 
       // Update Correlation meter
       updateCorrelation(dataL, dataR);
@@ -3247,18 +3528,24 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       // Update Stereo Scope
       updateStereoScope(dataL, dataR);
 
-      // Update BUTT spectrum if visible (uses its own audio source based on OBS/BUTT toggle)
+      // Update BUTT spectrum if visible - use Icecast audio when available
       const buttPreview = document.getElementById('buttAudioPreview');
       if (buttPreview && !buttPreview.classList.contains('hidden')) {
-        // Get the correct analysers based on buttAudioSource
-        const buttAnalyserL = buttAudioSource === 'obs' ? obsAnalyserL : liveAnalyserL;
-        const buttAnalyserR = buttAudioSource === 'obs' ? obsAnalyserR : liveAnalyserR;
+        // Use Icecast analysers when BUTT mode and connected, otherwise fallback to OBS
+        let buttSpectrumL, buttSpectrumR;
+        if (icecastAnalyserL && icecastAnalyserR && icecastConnected) {
+          buttSpectrumL = icecastAnalyserL;
+          buttSpectrumR = icecastAnalyserR;
+        } else {
+          buttSpectrumL = obsAnalyserL;
+          buttSpectrumR = obsAnalyserR;
+        }
 
-        if (buttAnalyserL && buttAnalyserR) {
-          const buttDataL = new Uint8Array(buttAnalyserL.frequencyBinCount);
-          const buttDataR = new Uint8Array(buttAnalyserR.frequencyBinCount);
-          buttAnalyserL.getByteFrequencyData(buttDataL);
-          buttAnalyserR.getByteFrequencyData(buttDataR);
+        if (buttSpectrumL && buttSpectrumR) {
+          const buttDataL = new Uint8Array(buttSpectrumL.frequencyBinCount);
+          const buttDataR = new Uint8Array(buttSpectrumR.frequencyBinCount);
+          buttSpectrumL.getByteFrequencyData(buttDataL);
+          buttSpectrumR.getByteFrequencyData(buttDataR);
           updateButtSpectrum(buttDataL, buttDataR);
         }
       }
@@ -3338,51 +3625,107 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     needleEl.style.transform = `translateX(-50%) rotate(${angle}deg)`;
   }
 
-  function updateLUFS(rmsL, rmsR) {
-    // Improved LUFS calculation using ITU-R BS.1770 approximation
-    // Apply K-weighting approximation: boost highs (+4dB at 2kHz), cut lows
-    // This is a simplified K-weighting factor (real K-weighting uses specific filters)
-    const kWeightingFactor = 1.2; // Approximate boost for presence frequencies
+  // LUFS calculation using K-weighted analysers (ITU-R BS.1770-4 compliant)
+  // Store block-based measurements for proper time windowing
+  let lufsBlockHistory = []; // Array of {ms: meanSquare, timestamp: ms}
+  const LUFS_BLOCK_SIZE = 100; // ms per block (10 blocks per second)
+  let lastLufsBlockTime = 0;
 
-    // Calculate mean square (not RMS) for proper loudness calculation
-    const msL = rmsL * rmsL * kWeightingFactor;
-    const msR = rmsR * rmsR * kWeightingFactor;
+  function updateLUFS(rmsL, rmsR, kWeightedAnalyserL = null, kWeightedAnalyserR = null) {
+    const now = performance.now();
 
-    // Sum channels (mono compatibility) - no 0.707 reduction for stereo
+    // Use K-weighted analysers if available, otherwise fall back to RMS approximation
+    let msL, msR;
+
+    if (kWeightedAnalyserL && kWeightedAnalyserR) {
+      // Get time-domain data from K-weighted analysers
+      const bufferLength = kWeightedAnalyserL.fftSize;
+      const dataL = new Float32Array(bufferLength);
+      const dataR = new Float32Array(bufferLength);
+      kWeightedAnalyserL.getFloatTimeDomainData(dataL);
+      kWeightedAnalyserR.getFloatTimeDomainData(dataR);
+
+      // Calculate mean-square from K-weighted samples
+      let sumL = 0, sumR = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        sumL += dataL[i] * dataL[i];
+        sumR += dataR[i] * dataR[i];
+      }
+      msL = sumL / bufferLength;
+      msR = sumR / bufferLength;
+    } else {
+      // Fallback: approximate K-weighting with simple multiplier
+      const kWeightingFactor = 1.2;
+      msL = rmsL * rmsL * kWeightingFactor;
+      msR = rmsR * rmsR * kWeightingFactor;
+    }
+
+    // ITU-R BS.1770-4: Sum channels without attenuation for stereo
     const summedMs = msL + msR;
 
-    // Convert to LUFS: -0.691 + 10 * log10(sum) is the ITU formula
-    // Simplified: 10 * log10(ms) gives dB, then offset to LUFS scale
-    const momentaryLufs = summedMs > 0 ? 10 * Math.log10(Math.max(summedMs, 1e-10)) : -70;
+    // Convert to LUFS: -0.691 + 10 * log10(sum)
+    // The -0.691 offset aligns with ITU reference
+    const momentaryLufs = summedMs > 1e-10 ? -0.691 + 10 * Math.log10(summedMs) : -70;
+    const calibratedMomentary = momentaryLufs + calGainOffset;
 
-    // Apply calibration offset
-    const calibratedLufs = momentaryLufs + calGainOffset;
+    // Store block measurements every LUFS_BLOCK_SIZE ms
+    if (now - lastLufsBlockTime >= LUFS_BLOCK_SIZE) {
+      lufsBlockHistory.push({ ms: summedMs, time: now });
+      lastLufsBlockTime = now;
 
-    // Store mean-square values for proper integration (not LUFS values)
-    // Use power averaging, not linear averaging of dB values
-    lufsHistory.push(summedMs);
-    if (lufsHistory.length > 300) lufsHistory.shift(); // ~5 seconds at 60fps
+      // Keep 30 seconds of history for integrated measurement
+      const thirtySecondsAgo = now - 30000;
+      lufsBlockHistory = lufsBlockHistory.filter(b => b.time > thirtySecondsAgo);
+    }
 
-    // Calculate short-term (last 3 seconds) - power average then convert
-    const shortTermSamples = lufsHistory.slice(-180);
-    const shortTermMs = shortTermSamples.reduce((a, b) => a + b, 0) / shortTermSamples.length;
-    const shortTermLufs = shortTermMs > 0 ? 10 * Math.log10(Math.max(shortTermMs, 1e-10)) + calGainOffset : -70;
+    // Momentary loudness: 400ms sliding window
+    const fourHundredMsAgo = now - 400;
+    const momentaryBlocks = lufsBlockHistory.filter(b => b.time > fourHundredMsAgo);
+    const momentaryMs = momentaryBlocks.length > 0
+      ? momentaryBlocks.reduce((sum, b) => sum + b.ms, 0) / momentaryBlocks.length
+      : summedMs;
+    const momentaryLufsDisplay = momentaryMs > 1e-10 ? -0.691 + 10 * Math.log10(momentaryMs) + calGainOffset : -70;
 
-    // Calculate integrated (gated) - filter out quiet sections below -70 LUFS
-    const gateThreshold = 1e-7; // Approximately -70 LUFS
-    const gatedSamples = lufsHistory.filter(ms => ms > gateThreshold);
-    const integratedMs = gatedSamples.length > 0
-      ? gatedSamples.reduce((a, b) => a + b, 0) / gatedSamples.length
-      : 0;
-    const integratedLufs = integratedMs > 0 ? 10 * Math.log10(Math.max(integratedMs, 1e-10)) + calGainOffset : -70;
+    // Short-term loudness: 3 second sliding window
+    const threeSecondsAgo = now - 3000;
+    const shortTermBlocks = lufsBlockHistory.filter(b => b.time > threeSecondsAgo);
+    const shortTermMs = shortTermBlocks.length > 0
+      ? shortTermBlocks.reduce((sum, b) => sum + b.ms, 0) / shortTermBlocks.length
+      : summedMs;
+    const shortTermLufs = shortTermMs > 1e-10 ? -0.691 + 10 * Math.log10(shortTermMs) + calGainOffset : -70;
 
-    // Calculate loudness range (LRA) - difference between 95th and 10th percentile
-    const sortedMs = [...lufsHistory].sort((a, b) => a - b);
-    const p10 = sortedMs[Math.floor(sortedMs.length * 0.1)] || 0;
-    const p95 = sortedMs[Math.floor(sortedMs.length * 0.95)] || 0;
-    const p10Lufs = p10 > 0 ? 10 * Math.log10(Math.max(p10, 1e-10)) : -70;
-    const p95Lufs = p95 > 0 ? 10 * Math.log10(Math.max(p95, 1e-10)) : -70;
-    const lufsRange = Math.max(0, p95Lufs - p10Lufs);
+    // Integrated loudness with ITU-R BS.1770-4 gating
+    // Stage 1: Absolute gate at -70 LUFS
+    const absoluteGate = Math.pow(10, (-70 + 0.691) / 10);
+    const stage1Blocks = lufsBlockHistory.filter(b => b.ms > absoluteGate);
+
+    // Stage 2: Relative gate at -10 LU below ungated average
+    let integratedLufs = -70;
+    if (stage1Blocks.length > 0) {
+      const ungatedMs = stage1Blocks.reduce((sum, b) => sum + b.ms, 0) / stage1Blocks.length;
+      const ungatedLufs = -0.691 + 10 * Math.log10(ungatedMs);
+      const relativeGate = Math.pow(10, (ungatedLufs - 10 + 0.691) / 10);
+
+      const stage2Blocks = stage1Blocks.filter(b => b.ms > relativeGate);
+      if (stage2Blocks.length > 0) {
+        const gatedMs = stage2Blocks.reduce((sum, b) => sum + b.ms, 0) / stage2Blocks.length;
+        integratedLufs = -0.691 + 10 * Math.log10(gatedMs) + calGainOffset;
+      }
+    }
+
+    // Loudness Range (LRA) - difference between 95th and 10th percentile of short-term
+    // Using simplified calculation from block history
+    const sortedMs = lufsBlockHistory.map(b => b.ms).sort((a, b) => a - b);
+    let lufsRange = 0;
+    if (sortedMs.length >= 10) {
+      const p10 = sortedMs[Math.floor(sortedMs.length * 0.1)];
+      const p95 = sortedMs[Math.floor(sortedMs.length * 0.95)];
+      if (p10 > 1e-10 && p95 > 1e-10) {
+        const p10Lufs = -0.691 + 10 * Math.log10(p10);
+        const p95Lufs = -0.691 + 10 * Math.log10(p95);
+        lufsRange = Math.max(0, p95Lufs - p10Lufs);
+      }
+    }
 
     // Update display
     const intEl = document.getElementById('lufsIntegrated');
@@ -3393,7 +3736,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
     if (intEl) intEl.textContent = integratedLufs > -60 ? integratedLufs.toFixed(1) : '-∞';
     if (shortEl) shortEl.textContent = shortTermLufs > -60 ? shortTermLufs.toFixed(1) : '-∞';
-    if (momEl) momEl.textContent = calibratedLufs > -60 ? calibratedLufs.toFixed(1) : '-∞';
+    if (momEl) momEl.textContent = momentaryLufsDisplay > -60 ? momentaryLufsDisplay.toFixed(1) : '-∞';
     if (rangeEl) rangeEl.textContent = isFinite(lufsRange) && lufsRange < 40 ? lufsRange.toFixed(1) + ' LU' : '0.0 LU';
 
     // Update bar (map -60 to 0 LUFS to 0-100%)
@@ -3402,17 +3745,18 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       barEl.style.width = `${barPercent}%`;
     }
 
-    // Color the main value based on calibrated reference level
+    // Color the main value based on DJ streaming safe zone (-13 to -8 LUFS)
     if (intEl) {
-      const targetLufs = calRefLevel; // -23, -24, -16, or -14
-      if (integratedLufs > targetLufs + 6) {
-        intEl.style.color = '#ef4444'; // Too loud
-      } else if (integratedLufs > targetLufs + 3) {
-        intEl.style.color = '#eab308'; // Getting loud
-      } else if (integratedLufs > targetLufs - 3) {
-        intEl.style.color = '#22c55e'; // Good range
+      intEl.classList.remove('lufs-safe', 'lufs-warning', 'lufs-danger', 'lufs-quiet');
+
+      if (integratedLufs > -5) {
+        intEl.classList.add('lufs-danger'); // Way too loud - red
+      } else if (integratedLufs > -8) {
+        intEl.classList.add('lufs-warning'); // Getting too loud - yellow
+      } else if (integratedLufs > -13) {
+        intEl.classList.add('lufs-safe'); // Safe zone -13 to -8 - green
       } else {
-        intEl.style.color = '#666'; // Too quiet
+        intEl.classList.add('lufs-quiet'); // Too quiet - grey
       }
     }
   }
@@ -3825,7 +4169,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
         // Only reset UI if user is NOT in "Ready" state (hasn't clicked I'm Ready)
         // When userIsStreaming is true, keep the audio panel visible and key info hidden
-        if (!userIsStreaming) {
+        // Also keep BUTT preview visible if BUTT tab is selected and Icecast is connected
+        const keepButtMode = currentPreviewSource === 'butt' && icecastStreamConnected;
+        if (!userIsStreaming && !keepButtMode) {
           // Show Go Live setup section when no one is streaming
           document.getElementById('streamKeySection')?.classList.remove('hidden');
           // Show Multi Streaming section when not live
@@ -3841,6 +4187,11 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
             goLiveBtn.disabled = false;
             goLiveBtn.classList.remove('disabled');
           }
+        } else if (keepButtMode) {
+          // Keep BUTT preview visible
+          document.getElementById('buttAudioPreview')?.classList.remove('hidden');
+          document.getElementById('obsOfflineState')?.classList.add('hidden');
+          document.getElementById('broadcastAudioPanel')?.classList.remove('hidden');
         }
 
         // Hide relay chat when no stream
@@ -5658,9 +6009,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         sum += dataArray[i] * dataArray[i];
       }
       const rms = Math.sqrt(sum / dataArray.length);
-      // Calibrated for -6dB peak to light ~8-10 of 12 LEDs
-      // At -6dB, RMS is roughly 128, so divide by 160 to get ~80% level
-      let level = Math.min(100, (rms / 160) * 100);
+      // Calibrated for -6dB peak to light ~6-8 of 12 LEDs (less sensitive)
+      // Higher divisor = less sensitive. 220 means louder audio needed to light LEDs
+      let level = Math.min(100, (rms / 220) * 100);
 
       // Get previous level for smoothing
       const meterId = ledRowEl.id;
@@ -5708,10 +6059,29 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       return level;
     }
 
+    // Start preview LED meter animation (called when OBS or BUTT connects)
+    // Exposed globally so it can be called from Icecast connection code
+    window.startPreviewMeterAnimation = function() {
+      if (!obsMeterAnimationId) {
+        animateObsMeters();
+        console.log('[Audio] Preview LED meter animation started');
+      }
+    };
+
     function animateObsMeters() {
-      if (obsAnalyserL && obsAnalyserR) {
-        updateLedMeter(obsAnalyserL, document.getElementById('obsLeftLeds'), true);
-        updateLedMeter(obsAnalyserR, document.getElementById('obsRightLeds'), false);
+      // Use Icecast analysers when BUTT mode is active, otherwise OBS
+      let analyserL, analyserR;
+      if (currentPreviewSource === 'butt' && icecastAnalyserL && icecastAnalyserR) {
+        analyserL = icecastAnalyserL;
+        analyserR = icecastAnalyserR;
+      } else if (obsAnalyserL && obsAnalyserR) {
+        analyserL = obsAnalyserL;
+        analyserR = obsAnalyserR;
+      }
+
+      if (analyserL && analyserR) {
+        updateLedMeter(analyserL, document.getElementById('obsLeftLeds'), true);
+        updateLedMeter(analyserR, document.getElementById('obsRightLeds'), false);
       }
       obsMeterAnimationId = requestAnimationFrame(animateObsMeters);
     }
