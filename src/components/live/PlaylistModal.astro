@@ -153,12 +153,6 @@
               <div class="my-playlist-title-group">
                 <h3>My Playlist</h3>
                 <span id="myPlaylistCount" class="my-playlist-count-box">0</span>
-                <select id="playlistSortSelect" class="playlist-sort-select">
-                  <option value="recent">Recently Added</option>
-                  <option value="oldest">Oldest First</option>
-                  <option value="alpha-az">A-Z</option>
-                  <option value="alpha-za">Z-A</option>
-                </select>
                 <div class="playlist-layout-toggle">
                   <button id="layoutSingleBtn" class="layout-btn active" title="Single column">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -178,6 +172,12 @@
                 </div>
               </div>
               <div class="my-playlist-actions">
+                <select id="playlistSortSelect" class="playlist-sort-select">
+                  <option value="recent">Recently Added</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="alpha-az">A-Z</option>
+                  <option value="alpha-za">Z-A</option>
+                </select>
                 <button id="exportPlaylistBtn" class="export-playlist-btn" title="Export playlist">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -1205,7 +1205,6 @@
     color: #bbb;
     cursor: pointer;
     outline: none;
-    margin-left: auto;
   }
 
   .playlist-sort-select:hover {
