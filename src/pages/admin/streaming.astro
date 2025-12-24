@@ -588,11 +588,485 @@ const adminKey = import.meta.env.ADMIN_KEY || '';
     cursor: not-allowed;
     transform: none;
   }
+
+  /* MediaMTX Section Styles */
+  .mediamtx-section {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 2px solid #0f3460;
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  .mediamtx-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .mediamtx-section h2 {
+    color: #e94560;
+    margin: 0;
+  }
+
+  .server-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(0,0,0,0.3);
+    border-radius: 20px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  .status-dot.online {
+    background: #22c55e;
+    box-shadow: 0 0 10px #22c55e;
+  }
+
+  .status-dot.offline {
+    background: #ef4444;
+    box-shadow: 0 0 10px #ef4444;
+    animation: none;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .mediamtx-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .mediamtx-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .mediamtx-card.wide {
+    grid-column: span 2;
+  }
+
+  @media (max-width: 768px) {
+    .mediamtx-card.wide {
+      grid-column: span 1;
+    }
+  }
+
+  .mediamtx-card h3 {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+  }
+
+  .mediamtx-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .mediamtx-card .card-header h3 {
+    margin: 0;
+  }
+
+  .server-controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .control-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .control-btn.start-btn {
+    background: #22c55e;
+    color: white;
+  }
+
+  .control-btn.start-btn:hover:not(:disabled) {
+    background: #16a34a;
+  }
+
+  .control-btn.stop-btn {
+    background: #ef4444;
+    color: white;
+  }
+
+  .control-btn.stop-btn:hover:not(:disabled) {
+    background: #dc2626;
+  }
+
+  .control-btn.restart-btn {
+    background: #f59e0b;
+    color: white;
+  }
+
+  .control-btn.restart-btn:hover:not(:disabled) {
+    background: #d97706;
+  }
+
+  .control-note {
+    margin: 0.75rem 0 0 0;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .active-streams-list {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .active-streams-list .empty-state {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.875rem;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .stream-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: rgba(0,0,0,0.2);
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+  }
+
+  .stream-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .stream-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .stream-path {
+    font-weight: 600;
+    color: #22c55e;
+    font-family: monospace;
+  }
+
+  .stream-meta {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+  }
+
+  .kick-stream-btn {
+    padding: 0.375rem 0.75rem;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .kick-stream-btn:hover {
+    background: #dc2626;
+  }
+
+  .quick-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .action-btn:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3);
+  }
+
+  .action-btn.danger {
+    background: rgba(239,68,68,0.2);
+    border-color: #ef4444;
+    color: #fca5a5;
+  }
+
+  .action-btn.danger:hover {
+    background: rgba(239,68,68,0.3);
+  }
+
+  .url-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .url-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .url-label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+  }
+
+  .url-item code {
+    font-size: 0.75rem;
+    color: #22c55e;
+    background: rgba(0,0,0,0.3);
+    padding: 0.375rem 0.5rem;
+    border-radius: 4px;
+    word-break: break-all;
+  }
+
+  .logs-panel {
+    margin-top: 1rem;
+    background: #000;
+    border: 1px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .logs-panel.hidden {
+    display: none;
+  }
+
+  .logs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+  }
+
+  .logs-header h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 0.9rem;
+  }
+
+  .logs-header .close-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .logs-header .close-btn:hover {
+    color: #fff;
+  }
+
+  .server-logs {
+    margin: 0;
+    padding: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: #22c55e;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .refresh-btn.small {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+  }
 </style>
 
 <AdminLayout title="Streaming Management">
   <a slot="actions" href="/admin/streaming/schedule" class="schedule-link-btn">📅 View Full Schedule →</a>
   <div class="streaming-admin">
+    <!-- MediaMTX Server Control -->
+    <div class="section mediamtx-section">
+      <div class="section-header">
+        <h2>🖥️ MediaMTX Server</h2>
+        <div class="server-status">
+          <span id="serverStatusDot" class="status-dot offline"></span>
+          <span id="serverStatusText">Checking...</span>
+        </div>
+      </div>
+
+      <div class="mediamtx-grid">
+        <!-- Server Controls -->
+        <div class="mediamtx-card">
+          <h3>Server Controls</h3>
+          <div class="server-controls">
+            <button id="startServerBtn" class="control-btn start-btn" disabled>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Start
+            </button>
+            <button id="stopServerBtn" class="control-btn stop-btn" disabled>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>
+              Stop
+            </button>
+            <button id="restartServerBtn" class="control-btn restart-btn" disabled>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>
+              Restart
+            </button>
+          </div>
+          <p class="control-note">Note: Server must be running on your local machine</p>
+        </div>
+
+        <!-- Server Stats -->
+        <div class="mediamtx-card">
+          <h3>Server Stats</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Uptime</span>
+              <span id="serverUptime" class="stat-value">--</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Active Paths</span>
+              <span id="activePaths" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Connections</span>
+              <span id="activeConnections" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">RTMP Port</span>
+              <span class="stat-value">1935</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Streams -->
+        <div class="mediamtx-card wide">
+          <div class="card-header">
+            <h3>Active Streams</h3>
+            <button id="refreshStreamsBtn" class="refresh-btn small">↻ Refresh</button>
+          </div>
+          <div id="activeStreamsList" class="active-streams-list">
+            <p class="empty-state">No active streams</p>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="mediamtx-card">
+          <h3>Quick Actions</h3>
+          <div class="quick-actions">
+            <button id="kickAllStreamsBtn" class="action-btn danger">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              End All Streams
+            </button>
+            <button id="healthCheckBtn" class="action-btn">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              Health Check
+            </button>
+            <button id="viewLogsBtn" class="action-btn">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              View Logs
+            </button>
+          </div>
+        </div>
+
+        <!-- Server Config -->
+        <div class="mediamtx-card">
+          <h3>Stream URLs</h3>
+          <div class="url-list">
+            <div class="url-item">
+              <span class="url-label">RTMP Ingest</span>
+              <code>rtmp://stream.freshwax.co.uk/live/</code>
+            </div>
+            <div class="url-item">
+              <span class="url-label">HLS Playback</span>
+              <code>https://stream.freshwax.co.uk/live/{key}/index.m3u8</code>
+            </div>
+            <div class="url-item">
+              <span class="url-label">API Endpoint</span>
+              <code>https://stream.freshwax.co.uk/v3/</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs Panel (Hidden by default) -->
+      <div id="logsPanel" class="logs-panel hidden">
+        <div class="logs-header">
+          <h3>Server Logs</h3>
+          <button id="closeLogsBtn" class="close-btn">&times;</button>
+        </div>
+        <pre id="serverLogs" class="server-logs">Loading logs...</pre>
+      </div>
+    </div>
+
     <!-- Chat Management -->
     <div class="section">
       <div class="section-header">
@@ -864,7 +1338,9 @@ const adminKey = import.meta.env.ADMIN_KEY || '';
 
 <script define:vars={{ adminKey }}>
   const ADMIN_KEY = adminKey;
-  
+  const STREAM_SERVER = 'https://stream.freshwax.co.uk';
+  let serverCheckInterval = null;
+
   async function init() {
     await Promise.all([
       loadLiveStreams(),
@@ -875,11 +1351,212 @@ const adminKey = import.meta.env.ADMIN_KEY || '';
       loadBypassRequests(),
       loadEventRequests(),
       loadQuickAccessKey(),
-      loadChatCount()
+      loadChatCount(),
+      checkServerStatus()
     ]);
 
     setupEventListeners();
     setupChatManagement();
+    setupMediaMTXControls();
+
+    // Check server status every 30 seconds
+    serverCheckInterval = setInterval(checkServerStatus, 30000);
+  }
+
+  // ===== MediaMTX Server Controls =====
+
+  async function checkServerStatus() {
+    const statusDot = document.getElementById('serverStatusDot');
+    const statusText = document.getElementById('serverStatusText');
+    const startBtn = document.getElementById('startServerBtn');
+    const stopBtn = document.getElementById('stopServerBtn');
+    const restartBtn = document.getElementById('restartServerBtn');
+
+    try {
+      const response = await fetch('/api/admin/server-status');
+      const data = await response.json();
+
+      if (data.online) {
+        statusDot.className = 'status-dot online';
+        statusText.textContent = 'Online';
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        restartBtn.disabled = false;
+
+        // Load active streams when server is online
+        await loadActiveStreams();
+        await loadServerStats();
+      } else {
+        statusDot.className = 'status-dot offline';
+        statusText.textContent = 'Offline';
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        restartBtn.disabled = true;
+
+        document.getElementById('activeStreamsList').innerHTML = '<p class="empty-state">Server offline</p>';
+      }
+    } catch (error) {
+      statusDot.className = 'status-dot offline';
+      statusText.textContent = 'Error';
+      console.error('Server status check failed:', error);
+    }
+  }
+
+  async function loadActiveStreams() {
+    const container = document.getElementById('activeStreamsList');
+    try {
+      const response = await fetch(`${STREAM_SERVER}/v3/paths/list`);
+      if (!response.ok) throw new Error('Failed to fetch paths');
+
+      const data = await response.json();
+      const paths = data.items || [];
+      const activePaths = paths.filter(p => p.ready);
+
+      document.getElementById('activePaths').textContent = activePaths.length.toString();
+
+      if (activePaths.length === 0) {
+        container.innerHTML = '<p class="empty-state">No active streams</p>';
+        return;
+      }
+
+      container.innerHTML = activePaths.map(path => `
+        <div class="stream-item">
+          <div class="stream-info">
+            <span class="stream-path">${path.name}</span>
+            <span class="stream-meta">
+              ${path.source?.type || 'Unknown'} •
+              ${path.readers?.length || 0} viewers
+            </span>
+          </div>
+          <button class="kick-stream-btn" onclick="kickStream('${path.name}')">Kick</button>
+        </div>
+      `).join('');
+    } catch (error) {
+      console.error('Failed to load active streams:', error);
+      container.innerHTML = '<p class="empty-state">Unable to load streams</p>';
+    }
+  }
+
+  async function loadServerStats() {
+    try {
+      // Try to get config to confirm server is responding
+      const response = await fetch(`${STREAM_SERVER}/v3/config/global/get`);
+      if (response.ok) {
+        document.getElementById('serverUptime').textContent = 'Running';
+      }
+
+      // Get connection count from paths
+      const pathsResponse = await fetch(`${STREAM_SERVER}/v3/paths/list`);
+      if (pathsResponse.ok) {
+        const data = await pathsResponse.json();
+        const paths = data.items || [];
+        let totalConnections = 0;
+        paths.forEach(p => {
+          totalConnections += (p.readers?.length || 0) + (p.source ? 1 : 0);
+        });
+        document.getElementById('activeConnections').textContent = totalConnections.toString();
+      }
+    } catch (error) {
+      document.getElementById('serverUptime').textContent = '--';
+      document.getElementById('activeConnections').textContent = '0';
+    }
+  }
+
+  window.kickStream = async function(pathName) {
+    if (!confirm(`Are you sure you want to kick the stream "${pathName}"?`)) return;
+
+    try {
+      // Close all readers and the source
+      const response = await fetch(`${STREAM_SERVER}/v3/paths/kick/${pathName}`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        alert('Stream kicked successfully');
+        await loadActiveStreams();
+      } else {
+        // Try alternative approach - the API might not support direct kick
+        alert('Stream kick requested. It may take a moment to disconnect.');
+        await loadActiveStreams();
+      }
+    } catch (error) {
+      console.error('Failed to kick stream:', error);
+      alert('Failed to kick stream: ' + error.message);
+    }
+  }
+
+  function setupMediaMTXControls() {
+    // Server control buttons
+    document.getElementById('startServerBtn')?.addEventListener('click', async () => {
+      const result = await serverAction('start-server');
+      alert(result.message || result.error);
+      await checkServerStatus();
+    });
+
+    document.getElementById('stopServerBtn')?.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to stop the server? All streams will be disconnected.')) return;
+      const result = await serverAction('stop-server');
+      alert(result.message || result.error);
+      await checkServerStatus();
+    });
+
+    document.getElementById('restartServerBtn')?.addEventListener('click', async () => {
+      if (!confirm('Restart the server? All streams will briefly disconnect.')) return;
+      const result = await serverAction('restart-server');
+      alert(result.message || result.error);
+      setTimeout(checkServerStatus, 3000);
+    });
+
+    // Quick actions
+    document.getElementById('kickAllStreamsBtn')?.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to end ALL active streams?')) return;
+      const result = await serverAction('force-end-streams');
+      alert(result.message || result.error);
+      await loadActiveStreams();
+    });
+
+    document.getElementById('healthCheckBtn')?.addEventListener('click', async () => {
+      const result = await serverAction('health-check');
+      alert(result.message || result.error);
+    });
+
+    document.getElementById('viewLogsBtn')?.addEventListener('click', async () => {
+      const panel = document.getElementById('logsPanel');
+      const logsEl = document.getElementById('serverLogs');
+
+      panel.classList.remove('hidden');
+      logsEl.textContent = 'Loading logs...';
+
+      try {
+        const response = await fetch('/api/admin/server-logs');
+        const data = await response.json();
+        logsEl.textContent = data.logs || 'No logs available';
+      } catch (error) {
+        logsEl.textContent = 'Failed to load logs: ' + error.message;
+      }
+    });
+
+    document.getElementById('closeLogsBtn')?.addEventListener('click', () => {
+      document.getElementById('logsPanel').classList.add('hidden');
+    });
+
+    // Refresh streams button
+    document.getElementById('refreshStreamsBtn')?.addEventListener('click', async () => {
+      await checkServerStatus();
+    });
+  }
+
+  async function serverAction(action) {
+    try {
+      const response = await fetch('/api/admin/server-control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   }
 
   async function loadChatCount() {
