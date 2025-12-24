@@ -186,7 +186,6 @@
                   </svg>
                   Export
                 </button>
-                <button id="clearMyPlaylistBtn" class="clear-playlist-btn" title="Clear all">Clear</button>
                 <button id="backToStreamBtn" class="back-to-stream-btn" title="Back to stream">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="15 18 9 12 15 6"></polyline>
@@ -196,21 +195,83 @@
               </div>
             </div>
 
-            <!-- Clear Playlist Confirmation Modal -->
-            <div id="clearPlaylistModal" class="clear-playlist-modal hidden">
-              <div class="clear-modal-backdrop"></div>
-              <div class="clear-modal-content">
-                <div class="clear-modal-icon">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M3 6h18"></path>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                  </svg>
+            <!-- Export Playlist Modal -->
+            <div id="exportModal" class="export-modal hidden">
+              <div class="export-modal-backdrop"></div>
+              <div class="export-modal-content">
+                <div class="export-modal-header">
+                  <h3>Export Playlist</h3>
+                  <button id="closeExportModal" class="export-modal-close">&times;</button>
                 </div>
-                <h3>Clear Playlist?</h3>
-                <p>This will remove all <span id="clearItemCount">0</span> tracks from your playlist. This action cannot be undone.</p>
-                <div class="clear-modal-actions">
-                  <button id="cancelClearBtn" class="cancel-clear-btn">Cancel</button>
-                  <button id="confirmClearBtn" class="confirm-clear-btn">Clear All</button>
+
+                <div class="export-modal-body">
+                  <div class="export-field">
+                    <label for="exportTitle">Playlist Title</label>
+                    <input type="text" id="exportTitle" placeholder="My Fresh Wax Playlist" />
+                  </div>
+
+                  <div class="export-field">
+                    <label>Export Format</label>
+                    <div class="export-formats">
+                      <label class="format-option">
+                        <input type="radio" name="exportFormat" value="txt" checked />
+                        <span class="format-label">
+                          <span class="format-name">TXT</span>
+                          <span class="format-desc">Plain text file</span>
+                        </span>
+                      </label>
+                      <label class="format-option">
+                        <input type="radio" name="exportFormat" value="csv" />
+                        <span class="format-label">
+                          <span class="format-name">CSV</span>
+                          <span class="format-desc">Spreadsheet compatible</span>
+                        </span>
+                      </label>
+                      <label class="format-option">
+                        <input type="radio" name="exportFormat" value="json" />
+                        <span class="format-label">
+                          <span class="format-name">JSON</span>
+                          <span class="format-desc">Data format</span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="export-info">
+                    <span id="exportTrackCount">0</span> tracks will be exported
+                  </div>
+
+                  <button id="confirmExportBtn" class="confirm-export-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download Playlist
+                  </button>
+                </div>
+
+                <div class="export-modal-divider"></div>
+
+                <div class="export-modal-danger">
+                  <h4>Danger Zone</h4>
+                  <p>Clear all tracks from your playlist. This cannot be undone.</p>
+                  <button id="clearPlaylistBtn" class="clear-playlist-danger-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M3 6h18"></path>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    Clear Playlist
+                  </button>
+                </div>
+
+                <!-- Clear Confirmation (hidden by default) -->
+                <div id="clearConfirmation" class="clear-confirmation hidden">
+                  <p>Are you sure? This will remove all <span id="clearItemCount">0</span> tracks.</p>
+                  <div class="clear-confirm-actions">
+                    <button id="cancelClearBtn" class="cancel-clear-btn">Cancel</button>
+                    <button id="confirmClearBtn" class="confirm-clear-btn">Yes, Clear All</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1294,8 +1355,8 @@
     cursor: not-allowed;
   }
 
-  /* Clear Playlist Confirmation Modal */
-  .clear-playlist-modal {
+  /* Export Modal */
+  .export-modal {
     position: fixed;
     inset: 0;
     z-index: 10000;
@@ -1304,78 +1365,245 @@
     justify-content: center;
   }
 
-  .clear-playlist-modal.hidden {
+  .export-modal.hidden {
     display: none;
   }
 
-  .clear-modal-backdrop {
+  .export-modal-backdrop {
     position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(4px);
   }
 
-  .clear-modal-content {
+  .export-modal-content {
     position: relative;
     background: #1a1a2e;
     border: 2px solid #333;
     border-radius: 16px;
-    padding: 2rem;
-    max-width: 380px;
-    text-align: center;
+    padding: 0;
+    max-width: 400px;
+    width: 90%;
     animation: modalSlideIn 0.2s ease;
   }
 
   @keyframes modalSlideIn {
-    from {
-      opacity: 0;
-      transform: scale(0.9);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1);
-    }
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
   }
 
-  .clear-modal-icon {
-    color: #ef4444;
-    margin-bottom: 1rem;
+  .export-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #333;
   }
 
-  .clear-modal-content h3 {
-    margin: 0 0 0.75rem 0;
-    font-size: 1.25rem;
+  .export-modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
     color: #fff;
   }
 
-  .clear-modal-content p {
-    margin: 0 0 1.5rem 0;
-    font-size: 0.9rem;
-    color: #9ca3af;
-    line-height: 1.5;
+  .export-modal-close {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
   }
 
-  .clear-modal-content p span {
-    color: #f87171;
+  .export-modal-close:hover {
+    color: #fff;
+  }
+
+  .export-modal-body {
+    padding: 1.25rem;
+  }
+
+  .export-field {
+    margin-bottom: 1rem;
+  }
+
+  .export-field label {
+    display: block;
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin-bottom: 0.5rem;
+  }
+
+  .export-field input[type="text"] {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    background: #0a0a15;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.85rem;
+  }
+
+  .export-field input[type="text"]:focus {
+    outline: none;
+    border-color: #4ade80;
+  }
+
+  .export-formats {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .format-option {
+    flex: 1;
+    cursor: pointer;
+  }
+
+  .format-option input {
+    display: none;
+  }
+
+  .format-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.6rem 0.5rem;
+    background: #0a0a15;
+    border: 1px solid #333;
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+
+  .format-option input:checked + .format-label {
+    border-color: #4ade80;
+    background: rgba(34, 197, 94, 0.1);
+  }
+
+  .format-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .format-desc {
+    font-size: 0.65rem;
+    color: #666;
+    margin-top: 0.15rem;
+  }
+
+  .export-info {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin-bottom: 1rem;
+  }
+
+  .export-info span {
+    color: #4ade80;
     font-weight: 600;
   }
 
-  .clear-modal-actions {
+  .confirm-export-btn {
+    width: 100%;
     display: flex;
-    gap: 0.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .confirm-export-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+  }
+
+  .export-modal-divider {
+    height: 1px;
+    background: #333;
+    margin: 0;
+  }
+
+  .export-modal-danger {
+    padding: 1rem 1.25rem;
+    background: rgba(239, 68, 68, 0.05);
+  }
+
+  .export-modal-danger h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.8rem;
+    color: #f87171;
+  }
+
+  .export-modal-danger p {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  .clear-playlist-danger-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 6px;
+    color: #f87171;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .clear-playlist-danger-btn:hover {
+    background: rgba(239, 68, 68, 0.25);
+  }
+
+  .clear-confirmation {
+    padding: 1rem 1.25rem;
+    background: rgba(239, 68, 68, 0.1);
+    border-top: 1px solid rgba(239, 68, 68, 0.2);
+  }
+
+  .clear-confirmation.hidden {
+    display: none;
+  }
+
+  .clear-confirmation p {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.85rem;
+    color: #f87171;
+    text-align: center;
+  }
+
+  .clear-confirmation span {
+    font-weight: 600;
+  }
+
+  .clear-confirm-actions {
+    display: flex;
+    gap: 0.5rem;
     justify-content: center;
   }
 
   .cancel-clear-btn {
-    padding: 0.6rem 1.25rem;
-    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
     font-weight: 600;
     background: rgba(75, 85, 99, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
+    border-radius: 6px;
     color: #e5e7eb;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
   }
 
   .cancel-clear-btn:hover {
@@ -1383,15 +1611,15 @@
   }
 
   .confirm-clear-btn {
-    padding: 0.6rem 1.25rem;
-    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
     font-weight: 600;
     background: #dc2626;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     color: #fff;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
   }
 
   .confirm-clear-btn:hover {
@@ -2242,55 +2470,26 @@
       });
     }
 
-    // Clear My Playlist button - opens confirmation modal
-    const clearMyPlaylistBtn = document.getElementById('clearMyPlaylistBtn');
-    const clearPlaylistModal = document.getElementById('clearPlaylistModal');
+    // Export Modal elements
+    const exportModal = document.getElementById('exportModal');
+    const exportModalBackdrop = exportModal?.querySelector('.export-modal-backdrop');
+    const closeExportModal = document.getElementById('closeExportModal');
+    const exportTitleInput = document.getElementById('exportTitle') as HTMLInputElement;
+    const exportTrackCountEl = document.getElementById('exportTrackCount');
+    const confirmExportBtn = document.getElementById('confirmExportBtn');
+    const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
+    const clearConfirmation = document.getElementById('clearConfirmation');
     const cancelClearBtn = document.getElementById('cancelClearBtn');
     const confirmClearBtn = document.getElementById('confirmClearBtn');
-    const clearModalBackdrop = clearPlaylistModal?.querySelector('.clear-modal-backdrop');
     const clearItemCountEl = document.getElementById('clearItemCount');
 
-    if (clearMyPlaylistBtn && !clearMyPlaylistBtn.dataset.listenerAttached) {
-      clearMyPlaylistBtn.dataset.listenerAttached = 'true';
-      clearMyPlaylistBtn.addEventListener('click', () => {
-        if (clearPlaylistModal && cachedPersonalItems.length > 0) {
-          // Update the count in the modal
-          if (clearItemCountEl) {
-            clearItemCountEl.textContent = cachedPersonalItems.length.toString();
-          }
-          clearPlaylistModal.classList.remove('hidden');
-        }
-      });
+    // Close export modal function
+    function closeExportModalFn() {
+      exportModal?.classList.add('hidden');
+      clearConfirmation?.classList.add('hidden');
     }
 
-    // Cancel clear button
-    if (cancelClearBtn && !cancelClearBtn.dataset.listenerAttached) {
-      cancelClearBtn.dataset.listenerAttached = 'true';
-      cancelClearBtn.addEventListener('click', () => {
-        clearPlaylistModal?.classList.add('hidden');
-      });
-    }
-
-    // Confirm clear button
-    if (confirmClearBtn && !confirmClearBtn.dataset.listenerAttached) {
-      confirmClearBtn.dataset.listenerAttached = 'true';
-      confirmClearBtn.addEventListener('click', () => {
-        if (playlistManager) {
-          playlistManager.clearPersonalPlaylist();
-          clearPlaylistModal?.classList.add('hidden');
-        }
-      });
-    }
-
-    // Close modal on backdrop click
-    if (clearModalBackdrop && !clearModalBackdrop.dataset.listenerAttached) {
-      (clearModalBackdrop as HTMLElement).dataset.listenerAttached = 'true';
-      clearModalBackdrop.addEventListener('click', () => {
-        clearPlaylistModal?.classList.add('hidden');
-      });
-    }
-
-    // Export Playlist button
+    // Export Playlist button - opens modal
     const exportPlaylistBtn = document.getElementById('exportPlaylistBtn');
     if (exportPlaylistBtn && !exportPlaylistBtn.dataset.listenerAttached) {
       exportPlaylistBtn.dataset.listenerAttached = 'true';
@@ -2305,72 +2504,144 @@
           return;
         }
 
-        // Generate export content
+        // Set default title and track count
+        if (exportTitleInput) {
+          exportTitleInput.value = 'My Fresh Wax Playlist';
+        }
+        if (exportTrackCountEl) {
+          exportTrackCountEl.textContent = cachedPersonalItems.length.toString();
+        }
+        if (clearItemCountEl) {
+          clearItemCountEl.textContent = cachedPersonalItems.length.toString();
+        }
+
+        // Reset clear confirmation state
+        clearConfirmation?.classList.add('hidden');
+
+        // Show modal
+        exportModal?.classList.remove('hidden');
+      });
+    }
+
+    // Close modal buttons
+    if (closeExportModal && !closeExportModal.dataset.listenerAttached) {
+      closeExportModal.dataset.listenerAttached = 'true';
+      closeExportModal.addEventListener('click', closeExportModalFn);
+    }
+    if (exportModalBackdrop && !exportModalBackdrop.dataset.listenerAttached) {
+      (exportModalBackdrop as HTMLElement).dataset.listenerAttached = 'true';
+      exportModalBackdrop.addEventListener('click', closeExportModalFn);
+    }
+
+    // Confirm export button
+    if (confirmExportBtn && !confirmExportBtn.dataset.listenerAttached) {
+      confirmExportBtn.dataset.listenerAttached = 'true';
+      confirmExportBtn.addEventListener('click', () => {
+        const format = (document.querySelector('input[name="exportFormat"]:checked') as HTMLInputElement)?.value || 'txt';
+        const title = exportTitleInput?.value.trim() || 'My Fresh Wax Playlist';
         const now = new Date();
-        const dateStr = now.toLocaleDateString('en-GB', {
-          day: '2-digit', month: 'short', year: 'numeric'
-        });
-        const timeStr = now.toLocaleTimeString('en-GB', {
-          hour: '2-digit', minute: '2-digit'
-        });
+        const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-        let content = `FRESH WAX - MY PLAYLIST\n`;
-        content += `========================\n`;
-        content += `Exported: ${dateStr} at ${timeStr}\n`;
-        content += `Total Tracks: ${cachedPersonalItems.length}\n`;
-        content += `========================\n\n`;
+        let content = '';
+        let mimeType = 'text/plain';
+        let extension = 'txt';
 
-        // Group by platform
-        const byPlatform: Record<string, any[]> = {};
-        cachedPersonalItems.forEach(item => {
-          const platform = item.platform || 'Other';
-          if (!byPlatform[platform]) byPlatform[platform] = [];
-          byPlatform[platform].push(item);
-        });
-
-        // Sort items by most recently added (reverse order since we reversed for display)
+        // Sort items by most recently added
         const sortedItems = [...cachedPersonalItems].reverse();
 
-        sortedItems.forEach((item, index) => {
-          const num = (index + 1).toString().padStart(2, '0');
-          const platform = getPlatformName(item.platform);
-          const title = item.title || 'Untitled';
-          const addedDate = item.addedAt
-            ? new Date(item.addedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-            : 'Unknown';
+        if (format === 'txt') {
+          content = `${title.toUpperCase()}\n`;
+          content += `${'='.repeat(title.length)}\n`;
+          content += `Exported: ${dateStr} at ${timeStr}\n`;
+          content += `Total Tracks: ${sortedItems.length}\n`;
+          content += `${'='.repeat(title.length)}\n\n`;
 
-          content += `${num}. ${title}\n`;
-          content += `    Platform: ${platform}\n`;
-          content += `    URL: ${item.url}\n`;
-          content += `    Added: ${addedDate}\n`;
-          content += `\n`;
-        });
+          sortedItems.forEach((item, index) => {
+            const num = (index + 1).toString().padStart(2, '0');
+            content += `${num}. ${item.title || 'Untitled'}\n`;
+            content += `    Platform: ${getPlatformName(item.platform)}\n`;
+            content += `    URL: ${item.url}\n`;
+            content += `    Added: ${item.addedAt ? new Date(item.addedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Unknown'}\n\n`;
+          });
 
-        content += `========================\n`;
-        content += `Platform Summary:\n`;
-        Object.entries(byPlatform).forEach(([platform, items]) => {
-          content += `  ${getPlatformName(platform)}: ${items.length} tracks\n`;
-        });
-        content += `========================\n`;
-        content += `\nExported from Fresh Wax - https://freshwax.co.uk\n`;
+          content += `\nExported from Fresh Wax - https://freshwax.co.uk\n`;
+          mimeType = 'text/plain;charset=utf-8';
+          extension = 'txt';
+
+        } else if (format === 'csv') {
+          content = 'Title,Platform,URL,Added Date\n';
+          sortedItems.forEach(item => {
+            const csvTitle = (item.title || 'Untitled').replace(/"/g, '""');
+            const csvUrl = item.url.replace(/"/g, '""');
+            const addedDate = item.addedAt ? new Date(item.addedAt).toISOString().split('T')[0] : '';
+            content += `"${csvTitle}","${getPlatformName(item.platform)}","${csvUrl}","${addedDate}"\n`;
+          });
+          mimeType = 'text/csv;charset=utf-8';
+          extension = 'csv';
+
+        } else if (format === 'json') {
+          const exportData = {
+            title: title,
+            exportedAt: now.toISOString(),
+            totalTracks: sortedItems.length,
+            tracks: sortedItems.map(item => ({
+              title: item.title || 'Untitled',
+              platform: item.platform,
+              url: item.url,
+              addedAt: item.addedAt || null
+            }))
+          };
+          content = JSON.stringify(exportData, null, 2);
+          mimeType = 'application/json;charset=utf-8';
+          extension = 'json';
+        }
 
         // Create and download file
-        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const blob = new Blob([content], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `freshwax-playlist-${now.toISOString().split('T')[0]}.txt`;
+        a.download = `freshwax-playlist-${now.toISOString().split('T')[0]}.${extension}`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        // Show success message
+        // Close modal and show success
+        closeExportModalFn();
         const successDiv = document.getElementById('playlistSuccess');
         if (successDiv) {
-          successDiv.textContent = `Exported ${cachedPersonalItems.length} tracks`;
+          successDiv.textContent = `Exported ${cachedPersonalItems.length} tracks as ${extension.toUpperCase()}`;
           successDiv.classList.remove('hidden');
           setTimeout(() => successDiv.classList.add('hidden'), 3000);
+        }
+      });
+    }
+
+    // Clear playlist button - shows confirmation
+    if (clearPlaylistBtn && !clearPlaylistBtn.dataset.listenerAttached) {
+      clearPlaylistBtn.dataset.listenerAttached = 'true';
+      clearPlaylistBtn.addEventListener('click', () => {
+        clearConfirmation?.classList.remove('hidden');
+      });
+    }
+
+    // Cancel clear button
+    if (cancelClearBtn && !cancelClearBtn.dataset.listenerAttached) {
+      cancelClearBtn.dataset.listenerAttached = 'true';
+      cancelClearBtn.addEventListener('click', () => {
+        clearConfirmation?.classList.add('hidden');
+      });
+    }
+
+    // Confirm clear button
+    if (confirmClearBtn && !confirmClearBtn.dataset.listenerAttached) {
+      confirmClearBtn.dataset.listenerAttached = 'true';
+      confirmClearBtn.addEventListener('click', () => {
+        if (playlistManager) {
+          playlistManager.clearPersonalPlaylist();
+          closeExportModalFn();
         }
       });
     }
