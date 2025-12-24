@@ -1,21 +1,16 @@
 // Fresh Wax Service Worker
 // Provides offline support and caching for PWA
 
-const CACHE_NAME = 'freshwax-v1';
-const STATIC_CACHE = 'freshwax-static-v1';
-const DYNAMIC_CACHE = 'freshwax-dynamic-v1';
+const CACHE_NAME = 'freshwax-v2';
+const STATIC_CACHE = 'freshwax-static-v2';
+const DYNAMIC_CACHE = 'freshwax-dynamic-v2';
 
-// Assets to cache on install
+// Only cache actual static files that definitely exist
 const STATIC_ASSETS = [
-  '/',
-  '/live',
-  '/shop',
-  '/dj-mixes',
   '/android-chrome-192x192.png',
   '/android-chrome-512x512.png',
   '/favicon.ico',
-  '/logo.webp',
-  '/placeholder.webp'
+  '/logo.webp'
 ];
 
 // Install event - cache static assets
@@ -23,9 +18,16 @@ self.addEventListener('install', (event) => {
   console.log('[SW] Installing service worker...');
   event.waitUntil(
     caches.open(STATIC_CACHE)
-      .then((cache) => {
+      .then(async (cache) => {
         console.log('[SW] Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        // Cache each asset individually to avoid failing on missing files
+        for (const asset of STATIC_ASSETS) {
+          try {
+            await cache.add(asset);
+          } catch (err) {
+            console.log('[SW] Failed to cache:', asset);
+          }
+        }
       })
       .then(() => self.skipWaiting())
       .catch((err) => console.log('[SW] Cache failed:', err))
