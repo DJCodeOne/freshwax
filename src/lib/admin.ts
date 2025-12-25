@@ -23,7 +23,8 @@ export function verifyAdminKey(key: string, locals: any): boolean {
 
 /**
  * Centralized admin authentication check
- * Validates admin key from request body, Authorization header, or query params
+ * Validates admin key from request body, Authorization header, or X-Admin-Key header
+ * SECURITY: Query params are NOT supported to prevent keys appearing in logs
  * Returns error response if auth fails, null if auth succeeds
  */
 export function requireAdminAuth(request: Request, locals: any, bodyData?: any): Response | null {
@@ -32,12 +33,12 @@ export function requireAdminAuth(request: Request, locals: any, bodyData?: any):
     return ApiErrors.serverError('Admin key not configured');
   }
 
-  // Check body
+  // Check body (for POST requests)
   if (bodyData?.adminKey === expectedKey) {
     return null; // Auth successful
   }
 
-  // Check Authorization header
+  // Check Authorization header (preferred method)
   const authHeader = request.headers.get('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
@@ -46,10 +47,9 @@ export function requireAdminAuth(request: Request, locals: any, bodyData?: any):
     }
   }
 
-  // Check query params (for GET requests)
-  const url = new URL(request.url);
-  const queryKey = url.searchParams.get('adminKey');
-  if (queryKey === expectedKey) {
+  // Check X-Admin-Key header (alternative for GET requests)
+  const adminKeyHeader = request.headers.get('X-Admin-Key');
+  if (adminKeyHeader === expectedKey) {
     return null; // Auth successful
   }
 

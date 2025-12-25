@@ -34,11 +34,13 @@ function generateCode(): string {
 export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
 
-  const url = new URL(request.url);
-  const adminKey = url.searchParams.get('adminKey');
+  // Check X-Admin-Key header (preferred) or Authorization header
+  const adminKeyHeader = request.headers.get('X-Admin-Key');
+  const authHeader = request.headers.get('Authorization');
+  const providedKey = adminKeyHeader || (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null);
 
   // Admin key check
-  if (adminKey !== getAdminKey(locals)) {
+  if (providedKey !== getAdminKey(locals)) {
     return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }

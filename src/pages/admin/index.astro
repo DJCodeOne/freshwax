@@ -1144,7 +1144,9 @@ export const prerender = false;
 
   async function fetchHealthData() {
     try {
-      const response = await fetch(`/api/admin/health-check?adminKey=${ADMIN_KEY}`);
+      const response = await fetch('/api/admin/health-check', {
+        headers: { 'X-Admin-Key': ADMIN_KEY }
+      });
       const data = await response.json();
 
       if (!data.success) return;

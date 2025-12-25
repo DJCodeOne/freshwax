@@ -1562,7 +1562,9 @@ const adminKey = import.meta.env.ADMIN_KEY || '';
   async function loadChatCount() {
     const countEl = document.getElementById('chatMessageCount');
     try {
-      const response = await fetch(`/api/admin/clear-chat?adminKey=${ADMIN_KEY}`);
+      const response = await fetch('/api/admin/clear-chat', {
+        headers: { 'X-Admin-Key': ADMIN_KEY }
+      });
       const result = await response.json();
       if (result.success) {
         countEl.textContent = result.count.toString();
@@ -2035,7 +2037,9 @@ const adminKey = import.meta.env.ADMIN_KEY || '';
     const usersContainer = document.getElementById('keyUsersContainer');
 
     try {
-      const response = await fetch(`/api/admin/quick-access-key?adminKey=${ADMIN_KEY}`);
+      const response = await fetch('/api/admin/quick-access-key', {
+        headers: { 'X-Admin-Key': ADMIN_KEY }
+      });
       const result = await response.json();
 
       if (result.success && result.hasKey) {
@@ -2369,7 +2373,9 @@ const adminKey = import.meta.env.ADMIN_KEY || '';
     const container = document.getElementById('bypassRequests');
     
     try {
-      const response = await fetch(`/api/admin/bypass-requests?action=list&adminKey=${ADMIN_KEY}`);
+      const response = await fetch('/api/admin/bypass-requests?action=list', {
+        headers: { 'X-Admin-Key': ADMIN_KEY }
+      });
       const result = await response.json();
       
       if (result.success && result.requests?.length > 0) {

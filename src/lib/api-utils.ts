@@ -156,24 +156,24 @@ export function validateAdminKey(
 
 /**
  * Extract admin key from various sources
+ * SECURITY: Query params are NOT supported to prevent keys appearing in logs
  */
 export function getAdminKey(
   request: Request,
   body?: { adminKey?: string } | null
 ): string | null {
-  // Check body
+  // Check body (for POST requests)
   if (body?.adminKey) return body.adminKey;
 
-  // Check Authorization header
+  // Check Authorization header (preferred method)
   const authHeader = request.headers.get('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
     return authHeader.slice(7);
   }
 
-  // Check query params (for GET requests)
-  const url = new URL(request.url);
-  const queryKey = url.searchParams.get('adminKey');
-  if (queryKey) return queryKey;
+  // Check X-Admin-Key header (alternative for GET requests)
+  const adminKeyHeader = request.headers.get('X-Admin-Key');
+  if (adminKeyHeader) return adminKeyHeader;
 
   return null;
 }
