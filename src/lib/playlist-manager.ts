@@ -1176,72 +1176,62 @@ export class PlaylistManager {
   /**
    * Pick a random track from history that hasn't been played recently
    * Used for auto-play when queue is empty
+   * Always uses server-side master history (8,273 videos) for maximum variety
    * Uses 60-minute cooldown and never repeats the last played track
-   * Falls back to server-side master history if local history is empty
    */
   private async pickRandomFromHistory(): Promise<GlobalPlaylistItem | null> {
-    // If no local history, try to fetch from server-side master history
-    if (this.playHistory.length === 0) {
-      console.log('[PlaylistManager] No local history - fetching from server');
-      try {
-        const response = await fetch('/api/playlist/history');
-        const result = await response.json();
-        if (result.success && result.items && result.items.length > 0) {
-          // Use server-side history
-          const serverHistory = result.items;
-          console.log('[PlaylistManager] Loaded', serverHistory.length, 'items from server history');
+    // Always fetch from server-side master history for maximum variety
+    console.log('[PlaylistManager] Fetching from server history for auto-play');
+    try {
+      const response = await fetch('/api/playlist/history');
+      const result = await response.json();
+      if (result.success && result.items && result.items.length > 0) {
+        const serverHistory = result.items;
+        console.log('[PlaylistManager] Server has', serverHistory.length, 'tracks available');
 
-          // Pick a random track from server history
-          const randomIndex = Math.floor(Math.random() * serverHistory.length);
-          const selected = serverHistory[randomIndex];
+        // Filter out recently played tracks and the last played track
+        const AUTO_PLAY_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
+        const now = Date.now();
 
-          return {
-            id: this.generateId(),
-            url: selected.url,
-            platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
-            embedId: selected.embedId,
-            title: selected.title,
-            thumbnail: selected.thumbnail,
-            addedAt: new Date().toISOString(),
-            addedBy: 'system',
-            addedByName: 'Auto-Play'
-          };
+        const availableTracks = serverHistory.filter((entry: any) => {
+          // Never pick the track that just finished playing
+          if (entry.url === this.lastPlayedUrl) return false;
+
+          const timestamp = this.recentlyPlayed.get(entry.url);
+          if (!timestamp) return true; // Never played recently, available
+          const elapsed = now - timestamp;
+          return elapsed >= AUTO_PLAY_COOLDOWN_MS; // Available if 60+ minutes since last play
+        });
+
+        console.log('[PlaylistManager]', availableTracks.length, 'tracks available after cooldown filter');
+
+        if (availableTracks.length === 0) {
+          // All tracks on cooldown - just pick a random one that isn't the last played
+          const fallbackTracks = serverHistory.filter((entry: any) => entry.url !== this.lastPlayedUrl);
+          if (fallbackTracks.length > 0) {
+            const randomIndex = Math.floor(Math.random() * fallbackTracks.length);
+            const selected = fallbackTracks[randomIndex];
+            console.log('[PlaylistManager] All on cooldown, picked random:', selected.title || selected.url);
+            return {
+              id: this.generateId(),
+              url: selected.url,
+              platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
+              embedId: selected.embedId,
+              title: selected.title,
+              thumbnail: selected.thumbnail,
+              addedAt: new Date().toISOString(),
+              addedBy: 'system',
+              addedByName: 'Auto-Play'
+            };
+          }
         }
-      } catch (error) {
-        console.error('[PlaylistManager] Error fetching server history:', error);
-      }
 
-      console.log('[PlaylistManager] No tracks available for auto-play');
-      return null;
-    }
+        // Pick a random track from available tracks
+        const randomIndex = Math.floor(Math.random() * availableTracks.length);
+        const selected = availableTracks[randomIndex];
 
-    // For auto-play, use a 60-minute cooldown to avoid frequent repeats
-    const AUTO_PLAY_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
-    const now = Date.now();
+        console.log('[PlaylistManager] Selected random track:', selected.title || selected.url);
 
-    // Filter out tracks played within the auto-play cooldown AND the last played track
-    const availableTracks = this.playHistory.filter(entry => {
-      // Never pick the track that just finished playing
-      if (entry.url === this.lastPlayedUrl) return false;
-
-      const timestamp = this.recentlyPlayed.get(entry.url);
-      if (!timestamp) return true; // Never played recently, available
-      const elapsed = now - timestamp;
-      return elapsed >= AUTO_PLAY_COOLDOWN_MS; // Available if 60+ minutes since last play
-    });
-
-    if (availableTracks.length === 0) {
-      // All tracks are on cooldown - pick the OLDEST played track (least recently played)
-      // This ensures maximum variety by playing what hasn't been heard longest
-      console.log('[PlaylistManager] All tracks on cooldown, picking least recently played');
-
-      // Filter out the last played track, then sort by oldest timestamp
-      const candidateTracks = this.playHistory.filter(entry => entry.url !== this.lastPlayedUrl);
-
-      if (candidateTracks.length === 0) {
-        // Only one track in history, have to repeat it
-        console.log('[PlaylistManager] Only one track in history, must repeat');
-        const selected = this.playHistory[0];
         return {
           id: this.generateId(),
           url: selected.url,
@@ -1254,21 +1244,15 @@ export class PlaylistManager {
           addedByName: 'Auto-Play'
         };
       }
+    } catch (error) {
+      console.error('[PlaylistManager] Error fetching server history:', error);
+    }
 
-      // Sort by play timestamp (oldest first) and pick from top candidates
-      const sortedByOldest = candidateTracks.sort((a, b) => {
-        const timeA = this.recentlyPlayed.get(a.url) || 0;
-        const timeB = this.recentlyPlayed.get(b.url) || 0;
-        return timeA - timeB; // Oldest (smallest timestamp) first
-      });
-
-      // Pick randomly from the oldest 3 tracks (or fewer if not enough tracks)
-      const topCandidates = sortedByOldest.slice(0, Math.min(3, sortedByOldest.length));
-      const randomIndex = Math.floor(Math.random() * topCandidates.length);
-      const selected = topCandidates[randomIndex];
-
-      console.log('[PlaylistManager] Selected oldest track:', selected.title || selected.url);
-
+    // Fallback to local history if server fails
+    if (this.playHistory.length > 0) {
+      console.log('[PlaylistManager] Server failed, using local history:', this.playHistory.length, 'tracks');
+      const randomIndex = Math.floor(Math.random() * this.playHistory.length);
+      const selected = this.playHistory[randomIndex];
       return {
         id: this.generateId(),
         url: selected.url,
@@ -1282,23 +1266,8 @@ export class PlaylistManager {
       };
     }
 
-    // Pick a random track from available (not on cooldown) tracks
-    const randomIndex = Math.floor(Math.random() * availableTracks.length);
-    const selected = availableTracks[randomIndex];
-
-    console.log('[PlaylistManager] Selected random track from history:', selected.title || selected.url);
-
-    return {
-      id: this.generateId(),
-      url: selected.url,
-      platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
-      embedId: selected.embedId,
-      title: selected.title,
-      thumbnail: selected.thumbnail,
-      addedAt: new Date().toISOString(),
-      addedBy: 'system',
-      addedByName: 'Auto-Play'
-    };
+    console.log('[PlaylistManager] No tracks available for auto-play');
+    return null;
   }
 
   /**
