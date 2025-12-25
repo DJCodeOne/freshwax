@@ -933,13 +933,18 @@ function showLiveStream(stream) {
   if (stream.djAvatar && fsDjAvatar) fsDjAvatar.src = stream.djAvatar;
   
   // Setup player based on stream type/source
+  // Placeholder mode = audio only (BUTT/Icecast), skip HLS
+  const isPlaceholder = stream.broadcastMode === 'placeholder' || stream.broadcastMode === 'audio';
+
   if (stream.streamSource === 'twitch' && stream.twitchChannel) {
     setupTwitchPlayer(stream);
-  } else if (stream.streamSource === 'red5' || stream.hlsUrl) {
+  } else if (!isPlaceholder && (stream.streamSource === 'red5' || stream.hlsUrl)) {
     setupHlsPlayer(stream);
-  } else if (stream.streamSource === 'icecast' || stream.audioStreamUrl) {
-    setupAudioPlayer(stream);
   } else {
+    // Audio mode - use Icecast
+    if (!stream.audioStreamUrl) {
+      stream.audioStreamUrl = 'https://icecast.freshwax.co.uk/live';
+    }
     setupAudioPlayer(stream);
   }
 

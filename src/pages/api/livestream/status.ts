@@ -121,8 +121,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       isLive: true,
       status: 'live',
       startedAt: slot.liveStartTime || slot.startTime,
-      // Always build HLS URL from stream key + env var (more reliable than stored URL)
-      hlsUrl: slot.streamKey ? buildHlsUrl(slot.streamKey) : slot.hlsUrl || null,
+      // Always use stored hlsUrl if available (updated by DJ lobby on mode change)
+      // Fall back to buildHlsUrl only if no stored URL
+      hlsUrl: slot.hlsUrl || (slot.streamKey ? buildHlsUrl(slot.streamKey) : null),
+      broadcastMode: slot.broadcastMode || 'video',
       streamKey: slot.streamKey,
       streamSource: 'red5',
       currentViewers: slot.currentViewers || 0,

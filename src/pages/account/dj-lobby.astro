@@ -370,19 +370,13 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                 <!-- BUTT Audio-Only Placeholder -->
                 <div id="buttAudioPreview" class="butt-audio-preview hidden">
                   <div class="butt-placeholder">
-                    <div class="butt-branding"><span class="fresh">Fresh</span><span class="wax">Wax</span></div>
+                    <div class="butt-vinyl-bg"></div>
+                    <div class="butt-branding"><span class="fresh">FRESH</span><span class="wax">WAX</span></div>
                     <div class="butt-spectrum" id="buttSpectrum">
                       <canvas id="buttWaveformCanvas" width="280" height="100"></canvas>
                     </div>
                     <div class="butt-info">
-                      <div class="butt-dj-row">
-                        <svg class="butt-headphones" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
-                          <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3v5z"/>
-                          <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3v5z"/>
-                        </svg>
-                        <span class="butt-dj-name" id="buttDjName">DJ Name</span>
-                      </div>
+                      <span class="butt-dj-name" id="buttDjName">DJ Name</span>
                       <span class="butt-stream-title" id="buttStreamTitle"></span>
                     </div>
                   </div>
@@ -424,6 +418,11 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
             <div class="player-panel live-panel">
               <div class="panel-header">
                 <span class="panel-title">Live Stream</span>
+                <div class="broadcast-mode-toggle hidden" id="broadcastModeToggle">
+                  <div class="indicator source-toggle" id="liveOutputToggleBtn" title="Toggle between placeholder and OBS video">
+                    <span class="indicator-label" id="liveOutputToggleLabel">Placeholder</span>
+                  </div>
+                </div>
                 <div class="stream-status" id="streamStatus">
                   <span class="status-dot offline"></span>
                   <span id="statusText">No one streaming</span>
@@ -440,6 +439,14 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                 </div>
               </div>
               <div class="player-wrapper preview-player" id="previewPlayer">
+                <!-- DJ IS LIVE Indicator -->
+                <div id="djIsLiveIndicator" class="dj-is-live-indicator hidden">
+                  <div class="live-indicator-content">
+                    <span class="live-led-glow"></span>
+                    <span class="live-led-text">DJ IS LIVE</span>
+                  </div>
+                </div>
+
                 <div id="offlineState" class="offline-state">
                   <div class="offline-icon">📡</div>
                   <h3>No Live Stream</h3>
@@ -1158,7 +1165,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { getFirestore, collection, query, orderBy, limit, addDoc, serverTimestamp, doc, setDoc, deleteDoc, getDocs, getDoc, where } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+  import { getFirestore, collection, query, orderBy, limit, addDoc, serverTimestamp, doc, setDoc, deleteDoc, getDocs, getDoc, where, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
   
   // Pusher-based real-time features (replaces Firebase onSnapshot)
   import { 
@@ -1224,6 +1231,27 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   // Preview source state: 'obs' or 'butt' - for switching between OBS video and BUTT audio-only
   let currentPreviewSource = 'obs';
   let buttAudioSource = 'obs'; // Which audio source to use for BUTT spectrum: 'obs' or 'live'
+
+  // Icecast/BUTT audio state - all declarations here to avoid timing issues
+  let icecastConnected = false;
+  let icecastAudioContext = null;
+  let icecastAnalyserL = null;
+  let icecastAnalyserR = null;
+  let icecastKWeightedAnalyserL = null;
+  let icecastKWeightedAnalyserR = null;
+
+  // LED meter animation IDs - declared here to avoid timing issues
+  let liveMeterAnimationId = null;
+
+  // OBS/Live K-weighted analysers - declared here to avoid timing issues
+  let obsKWeightedAnalyserL = null;
+  let obsKWeightedAnalyserR = null;
+  let liveKWeightedAnalyserL = null;
+  let liveKWeightedAnalyserR = null;
+
+  // Broadcast mode: 'placeholder' or 'video' - determines what visual to show on live stream
+  let broadcastMode = 'placeholder';
+  let obsConnected = false; // Track if OBS is connected
 
   // Stream key for preview (can be set via ?testPreview=key for testing)
   const urlParams = new URLSearchParams(window.location.search);
@@ -2003,6 +2031,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Initialize OBS/BUTT source toggle
     initSourceToggle();
 
+    // Initialize broadcast mode toggle (Placeholder vs Video)
+    initBroadcastModeToggle();
+
     // Start Icecast connection status check
     startIcecastCheck();
 
@@ -2244,6 +2275,87 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       box.classList.toggle('connected', isConnected);
       box.classList.toggle('disconnected', !isConnected);
     }
+    // Track OBS connection and update Video broadcast mode button
+    obsConnected = isConnected;
+    updateBroadcastModeUI();
+  }
+
+  function updateBroadcastModeUI() {
+    const toggleContainer = document.getElementById('broadcastModeToggle');
+    const toggleBtn = document.getElementById('liveOutputToggleBtn');
+    const toggleLabel = document.getElementById('liveOutputToggleLabel');
+    const isButtActive = currentPreviewSource === 'butt';
+
+    // Determine which mode to use based on what's connected
+    if (isButtActive && obsConnected) {
+      // Both BUTT and OBS connected - show toggle
+      toggleContainer?.classList.remove('hidden');
+      toggleLabel.textContent = broadcastMode === 'placeholder' ? 'Placeholder' : 'OBS Video';
+    } else if (isButtActive && !obsConnected) {
+      // BUTT only - force placeholder, hide toggle
+      toggleContainer?.classList.add('hidden');
+      if (broadcastMode !== 'placeholder') {
+        setBroadcastMode('placeholder');
+      }
+    } else if (!isButtActive && obsConnected) {
+      // OBS only - force video mode, hide toggle
+      toggleContainer?.classList.add('hidden');
+      if (broadcastMode !== 'video') {
+        setBroadcastMode('video');
+      }
+    } else {
+      // Nothing connected
+      toggleContainer?.classList.add('hidden');
+    }
+  }
+
+  async function setBroadcastMode(mode) {
+    broadcastMode = mode;
+    const toggleLabel = document.getElementById('liveOutputToggleLabel');
+
+    if (toggleLabel) {
+      toggleLabel.textContent = mode === 'placeholder' ? 'Placeholder' : 'OBS Video';
+    }
+    console.log('[Broadcast] Mode set to:', mode);
+
+    // If we're live, update Firestore with the new mode and hlsUrl
+    if (currentStream && currentStream.id) {
+      try {
+        const hlsBaseUrl = 'https://stream.freshwax.co.uk/live';
+        let hlsUrl;
+
+        if (mode === 'placeholder') {
+          // Placeholder mode uses freshwax-main stream
+          hlsUrl = hlsBaseUrl + "/freshwax-main/index.m3u8";
+        } else {
+          // Video mode uses the OBS stream key directly
+          hlsUrl = hlsBaseUrl + "/" + currentStream.streamKey + "/index.m3u8";
+        }
+
+        const slotRef = doc(db, 'livestreamSlots', currentStream.id);
+        await updateDoc(slotRef, {
+          broadcastMode: mode,
+          hlsUrl: hlsUrl,
+          updatedAt: new Date().toISOString()
+        });
+        console.log('[Broadcast] Updated Firestore:', { mode, hlsUrl });
+      } catch (error) {
+        console.error('[Broadcast] Failed to update Firestore:', error);
+      }
+    }
+  }
+
+  function initBroadcastModeToggle() {
+    const toggleBtn = document.getElementById('liveOutputToggleBtn');
+
+    toggleBtn?.addEventListener('click', () => {
+      // Toggle between placeholder and video modes
+      // Only works when both BUTT and OBS are connected
+      if (currentPreviewSource === 'butt' && obsConnected) {
+        const newMode = broadcastMode === 'placeholder' ? 'video' : 'placeholder';
+        setBroadcastMode(newMode);
+      }
+    });
   }
 
   function updateButtIndicator(isConnected) {
@@ -2372,6 +2484,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
     // Switch audio analyser source for meters
     switchAudioSource(source);
+    // Update live output toggle visibility based on source
+    updateBroadcastModeUI();
   }
 
   function initSourceToggle() {
@@ -2435,6 +2549,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           }
           // Start LED meter animation if not already running
           if (window.startPreviewMeterAnimation) window.startPreviewMeterAnimation();
+          // Start live output meters for BUTT mode
+          if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
+            animateLiveMeters();
+          }
         }).catch(err => {
           console.log('[Audio] Icecast play error (normal if no stream):', err.message);
           // Try again with muted (for autoplay policy)
@@ -2448,6 +2566,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
             }
             // Start LED meter animation if not already running
             if (window.startPreviewMeterAnimation) window.startPreviewMeterAnimation();
+            // Start live output meters for BUTT mode
+            if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
+              animateLiveMeters();
+            }
           }).catch(() => {
             updateButtIndicator(false);
           });
@@ -2478,7 +2600,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     updateAudioSourceIndicator(source);
   }
 
-  function updateAudioSourceIndicator(source) {
+  function updateAudioSourceIndicator(source, audioMode = null) {
     const indicator = document.getElementById('audioSourceIndicator');
     const sourceName = indicator?.querySelector('.source-name');
     if (indicator && sourceName) {
@@ -2487,14 +2609,12 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         sourceName.textContent = 'BUTT';
       } else {
         indicator.classList.remove('butt');
-        sourceName.textContent = 'OBS';
+        // Show whether analyzing preview or live audio
+        const mode = audioMode || broadcastAudioSource;
+        sourceName.textContent = mode === 'live' ? 'OBS LIVE' : 'OBS';
       }
     }
   }
-
-  // K-weighted analysers for accurate LUFS measurement
-  let icecastKWeightedAnalyserL = null;
-  let icecastKWeightedAnalyserR = null;
 
   function setupIcecastAnalysers(audioElement) {
     try {
@@ -3347,11 +3467,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   let obsAnalyserR = null;
   let liveAnalyserL = null;
   let liveAnalyserR = null;
-  // Icecast/BUTT audio analysers
-  let icecastAudioContext = null;
-  let icecastAnalyserL = null;
-  let icecastAnalyserR = null;
-  let icecastConnected = false;
+  // Note: Icecast/BUTT audio analysers declared at top with other preview state
 
   // =============== BROADCAST AUDIO PANEL ===============
   let broadcastMeterAnimationId = null;
@@ -3393,6 +3509,11 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       broadcastAudioSource = broadcastAudioSource === 'preview' ? 'live' : 'preview';
       const label = document.querySelector('#audioSourceToggle .source-label');
       if (label) label.textContent = broadcastAudioSource.toUpperCase();
+
+      // Sync the main audio toggle to match
+      activeAudioSource = broadcastAudioSource;
+      updateAudioSourceUI();
+      updateAudioSourceIndicator('obs', broadcastAudioSource);
     });
 
     // Calibration button - toggle panel
@@ -3489,7 +3610,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       // OBS tab selected - use preview or live based on toggle
       analyserL = broadcastAudioSource === 'preview' ? obsAnalyserL : liveAnalyserL;
       analyserR = broadcastAudioSource === 'preview' ? obsAnalyserR : liveAnalyserR;
-      // OBS doesn't have K-weighted analysers yet - will use RMS fallback
+      // K-weighted analysers for accurate LUFS
+      kWeightedL = broadcastAudioSource === 'preview' ? obsKWeightedAnalyserL : liveKWeightedAnalyserL;
+      kWeightedR = broadcastAudioSource === 'preview' ? obsKWeightedAnalyserR : liveKWeightedAnalyserR;
     }
 
     if (analyserL && analyserR) {
@@ -4000,6 +4123,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         document.querySelector('.live-panel')?.classList.add('streaming');
         if (statusText) statusText.textContent = `${currentStream.djName} is LIVE`;
 
+        // Show DJ IS LIVE indicator with glowing LED
+        const djIsLiveIndicator = document.getElementById('djIsLiveIndicator');
+        djIsLiveIndicator?.classList.remove('hidden');
+
         // Show relay indicators and set to connecting when stream goes live
         showRelayIndicators(true);
         updateYoutubeIndicator('connecting');
@@ -4144,6 +4271,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         document.querySelector('.live-panel')?.classList.remove('streaming');
         if (statusText) statusText.textContent = 'No one streaming';
 
+        // Hide DJ IS LIVE indicator
+        const djIsLiveIndicator = document.getElementById('djIsLiveIndicator');
+        djIsLiveIndicator?.classList.add('hidden');
+
         // Hide relay indicators when stream ends
         showRelayIndicators(false);
 
@@ -4167,19 +4298,23 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         // Disable End Stream button - no active stream
         updateEndStreamButton(false, false);
 
-        // Only reset UI if user is NOT in "Ready" state (hasn't clicked I'm Ready)
-        // When userIsStreaming is true, keep the audio panel visible and key info hidden
-        // Also keep BUTT preview visible if BUTT tab is selected and Icecast is connected
-        const keepButtMode = currentPreviewSource === 'butt' && icecastStreamConnected;
-        if (!userIsStreaming && !keepButtMode) {
-          // Show Go Live setup section when no one is streaming
+        // Only reset UI if user has NOT clicked "I'm Ready"
+        // Once userIsStreaming is true, keep stream key hidden and audio panel visible
+        if (userIsStreaming) {
+          // User clicked "I'm Ready" - keep stream key hidden, audio panel visible
+          document.getElementById('streamKeySection')?.classList.add('hidden');
+          document.getElementById('broadcastAudioPanel')?.classList.remove('hidden');
+          // Keep BUTT preview visible if in BUTT mode
+          if (currentPreviewSource === 'butt') {
+            document.getElementById('buttAudioPreview')?.classList.remove('hidden');
+            document.getElementById('obsOfflineState')?.classList.add('hidden');
+          }
+        } else {
+          // User hasn't clicked "I'm Ready" yet - show stream key setup
           document.getElementById('streamKeySection')?.classList.remove('hidden');
-          // Show Multi Streaming section when not live
           document.getElementById('multiStreamSection')?.classList.remove('hidden');
-          // Hide Broadcast Audio Panel when not live
           document.getElementById('broadcastAudioPanel')?.classList.add('hidden');
           stopBroadcastMeters();
-          // Shrink video player back to normal size
           document.querySelector('.preview-section')?.classList.remove('expanded');
           // Enable Go Live button when no one is streaming
           const goLiveBtn = document.getElementById('setReadyBtn');
@@ -4187,11 +4322,6 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
             goLiveBtn.disabled = false;
             goLiveBtn.classList.remove('disabled');
           }
-        } else if (keepButtMode) {
-          // Keep BUTT preview visible
-          document.getElementById('buttAudioPreview')?.classList.remove('hidden');
-          document.getElementById('obsOfflineState')?.classList.add('hidden');
-          document.getElementById('broadcastAudioPanel')?.classList.remove('hidden');
         }
 
         // Hide relay chat when no stream
@@ -5405,7 +5535,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       title: title,
       genre: genre,
       twitchUsername: twitchUsername,
-      twitchStreamKey: twitchStreamKey
+      twitchStreamKey: twitchStreamKey,
+      broadcastMode: broadcastMode // 'placeholder' or 'video'
     };
 
     if (isRelayMode) {
@@ -5965,29 +6096,82 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // =============== STEREO AUDIO METERS ===============
     let obsAudioContext = null;
     // Note: obsAnalyserL, obsAnalyserR, liveAnalyserL, liveAnalyserR declared earlier for broadcast panel
+    // Note: liveMeterAnimationId declared at top with other preview state
     let liveAudioContext = null;
     let obsMeterAnimationId = null;
-    let liveMeterAnimationId = null;
+    // Note: OBS/Live K-weighted analysers declared at top with other preview state
 
     function setupAudioMeter(videoElement, prefix) {
       try {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         const source = audioContext.createMediaElementSource(videoElement);
         const splitter = audioContext.createChannelSplitter(2);
+
+        // Regular analysers for visualization (unfiltered)
         const analyserL = audioContext.createAnalyser();
         const analyserR = audioContext.createAnalyser();
-
         analyserL.fftSize = 256;
         analyserR.fftSize = 256;
         analyserL.smoothingTimeConstant = 0.5;
         analyserR.smoothingTimeConstant = 0.5;
 
+        // K-weighted analysers for accurate LUFS (ITU-R BS.1770-4)
+        const kWeightedAnalyserL = audioContext.createAnalyser();
+        const kWeightedAnalyserR = audioContext.createAnalyser();
+        kWeightedAnalyserL.fftSize = 2048;
+        kWeightedAnalyserR.fftSize = 2048;
+        kWeightedAnalyserL.smoothingTimeConstant = 0;
+        kWeightedAnalyserR.smoothingTimeConstant = 0;
+
+        // K-weighting Stage 1: High shelf filter (+4dB at high frequencies)
+        const highShelfL = audioContext.createBiquadFilter();
+        const highShelfR = audioContext.createBiquadFilter();
+        highShelfL.type = 'highshelf';
+        highShelfR.type = 'highshelf';
+        highShelfL.frequency.value = 1681.97;
+        highShelfR.frequency.value = 1681.97;
+        highShelfL.gain.value = 4;
+        highShelfR.gain.value = 4;
+
+        // K-weighting Stage 2: High-pass filter
+        const highPassL = audioContext.createBiquadFilter();
+        const highPassR = audioContext.createBiquadFilter();
+        highPassL.type = 'highpass';
+        highPassR.type = 'highpass';
+        highPassL.frequency.value = 38.14;
+        highPassR.frequency.value = 38.14;
+        highPassL.Q.value = 0.5;
+        highPassR.Q.value = 0.5;
+
+        // Connect audio chain
         source.connect(splitter);
+
+        // Unfiltered path for LED visualization
         splitter.connect(analyserL, 0);
         splitter.connect(analyserR, 1);
+
+        // K-weighted path for LUFS
+        splitter.connect(highShelfL, 0);
+        splitter.connect(highShelfR, 1);
+        highShelfL.connect(highPassL);
+        highShelfR.connect(highPassR);
+        highPassL.connect(kWeightedAnalyserL);
+        highPassR.connect(kWeightedAnalyserR);
+
+        // Output to speakers (unfiltered)
         source.connect(audioContext.destination);
 
-        return { audioContext, analyserL, analyserR };
+        // Store K-weighted analysers in global vars based on prefix
+        if (prefix === 'OBS') {
+          obsKWeightedAnalyserL = kWeightedAnalyserL;
+          obsKWeightedAnalyserR = kWeightedAnalyserR;
+        } else if (prefix === 'Live') {
+          liveKWeightedAnalyserL = kWeightedAnalyserL;
+          liveKWeightedAnalyserR = kWeightedAnalyserR;
+        }
+
+        console.log(`[${prefix}] Audio meter with K-weighting initialized`);
+        return { audioContext, analyserL, analyserR, kWeightedAnalyserL, kWeightedAnalyserR };
       } catch (e) {
         console.error(`[${prefix}] Audio meter setup error:`, e);
         return null;
@@ -6087,9 +6271,19 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
 
     function animateLiveMeters() {
-      if (liveAnalyserL && liveAnalyserR) {
-        updateLedMeter(liveAnalyserL, document.getElementById('liveLeftLeds'), true);
-        updateLedMeter(liveAnalyserR, document.getElementById('liveRightLeds'), false);
+      // Use Icecast analysers when in BUTT mode, otherwise use HLS live analysers
+      let analyserL, analyserR;
+      if (currentPreviewSource === 'butt' && icecastAnalyserL && icecastAnalyserR) {
+        analyserL = icecastAnalyserL;
+        analyserR = icecastAnalyserR;
+      } else {
+        analyserL = liveAnalyserL;
+        analyserR = liveAnalyserR;
+      }
+
+      if (analyserL && analyserR) {
+        updateLedMeter(analyserL, document.getElementById('liveLeftLeds'), true);
+        updateLedMeter(analyserR, document.getElementById('liveRightLeds'), false);
       }
       liveMeterAnimationId = requestAnimationFrame(animateLiveMeters);
     }
@@ -6196,6 +6390,25 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     document.getElementById('audioToggleBtn')?.addEventListener('click', () => {
       activeAudioSource = activeAudioSource === 'preview' ? 'live' : 'preview';
       updateAudioSourceUI();
+
+      // Sync the broadcast audio panel meters to match the toggle
+      // In OBS mode, switch between preview and live analysers
+      // In BUTT mode, always uses Icecast analysers (handled in animateBroadcastMeters)
+      if (currentPreviewSource === 'obs') {
+        broadcastAudioSource = activeAudioSource;
+        const label = document.querySelector('#audioSourceToggle .source-label');
+        if (label) label.textContent = broadcastAudioSource.toUpperCase();
+        // Update indicator to show which OBS source is being analyzed
+        updateAudioSourceIndicator('obs', broadcastAudioSource);
+      }
+
+      // In BUTT mode, start the live meter animation when switching to live
+      // since there's no HLS video to trigger it
+      if (currentPreviewSource === 'butt' && activeAudioSource === 'live') {
+        if (!liveMeterAnimationId && icecastAnalyserL && icecastAnalyserR) {
+          animateLiveMeters();
+        }
+      }
     });
 
     // Initialize audio source state

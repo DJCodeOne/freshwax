@@ -835,7 +835,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // GO LIVE - Validate stream is active and mark as live
     if (action === 'go_live') {
-      const { djId, djName, streamKey, title, genre, twitchUsername, twitchStreamKey } = data;
+      const { djId, djName, streamKey, title, genre, twitchUsername, twitchStreamKey, broadcastMode } = data;
 
       if (!djId || !djName || !streamKey) {
         return new Response(JSON.stringify({ success: false, error: 'DJ ID, name, and stream key required' }), {
@@ -895,6 +895,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Create live slot
       const slotId = generateId();
+
+      // Determine HLS URL based on broadcast mode
+      // 'placeholder' = use Icecast relay with static image (freshwax-main)
+      // 'video' = use OBS video stream (stream key path)
+      const useIcecastRelay = broadcastMode === 'placeholder';
+      const hlsUrl = useIcecastRelay
+        ? 'https://stream.freshwax.co.uk/live/freshwax-main/index.m3u8'
+        : buildHlsUrl(streamKey);
+
       const newSlot = {
         djId,
         djName: djName.trim(),
@@ -907,7 +916,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         description: data.description || '',
         streamKey,
         rtmpUrl: buildRtmpUrl(streamKey),
-        hlsUrl: buildHlsUrl(streamKey),
+        hlsUrl,
+        broadcastMode: broadcastMode || 'video', // Store for reference
         status: 'live',
         createdAt: nowISO,
         startedAt: nowISO,
