@@ -69,7 +69,8 @@ export class PlaylistManager {
       onEnded: () => this.handleTrackEnded(),
       onError: (error) => this.handlePlaybackError(error),
       onReady: () => this.handlePlayerReady(),
-      onStateChange: (state) => this.handleStateChange(state)
+      onStateChange: (state) => this.handleStateChange(state),
+      onTitleUpdate: (title) => this.handleTitleUpdate(title)
     });
 
     // Load play history, recently played, and personal playlist
@@ -1684,6 +1685,19 @@ export class PlaylistManager {
     // Reset error counter on successful state changes
     if (state === 'playing') {
       this.consecutiveErrors = 0;
+    }
+  }
+
+  /**
+   * Handle title update from player (e.g., YouTube video data)
+   */
+  private handleTitleUpdate(title: string): void {
+    const currentItem = this.playlist.queue[this.playlist.currentIndex];
+    if (currentItem && this.isPlaceholderTitle(currentItem.title)) {
+      console.log('[PlaylistManager] Updating title from player:', title);
+      currentItem.title = title;
+      // Notify listeners of the update
+      this.notifyStateChange();
     }
   }
 

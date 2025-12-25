@@ -9,6 +9,7 @@ export interface PlayerCallbacks {
   onError?: (error: string) => void;
   onReady?: () => void;
   onStateChange?: (state: string) => void;
+  onTitleUpdate?: (title: string) => void;
 }
 
 export class EmbedPlayerManager {
@@ -148,6 +149,17 @@ export class EmbedPlayerManager {
               }, 100);
             }
             this.callbacks.onStateChange?.('playing');
+
+            // Get video title from YouTube player and emit it
+            try {
+              const videoData = this.youtubePlayer?.getVideoData?.();
+              if (videoData?.title) {
+                console.log('[EmbedPlayerManager] Got YouTube title:', videoData.title);
+                this.callbacks.onTitleUpdate?.(videoData.title);
+              }
+            } catch (e) {
+              // Ignore errors getting video data
+            }
           }
         },
         onError: (event: any) => {
