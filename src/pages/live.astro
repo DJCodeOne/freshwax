@@ -435,9 +435,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
             </svg>
           </button>
           <div class="dj-info-center">
-            <span class="dj-info-label">NOW PLAYING</span>
+            <span class="dj-info-label" id="controlsLabel">NOW PLAYING</span>
             <span class="dj-info-name" id="controlsDjName">--</span>
-            <span class="dj-track-title" id="npTrackTitle"></span>
           </div>
           <div class="dj-info-right">
             <span class="stream-genre" id="streamGenre">Jungle / D&B</span>
@@ -4533,7 +4532,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   window.addEventListener('playlistUpdate', (e) => {
     const detail = e.detail;
     const isPlaylistPlaying = detail.isPlaying && detail.queue && detail.queue.length > 0;
-    const trackTitleEl = document.getElementById('npTrackTitle');
+    const controlsLabel = document.getElementById('controlsLabel');
+    const controlsDjName = document.getElementById('controlsDjName');
 
     if (isPlaylistPlaying) {
       // Add playlist-mode class to show the save button
@@ -4543,9 +4543,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       const currentIndex = detail.currentIndex || 0;
       currentPlaylistTrack = detail.queue[currentIndex];
 
-      // Update track title display
-      if (trackTitleEl && currentPlaylistTrack) {
-        trackTitleEl.textContent = currentPlaylistTrack.title || '';
+      // Update label and show track title in main position
+      if (controlsLabel) controlsLabel.textContent = 'PLAYLIST';
+      if (controlsDjName && currentPlaylistTrack) {
+        controlsDjName.textContent = currentPlaylistTrack.title || '--';
       }
 
       // Update button state - check if track is already in personal playlist
@@ -4558,7 +4559,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     } else {
       djInfoBar?.classList.remove('playlist-mode');
       currentPlaylistTrack = null;
-      if (trackTitleEl) trackTitleEl.textContent = '';
+      if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
+      if (controlsDjName) controlsDjName.textContent = '--';
     }
   });
 
