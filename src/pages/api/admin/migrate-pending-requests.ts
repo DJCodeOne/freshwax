@@ -5,7 +5,8 @@ import { queryCollection, setDocument, getDocument, initFirebaseEnv } from '../.
 
 export const prerender = false;
 
-const ADMIN_KEY = import.meta.env.ADMIN_KEY || 'freshwax-admin-2024';
+// SECURITY: No fallback - ADMIN_KEY must be set in environment
+const ADMIN_KEY = import.meta.env.ADMIN_KEY;
 const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -26,7 +27,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Query users collection - this may fail due to auth, so we'll use a different approach
     // Query the pendingRoleRequests to see what we already have
-    const existingRequests = await queryCollection('pendingRoleRequests', { skipCache: true });
+    const existingRequests = await queryCollection('pendingRoleRequests', { skipCache: true, limit: 200 });
     const existingIds = new Set(existingRequests.map(r => r.id));
     console.log(`[migrate] Found ${existingRequests.length} existing pendingRoleRequests`);
 

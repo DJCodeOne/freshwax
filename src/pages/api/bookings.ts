@@ -18,10 +18,11 @@ async function getUserDailyHours(uid: string, date: Date): Promise<number> {
   const endOfDay = new Date(date);
   endOfDay.setHours(23, 59, 59, 999);
 
-  // Get all bookings for this user and filter by date locally
+  // Get bookings for this user with limit to prevent runaway
   const bookings = await queryCollection('livestream-bookings', {
     filters: [{ field: 'djId', op: 'EQUAL', value: uid }],
-    skipCache: true
+    skipCache: true,
+    limit: 50  // Max 50 bookings per user to prevent runaway
   });
 
   let totalHours = 0;
@@ -45,8 +46,11 @@ async function isSlotAvailable(startTime: Date, duration: number): Promise<{ ava
   const dayEnd = new Date(startTime);
   dayEnd.setHours(23, 59, 59, 999);
 
-  // Get all bookings and filter by date locally
-  const bookings = await queryCollection('livestream-bookings', { skipCache: true });
+  // Get bookings with limit to prevent runaway (filter by date locally)
+  const bookings = await queryCollection('livestream-bookings', {
+    skipCache: true,
+    limit: 200  // Max 200 bookings to prevent runaway
+  });
 
   for (const booking of bookings) {
     const bookingStart = booking.startTime ? new Date(booking.startTime) : null;
@@ -99,7 +103,11 @@ export const GET: APIRoute = async ({ url }) => {
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
-      const allBookings = await queryCollection('livestream-bookings', { skipCache: true });
+      // Limit to prevent runaway - filter by date locally
+      const allBookings = await queryCollection('livestream-bookings', {
+        skipCache: true,
+        limit: 200  // Max 200 bookings to prevent runaway
+      });
 
       const bookings = allBookings
         .filter(b => {
@@ -129,7 +137,8 @@ export const GET: APIRoute = async ({ url }) => {
 
       const allBookings = await queryCollection('livestream-bookings', {
         filters: [{ field: 'djId', op: 'EQUAL', value: uid }],
-        skipCache: true
+        skipCache: true,
+        limit: 50  // Max 50 bookings per user to prevent runaway
       });
 
       const bookings = allBookings

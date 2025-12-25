@@ -11,8 +11,8 @@ let releases: any[] = [];
 let errorMessage = '';
 
 try {
-  // Query ALL releases (no limit) to match admin dashboard - skipCache to ensure fresh data
-  releases = await queryCollection('releases', { skipCache: true });
+  // Query releases with limit to prevent runaway - skipCache to ensure fresh data
+  releases = await queryCollection('releases', { skipCache: true, limit: 500 });
 
   // Sort by processedAt or createdAt (newest first), pending releases at top
   releases.sort((a, b) => {

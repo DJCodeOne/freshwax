@@ -230,12 +230,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Stream history - all completed/cancelled streams
+    // Stream history - completed/cancelled streams (limited to prevent runaway)
     if (action === 'history') {
-      const allSlots = await queryCollection('livestreamSlots', { skipCache: true });
-      const historySlots = allSlots.filter(slot =>
-        slot.status === 'completed' || slot.status === 'cancelled'
-      );
+      // Query with limit to prevent unbounded reads
+      const historySlots = await queryCollection('livestreamSlots', {
+        skipCache: true,
+        filters: [{ field: 'status', op: 'IN', value: ['completed', 'cancelled'] }],
+        limit: 100  // Max 100 history items to prevent runaway
+      });
 
       return new Response(JSON.stringify({
         success: true,
@@ -248,7 +250,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     let slots = forceRefresh ? null : getFromCache(cacheKey);
 
     if (!slots) {
-      const allSlots = await queryCollection('livestreamSlots', { skipCache: true });
+      // Add limit to prevent unbounded reads - schedule rarely exceeds 200 slots
+      const allSlots = await queryCollection('livestreamSlots', {
+        skipCache: true,
+        limit: 200  // Max 200 slots to prevent runaway
+      });
       slots = allSlots.filter((slot: any) => slot.startTime >= startDate && slot.startTime <= endDate);
       if (djId) slots = slots.filter((slot: any) => slot.djId === djId);
       setCache(cacheKey, slots);
@@ -382,8 +388,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Continue with booking if limit check fails
       }
 
-      // Check for conflicts
-      const existingSlots = await queryCollection('livestreamSlots', { skipCache: true });
+      // Check for conflicts - limit to prevent runaway
+      const existingSlots = await queryCollection('livestreamSlots', { skipCache: true, limit: 200 });
       const conflicts = existingSlots.filter(slot => {
         if (!['scheduled', 'in_lobby', 'live', 'queued'].includes(slot.status)) return false;
         const existingStart = new Date(slot.startTime);

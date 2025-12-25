@@ -33,9 +33,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (userId) {
       // OPTIMIZED: Query all possible userId fields in PARALLEL (saves 2 sequential reads)
       const [mixesByUserId, mixesByUserId2, mixesByUploaderId] = await Promise.all([
-        queryCollection('dj-mixes', { filters: [{ field: 'userId', op: 'EQUAL', value: userId }] }),
-        queryCollection('dj-mixes', { filters: [{ field: 'user_id', op: 'EQUAL', value: userId }] }),
-        queryCollection('dj-mixes', { filters: [{ field: 'uploaderId', op: 'EQUAL', value: userId }] })
+        queryCollection('dj-mixes', { filters: [{ field: 'userId', op: 'EQUAL', value: userId }], limit: 100 }),
+        queryCollection('dj-mixes', { filters: [{ field: 'user_id', op: 'EQUAL', value: userId }], limit: 100 }),
+        queryCollection('dj-mixes', { filters: [{ field: 'uploaderId', op: 'EQUAL', value: userId }], limit: 100 })
       ]);
 
       // Merge results and dedupe by id
@@ -72,9 +72,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
             // OPTIMIZED: Query all displayName fields in PARALLEL
             const [byDjName, byDjName2, byDisplayName] = await Promise.all([
-              queryCollection('dj-mixes', { filters: [{ field: 'djName', op: 'EQUAL', value: displayName }] }),
-              queryCollection('dj-mixes', { filters: [{ field: 'dj_name', op: 'EQUAL', value: displayName }] }),
-              queryCollection('dj-mixes', { filters: [{ field: 'displayName', op: 'EQUAL', value: displayName }] })
+              queryCollection('dj-mixes', { filters: [{ field: 'djName', op: 'EQUAL', value: displayName }], limit: 100 }),
+              queryCollection('dj-mixes', { filters: [{ field: 'dj_name', op: 'EQUAL', value: displayName }], limit: 100 }),
+              queryCollection('dj-mixes', { filters: [{ field: 'displayName', op: 'EQUAL', value: displayName }], limit: 100 })
             ]);
 
             // Merge and dedupe

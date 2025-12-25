@@ -3,7 +3,7 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../../lib/firebase-rest';
 
-const allUsers = await queryCollection('users', { skipCache: true });
+const allUsers = await queryCollection('users', { skipCache: true, limit: 500 });
 
 const pendingPartners = allUsers.filter((user: any) => {
   const pending = user.pendingRoles || {};

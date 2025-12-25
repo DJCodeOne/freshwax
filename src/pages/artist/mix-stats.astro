@@ -32,8 +32,8 @@ if (partnerId) {
   try {
     partner = await getDocument('artists', partnerId);
     if (partner) {
-      // Get all mixes and filter
-      const allMixes = await queryCollection('dj-mixes');
+      // Get all mixes and filter (with limit to prevent runaway)
+      const allMixes = await queryCollection('dj-mixes', { limit: 500 });
       const partnerName = partner.artistName?.toLowerCase().trim();
 
       // Filter mixes belonging to this user

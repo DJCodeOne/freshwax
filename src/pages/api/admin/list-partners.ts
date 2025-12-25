@@ -73,8 +73,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Helper to get first non-empty value
     const firstNonEmpty = (...values: any[]) => values.find(v => v && String(v).trim() !== '') || '';
 
-    // Load from users collection (skip deleted users)
-    const users = await queryCollection('users', { cacheTime: 300000 }); // 5 min cache
+    // Load from users collection (skip deleted users) - limited to prevent runaway
+    const users = await queryCollection('users', {
+      cacheTime: 300000,  // 5 min cache
+      limit: 500  // Max 500 users to prevent runaway
+    });
     users.forEach(user => {
       if (user.deleted === true) return;
       const roles = user.roles || {};
@@ -104,8 +107,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
 
-    // Load from artists collection (skip deleted users)
-    const artists = await queryCollection('artists', { cacheTime: 300000 }); // 5 min cache
+    // Load from artists collection (skip deleted users) - limited to prevent runaway
+    const artists = await queryCollection('artists', {
+      cacheTime: 300000,  // 5 min cache
+      limit: 500  // Max 500 artists to prevent runaway
+    });
     artists.forEach(artist => {
       if (artist.deleted === true) return;
       // Check if this artist record has partner roles

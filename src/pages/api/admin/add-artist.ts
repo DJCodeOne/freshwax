@@ -5,7 +5,8 @@ import { initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
-const ADMIN_KEY = import.meta.env.ADMIN_KEY || 'freshwax-admin-2024';
+// SECURITY: No fallback - ADMIN_KEY must be set in environment
+const ADMIN_KEY = import.meta.env.ADMIN_KEY;
 
 // Convert value to Firestore format
 function toFirestoreValue(value: any): any {

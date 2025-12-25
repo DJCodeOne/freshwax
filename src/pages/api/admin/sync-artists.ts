@@ -22,14 +22,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    // Get all users
-    const users = await queryCollection('users', { skipCache: true });
-    console.log(`[sync-artists] Found ${users.length} users`);
+    // Get users with limit to prevent runaway (admin operation)
+    const users = await queryCollection('users', {
+      skipCache: true,
+      limit: 500  // Max 500 users per sync to prevent runaway
+    });
+    console.log(`[sync-artists] Found ${users.length} users (limited to 500)`);
 
-    // Get all existing artists
-    const existingArtists = await queryCollection('artists', { skipCache: true });
+    // Get existing artists with limit
+    const existingArtists = await queryCollection('artists', {
+      skipCache: true,
+      limit: 500  // Max 500 artists to prevent runaway
+    });
     const artistIds = new Set(existingArtists.map(a => a.id));
-    console.log(`[sync-artists] Found ${existingArtists.length} existing artists`);
+    console.log(`[sync-artists] Found ${existingArtists.length} existing artists (limited to 500)`);
 
     const synced: string[] = [];
     const errors: string[] = [];

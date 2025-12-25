@@ -129,8 +129,8 @@ async function restartServer(): Promise<{ success: boolean; message?: string; er
 // Force end all active streams
 async function forceEndStreams(): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    // Get all active livestreams
-    const streams = await queryCollection('livestreams');
+    // Get active livestreams with limit
+    const streams = await queryCollection('livestreams', { limit: 100 });
     const activeStreams = streams.filter((s: any) => s.status === 'live');
 
     // Update each to ended
@@ -142,8 +142,8 @@ async function forceEndStreams(): Promise<{ success: boolean; message?: string; 
       });
     }
 
-    // Also update livestreamSlots
-    const slots = await queryCollection('livestreamSlots');
+    // Also update livestreamSlots with limit
+    const slots = await queryCollection('livestreamSlots', { limit: 200 });
     const activeSlots = slots.filter((s: any) => s.status === 'live');
 
     for (const slot of activeSlots) {
@@ -165,8 +165,8 @@ async function forceEndStreams(): Promise<{ success: boolean; message?: string; 
 // Clear all chat messages
 async function clearChat(): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    // Get all messages and delete them
-    const messages = await queryCollection('livestream-chat');
+    // Get messages with limit to prevent runaway
+    const messages = await queryCollection('livestream-chat', { limit: 1000 });
     let deleted = 0;
 
     for (const msg of messages) {
@@ -188,8 +188,8 @@ async function clearChat(): Promise<{ success: boolean; message?: string; error?
 // Kick all viewers (clear listeners)
 async function kickViewers(): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    // Get all listeners and delete them
-    const listeners = await queryCollection('listeners');
+    // Get listeners with limit to prevent runaway
+    const listeners = await queryCollection('listeners', { limit: 500 });
     let deleted = 0;
 
     for (const listener of listeners) {
@@ -240,9 +240,9 @@ async function cleanupDatabase(): Promise<{ success: boolean; message?: string; 
   try {
     let cleaned = 0;
 
-    // Clean expired bypass requests (older than 24 hours)
+    // Clean expired bypass requests (older than 24 hours) - limited
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const bypassRequests = await queryCollection('bypassRequests');
+    const bypassRequests = await queryCollection('bypassRequests', { limit: 200 });
     for (const req of bypassRequests) {
       if (req.createdAt && req.createdAt < oneDayAgo) {
         // Would delete here - for safety just counting
@@ -250,9 +250,9 @@ async function cleanupDatabase(): Promise<{ success: boolean; message?: string; 
       }
     }
 
-    // Clean old listener heartbeats (older than 5 minutes)
+    // Clean old listener heartbeats (older than 5 minutes) - limited
     const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    const listeners = await queryCollection('listeners');
+    const listeners = await queryCollection('listeners', { limit: 500 });
     for (const listener of listeners) {
       if (listener.lastSeen && listener.lastSeen < fiveMinAgo) {
         cleaned++;

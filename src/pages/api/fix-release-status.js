@@ -14,7 +14,7 @@ export async function GET({ locals }) {
   });
 
   try {
-    const releases = await queryCollection('releases', {});
+    const releases = await queryCollection('releases', { limit: 500 });
 
     const updates = [];
 

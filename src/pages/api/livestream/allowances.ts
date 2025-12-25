@@ -54,8 +54,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Get all allowances (admin view)
-    const allowances = await queryCollection('djAllowances');
+    // Get all allowances (admin view) - limited to prevent runaway
+    const allowances = await queryCollection('djAllowances', { limit: 200 });
 
     return new Response(JSON.stringify({
       success: true,

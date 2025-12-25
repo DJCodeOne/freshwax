@@ -22,10 +22,10 @@ let bypassRequestsData: any[] = [];
 try {
   const results = await Promise.allSettled([
     queryCollection('orders', { limit: 50 }),
-    queryCollection('releases'),
-    queryCollection('artists'),
-    queryCollection('merch'),
-    queryCollection('dj-mixes'),
+    queryCollection('releases', { limit: 500 }),
+    queryCollection('artists', { limit: 500 }),
+    queryCollection('merch', { limit: 500 }),
+    queryCollection('dj-mixes', { limit: 500 }),
     queryCollection('livestreams', { limit: 10 }),
     queryCollection('bypassRequests', { limit: 20 })
   ]);
