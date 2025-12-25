@@ -1212,12 +1212,20 @@ export class PlaylistManager {
             const randomIndex = Math.floor(Math.random() * fallbackTracks.length);
             const selected = fallbackTracks[randomIndex];
             console.log('[PlaylistManager] All on cooldown, picked random:', selected.title || selected.url);
+
+            // Fetch real title if placeholder
+            let title = selected.title;
+            if (this.isPlaceholderTitle(title) && selected.embedId) {
+              const realTitle = await this.fetchYouTubeTitle(selected.embedId);
+              if (realTitle) title = realTitle;
+            }
+
             return {
               id: this.generateId(),
               url: selected.url,
               platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
               embedId: selected.embedId,
-              title: selected.title,
+              title: title,
               thumbnail: selected.thumbnail,
               addedAt: new Date().toISOString(),
               addedBy: 'system',
@@ -1232,12 +1240,22 @@ export class PlaylistManager {
 
         console.log('[PlaylistManager] Selected random track:', selected.title || selected.url);
 
+        // Fetch real title if it's a placeholder (e.g., "Track 1234")
+        let title = selected.title;
+        if (this.isPlaceholderTitle(title) && selected.embedId) {
+          const realTitle = await this.fetchYouTubeTitle(selected.embedId);
+          if (realTitle) {
+            title = realTitle;
+            console.log('[PlaylistManager] Fetched real title:', title);
+          }
+        }
+
         return {
           id: this.generateId(),
           url: selected.url,
           platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
           embedId: selected.embedId,
-          title: selected.title,
+          title: title,
           thumbnail: selected.thumbnail,
           addedAt: new Date().toISOString(),
           addedBy: 'system',
@@ -1253,12 +1271,20 @@ export class PlaylistManager {
       console.log('[PlaylistManager] Server failed, using local history:', this.playHistory.length, 'tracks');
       const randomIndex = Math.floor(Math.random() * this.playHistory.length);
       const selected = this.playHistory[randomIndex];
+
+      // Fetch real title if it's a placeholder
+      let title = selected.title;
+      if (this.isPlaceholderTitle(title) && selected.embedId) {
+        const realTitle = await this.fetchYouTubeTitle(selected.embedId);
+        if (realTitle) title = realTitle;
+      }
+
       return {
         id: this.generateId(),
         url: selected.url,
         platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
         embedId: selected.embedId,
-        title: selected.title,
+        title: title,
         thumbnail: selected.thumbnail,
         addedAt: new Date().toISOString(),
         addedBy: 'system',
@@ -1849,6 +1875,30 @@ export class PlaylistManager {
     }
 
     // Duration check not available for this platform
+    return null;
+  }
+
+  /**
+   * Check if a title is a placeholder (e.g., "Track 1234")
+   */
+  private isPlaceholderTitle(title?: string): boolean {
+    if (!title) return true;
+    return /^Track \d+$/i.test(title);
+  }
+
+  /**
+   * Fetch actual YouTube title via oEmbed
+   */
+  private async fetchYouTubeTitle(videoId: string): Promise<string | null> {
+    try {
+      const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.title || null;
+      }
+    } catch (error) {
+      console.warn('[PlaylistManager] Could not fetch YouTube title:', error);
+    }
     return null;
   }
 
