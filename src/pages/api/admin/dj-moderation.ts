@@ -41,12 +41,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       queryCollection('djModeration', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'banned' }],
         orderBy: { field: 'bannedAt', direction: 'DESCENDING' },
-        skipCache: true
+        skipCache: true,
+        limit: 200
       }),
       queryCollection('djModeration', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'hold' }],
         orderBy: { field: 'holdAt', direction: 'DESCENDING' },
-        skipCache: true
+        skipCache: true,
+        limit: 200
       })
     ]);
 
@@ -156,7 +158,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           { field: 'djId', op: 'EQUAL', value: user.userId },
           { field: 'status', op: 'EQUAL', value: 'live' }
         ],
-        skipCache: true
+        skipCache: true,
+        limit: 10
       });
 
       for (const stream of activeStreams) {
@@ -232,7 +235,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           { field: 'djId', op: 'EQUAL', value: user.userId },
           { field: 'status', op: 'EQUAL', value: 'live' }
         ],
-        skipCache: true
+        skipCache: true,
+        limit: 10
       });
 
       for (const stream of activeStreams) {
@@ -287,7 +291,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           { field: 'djId', op: 'EQUAL', value: userId },
           { field: 'status', op: 'EQUAL', value: 'live' }
         ],
-        skipCache: true
+        skipCache: true,
+        limit: 10
       });
 
       if (activeStreams.length === 0) {
