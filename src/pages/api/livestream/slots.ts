@@ -43,6 +43,17 @@ function initServices(locals: any) {
 const SLOT_DURATIONS = [30, 45, 60, 120, 180, 240];
 const MAX_BOOKING_DAYS = 30;
 
+// SECURITY: Sanitize slot data to remove sensitive fields from public responses
+function sanitizeSlot(slot: any): any {
+  if (!slot) return slot;
+  const { streamKey, twitchStreamKey, rtmpUrl, ...safeSlot } = slot;
+  return safeSlot;
+}
+
+function sanitizeSlots(slots: any[]): any[] {
+  return slots.map(sanitizeSlot);
+}
+
 const DEFAULT_SETTINGS = {
   defaultDailyHours: 2,
   defaultWeeklySlots: 2,
@@ -189,11 +200,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       const timeRemaining = Math.max(0, endTime.getTime() - now.getTime());
       const showCountdown = timeRemaining <= settings.sessionEndCountdown * 1000;
 
+      // SECURITY: Remove sensitive fields from public response
+      const { streamKey, twitchStreamKey, rtmpUrl, ...safeLiveSlot } = liveSlot;
+
       return new Response(JSON.stringify({
         success: true,
         isLive: true,
         currentStream: {
-          ...liveSlot,
+          ...safeLiveSlot,
           timeRemaining,
           showCountdown,
           countdownSeconds: showCountdown ? Math.ceil(timeRemaining / 1000) : null
@@ -241,7 +255,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
       return new Response(JSON.stringify({
         success: true,
-        slots: historySlots
+        slots: sanitizeSlots(historySlots)
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -265,11 +279,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const liveSlot = slots.find((slot: any) => slot.status === 'live');
     const upcomingSlots = slots.filter((slot: any) => slot.startTime > now && ['scheduled', 'in_lobby', 'queued'].includes(slot.status));
 
+    // SECURITY: Sanitize all slots to remove stream keys from public response
     return new Response(JSON.stringify({
       success: true,
-      slots,
-      currentLive: liveSlot || null,
-      upcoming: upcomingSlots,
+      slots: sanitizeSlots(slots),
+      currentLive: sanitizeSlot(liveSlot) || null,
+      upcoming: sanitizeSlots(upcomingSlots),
       total: slots.length,
       settings: {
         sessionEndCountdown: settings.sessionEndCountdown,

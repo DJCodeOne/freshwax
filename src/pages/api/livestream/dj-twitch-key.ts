@@ -1,6 +1,7 @@
 // src/pages/api/livestream/dj-twitch-key.ts
 // Returns the DJ's personal Twitch stream key for the current live stream
 // Called by MediaMTX batch scripts to enable multi-streaming
+// SECURITY: Requires server key to prevent unauthorized access
 
 import type { APIRoute } from 'astro';
 import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
@@ -16,6 +17,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
   try {
     const url = new URL(request.url);
     const streamKey = url.searchParams.get('streamKey');
+    const serverKey = url.searchParams.get('serverKey') || request.headers.get('x-server-key');
+
+    // SECURITY: Require server key for access to Twitch credentials
+    const expectedServerKey = env?.STREAM_SERVER_KEY || import.meta.env.STREAM_SERVER_KEY;
+    if (!expectedServerKey || serverKey !== expectedServerKey) {
+      console.warn('[dj-twitch-key] Unauthorized access attempt');
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Unauthorized'
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     if (!streamKey) {
       return new Response(JSON.stringify({

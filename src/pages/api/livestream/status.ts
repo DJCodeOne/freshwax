@@ -83,9 +83,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
         return jsonResponse(result, 404, 15);
       }
 
+      // SECURITY: Remove sensitive fields from public response
+      const { streamKey, twitchStreamKey, rtmpUrl, ...safeStreamDoc } = streamDoc;
+
       const result = {
         success: true,
-        stream: streamDoc
+        stream: safeStreamDoc
       };
       setCache(cacheKey, result);
       return jsonResponse(result, 200, 15);
@@ -110,6 +113,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
     // Convert slots to stream format for the player
+    // SECURITY: Do NOT expose streamKey in public response - it would allow stream hijacking
     let liveStreams = liveSlots.map(slot => ({
       id: slot.id,
       title: slot.title || `${slot.djName}'s Stream`,
@@ -125,7 +129,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Fall back to buildHlsUrl only if no stored URL
       hlsUrl: slot.hlsUrl || (slot.streamKey ? buildHlsUrl(slot.streamKey) : null),
       broadcastMode: slot.broadcastMode || 'video',
-      streamKey: slot.streamKey,
+      // streamKey intentionally omitted - security risk
       streamSource: 'red5',
       currentViewers: slot.currentViewers || 0,
       totalViews: slot.totalViews || 0,
