@@ -2860,6 +2860,19 @@
     text-overflow: ellipsis;
   }
 
+  .dj-track-title {
+    font-size: 12px;
+    color: #aaa;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 400px;
+  }
+
+  .dj-info-bar.playlist-mode .dj-track-title {
+    color: #f87171;
+  }
+
   .dj-info-bar .stream-genre {
     font-size: 12px;
     color: #666;
@@ -5879,7 +5892,12 @@
     .dj-info-name {
       font-size: 14px;
     }
-    
+
+    .dj-track-title {
+      font-size: 11px;
+      max-width: 280px;
+    }
+
     /* Reactions in a row */
     .inline-reactions {
       display: flex;
