@@ -287,7 +287,9 @@ export class EmbedPlayerManager {
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           video.play().catch((err: any) => {
-            console.error('[Direct] Autoplay failed:', err);
+            if (err?.name !== 'AbortError') {
+              console.error('[Direct] Autoplay failed:', err);
+            }
           });
           this.callbacks.onReady?.();
         });
@@ -301,7 +303,9 @@ export class EmbedPlayerManager {
         // Native HLS support (Safari)
         video.src = item.url;
         video.play().catch((err: any) => {
-          console.error('[Direct] Autoplay failed:', err);
+          if (err?.name !== 'AbortError') {
+            console.error('[Direct] Autoplay failed:', err);
+          }
         });
         this.callbacks.onReady?.();
       } else {
@@ -316,7 +320,9 @@ export class EmbedPlayerManager {
 
       video.src = item.url;
       video.play().catch((err: any) => {
-        console.error('[Direct] Autoplay failed:', err);
+        if (err?.name !== 'AbortError') {
+          console.error('[Direct] Autoplay failed:', err);
+        }
       });
 
       this.callbacks.onReady?.();
@@ -360,7 +366,12 @@ export class EmbedPlayerManager {
       } else if (this.currentPlatform === 'direct' && this.directVideo) {
         await this.directVideo.play();
       }
-    } catch (error) {
+    } catch (error: any) {
+      // AbortError happens when play() is interrupted by pause() - this is expected during rapid state changes
+      if (error?.name === 'AbortError') {
+        console.log('[EmbedPlayerManager] Play interrupted (normal during state changes)');
+        return;
+      }
       console.error('[EmbedPlayerManager] Play error:', error);
     }
   }

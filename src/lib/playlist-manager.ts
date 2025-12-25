@@ -53,6 +53,8 @@ export class PlaylistManager {
   private consecutiveErrors: number = 0; // Track errors to prevent infinite loops
   private containerId: string; // Store container ID for existence check
   private lastPlayedUrl: string | null = null; // Track last played URL to avoid immediate repeats
+  private isPlayingLocked: boolean = false; // Prevent concurrent play operations
+  private pendingPlayRequest: boolean = false; // Queue a play request if locked
 
   constructor(containerId: string) {
     this.containerId = containerId;
@@ -481,8 +483,9 @@ export class PlaylistManager {
     this.clearTrackTimer();
     this.stopCountdown();
     await this.player.pause();
+    this.stopPlaylistMeters();
     this.disableEmojis();
-    console.log('[PlaylistManager] Paused locally');
+    console.log('[PlaylistManager] Paused locally, meters stopped');
   }
 
   /**
@@ -505,6 +508,7 @@ export class PlaylistManager {
     // Resume and sync to current global position
     await this.player.play();
     this.enableEmojis();
+    this.startPlaylistMeters();
 
     // Seek to current global position
     const syncPosition = this.calculateSyncPosition();
@@ -516,7 +520,7 @@ export class PlaylistManager {
     // Restart countdown display
     this.updateDurationDisplay();
 
-    console.log('[PlaylistManager] Resumed locally, synced to global position');
+    console.log('[PlaylistManager] Resumed locally, meters started');
   }
 
   /**
@@ -664,7 +668,7 @@ export class PlaylistManager {
   }
 
   /**
-   * Play current track
+   * Play current track (with lock to prevent race conditions)
    */
   private async playCurrent(): Promise<void> {
     const currentItem = this.playlist.queue[this.playlist.currentIndex];
@@ -678,12 +682,23 @@ export class PlaylistManager {
       return;
     }
 
+    // Prevent concurrent play operations (race condition fix)
+    if (this.isPlayingLocked) {
+      console.log('[PlaylistManager] Play already in progress, queuing request');
+      this.pendingPlayRequest = true;
+      return;
+    }
+
+    this.isPlayingLocked = true;
+    this.pendingPlayRequest = false;
+
     try {
       // Show video player and hide overlays
       this.showVideoPlayer();
 
-      // Log to play history
+      // Log to play history (local and server)
       this.logToHistory(currentItem);
+      this.logToServerHistory(currentItem);
 
       // Mark URL as played (for 1-hour cooldown)
       this.markAsPlayed(currentItem.url);
@@ -713,6 +728,16 @@ export class PlaylistManager {
       console.error('[PlaylistManager] Error playing current:', error);
       // Try next track
       await this.playNext();
+    } finally {
+      this.isPlayingLocked = false;
+
+      // If there was a pending play request, execute it
+      if (this.pendingPlayRequest) {
+        console.log('[PlaylistManager] Executing pending play request');
+        this.pendingPlayRequest = false;
+        // Use setTimeout to avoid stack overflow
+        setTimeout(() => this.playCurrent(), 50);
+      }
     }
   }
 
@@ -761,6 +786,33 @@ export class PlaylistManager {
   }
 
   /**
+   * Log item to server-side master history (for auto-play across all users)
+   */
+  private async logToServerHistory(item: GlobalPlaylistItem): Promise<void> {
+    try {
+      await fetch('/api/playlist/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          item: {
+            id: item.id,
+            url: item.url,
+            platform: item.platform,
+            embedId: item.embedId,
+            title: item.title,
+            thumbnail: item.thumbnail,
+            addedBy: item.addedBy,
+            addedByName: item.addedByName
+          }
+        })
+      });
+      console.log('[PlaylistManager] Logged to server history');
+    } catch (error) {
+      console.error('[PlaylistManager] Error logging to server history:', error);
+    }
+  }
+
+  /**
    * Enable emoji reactions, audio meters, and chat
    */
   private enableEmojis(): void {
@@ -790,13 +842,18 @@ export class PlaylistManager {
       console.log('[PlaylistManager] Chat enabled for playlist mode');
     }
 
-    // Start audio LED meters
-    if (typeof (window as any).startGlobalMeters === 'function') {
-      (window as any).startGlobalMeters();
+    // Hide the main stereo meters and toggle button when playlist is playing
+    const stereoMeters = document.getElementById('stereoMeters');
+    const toggleMetersBtn = document.getElementById('toggleMetersBtn');
+    if (stereoMeters) {
+      stereoMeters.style.display = 'none';
+    }
+    if (toggleMetersBtn) {
+      toggleMetersBtn.style.display = 'none';
     }
 
     this.startPlaylistMeters();
-    console.log('[PlaylistManager] Emoji reactions, chat, and audio meters enabled');
+    console.log('[PlaylistManager] Emoji reactions, chat, and playlist meters enabled (main meters hidden)');
   }
 
   /**
@@ -824,6 +881,16 @@ export class PlaylistManager {
     }
 
     this.stopPlaylistMeters();
+
+    // Show the main stereo meters and toggle button again when playlist stops
+    const stereoMeters = document.getElementById('stereoMeters');
+    const toggleMetersBtn = document.getElementById('toggleMetersBtn');
+    if (stereoMeters) {
+      stereoMeters.style.display = '';
+    }
+    if (toggleMetersBtn) {
+      toggleMetersBtn.style.display = '';
+    }
   }
 
   private playlistMeterAnimationId: number | null = null;
@@ -856,8 +923,8 @@ export class PlaylistManager {
     this.meterState.bpm = 140 + Math.random() * 40;
 
     const updateMeters = () => {
-      if (!this.playlist.isPlaying) {
-        this.stopPlaylistMeters();
+      // Check if animation was cancelled (paused)
+      if (!this.playlistMeterAnimationId) {
         return;
       }
 
@@ -1110,10 +1177,41 @@ export class PlaylistManager {
    * Pick a random track from history that hasn't been played recently
    * Used for auto-play when queue is empty
    * Uses 60-minute cooldown and never repeats the last played track
+   * Falls back to server-side master history if local history is empty
    */
   private async pickRandomFromHistory(): Promise<GlobalPlaylistItem | null> {
+    // If no local history, try to fetch from server-side master history
     if (this.playHistory.length === 0) {
-      console.log('[PlaylistManager] No tracks in history for auto-play');
+      console.log('[PlaylistManager] No local history - fetching from server');
+      try {
+        const response = await fetch('/api/playlist/history');
+        const result = await response.json();
+        if (result.success && result.items && result.items.length > 0) {
+          // Use server-side history
+          const serverHistory = result.items;
+          console.log('[PlaylistManager] Loaded', serverHistory.length, 'items from server history');
+
+          // Pick a random track from server history
+          const randomIndex = Math.floor(Math.random() * serverHistory.length);
+          const selected = serverHistory[randomIndex];
+
+          return {
+            id: this.generateId(),
+            url: selected.url,
+            platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
+            embedId: selected.embedId,
+            title: selected.title,
+            thumbnail: selected.thumbnail,
+            addedAt: new Date().toISOString(),
+            addedBy: 'system',
+            addedByName: 'Auto-Play'
+          };
+        }
+      } catch (error) {
+        console.error('[PlaylistManager] Error fetching server history:', error);
+      }
+
+      console.log('[PlaylistManager] No tracks available for auto-play');
       return null;
     }
 
@@ -1699,23 +1797,65 @@ export class PlaylistManager {
   }
 
   /**
-   * Fetch video metadata using noembed.com
+   * Fetch video metadata using noembed.com with YouTube fallback
    */
   private async fetchMetadata(url: string): Promise<{ title?: string; thumbnail?: string; duration?: number }> {
     try {
+      // Try noembed first
       const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
-      if (!response.ok) return {};
-
-      const data = await response.json();
-      return {
-        title: data.title || undefined,
-        thumbnail: data.thumbnail_url || undefined,
-        duration: data.duration || undefined // Some providers include duration
-      };
+      if (response.ok) {
+        const data = await response.json();
+        if (data.title) {
+          console.log('[PlaylistManager] Got title from noembed:', data.title);
+          return {
+            title: data.title,
+            thumbnail: data.thumbnail_url || undefined,
+            duration: data.duration || undefined
+          };
+        }
+      }
     } catch (error) {
-      console.warn('[PlaylistManager] Failed to fetch metadata:', error);
-      return {};
+      console.warn('[PlaylistManager] noembed failed:', error);
     }
+
+    // Fallback: Try YouTube oEmbed directly for YouTube URLs
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      try {
+        const ytResponse = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+        if (ytResponse.ok) {
+          const ytData = await ytResponse.json();
+          console.log('[PlaylistManager] Got title from YouTube oEmbed:', ytData.title);
+          return {
+            title: ytData.title || undefined,
+            thumbnail: ytData.thumbnail_url || undefined,
+            duration: undefined
+          };
+        }
+      } catch (error) {
+        console.warn('[PlaylistManager] YouTube oEmbed failed:', error);
+      }
+    }
+
+    // Fallback: Try SoundCloud oEmbed for SoundCloud URLs
+    if (url.includes('soundcloud.com')) {
+      try {
+        const scResponse = await fetch(`https://soundcloud.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+        if (scResponse.ok) {
+          const scData = await scResponse.json();
+          console.log('[PlaylistManager] Got title from SoundCloud oEmbed:', scData.title);
+          return {
+            title: scData.title || undefined,
+            thumbnail: scData.thumbnail_url || undefined,
+            duration: undefined
+          };
+        }
+      } catch (error) {
+        console.warn('[PlaylistManager] SoundCloud oEmbed failed:', error);
+      }
+    }
+
+    console.warn('[PlaylistManager] Could not fetch metadata for:', url);
+    return {};
   }
 
   /**

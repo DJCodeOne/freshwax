@@ -13,7 +13,7 @@
         </svg>
         <span>Back</span>
       </button>
-      <h2>DJ Waitlist</h2>
+      <h2>Playlist</h2>
       <button id="closePlaylistModal" class="close-btn" aria-label="Close playlist">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -99,7 +99,7 @@
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                     <polygon points="5 3 19 12 5 21 5 3"></polygon>
                   </svg>
-                  <p>DJ Waitlist is empty</p>
+                  <p>Playlist is empty</p>
                   <p class="playlist-empty-hint">Add a track to join</p>
                 </div>
               </div>
@@ -135,7 +135,7 @@
               <div id="previewTrackInfo" class="preview-track-info hidden">
                 <div class="preview-track-title" id="previewTrackTitle">--</div>
                 <div class="preview-track-bottom">
-                  <div class="preview-track-dj" id="previewTrackDj">Selecter: --</div>
+                  <div class="preview-track-dj" id="previewTrackDj">Selector: --</div>
                   <div class="preview-duration-box" id="previewDurationBox">
                     <span class="preview-duration-value" id="previewDuration">--:--</span>
                     <span class="preview-duration-label">LEFT</span>
@@ -2842,7 +2842,7 @@
     if (statusText && queueSize > 0) {
       const currentItem = queue[currentIndex];
       const djName = currentDj?.userName || 'Unknown';
-      statusText.textContent = `Selecter: ${djName}`;
+      statusText.textContent = `Selector: ${djName}`;
     }
 
     // Update Now Playing Strip
@@ -2946,7 +2946,7 @@
     if (previewTrackInfo && previewTitle && previewDjName) {
       previewTrackInfo.classList.remove('hidden');
       previewTitle.textContent = currentItem.title || 'Unknown Track';
-      previewDjName.textContent = `Selecter: ${currentDj?.userName || currentItem.addedByName || 'Unknown'}`;
+      previewDjName.textContent = `Selector: ${currentDj?.userName || currentItem.addedByName || 'Unknown'}`;
     }
 
     // Start duration timer for this track (with countdown support)
@@ -3028,7 +3028,7 @@
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <polygon points="5 3 19 12 5 21 5 3"></polygon>
           </svg>
-          <p>DJ Waitlist is empty</p>
+          <p>Playlist is empty</p>
           <p class="playlist-empty-hint">${isAuthenticated ? 'Add a track to join' : 'Sign in to join'}</p>
         </div>
       `;
@@ -3058,7 +3058,7 @@
           </div>
           <div class="playlist-grid-info">
             <div class="playlist-grid-title">${item.title || 'Untitled'}</div>
-            <div class="dj-name-display">Selecter: ${djName}${isUsersTrack ? ' (You)' : ''}</div>
+            <div class="dj-name-display">Selector: ${djName}${isUsersTrack ? ' (You)' : ''}</div>
           </div>
           <div class="playlist-grid-actions">
             ${isAuthenticated ? `

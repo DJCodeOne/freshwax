@@ -2,9 +2,16 @@
 // src/pages/live/fullpage.astro
 // Full page live stream view - immersive player with 3 chat columns
 import { ClientRouter } from 'astro:transitions';
+import PlaylistModal from '../../components/live/PlaylistModal.astro';
 export const prerender = false;
 
 const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6SfraYr';
+
+// Pusher config for client-side (PUBLIC_ prefixed vars are safe to expose)
+const pusherConfig = {
+  key: import.meta.env.PUBLIC_PUSHER_KEY || '',
+  cluster: import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu'
+};
 ---
 
 <!DOCTYPE html>
@@ -18,6 +25,12 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+
+  <!-- Pusher config for real-time features -->
+  <script define:vars={{ pusherConfig }}>
+    window.PUSHER_CONFIG = pusherConfig;
+  </script>
+
   <ClientRouter />
 </head>
 <body>
@@ -50,6 +63,41 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     </div>
   </div>
 
+  <!-- Emoji Modal -->
+  <div id="emojiModal" class="modal hidden">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-content picker-modal-content">
+      <div class="picker-modal-header">
+        <h3>Choose an Emoji</h3>
+        <button class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <div class="emoji-categories">
+        <button class="emoji-cat active" data-cat="music">Music</button>
+        <button class="emoji-cat" data-cat="reactions">Fire</button>
+        <button class="emoji-cat" data-cat="faces">Faces</button>
+        <button class="emoji-cat" data-cat="vibes">Vibes</button>
+      </div>
+      <div class="emoji-grid" id="emojiGrid"></div>
+    </div>
+  </div>
+
+  <!-- GIF Modal -->
+  <div id="giphyModal" class="modal hidden">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-content picker-modal-content">
+      <div class="picker-modal-header">
+        <h3>Search GIFs</h3>
+        <button class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <div class="giphy-search">
+        <input type="text" id="giphySearch" placeholder="Search GIFs..." autocomplete="off" />
+      </div>
+      <div class="giphy-grid" id="giphyGrid">
+        <p class="giphy-hint">Search for a GIF above</p>
+      </div>
+    </div>
+  </div>
+
   <div class="fullpage-container">
     <!-- Player Section -->
     <div class="player-section">
@@ -76,6 +124,12 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
             <span class="stat-value" id="viewerCount">0</span>
             <span class="stat-label">watching</span>
           </div>
+          <button id="playlistBtn" class="playlist-btn">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+              <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+            </svg>
+            <span>Playlist</span>
+          </button>
           <a href="/account/dj-lobby" id="djLobbyBtn" class="dj-lobby-btn hidden">
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
               <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
@@ -184,23 +238,20 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
         </div>
       </div>
 
-      <!-- Now Playing Bar -->
-      <div class="now-playing-bar" id="nowPlayingBar">
-        <div class="now-playing-left">
-          <img id="djAvatar" src="/place-holder.webp" alt="" class="np-avatar" />
-          <div class="np-info">
-            <span class="np-label" id="npLabel">NOW PLAYING</span>
-            <span class="np-name" id="djName">Waiting...</span>
-          </div>
+      <!-- Now Playing Bar / DJ Info Bar - matches main live page -->
+      <div class="now-playing-bar dj-info-bar" id="nowPlayingBar">
+        <img id="djAvatar" src="/place-holder.webp" alt="" class="dj-avatar" />
+        <div class="dj-info-center">
+          <span class="dj-info-label" id="npLabel">NOW PLAYING</span>
+          <span class="dj-info-title" id="npTrackTitle"></span>
+          <span class="dj-info-selector" id="controlsDjName">Waiting...</span>
         </div>
-        <div class="now-playing-center">
-          <span class="np-track-title" id="npTrackTitle">No track playing</span>
-        </div>
-        <div class="now-playing-right">
+        <div class="dj-info-right">
           <div class="np-duration-box">
-            <span class="np-duration-label">TIME</span>
-            <span class="np-duration-value" id="npDuration">--:--</span>
+            <span class="np-duration" id="npDuration">--:--</span>
+            <span class="np-duration-label" id="npDurationLabel"></span>
           </div>
+          <span class="stream-genre" id="streamGenre">Jungle / D&B</span>
         </div>
       </div>
     </div>
@@ -214,11 +265,23 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
             <span class="chat-icon">&#x1F4AC;</span>
             <span><span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></span>
           </div>
-          <button class="chat-expand-btn" data-target="freshwax" title="Expand">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
-            </svg>
-          </button>
+          <div class="chat-header-actions">
+            <button class="external-chat-btn twitch-toggle" data-toggle="twitch" title="Toggle Twitch Chat">
+              <svg class="twitch-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+              </svg>
+            </button>
+            <button class="external-chat-btn youtube-toggle" data-toggle="youtube" title="Toggle YouTube Chat">
+              <svg class="youtube-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+              </svg>
+            </button>
+            <button class="chat-expand-btn" data-target="freshwax" title="Expand Fresh Wax Chat">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="chat-column-body">
           <div class="chat-messages" id="chatMessages">
@@ -244,25 +307,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
               </div>
             </div>
           </div>
-          <!-- Emoji Picker -->
-          <div id="emojiPicker" class="emoji-picker hidden">
-            <div class="emoji-categories">
-              <button class="emoji-cat active" data-cat="music">Music</button>
-              <button class="emoji-cat" data-cat="reactions">Fire</button>
-              <button class="emoji-cat" data-cat="faces">Faces</button>
-              <button class="emoji-cat" data-cat="vibes">Vibes</button>
-            </div>
-            <div class="emoji-grid" id="emojiGrid"></div>
-          </div>
-          <!-- Giphy Picker -->
-          <div id="giphyPicker" class="giphy-picker hidden">
-            <div class="giphy-search">
-              <input type="text" id="giphySearch" placeholder="Search GIFs..." />
-            </div>
-            <div class="giphy-grid" id="giphyGrid">
-              <p class="giphy-hint">Search for a GIF above</p>
-            </div>
-          </div>
+        </div>
         </div>
       </div>
 
@@ -273,11 +318,11 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
             <svg class="twitch-icon" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
               <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
             </svg>
-            <span>Twitch</span>
+            <span>Twitch Chat</span>
           </div>
-          <button class="chat-expand-btn" data-target="twitch" title="Expand">
+          <button class="chat-close-btn" data-close="twitch" title="Close">
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
             </svg>
           </button>
         </div>
@@ -299,11 +344,11 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
             <svg class="youtube-icon" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
               <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
             </svg>
-            <span>YouTube</span>
+            <span>YouTube Chat</span>
           </div>
-          <button class="chat-expand-btn" data-target="youtube" title="Expand">
+          <button class="chat-close-btn" data-close="youtube" title="Close">
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
             </svg>
           </button>
         </div>
@@ -357,26 +402,36 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   /* Main Layout */
   .fullpage-container {
     display: grid;
-    grid-template-columns: 1fr 720px;
+    grid-template-columns: 1fr 480px;
     height: 100vh;
     max-height: 100vh;
     overflow: hidden;
+    transition: grid-template-columns 0.3s ease;
+  }
+
+  /* When chat is expanded, shrink player and grow chat */
+  .fullpage-container.chat-expanded {
+    grid-template-columns: 1fr 900px;
+  }
+
+  @media (max-width: 1600px) {
+    .fullpage-container.chat-expanded { grid-template-columns: 1fr 780px; }
   }
 
   @media (max-width: 1400px) {
-    .fullpage-container { grid-template-columns: 1fr 540px; }
+    .fullpage-container { grid-template-columns: 1fr 400px; }
+    .fullpage-container.chat-expanded { grid-template-columns: 1fr 660px; }
   }
 
   @media (max-width: 1200px) {
-    .fullpage-container { grid-template-columns: 1fr 400px; }
-    .chat-section.multi-chat { grid-template-columns: 1fr; }
-    .chat-column:nth-child(2), .chat-column:nth-child(3) { display: none; }
+    .fullpage-container { grid-template-columns: 1fr 360px; }
+    .fullpage-container.chat-expanded { grid-template-columns: 1fr 500px; }
   }
 
   @media (max-width: 900px) {
     .fullpage-container { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+    .fullpage-container.chat-expanded { grid-template-columns: 1fr; }
     .chat-section { height: 300px; }
-    .chat-section.multi-chat { grid-template-columns: 1fr; }
   }
 
   /* Player Section */
@@ -386,6 +441,8 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     background: linear-gradient(180deg, #111 0%, #0a0a0a 100%);
     min-width: 0;
     overflow: hidden;
+    height: 100vh;
+    max-height: 100vh;
   }
 
   /* Top Bar */
@@ -393,33 +450,35 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1.25rem;
+    flex-shrink: 0;
+    padding: 0.4rem 0.75rem;
     background: rgba(0,0,0,0.5);
     border-bottom: 1px solid #222;
-    gap: 1rem;
-    flex-wrap: wrap;
+    gap: 0.5rem;
+    flex-shrink: 0;
   }
 
   .back-btn {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    gap: 0.35rem;
+    padding: 0.3rem 0.6rem;
     background: #222;
-    border-radius: 8px;
+    border-radius: 6px;
     color: #fff;
     text-decoration: none;
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: 0.7rem;
     transition: all 0.2s;
     border: 1px solid #333;
   }
+  .back-btn svg { width: 14px; height: 14px; }
   .back-btn:hover { background: #dc2626; border-color: #dc2626; }
 
   .stream-info {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.5rem;
     flex: 1;
     min-width: 0;
   }
@@ -427,13 +486,13 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .live-badge {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.75rem;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
     background: #333;
-    border-radius: 6px;
-    font-size: 0.75rem;
+    border-radius: 4px;
+    font-size: 0.625rem;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     color: #888;
   }
   .live-badge.is-live {
@@ -442,7 +501,7 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     color: #dc2626;
     animation: live-badge-glow 2s ease-in-out infinite;
   }
-  .live-dot { width: 8px; height: 8px; background: #888; border-radius: 50%; }
+  .live-dot { width: 6px; height: 6px; background: #888; border-radius: 50%; }
   .live-badge.is-live .live-dot { background: #dc2626; animation: pulse 1.5s ease-in-out infinite; }
 
   @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
@@ -453,53 +512,72 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
 
   .stream-info h1 {
     font-family: 'Inter', sans-serif;
-    font-size: 1.5rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .stream-stats { display: flex; align-items: center; gap: 1.5rem; }
+  .stream-stats { display: flex; align-items: center; gap: 0.5rem; }
 
   .viewers-stat {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.75rem;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
     background: rgba(220, 38, 38, 0.1);
     border: 1px solid rgba(220, 38, 38, 0.3);
-    border-radius: 8px;
+    border-radius: 6px;
   }
-  .stat-icon { font-size: 1rem; }
-  .stat-value { font-weight: 700; font-size: 1.125rem; color: #dc2626; }
-  .stat-label { font-size: 0.75rem; color: #888; }
+  .stat-icon { font-size: 0.75rem; }
+  .stat-value { font-weight: 700; font-size: 0.8rem; color: #dc2626; }
+  .stat-label { font-size: 0.6rem; color: #888; }
 
   .dj-lobby-btn {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: linear-gradient(135deg, #9333ea, #7c3aed);
-    border-radius: 8px;
+    gap: 0.35rem;
+    padding: 0.3rem 0.6rem;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    border-radius: 6px;
     color: #fff;
     text-decoration: none;
-    font-size: 0.8125rem;
+    font-size: 0.65rem;
     font-weight: 600;
     transition: all 0.2s;
   }
-  .dj-lobby-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4); }
+  .dj-lobby-btn svg { width: 12px; height: 12px; }
+  .dj-lobby-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(22, 163, 74, 0.4); }
+
+  .playlist-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.6rem;
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .playlist-btn svg { width: 12px; height: 12px; }
+  .playlist-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4); }
 
   /* Player Wrapper */
   .player-wrapper {
-    flex: 1;
+    flex: 1 1 0;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     background: #000;
     min-height: 0;
+    max-height: 100%;
     overflow: hidden;
   }
 
@@ -561,16 +639,18 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .player-controls {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    padding: 0.35rem 0.75rem;
     background: #111;
     border-top: 1px solid #222;
     border-bottom: 1px solid #222;
+    flex-shrink: 0;
   }
 
   .control-btn {
-    width: 48px;
-    height: 48px;
+    width: 36px;
+    height: 36px;
     background: #dc2626;
     border: none;
     border-radius: 50%;
@@ -582,21 +662,22 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     transition: all 0.2s;
     flex-shrink: 0;
   }
+  .control-btn svg { width: 20px; height: 20px; }
   .control-btn:hover { background: #b91c1c; transform: scale(1.05); }
 
-  .inline-reactions { display: flex; align-items: center; gap: 0.25rem; flex: 1; }
+  .inline-reactions { display: flex; align-items: center; gap: 0.2rem; flex: 1; }
 
   .reaction-btn {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px;
+    border-radius: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    font-size: 1rem;
     transition: all 0.2s;
     color: #fff;
   }
@@ -612,61 +693,227 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .anim-toggle-btn .anim-on-icon { display: block; color: #10b981; }
   .anim-toggle-btn.off .anim-off-icon { display: block; color: #ef4444; }
   .anim-toggle-btn.off .anim-on-icon { display: none; }
+  .anim-toggle-btn svg { width: 14px; height: 14px; }
 
-  .volume-control { display: flex; align-items: center; gap: 0.5rem; }
-  .volume-icon { color: #888; }
-  .volume-slider { width: 100px; height: 6px; -webkit-appearance: none; appearance: none; background: #333; border-radius: 3px; cursor: pointer; }
-  .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; background: #dc2626; border-radius: 50%; cursor: pointer; }
+  .volume-control { display: flex; align-items: center; gap: 0.35rem; }
+  .volume-icon { color: #888; width: 16px; height: 16px; }
+  .volume-slider { width: 70px; height: 4px; -webkit-appearance: none; -moz-appearance: none; appearance: none; background: #333; border-radius: 2px; cursor: pointer; }
+  .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; background: #dc2626; border-radius: 50%; cursor: pointer; }
+  .volume-slider::-moz-range-thumb { width: 12px; height: 12px; background: #dc2626; border-radius: 50%; cursor: pointer; border: none; }
+  .volume-slider::-moz-range-track { background: #333; border-radius: 2px; height: 4px; }
 
   /* Shoutout Bar */
-  .shoutout-bar { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1rem; background: linear-gradient(90deg, rgba(220, 38, 38, 0.1) 0%, transparent 50%); border-bottom: 1px solid #222; }
-  .shoutout-left { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
-  .shoutout-label { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.875rem; letter-spacing: 1px; color: #dc2626; }
-  .shoutout-add-btn { width: 28px; height: 28px; background: #dc2626; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 1.25rem; font-weight: 700; line-height: 1; transition: all 0.2s; }
+  .shoutout-bar { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.75rem; background: linear-gradient(90deg, rgba(220, 38, 38, 0.1) 0%, transparent 50%); border-bottom: 1px solid #222; flex-shrink: 0; }
+  .shoutout-left { display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0; }
+  .shoutout-label { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.65rem; letter-spacing: 0.5px; color: #dc2626; }
+  .shoutout-add-btn { width: 22px; height: 22px; background: #dc2626; border: none; border-radius: 4px; color: #fff; cursor: pointer; font-size: 1rem; font-weight: 700; line-height: 1; transition: all 0.2s; }
   .shoutout-add-btn:hover { background: #b91c1c; transform: scale(1.1); }
-  .shoutout-marquee { flex: 1; overflow: hidden; min-width: 0; position: relative; display: flex; align-items: center; justify-content: center; min-height: 24px; }
+  .shoutout-marquee { flex: 1; overflow: hidden; min-width: 0; position: relative; display: flex; align-items: center; justify-content: center; min-height: 18px; }
   .shoutout-track { display: inline-block; white-space: nowrap; }
   .shoutout-track.scrolling { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); animation: shoutout-scroll 20s linear forwards; }
-  .shoutout-item { color: #fff; font-size: 0.9rem; font-weight: 500; }
-  .shoutout-placeholder { color: #555; font-size: 0.875rem; font-style: italic; }
+  .shoutout-item { color: #fff; font-size: 0.75rem; font-weight: 500; }
+  .shoutout-placeholder { color: #555; font-size: 0.7rem; font-style: italic; }
   @keyframes shoutout-scroll { 0% { transform: translateY(-50%) translateX(0); } 100% { transform: translateY(-50%) translateX(calc(-100% - 100vw)); } }
 
-  /* Now Playing Bar */
-  .now-playing-bar { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: #0a0a0a; border-top: 2px solid #dc2626; }
-  .now-playing-left { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
-  .np-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #dc2626; }
-  .np-info { display: flex; flex-direction: column; gap: 0.125rem; }
-  .np-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 1px; color: #dc2626; }
-  .np-name { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.125rem; letter-spacing: 0.5px; }
-  .now-playing-center { flex: 1; text-align: center; padding: 0 1rem; min-width: 0; }
-  .np-track-title { font-size: 1rem; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-  .now-playing-right { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
-  .np-duration-box { display: flex; flex-direction: column; align-items: center; background: rgba(0, 0, 0, 0.5); border: 1px solid #333; border-radius: 8px; padding: 0.4rem 0.75rem; }
-  .np-duration-label { font-size: 0.5rem; text-transform: uppercase; letter-spacing: 1px; color: #888; }
-  .np-duration-value { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1rem; color: #dc2626; font-variant-numeric: tabular-nums; min-width: 50px; text-align: center; }
+  /* DJ Info Bar - matches main live page */
+  .dj-info-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: #0a0a0a;
+    border-top: 2px solid #333;
+    flex-shrink: 0;
+  }
+  .dj-info-bar .dj-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #333;
+    flex-shrink: 0;
+  }
+  .dj-info-bar.is-live .dj-avatar { border-color: #dc2626; }
+  .dj-info-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+  }
+  .dj-info-label {
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+    font-weight: 600;
+  }
+  .dj-info-bar.is-live .dj-info-label { color: #dc2626; }
+  .dj-info-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .dj-info-bar.is-live .dj-info-name { color: #fff; }
+  .dj-info-title {
+    font-size: 0.85rem;
+    color: #dc2626;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    text-align: center;
+    font-weight: 600;
+  }
+  .dj-info-title:empty { display: none; }
+  .dj-info-bar.is-live .dj-info-title { color: #dc2626; }
+  .dj-info-selector {
+    font-size: 0.65rem;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    text-align: center;
+  }
+  .dj-info-selector:empty { display: none; }
+  .dj-info-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+  .np-duration-box {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+  }
+  .np-duration {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #dc2626;
+    font-variant-numeric: tabular-nums;
+    min-width: 40px;
+    text-align: left;
+  }
+  .np-duration-label {
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+    font-weight: 600;
+  }
+  .stream-genre {
+    font-size: 0.65rem;
+    color: #dc2626;
+    padding: 0.2rem 0.5rem;
+    background: rgba(220, 38, 38, 0.1);
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .dj-info-bar.is-live .stream-genre {
+    background: rgba(220, 38, 38, 0.2);
+    color: #f87171;
+  }
 
   /* Multi-Chat Section */
-  .chat-section { display: flex; flex-direction: column; background: #111; border-left: 2px solid #222; height: 100%; overflow: hidden; }
-  .chat-section.multi-chat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+  .chat-section { display: flex; flex-direction: column; background: #111; border-left: 2px solid #222; height: 100vh; max-height: 100vh; overflow: hidden; }
+  .chat-section.multi-chat { display: grid; grid-template-columns: 1fr; gap: 0; overflow: hidden; }
 
-  .chat-column { display: flex; flex-direction: column; border-right: 1px solid #222; overflow: hidden; min-height: 0; max-height: 100%; }
+  /* When chat is expanded, show two columns: main chat + expanded external chat */
+  .chat-expanded .chat-section.multi-chat { grid-template-columns: 1fr 1fr; }
+
+  .chat-column { display: flex; flex-direction: column; border-right: 1px solid #222; overflow: hidden; min-height: 0; height: 100%; }
   .chat-column:last-child { border-right: none; }
+  .chat-column[data-chat="twitch"], .chat-column[data-chat="youtube"] { overflow: hidden; }
 
-  .chat-column-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background: #0a0a0a; border-bottom: 2px solid #222; min-height: 40px; }
+  /* Hide Twitch and YouTube columns by default */
+  .chat-column[data-chat="twitch"],
+  .chat-column[data-chat="youtube"] { display: none; }
+
+  /* Show when expanded */
+  .chat-column[data-chat="twitch"].expanded,
+  .chat-column[data-chat="youtube"].expanded { display: flex; }
+
+  .chat-column-header { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0.5rem; background: #0a0a0a; border-bottom: 2px solid #222; min-height: 32px; flex-shrink: 0; }
   .chat-column-header.freshwax-header { border-bottom-color: #dc262640; }
   .chat-column-header.twitch-header { border-bottom-color: #9146ff40; }
   .chat-column-header.youtube-header { border-bottom-color: #ff000040; }
 
-  .chat-column-title { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-weight: 600; color: #fff; letter-spacing: 0.5px; }
-  .chat-icon { font-size: 0.875rem; }
-  .twitch-icon { fill: #9146ff; }
-  .youtube-icon { fill: #ff0000; }
+  .chat-header-actions { display: flex; align-items: center; gap: 0.25rem; }
 
-  .chat-expand-btn { width: 28px; height: 28px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #888; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-  .chat-expand-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-  .chat-expand-btn svg { fill: currentColor; }
+  .external-chat-btn {
+    width: 24px;
+    height: 24px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    color: #666;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .external-chat-btn:hover { background: rgba(255,255,255,0.1); }
+  .external-chat-btn.twitch-toggle { color: #9146ff; }
+  .external-chat-btn.twitch-toggle:hover { border-color: #9146ff40; }
+  .external-chat-btn.youtube-toggle { color: #ff0000; }
+  .external-chat-btn.youtube-toggle:hover { border-color: #ff000040; }
+  .external-chat-btn.active { background: rgba(255,255,255,0.1); }
+  .external-chat-btn.twitch-toggle.active { color: #9146ff; border-color: #9146ff; background: rgba(145,70,255,0.15); }
+  .external-chat-btn.youtube-toggle.active { color: #ff0000; border-color: #ff0000; background: rgba(255,0,0,0.15); }
+  .external-chat-btn svg { fill: currentColor; width: 12px; height: 12px; }
 
-  .chat-column-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; min-height: 0; }
+  .chat-column-title { display: flex; align-items: center; gap: 0.3rem; font-size: 0.65rem; font-weight: 600; color: #fff; letter-spacing: 0.25px; }
+  .chat-icon { font-size: 0.75rem; }
+  .twitch-icon { fill: #9146ff; width: 12px; height: 12px; }
+  .youtube-icon { fill: #ff0000; width: 12px; height: 12px; }
+
+  .chat-expand-btn, .chat-close-btn { width: 24px; height: 24px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #888; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .chat-expand-btn:hover, .chat-close-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .chat-expand-btn svg, .chat-close-btn svg { fill: currentColor; width: 12px; height: 12px; }
+  .chat-close-btn:hover { background: rgba(220,38,38,0.2); color: #dc2626; border-color: #dc262680; }
+
+  .chat-column-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+  }
+
+  /* Ensure Fresh Wax chat has proper internal layout */
+  .chat-column[data-chat="freshwax"] .chat-column-body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .chat-column[data-chat="freshwax"] .chat-messages {
+    flex: 1 1 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+  }
+
+  .chat-column[data-chat="freshwax"] .chat-input-section {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 100; /* Ensure pickers appear above messages */
+    overflow: visible; /* Allow pickers to overflow upward */
+  }
 
   /* External Chat Frames */
   .external-chat-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: none; background: #18181b; }
@@ -680,55 +927,55 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .external-chat-placeholder p { font-size: 0.7rem; line-height: 1.4; }
 
   /* Chat Messages */
-  .chat-messages { flex: 1; overflow-y: auto; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
-  .chat-welcome { text-align: center; padding: 1rem 0.5rem; color: #9ca3af; }
-  .chat-welcome p { font-size: 0.7rem; margin-bottom: 0.25rem; }
+  .chat-messages { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0.35rem; display: flex; flex-direction: column; gap: 0.35rem; }
+  .chat-welcome { text-align: center; padding: 0.5rem 0.35rem; color: #9ca3af; }
+  .chat-welcome p { font-size: 0.6rem; margin-bottom: 0.125rem; }
   .chat-hint { font-size: 0.65rem; color: #9ca3af; }
 
-  .chat-message { display: flex; gap: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 8px; }
-  .chat-message-avatar { width: 28px; height: 28px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; flex-shrink: 0; overflow: hidden; }
+  .chat-message { display: flex; flex-direction: row; align-items: flex-start; gap: 0.35rem; padding: 0.35rem; background: rgba(255,255,255,0.02); border-radius: 6px; width: 100%; box-sizing: border-box; }
+  .chat-message-avatar { width: 22px; height: 22px; min-width: 22px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; flex-shrink: 0; overflow: hidden; }
   .chat-message-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .chat-message-content { flex: 1; min-width: 0; }
-  .chat-message-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.125rem; }
-  .chat-message-name { font-weight: 600; font-size: 0.75rem; color: #dc2626; }
-  .chat-message-time { font-size: 0.625rem; color: #666; }
-  .chat-message-text { font-size: 0.8125rem; color: #ddd; word-break: break-word; }
-  .chat-message-gif { max-width: 150px; border-radius: 8px; margin-top: 0.25rem; }
+  .chat-message-content { flex: 1; min-width: 0; overflow: hidden; text-align: left; }
+  .chat-message-header { display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0; flex-wrap: nowrap; }
+  .chat-message-name { font-weight: 600; font-size: 0.6rem; color: #dc2626; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
+  .chat-message-time { font-size: 0.5rem; color: #666; white-space: nowrap; flex-shrink: 0; }
+  .chat-message-text { font-size: 0.7rem; color: #ddd; word-break: break-word; overflow-wrap: break-word; text-align: left; line-height: 1.3; }
+  .chat-message-gif { max-width: 100px; border-radius: 6px; margin-top: 0.125rem; }
 
   /* Chat Input */
-  .chat-input-section { padding: 0.5rem; background: #0a0a0a; border-top: 1px solid #222; position: relative; }
-  .login-prompt { text-align: center; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 0.7rem; color: #888; }
+  .chat-input-section { padding: 0.35rem; background: #0a0a0a; border-top: 1px solid #222; position: relative; z-index: 10; }
+  .login-prompt { text-align: center; padding: 0.35rem; background: rgba(255,255,255,0.05); border-radius: 4px; font-size: 0.6rem; color: #888; }
   .login-prompt a { color: #dc2626; font-weight: 600; }
-  .chat-form { display: flex; flex-direction: column; gap: 0.35rem; }
-  .chat-tools { display: flex; gap: 0.25rem; }
-  .tool-btn { padding: 0.25rem 0.5rem; background: #222; border: 1px solid #333; border-radius: 4px; color: #888; font-size: 0.65rem; cursor: pointer; transition: all 0.2s; }
+  .chat-form { display: flex; flex-direction: column; gap: 0.25rem; }
+  .chat-tools { display: flex; gap: 0.2rem; }
+  .tool-btn { padding: 0.2rem 0.4rem; background: #222; border: 1px solid #333; border-radius: 4px; color: #888; font-size: 0.55rem; cursor: pointer; transition: all 0.2s; }
   .tool-btn:hover { background: #333; color: #fff; }
-  .chat-input-wrapper { display: flex; gap: 0.35rem; }
-  .chat-input-wrapper input { flex: 1; padding: 0.5rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 0.75rem; min-width: 0; }
+  .chat-input-wrapper { display: flex; gap: 0.25rem; }
+  .chat-input-wrapper input { flex: 1; padding: 0.35rem 0.5rem; background: #222; border: 1px solid #333; border-radius: 4px; color: #fff; font-size: 0.65rem; min-width: 0; }
   .chat-input-wrapper input:focus { outline: none; border-color: #dc2626; }
-  .chat-input-wrapper button { width: 32px; height: 32px; background: #dc2626; border: none; border-radius: 6px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+  .chat-input-wrapper button { width: 26px; height: 26px; background: #dc2626; border: none; border-radius: 4px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
   .chat-input-wrapper button:hover { background: #b91c1c; }
-  .chat-input-wrapper button svg { width: 14px; height: 14px; }
+  .chat-input-wrapper button svg { width: 12px; height: 12px; }
 
   /* Emoji & Giphy Pickers */
-  .emoji-picker, .giphy-picker { position: absolute; bottom: 100%; left: 0; right: 0; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; box-shadow: 0 -4px 20px rgba(0,0,0,0.3); z-index: 100; }
-  .emoji-categories { display: flex; gap: 0.125rem; padding: 0.35rem; border-bottom: 1px solid #333; flex-wrap: wrap; }
-  .emoji-cat { padding: 0.25rem 0.5rem; background: #222; border: none; border-radius: 4px; font-size: 0.6rem; color: #888; cursor: pointer; transition: all 0.2s; }
+  .emoji-picker, .giphy-picker { position: absolute; bottom: calc(100% + 2px); left: 0.35rem; right: 0.35rem; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; box-shadow: 0 -4px 20px rgba(0,0,0,0.5); z-index: 1000; }
+  .emoji-categories { display: flex; gap: 0.1rem; padding: 0.25rem; border-bottom: 1px solid #333; flex-wrap: wrap; }
+  .emoji-cat { padding: 0.15rem 0.35rem; background: #222; border: none; border-radius: 3px; font-size: 0.5rem; color: #888; cursor: pointer; transition: all 0.2s; }
   .emoji-cat.active { background: #dc2626; color: #fff; }
-  .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.125rem; padding: 0.5rem; max-height: 150px; overflow-y: auto; }
-  .emoji-grid button { padding: 0.35rem; background: none; border: none; font-size: 1.125rem; cursor: pointer; border-radius: 4px; }
+  .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.1rem; padding: 0.35rem; max-height: 100px; overflow-y: auto; }
+  .emoji-grid button { padding: 0.2rem; background: none; border: none; font-size: 0.9rem; cursor: pointer; border-radius: 3px; }
   .emoji-grid button:hover { background: rgba(220, 38, 38, 0.2); }
-  .giphy-search { padding: 0.5rem; border-bottom: 1px solid #333; }
-  .giphy-search input { width: 100%; padding: 0.35rem 0.5rem; background: #222; border: 1px solid #333; border-radius: 4px; color: #fff; font-size: 0.7rem; }
-  .giphy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.25rem; padding: 0.5rem; max-height: 150px; overflow-y: auto; }
-  .giphy-grid img { width: 100%; border-radius: 4px; cursor: pointer; }
+  .giphy-search { padding: 0.35rem; border-bottom: 1px solid #333; }
+  .giphy-search input { width: 100%; padding: 0.25rem 0.35rem; background: #222; border: 1px solid #333; border-radius: 3px; color: #fff; font-size: 0.6rem; }
+  .giphy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.2rem; padding: 0.35rem; max-height: 100px; overflow-y: auto; }
+  .giphy-grid img { width: 100%; border-radius: 3px; cursor: pointer; }
   .giphy-grid img:hover { opacity: 0.8; }
-  .giphy-hint { grid-column: 1 / -1; text-align: center; color: #666; font-size: 0.7rem; padding: 0.5rem; }
+  .giphy-hint { grid-column: 1 / -1; text-align: center; color: #666; font-size: 0.55rem; padding: 0.35rem; }
 
   /* Expanded Chat Modal */
   .expanded-chat-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
   .expanded-chat-modal.hidden { display: none; }
-  .expanded-chat-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); }
+  .expanded-chat-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.85); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
   .expanded-chat-content { position: relative; width: 90%; max-width: 600px; height: 80vh; background: #111; border: 2px solid #333; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
   .expanded-chat-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; background: #0a0a0a; border-bottom: 2px solid #333; }
   .expanded-chat-title { font-weight: 700; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
@@ -740,12 +987,49 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   .expanded-chat-body { flex: 1; overflow: hidden; }
   .expanded-chat-body iframe { width: 100%; height: 100%; border: none; }
 
+  /* Expanded Fresh Wax Chat */
+  .expanded-freshwax-chat { display: flex; flex-direction: column; height: 100%; }
+  .expanded-chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+  .expanded-chat-messages .chat-message { display: flex; flex-direction: row; align-items: flex-start; gap: 0.75rem; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 10px; }
+  .expanded-chat-messages .chat-message-avatar { width: 36px; height: 36px; min-width: 36px; border-radius: 50%; background: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 600; color: #fff; flex-shrink: 0; }
+  .expanded-chat-messages .chat-message-content { flex: 1; min-width: 0; }
+  .expanded-chat-messages .chat-message-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem; }
+  .expanded-chat-messages .chat-message-name { font-weight: 600; font-size: 0.875rem; color: #dc2626; }
+  .expanded-chat-messages .chat-message-time { font-size: 0.75rem; color: #666; }
+  .expanded-chat-messages .chat-message-text { font-size: 0.9375rem; color: #e5e5e5; line-height: 1.5; word-break: break-word; }
+  .expanded-chat-input { display: flex; gap: 0.75rem; padding: 1rem; background: #0a0a0a; border-top: 1px solid #333; }
+  .expanded-chat-input input { flex: 1; background: #1a1a1a; border: 1px solid #333; border-radius: 10px; padding: 0.875rem 1rem; color: #fff; font-size: 0.9375rem; outline: none; }
+  .expanded-chat-input input:focus { border-color: #dc2626; }
+  .expanded-chat-input button { background: #dc2626; border: none; border-radius: 10px; padding: 0.875rem 1.25rem; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+  .expanded-chat-input button:hover { background: #b91c1c; }
+
   /* Shoutout Modal */
   .modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
   .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.8); }
   .modal-content { position: relative; background: #1a1a1a; border: 2px solid #333; border-radius: 20px; padding: 2rem; max-width: 480px; width: 90%; }
   .modal-close { position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; background: #333; border: none; border-radius: 50%; color: #fff; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   .modal-close:hover { background: #dc2626; }
+
+  /* Picker Modal Styles */
+  .picker-modal-content { max-width: 600px; padding: 0; overflow: hidden; }
+  .picker-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: #111; border-bottom: 1px solid #333; }
+  .picker-modal-header h3 { margin: 0; font-size: 1.125rem; font-weight: 600; }
+  .picker-modal-header .modal-close { position: static; width: 32px; height: 32px; font-size: 1.5rem; }
+  .picker-modal-content .emoji-categories { display: flex; gap: 0.5rem; padding: 1rem; border-bottom: 1px solid #333; flex-wrap: wrap; }
+  .picker-modal-content .emoji-cat { padding: 0.5rem 1rem; background: #222; border: none; border-radius: 6px; font-size: 0.875rem; color: #888; cursor: pointer; transition: all 0.2s; }
+  .picker-modal-content .emoji-cat:hover { background: #333; color: #fff; }
+  .picker-modal-content .emoji-cat.active { background: #dc2626; color: #fff; }
+  .picker-modal-content .emoji-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 0.35rem; padding: 1.25rem; max-height: 450px; overflow-y: auto; }
+  .picker-modal-content .emoji-grid button { padding: 0.6rem; background: none; border: none; font-size: 1.75rem; cursor: pointer; border-radius: 6px; transition: background 0.2s; }
+  .picker-modal-content .emoji-grid button:hover { background: rgba(220, 38, 38, 0.2); }
+  .picker-modal-content .giphy-search { padding: 1rem; border-bottom: 1px solid #333; }
+  .picker-modal-content .giphy-search input { width: 100%; padding: 0.75rem 1rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 1rem; }
+  .picker-modal-content .giphy-search input:focus { outline: none; border-color: #dc2626; }
+  .picker-modal-content .giphy-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; padding: 1.25rem; max-height: 450px; overflow-y: auto; }
+  .picker-modal-content .giphy-grid img { width: 100%; border-radius: 6px; cursor: pointer; transition: opacity 0.2s; }
+  .picker-modal-content .giphy-grid img:hover { opacity: 0.8; }
+  .picker-modal-content .giphy-hint { grid-column: 1 / -1; text-align: center; color: #666; font-size: 1rem; padding: 2.5rem 0; }
+
   .shoutout-modal-content h2 { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; margin-bottom: 0.5rem; }
   .shoutout-hint { font-size: 0.875rem; color: #888; margin-bottom: 1rem; }
   .shoutout-input-wrapper { position: relative; margin-bottom: 1rem; }
@@ -808,25 +1092,79 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   // Initialize Firebase Auth
   async function initAuth() {
     try {
-      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
-      const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+      const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+      const { getAuth, onAuthStateChanged, browserLocalPersistence, setPersistence } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
 
-      const app = initializeApp({
-        apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-        authDomain: "freshwax-store.firebaseapp.com",
-        projectId: "freshwax-store"
-      });
+      // Reuse existing app if already initialized
+      let app;
+      if (getApps().length > 0) {
+        app = getApp();
+        console.log('[Auth] Reusing existing Firebase app');
+      } else {
+        app = initializeApp({
+          apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+          authDomain: "freshwax-store.firebaseapp.com",
+          projectId: "freshwax-store"
+        });
+        console.log('[Auth] Initialized new Firebase app');
+      }
 
       const auth = getAuth(app);
       window.firebaseAuth = auth;
 
+      // Try to set persistence (may fail if storage is blocked)
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (persistError) {
+        console.warn('[Auth] Could not set persistence:', persistError.message);
+      }
+
+      // Check current user immediately (in case already logged in)
+      if (auth.currentUser) {
+        console.log('[Auth] User already logged in:', auth.currentUser.email);
+        currentUser = auth.currentUser;
+        updateChatUI();
+        await checkUserType(auth.currentUser.uid);
+      }
+
       onAuthStateChanged(auth, async (user) => {
+        console.log('[Auth] State changed:', user ? user.email : 'signed out');
         currentUser = user;
         updateChatUI();
         if (user) await checkUserType(user.uid);
       });
+
+      // If no user after a short delay, try server-side session check
+      setTimeout(async () => {
+        if (!currentUser) {
+          console.log('[Auth] No Firebase user, checking server session...');
+          await checkServerSession();
+        }
+      }, 1500);
     } catch (e) {
       console.error('[Auth] Error:', e);
+      // Fallback to server session check
+      await checkServerSession();
+    }
+  }
+
+  // Check server-side session as fallback when Firebase auth is blocked
+  async function checkServerSession() {
+    try {
+      const response = await fetch('/api/auth/session', { credentials: 'include' });
+      const result = await response.json();
+      if (result.success && result.user) {
+        console.log('[Auth] Server session found:', result.user.email);
+        currentUser = {
+          uid: result.user.uid,
+          email: result.user.email,
+          displayName: result.user.displayName
+        };
+        updateChatUI();
+        await checkUserType(result.user.uid);
+      }
+    } catch (e) {
+      console.log('[Auth] No server session available');
     }
   }
 
@@ -885,6 +1223,9 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   function startDurationTimer(startedAt) {
     if (durationInterval) clearInterval(durationInterval);
     streamStartTime = startedAt ? new Date(startedAt).getTime() : Date.now();
+    // Clear "LEFT" label for live streams (shows elapsed, not remaining)
+    const npDurationLabel = document.getElementById('npDurationLabel');
+    if (npDurationLabel) npDurationLabel.textContent = '';
     updateDurationDisplay();
     durationInterval = setInterval(updateDurationDisplay, 1000);
   }
@@ -897,6 +1238,8 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     streamStartTime = null;
     const npDurationEl = document.getElementById('npDuration');
     if (npDurationEl) npDurationEl.textContent = '--:--';
+    const npDurationLabel = document.getElementById('npDurationLabel');
+    if (npDurationLabel) npDurationLabel.textContent = '';
   }
 
   // HLS Player Setup
@@ -977,32 +1320,46 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
 
   // Load Stream Status
   async function loadStreamStatus() {
+    console.log('[Stream] Fetching status...');
     try {
       const response = await fetch(`/api/livestream/status?_t=${Date.now()}`);
       const result = await response.json();
+      console.log('[Stream] Status result:', result.isLive ? 'LIVE' : 'OFFLINE', result.streams?.length || 0, 'streams');
 
       if (result.isLive && result.streams && result.streams.length > 0) {
         const stream = result.streams[0];
         currentStream = stream;
         window.currentStreamId = stream.slotId || stream.id;
+        window.isLiveStreamActive = true;
 
         if (!durationInterval) {
           startDurationTimer(stream.startedAt);
         }
 
         // Update UI
+        console.log('[Stream] Updating UI for live stream:', stream.title, 'by', stream.djName);
         document.getElementById('liveBadge')?.classList.add('is-live');
-        document.getElementById('liveStatusText').textContent = 'LIVE';
-        document.getElementById('streamTitle').textContent = stream.title || 'Live Stream';
-        document.getElementById('djName').textContent = stream.djName || 'DJ';
-        document.getElementById('npTrackTitle').textContent = stream.title || 'Live Set';
-        document.getElementById('viewerCount').textContent = stream.currentViewers || 0;
-        document.getElementById('audioTitle').textContent = stream.title || 'Live Stream';
-        document.getElementById('audioDjName').textContent = stream.djName || 'DJ';
+        document.getElementById('nowPlayingBar')?.classList.add('is-live');
+        const liveStatusEl = document.getElementById('liveStatusText');
+        if (liveStatusEl) liveStatusEl.textContent = 'LIVE';
+        const streamTitleEl = document.getElementById('streamTitle');
+        if (streamTitleEl) streamTitleEl.textContent = stream.title || 'Live Stream';
+        const djNameEl = document.getElementById('controlsDjName');
+        if (djNameEl) djNameEl.textContent = stream.djName || 'DJ';
+        const genreEl = document.getElementById('streamGenre');
+        if (genreEl) genreEl.textContent = stream.genre || 'Jungle / D&B';
+        const viewerEl = document.getElementById('viewerCount');
+        if (viewerEl) viewerEl.textContent = stream.currentViewers || 0;
+        const audioTitleEl = document.getElementById('audioTitle');
+        if (audioTitleEl) audioTitleEl.textContent = stream.title || 'Live Stream';
+        const audioDjEl = document.getElementById('audioDjName');
+        if (audioDjEl) audioDjEl.textContent = stream.djName || 'DJ';
 
         if (stream.djAvatar) {
-          document.getElementById('djAvatar').src = stream.djAvatar;
-          document.getElementById('streamCover').src = stream.djAvatar;
+          const djAvatarEl = document.getElementById('djAvatar');
+          if (djAvatarEl) djAvatarEl.src = stream.djAvatar;
+          const streamCoverEl = document.getElementById('streamCover');
+          if (streamCoverEl) streamCoverEl.src = stream.djAvatar;
         }
 
         document.getElementById('offlineOverlay')?.classList.add('hidden');
@@ -1041,11 +1398,62 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
         setupExternalChats(stream);
         registerAsListener();
       } else {
+        // OFFLINE - try to start playlist auto-play
+        console.log('[Stream] No live stream, checking playlist...');
         stopDurationTimer();
+        window.isLiveStreamActive = false;
+
         document.getElementById('liveBadge')?.classList.remove('is-live');
-        document.getElementById('liveStatusText').textContent = 'OFFLINE';
-        document.getElementById('djName').textContent = 'Waiting...';
-        document.getElementById('npTrackTitle').textContent = 'No track playing';
+        document.getElementById('nowPlayingBar')?.classList.remove('is-live');
+        const liveStatusEl = document.getElementById('liveStatusText');
+        if (liveStatusEl) liveStatusEl.textContent = 'OFFLINE';
+
+        // Check if playlist manager is available and try auto-play
+        const playlistManager = window.playlistManager;
+        if (playlistManager) {
+          console.log('[Stream] Playlist manager found, attempting auto-play...');
+
+          // Show playlist player container
+          const playlistPlayer = document.getElementById('playlistPlayer');
+          const offlineOverlay = document.getElementById('offlineOverlay');
+
+          if (playlistManager.queue?.length > 0 || playlistManager.isPlaying) {
+            // Already has items or playing - show playlist
+            if (offlineOverlay) offlineOverlay.classList.add('hidden');
+            if (playlistPlayer) playlistPlayer.classList.remove('hidden');
+
+            const djNameEl = document.getElementById('controlsDjName');
+            if (djNameEl) djNameEl.textContent = 'Auto-Play';
+            const genreEl = document.getElementById('streamGenre');
+            if (genreEl) genreEl.textContent = 'Playlist';
+          } else {
+            // Try to start auto-play from history
+            const started = await playlistManager.startAutoPlay?.();
+            if (started) {
+              console.log('[Stream] Auto-play started from history');
+              if (offlineOverlay) offlineOverlay.classList.add('hidden');
+              if (playlistPlayer) playlistPlayer.classList.remove('hidden');
+
+              const djNameEl = document.getElementById('controlsDjName');
+              if (djNameEl) djNameEl.textContent = 'Auto-Play';
+              const genreEl = document.getElementById('streamGenre');
+              if (genreEl) genreEl.textContent = 'Playlist';
+            } else {
+              // No history to auto-play
+              const djNameEl = document.getElementById('controlsDjName');
+              if (djNameEl) djNameEl.textContent = '--';
+              const genreEl = document.getElementById('streamGenre');
+              if (genreEl) genreEl.textContent = 'Offline';
+            }
+          }
+        } else {
+          // No playlist manager yet - show waiting state
+          const djNameEl = document.getElementById('controlsDjName');
+          if (djNameEl) djNameEl.textContent = '--';
+          const genreEl = document.getElementById('streamGenre');
+          if (genreEl) genreEl.textContent = 'Offline';
+        }
+
         setupExternalChats(null);
       }
     } catch (e) {
@@ -1295,6 +1703,13 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       `;
     }).join('');
 
+    // Also update expanded chat if open
+    const expandedMessages = document.getElementById('expandedChatMessages');
+    if (expandedMessages) {
+      expandedMessages.innerHTML = chatMessages.innerHTML;
+      expandedMessages.scrollTop = expandedMessages.scrollHeight;
+    }
+
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
@@ -1415,7 +1830,24 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       case 'freshwax':
         titleText = 'Fresh Wax Chat';
         titleClass = 'freshwax';
-        content = '<div style="padding: 2rem; text-align: center; color: #888;"><p>Fresh Wax chat is in the main view</p></div>';
+        // Clone the Fresh Wax chat messages into expanded view
+        const originalMessages = document.getElementById('chatMessages');
+        if (originalMessages) {
+          content = `
+            <div class="expanded-freshwax-chat">
+              <div class="expanded-chat-messages" id="expandedChatMessages">
+                ${originalMessages.innerHTML}
+              </div>
+              <div class="expanded-chat-input">
+                <input type="text" id="expandedChatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
+                <button id="expandedSendBtn">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
+              </div>
+            </div>`;
+        } else {
+          content = '<div style="padding: 2rem; text-align: center; color: #888;"><p>Chat unavailable</p></div>';
+        }
         break;
       case 'twitch':
         titleText = 'Twitch Chat';
@@ -1443,6 +1875,44 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     }
     if (body) body.innerHTML = content;
     modal?.classList.remove('hidden');
+
+    // Setup expanded Fresh Wax chat send functionality
+    if (chatType === 'freshwax') {
+      const expandedInput = document.getElementById('expandedChatInput');
+      const expandedSendBtn = document.getElementById('expandedSendBtn');
+
+      const sendExpandedMessage = async () => {
+        if (!expandedInput || !currentUser || !currentStream) return;
+        const message = expandedInput.value.trim();
+        if (!message) return;
+
+        try {
+          await fetch('/api/livestream/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              streamId: currentStream.id,
+              userId: currentUser.uid,
+              userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+              message,
+              type: 'text'
+            })
+          });
+          expandedInput.value = '';
+        } catch (error) {
+          console.error('[Chat] Error sending message:', error);
+        }
+      };
+
+      expandedSendBtn?.addEventListener('click', sendExpandedMessage);
+      expandedInput?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendExpandedMessage();
+      });
+
+      // Scroll to bottom
+      const expandedMessages = document.getElementById('expandedChatMessages');
+      if (expandedMessages) expandedMessages.scrollTop = expandedMessages.scrollHeight;
+    }
   }
 
   function closeExpandedChatModal() {
@@ -1529,22 +1999,90 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
   }
 
   // Initialize everything
+  let streamPollInterval = null;
+  let pageInitialized = false;
+
   function initPage() {
-    console.log('[Fullpage] Initializing...');
+    // Prevent duplicate initialization
+    if (pageInitialized) {
+      console.log('[Fullpage] Already initialized, skipping duplicate init');
+      return;
+    }
+    pageInitialized = true;
+    console.log('[Fullpage] Initializing page...');
 
-    // Auth
-    initAuth();
+    // Auth (async, runs in background)
+    initAuth().then(() => console.log('[Fullpage] Auth init complete')).catch(e => console.error('[Fullpage] Auth init error:', e));
 
-    // Load stream
-    loadStreamStatus();
+    // Load stream status immediately
+    console.log('[Fullpage] Loading stream status...');
+    loadStreamStatus().then(() => {
+      console.log('[Fullpage] Stream status loaded');
+      // Retry playlist check after a delay if not live (playlist manager may not be ready yet)
+      if (!window.isLiveStreamActive) {
+        setTimeout(() => {
+          if (window.playlistManager && !window.isLiveStreamActive) {
+            console.log('[Fullpage] Retrying playlist auto-play...');
+            loadStreamStatus();
+          }
+        }, 3000);
+      }
+    }).catch(e => console.error('[Fullpage] Stream load error:', e));
 
-    // Poll for stream updates
-    setInterval(loadStreamStatus, 30000);
+    // Clear any existing poll interval and create new one
+    if (streamPollInterval) clearInterval(streamPollInterval);
+    streamPollInterval = setInterval(loadStreamStatus, 30000);
 
     // Subscribe to chat after a delay to allow stream to load
     setTimeout(() => {
       if (currentStream) subscribeToChatMessages();
     }, 2000);
+
+    // Listen for playlist updates from PlaylistModal
+    window.addEventListener('playlistUpdate', (e) => {
+      const { queue, isPlaying, currentIndex } = e.detail;
+      const playlistPlayer = document.getElementById('playlistPlayer');
+      const offlineOverlay = document.getElementById('offlineOverlay');
+      const audioPlayer = document.getElementById('audioPlayer');
+      const videoPlayer = document.getElementById('videoPlayer');
+
+      if (isPlaying && queue && queue.length > 0) {
+        // Playlist is playing - show it
+        console.log('[Playlist] Update received - playing:', queue[currentIndex || 0]?.title);
+
+        if (offlineOverlay) offlineOverlay.classList.add('hidden');
+        if (audioPlayer) audioPlayer.classList.add('hidden');
+        if (playlistPlayer) playlistPlayer.classList.remove('hidden');
+        if (videoPlayer) videoPlayer.classList.remove('hidden');
+
+        // Update now playing info
+        const currentTrack = queue[currentIndex || 0];
+        const selectorEl = document.getElementById('controlsDjName');
+        if (selectorEl) selectorEl.textContent = currentTrack?.addedByName || 'Auto-Play';
+        const trackTitleEl = document.getElementById('npTrackTitle');
+        if (trackTitleEl) trackTitleEl.textContent = currentTrack?.title || '';
+        const genreEl = document.getElementById('streamGenre');
+        if (genreEl) genreEl.textContent = 'Playlist';
+        // Show "LEFT" label for playlist countdown
+        const npDurationLabel = document.getElementById('npDurationLabel');
+        if (npDurationLabel) npDurationLabel.textContent = 'LEFT';
+
+        // Update live badge to show playlist mode
+        const liveStatusEl = document.getElementById('liveStatusText');
+        if (liveStatusEl) liveStatusEl.textContent = 'PLAYLIST';
+      } else if (!window.isLiveStreamActive) {
+        // Not playing and no live stream - show offline
+        if (offlineOverlay) offlineOverlay.classList.remove('hidden');
+        if (playlistPlayer) playlistPlayer.classList.add('hidden');
+
+        const liveStatusEl = document.getElementById('liveStatusText');
+        if (liveStatusEl) liveStatusEl.textContent = 'OFFLINE';
+        const genreEl = document.getElementById('streamGenre');
+        if (genreEl) genreEl.textContent = 'Offline';
+        const trackTitleEl = document.getElementById('npTrackTitle');
+        if (trackTitleEl) trackTitleEl.textContent = '';
+      }
+    });
 
     // Play/Pause button
     document.getElementById('playPauseBtn')?.addEventListener('click', async () => {
@@ -1659,6 +2197,14 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       document.getElementById('shoutoutModal')?.classList.remove('hidden');
     });
 
+    // Playlist button - open playlist modal
+    document.getElementById('playlistBtn')?.addEventListener('click', () => {
+      const playlistModal = document.getElementById('playlistModal');
+      if (playlistModal) {
+        playlistModal.classList.remove('hidden');
+      }
+    });
+
     // Close modal buttons
     document.querySelectorAll('[data-close-modal]').forEach(el => {
       el.addEventListener('click', () => {
@@ -1701,29 +2247,38 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       }
     });
 
-    // Emoji picker
+    // Emoji modal
     document.getElementById('emojiBtn')?.addEventListener('click', () => {
-      document.getElementById('giphyPicker')?.classList.add('hidden');
-      document.getElementById('emojiPicker')?.classList.toggle('hidden');
+      document.getElementById('emojiModal')?.classList.remove('hidden');
       renderEmojis('music');
     });
 
-    document.querySelectorAll('.emoji-cat').forEach(btn => {
+    // Close emoji modal
+    document.getElementById('emojiModal')?.querySelectorAll('[data-close-modal]').forEach(el => {
+      el.addEventListener('click', () => {
+        document.getElementById('emojiModal')?.classList.add('hidden');
+      });
+    });
+
+    document.querySelectorAll('#emojiModal .emoji-cat').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.emoji-cat').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#emojiModal .emoji-cat').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         renderEmojis(btn.dataset.cat);
       });
     });
 
-    // Giphy picker
+    // Giphy modal
     document.getElementById('giphyBtn')?.addEventListener('click', () => {
-      document.getElementById('emojiPicker')?.classList.add('hidden');
-      const picker = document.getElementById('giphyPicker');
-      picker?.classList.toggle('hidden');
-      if (!picker?.classList.contains('hidden')) {
-        searchGiphy('');
-      }
+      document.getElementById('giphyModal')?.classList.remove('hidden');
+      searchGiphy('');
+    });
+
+    // Close giphy modal
+    document.getElementById('giphyModal')?.querySelectorAll('[data-close-modal]').forEach(el => {
+      el.addEventListener('click', () => {
+        document.getElementById('giphyModal')?.classList.add('hidden');
+      });
     });
 
     document.getElementById('giphySearch')?.addEventListener('input', (e) => {
@@ -1731,26 +2286,27 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
       giphySearchTimeout = setTimeout(() => searchGiphy(e.target.value), 500);
     });
 
-    // Close pickers when clicking outside
-    document.addEventListener('click', (e) => {
-      const emojiPicker = document.getElementById('emojiPicker');
-      const giphyPicker = document.getElementById('giphyPicker');
-      const emojiBtn = document.getElementById('emojiBtn');
-      const giphyBtn = document.getElementById('giphyBtn');
-
-      if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiBtn) {
-        emojiPicker.classList.add('hidden');
-      }
-      if (giphyPicker && !giphyPicker.contains(e.target) && e.target !== giphyBtn) {
-        giphyPicker.classList.add('hidden');
-      }
-    });
-
-    // Expand chat buttons
+    // Expand chat buttons (for Fresh Wax modal expand)
     document.querySelectorAll('.chat-expand-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const target = btn.dataset.target;
         if (target) openExpandedChat(target);
+      });
+    });
+
+    // Toggle external chat buttons (Twitch/YouTube inline expansion)
+    document.querySelectorAll('.external-chat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.toggle;
+        if (target) toggleExternalChat(target);
+      });
+    });
+
+    // Close external chat buttons
+    document.querySelectorAll('.chat-close-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.close;
+        if (target) closeExternalChat(target);
       });
     });
 
@@ -1760,18 +2316,115 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     });
   }
 
+  // Toggle external chat (Twitch/YouTube) inline
+  function toggleExternalChat(chatType) {
+    const container = document.querySelector('.fullpage-container');
+    const column = document.querySelector(`.chat-column[data-chat="${chatType}"]`);
+    const toggleBtn = document.querySelector(`.external-chat-btn[data-toggle="${chatType}"]`);
+    const otherType = chatType === 'twitch' ? 'youtube' : 'twitch';
+    const otherColumn = document.querySelector(`.chat-column[data-chat="${otherType}"]`);
+    const otherToggleBtn = document.querySelector(`.external-chat-btn[data-toggle="${otherType}"]`);
+
+    if (!column || !container) return;
+
+    // Check if already expanded
+    const isExpanded = column.classList.contains('expanded');
+
+    if (isExpanded) {
+      // Close this chat
+      closeExternalChat(chatType);
+    } else {
+      // Close other chat if open
+      if (otherColumn?.classList.contains('expanded')) {
+        otherColumn.classList.remove('expanded');
+        otherToggleBtn?.classList.remove('active');
+      }
+
+      // Expand this chat
+      column.classList.add('expanded');
+      toggleBtn?.classList.add('active');
+      container.classList.add('chat-expanded');
+
+      // Load iframe if not already loaded
+      loadExternalChatIframe(chatType);
+    }
+  }
+
+  // Close external chat
+  function closeExternalChat(chatType) {
+    const container = document.querySelector('.fullpage-container');
+    const column = document.querySelector(`.chat-column[data-chat="${chatType}"]`);
+    const toggleBtn = document.querySelector(`.external-chat-btn[data-toggle="${chatType}"]`);
+
+    if (column) {
+      column.classList.remove('expanded');
+    }
+    if (toggleBtn) {
+      toggleBtn.classList.remove('active');
+    }
+
+    // Check if any external chat is still expanded
+    const anyExpanded = document.querySelector('.chat-column[data-chat="twitch"].expanded, .chat-column[data-chat="youtube"].expanded');
+    if (!anyExpanded && container) {
+      container.classList.remove('chat-expanded');
+    }
+  }
+
+  // Load external chat iframe
+  function loadExternalChatIframe(chatType) {
+    const host = window.location.hostname;
+    const parentDomains = ['freshwax.co.uk', 'www.freshwax.co.uk', 'freshwax.pages.dev', host].filter((v, i, a) => a.indexOf(v) === i);
+    const parentParams = parentDomains.map(d => `parent=${d}`).join('&');
+
+    if (chatType === 'twitch') {
+      const frame = document.getElementById('twitchChatFrame');
+      const placeholder = document.getElementById('twitchChatPlaceholder');
+      if (frame && currentTwitchChannel) {
+        frame.src = `https://www.twitch.tv/embed/${currentTwitchChannel}/chat?${parentParams}&darkpopout`;
+        frame.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+      }
+    } else if (chatType === 'youtube') {
+      const frame = document.getElementById('youtubeChatFrame');
+      const placeholder = document.getElementById('youtubeChatPlaceholder');
+      if (frame && currentYoutubeVideoId) {
+        frame.src = `https://www.youtube.com/live_chat?v=${currentYoutubeVideoId}&embed_domain=${host}`;
+        frame.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'none';
+      }
+    }
+  }
+
   // Initialize on first load
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPage);
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('[Fullpage] DOMContentLoaded fired');
+      initPage();
+    });
   } else {
+    console.log('[Fullpage] Document already ready, initializing immediately');
     initPage();
   }
 
-  // Re-initialize on View Transitions
-  document.addEventListener('astro:page-load', initPage);
+  // Handle back-forward cache (bfcache) - page restored from cache
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      console.log('[Fullpage] Page restored from bfcache, reinitializing...');
+      pageInitialized = false;
+      initPage();
+    }
+  });
+
+  // Re-initialize on View Transitions (astro:after-swap fires ONLY on navigation, not initial load)
+  document.addEventListener('astro:after-swap', () => {
+    console.log('[Fullpage] View Transition swap detected');
+    pageInitialized = false;
+    initPage();
+  });
 
   // Cleanup on page unload
   window.addEventListener('beforeunload', () => {
+    if (streamPollInterval) clearInterval(streamPollInterval);
     stopChatPolling();
     stopDurationTimer();
     if (currentUser && currentStream?.id) {
@@ -1783,5 +2436,11 @@ const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6
     }
   });
 </script>
+
+<!-- Playlist Modal for auto-play when offline -->
+<PlaylistModal />
+
+<!-- Live stream manager (handles playlist auto-play) -->
+<script type="module" src="/live-stream.js?v=20251225-fullpage"></script>
 </body>
 </html>

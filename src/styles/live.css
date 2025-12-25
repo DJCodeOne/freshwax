@@ -168,6 +168,7 @@
     background: #fff;
     padding: 2rem;
     border-radius: 12px;
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
   }
   
@@ -3190,7 +3191,22 @@
     background: #dc2626;
     cursor: pointer;
   }
-  
+
+  #volumeSlider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #dc2626;
+    cursor: pointer;
+    border: none;
+  }
+
+  #volumeSlider::-moz-range-track {
+    background: #333;
+    border-radius: 3px;
+    height: 4px;
+  }
+
   .reactions-bar {
     display: flex;
     align-items: center;
@@ -6577,6 +6593,7 @@
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.75);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 
