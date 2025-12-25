@@ -1354,15 +1354,19 @@ export const prerender = false;
   }
 </style>
 
+<script is:inline>
+  window.FIREBASE_CONFIG = {
+    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store"
+  };
+</script>
+
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  
-  const app = initializeApp({
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-    authDomain: "freshwax-store.firebaseapp.com",
-    projectId: "freshwax-store"
-  });
+
+  const app = initializeApp(window.FIREBASE_CONFIG);
   
   const auth = getAuth(app);
   
