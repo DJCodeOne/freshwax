@@ -1696,8 +1696,8 @@ export class PlaylistManager {
     if (currentItem && this.isPlaceholderTitle(currentItem.title)) {
       console.log('[PlaylistManager] Updating title from player:', title);
       currentItem.title = title;
-      // Notify listeners of the update
-      this.notifyStateChange();
+      // Update the UI with the new title
+      this.renderUI();
     }
   }
 
