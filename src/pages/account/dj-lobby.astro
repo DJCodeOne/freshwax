@@ -2409,11 +2409,11 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           updateButtIndicator(false);
         }
       }
-    } catch (err) {
+    } catch {
+      // Silently handle - server may not be running
       if (icecastStreamConnected) {
         icecastStreamConnected = false;
         updateButtIndicator(false);
-        console.log('[Icecast] Check failed:', err.message);
       }
     }
   }
@@ -2753,7 +2753,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   async function checkObsPreview() {
     // Check if DJ's own stream is available at their stream key
     if (!currentStreamKey) {
-      console.log('[ObsPreview] No stream key yet, waiting...');
+      // Silently wait for stream key
       updateServerIndicator(false);
       updateObsIndicator(false);
       return;
@@ -2793,11 +2793,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   }
 
   function handleObsPreviewFailure(reason) {
-    console.log('[ObsPreview] Check failed:', reason);
+    // Silently handle - server may not be running or stream not started yet
 
     // If user is actively streaming (clicked I'm Ready), never destroy - just keep trying
     if (userIsStreaming) {
-      console.log('[ObsPreview] User is streaming, will keep trying to reconnect...');
       updateObsIndicator(false);
       // Keep currentObsPreviewUrl so we can recover
       return;
@@ -2806,7 +2805,6 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // If player is already running, be tolerant of temporary failures
     if (currentObsPreviewUrl && obsHlsPlayer) {
       obsPreviewFailCount++;
-      console.log('[ObsPreview] Fail count:', obsPreviewFailCount, '/', OBS_PREVIEW_MAX_FAILS);
 
       // Only destroy after many consecutive failures (and not actively streaming)
       if (obsPreviewFailCount >= OBS_PREVIEW_MAX_FAILS) {
