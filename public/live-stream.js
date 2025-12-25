@@ -765,10 +765,32 @@ async function checkLiveStatus() {
           videoPlayer.style.opacity = '1';
         }
       } else {
-        // No playlist - hide video container
-        if (videoPlayer) {
-          videoPlayer.style.opacity = '0';
-          setTimeout(() => videoPlayer.classList.add('hidden'), 300);
+        // Queue is empty - try to auto-start playlist from history
+        if (playlistManager && typeof playlistManager.startAutoPlay === 'function') {
+          console.log('[Playlist] No live stream and queue empty - attempting auto-play from history');
+          const started = await playlistManager.startAutoPlay();
+          if (started) {
+            console.log('[Playlist] Auto-play started successfully');
+            // Show video player for auto-play content
+            if (hlsVideo) hlsVideo.classList.add('hidden');
+            if (playlistPlayer) playlistPlayer.classList.remove('hidden');
+            if (videoPlayer) {
+              videoPlayer.classList.remove('hidden');
+              videoPlayer.style.opacity = '1';
+            }
+          } else {
+            // No history available - hide video container
+            if (videoPlayer) {
+              videoPlayer.style.opacity = '0';
+              setTimeout(() => videoPlayer.classList.add('hidden'), 300);
+            }
+          }
+        } else {
+          // No playlist manager - hide video container
+          if (videoPlayer) {
+            videoPlayer.style.opacity = '0';
+            setTimeout(() => videoPlayer.classList.add('hidden'), 300);
+          }
         }
       }
 

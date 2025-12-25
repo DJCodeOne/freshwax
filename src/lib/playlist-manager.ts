@@ -540,6 +540,61 @@ export class PlaylistManager {
   }
 
   /**
+   * Start auto-play from history when queue is empty and no live stream
+   * Called by live-stream.js when going offline with empty queue
+   */
+  async startAutoPlay(): Promise<boolean> {
+    // Don't start if already playing or queue has items
+    if (this.playlist.isPlaying || this.playlist.queue.length > 0) {
+      console.log('[PlaylistManager] Auto-play skipped - already playing or queue not empty');
+      return false;
+    }
+
+    // Check if container exists
+    const container = document.getElementById(this.containerId);
+    if (!container) {
+      console.warn('[PlaylistManager] Auto-play skipped - player container not found');
+      return false;
+    }
+
+    // Pick a random track from history
+    const randomTrack = await this.pickRandomFromHistory();
+    if (!randomTrack) {
+      console.log('[PlaylistManager] Auto-play skipped - no tracks in history');
+      return false;
+    }
+
+    // Add to queue and start playing
+    this.playlist.queue.push(randomTrack);
+    this.playlist.currentIndex = 0;
+    this.playlist.isPlaying = true;
+    this.playlist.trackStartedAt = new Date().toISOString();
+    this.playlist.lastUpdated = new Date().toISOString();
+
+    console.log('[PlaylistManager] Auto-play starting from history:', randomTrack.title || randomTrack.url);
+
+    // Sync to server
+    try {
+      await fetch('/api/playlist/global', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sync',
+          playlist: this.playlist
+        })
+      });
+    } catch (error) {
+      console.error('[PlaylistManager] Error syncing auto-play state:', error);
+    }
+
+    // Start playback
+    await this.playCurrent();
+    this.renderUI();
+
+    return true;
+  }
+
+  /**
    * Send control action to server
    */
   private async sendControlAction(action: string): Promise<void> {
