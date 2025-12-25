@@ -326,7 +326,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         <div class="djs-online-box">
           <div class="box-header">
             <h3>🎧 DJs in Lobby <span class="online-count-inline" id="onlineDjCount">0</span></h3>
-            <button id="openDmBtn" class="dm-btn">DM</button>
+            <button id="openDmBtn" class="dm-btn" onclick="if(typeof openDmModal==='function')openDmModal()">DM</button>
           </div>
           <div id="djsList" class="djs-list">
             <p class="empty-state">No DJs online yet</p>
@@ -5118,6 +5118,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     document.getElementById('dmChatView').classList.add('hidden');
     populateDmDjList();
   }
+  // Expose to window for onclick fallback
+  window.openDmModal = openDmModal;
   
   function closeDmModal() {
     document.getElementById('dmModal').classList.add('hidden');
