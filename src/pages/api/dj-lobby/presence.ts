@@ -505,8 +505,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const twoMinutesAgo = new Date(Date.now() - 120000);
 
     const staleDjs = await queryCollection('djLobbyPresence', {
-      filters: [{ field: 'lastSeen', op: 'LESS_THAN', value: twoMinutesAgo }]
-      // No cache needed for cleanup - runs infrequently
+      filters: [{ field: 'lastSeen', op: 'LESS_THAN', value: twoMinutesAgo }],
+      limit: 100  // Limit cleanup batch size
     });
 
     const staleIds: string[] = staleDjs.map(dj => dj.id);

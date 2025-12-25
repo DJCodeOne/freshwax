@@ -287,7 +287,8 @@ export const DELETE: APIRoute = async ({ locals }) => {
 
     const requests = await queryCollection('djTakeoverRequests', {
       filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }],
-      skipCache: true
+      skipCache: true,
+      limit: 50
     });
 
     const expiredRequests = requests.filter(r => r.createdAt && r.createdAt < fiveMinutesAgo);

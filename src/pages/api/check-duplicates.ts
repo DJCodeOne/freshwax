@@ -29,9 +29,10 @@ async function getOwnershipData(userId: string): Promise<{
     return cached.data;
   }
   
-  // Query orders for this customer
+  // Query orders for this customer (limit to prevent runaway)
   const orders = await queryCollection('orders', {
-    filters: [{ field: 'customer.userId', op: 'EQUAL', value: userId }]
+    filters: [{ field: 'customer.userId', op: 'EQUAL', value: userId }],
+    limit: 200
   });
 
   const ownedReleases = new Set<string>();
