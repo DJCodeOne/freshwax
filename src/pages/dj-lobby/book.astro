@@ -68,6 +68,28 @@ Astro.response.headers.set('Pragma', 'no-cache');
           <span><span class="dot yours"></span>Yours</span>
           <span><span class="dot selected"></span>Selected</span>
         </div>
+
+        <!-- Your Bookings (inside schedule container) -->
+        <div class="bookings-panel">
+          <h3>Your Upcoming Slots</h3>
+          <div id="myBookings" class="my-bookings">
+            <p class="empty">No bookings yet</p>
+          </div>
+        </div>
+
+        <!-- Stream Key Info (inside schedule container) -->
+        <div id="streamKeyPanel" class="stream-key-panel hidden">
+          <h3>Your Stream Key</h3>
+          <p class="key-note">This key is only valid for your booked slot</p>
+          <div class="key-display">
+            <code id="streamKeyValue">-</code>
+            <button id="copyKeyBtn" class="copy-btn">Copy</button>
+          </div>
+          <div class="key-info">
+            <p><strong>RTMP URL:</strong> rtmp://rtmp.freshwax.co.uk/live</p>
+            <p><strong>Valid:</strong> <span id="keyValidTime">-</span></p>
+          </div>
+        </div>
       </section>
 
       <!-- Booking Form -->
@@ -106,28 +128,6 @@ Astro.response.headers.set('Pragma', 'no-cache');
         </form>
 
         <div id="formMsg" class="form-msg hidden"></div>
-
-        <!-- Your Bookings -->
-        <div class="bookings-panel">
-          <h3>Your Upcoming Slots</h3>
-          <div id="myBookings" class="my-bookings">
-            <p class="empty">No bookings yet</p>
-          </div>
-        </div>
-
-        <!-- Stream Key Info -->
-        <div id="streamKeyPanel" class="stream-key-panel hidden">
-          <h3>Your Stream Key</h3>
-          <p class="key-note">This key is only valid for your booked slot</p>
-          <div class="key-display">
-            <code id="streamKeyValue">-</code>
-            <button id="copyKeyBtn" class="copy-btn">Copy</button>
-          </div>
-          <div class="key-info">
-            <p><strong>RTMP URL:</strong> rtmp://rtmp.freshwax.co.uk/live</p>
-            <p><strong>Valid:</strong> <span id="keyValidTime">-</span></p>
-          </div>
-        </div>
       </section>
     </div>
   </div>
@@ -477,10 +477,11 @@ Astro.response.headers.set('Pragma', 'no-cache');
 
     /* Bookings Panel */
     .bookings-panel {
-      background: #111;
-      border: 1px solid #222;
-      border-radius: 8px;
+      background: #0a0a0a;
+      border: 1px solid #333;
+      border-radius: 6px;
       padding: 0.75rem;
+      margin-top: 0.75rem;
     }
 
     .bookings-panel h3 {
@@ -523,10 +524,11 @@ Astro.response.headers.set('Pragma', 'no-cache');
 
     /* Stream Key Panel */
     .stream-key-panel {
-      background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
-      border: 1px solid #333;
-      border-radius: 8px;
+      background: linear-gradient(135deg, #0d1a0d 0%, #0a0a0a 100%);
+      border: 1px solid #22c55e40;
+      border-radius: 6px;
       padding: 0.75rem;
+      margin-top: 0.75rem;
     }
 
     .stream-key-panel h3 {
