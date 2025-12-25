@@ -1,8 +1,43 @@
 // src/middleware.ts
 // Initialize Firebase env from Cloudflare runtime on every request
-// Add security headers to all responses
+// Add security headers and CORS to all responses
 import { defineMiddleware } from 'astro:middleware';
 import { initFirebaseEnv } from './lib/firebase-rest';
+
+// Allowed origins for CORS
+const ALLOWED_ORIGINS = [
+  'https://freshwax.co.uk',
+  'https://www.freshwax.co.uk',
+  'https://freshwax.pages.dev',
+  'https://stream.freshwax.co.uk',
+  'https://icecast.freshwax.co.uk',
+  // Development
+  'http://localhost:4321',
+  'http://localhost:3000',
+  'http://127.0.0.1:4321',
+];
+
+// Check if origin is allowed
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  // Allow any *.freshwax.pages.dev preview deployments
+  if (origin.endsWith('.freshwax.pages.dev')) return true;
+  return ALLOWED_ORIGINS.includes(origin);
+}
+
+// Get CORS headers for a request
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  if (isAllowedOrigin(origin)) {
+    return {
+      'Access-Control-Allow-Origin': origin!,
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Max-Age': '86400', // 24 hours
+    };
+  }
+  return {};
+}
 
 // Security headers to apply to all responses
 const securityHeaders: Record<string, string> = {
@@ -22,18 +57,47 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     initFirebaseEnv(runtime.env);
   }
 
+  const url = new URL(request.url);
+  const isApiRoute = url.pathname.startsWith('/api/');
+  const origin = request.headers.get('origin');
+
+  // Handle CORS preflight for API routes
+  if (isApiRoute && request.method === 'OPTIONS') {
+    const corsHeaders = getCorsHeaders(origin);
+    if (Object.keys(corsHeaders).length > 0) {
+      return new Response(null, {
+        status: 204,
+        headers: corsHeaders,
+      });
+    }
+    // Reject preflight from unknown origins
+    return new Response(null, { status: 403 });
+  }
+
   // Get the response
   const response = await next();
 
-  // Add security headers to all HTML responses
+  // Clone headers for modification
+  const newHeaders = new Headers(response.headers);
+
+  // Add CORS headers to API responses
+  if (isApiRoute) {
+    const corsHeaders = getCorsHeaders(origin);
+    for (const [key, value] of Object.entries(corsHeaders)) {
+      newHeaders.set(key, value);
+    }
+  }
+
+  // Add security headers to HTML responses
   const contentType = response.headers.get('content-type') || '';
   if (contentType.includes('text/html')) {
-    // Clone response to modify headers
-    const newHeaders = new Headers(response.headers);
     for (const [key, value] of Object.entries(securityHeaders)) {
       newHeaders.set(key, value);
     }
+  }
 
+  // Return modified response if headers changed
+  if (isApiRoute || contentType.includes('text/html')) {
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,

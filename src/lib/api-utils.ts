@@ -207,25 +207,57 @@ export function getEnv(locals: unknown): Record<string, string | undefined> {
 // CORS HELPERS
 // ============================================
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+// Allowed origins for CORS (must match middleware.ts)
+const ALLOWED_ORIGINS = [
+  'https://freshwax.co.uk',
+  'https://www.freshwax.co.uk',
+  'https://freshwax.pages.dev',
+  'https://stream.freshwax.co.uk',
+  'https://icecast.freshwax.co.uk',
+  'http://localhost:4321',
+  'http://localhost:3000',
+  'http://127.0.0.1:4321',
+];
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  if (origin.endsWith('.freshwax.pages.dev')) return true;
+  return ALLOWED_ORIGINS.includes(origin);
+}
+
+function getCorsHeadersForOrigin(origin: string | null): Record<string, string> {
+  if (isAllowedOrigin(origin)) {
+    return {
+      'Access-Control-Allow-Origin': origin!,
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      'Access-Control-Allow-Credentials': 'true',
+    };
+  }
+  return {};
+}
 
 /**
  * Handle CORS preflight request
  */
-export function corsPreflightResponse(): Response {
-  return new Response(null, {
-    status: 204,
-    headers: CORS_HEADERS,
-  });
+export function corsPreflightResponse(request?: Request): Response {
+  const origin = request?.headers.get('origin') || null;
+  const corsHeaders = getCorsHeadersForOrigin(origin);
+
+  if (Object.keys(corsHeaders).length > 0) {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    });
+  }
+  return new Response(null, { status: 403 });
 }
 
 /**
  * Add CORS headers to existing headers
  */
-export function withCors(headers: Record<string, string> = {}): Record<string, string> {
-  return { ...headers, ...CORS_HEADERS };
+export function withCors(headers: Record<string, string> = {}, request?: Request): Record<string, string> {
+  const origin = request?.headers.get('origin') || null;
+  const corsHeaders = getCorsHeadersForOrigin(origin);
+  return { ...headers, ...corsHeaders };
 }
