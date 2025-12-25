@@ -3,6 +3,7 @@
 // Required for private-dj-{userId} channels
 
 import type { APIRoute } from 'astro';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Web Crypto API helper for HMAC-SHA256 (hex output)
 async function hmacSha256Hex(key: string, data: string): Promise<string> {
@@ -24,6 +25,13 @@ async function hmacSha256Hex(key: string, data: string): Promise<string> {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: auth attempts - 10 per 15 minutes
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`pusher-auth:${clientId}`, RateLimiters.auth);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Get Pusher config from env (Cloudflare runtime) or import.meta.env
   const env = (locals as any)?.runtime?.env;
   const PUSHER_KEY = env?.PUBLIC_PUSHER_KEY || import.meta.env.PUBLIC_PUSHER_KEY;

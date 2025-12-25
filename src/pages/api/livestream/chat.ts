@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { BOT_USER, isBotCommand, processBotCommand, getRandomTuneComment, getWelcomeMessage, shouldCommentOnTune, shouldWelcomeUser } from '../../../lib/chatbot';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // ============================================
 // CONTENT MODERATION
@@ -434,6 +435,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // Send a chat message
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: chat messages - 30 per minute per IP
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`livestream-chat:${clientId}`, RateLimiters.chat);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime and get env for Pusher
   const env = initFirebase(locals);
 

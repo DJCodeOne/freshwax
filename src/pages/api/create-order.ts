@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, addDocument, incrementField, initFirebaseEnv } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -22,6 +23,13 @@ function generateOrderNumber(): string {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`create-order:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;

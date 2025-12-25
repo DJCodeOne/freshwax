@@ -6,6 +6,7 @@
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -19,6 +20,13 @@ function getR2Config(env: any) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: upload operations - 10 per hour
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`presign-upload:${clientId}`, RateLimiters.upload);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     const { key, contentType, bucket } = await request.json();
 

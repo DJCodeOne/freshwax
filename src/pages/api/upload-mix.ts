@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -61,6 +62,13 @@ function parseTracklist(tracklist: string): string[] {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: upload operations - 10 per hour
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`upload-mix:${clientId}`, RateLimiters.upload);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({

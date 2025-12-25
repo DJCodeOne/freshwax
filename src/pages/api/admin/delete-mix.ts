@@ -7,6 +7,7 @@ import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/cl
 import { getDocument, deleteDocument, initFirebaseEnv, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -37,6 +38,13 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: destructive operations - 3 per hour
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`admin-delete-mix:${clientId}`, RateLimiters.destructive);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Admin authentication
   const body = await parseJsonBody(request);
   const authError = requireAdminAuth(request, locals, body);

@@ -7,6 +7,7 @@ import type { APIRoute } from 'astro';
 import { setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToSquareWebP } from '../../lib/image-processing';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Avatar size - small for icon use
 const AVATAR_SIZE = 128;
@@ -44,6 +45,13 @@ function createR2Client(config: ReturnType<typeof getR2Config>) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: upload operations - 10 per hour
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`upload-avatar:${clientId}`, RateLimiters.upload);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = (locals as any)?.runtime?.env;
   initFirebase(locals);
 

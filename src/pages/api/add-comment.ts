@@ -2,6 +2,7 @@
 // Add comments to releases with optional GIF support
 import type { APIRoute } from 'astro';
 import { getDocument, arrayUnion, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -10,6 +11,13 @@ const log = {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: chat/comments - 30 per minute per IP
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`add-comment:${clientId}`, RateLimiters.chat);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({

@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -34,6 +35,13 @@ async function isAdmin(uid: string): Promise<boolean> {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: destructive operations - 3 per hour
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`delete-user:${clientId}`, RateLimiters.destructive);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 

@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { checkRateLimit as checkGlobalRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Simple MD5 implementation for Cloudflare Workers (same as presence.ts)
 // Converts string to UTF-8 bytes first to handle unicode/emojis properly
@@ -294,6 +295,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Send a chat message
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: chat messages - 30 per minute per IP (global protection)
+  const clientId = getClientId(request);
+  const globalRateLimit = checkGlobalRateLimit(`dj-lobby-chat:${clientId}`, RateLimiters.chat);
+  if (!globalRateLimit.allowed) {
+    return rateLimitResponse(globalRateLimit.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
