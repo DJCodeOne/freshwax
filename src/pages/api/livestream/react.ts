@@ -340,21 +340,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
 
         // Increment total likes - try livestreamSlots first, fall back to livestreams
+        // If neither exists (playlist mode), just skip the counter update
         let totalLikes = 0;
         try {
           const result = await incrementField('livestreamSlots', streamId, 'totalLikes', 1);
           totalLikes = result.newValue;
         } catch (e) {
-          // Fall back to livestreams collection
-          const result = await incrementField('livestreams', streamId, 'totalLikes', 1);
-          totalLikes = result.newValue;
+          try {
+            // Fall back to livestreams collection
+            const result = await incrementField('livestreams', streamId, 'totalLikes', 1);
+            totalLikes = result.newValue;
+          } catch (e2) {
+            // Stream doesn't exist in either collection (playlist mode) - that's OK
+            console.log('[react] Stream not found for like counter, skipping increment');
+          }
         }
 
-        // Broadcast updated like count to all viewers
-        await triggerPusher(`stream-${streamId}`, 'like-update', {
-          totalLikes,
-          timestamp: now
-        }, env);
+        // Broadcast updated like count to all viewers (only if we have a count)
+        if (totalLikes > 0) {
+          await triggerPusher(`stream-${streamId}`, 'like-update', {
+            totalLikes,
+            timestamp: now
+          }, env);
+        }
 
         return new Response(JSON.stringify({
           success: true,
