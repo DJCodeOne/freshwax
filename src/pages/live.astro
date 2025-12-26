@@ -2553,6 +2553,45 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     }
     loadSchedule();
   });
+
+  // Subscribe to live-status Pusher channel for instant schedule updates
+  function setupLiveStatusListener() {
+    const config = window.PUSHER_CONFIG;
+    if (!config?.key) {
+      console.log('[LiveStatus] Pusher config not ready');
+      return;
+    }
+
+    try {
+      const statusPusher = new window.Pusher(config.key, {
+        cluster: config.cluster || 'eu',
+        forceTLS: true
+      });
+
+      const liveStatusChannel = statusPusher.subscribe('live-status');
+
+      liveStatusChannel.bind('stream-started', (data) => {
+        console.log('[LiveStatus] DJ went live:', data.djName);
+        // Refresh schedule immediately
+        scheduleCache = null;
+        loadSchedule(true);
+      });
+
+      liveStatusChannel.bind('stream-ended', (data) => {
+        console.log('[LiveStatus] Stream ended:', data.djName);
+        // Refresh schedule immediately to remove completed DJ
+        scheduleCache = null;
+        loadSchedule(true);
+      });
+
+      console.log('[LiveStatus] Subscribed to live-status channel');
+    } catch (err) {
+      console.warn('[LiveStatus] Failed to setup Pusher:', err);
+    }
+  }
+
+  // Setup live status listener after page load
+  setTimeout(setupLiveStatusListener, 1000);
   
   async function checkUserStatus(userId) {
     try {
@@ -3471,14 +3510,13 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     const now = new Date();
     const today = now.toISOString().split('T')[0];
     
-    // Filter to today's slots that are current or future (not completed past shows)
+    // Filter to today's slots that are current or future (not completed/cancelled shows)
     const todaySlots = allSlots.filter(s => {
       if (!s.startTime.startsWith(today)) return false;
-      if (s.status === 'cancelled') return false;
-      
-      // Show if live, or if end time is in the future
-      const endTime = new Date(s.endTime);
-      return s.status === 'live' || endTime > now;
+      if (s.status === 'cancelled' || s.status === 'completed') return false;
+
+      // Show if live, scheduled, in_lobby, or queued
+      return ['live', 'scheduled', 'in_lobby', 'queued'].includes(s.status);
     });
     
     // Sort by start time

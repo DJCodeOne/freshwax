@@ -843,18 +843,19 @@ export class PlaylistManager {
       console.log('[PlaylistManager] Chat enabled for playlist mode');
     }
 
-    // Hide the main stereo meters and toggle button when playlist is playing
+    // Ensure stereo meters are visible for playlist (we use the same LED elements)
     const stereoMeters = document.getElementById('stereoMeters');
     const toggleMetersBtn = document.getElementById('toggleMetersBtn');
     if (stereoMeters) {
-      stereoMeters.style.display = 'none';
+      stereoMeters.style.display = '';
     }
+    // Hide toggle button since playlist meters are simulated (no audio context to toggle)
     if (toggleMetersBtn) {
       toggleMetersBtn.style.display = 'none';
     }
 
     this.startPlaylistMeters();
-    console.log('[PlaylistManager] Emoji reactions, chat, and playlist meters enabled (main meters hidden)');
+    console.log('[PlaylistManager] Emoji reactions, chat, and playlist meters enabled');
   }
 
   /**

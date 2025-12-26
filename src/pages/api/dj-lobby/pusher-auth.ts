@@ -61,8 +61,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (channelName.startsWith('private-dj-')) {
       const channelUserId = channelName.replace('private-dj-', '');
 
-      // User can only auth for their own private channel
-      if (userId && channelUserId !== userId) {
+      // User must provide userId AND it must match the channel they're subscribing to
+      if (!userId || channelUserId !== userId) {
         return new Response(JSON.stringify({
           error: 'Forbidden - cannot subscribe to another user\'s private channel'
         }), { status: 403, headers: { 'Content-Type': 'application/json' } });

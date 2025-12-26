@@ -365,7 +365,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                   <p>Start OBS and your stream will appear here</p>
                 </div>
                 <div id="obsVideoPreview" class="video-preview hidden">
-                  <video id="obsVideo" playsinline autoplay muted></video>
+                  <video id="obsVideo" playsinline autoplay muted crossorigin="anonymous"></video>
                 </div>
                 <!-- BUTT Audio-Only Placeholder -->
                 <div id="buttAudioPreview" class="butt-audio-preview hidden">
@@ -454,7 +454,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                 </div>
 
                 <div id="videoPreview" class="video-preview hidden">
-                  <video id="hlsVideo" playsinline autoplay></video>
+                  <video id="hlsVideo" playsinline autoplay crossorigin="anonymous"></video>
                 </div>
 
                 <div id="audioPreview" class="audio-preview hidden">
@@ -585,10 +585,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
               <div class="cal-row">
                 <label>Reference Level:</label>
                 <select id="calRefLevel">
-                  <option value="-23">-23 LUFS (EBU R128)</option>
-                  <option value="-24">-24 LUFS (ATSC A/85)</option>
-                  <option value="-16">-16 LUFS (Streaming)</option>
-                  <option value="-14">-14 LUFS (Podcast)</option>
+                  <option value="-14">-14 LUFS (YouTube/Spotify/Twitch)</option>
+                  <option value="-16">-16 LUFS (Apple Music)</option>
+                  <option value="-23">-23 LUFS (EBU R128 Broadcast)</option>
+                  <option value="-24">-24 LUFS (ATSC A/85 TV)</option>
                 </select>
               </div>
               <div class="cal-row">
@@ -635,7 +635,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                   </div>
                   <div class="lufs-bar-track">
                     <div class="lufs-bar-fill" id="lufsBarFill"></div>
-                    <div class="lufs-target-marker" style="left: 38.5%;" title="-23 LUFS Target"></div>
+                    <div class="lufs-target-marker" style="left: 76.3%;" title="-14 LUFS Target"></div>
                   </div>
                 </div>
               </div>
@@ -1161,6 +1161,80 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     </div>
   </div>
 
+  <!-- Initialization Modal -->
+  <div id="initModal" class="init-modal hidden">
+    <div class="init-modal-backdrop"></div>
+    <div class="init-modal-container">
+      <div class="init-modal-content">
+        <div class="init-modal-header">
+          <div class="init-title-row">
+            <span class="init-icon">🎧</span>
+            <h2>Initialising Stream</h2>
+          </div>
+          <p class="init-subtitle">Checking your connections...</p>
+        </div>
+
+        <div class="init-progress-section">
+          <div class="init-progress-bar">
+            <div class="init-progress-fill" id="initProgressFill"></div>
+            <div class="init-progress-glow"></div>
+          </div>
+          <span class="init-progress-text" id="initProgressText">Starting up...</span>
+        </div>
+
+        <div class="init-checks">
+          <!-- OBS Check -->
+          <div class="init-check-item" id="initCheckObs">
+            <div class="init-check-icon">
+              <div class="init-spinner"></div>
+            </div>
+            <div class="init-check-info">
+              <span class="init-check-label">OBS / Video Stream</span>
+              <span class="init-check-status" id="initObsStatus">Checking...</span>
+            </div>
+            <div class="init-check-indicator"></div>
+          </div>
+
+          <!-- BUTT Check -->
+          <div class="init-check-item" id="initCheckButt">
+            <div class="init-check-icon">
+              <div class="init-spinner"></div>
+            </div>
+            <div class="init-check-info">
+              <span class="init-check-label">BUTT / Audio Stream</span>
+              <span class="init-check-status" id="initButtStatus">Checking...</span>
+            </div>
+            <div class="init-check-indicator"></div>
+          </div>
+
+          <!-- Audio Levels Check -->
+          <div class="init-check-item" id="initCheckLevels">
+            <div class="init-check-icon">
+              <div class="init-spinner"></div>
+            </div>
+            <div class="init-check-info">
+              <span class="init-check-label">Audio Levels</span>
+              <span class="init-check-status" id="initLevelsStatus">Waiting...</span>
+            </div>
+            <div class="init-check-indicator"></div>
+          </div>
+        </div>
+
+        <div class="init-tips" id="initTips">
+          <div class="init-tip">
+            <span class="tip-icon">💡</span>
+            <span>Make sure your streaming software is running and connected</span>
+          </div>
+        </div>
+
+        <div class="init-modal-footer">
+          <button id="initCloseBtn" class="init-close-btn" disabled>
+            <span class="init-close-text">Checking connections...</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
@@ -3477,7 +3551,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
   // Calibration settings (stored in localStorage)
   let calGainOffset = parseFloat(localStorage.getItem('calGainOffset') || '0');
-  let calRefLevel = parseInt(localStorage.getItem('calRefLevel') || '-23');
+  let calRefLevel = parseInt(localStorage.getItem('calRefLevel') || '-14');
 
   function initBroadcastMeters() {
     const canvas = document.getElementById('stereoCanvas');
@@ -3553,7 +3627,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Reset calibration
     document.getElementById('calReset')?.addEventListener('click', () => {
       calGainOffset = 0;
-      calRefLevel = -23;
+      calRefLevel = -14;
       localStorage.removeItem('calGainOffset');
       localStorage.removeItem('calRefLevel');
       if (gainSlider) gainSlider.value = 0;
@@ -5876,8 +5950,44 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
               status.textContent = 'Stream ended successfully';
               // Stop streaming flag and cleanup preview
               userIsStreaming = false;
-              // Refresh stream status
-              loadStreamStatus();
+
+              // Force UI to offline state immediately
+              const statusDot = document.querySelector('.status-dot');
+              const statusText = document.getElementById('statusText');
+              statusDot?.classList.add('offline');
+              statusDot?.classList.remove('live');
+              document.querySelector('.live-panel')?.classList.remove('streaming');
+              if (statusText) statusText.textContent = 'No one streaming';
+              document.getElementById('djIsLiveIndicator')?.classList.add('hidden');
+              showRelayIndicators(false);
+              document.getElementById('offlineState')?.classList.remove('hidden');
+              document.getElementById('timeRemaining')?.classList.add('hidden');
+
+              // Clear current stream reference
+              currentStream = null;
+              streamStartTime = null;
+              streamEndTime = null;
+
+              // Cleanup HLS and meters
+              cleanupHlsPlayer();
+              cleanupLivestreamChat();
+
+              // Show stream key setup section again
+              document.getElementById('streamKeySection')?.classList.remove('hidden');
+              document.getElementById('multiStreamSection')?.classList.remove('hidden');
+              document.getElementById('broadcastAudioPanel')?.classList.add('hidden');
+              stopBroadcastMeters();
+              document.querySelector('.preview-section')?.classList.remove('expanded');
+
+              // Re-enable Go Live button
+              const goLiveBtn = document.getElementById('setReadyBtn');
+              if (goLiveBtn) {
+                goLiveBtn.disabled = false;
+                goLiveBtn.classList.remove('disabled');
+              }
+
+              // Refresh stream status (backup)
+              setTimeout(() => loadStreamStatus(), 500);
               recordStreamEnd();
             }
           }, 1000);
@@ -6457,8 +6567,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         // Show the GO LIVE button
         goLiveBtn?.classList.remove('hidden');
 
-        // Show reminder popup
-        alert('🎧 Start your streaming software (OBS) now!\n\nCheck that:\n• Your audio levels are good\n• Your video preview is showing\n\nWhen everything looks good, press GO LIVE!');
+        // Show initialization modal with connection checks
+        showInitModal();
 
       } catch (e) {
         console.error('Ready error:', e);
@@ -6931,6 +7041,240 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     initLivestreamChat('playlist-global');
     console.log('[LivestreamChat] Switched to playlist-global for DJ waitlist monitoring');
   }
+
+  // =============== INITIALIZATION MODAL ===============
+  let initCheckInterval = null;
+
+  function showInitModal() {
+    const modal = document.getElementById('initModal');
+    if (!modal) return;
+
+    // Reset modal state
+    const progressFill = document.getElementById('initProgressFill');
+    const progressText = document.getElementById('initProgressText');
+    const closeBtn = document.getElementById('initCloseBtn');
+    const closeBtnText = closeBtn?.querySelector('.init-close-text');
+
+    if (progressFill) progressFill.style.width = '0%';
+    if (progressText) progressText.textContent = 'Starting up...';
+    if (closeBtn) closeBtn.disabled = true;
+    if (closeBtnText) closeBtnText.textContent = 'Checking connections...';
+
+    // Reset check items
+    ['initCheckObs', 'initCheckButt', 'initCheckLevels'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('connected', 'disconnected', 'error', 'checking');
+      }
+    });
+
+    document.getElementById('initObsStatus').textContent = 'Checking...';
+    document.getElementById('initButtStatus').textContent = 'Checking...';
+    document.getElementById('initLevelsStatus').textContent = 'Waiting...';
+
+    // Show modal
+    modal.classList.remove('hidden');
+
+    // Start checking connections
+    setTimeout(() => startConnectionChecks(), 500);
+  }
+
+  function hideInitModal() {
+    const modal = document.getElementById('initModal');
+    if (modal) modal.classList.add('hidden');
+    if (initCheckInterval) {
+      clearInterval(initCheckInterval);
+      initCheckInterval = null;
+    }
+  }
+
+  function startConnectionChecks() {
+    const progressFill = document.getElementById('initProgressFill');
+    const progressText = document.getElementById('initProgressText');
+    let progress = 10;
+
+    // Animate progress bar
+    if (progressFill) progressFill.style.width = '10%';
+    if (progressText) progressText.textContent = 'Checking OBS connection...';
+
+    // Check OBS (video preview)
+    const obsCheck = document.getElementById('initCheckObs');
+    obsCheck?.classList.add('checking');
+
+    setTimeout(() => {
+      progress = 40;
+      if (progressFill) progressFill.style.width = '40%';
+
+      // Check if OBS video preview is loaded
+      const obsVideo = document.getElementById('obsVideo');
+      const obsPreview = document.getElementById('obsVideoPreview');
+      const isObsConnected = obsPreview && !obsPreview.classList.contains('hidden') && obsVideo && !obsVideo.paused;
+
+      obsCheck?.classList.remove('checking');
+      if (isObsConnected) {
+        obsCheck?.classList.add('connected');
+        document.getElementById('initObsStatus').textContent = 'Connected - Video stream detected';
+      } else {
+        obsCheck?.classList.add('disconnected');
+        document.getElementById('initObsStatus').textContent = 'Not detected - Start OBS when ready';
+      }
+
+      // Check BUTT (audio)
+      if (progressText) progressText.textContent = 'Checking BUTT connection...';
+      const buttCheck = document.getElementById('initCheckButt');
+      buttCheck?.classList.add('checking');
+
+      setTimeout(() => {
+        progress = 70;
+        if (progressFill) progressFill.style.width = '70%';
+
+        // Check if Icecast audio is connected
+        const isButtConnected = icecastConnected || (currentPreviewSource === 'butt');
+
+        buttCheck?.classList.remove('checking');
+        if (isButtConnected) {
+          buttCheck?.classList.add('connected');
+          document.getElementById('initButtStatus').textContent = 'Connected - Audio stream detected';
+        } else {
+          buttCheck?.classList.add('disconnected');
+          document.getElementById('initButtStatus').textContent = 'Not detected - Optional for video streams';
+        }
+
+        // Check audio levels
+        if (progressText) progressText.textContent = 'Checking audio levels...';
+        const levelsCheck = document.getElementById('initCheckLevels');
+        levelsCheck?.classList.add('checking');
+
+        setTimeout(() => {
+          progress = 100;
+          if (progressFill) progressFill.style.width = '100%';
+
+          // Check if we have audio signal
+          const hasAudioSignal = (obsAnalyserL || icecastAnalyserL) ? true : false;
+
+          levelsCheck?.classList.remove('checking');
+          if (hasAudioSignal) {
+            levelsCheck?.classList.add('connected');
+            document.getElementById('initLevelsStatus').textContent = 'Audio meters active - Check your levels';
+          } else {
+            levelsCheck?.classList.add('disconnected');
+            document.getElementById('initLevelsStatus').textContent = 'No audio signal yet';
+          }
+
+          // Complete - enable close button
+          if (progressText) progressText.textContent = 'Ready to go!';
+          const closeBtn = document.getElementById('initCloseBtn');
+          const closeBtnText = closeBtn?.querySelector('.init-close-text');
+          if (closeBtn) closeBtn.disabled = false;
+          if (closeBtnText) closeBtnText.textContent = 'Continue to Check Levels';
+
+          // Update tip based on status
+          updateInitTip(isObsConnected, isButtConnected);
+
+          // Start live status updates
+          startLiveStatusUpdates();
+
+        }, 800);
+      }, 800);
+    }, 1000);
+  }
+
+  function startLiveStatusUpdates() {
+    // Continuously update connection status while modal is open
+    initCheckInterval = setInterval(() => {
+      const modal = document.getElementById('initModal');
+      if (!modal || modal.classList.contains('hidden')) {
+        clearInterval(initCheckInterval);
+        initCheckInterval = null;
+        return;
+      }
+
+      // Update OBS status
+      const obsVideo = document.getElementById('obsVideo');
+      const obsPreview = document.getElementById('obsVideoPreview');
+      const isObsConnected = obsPreview && !obsPreview.classList.contains('hidden') && obsVideo && !obsVideo.paused;
+      const obsCheck = document.getElementById('initCheckObs');
+
+      obsCheck?.classList.remove('connected', 'disconnected');
+      if (isObsConnected) {
+        obsCheck?.classList.add('connected');
+        document.getElementById('initObsStatus').textContent = 'Connected - Video stream detected';
+      } else {
+        obsCheck?.classList.add('disconnected');
+        document.getElementById('initObsStatus').textContent = 'Not detected - Start OBS when ready';
+      }
+
+      // Update BUTT status
+      const isButtConnected = icecastConnected || (currentPreviewSource === 'butt');
+      const buttCheck = document.getElementById('initCheckButt');
+
+      buttCheck?.classList.remove('connected', 'disconnected');
+      if (isButtConnected) {
+        buttCheck?.classList.add('connected');
+        document.getElementById('initButtStatus').textContent = 'Connected - Audio stream detected';
+      } else {
+        buttCheck?.classList.add('disconnected');
+        document.getElementById('initButtStatus').textContent = 'Not detected - Optional for video streams';
+      }
+
+      // Update audio levels status
+      const hasAudioSignal = (obsAnalyserL || icecastAnalyserL) ? true : false;
+      const levelsCheck = document.getElementById('initCheckLevels');
+
+      levelsCheck?.classList.remove('connected', 'disconnected');
+      if (hasAudioSignal) {
+        levelsCheck?.classList.add('connected');
+        document.getElementById('initLevelsStatus').textContent = 'Audio meters active - Check your levels';
+      } else {
+        levelsCheck?.classList.add('disconnected');
+        document.getElementById('initLevelsStatus').textContent = 'No audio signal yet';
+      }
+
+      updateInitTip(isObsConnected, isButtConnected);
+
+    }, 2000);
+  }
+
+  function updateInitTip(obsConnected, buttConnected) {
+    const tipsEl = document.getElementById('initTips');
+    if (!tipsEl) return;
+
+    let tipHtml = '';
+    if (!obsConnected && !buttConnected) {
+      tipHtml = `
+        <div class="init-tip">
+          <span class="tip-icon">💡</span>
+          <span>Start OBS or BUTT to begin streaming</span>
+        </div>
+      `;
+    } else if (obsConnected && !buttConnected) {
+      tipHtml = `
+        <div class="init-tip" style="background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3); color: #22c55e;">
+          <span class="tip-icon">✓</span>
+          <span>OBS connected! Check your audio levels before going live</span>
+        </div>
+      `;
+    } else if (buttConnected) {
+      tipHtml = `
+        <div class="init-tip" style="background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3); color: #22c55e;">
+          <span class="tip-icon">✓</span>
+          <span>Audio stream connected! Ready when you are</span>
+        </div>
+      `;
+    }
+    tipsEl.innerHTML = tipHtml;
+  }
+
+  // Close button handler
+  document.getElementById('initCloseBtn')?.addEventListener('click', hideInitModal);
+
+  // Backdrop click to close (optional)
+  document.querySelector('.init-modal-backdrop')?.addEventListener('click', () => {
+    const closeBtn = document.getElementById('initCloseBtn');
+    if (closeBtn && !closeBtn.disabled) {
+      hideInitModal();
+    }
+  });
 </script>
 </body>
 </html>

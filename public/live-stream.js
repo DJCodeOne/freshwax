@@ -1,6 +1,6 @@
 // public/live-stream.js
 // Fresh Wax Live Stream - Mobile-First Optimized
-// Version: 2.1 - December 2025 - Pusher Chat Integration
+// Version: 2.2 - December 2025 - Live status polling + 30s playlist delay
 
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
@@ -24,6 +24,11 @@ function normalizeHlsUrl(url) {
 
 // Playlist manager for media queue when stream is offline
 let playlistManager = null;
+
+// Track when stream ended for 30-second delay before resuming playlist
+let streamEndedAt = null;
+let wasLiveStreamActive = false;
+let liveStatusPollInterval = null;
 
 // Emoji/GIF pickers are now handled by inline script in LiveChat.astro
 
@@ -267,6 +272,16 @@ async function init() {
   // Check live status
   await checkLiveStatus();
 
+  // Poll for live status changes every 20 seconds (as fallback)
+  // Primary detection is via Pusher events, polling is backup
+  if (liveStatusPollInterval) clearInterval(liveStatusPollInterval);
+  liveStatusPollInterval = setInterval(async () => {
+    await checkLiveStatus();
+  }, 20000);
+
+  // Subscribe to Pusher for instant live status updates
+  setupLiveStatusPusher();
+
   // Setup playlist control on play button (after live status check)
   setupPlaylistPlayButton();
 
@@ -492,10 +507,9 @@ function setupPlaylistPlayButton() {
   const playBtn = document.getElementById('playBtn');
   if (!playBtn) return;
 
-  // Store original onclick if exists
-  const originalOnclick = playBtn.onclick;
-
-  playBtn.onclick = async () => {
+  // Use addEventListener instead of overwriting onclick
+  // This allows the HLS player to set its own onclick later
+  playBtn.addEventListener('click', async (e) => {
     console.log('[Playlist] Play button clicked, state:', {
       isLiveStreamActive: window.isLiveStreamActive,
       isPlaylistActive: window.isPlaylistActive,
@@ -503,10 +517,9 @@ function setupPlaylistPlayButton() {
       hasPlaylistManager: !!window.playlistManager
     });
 
-    // If live stream is active, use original behavior
-    if (window.isLiveStreamActive && originalOnclick) {
-      originalOnclick();
-      return;
+    // If live stream is active, let the HLS onclick handler deal with it
+    if (window.isLiveStreamActive) {
+      return; // Don't interfere with live stream controls
     }
 
     // Get playlist manager - it should exist if playlist was ever active
@@ -524,7 +537,9 @@ function setupPlaylistPlayButton() {
 
     try {
       if (isCurrentlyPlaying) {
-        // Pause playlist
+        // Pause playlist - PlaylistManager.pause() handles:
+        // - stopping playlist simulated meters
+        // - disabling emojis and reaction buttons
         await pm.pause();
         window.isPlaylistPlaying = false;
         window.isPlaylistActive = true; // Keep playlist active even when paused
@@ -533,7 +548,9 @@ function setupPlaylistPlayButton() {
         playBtn.classList.remove('playing');
         console.log('[Playlist] Paused via play button');
       } else {
-        // Resume playlist
+        // Resume playlist - PlaylistManager.resume() handles:
+        // - starting playlist simulated meters
+        // - enabling emojis and reaction buttons
         await pm.resume();
         window.isPlaylistPlaying = true;
         window.isPlaylistActive = true;
@@ -708,6 +725,56 @@ async function refreshViewerCount(streamId) {
 }
 
 // ==========================================
+// LIVE STATUS VIA PUSHER (instant updates)
+// ==========================================
+let liveStatusChannel = null;
+
+function setupLiveStatusPusher() {
+  try {
+    // Wait for Pusher to be available
+    const config = window.PUSHER_CONFIG;
+    if (!config?.key) {
+      console.log('[LiveStatus] Pusher config not ready, will rely on polling');
+      return;
+    }
+
+    // Use existing Pusher instance or create new one
+    if (!window.statusPusher) {
+      window.statusPusher = new Pusher(config.key, {
+        cluster: config.cluster,
+        forceTLS: true
+      });
+    }
+
+    // Subscribe to global live status channel
+    if (liveStatusChannel) {
+      liveStatusChannel.unbind_all();
+      window.statusPusher.unsubscribe('live-status');
+    }
+
+    liveStatusChannel = window.statusPusher.subscribe('live-status');
+
+    liveStatusChannel.bind('stream-started', (data) => {
+      console.log('[LiveStatus] DJ went live via Pusher:', data.djName);
+      // Immediately check status to switch to live stream
+      checkLiveStatus();
+    });
+
+    liveStatusChannel.bind('stream-ended', (data) => {
+      console.log('[LiveStatus] Stream ended via Pusher:', data.djName);
+      // Trigger the 30-second delay countdown
+      wasLiveStreamActive = true;
+      streamEndedAt = Date.now();
+      checkLiveStatus();
+    });
+
+    console.log('[LiveStatus] Subscribed to Pusher live-status channel');
+  } catch (err) {
+    console.warn('[LiveStatus] Pusher setup failed, falling back to polling:', err);
+  }
+}
+
+// ==========================================
 // STREAM STATUS CHECK
 // ==========================================
 async function checkLiveStatus() {
@@ -723,7 +790,10 @@ async function checkLiveStatus() {
     const result = await response.json();
 
     if (result.success && result.isLive && result.primaryStream) {
-      // LIVE STREAM ACTIVE - Pause playlist
+      // LIVE STREAM ACTIVE - Track state and pause playlist
+      wasLiveStreamActive = true;
+      streamEndedAt = null; // Clear any previous end time
+
       if (playlistManager?.isPlaying) {
         await playlistManager.pause();
         playlistManager.wasPausedForStream = true;
@@ -744,54 +814,80 @@ async function checkLiveStatus() {
 
       showLiveStream(result.primaryStream);
     } else {
-      // NO LIVE STREAM - Resume playlist if it was playing
-      if (playlistManager?.wasPausedForStream && playlistManager.queue.length > 0) {
-        await playlistManager.resume();
-        playlistManager.wasPausedForStream = false;
-        console.log('[Playlist] Resumed after stream ended');
+      // NO LIVE STREAM
+      // Track when stream ended (for 10-second delay before resuming playlist)
+      if (wasLiveStreamActive && !streamEndedAt) {
+        streamEndedAt = Date.now();
+        console.log('[Stream] Stream ended, waiting 10 seconds before resuming playlist...');
       }
 
-      // Show playlist in main player if queue has items
+      // Only resume playlist after 10-second delay (gives time for DJ handoffs)
+      const secondsSinceEnd = streamEndedAt ? (Date.now() - streamEndedAt) / 1000 : 999;
+      const canResumePlaylist = secondsSinceEnd >= 10;
+
+      if (canResumePlaylist) {
+        // Reset tracking flags
+        wasLiveStreamActive = false;
+        streamEndedAt = null;
+
+        // Resume playlist if it was playing
+        if (playlistManager?.wasPausedForStream && playlistManager.queue.length > 0) {
+          await playlistManager.resume();
+          playlistManager.wasPausedForStream = false;
+          console.log('[Playlist] Resumed after 10-second delay');
+        }
+      } else if (streamEndedAt) {
+        console.log(`[Stream] Waiting... ${Math.ceil(10 - secondsSinceEnd)}s until playlist resumes`);
+      }
+
+      // Show playlist in main player if queue has items (only after 10s delay)
       const videoPlayer = document.getElementById('videoPlayer');
       const hlsVideo = document.getElementById('hlsVideoElement');
       const playlistPlayer = document.getElementById('playlistPlayer');
 
-      if (playlistManager?.queue.length > 0) {
-        // Show video player container with playlist content
-        if (hlsVideo) hlsVideo.classList.add('hidden');
-        if (playlistPlayer) playlistPlayer.classList.remove('hidden');
-        if (videoPlayer) {
-          videoPlayer.classList.remove('hidden');
-          videoPlayer.style.opacity = '1';
-        }
-      } else {
-        // Queue is empty - try to auto-start playlist from history
-        if (playlistManager && typeof playlistManager.startAutoPlay === 'function') {
-          console.log('[Playlist] No live stream and queue empty - attempting auto-play from history');
-          const started = await playlistManager.startAutoPlay();
-          if (started) {
-            console.log('[Playlist] Auto-play started successfully');
-            // Show video player for auto-play content
-            if (hlsVideo) hlsVideo.classList.add('hidden');
-            if (playlistPlayer) playlistPlayer.classList.remove('hidden');
-            if (videoPlayer) {
-              videoPlayer.classList.remove('hidden');
-              videoPlayer.style.opacity = '1';
+      if (canResumePlaylist) {
+        if (playlistManager?.queue.length > 0) {
+          // Show video player container with playlist content
+          if (hlsVideo) hlsVideo.classList.add('hidden');
+          if (playlistPlayer) playlistPlayer.classList.remove('hidden');
+          if (videoPlayer) {
+            videoPlayer.classList.remove('hidden');
+            videoPlayer.style.opacity = '1';
+          }
+        } else {
+          // Queue is empty - try to auto-start playlist from history
+          if (playlistManager && typeof playlistManager.startAutoPlay === 'function') {
+            console.log('[Playlist] No live stream and queue empty - attempting auto-play from history');
+            const started = await playlistManager.startAutoPlay();
+            if (started) {
+              console.log('[Playlist] Auto-play started successfully');
+              // Show video player for auto-play content
+              if (hlsVideo) hlsVideo.classList.add('hidden');
+              if (playlistPlayer) playlistPlayer.classList.remove('hidden');
+              if (videoPlayer) {
+                videoPlayer.classList.remove('hidden');
+                videoPlayer.style.opacity = '1';
+              }
+            } else {
+              // No history available - hide video container
+              if (videoPlayer) {
+                videoPlayer.style.opacity = '0';
+                setTimeout(() => videoPlayer.classList.add('hidden'), 300);
+              }
             }
           } else {
-            // No history available - hide video container
+            // No playlist manager - hide video container
             if (videoPlayer) {
               videoPlayer.style.opacity = '0';
               setTimeout(() => videoPlayer.classList.add('hidden'), 300);
             }
           }
-        } else {
-          // No playlist manager - hide video container
-          if (videoPlayer) {
-            videoPlayer.style.opacity = '0';
-            setTimeout(() => videoPlayer.classList.add('hidden'), 300);
-          }
         }
+      } else {
+        // Still in 30-second delay - keep showing offline/waiting state
+        // Don't switch to playlist yet
+        if (hlsVideo) hlsVideo.classList.remove('hidden');
+        if (playlistPlayer) playlistPlayer.classList.add('hidden');
       }
 
       showOfflineState(result.scheduled || []);
@@ -1246,14 +1342,22 @@ function setupHlsPlayer(stream) {
       document.getElementById('pauseIcon')?.classList.remove('hidden');
       playBtn?.classList.add('playing');
       updateMiniPlayer(true);
+      // Re-enable emojis and meters when playing
+      window.emojiAnimationsEnabled = true;
+      setReactionButtonsEnabled(true);
+      startGlobalMeters();
     });
-    
+
     videoElement.addEventListener('pause', () => {
       isPlaying = false;
       document.getElementById('playIcon')?.classList.remove('hidden');
       document.getElementById('pauseIcon')?.classList.add('hidden');
       playBtn?.classList.remove('playing');
       updateMiniPlayer(false);
+      // Disable emojis and meters when paused
+      window.emojiAnimationsEnabled = false;
+      setReactionButtonsEnabled(false);
+      stopGlobalMeters();
     });
   }
 }
@@ -1922,6 +2026,11 @@ async function sendHeartbeat(streamId) {
 // CHAT SYSTEM - Pusher Real-time
 // ==========================================
 async function setupChat(streamId) {
+  // Skip chat setup on fullscreen page - it has its own chat system
+  if (window.location.pathname.includes('/live/fullpage')) {
+    console.log('[DEBUG] Skipping setupChat on fullscreen page');
+    return;
+  }
   console.log('[DEBUG] setupChat called with streamId:', streamId);
 
   // Load Pusher script if not already loaded
@@ -2146,6 +2255,11 @@ window.cancelReply = function() {
 };
 
 function renderChatMessages(messages, forceScrollToBottom = false) {
+  // Skip on fullscreen page - it has its own chat renderer
+  if (window.location.pathname.includes('/live/fullpage')) {
+    return;
+  }
+
   const container = document.getElementById('chatMessages');
   if (!container) return;
 
@@ -2262,6 +2376,11 @@ function escapeHtml(text) {
 }
 
 function setupEmojiPicker() {
+  // Skip on fullscreen page - it has its own emoji picker
+  if (window.location.pathname.includes('/live/fullpage')) {
+    console.log('[EmojiPicker] Skipping on fullscreen page');
+    return;
+  }
   console.log('[EmojiPicker] Setting up emoji picker...');
   const emojiBtn = document.getElementById('emojiBtn');
   const emojiPicker = document.getElementById('emojiPicker');
@@ -2344,6 +2463,11 @@ function setupEmojiPicker() {
 }
 
 function setupGiphyPicker() {
+  // Skip on fullscreen page - it has its own giphy picker
+  if (window.location.pathname.includes('/live/fullpage')) {
+    console.log('[GiphyPicker] Skipping on fullscreen page');
+    return;
+  }
   console.log('[GiphyPicker] Setting up giphy picker...');
   console.log('[GiphyPicker] GIPHY_API_KEY set:', !!GIPHY_API_KEY, GIPHY_API_KEY ? `(${GIPHY_API_KEY.length} chars)` : '');
   const giphyBtn = document.getElementById('giphyBtn');
@@ -2513,6 +2637,11 @@ async function sendGiphyMessage(giphyUrl, giphyId) {
 window.sendGifMessage = sendGiphyMessage;
 
 function setupChatInput(streamId) {
+  // Skip on fullscreen page - it has its own chat input handlers
+  if (window.location.pathname.includes('/live/fullpage')) {
+    console.log('[ChatInput] Skipping on fullscreen page');
+    return;
+  }
   const input = document.getElementById('chatInput');
   const sendBtn = document.getElementById('sendBtn');
 
@@ -2812,6 +2941,12 @@ document.addEventListener('click', (e) => {
 let isInitialized = false;
 
 async function safeInit() {
+  // Skip entirely on fullscreen page - it has its own implementation
+  if (window.location.pathname.includes('/live/fullpage')) {
+    console.log('[LiveStream] On fullscreen page, skipping init');
+    return;
+  }
+
   // Check if we're on the live page
   if (!window.location.pathname.startsWith('/live')) {
     console.log('[LiveStream] Not on live page, skipping init');

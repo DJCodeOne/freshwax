@@ -111,31 +111,40 @@ const pusherConfig = {
         </a>
 
         <div class="stream-info">
-          <div class="live-badge" id="liveBadge">
-            <span class="live-dot"></span>
-            <span id="liveStatusText">OFFLINE</span>
-          </div>
           <h1 id="streamTitle">No Live Streams</h1>
         </div>
 
         <div class="stream-stats">
+          <!-- Watching count -->
           <div class="stat viewers-stat">
             <span class="stat-icon">&#x1F441;</span>
             <span class="stat-value" id="viewerCount">0</span>
             <span class="stat-label">watching</span>
           </div>
+          <!-- Duration timer (moved from bottom bar) -->
+          <div class="stat duration-stat" id="topDurationStat">
+            <span class="np-duration-label" id="npDurationLabel">DURATION</span>
+            <span class="np-duration" id="npDuration">--:--</span>
+          </div>
+          <!-- DJ Lobby button (green) -->
+          <button id="djLobbyBtn" class="dj-lobby-btn">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+            </svg>
+            <span>DJ Lobby</span>
+          </button>
+          <!-- Playlist button (red) -->
           <button id="playlistBtn" class="playlist-btn">
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
               <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
             </svg>
             <span>Playlist</span>
           </button>
-          <a href="/account/dj-lobby" id="djLobbyBtn" class="dj-lobby-btn hidden">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-            </svg>
-            <span>DJ Lobby</span>
-          </a>
+          <!-- Live/Offline badge (moved to right side) -->
+          <div class="live-badge" id="liveBadge">
+            <span class="live-dot"></span>
+            <span id="liveStatusText">OFFLINE</span>
+          </div>
         </div>
       </div>
 
@@ -247,38 +256,29 @@ const pusherConfig = {
           <span class="dj-info-selector" id="controlsDjName">Waiting...</span>
         </div>
         <div class="dj-info-right">
-          <div class="np-duration-box">
-            <span class="np-duration" id="npDuration">--:--</span>
-            <span class="np-duration-label" id="npDurationLabel"></span>
-          </div>
           <span class="stream-genre" id="streamGenre">Jungle / D&B</span>
         </div>
       </div>
     </div>
 
-    <!-- Multi-Chat Section - 3 Columns -->
-    <aside class="chat-section multi-chat">
+    <!-- Multi-Chat Section -->
+    <aside class="chat-section multi-chat" id="chatSection">
       <!-- Fresh Wax Chat Column -->
-      <div class="chat-column" data-chat="freshwax">
+      <div class="chat-column active" data-chat="freshwax">
         <div class="chat-column-header freshwax-header">
           <div class="chat-column-title">
             <span class="chat-icon">&#x1F4AC;</span>
             <span><span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></span>
           </div>
           <div class="chat-header-actions">
-            <button class="external-chat-btn twitch-toggle" data-toggle="twitch" title="Toggle Twitch Chat">
+            <button class="external-chat-btn twitch-toggle" id="toggleTwitch" data-toggle="twitch" title="Toggle Twitch Chat">
               <svg class="twitch-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
                 <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
               </svg>
             </button>
-            <button class="external-chat-btn youtube-toggle" data-toggle="youtube" title="Toggle YouTube Chat">
+            <button class="external-chat-btn youtube-toggle" id="toggleYoutube" data-toggle="youtube" title="Toggle YouTube Chat">
               <svg class="youtube-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
                 <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-              </svg>
-            </button>
-            <button class="chat-expand-btn" data-target="freshwax" title="Expand Fresh Wax Chat">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
               </svg>
             </button>
           </div>
@@ -287,7 +287,7 @@ const pusherConfig = {
           <div class="chat-messages" id="chatMessages">
             <div class="chat-welcome">
               <p>Welcome to <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span> Live!</p>
-              <p class="chat-hint">Chat is active during live streams.</p>
+              <p class="chat-hint">Type !help for commands</p>
             </div>
           </div>
           <div class="chat-input-section">
@@ -295,24 +295,56 @@ const pusherConfig = {
               <p><a href="/login?redirect=/live/fullpage">Sign in</a> to chat</p>
             </div>
             <div id="chatForm" class="chat-form hidden">
-              <div class="chat-tools">
-                <button type="button" id="emojiBtn" class="tool-btn">&#x1F60A;</button>
-                <button type="button" id="giphyBtn" class="tool-btn">GIF</button>
+              <div id="replyIndicator" class="reply-indicator" style="display: none;">
+                <span>Replying to <strong id="replyToName"></strong></span>
+                <button type="button" id="cancelReply" class="cancel-reply">&times;</button>
               </div>
               <div class="chat-input-wrapper">
                 <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
-                <button type="submit" id="sendBtn">
+                <button type="button" id="emojiBtn" class="chat-tool-btn" title="Emojis">&#x1F60A;</button>
+                <button type="button" id="giphyBtn" class="chat-tool-btn" title="GIFs">GIF</button>
+                <button type="button" id="sendBtn" class="send-btn">
                   <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                 </button>
               </div>
             </div>
+            <!-- Emoji Picker -->
+            <div id="emojiPicker" class="emoji-picker" style="display: none;">
+              <div class="emoji-picker-header">
+                <div class="emoji-cats">
+                  <button class="emoji-cat active" data-category="music" title="Music">&#x1F3B5;</button>
+                  <button class="emoji-cat" data-category="reactions" title="Reactions">&#x1F525;</button>
+                  <button class="emoji-cat" data-category="faces" title="Faces">&#x1F60E;</button>
+                  <button class="emoji-cat" data-category="vibes" title="Vibes">&#x1F334;</button>
+                </div>
+                <button class="emoji-close" id="closeEmoji">&times;</button>
+              </div>
+              <div class="emoji-grid" id="emojiGrid"></div>
+            </div>
+            <!-- GIF Picker -->
+            <div id="giphyPicker" class="giphy-picker" style="display: none;">
+              <div class="giphy-picker-header">
+                <input type="text" id="giphySearch" class="giphy-search" placeholder="Search GIFs..." />
+                <button class="giphy-close" id="closeGiphy">&times;</button>
+              </div>
+              <div class="giphy-cats">
+                <button class="giphy-cat active" data-category="trending">Trending</button>
+                <button class="giphy-cat" data-category="reactions">Reactions</button>
+                <button class="giphy-cat" data-category="music">Music</button>
+                <button class="giphy-cat" data-category="dance">Dance</button>
+                <button class="giphy-cat" data-category="party">Party</button>
+              </div>
+              <div class="giphy-grid" id="giphyGrid">
+                <p class="giphy-loading">Loading GIFs...</p>
+              </div>
+              <div class="giphy-footer">Powered by GIPHY</div>
+            </div>
           </div>
-        </div>
         </div>
       </div>
 
       <!-- Twitch Chat Column -->
-      <div class="chat-column" data-chat="twitch">
+      <div class="chat-column" data-chat="twitch" id="twitchColumn">
         <div class="chat-column-header twitch-header">
           <div class="chat-column-title">
             <svg class="twitch-icon" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
@@ -320,7 +352,7 @@ const pusherConfig = {
             </svg>
             <span>Twitch Chat</span>
           </div>
-          <button class="chat-close-btn" data-close="twitch" title="Close">
+          <button class="chat-close-btn" id="closeTwitch" data-close="twitch" title="Close">
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
             </svg>
@@ -328,8 +360,8 @@ const pusherConfig = {
         </div>
         <div class="chat-column-body">
           <iframe id="twitchChatFrame" class="external-chat-frame" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-          <div class="external-chat-placeholder" id="twitchChatPlaceholder">
-            <svg class="placeholder-icon twitch-placeholder-icon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+          <div class="external-chat-placeholder" id="twitchPlaceholder">
+            <svg class="placeholder-icon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
               <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
             </svg>
             <p>Twitch chat appears when streaming</p>
@@ -338,7 +370,7 @@ const pusherConfig = {
       </div>
 
       <!-- YouTube Chat Column -->
-      <div class="chat-column" data-chat="youtube">
+      <div class="chat-column" data-chat="youtube" id="youtubeColumn">
         <div class="chat-column-header youtube-header">
           <div class="chat-column-title">
             <svg class="youtube-icon" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
@@ -346,7 +378,7 @@ const pusherConfig = {
             </svg>
             <span>YouTube Chat</span>
           </div>
-          <button class="chat-close-btn" data-close="youtube" title="Close">
+          <button class="chat-close-btn" id="closeYoutube" data-close="youtube" title="Close">
             <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
             </svg>
@@ -354,8 +386,8 @@ const pusherConfig = {
         </div>
         <div class="chat-column-body">
           <iframe id="youtubeChatFrame" class="external-chat-frame" allow="autoplay" allowfullscreen></iframe>
-          <div class="external-chat-placeholder" id="youtubeChatPlaceholder">
-            <svg class="placeholder-icon youtube-placeholder-icon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+          <div class="external-chat-placeholder" id="youtubePlaceholder">
+            <svg class="placeholder-icon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
               <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
             </svg>
             <p>YouTube chat appears when streaming</p>
@@ -364,17 +396,6 @@ const pusherConfig = {
       </div>
     </aside>
 
-    <!-- Expanded Chat Modal -->
-    <div id="expandedChatModal" class="expanded-chat-modal hidden">
-      <div class="expanded-chat-backdrop" data-close-expanded></div>
-      <div class="expanded-chat-content">
-        <div class="expanded-chat-header">
-          <div class="expanded-chat-title" id="expandedChatTitle">Chat</div>
-          <button class="expanded-chat-close" data-close-expanded>&times;</button>
-        </div>
-        <div class="expanded-chat-body" id="expandedChatBody"></div>
-      </div>
-    </div>
   </div>
 
 <style is:global>
@@ -409,29 +430,42 @@ const pusherConfig = {
     transition: grid-template-columns 0.3s ease;
   }
 
-  /* When chat is expanded, shrink player and grow chat */
-  .fullpage-container.chat-expanded {
-    grid-template-columns: 1fr 900px;
+  /* When 1 external chat is expanded (2 chat columns total) */
+  .fullpage-container.chat-expanded-1 {
+    grid-template-columns: 1fr 720px;
+  }
+
+  /* When 2 external chats are expanded (3 chat columns total) */
+  .fullpage-container.chat-expanded-2 {
+    grid-template-columns: 1fr 960px;
+  }
+
+  @media (max-width: 1800px) {
+    .fullpage-container.chat-expanded-1 { grid-template-columns: 1fr 640px; }
+    .fullpage-container.chat-expanded-2 { grid-template-columns: 1fr 840px; }
   }
 
   @media (max-width: 1600px) {
-    .fullpage-container.chat-expanded { grid-template-columns: 1fr 780px; }
+    .fullpage-container.chat-expanded-1 { grid-template-columns: 1fr 560px; }
+    .fullpage-container.chat-expanded-2 { grid-template-columns: 1fr 720px; }
   }
 
   @media (max-width: 1400px) {
     .fullpage-container { grid-template-columns: 1fr 400px; }
-    .fullpage-container.chat-expanded { grid-template-columns: 1fr 660px; }
+    .fullpage-container.chat-expanded-1 { grid-template-columns: 1fr 520px; }
+    .fullpage-container.chat-expanded-2 { grid-template-columns: 1fr 660px; }
   }
 
   @media (max-width: 1200px) {
     .fullpage-container { grid-template-columns: 1fr 360px; }
-    .fullpage-container.chat-expanded { grid-template-columns: 1fr 500px; }
+    .fullpage-container.chat-expanded-1 { grid-template-columns: 1fr 480px; }
+    .fullpage-container.chat-expanded-2 { grid-template-columns: 1fr 600px; }
   }
 
   @media (max-width: 900px) {
     .fullpage-container { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
-    .fullpage-container.chat-expanded { grid-template-columns: 1fr; }
-    .chat-section { height: 300px; }
+    .fullpage-container.chat-expanded-1,
+    .fullpage-container.chat-expanded-2 { grid-template-columns: 1fr; }
   }
 
   /* Player Section */
@@ -535,17 +569,44 @@ const pusherConfig = {
   .stat-value { font-weight: 700; font-size: 0.8rem; color: #dc2626; }
   .stat-label { font-size: 0.6rem; color: #888; }
 
+  /* Duration stat in top bar */
+  .duration-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #333;
+    border-radius: 6px;
+  }
+  .duration-stat .np-duration-label {
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+    font-weight: 600;
+  }
+  .duration-stat .np-duration {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: #dc2626;
+    font-variant-numeric: tabular-nums;
+  }
+
   .dj-lobby-btn {
     display: flex;
     align-items: center;
     gap: 0.35rem;
     padding: 0.3rem 0.6rem;
     background: linear-gradient(135deg, #16a34a, #15803d);
+    border: none;
     border-radius: 6px;
     color: #fff;
     text-decoration: none;
     font-size: 0.65rem;
     font-weight: 600;
+    cursor: pointer;
     transition: all 0.2s;
   }
   .dj-lobby-btn svg { width: 12px; height: 12px; }
@@ -828,10 +889,14 @@ const pusherConfig = {
 
   /* Multi-Chat Section */
   .chat-section { display: flex; flex-direction: column; background: #111; border-left: 2px solid #222; height: 100vh; max-height: 100vh; overflow: hidden; }
+  @media (max-width: 900px) { .chat-section { height: 900px; max-height: 900px; } }
   .chat-section.multi-chat { display: grid; grid-template-columns: 1fr; gap: 0; overflow: hidden; }
 
-  /* When chat is expanded, show two columns: main chat + expanded external chat */
-  .chat-expanded .chat-section.multi-chat { grid-template-columns: 1fr 1fr; }
+  /* When 1 external chat is expanded, show 2 columns */
+  .chat-expanded-1 .chat-section.multi-chat { grid-template-columns: 1fr 1fr; }
+
+  /* When 2 external chats are expanded, show 3 columns */
+  .chat-expanded-2 .chat-section.multi-chat { grid-template-columns: 1fr 1fr 1fr; }
 
   .chat-column { display: flex; flex-direction: column; border-right: 1px solid #222; overflow: hidden; min-height: 0; height: 100%; }
   .chat-column:last-child { border-right: none; }
@@ -932,15 +997,15 @@ const pusherConfig = {
   .chat-welcome p { font-size: 0.6rem; margin-bottom: 0.125rem; }
   .chat-hint { font-size: 0.65rem; color: #9ca3af; }
 
-  .chat-message { display: flex; flex-direction: row; align-items: flex-start; gap: 0.35rem; padding: 0.35rem; background: rgba(255,255,255,0.02); border-radius: 6px; width: 100%; box-sizing: border-box; }
-  .chat-message-avatar { width: 22px; height: 22px; min-width: 22px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; flex-shrink: 0; overflow: hidden; }
+  .chat-message { display: flex; flex-direction: row; align-items: flex-start; gap: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 8px; width: 100%; box-sizing: border-box; }
+  .chat-message-avatar { width: 36px; height: 36px; min-width: 36px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; overflow: hidden; color: #fff; font-weight: 600; }
   .chat-message-avatar img { width: 100%; height: 100%; object-fit: cover; }
   .chat-message-content { flex: 1; min-width: 0; overflow: hidden; text-align: left; display: flex; flex-direction: column; }
-  .chat-message-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.15rem; flex-wrap: nowrap; width: 100%; }
-  .chat-message-name { font-weight: 600; font-size: 0.6rem; color: #dc2626; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
-  .chat-message-time { font-size: 0.5rem; color: #666; white-space: nowrap; flex-shrink: 0; }
-  .chat-message-text { display: block; font-size: 0.7rem; color: #ddd; word-break: break-word; overflow-wrap: break-word; text-align: left; line-height: 1.3; }
-  .chat-message-gif { max-width: 100px; border-radius: 6px; margin-top: 0.125rem; }
+  .chat-message-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; flex-wrap: nowrap; width: 100%; }
+  .chat-message-name { font-weight: 600; font-size: 0.9rem; color: #dc2626; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+  .chat-message-time { font-size: 0.75rem; color: #666; white-space: nowrap; flex-shrink: 0; }
+  .chat-message-text { display: block; font-size: 1rem; color: #ddd; word-break: break-word; overflow-wrap: break-word; text-align: left; line-height: 1.4; }
+  .chat-message-gif { max-width: 150px; border-radius: 8px; margin-top: 0.25rem; }
 
   /* Chat Input */
   .chat-input-section { padding: 0.35rem; background: #0a0a0a; border-top: 1px solid #222; position: relative; z-index: 10; }
@@ -1050,6 +1115,59 @@ const pusherConfig = {
     .reaction-btn { width: 36px; height: 36px; font-size: 1rem; }
     .volume-slider { width: 60px; }
     .now-playing-right { display: none; }
+  }
+
+  /* Login Toast */
+  .login-toast {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    animation: slideDown 0.3s ease;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  .login-toast-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  .login-toast-content span {
+    color: #ccc;
+    font-size: 0.875rem;
+  }
+  .login-toast-btn {
+    background: #dc2626;
+    color: #fff;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .login-toast-btn:hover {
+    background: #b91c1c;
+  }
+  .login-toast-close {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    line-height: 1;
+  }
+  .login-toast-close:hover {
+    color: #dc2626;
   }
 </style>
 
@@ -1223,9 +1341,9 @@ const pusherConfig = {
   function startDurationTimer(startedAt) {
     if (durationInterval) clearInterval(durationInterval);
     streamStartTime = startedAt ? new Date(startedAt).getTime() : Date.now();
-    // Clear "LEFT" label for live streams (shows elapsed, not remaining)
+    // Show "DURATION" label for live streams (shows elapsed time)
     const npDurationLabel = document.getElementById('npDurationLabel');
-    if (npDurationLabel) npDurationLabel.textContent = '';
+    if (npDurationLabel) npDurationLabel.textContent = 'DURATION';
     updateDurationDisplay();
     durationInterval = setInterval(updateDurationDisplay, 1000);
   }
@@ -1239,7 +1357,7 @@ const pusherConfig = {
     const npDurationEl = document.getElementById('npDuration');
     if (npDurationEl) npDurationEl.textContent = '--:--';
     const npDurationLabel = document.getElementById('npDurationLabel');
-    if (npDurationLabel) npDurationLabel.textContent = '';
+    if (npDurationLabel) npDurationLabel.textContent = 'DURATION';
   }
 
   // HLS Player Setup
@@ -1630,46 +1748,21 @@ const pusherConfig = {
     }
   }
 
-  // Subscribe to chat messages via API polling (more reliable than direct Firestore)
-  let chatPollingInterval = null;
-  let lastMessageTimestamp = null;
-
-  async function subscribeToChatMessages() {
-    if (chatPollingInterval) return; // Already polling
-
-    // Use live stream ID if available, otherwise default to 'playlist-global' for offline mode
-    const streamId = currentStream?.slotId || currentStream?.id || 'playlist-global';
-    console.log('[Chat] Starting chat polling for stream:', streamId);
-
-    async function fetchMessages() {
-      try {
-        const response = await fetch(`/api/livestream/chat?streamId=${streamId}&limit=50`);
-        if (!response.ok) return;
-
-        const result = await response.json();
-        if (!result.success || !result.messages) return;
-
-        renderChatMessages(result.messages);
-      } catch (e) {
-        console.log('[Chat] Poll error:', e.message);
-      }
-    }
-
-    // Initial fetch
-    await fetchMessages();
-
-    // Poll every 3 seconds
-    chatPollingInterval = setInterval(fetchMessages, 3000);
-  }
-
-  function renderChatMessages(messages) {
+  // Override global renderChatMessages from live-stream.js - MUST be defined before chat polling starts
+  window.fullpageRenderChatMessages = function(messages) {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages || !messages.length) return;
 
-    // Sort by timestamp ascending
+    // Sort by timestamp/createdAt ascending (oldest first at top)
     messages.sort((a, b) => {
-      const aTime = a.timestamp?._seconds || a.timestamp?.seconds || 0;
-      const bTime = b.timestamp?._seconds || b.timestamp?.seconds || 0;
+      // Try Firestore timestamp format first
+      let aTime = a.timestamp?._seconds || a.timestamp?.seconds || 0;
+      let bTime = b.timestamp?._seconds || b.timestamp?.seconds || 0;
+
+      // Fall back to createdAt ISO string
+      if (!aTime && a.createdAt) aTime = new Date(a.createdAt).getTime() / 1000;
+      if (!bTime && b.createdAt) bTime = new Date(b.createdAt).getTime() / 1000;
+
       return aTime - bTime;
     });
 
@@ -1692,9 +1785,15 @@ const pusherConfig = {
         content = `<div class="chat-message-text">${escapeHtml(msg.message || '')}</div>`;
       }
 
+      // Check for user avatar (userAvatar or profilePhoto from API)
+      const avatarUrl = msg.userAvatar || msg.profilePhoto || msg.photoURL;
+      const avatarHtml = avatarUrl
+        ? `<img src="${avatarUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />`
+        : (msg.userName || 'U')[0].toUpperCase();
+
       return `
         <div class="chat-message">
-          <div class="chat-message-avatar">${(msg.userName || 'U')[0].toUpperCase()}</div>
+          <div class="chat-message-avatar">${avatarHtml}</div>
           <div class="chat-message-content">
             <div class="chat-message-header">
               <span class="chat-message-name">${escapeHtml(msg.userName || 'User')}</span>
@@ -1714,7 +1813,40 @@ const pusherConfig = {
     }
 
     chatMessages.scrollTop = chatMessages.scrollHeight;
+  };
+
+  // Subscribe to chat messages via API polling (more reliable than direct Firestore)
+  let chatPollingInterval = null;
+  let lastMessageTimestamp = null;
+
+  async function subscribeToChatMessages() {
+    if (chatPollingInterval) return; // Already polling
+
+    // Use live stream ID if available, otherwise default to 'playlist-global' for offline mode
+    const streamId = currentStream?.slotId || currentStream?.id || 'playlist-global';
+    console.log('[Chat] Starting chat polling for stream:', streamId);
+
+    async function fetchMessages() {
+      try {
+        const response = await fetch(`/api/livestream/chat?streamId=${streamId}&limit=50`);
+        if (!response.ok) return;
+
+        const result = await response.json();
+        if (!result.success || !result.messages) return;
+
+        window.fullpageRenderChatMessages(result.messages);
+      } catch (e) {
+        console.log('[Chat] Poll error:', e.message);
+      }
+    }
+
+    // Initial fetch
+    await fetchMessages();
+
+    // Poll every 3 seconds
+    chatPollingInterval = setInterval(fetchMessages, 3000);
   }
+
 
   function stopChatPolling() {
     if (chatPollingInterval) {
@@ -2200,13 +2332,43 @@ const pusherConfig = {
       document.getElementById('shoutoutModal')?.classList.remove('hidden');
     });
 
-    // Playlist button - open playlist modal
+    // Playlist button - navigate to playlist page if logged in
     document.getElementById('playlistBtn')?.addEventListener('click', () => {
-      const playlistModal = document.getElementById('playlistModal');
-      if (playlistModal) {
-        playlistModal.classList.remove('hidden');
+      if (!currentUser) {
+        showLoginMessage('playlist');
+        return;
       }
+      window.location.href = '/live#playlist';
     });
+
+    // DJ Lobby button - navigate to DJ Lobby if logged in
+    document.getElementById('djLobbyBtn')?.addEventListener('click', () => {
+      if (!currentUser) {
+        showLoginMessage('DJ Lobby');
+        return;
+      }
+      window.location.href = '/account/dj-lobby';
+    });
+
+    // Show login message for protected features
+    function showLoginMessage(feature) {
+      const msg = document.createElement('div');
+      msg.className = 'login-toast';
+      msg.innerHTML = `
+        <div class="login-toast-content">
+          <span>Sign in to access ${feature}</span>
+          <a href="/login" class="login-toast-btn">Sign In</a>
+          <button class="login-toast-close">&times;</button>
+        </div>
+      `;
+      document.body.appendChild(msg);
+
+      // Auto-remove after 5 seconds
+      setTimeout(() => msg.remove(), 5000);
+
+      // Close button
+      msg.querySelector('.login-toast-close')?.addEventListener('click', () => msg.remove());
+    }
 
     // Close modal buttons
     document.querySelectorAll('[data-close-modal]').forEach(el => {
@@ -2250,43 +2412,59 @@ const pusherConfig = {
       }
     });
 
-    // Emoji modal
+    // Emoji picker
     document.getElementById('emojiBtn')?.addEventListener('click', () => {
-      document.getElementById('emojiModal')?.classList.remove('hidden');
-      renderEmojis('music');
+      const picker = document.getElementById('emojiPicker');
+      const giphyPicker = document.getElementById('giphyPicker');
+      giphyPicker?.style.setProperty('display', 'none');
+      picker?.style.setProperty('display', picker.style.display === 'none' ? 'block' : 'none');
+      if (picker?.style.display !== 'none') renderEmojis('music');
     });
 
-    // Close emoji modal
-    document.getElementById('emojiModal')?.querySelectorAll('[data-close-modal]').forEach(el => {
-      el.addEventListener('click', () => {
-        document.getElementById('emojiModal')?.classList.add('hidden');
-      });
+    // Close emoji picker
+    document.getElementById('closeEmoji')?.addEventListener('click', () => {
+      document.getElementById('emojiPicker')?.style.setProperty('display', 'none');
     });
 
-    document.querySelectorAll('#emojiModal .emoji-cat').forEach(btn => {
+    document.querySelectorAll('#emojiPicker .emoji-cat').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('#emojiModal .emoji-cat').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#emojiPicker .emoji-cat').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        renderEmojis(btn.dataset.cat);
+        renderEmojis(btn.dataset.category);
       });
     });
 
-    // Giphy modal
+    // Giphy picker
     document.getElementById('giphyBtn')?.addEventListener('click', () => {
-      document.getElementById('giphyModal')?.classList.remove('hidden');
-      searchGiphy('');
+      const picker = document.getElementById('giphyPicker');
+      const emojiPicker = document.getElementById('emojiPicker');
+      emojiPicker?.style.setProperty('display', 'none');
+      picker?.style.setProperty('display', picker.style.display === 'none' ? 'block' : 'none');
+      if (picker?.style.display !== 'none') searchGiphy('');
     });
 
-    // Close giphy modal
-    document.getElementById('giphyModal')?.querySelectorAll('[data-close-modal]').forEach(el => {
-      el.addEventListener('click', () => {
-        document.getElementById('giphyModal')?.classList.add('hidden');
-      });
+    // Close giphy picker
+    document.getElementById('closeGiphy')?.addEventListener('click', () => {
+      document.getElementById('giphyPicker')?.style.setProperty('display', 'none');
     });
 
     document.getElementById('giphySearch')?.addEventListener('input', (e) => {
       clearTimeout(giphySearchTimeout);
       giphySearchTimeout = setTimeout(() => searchGiphy(e.target.value), 500);
+    });
+
+    // Giphy category buttons
+    document.querySelectorAll('#giphyPicker .giphy-cat').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#giphyPicker .giphy-cat').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const category = btn.dataset.category;
+        if (category === 'trending') {
+          searchGiphy('');
+        } else {
+          searchGiphy(category);
+        }
+      });
     });
 
     // Expand chat buttons (for Fresh Wax modal expand)
@@ -2324,9 +2502,6 @@ const pusherConfig = {
     const container = document.querySelector('.fullpage-container');
     const column = document.querySelector(`.chat-column[data-chat="${chatType}"]`);
     const toggleBtn = document.querySelector(`.external-chat-btn[data-toggle="${chatType}"]`);
-    const otherType = chatType === 'twitch' ? 'youtube' : 'twitch';
-    const otherColumn = document.querySelector(`.chat-column[data-chat="${otherType}"]`);
-    const otherToggleBtn = document.querySelector(`.external-chat-btn[data-toggle="${otherType}"]`);
 
     if (!column || !container) return;
 
@@ -2337,25 +2512,40 @@ const pusherConfig = {
       // Close this chat
       closeExternalChat(chatType);
     } else {
-      // Close other chat if open
-      if (otherColumn?.classList.contains('expanded')) {
-        otherColumn.classList.remove('expanded');
-        otherToggleBtn?.classList.remove('active');
-      }
-
-      // Expand this chat
+      // Expand this chat (allow both to be open)
       column.classList.add('expanded');
       toggleBtn?.classList.add('active');
-      container.classList.add('chat-expanded');
+
+      // Update container class based on how many external chats are expanded
+      updateChatExpandedClass();
 
       // Load iframe if not already loaded
       loadExternalChatIframe(chatType);
     }
   }
 
+  // Update the container class based on number of expanded external chats
+  function updateChatExpandedClass() {
+    const container = document.querySelector('.fullpage-container');
+    if (!container) return;
+
+    const twitchExpanded = document.querySelector('.chat-column[data-chat="twitch"].expanded');
+    const youtubeExpanded = document.querySelector('.chat-column[data-chat="youtube"].expanded');
+    const expandedCount = (twitchExpanded ? 1 : 0) + (youtubeExpanded ? 1 : 0);
+
+    // Remove all expanded classes first
+    container.classList.remove('chat-expanded-1', 'chat-expanded-2');
+
+    // Add appropriate class
+    if (expandedCount === 1) {
+      container.classList.add('chat-expanded-1');
+    } else if (expandedCount === 2) {
+      container.classList.add('chat-expanded-2');
+    }
+  }
+
   // Close external chat
   function closeExternalChat(chatType) {
-    const container = document.querySelector('.fullpage-container');
     const column = document.querySelector(`.chat-column[data-chat="${chatType}"]`);
     const toggleBtn = document.querySelector(`.external-chat-btn[data-toggle="${chatType}"]`);
 
@@ -2366,11 +2556,8 @@ const pusherConfig = {
       toggleBtn.classList.remove('active');
     }
 
-    // Check if any external chat is still expanded
-    const anyExpanded = document.querySelector('.chat-column[data-chat="twitch"].expanded, .chat-column[data-chat="youtube"].expanded');
-    if (!anyExpanded && container) {
-      container.classList.remove('chat-expanded');
-    }
+    // Update container class based on remaining expanded chats
+    updateChatExpandedClass();
   }
 
   // Load external chat iframe
@@ -2444,6 +2631,6 @@ const pusherConfig = {
 <PlaylistModal />
 
 <!-- Live stream manager (handles playlist auto-play) -->
-<script type="module" src="/live-stream.js?v=20251225-fullpage"></script>
+<script type="module" src="/live-stream.js?v=20251226-fullpage6"></script>
 </body>
 </html>

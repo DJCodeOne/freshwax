@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, setDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { generateStreamKey as generateSecureStreamKey, buildRtmpUrl, buildHlsUrl, initRed5Env } from '../../../lib/red5';
+import { broadcastLiveStatus } from '../../../lib/pusher';
 
 // Helper to initialize services
 function initServices(locals: any) {
@@ -516,6 +517,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await setDocument('livestreamSlots', slotId, newSlot, idToken);
       invalidateCache();
 
+      // Broadcast via Pusher for instant client updates
+      await broadcastLiveStatus('stream-started', {
+        djId,
+        djName: djName.trim(),
+        slotId,
+        title: newSlot.title
+      }, env);
+
       return new Response(JSON.stringify({
         success: true,
         slot: { id: slotId, ...newSlot },
@@ -748,6 +757,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       invalidateCache();
 
+      // Broadcast via Pusher for instant client updates
+      await broadcastLiveStatus('stream-ended', {
+        djId: slot.djId,
+        djName: slot.djName,
+        slotId: targetSlotId
+      }, env);
+
       return new Response(JSON.stringify({ success: true, message: 'Stream ended' }), {
         status: 200, headers: { 'Content-Type': 'application/json' }
       });
@@ -955,6 +971,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await setDocument('livestreamSlots', slotId, newSlot, idToken);
         invalidateCache();
 
+        // Broadcast via Pusher for instant client updates
+        await broadcastLiveStatus('stream-started', {
+          djId,
+          djName: djName.trim(),
+          slotId,
+          title: newSlot.title
+        }, env);
+
         return new Response(JSON.stringify({
           success: true,
           slot: { id: slotId, ...newSlot },
@@ -1050,6 +1074,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await setDocument('livestreamSlots', relaySlotId, newSlot, idToken);
       invalidateCache();
+
+      // Broadcast via Pusher for instant client updates
+      await broadcastLiveStatus('stream-started', {
+        djId,
+        djName: djName.trim(),
+        slotId: relaySlotId,
+        title: newSlot.title
+      }, env);
 
       return new Response(JSON.stringify({
         success: true,
