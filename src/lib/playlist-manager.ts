@@ -1058,11 +1058,11 @@ export class PlaylistManager {
         djAvatarEl.src = item.thumbnail;
       }
       if (genreEl) {
-        // Show loading initially, then update with duration
-        genreEl.textContent = '--:--';
-        // Fetch duration after player is ready
-        this.updateDurationDisplay();
+        // Show "Playlist" in genre, countdown goes in duration boxes
+        genreEl.textContent = 'Playlist';
       }
+      // Fetch duration after player is ready (updates npDuration and bottomDuration)
+      this.updateDurationDisplay();
     } else {
       // Remove playlist mode class
       if (djInfoBar) {
@@ -1087,11 +1087,12 @@ export class PlaylistManager {
    * Update duration display after player is ready - shows countdown
    */
   private async updateDurationDisplay(): Promise<void> {
-    const genreEl = document.getElementById('streamGenre');
-    if (!genreEl) return;
-
     // Clear any existing countdown
     this.stopCountdown();
+
+    // Show loading state in bottom duration element only (top is for live stream duration)
+    const bottomDurationEl = document.getElementById('bottomDuration');
+    if (bottomDurationEl) bottomDurationEl.textContent = '--:--';
 
     // Wait a moment for player to be ready and have duration info
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -1111,15 +1112,23 @@ export class PlaylistManager {
    * Start countdown display that updates every second
    */
   private async startCountdown(totalDuration: number): Promise<void> {
+    // Get bottom duration element only (top is for live stream duration)
+    const bottomDurationEl = document.getElementById('bottomDuration');
     const genreEl = document.getElementById('streamGenre');
-    if (!genreEl) return;
+
+    // Set genre to "Playlist" instead of showing countdown there
+    if (genreEl) {
+      genreEl.textContent = 'Playlist';
+    }
 
     // Update display immediately
     const updateDisplay = async () => {
       try {
         const currentTime = await this.player.getCurrentTime();
         const remaining = Math.max(0, totalDuration - currentTime);
-        genreEl.textContent = this.formatDuration(remaining);
+        const formattedTime = this.formatDuration(remaining);
+        // Update bottom duration only (top bar shows live stream duration)
+        if (bottomDurationEl) bottomDurationEl.textContent = formattedTime;
       } catch (error) {
         // Silently fail if player not ready
       }

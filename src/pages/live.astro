@@ -2221,9 +2221,9 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     sendShoutoutBtn.innerHTML = '<span>Sending...</span>';
     
     try {
-      // Get current stream ID from the page
-      const streamId = window.currentStreamId || 'default';
-      
+      // Get current stream ID - use playlist-global for playlist mode
+      const streamId = window.currentStreamId || 'playlist-global';
+
       // Send via API to broadcast to all viewers
       const response = await fetch('/api/livestream/react', {
         method: 'POST',
@@ -2585,6 +2585,32 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       });
 
       console.log('[LiveStatus] Subscribed to live-status channel');
+
+      // Also subscribe to reaction/shoutout channel
+      const streamId = window.currentStreamId || 'playlist-global';
+      const reactionChannelName = `stream-${streamId}`;
+      const reactionChannel = statusPusher.subscribe(reactionChannelName);
+
+      reactionChannel.bind('shoutout', (data) => {
+        console.log('[Shoutout] Received from Pusher:', data);
+        if (typeof window.handleIncomingShoutout === 'function') {
+          window.handleIncomingShoutout(data);
+        }
+      });
+
+      reactionChannel.bind('reaction', (data) => {
+        console.log('[Reactions] Received from Pusher:', data);
+        // Skip if this is our own reaction
+        if (data.sessionId === window.reactionSessionId) return;
+        // Trigger floating emoji animation from center (null element = use center)
+        const emojiList = data.emoji?.split(',') || ['❤️'];
+        if (typeof triggerReactionBurst === 'function') {
+          triggerReactionBurst(null, emojiList);
+        }
+      });
+
+      console.log('[Reactions] Subscribed to channel:', reactionChannelName);
+
     } catch (err) {
       console.warn('[LiveStatus] Failed to setup Pusher:', err);
     }

@@ -256,6 +256,10 @@ const pusherConfig = {
           <span class="dj-info-selector" id="controlsDjName">Waiting...</span>
         </div>
         <div class="dj-info-right">
+          <div class="np-duration-box" id="bottomDurationBox">
+            <span class="np-duration-label" id="bottomDurationLabel">LEFT</span>
+            <span class="np-duration" id="bottomDuration">--:--</span>
+          </div>
           <span class="stream-genre" id="streamGenre">Jungle / D&B</span>
         </div>
       </div>
@@ -537,6 +541,12 @@ const pusherConfig = {
   }
   .live-dot { width: 6px; height: 6px; background: #888; border-radius: 50%; }
   .live-badge.is-live .live-dot { background: #dc2626; animation: pulse 1.5s ease-in-out infinite; }
+  .live-badge.is-playlist {
+    background: rgba(59, 130, 246, 0.2);
+    border: 1px solid #3b82f6;
+    color: #3b82f6;
+  }
+  .live-badge.is-playlist .live-dot { background: #3b82f6; animation: pulse 1.5s ease-in-out infinite; }
 
   @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
   @keyframes live-badge-glow {
@@ -850,7 +860,7 @@ const pusherConfig = {
     flex-shrink: 0;
   }
   .np-duration-box {
-    display: flex;
+    display: none; /* Hidden by default, shown in playlist mode */
     align-items: center;
     gap: 0.4rem;
     background: rgba(0, 0, 0, 0.4);
@@ -864,8 +874,8 @@ const pusherConfig = {
     font-size: 0.8rem;
     color: #dc2626;
     font-variant-numeric: tabular-nums;
-    min-width: 40px;
-    text-align: left;
+    min-width: 45px;
+    text-align: center;
   }
   .np-duration-label {
     font-size: 0.55rem;
@@ -2184,7 +2194,8 @@ const pusherConfig = {
     if (!message || !currentUser) return;
 
     const userName = currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous';
-    const streamId = currentStream?.id || 'default';
+    // Use playlist-global for playlist mode to match Pusher subscription
+    const streamId = currentStream?.slotId || currentStream?.id || 'playlist-global';
 
     try {
       await fetch('/api/livestream/react', {
@@ -2297,16 +2308,32 @@ const pusherConfig = {
         const npDurationLabel = document.getElementById('npDurationLabel');
         if (npDurationLabel) npDurationLabel.textContent = 'LEFT';
 
-        // Update live badge to show playlist mode
+        // Update live badge to show playlist mode (blue)
+        const liveBadge = document.getElementById('liveBadge');
+        if (liveBadge) {
+          liveBadge.classList.remove('is-live');
+          liveBadge.classList.add('is-playlist');
+        }
         const liveStatusEl = document.getElementById('liveStatusText');
         if (liveStatusEl) liveStatusEl.textContent = 'PLAYLIST';
+
+        // Show bottom duration box
+        const bottomDurationBox = document.getElementById('bottomDurationBox');
+        if (bottomDurationBox) bottomDurationBox.style.display = 'flex';
       } else if (!window.isLiveStreamActive) {
         // Not playing and no live stream - show offline
         if (offlineOverlay) offlineOverlay.classList.remove('hidden');
         if (playlistPlayer) playlistPlayer.classList.add('hidden');
 
+        const liveBadge = document.getElementById('liveBadge');
+        if (liveBadge) {
+          liveBadge.classList.remove('is-live', 'is-playlist');
+        }
         const liveStatusEl = document.getElementById('liveStatusText');
         if (liveStatusEl) liveStatusEl.textContent = 'OFFLINE';
+        // Hide bottom duration box when offline
+        const bottomDurationBox = document.getElementById('bottomDurationBox');
+        if (bottomDurationBox) bottomDurationBox.style.display = 'none';
         const genreEl = document.getElementById('streamGenre');
         if (genreEl) genreEl.textContent = 'Offline';
         const trackTitleEl = document.getElementById('npTrackTitle');
