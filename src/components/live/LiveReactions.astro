@@ -42,3 +42,28 @@
   <svg class="volume-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
   <input type="range" id="volumeSlider" min="0" max="100" value="80" />
 </div>
+
+<script>
+  // Volume slider handler - runs when component is rendered
+  const volumeSlider = document.getElementById('volumeSlider');
+  if (volumeSlider) {
+    volumeSlider.addEventListener('input', (e) => {
+      const volume = parseInt(e.target.value);
+      console.log('[Volume] Slider input:', volume);
+
+      // Update HLS video if exists
+      const hlsVideo = document.getElementById('hlsVideoElement');
+      if (hlsVideo) hlsVideo.volume = volume / 100;
+
+      // Update audio element if exists
+      const audio = document.getElementById('audioElement');
+      if (audio) audio.volume = volume / 100;
+
+      // Update playlist volume if active
+      if (window.playlistManager) {
+        window.playlistManager.setVolume(volume);
+      }
+    });
+    console.log('[Volume] LiveReactions slider handler attached');
+  }
+</script>

@@ -1189,6 +1189,12 @@ const pusherConfig = {
   let currentTwitchChannel = null;
   let currentYoutubeVideoId = null;
 
+  // Generate unique session ID for reaction deduplication
+  if (!sessionStorage.getItem('fullpageSessionId')) {
+    sessionStorage.setItem('fullpageSessionId', `fp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  }
+  window.reactionSessionId = sessionStorage.getItem('fullpageSessionId');
+
   // Emoji categories for picker
   const emojiCategories = {
     music: ['\u{1F3B5}', '\u{1F3B6}', '\u{1F3A7}', '\u{1F3A4}', '\u{1F3B9}', '\u{1F941}', '\u{1F3B8}', '\u{1F3BA}', '\u{1F3B7}', '\u{1F3BB}', '\u{1FA98}', '\u{1F3BC}', '\u{1F4FB}', '\u{1F4BF}', '\u{1F4C0}', '\u{1F50A}'],
@@ -1779,8 +1785,8 @@ const pusherConfig = {
       }
 
       let content = '';
-      if (msg.type === 'giphy' && msg.giphyUrl) {
-        content = `<img src="${msg.giphyUrl}" class="chat-message-gif" alt="GIF" />`;
+      if ((msg.type === 'giphy' || msg.type === 'gif') && msg.giphyUrl) {
+        content = `<img src="${msg.giphyUrl}" class="chat-message-gif" alt="GIF" loading="lazy" />`;
       } else {
         content = `<div class="chat-message-text">${escapeHtml(msg.message || '')}</div>`;
       }
@@ -1853,6 +1859,80 @@ const pusherConfig = {
       clearInterval(chatPollingInterval);
       chatPollingInterval = null;
     }
+  }
+
+  // Subscribe to Pusher for reactions from other users
+  let reactionChannel = null;
+
+  async function subscribeToReactions() {
+    const config = window.PUSHER_CONFIG;
+    if (!config?.key) {
+      console.log('[Reactions] Pusher config not ready');
+      return;
+    }
+
+    // Load Pusher if not loaded
+    if (!window.Pusher) {
+      try {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      } catch (e) {
+        console.error('[Reactions] Failed to load Pusher:', e);
+        return;
+      }
+    }
+
+    // Create or reuse Pusher instance
+    if (!window.fullpagePusher) {
+      window.fullpagePusher = new window.Pusher(config.key, {
+        cluster: config.cluster,
+        forceTLS: true
+      });
+    }
+
+    // Get stream ID for reactions
+    const streamId = currentStream?.slotId || currentStream?.id || 'playlist-global';
+    const channelName = `stream-${streamId}`;
+
+    // Unsubscribe from previous channel
+    if (reactionChannel) {
+      reactionChannel.unbind_all();
+      window.fullpagePusher.unsubscribe(reactionChannel.name);
+    }
+
+    // Subscribe to reaction channel
+    reactionChannel = window.fullpagePusher.subscribe(channelName);
+
+    reactionChannel.bind('reaction', (data) => {
+      console.log('[Reactions] Received from Pusher:', data);
+
+      // Skip if animations disabled or this is our own reaction
+      if (!window.emojiAnimationsEnabled) return;
+      if (data.sessionId === window.reactionSessionId) return;
+      if (data.userId === currentUser?.uid) return;
+
+      // Trigger floating emoji animation
+      const emojiList = data.emoji?.split(',') || ['❤️'];
+      triggerReactionBurst(emojiList);
+    });
+
+    // Listen for shoutouts from other viewers
+    reactionChannel.bind('shoutout', (data) => {
+      console.log('[Shoutout] Received from Pusher:', data);
+      if (typeof window.handleIncomingShoutout === 'function') {
+        window.handleIncomingShoutout(data);
+      }
+    });
+
+    console.log('[Reactions] Subscribed to channel:', channelName);
+
+    // Enable emoji animations by default when subscribed
+    window.emojiAnimationsEnabled = true;
   }
 
   function escapeHtml(text) {
@@ -2173,6 +2253,11 @@ const pusherConfig = {
       subscribeToChatMessages();
     }, 2000);
 
+    // Subscribe to Pusher for reactions from other users
+    setTimeout(() => {
+      subscribeToReactions();
+    }, 2500);
+
     // Listen for playlist updates from PlaylistModal
     window.addEventListener('playlistUpdate', (e) => {
       const { queue, isPlaying, currentIndex } = e.detail;
@@ -2189,6 +2274,16 @@ const pusherConfig = {
         if (audioPlayer) audioPlayer.classList.add('hidden');
         if (playlistPlayer) playlistPlayer.classList.remove('hidden');
         if (videoPlayer) videoPlayer.classList.remove('hidden');
+
+        // Enable emoji animations and update play button state
+        window.emojiAnimationsEnabled = true;
+        window.isPlaylistPlaying = true;
+        const playBtn = document.getElementById('playPauseBtn');
+        const playIcon = document.getElementById('playIcon');
+        const pauseIcon = document.getElementById('pauseIcon');
+        playBtn?.classList.add('playing');
+        playIcon?.classList.add('hidden');
+        pauseIcon?.classList.remove('hidden');
 
         // Update now playing info
         const currentTrack = queue[currentIndex || 0];
@@ -2219,17 +2314,47 @@ const pusherConfig = {
       }
     });
 
-    // Play/Pause button
+    // Play/Pause button - handles live stream, audio, and playlist modes
     document.getElementById('playPauseBtn')?.addEventListener('click', async () => {
       const audio = document.getElementById('audioElement');
       const video = document.getElementById('hlsVideoElement');
       const playIcon = document.getElementById('playIcon');
       const pauseIcon = document.getElementById('pauseIcon');
+      const playBtn = document.getElementById('playPauseBtn');
 
       // Check if audio player is visible (placeholder/audio mode)
       const audioPlayerVisible = !document.getElementById('audioPlayer')?.classList.contains('hidden');
+      // Check if playlist is active (no live stream)
+      const playlistPlayer = document.getElementById('playlistPlayer');
+      const playlistVisible = playlistPlayer && !playlistPlayer.classList.contains('hidden');
 
-      if (audioPlayerVisible && audio) {
+      if (playlistVisible && window.playlistManager) {
+        // Handle Playlist mode
+        const pm = window.playlistManager;
+        const isCurrentlyPlaying = window.isPlaylistPlaying || playBtn?.classList.contains('playing');
+
+        try {
+          if (isCurrentlyPlaying) {
+            await pm.pause();
+            window.isPlaylistPlaying = false;
+            playIcon?.classList.remove('hidden');
+            pauseIcon?.classList.add('hidden');
+            playBtn?.classList.remove('playing');
+            window.emojiAnimationsEnabled = false;
+            console.log('[Fullpage] Playlist paused');
+          } else {
+            await pm.resume();
+            window.isPlaylistPlaying = true;
+            playIcon?.classList.add('hidden');
+            pauseIcon?.classList.remove('hidden');
+            playBtn?.classList.add('playing');
+            window.emojiAnimationsEnabled = true;
+            console.log('[Fullpage] Playlist resumed');
+          }
+        } catch (e) {
+          console.error('[Fullpage] Playlist toggle error:', e);
+        }
+      } else if (audioPlayerVisible && audio) {
         // Handle Icecast audio stream
         if (audio.paused) {
           try {
@@ -2237,6 +2362,7 @@ const pusherConfig = {
             await audio.play();
             playIcon?.classList.add('hidden');
             pauseIcon?.classList.remove('hidden');
+            window.emojiAnimationsEnabled = true;
             console.log('[Audio] Playing Icecast stream successfully');
           } catch (e) {
             console.error('[Audio] Play failed:', e.message);
@@ -2247,6 +2373,7 @@ const pusherConfig = {
               await audio.play();
               playIcon?.classList.add('hidden');
               pauseIcon?.classList.remove('hidden');
+              window.emojiAnimationsEnabled = true;
             } catch (e2) {
               console.error('[Audio] Retry failed:', e2.message);
               alert('Unable to play audio stream. Please try again.');
@@ -2256,8 +2383,9 @@ const pusherConfig = {
           audio.pause();
           playIcon?.classList.remove('hidden');
           pauseIcon?.classList.add('hidden');
+          window.emojiAnimationsEnabled = false;
         }
-      } else if (video) {
+      } else if (video && !video.classList.contains('hidden')) {
         // Handle HLS video
         if (video.paused) {
           try {
@@ -2265,6 +2393,7 @@ const pusherConfig = {
             await video.play();
             playIcon?.classList.add('hidden');
             pauseIcon?.classList.remove('hidden');
+            window.emojiAnimationsEnabled = true;
           } catch (e) {
             console.error('[Video] Play failed:', e);
           }
@@ -2272,17 +2401,22 @@ const pusherConfig = {
           video.pause();
           playIcon?.classList.remove('hidden');
           pauseIcon?.classList.add('hidden');
+          window.emojiAnimationsEnabled = false;
         }
       }
     });
 
-    // Volume slider
+    // Volume slider - controls HLS, audio, and playlist
     document.getElementById('volumeSlider')?.addEventListener('input', (e) => {
       const volume = e.target.value / 100;
       const audio = document.getElementById('audioElement');
       const video = document.getElementById('hlsVideoElement');
       if (audio) audio.volume = volume;
       if (video) video.volume = volume;
+      // Update playlist volume (0-100 scale)
+      if (window.playlistManager) {
+        window.playlistManager.setVolume(parseInt(e.target.value));
+      }
     });
 
     // Reaction buttons
@@ -2300,20 +2434,22 @@ const pusherConfig = {
         btn.classList.add('liked');
         setTimeout(() => btn.classList.remove('liked'), 300);
 
-        if (currentStream) {
-          try {
-            await fetch('/api/livestream/react', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                action: 'emoji',
-                emoji: emojiList.join(','),
-                streamId: currentStream.id,
-                userId: currentUser.uid
-              })
-            });
-          } catch (e) { console.log('[Reaction] Sent locally'); }
-        }
+        // Send reaction to API - use playlist-global for playlist mode
+        const streamId = currentStream?.id || 'playlist-global';
+        try {
+          await fetch('/api/livestream/react', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'emoji',
+              emoji: emojiList.join(','),
+              streamId: streamId,
+              userId: currentUser.uid,
+              userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+              sessionId: window.reactionSessionId
+            })
+          });
+        } catch (e) { console.log('[Reaction] Sent locally'); }
       });
     });
 

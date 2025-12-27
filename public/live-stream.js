@@ -269,27 +269,21 @@ async function init() {
   // Listen for playlist updates to show/hide video player
   setupPlaylistListener();
 
-  // Check live status
-  await checkLiveStatus();
+  // Setup UI controls immediately (don't wait for network)
+  setupPlaylistPlayButton();
+  setupVolumeSlider();
+  setupAuthListener();
+  setupMobileFeatures();
+
+  // Start network operations in parallel (non-blocking)
+  checkLiveStatus();
+  setupLiveStatusPusher();
 
   // Poll for live status changes every 20 seconds (as fallback)
-  // Primary detection is via Pusher events, polling is backup
   if (liveStatusPollInterval) clearInterval(liveStatusPollInterval);
   liveStatusPollInterval = setInterval(async () => {
     await checkLiveStatus();
   }, 20000);
-
-  // Subscribe to Pusher for instant live status updates
-  setupLiveStatusPusher();
-
-  // Setup playlist control on play button (after live status check)
-  setupPlaylistPlayButton();
-
-  // Setup auth listener
-  setupAuthListener();
-
-  // Setup mobile-specific features
-  setupMobileFeatures();
 
   // Always subscribe to reaction channel for emoji broadcasts
   // This ensures all users can see reactions even without active playlist
@@ -567,6 +561,51 @@ function setupPlaylistPlayButton() {
   console.log('[Playlist] Play button control set up');
 }
 
+// Set up volume slider for playlist mode (runs on init, before HLS might set its own handler)
+function setupVolumeSlider() {
+  const volumeSlider = document.getElementById('volumeSlider');
+  if (!volumeSlider) {
+    console.log('[Volume] Slider not found');
+    return;
+  }
+
+  // Add input handler that works for both playlist and HLS
+  volumeSlider.addEventListener('input', (e) => {
+    const volume = parseInt(e.target.value);
+    console.log('[Volume] Slider changed to:', volume);
+
+    // Update HLS video if exists
+    const hlsVideo = document.getElementById('hlsVideoElement');
+    if (hlsVideo) {
+      hlsVideo.volume = volume / 100;
+      console.log('[Volume] HLS video volume set to:', volume / 100);
+    }
+
+    // Update audio element if exists
+    const audio = document.getElementById('audioElement');
+    if (audio) {
+      audio.volume = volume / 100;
+      console.log('[Volume] Audio element volume set to:', volume / 100);
+    }
+
+    // Update playlist volume if active
+    if (window.playlistManager) {
+      console.log('[Volume] Setting playlist manager volume to:', volume);
+      window.playlistManager.setVolume(volume);
+    } else {
+      console.log('[Volume] No playlist manager available');
+    }
+
+    // Also try to set embed player volume directly
+    if (window.embedPlayerManager) {
+      console.log('[Volume] Setting embed player volume to:', volume);
+      window.embedPlayerManager.setVolume(volume);
+    }
+  });
+
+  console.log('[Volume] Slider control set up');
+}
+
 // Get playlist manager from window (initialized by PlaylistModal.astro)
 function getPlaylistManager() {
   // PlaylistModal.astro initializes and exposes the manager to window
@@ -574,6 +613,11 @@ function getPlaylistManager() {
 
   if (playlistManager) {
     console.log('[Playlist] Using manager from PlaylistModal');
+    // Sync volume slider with playlist manager
+    const volumeSlider = document.getElementById('volumeSlider');
+    if (volumeSlider) {
+      playlistManager.setVolume(parseInt(volumeSlider.value));
+    }
   } else {
     console.log('[Playlist] Manager not yet available, will retry later');
   }
@@ -729,7 +773,7 @@ async function refreshViewerCount(streamId) {
 // ==========================================
 let liveStatusChannel = null;
 
-function setupLiveStatusPusher() {
+async function setupLiveStatusPusher() {
   try {
     // Wait for Pusher to be available
     const config = window.PUSHER_CONFIG;
@@ -738,9 +782,20 @@ function setupLiveStatusPusher() {
       return;
     }
 
+    // Load Pusher script if not already loaded
+    if (!window.Pusher) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
     // Use existing Pusher instance or create new one
     if (!window.statusPusher) {
-      window.statusPusher = new Pusher(config.key, {
+      window.statusPusher = new window.Pusher(config.key, {
         cluster: config.cluster,
         forceTLS: true
       });
@@ -1327,11 +1382,21 @@ function setupHlsPlayer(stream) {
       };
     }
     
-    // Volume slider handler
-    if (volumeSlider && videoElement) {
-      videoElement.volume = volumeSlider.value / 100;
+    // Volume slider handler - controls both HLS video and playlist
+    if (volumeSlider) {
+      if (videoElement) {
+        videoElement.volume = volumeSlider.value / 100;
+      }
       volumeSlider.oninput = (e) => {
-        videoElement.volume = e.target.value / 100;
+        const volume = e.target.value;
+        // Update HLS video volume
+        if (videoElement) {
+          videoElement.volume = volume / 100;
+        }
+        // Update playlist volume if active
+        if (window.playlistManager) {
+          window.playlistManager.setVolume(parseInt(volume));
+        }
       };
     }
     
@@ -1931,9 +1996,16 @@ function setupAudioPlayer(stream) {
     };
   }
   
-  if (volumeSlider && audio) {
+  if (volumeSlider) {
     volumeSlider.oninput = (e) => {
-      audio.volume = e.target.value / 100;
+      const volume = e.target.value;
+      if (audio) {
+        audio.volume = volume / 100;
+      }
+      // Update playlist volume if active
+      if (window.playlistManager) {
+        window.playlistManager.setVolume(parseInt(volume));
+      }
     };
   }
   
