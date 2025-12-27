@@ -294,8 +294,8 @@ const pusherConfig = {
               <p class="chat-hint">Type !help for commands</p>
             </div>
           </div>
-          <div class="chat-input-section">
-            <div id="loginPrompt" class="login-prompt">
+          <div class="chat-input-section" style="min-height: 70px; background: #222; border-top: 2px solid #dc2626;">
+            <div id="loginPrompt" class="login-prompt" style="padding: 1rem; font-size: 1rem;">
               <p><a href="/login?redirect=/live/fullpage">Sign in</a> to chat</p>
             </div>
             <div id="chatForm" class="chat-form hidden">
@@ -323,12 +323,12 @@ const pusherConfig = {
                 </div>
                 <button class="emoji-close" id="closeEmoji">&times;</button>
               </div>
-              <div class="emoji-grid" id="emojiGrid"></div>
+              <div class="emoji-grid" id="emojiGridInline"></div>
             </div>
             <!-- GIF Picker -->
             <div id="giphyPicker" class="giphy-picker" style="display: none;">
               <div class="giphy-picker-header">
-                <input type="text" id="giphySearch" class="giphy-search" placeholder="Search GIFs..." />
+                <input type="text" id="giphySearchInline" class="giphy-search" placeholder="Search GIFs..." />
                 <button class="giphy-close" id="closeGiphy">&times;</button>
               </div>
               <div class="giphy-cats">
@@ -338,7 +338,7 @@ const pusherConfig = {
                 <button class="giphy-cat" data-category="dance">Dance</button>
                 <button class="giphy-cat" data-category="party">Party</button>
               </div>
-              <div class="giphy-grid" id="giphyGrid">
+              <div class="giphy-grid" id="giphyGridInline">
                 <p class="giphy-loading">Loading GIFs...</p>
               </div>
               <div class="giphy-footer">Powered by GIPHY</div>
@@ -406,16 +406,19 @@ const pusherConfig = {
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   html, body {
-    height: 100%;
+    height: 100dvh;
     margin: 0;
     padding: 0;
+    min-width: 1600px; /* Fixed layout - prevents responsive shrinking */
   }
 
   body {
     font-family: 'Inter', sans-serif;
     background: linear-gradient(135deg, #0a0a0f 0%, #111118 50%, #0d0d12 100%);
     color: #fff;
-    overflow: hidden;
+    overflow-x: auto; /* Allow horizontal scroll on smaller screens */
+    overflow-y: hidden;
+    height: 100dvh;
   }
 
   .hidden { display: none !important; }
@@ -428,8 +431,8 @@ const pusherConfig = {
   .fullpage-container {
     display: grid;
     grid-template-columns: 1fr 480px;
-    height: 100vh;
-    max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     overflow: hidden;
     transition: grid-template-columns 0.3s ease;
   }
@@ -444,6 +447,7 @@ const pusherConfig = {
     grid-template-columns: 1fr 960px;
   }
 
+  /* DISABLED: Responsive breakpoints - layout is now fixed at 1600px min-width
   @media (max-width: 1800px) {
     .fullpage-container.chat-expanded-1 { grid-template-columns: 1fr 640px; }
     .fullpage-container.chat-expanded-2 { grid-template-columns: 1fr 840px; }
@@ -471,6 +475,7 @@ const pusherConfig = {
     .fullpage-container.chat-expanded-1,
     .fullpage-container.chat-expanded-2 { grid-template-columns: 1fr; }
   }
+  */
 
   /* Player Section */
   .player-section {
@@ -736,7 +741,7 @@ const pusherConfig = {
   .control-btn svg { width: 32px; height: 32px; }
   .control-btn:hover { background: #b91c1c; transform: scale(1.05); }
 
-  .inline-reactions { display: flex; align-items: center; gap: 0.4rem; flex: 1; }
+  .inline-reactions { display: flex; align-items: center; justify-content: center; gap: 0.4rem; flex: 1; }
 
   .reaction-btn {
     width: 48px;
@@ -898,9 +903,11 @@ const pusherConfig = {
   }
 
   /* Multi-Chat Section */
-  .chat-section { display: flex; flex-direction: column; background: #111; border-left: 2px solid #222; height: 100vh; max-height: 100vh; overflow: hidden; }
+  .chat-section { display: flex; flex-direction: column; background: #111; border-left: 2px solid #222; height: 100%; overflow: hidden; }
+  /* DISABLED: Responsive breakpoint - layout is now fixed
   @media (max-width: 900px) { .chat-section { height: 900px; max-height: 900px; } }
-  .chat-section.multi-chat { display: grid; grid-template-columns: 1fr; gap: 0; overflow: hidden; }
+  */
+  .chat-section.multi-chat { display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr; gap: 0; overflow: hidden; height: 100%; }
 
   /* When 1 external chat is expanded, show 2 columns */
   .chat-expanded-1 .chat-section.multi-chat { grid-template-columns: 1fr 1fr; }
@@ -965,29 +972,34 @@ const pusherConfig = {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    position: relative;
     min-height: 0;
   }
 
   /* Ensure Fresh Wax chat has proper internal layout */
   .chat-column[data-chat="freshwax"] .chat-column-body {
+    flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
   }
 
   .chat-column[data-chat="freshwax"] .chat-messages {
-    flex: 1 1 0;
+    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    padding: 0.35rem;
     min-height: 0;
   }
 
   .chat-column[data-chat="freshwax"] .chat-input-section {
     flex-shrink: 0;
-    position: relative;
-    z-index: 100; /* Ensure pickers appear above messages */
-    overflow: visible; /* Allow pickers to overflow upward */
+    z-index: 100;
+    overflow: visible;
+    background: #111;
+    padding: 0.75rem;
+    min-height: 60px;
+    border-top: 2px solid #333;
   }
 
   /* External Chat Frames */
@@ -1002,7 +1014,7 @@ const pusherConfig = {
   .external-chat-placeholder p { font-size: 0.7rem; line-height: 1.4; }
 
   /* Chat Messages */
-  .chat-messages { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0.35rem; display: flex; flex-direction: column; gap: 0.35rem; }
+  .chat-messages { overflow-y: auto; overflow-x: hidden; padding: 0.35rem; display: flex; flex-direction: column; gap: 0.35rem; min-height: 0; }
   .chat-welcome { text-align: center; padding: 0.5rem 0.35rem; color: #9ca3af; }
   .chat-welcome p { font-size: 0.6rem; margin-bottom: 0.125rem; }
   .chat-hint { font-size: 0.65rem; color: #9ca3af; }
@@ -1018,34 +1030,40 @@ const pusherConfig = {
   .chat-message-gif { max-width: 150px; border-radius: 8px; margin-top: 0.25rem; }
 
   /* Chat Input */
-  .chat-input-section { padding: 0.35rem; background: #0a0a0a; border-top: 1px solid #222; position: relative; z-index: 10; }
-  .login-prompt { text-align: center; padding: 0.35rem; background: rgba(255,255,255,0.05); border-radius: 4px; font-size: 0.6rem; color: #888; }
+  .chat-input-section { padding: 0.75rem; background: #111; border-top: 2px solid #333; position: relative; z-index: 10; flex-shrink: 0; min-height: 60px; overflow: visible; }
+  .login-prompt { text-align: center; padding: 0.75rem; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 0.9rem; color: #888; }
   .login-prompt a { color: #dc2626; font-weight: 600; }
-  .chat-form { display: flex; flex-direction: column; gap: 0.25rem; }
-  .chat-tools { display: flex; gap: 0.2rem; }
-  .tool-btn { padding: 0.2rem 0.4rem; background: #222; border: 1px solid #333; border-radius: 4px; color: #888; font-size: 0.55rem; cursor: pointer; transition: all 0.2s; }
+  .chat-form { display: flex; flex-direction: column; gap: 0.5rem; }
+  .chat-tools { display: flex; gap: 0.35rem; }
+  .tool-btn { padding: 0.4rem 0.6rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #888; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
   .tool-btn:hover { background: #333; color: #fff; }
-  .chat-input-wrapper { display: flex; gap: 0.25rem; }
-  .chat-input-wrapper input { flex: 1; padding: 0.35rem 0.5rem; background: #222; border: 1px solid #333; border-radius: 4px; color: #fff; font-size: 0.65rem; min-width: 0; }
+  .chat-input-wrapper { display: flex; gap: 0.5rem; }
+  .chat-input-wrapper input { flex: 1; padding: 0.6rem 0.75rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 0.9rem; min-width: 0; }
   .chat-input-wrapper input:focus { outline: none; border-color: #dc2626; }
-  .chat-input-wrapper button { width: 26px; height: 26px; background: #dc2626; border: none; border-radius: 4px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+  .chat-input-wrapper button { width: 36px; height: 36px; background: #dc2626; border: none; border-radius: 6px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
   .chat-input-wrapper button:hover { background: #b91c1c; }
-  .chat-input-wrapper button svg { width: 12px; height: 12px; }
+  .chat-input-wrapper button svg { width: 16px; height: 16px; }
 
   /* Emoji & Giphy Pickers */
-  .emoji-picker, .giphy-picker { position: absolute; bottom: calc(100% + 2px); left: 0.35rem; right: 0.35rem; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; box-shadow: 0 -4px 20px rgba(0,0,0,0.5); z-index: 1000; }
-  .emoji-categories { display: flex; gap: 0.1rem; padding: 0.25rem; border-bottom: 1px solid #333; flex-wrap: wrap; }
-  .emoji-cat { padding: 0.15rem 0.35rem; background: #222; border: none; border-radius: 3px; font-size: 0.5rem; color: #888; cursor: pointer; transition: all 0.2s; }
+  .emoji-picker, .giphy-picker { position: absolute; bottom: calc(100% + 8px); left: 0; right: 0; width: 100%; background: #1a1a1a; border: 2px solid #444; border-radius: 12px; box-shadow: 0 -8px 32px rgba(0,0,0,0.8); z-index: 1000; display: flex; flex-direction: column; }
+  .emoji-picker-header, .giphy-picker-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-bottom: 1px solid #333; gap: 0.5rem; flex-shrink: 0; }
+  .emoji-cats { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .emoji-cat { padding: 0.5rem 0.75rem; background: #222; border: none; border-radius: 6px; font-size: 1.25rem; color: #888; cursor: pointer; transition: all 0.2s; }
   .emoji-cat.active { background: #dc2626; color: #fff; }
-  .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.1rem; padding: 0.35rem; max-height: 100px; overflow-y: auto; }
-  .emoji-grid button { padding: 0.2rem; background: none; border: none; font-size: 0.9rem; cursor: pointer; border-radius: 3px; }
+  .emoji-close, .giphy-close { background: #333; border: none; color: #888; font-size: 1.5rem; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .emoji-close:hover, .giphy-close:hover { background: #dc2626; color: #fff; }
+  .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.5rem; padding: 0.75rem; min-height: 200px; max-height: 400px; overflow-y: auto; background: #222; flex: 1; }
+  .emoji-grid button { padding: 0.5rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; border-radius: 6px; }
   .emoji-grid button:hover { background: rgba(220, 38, 38, 0.2); }
-  .giphy-search { padding: 0.35rem; border-bottom: 1px solid #333; }
-  .giphy-search input { width: 100%; padding: 0.25rem 0.35rem; background: #222; border: 1px solid #333; border-radius: 3px; color: #fff; font-size: 0.6rem; }
-  .giphy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.2rem; padding: 0.35rem; max-height: 100px; overflow-y: auto; }
-  .giphy-grid img { width: 100%; border-radius: 3px; cursor: pointer; }
-  .giphy-grid img:hover { opacity: 0.8; }
-  .giphy-hint { grid-column: 1 / -1; text-align: center; color: #666; font-size: 0.55rem; padding: 0.35rem; }
+  #giphySearch, input.giphy-search { flex: 1; padding: 0.6rem 0.75rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 0.9rem; }
+  .giphy-cats { display: flex; gap: 0.5rem; padding: 0.75rem; flex-wrap: wrap; border-bottom: 1px solid #333; }
+  .giphy-cat { padding: 0.5rem 0.75rem; background: #222; border: none; border-radius: 6px; font-size: 0.85rem; color: #888; cursor: pointer; transition: all 0.2s; }
+  .giphy-cat.active { background: #dc2626; color: #fff; }
+  .giphy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; padding: 0.75rem; min-height: 250px; max-height: 450px; overflow-y: auto; }
+  .giphy-grid img { width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; }
+  .giphy-grid img:hover { opacity: 0.8; transform: scale(1.02); }
+  .giphy-hint, .giphy-loading { grid-column: 1 / -1; text-align: center; color: #888; font-size: 0.9rem; padding: 1.5rem; }
+  .giphy-footer { padding: 0.5rem; text-align: center; font-size: 0.75rem; color: #666; border-top: 1px solid #333; }
 
   /* Expanded Chat Modal */
   .expanded-chat-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
@@ -1119,6 +1137,7 @@ const pusherConfig = {
   .send-shoutout-btn:not(:disabled):hover { background: #b91c1c; }
   .shoutout-cost { font-size: 0.75rem; background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 4px; }
 
+  /* DISABLED: Responsive breakpoint - layout is now fixed
   @media (max-width: 768px) {
     .stream-stats { gap: 1rem; }
     .inline-reactions { gap: 0.125rem; }
@@ -1126,6 +1145,7 @@ const pusherConfig = {
     .volume-slider { width: 60px; }
     .now-playing-right { display: none; }
   }
+  */
 
   /* Login Toast */
   .login-toast {
@@ -1740,15 +1760,28 @@ const pusherConfig = {
   async function sendChatMessage() {
     const chatInput = document.getElementById('chatInput');
     const message = chatInput?.value.trim();
-    if (!message || !currentUser) return;
 
-    const streamId = currentStream?.slotId || currentStream?.id || window.currentStreamId;
-    if (!streamId) return;
+    console.log('[Chat] Send attempt:', { message, hasUser: !!currentUser, hasStream: !!currentStream, windowStreamId: window.currentStreamId });
+
+    if (!message) {
+      console.log('[Chat] No message to send');
+      return;
+    }
+
+    if (!currentUser) {
+      console.log('[Chat] Not logged in');
+      alert('Please sign in to chat');
+      return;
+    }
+
+    // Use playlist-global as fallback for offline/playlist mode
+    const streamId = currentStream?.slotId || currentStream?.id || window.currentStreamId || 'playlist-global';
+    console.log('[Chat] Using streamId:', streamId);
 
     chatInput.value = '';
 
     try {
-      await fetch('/api/livestream/chat', {
+      const response = await fetch('/api/livestream/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1759,6 +1792,7 @@ const pusherConfig = {
           type: 'text'
         })
       });
+      console.log('[Chat] Send response:', response.ok);
     } catch (e) {
       console.error('[Chat] Send error:', e);
     }
@@ -1951,13 +1985,22 @@ const pusherConfig = {
     return div.innerHTML;
   }
 
-  // Emoji Picker
+  // Emoji Picker - uses emojiGridInline (not emojiGrid which is in the modal)
   function renderEmojis(category) {
-    const emojiGrid = document.getElementById('emojiGrid');
+    console.log('[Emoji] renderEmojis called with category:', category);
+    const emojiGrid = document.getElementById('emojiGridInline');
+    console.log('[Emoji] Grid found:', !!emojiGrid);
     if (!emojiGrid) return;
 
     emojiGrid.innerHTML = '';
-    const emojis = emojiCategories[category] || emojiCategories.music;
+
+    const emojis = emojiCategories?.[category] || emojiCategories?.music || [];
+    console.log('[Emoji] Rendering', emojis.length, 'emojis for category:', category);
+
+    if (emojis.length === 0) {
+      emojiGrid.innerHTML = '<p style="color: #888; text-align: center; padding: 1rem;">No emojis found</p>';
+      return;
+    }
 
     emojis.forEach(emoji => {
       const btn = document.createElement('button');
@@ -1965,18 +2008,19 @@ const pusherConfig = {
       btn.addEventListener('click', () => {
         const chatInput = document.getElementById('chatInput');
         if (chatInput) chatInput.value += emoji;
-        document.getElementById('emojiPicker')?.classList.add('hidden');
+        document.getElementById('emojiPicker')?.style.setProperty('display', 'none');
         chatInput?.focus();
       });
       emojiGrid.appendChild(btn);
     });
+    console.log('[Emoji] Grid children count:', emojiGrid.children.length);
   }
 
-  // Giphy Search
+  // Giphy Search - uses giphyGridInline (not giphyGrid which is in the modal)
   let giphySearchTimeout = null;
 
   async function searchGiphy(query) {
-    const giphyGrid = document.getElementById('giphyGrid');
+    const giphyGrid = document.getElementById('giphyGridInline');
     if (!GIPHY_API_KEY || !giphyGrid) return;
 
     giphyGrid.innerHTML = '<p class="giphy-hint">Loading...</p>';
@@ -2007,18 +2051,19 @@ const pusherConfig = {
   }
 
   async function sendGif(giphyUrl, giphyId) {
-    document.getElementById('giphyPicker')?.classList.add('hidden');
+    document.getElementById('giphyPicker')?.style.setProperty('display', 'none');
 
     if (!currentUser) {
       alert('Please sign in to send GIFs');
       return;
     }
 
-    const streamId = currentStream?.slotId || currentStream?.id || window.currentStreamId;
-    if (!streamId) return;
+    // Use playlist-global fallback for offline/playlist mode (same as other chat functions)
+    const streamId = currentStream?.slotId || currentStream?.id || window.currentStreamId || 'playlist-global';
 
     try {
-      await fetch('/api/livestream/chat', {
+      console.log('[GIF] Sending to stream:', streamId, 'URL:', giphyUrl);
+      const response = await fetch('/api/livestream/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2031,6 +2076,7 @@ const pusherConfig = {
           giphyId
         })
       });
+      console.log('[GIF] Send response:', response.ok, response.status);
     } catch (e) {
       console.error('[GIF] Send error:', e);
     }
@@ -2579,17 +2625,31 @@ const pusherConfig = {
     });
 
     // Emoji picker
-    document.getElementById('emojiBtn')?.addEventListener('click', () => {
+    const emojiBtn = document.getElementById('emojiBtn');
+    console.log('[Emoji] Button found:', !!emojiBtn);
+    emojiBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('[Emoji] Button clicked');
       const picker = document.getElementById('emojiPicker');
       const giphyPicker = document.getElementById('giphyPicker');
+      console.log('[Emoji] Picker found:', !!picker, 'Current display:', picker?.style.display);
+      if (!picker) return;
       giphyPicker?.style.setProperty('display', 'none');
-      picker?.style.setProperty('display', picker.style.display === 'none' ? 'block' : 'none');
-      if (picker?.style.display !== 'none') renderEmojis('music');
+      const isHidden = picker.style.display === 'none' || picker.style.display === '';
+      // Force flex layout on picker
+      picker.style.cssText = isHidden
+        ? 'display: flex; flex-direction: column; position: absolute; bottom: calc(100% + 8px); left: 0; right: 0; background: #1a1a1a; border: 2px solid #444; border-radius: 12px; box-shadow: 0 -8px 32px rgba(0,0,0,0.8); z-index: 1000;'
+        : 'display: none;';
+      console.log('[Emoji] Set display to:', picker.style.display);
+      if (isHidden) renderEmojis('music');
     });
 
     // Close emoji picker
-    document.getElementById('closeEmoji')?.addEventListener('click', () => {
-      document.getElementById('emojiPicker')?.style.setProperty('display', 'none');
+    document.getElementById('closeEmoji')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const picker = document.getElementById('emojiPicker');
+      if (picker) picker.style.display = 'none';
     });
 
     document.querySelectorAll('#emojiPicker .emoji-cat').forEach(btn => {
@@ -2601,12 +2661,21 @@ const pusherConfig = {
     });
 
     // Giphy picker
-    document.getElementById('giphyBtn')?.addEventListener('click', () => {
+    const giphyBtn = document.getElementById('giphyBtn');
+    console.log('[Giphy] Button found:', !!giphyBtn);
+    giphyBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('[Giphy] Button clicked');
       const picker = document.getElementById('giphyPicker');
       const emojiPicker = document.getElementById('emojiPicker');
+      console.log('[Giphy] Picker found:', !!picker, 'Current display:', picker?.style.display);
+      if (!picker) return;
       emojiPicker?.style.setProperty('display', 'none');
-      picker?.style.setProperty('display', picker.style.display === 'none' ? 'block' : 'none');
-      if (picker?.style.display !== 'none') searchGiphy('');
+      const isHidden = picker.style.display === 'none' || picker.style.display === '';
+      picker.style.display = isHidden ? 'block' : 'none';
+      console.log('[Giphy] Set display to:', picker.style.display);
+      if (isHidden) searchGiphy('');
     });
 
     // Close giphy picker
@@ -2614,7 +2683,7 @@ const pusherConfig = {
       document.getElementById('giphyPicker')?.style.setProperty('display', 'none');
     });
 
-    document.getElementById('giphySearch')?.addEventListener('input', (e) => {
+    document.getElementById('giphySearchInline')?.addEventListener('input', (e) => {
       clearTimeout(giphySearchTimeout);
       giphySearchTimeout = setTimeout(() => searchGiphy(e.target.value), 500);
     });
