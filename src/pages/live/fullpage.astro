@@ -1865,44 +1865,143 @@ const pusherConfig = {
     chatMessages.scrollTop = chatMessages.scrollHeight;
   };
 
-  // Subscribe to chat messages via API polling (more reliable than direct Firestore)
-  let chatPollingInterval = null;
-  let lastMessageTimestamp = null;
+  // Chat messages via Pusher (no polling - saves ~24k Firebase reads/hour)
+  let chatMessages = []; // Store messages for deduplication
+  let chatSubscribed = false;
+
+  // Append a single message to the chat (used for Pusher real-time updates)
+  function appendChatMessage(msg) {
+    const chatMessagesEl = document.getElementById('chatMessages');
+    if (!chatMessagesEl) return;
+
+    // Check for duplicate (by id or timestamp+user)
+    const msgId = msg.id || `${msg.createdAt}-${msg.userId}`;
+    if (chatMessages.some(m => (m.id || `${m.createdAt}-${m.userId}`) === msgId)) {
+      return; // Skip duplicate
+    }
+    chatMessages.push(msg);
+
+    // Format time
+    let time = '';
+    if (msg.timestamp) {
+      const ts = msg.timestamp._seconds || msg.timestamp.seconds;
+      if (ts) {
+        time = new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+    } else if (msg.createdAt) {
+      time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Format content
+    let content = '';
+    if ((msg.type === 'giphy' || msg.type === 'gif') && msg.giphyUrl) {
+      content = `<img src="${msg.giphyUrl}" class="chat-message-gif" alt="GIF" loading="lazy" />`;
+    } else {
+      content = `<div class="chat-message-text">${escapeHtml(msg.message || '')}</div>`;
+    }
+
+    // Avatar
+    const avatarUrl = msg.userAvatar || msg.profilePhoto || msg.photoURL;
+    const avatarHtml = avatarUrl
+      ? `<img src="${avatarUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />`
+      : (msg.userName || 'U')[0].toUpperCase();
+
+    const messageHtml = `
+      <div class="chat-message">
+        <div class="chat-message-avatar">${avatarHtml}</div>
+        <div class="chat-message-content">
+          <div class="chat-message-header">
+            <span class="chat-message-name">${escapeHtml(msg.userName || 'User')}</span>
+            <span class="chat-message-time">${time}</span>
+          </div>
+          ${content}
+        </div>
+      </div>
+    `;
+
+    chatMessagesEl.insertAdjacentHTML('beforeend', messageHtml);
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+    // Update expanded chat if open
+    const expandedMessages = document.getElementById('expandedChatMessages');
+    if (expandedMessages) {
+      expandedMessages.insertAdjacentHTML('beforeend', messageHtml);
+      expandedMessages.scrollTop = expandedMessages.scrollHeight;
+    }
+  }
 
   async function subscribeToChatMessages() {
-    if (chatPollingInterval) return; // Already polling
+    if (chatSubscribed) return; // Already subscribed
 
-    // Use live stream ID if available, otherwise default to 'playlist-global' for offline mode
     const streamId = currentStream?.slotId || currentStream?.id || 'playlist-global';
-    console.log('[Chat] Starting chat polling for stream:', streamId);
+    console.log('[Chat] Subscribing to Pusher chat for stream:', streamId);
 
-    async function fetchMessages() {
-      try {
-        const response = await fetch(`/api/livestream/chat?streamId=${streamId}&limit=50`);
-        if (!response.ok) return;
-
+    // Initial fetch only - get existing messages once
+    try {
+      const response = await fetch(`/api/livestream/chat?streamId=${streamId}&limit=50`);
+      if (response.ok) {
         const result = await response.json();
-        if (!result.success || !result.messages) return;
+        if (result.success && result.messages) {
+          chatMessages = result.messages; // Store for deduplication
+          window.fullpageRenderChatMessages(result.messages);
+        }
+      }
+    } catch (e) {
+      console.log('[Chat] Initial fetch error:', e.message);
+    }
 
-        window.fullpageRenderChatMessages(result.messages);
+    // Subscribe to Pusher for real-time messages (no polling!)
+    const config = window.PUSHER_CONFIG;
+    if (!config?.key) {
+      console.log('[Chat] Pusher config not ready, will retry...');
+      setTimeout(() => subscribeToChatMessages(), 1000);
+      return;
+    }
+
+    // Ensure Pusher is loaded
+    if (!window.Pusher) {
+      try {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
       } catch (e) {
-        console.log('[Chat] Poll error:', e.message);
+        console.error('[Chat] Failed to load Pusher:', e);
+        return;
       }
     }
 
-    // Initial fetch
-    await fetchMessages();
+    // Create or reuse Pusher instance
+    if (!window.fullpagePusher) {
+      window.fullpagePusher = new window.Pusher(config.key, {
+        cluster: config.cluster,
+        forceTLS: true
+      });
+    }
 
-    // Poll every 3 seconds
-    chatPollingInterval = setInterval(fetchMessages, 3000);
+    const channelName = `stream-${streamId}`;
+    let chatChannel = window.fullpagePusher.channel(channelName);
+
+    if (!chatChannel) {
+      chatChannel = window.fullpagePusher.subscribe(channelName);
+    }
+
+    // Listen for new messages via Pusher
+    chatChannel.bind('new-message', (data) => {
+      console.log('[Chat] Received message via Pusher:', data);
+      appendChatMessage(data);
+    });
+
+    chatSubscribed = true;
+    console.log('[Chat] Subscribed to Pusher channel:', channelName);
   }
 
-
   function stopChatPolling() {
-    if (chatPollingInterval) {
-      clearInterval(chatPollingInterval);
-      chatPollingInterval = null;
-    }
+    // No polling to stop - Pusher handles it
+    chatSubscribed = false;
   }
 
   // Subscribe to Pusher for reactions from other users

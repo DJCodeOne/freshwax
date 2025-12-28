@@ -4430,9 +4430,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
   }
 
-  // Load viewers initially and on interval
+  // Load viewers initially and on interval (reduced to 60s - Pusher handles real-time updates)
   loadStreamViewers();
-  setInterval(loadStreamViewers, 15000);
+  setInterval(loadStreamViewers, 60000);
 
   // Stream Info Panel - Update real-time stream information
   function updateStreamInfoPanel(isLive, stream = null) {
@@ -6830,6 +6830,13 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       livestreamChatChannel.bind('new-message', (data) => {
         console.log('[LivestreamChat] New message:', data);
         appendLivestreamMessage(data);
+      });
+
+      // Listen for viewer count updates via Pusher (saves polling)
+      livestreamChatChannel.bind('viewer-update', (data) => {
+        console.log('[LivestreamChat] Viewer update:', data);
+        const viewerCount = data.currentViewers ?? data.totalViews ?? 0;
+        updateCenterStats({ viewers: viewerCount });
       });
     }
 

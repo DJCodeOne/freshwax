@@ -279,11 +279,21 @@ async function init() {
   checkLiveStatus();
   setupLiveStatusPusher();
 
-  // Poll for live status changes every 20 seconds (as fallback)
+  // Polling is now a FALLBACK only - Pusher handles real-time updates
+  // Poll every 2 minutes when Pusher connected, every 20s if not (saves ~90% Firebase reads)
   if (liveStatusPollInterval) clearInterval(liveStatusPollInterval);
   liveStatusPollInterval = setInterval(async () => {
-    await checkLiveStatus();
+    // Only poll frequently if Pusher isn't connected
+    const pusherConnected = window.statusPusher?.connection?.state === 'connected';
+    if (!pusherConnected) {
+      await checkLiveStatus();
+    }
   }, 20000);
+
+  // Slow fallback poll every 2 minutes even when Pusher is connected (safety net)
+  setInterval(async () => {
+    await checkLiveStatus();
+  }, 120000);
 
   // Always subscribe to reaction channel for emoji broadcasts
   // This ensures all users can see reactions even without active playlist
@@ -556,7 +566,7 @@ function setupPlaylistPlayButton() {
     } catch (error) {
       console.error('[Playlist] Error toggling playback:', error);
     }
-  };
+  });
 
   console.log('[Playlist] Play button control set up');
 }

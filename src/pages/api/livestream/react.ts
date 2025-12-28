@@ -5,6 +5,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, incrementField, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 
 // Helper to initialize Firebase and return env for Pusher
 function initFirebase(locals: any) {
@@ -258,17 +259,42 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = initFirebase(locals);
+  const clientId = getClientId(request);
+
   try {
     const data = await request.json();
     const { action, streamId, userId, userName, rating, sessionId, emoji, emojiType } = data;
-    
+
     if (!streamId) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Stream ID is required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
+    // Rate limit emoji/star reactions (30 per minute per client)
+    if (action === 'emoji' || action === 'star') {
+      const rateCheck = checkRateLimit(`react-emoji:${clientId}`, {
+        maxRequests: 30,
+        windowMs: 60 * 1000,
+        blockDurationMs: 60 * 1000
+      });
+      if (!rateCheck.allowed) {
+        return rateLimitResponse(rateCheck.retryAfter!);
+      }
+    }
+
+    // Rate limit join/heartbeat (10 per minute - prevents rapid reconnects)
+    if (action === 'join' || action === 'heartbeat') {
+      const rateCheck = checkRateLimit(`react-presence:${clientId}:${streamId}`, {
+        maxRequests: 10,
+        windowMs: 60 * 1000
+      });
+      if (!rateCheck.allowed) {
+        return rateLimitResponse(rateCheck.retryAfter!);
+      }
+    }
+
     const now = new Date().toISOString();
 
     switch (action) {
