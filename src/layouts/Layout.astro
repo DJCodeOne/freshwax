@@ -257,7 +257,16 @@ const GTM_ID = ''; // Optional: Google Tag Manager ID
   <body>
     <!-- Accessibility: Skip to main content -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
-    
+
+    <!-- Fallback for users with JavaScript disabled -->
+    <noscript>
+      <div style="background: #1a1a1a; color: #fff; padding: 2rem; text-align: center; font-family: system-ui, sans-serif;">
+        <h1 style="color: #dc2626; margin-bottom: 1rem;">JavaScript Required</h1>
+        <p style="margin-bottom: 1rem;">Fresh Wax requires JavaScript to browse releases, play audio, and make purchases.</p>
+        <p style="color: #888;">Please enable JavaScript in your browser settings to continue.</p>
+      </div>
+    </noscript>
+
     <!-- Cart functionality -->
     <script is:inline src="/freshwax-cart.js"></script>
     
