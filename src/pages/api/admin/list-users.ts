@@ -91,137 +91,47 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Load users from all collections (cached for 5 minutes to reduce reads)
+    // Load users collection as SOURCE OF TRUTH + orders for stats
     const usersMap = new Map<string, UserData>();
 
-    // OPTIMIZED: Load all collections in PARALLEL (saves 3 sequential round trips)
-    const [customers, users, artists, orders] = await Promise.all([
-      queryCollection('customers', { limit: 100, cacheTime: 300000 }), // 5 min cache
-      queryCollection('users', { limit: 100, cacheTime: 300000 }),
-      queryCollection('artists', { limit: 100, cacheTime: 300000 }),
-      queryCollection('orders', { limit: 200, cacheTime: 300000 })
+    // Load users collection (source of truth) and orders in parallel
+    const [users, orders] = await Promise.all([
+      queryCollection('users', { limit: 500, cacheTime: 300000 }), // 5 min cache
+      queryCollection('orders', { limit: 500, cacheTime: 300000 })
     ]);
 
-    // Process customers (skip deleted users)
-    for (const doc of customers) {
+    // Process users collection - this is the SOURCE OF TRUTH
+    for (const doc of users) {
       if (doc.deleted === true) continue;
+
+      // Get roles from the roles object (primary) or legacy fields
+      const roles = doc.roles || {};
+
       usersMap.set(doc.id, {
         id: doc.id,
-        collection: 'customers',
+        collection: 'users',
         displayName: doc.displayName || doc.name || doc.fullName || 'Unknown',
         fullName: doc.fullName || doc.name || '',
         email: doc.email || '',
         phone: doc.phone || '',
-        address: doc.address || doc.shippingAddress || null,
+        address: doc.address || null,
         avatarUrl: doc.avatarUrl || doc.photoURL || null,
         roles: {
-          customer: true,
-          dj: doc.isDJ === true || doc.roles?.dj === true,
-          artist: doc.isArtist === true || doc.roles?.artist === true,
-          merch: doc.isMerchSupplier === true || doc.roles?.merchSupplier === true
+          customer: roles.customer !== false, // default true
+          dj: roles.dj !== false, // default true (all users are DJs)
+          artist: roles.artist === true,
+          merch: roles.merchSupplier === true || roles.merchSeller === true
         },
-        isAdmin: doc.isAdmin === true || doc.roles?.admin === true,
+        isAdmin: doc.isAdmin === true || roles.admin === true,
         permissions: doc.permissions || { canBuy: true, canComment: true, canRate: true },
-        approved: doc.approved === true,
-        suspended: doc.suspended === true,
+        approved: doc.approved === true || (doc.partnerInfo?.approved === true),
+        suspended: doc.suspended === true || doc.disabled === true,
         notes: doc.adminNotes || '',
         registeredAt: doc.createdAt || doc.registeredAt || null,
         orderCount: 0,
         totalSpent: 0,
-        source: 'customers'
+        source: 'users'
       });
-    }
-
-    // Process users collection (skip deleted users)
-    for (const doc of users) {
-      if (doc.deleted === true) continue;
-      if (usersMap.has(doc.id)) {
-        // Merge data
-        const existing = usersMap.get(doc.id)!;
-        existing.roles.dj = existing.roles.dj || doc.isDJ === true || doc.roles?.dj === true;
-        existing.roles.artist = existing.roles.artist || doc.isArtist === true || doc.roles?.artist === true;
-        existing.roles.merch = existing.roles.merch || doc.isMerchSupplier === true || doc.roles?.merchSupplier === true;
-        existing.approved = existing.approved || doc.approved === true;
-        existing.isAdmin = existing.isAdmin || doc.isAdmin === true || doc.roles?.admin === true;
-        if (!existing.email && doc.email) existing.email = doc.email;
-        if (!existing.phone && doc.phone) existing.phone = doc.phone;
-        if (!existing.avatarUrl && (doc.avatarUrl || doc.photoURL)) existing.avatarUrl = doc.avatarUrl || doc.photoURL;
-        if (doc.address) existing.address = doc.address;
-        if (doc.permissions) existing.permissions = { ...existing.permissions, ...doc.permissions };
-      } else {
-        usersMap.set(doc.id, {
-          id: doc.id,
-          collection: 'users',
-          displayName: doc.displayName || doc.name || 'Unknown',
-          fullName: doc.fullName || doc.name || '',
-          email: doc.email || '',
-          phone: doc.phone || '',
-          address: doc.address || null,
-          avatarUrl: doc.avatarUrl || doc.photoURL || null,
-          roles: {
-            customer: true,
-            dj: doc.isDJ === true || doc.roles?.dj === true,
-            artist: doc.isArtist === true || doc.roles?.artist === true,
-            merch: doc.isMerchSupplier === true || doc.roles?.merchSupplier === true
-          },
-          isAdmin: doc.isAdmin === true || doc.roles?.admin === true,
-          permissions: doc.permissions || { canBuy: true, canComment: true, canRate: true },
-          approved: doc.approved === true,
-          suspended: doc.suspended === true,
-          notes: doc.adminNotes || '',
-          registeredAt: doc.createdAt || null,
-          orderCount: 0,
-          totalSpent: 0,
-          source: 'users'
-        });
-      }
-    }
-
-    // Process artists collection (skip deleted users)
-    for (const doc of artists) {
-      if (doc.deleted === true) continue;
-      if (usersMap.has(doc.id)) {
-        // Merge data
-        const existing = usersMap.get(doc.id)!;
-        existing.roles.artist = existing.roles.artist || doc.isArtist === true;
-        existing.roles.merch = existing.roles.merch || doc.isMerchSupplier === true;
-        existing.approved = existing.approved || doc.approved === true;
-        existing.suspended = existing.suspended || doc.suspended === true;
-        existing.notes = existing.notes || doc.adminNotes || '';
-        if (!existing.email && doc.email) existing.email = doc.email;
-        if (!existing.phone && (doc.phone || doc.whatsapp)) existing.phone = doc.phone || doc.whatsapp;
-        if (!existing.avatarUrl && (doc.avatarUrl || doc.photoURL || doc.imageUrl)) {
-          existing.avatarUrl = doc.avatarUrl || doc.photoURL || doc.imageUrl;
-        }
-      } else {
-        // Users from artists collection who aren't in other collections
-        // All registered users are customers by default, and DJs by default
-        usersMap.set(doc.id, {
-          id: doc.id,
-          collection: 'artists',
-          displayName: doc.artistName || doc.name || 'Unknown',
-          fullName: doc.name || doc.fullName || '',
-          email: doc.email || '',
-          phone: doc.phone || doc.whatsapp || '',
-          address: null,
-          avatarUrl: doc.avatarUrl || doc.photoURL || doc.imageUrl || null,
-          roles: {
-            customer: true,  // All users are customers by default
-            dj: true,        // All users are DJs by default
-            artist: doc.isArtist === true,
-            merch: doc.isMerchSupplier === true
-          },
-          isAdmin: false,
-          permissions: { canBuy: true, canComment: true, canRate: true },
-          approved: doc.approved === true,
-          suspended: doc.suspended === true,
-          notes: doc.adminNotes || '',
-          registeredAt: doc.registeredAt || doc.createdAt || null,
-          orderCount: 0,
-          totalSpent: 0,
-          source: 'artists'
-        });
-      }
     }
 
     // Process order data
@@ -264,24 +174,25 @@ export const GET: APIRoute = async ({ request, locals }) => {
       );
     }
 
+    // Filter OUT users with artist or merch roles - they belong in Partner Management
+    // User Management is only for Customers and DJs (non-partner roles)
+    allUsers = allUsers.filter(u => !u.roles.artist && !u.roles.merch);
+
     // Apply role filter
     if (roleFilter !== 'all') {
       allUsers = allUsers.filter(u => {
         switch (roleFilter) {
-          case 'customer': return u.roles.customer && !u.roles.dj && !u.roles.artist;
+          case 'customer': return u.roles.customer && !u.roles.dj;
           case 'dj': return u.roles.dj;
-          case 'artist': return u.roles.artist;
-          case 'merch': return u.roles.merch;
           default: return true;
         }
       });
     }
 
-    // Calculate stats (before pagination)
+    // Calculate stats (before pagination) - artists/merch already filtered out
     const totalCount = allUsers.length;
-    const customerCount = allUsers.filter(u => u.roles.customer && !u.roles.dj && !u.roles.artist).length;
+    const customerCount = allUsers.filter(u => u.roles.customer && !u.roles.dj).length;
     const djCount = allUsers.filter(u => u.roles.dj).length;
-    const artistCount = allUsers.filter(u => u.roles.artist).length;
     const totalRevenue = allUsers.reduce((sum, u) => sum + (u.totalSpent || 0), 0);
 
     // Apply pagination
@@ -303,7 +214,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
         totalCount,
         customerCount,
         djCount,
-        artistCount,
         totalRevenue
       }
     }), {

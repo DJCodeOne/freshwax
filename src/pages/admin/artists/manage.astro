@@ -247,10 +247,10 @@ export const prerender = false;
     <script type="module">
       import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
       import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-      import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+      import { getFirestore, doc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
       
       const firebaseConfig = {
-        apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+        apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
         authDomain: "freshwax-store.firebaseapp.com",
         projectId: "freshwax-store",
         storageBucket: "freshwax-store.firebasestorage.app",
@@ -266,16 +266,6 @@ export const prerender = false;
       let currentFilter = 'all';
       let currentPartnerId = null;
 
-      // Helper function to get a comparable date value from various formats
-      function getDateValue(dateField) {
-        if (!dateField) return 0;
-        // Firestore Timestamp has toDate()
-        if (dateField.toDate) return dateField.toDate().getTime();
-        // ISO string or Date object
-        const date = new Date(dateField);
-        return isNaN(date.getTime()) ? 0 : date.getTime();
-      }
-
       onAuthStateChanged(auth, (user) => {
         if (!user) {
           window.location.href = '/admin/login';
@@ -286,49 +276,42 @@ export const prerender = false;
 
       async function loadPartners() {
         try {
-          // Don't use orderBy - it causes issues with mixed timestamp/string dates
-          // Load all and sort client-side instead
-          const snapshot = await getDocs(collection(db, 'artists'));
-          allPartners = [];
+          // Use API to load partners from both users and artists collections
+          const adminUid = auth.currentUser?.uid;
+          if (!adminUid) {
+            throw new Error('Not authenticated');
+          }
 
-          snapshot.forEach(doc => {
-            const data = doc.data();
+          const response = await fetch(`/api/admin/list-partners?uid=${adminUid}`);
+          const data = await response.json();
 
-            // Only include users who have at least one partner role (artist or merch supplier)
-            const isArtist = data.isArtist === true;
-            const isMerchSupplier = data.isMerchSupplier === true;
+          if (!data.success) {
+            throw new Error(data.error || 'Failed to load partners');
+          }
 
-            // Skip users who don't have any partner roles
-            if (!isArtist && !isMerchSupplier) {
-              console.log('[manage] Skipping non-partner:', doc.id, data.artistName || data.name);
-              return;
-            }
+          allPartners = data.partners.map(p => ({
+            id: p.id,
+            name: p.displayName || p.name || 'Unknown',
+            fullName: p.name || '',
+            email: p.email || '',
+            phone: p.phone || '',
+            avatarUrl: null,
+            isArtist: p.isArtist === true,
+            isMerchSupplier: p.isMerchSupplier === true,
+            approved: p.isApproved === true,
+            suspended: p.isDisabled === true,
+            notes: '',
+            registeredAt: p.createdAt ? new Date(p.createdAt) : null
+          }));
 
-            allPartners.push({
-              id: doc.id,
-              name: data.artistName || data.name || 'Unknown',
-              fullName: data.name || data.fullName || '',
-              email: data.email || '',
-              phone: data.phone || data.whatsapp || '',
-              avatarUrl: data.avatarUrl || data.photoURL || data.imageUrl || null,
-              isArtist: isArtist,
-              isMerchSupplier: isMerchSupplier,
-              approved: data.approved === true,
-              suspended: data.suspended === true,
-              notes: data.adminNotes || '',
-              registeredAt: data.registeredAt?.toDate?.() || (data.registeredAt ? new Date(data.registeredAt) : null),
-              _rawRegisteredAt: data.registeredAt // Keep raw for sorting
-            });
-          });
-
-          // Sort by registeredAt descending (newest first), handling mixed formats
+          // Sort by registeredAt descending (newest first)
           allPartners.sort((a, b) => {
-            const dateA = getDateValue(a._rawRegisteredAt);
-            const dateB = getDateValue(b._rawRegisteredAt);
-            return dateB - dateA; // Descending order
+            const dateA = a.registeredAt?.getTime() || 0;
+            const dateB = b.registeredAt?.getTime() || 0;
+            return dateB - dateA;
           });
 
-          console.log('[manage] Loaded', allPartners.length, 'partners:', allPartners.map(p => p.name));
+          console.log('[manage] Loaded', allPartners.length, 'partners from API:', allPartners.map(p => p.name));
 
           updateStats();
           renderPartners();
@@ -562,11 +545,37 @@ export const prerender = false;
       
       window.confirmApprove = async function() {
         if (!currentPartnerId) return;
+        const partner = allPartners.find(p => p.id === currentPartnerId);
         try {
-          await updateDoc(doc(db, 'artists', currentPartnerId), { approved: true, approvedAt: new Date().toISOString() });
-          try { await updateDoc(doc(db, 'users', currentPartnerId), { approved: true }); } catch (e) {}
+          // Update users collection (source of truth)
+          await updateDoc(doc(db, 'users', currentPartnerId), {
+            approved: true,
+            approvedAt: new Date().toISOString()
+          });
+
+          // Send confirmation email
+          if (partner?.email) {
+            try {
+              await fetch('/api/admin/send-approval-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  email: partner.email,
+                  name: partner.name,
+                  type: partner.isArtist && partner.isMerchSupplier ? 'both' :
+                        partner.isArtist ? 'artist' : 'merch'
+                })
+              });
+              showToast('Partner approved! Confirmation email sent.', 'success');
+            } catch (emailErr) {
+              console.warn('Email failed:', emailErr);
+              showToast('Partner approved! (Email may not have sent)', 'success');
+            }
+          } else {
+            showToast('Partner approved!', 'success');
+          }
+
           closeModal('approveModal');
-          showToast('Partner approved!', 'success');
           loadPartners();
         } catch (error) {
           showToast('Error approving partner: ' + error.message, 'error');

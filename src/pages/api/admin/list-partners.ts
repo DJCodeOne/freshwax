@@ -68,105 +68,51 @@ export const GET: APIRoute = async ({ request, locals }) => {
   
   try {
     const partners: any[] = [];
-    const userMap = new Map();
 
-    // Helper to get first non-empty value
-    const firstNonEmpty = (...values: any[]) => values.find(v => v && String(v).trim() !== '') || '';
-
-    // Load from users collection (skip deleted users) - limited to prevent runaway
+    // Load from users collection - SOURCE OF TRUTH
     const users = await queryCollection('users', {
       cacheTime: 300000,  // 5 min cache
-      limit: 500  // Max 500 users to prevent runaway
+      limit: 500
     });
-    users.forEach(user => {
-      if (user.deleted === true) return;
+
+    // Process users - only include those with artist or merch roles
+    for (const user of users) {
+      if (user.deleted === true) continue;
+
       const roles = user.roles || {};
+      const isArtist = roles.artist === true;
+      const isMerchSupplier = roles.merchSupplier === true || roles.merchSeller === true;
 
       // Only include if they have artist or merch role
-      if (roles.artist || roles.merchSupplier) {
-        userMap.set(user.id, {
-          id: user.id,
-          email: user.email || '',
-          name: user.fullName || user.name || user.displayName || '',
-          displayName: user.partnerInfo?.displayName || user.displayName || '',
-          phone: user.phone || '',
-          address: user.address || null,
-          isAdmin: user.isAdmin || user.role === 'admin' || roles.admin || false,
-          isCustomer: roles.customer ?? true,
-          isArtist: roles.artist || false,
-          isDJ: roles.dj || false,
-          isMerchSupplier: roles.merchSupplier || false,
-          isApproved: user.partnerInfo?.approved || false,
-          isDisabled: user.disabled || false,
-          canBuy: user.permissions?.canBuy ?? true,
-          canComment: user.permissions?.canComment ?? true,
-          canRate: user.permissions?.canRate ?? true,
-          createdAt: user.createdAt || null,
-          source: 'users'
-        });
-      }
-    });
+      if (!isArtist && !isMerchSupplier) continue;
 
-    // Load from artists collection (skip deleted users) - limited to prevent runaway
-    const artists = await queryCollection('artists', {
-      cacheTime: 300000,  // 5 min cache
-      limit: 500  // Max 500 artists to prevent runaway
-    });
-    artists.forEach(artist => {
-      if (artist.deleted === true) return;
-      // Check if this artist record has partner roles
-      // Only include if isArtist is explicitly true, or if it's a legacy record without the flag but with artist data
-      const hasArtistRole = artist.isArtist === true;
-      const hasMerchRole = artist.isMerchSupplier === true;
-
-      if (userMap.has(artist.id)) {
-        // Merge data - but respect role flags
-        const existing = userMap.get(artist.id);
-        existing.isArtist = existing.isArtist || hasArtistRole;
-        existing.isDJ = existing.isDJ || artist.isDJ || false;
-        existing.isMerchSupplier = existing.isMerchSupplier || hasMerchRole;
-        existing.isApproved = existing.isApproved || artist.approved || false;
-        existing.name = firstNonEmpty(existing.name, artist.artistName, artist.name);
-        existing.displayName = firstNonEmpty(existing.displayName, artist.artistName, artist.name);
-        if (!existing.email && artist.email) existing.email = artist.email;
-        if (!existing.address && artist.address) existing.address = artist.address;
-      } else {
-        // Only add if they have at least one partner role
-        if (hasArtistRole || hasMerchRole) {
-          userMap.set(artist.id, {
-            id: artist.id,
-            email: artist.email || '',
-            name: artist.artistName || artist.name || '',
-            displayName: artist.artistName || artist.name || '',
-            phone: artist.phone || '',
-            address: artist.address || null,
-            isAdmin: artist.isAdmin || artist.role === 'admin' || false,
-            isCustomer: true,
-            isArtist: hasArtistRole,
-            isDJ: artist.isDJ || false,
-            isMerchSupplier: hasMerchRole,
-            isApproved: artist.approved || false,
-            isDisabled: artist.disabled || false,
-            canBuy: true,
-            canComment: true,
-            canRate: true,
-            createdAt: artist.createdAt || null,
-            source: 'artists'
-          });
-        }
-      }
-    });
-
-    // Convert map to array and filter to only include actual partners
-    userMap.forEach(user => {
-      // Only include users who have at least one partner role
-      if (user.isArtist || user.isMerchSupplier) {
-        partners.push(user);
-      }
-    });
+      partners.push({
+        id: user.id,
+        email: user.email || '',
+        name: user.fullName || user.name || user.displayName || '',
+        displayName: user.partnerInfo?.displayName || user.displayName || '',
+        phone: user.phone || '',
+        address: user.address || null,
+        isAdmin: user.isAdmin || roles.admin || false,
+        isCustomer: roles.customer !== false,
+        isArtist: isArtist,
+        isDJ: roles.dj !== false,
+        isMerchSupplier: isMerchSupplier,
+        isApproved: user.approved === true ||
+                    user.partnerInfo?.approved === true ||
+                    user.pendingRoles?.artist?.status === 'approved' ||
+                    user.pendingRoles?.merchSeller?.status === 'approved',
+        isDisabled: user.disabled === true || user.suspended === true,
+        canBuy: user.permissions?.canBuy ?? true,
+        canComment: user.permissions?.canComment ?? true,
+        canRate: user.permissions?.canRate ?? true,
+        createdAt: user.createdAt || user.registeredAt || null,
+        source: 'users'
+      });
+    }
 
     // Sort by name
-    partners.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    partners.sort((a, b) => (a.displayName || a.name || '').localeCompare(b.displayName || b.name || ''));
 
     return new Response(JSON.stringify({
       success: true,
