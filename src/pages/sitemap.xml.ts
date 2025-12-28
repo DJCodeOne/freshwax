@@ -46,6 +46,13 @@ function escapeXml(str: string): string {
     .replace(/'/g, '&apos;');
 }
 
+// Check if URL is valid for sitemap (absolute, not placeholder)
+function isValidImageUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  if (url.includes('place-holder') || url.includes('placeholder')) return false;
+  return url.startsWith('http://') || url.startsWith('https://');
+}
+
 function formatDate(date: any): string {
   if (!date) return new Date().toISOString().split('T')[0];
   try {
@@ -104,7 +111,6 @@ export const GET = async () => {
 
   // Build XML with all extensions
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"
@@ -139,8 +145,8 @@ export const GET = async () => {
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>`;
     
-    // Image extension for rich image results
-    if (imageUrl) {
+    // Image extension for rich image results (only valid absolute URLs)
+    if (isValidImageUrl(imageUrl)) {
       xml += `
     <image:image>
       <image:loc>${escapeXml(imageUrl)}</image:loc>
@@ -174,20 +180,19 @@ export const GET = async () => {
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>`;
     
-    // Image for the mix artwork
-    if (imageUrl) {
+    // Image for the mix artwork (only valid absolute URLs)
+    if (isValidImageUrl(imageUrl)) {
       xml += `
     <image:image>
       <image:loc>${escapeXml(imageUrl)}</image:loc>
       <image:title>${title}${dj ? ` by ${dj}` : ''}</image:title>
       <image:caption>DJ Mix artwork - ${title}</image:caption>
     </image:image>`;
-    }
-    
-    // Video extension can be used for audio content with thumbnail
-    // Google treats audio content similarly for rich results
-    if (imageUrl && duration) {
-      xml += `
+
+      // Video extension can be used for audio content with thumbnail
+      // Google treats audio content similarly for rich results
+      if (duration) {
+        xml += `
     <video:video>
       <video:thumbnail_loc>${escapeXml(imageUrl)}</video:thumbnail_loc>
       <video:title>${title}${dj ? ` by ${dj}` : ''}</video:title>
@@ -203,6 +208,7 @@ export const GET = async () => {
       <video:tag>electronic music</video:tag>
       <video:uploader info="${SITE_URL}/about">${dj || 'Fresh Wax'}</video:uploader>
     </video:video>`;
+      }
     }
     
     xml += `
@@ -225,8 +231,8 @@ export const GET = async () => {
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>`;
     
-    // Primary image
-    if (primaryImage) {
+    // Primary image (only valid absolute URLs)
+    if (isValidImageUrl(primaryImage)) {
       xml += `
     <image:image>
       <image:loc>${escapeXml(primaryImage)}</image:loc>
@@ -234,11 +240,11 @@ export const GET = async () => {
       <image:caption>${description.substring(0, 200)}</image:caption>
     </image:image>`;
     }
-    
-    // Additional images
+
+    // Additional images (only valid absolute URLs)
     if (item.images && Array.isArray(item.images)) {
       for (const img of item.images.slice(1, 5)) { // Max 5 images per URL
-        if (img.url && img.url !== primaryImage) {
+        if (isValidImageUrl(img.url) && img.url !== primaryImage) {
           xml += `
     <image:image>
       <image:loc>${escapeXml(img.url)}</image:loc>
