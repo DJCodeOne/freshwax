@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 
 // Pusher configuration is loaded from env at runtime (not module level)
 // This is required for Cloudflare Workers compatibility
@@ -266,6 +267,16 @@ function setCachedOnlineDjs(djs: any[]): void {
 export const GET: APIRoute = async ({ request, locals }) => {
   console.log('[DEBUG] presence.ts GET called');
 
+  // Rate limit: 30 requests per minute per client
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`presence-get:${clientId}`, {
+    maxRequests: 30,
+    windowMs: 60 * 1000
+  });
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   const firebaseApiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
@@ -352,6 +363,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Join/Leave/Heartbeat
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: 20 requests per minute per client (covers join/leave/heartbeat)
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`presence-post:${clientId}`, {
+    maxRequests: 20,
+    windowMs: 60 * 1000
+  });
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
