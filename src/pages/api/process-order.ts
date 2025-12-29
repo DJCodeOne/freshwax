@@ -19,10 +19,12 @@ function initFirebase(locals: any) {
 }
 
 // Payment split configuration
+// Artist sets their price - they receive 100% of it
+// Fees are added ON TOP for the customer
 const PAYMENT_CONFIG = {
   stripeFeePercent: 2.9,      // Stripe's percentage
   stripeFeeFixed: 0.30,       // Stripe's fixed fee in GBP
-  platformFeePercent: 15,     // Fresh Wax platform fee
+  platformFeePercent: 1,      // Fresh Wax platform fee (1%)
 };
 
 function generateOrderNumber(): string {
@@ -35,23 +37,30 @@ function generateOrderNumber(): string {
 }
 
 // Calculate payment splits for an item
-function calculatePaymentSplit(itemPrice: number, quantity: number = 1) {
-  const totalPrice = itemPrice * quantity;
+// Artist gets their full asking price, fees are added on top for customer
+function calculatePaymentSplit(artistPrice: number, quantity: number = 1) {
+  // Artist receives their full price
+  const artistShare = artistPrice * quantity;
 
-  // Stripe fees (2.9% + 30p)
-  const stripeFee = (totalPrice * PAYMENT_CONFIG.stripeFeePercent / 100) + PAYMENT_CONFIG.stripeFeeFixed;
+  // Fresh Wax platform fee (1% of artist price) - added to customer price
+  const platformFee = artistShare * PAYMENT_CONFIG.platformFeePercent / 100;
 
-  // Fresh Wax platform fee (15% of item price)
-  const platformFee = totalPrice * PAYMENT_CONFIG.platformFeePercent / 100;
+  // Calculate total before Stripe fee
+  const subtotalBeforeStripe = artistShare + platformFee;
 
-  // Artist/Label/Producer gets the rest
-  const artistShare = totalPrice - stripeFee - platformFee;
+  // Stripe fee is charged on total customer payment
+  // Customer pays X, Stripe takes 2.9% + 30p, so:
+  // X - (0.029*X + 0.30) = subtotalBeforeStripe
+  // X * 0.971 = subtotalBeforeStripe + 0.30
+  // X = (subtotalBeforeStripe + 0.30) / 0.971
+  const customerPays = (subtotalBeforeStripe + PAYMENT_CONFIG.stripeFeeFixed) / (1 - PAYMENT_CONFIG.stripeFeePercent / 100);
+  const stripeFee = customerPays - subtotalBeforeStripe;
 
   return {
-    totalPrice: Math.round(totalPrice * 100) / 100,
+    totalPrice: Math.round(customerPays * 100) / 100,  // What customer pays
     stripeFee: Math.round(stripeFee * 100) / 100,
     platformFee: Math.round(platformFee * 100) / 100,
-    artistShare: Math.round(artistShare * 100) / 100,
+    artistShare: Math.round(artistShare * 100) / 100,  // Artist gets their full asking price
   };
 }
 
@@ -242,8 +251,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
               price: item.price,
               quantity: item.quantity,
               artistShare: paymentSplit.artistShare,
+              stripeFee: paymentSplit.stripeFee,
+              platformFee: paymentSplit.platformFee,
+              customerPaid: paymentSplit.totalPrice,
             });
             artistPayments[downloads.artistId].totalArtistShare += paymentSplit.artistShare;
+            artistPayments[downloads.artistId].totalStripeFee = (artistPayments[downloads.artistId].totalStripeFee || 0) + paymentSplit.stripeFee;
+            artistPayments[downloads.artistId].totalPlatformFee = (artistPayments[downloads.artistId].totalPlatformFee || 0) + paymentSplit.platformFee;
+            artistPayments[downloads.artistId].totalCustomerPaid = (artistPayments[downloads.artistId].totalCustomerPaid || 0) + paymentSplit.totalPrice;
           }
         }
       }

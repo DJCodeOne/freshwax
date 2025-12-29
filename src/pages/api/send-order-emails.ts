@@ -326,48 +326,101 @@ async function sendArtistEmail(orderId: string, orderNumber: string, artistPayme
 
   const itemsHtml = artistPayment.items.map((item: any) => `
     <tr>
-      <td style="padding: 10px 0; border-bottom: 1px solid #eee;">${item.name}</td>
-      <td style="padding: 10px 0; border-bottom: 1px solid #eee; text-align: right;">£${item.price.toFixed(2)}</td>
-      <td style="padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; color: #16a34a; font-weight: 600;">£${item.artistShare.toFixed(2)}</td>
+      <td style="padding: 6px 8px; border-bottom: 1px solid #eee;">${item.name}</td>
+      <td style="padding: 6px 8px; border-bottom: 1px solid #eee; text-align: right;">£${item.price.toFixed(2)}</td>
+      <td style="padding: 6px 8px; border-bottom: 1px solid #eee; text-align: right; color: #16a34a; font-weight: 600;">£${item.artistShare.toFixed(2)}</td>
     </tr>
   `).join('');
+
+  // Calculate totals with fallbacks for older orders
+  const totalCustomerPaid = artistPayment.totalCustomerPaid || artistPayment.items.reduce((sum: number, i: any) => sum + (i.customerPaid || i.price), 0);
+  const totalStripeFee = artistPayment.totalStripeFee || artistPayment.items.reduce((sum: number, i: any) => sum + (i.stripeFee || 0), 0);
+  const totalPlatformFee = artistPayment.totalPlatformFee || artistPayment.items.reduce((sum: number, i: any) => sum + (i.platformFee || 0), 0);
 
   const html = `
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>Sale Notification</title></head>
+<head>
+  <meta charset="utf-8">
+  <title>Sale Notification</title>
+  <style>
+    @media print {
+      body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .email-wrapper { padding: 0 !important; }
+      .email-container { box-shadow: none !important; }
+    }
+    @page { margin: 0.5in; size: auto; }
+  </style>
+</head>
 <body style="margin: 0; padding: 0; background: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table cellpadding="0" cellspacing="0" border="0" width="100%">
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" class="email-wrapper">
     <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background: #fff; border-radius: 8px; overflow: hidden;">
+      <td align="center" style="padding: 20px 15px;">
+        <table cellpadding="0" cellspacing="0" border="0" width="550" style="max-width: 550px; background: #fff; border-radius: 8px; overflow: hidden;" class="email-container">
+          <!-- Header -->
           <tr>
-            <td style="background: #111; padding: 24px; text-align: center;">
-              <div style="font-size: 24px; font-weight: 800;"><span style="color: #fff;">FRESH</span> <span style="color: #dc2626;">WAX</span></div>
+            <td style="background: #111; padding: 16px; text-align: center;">
+              <div style="font-size: 20px; font-weight: 800;"><span style="color: #fff;">FRESH</span> <span style="color: #dc2626;">WAX</span></div>
             </td>
           </tr>
+          <!-- Content -->
           <tr>
-            <td style="padding: 32px 24px;">
-              <h1 style="margin: 0 0 8px; color: #16a34a; font-size: 22px;">You Made a Sale! 🎉</h1>
-              <p style="color: #666; margin: 0 0 24px;">Order ${orderNumber}</p>
+            <td style="padding: 20px;">
+              <h1 style="margin: 0 0 4px; color: #16a34a; font-size: 18px;">You Made a Sale! 🎉</h1>
+              <p style="color: #666; margin: 0 0 16px; font-size: 13px;">Order ${orderNumber}</p>
 
-              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 24px;">
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 16px; font-size: 13px;">
                 <tr style="background: #f8f8f8;">
-                  <th style="padding: 12px; text-align: left; font-weight: 600; color: #666;">Item</th>
-                  <th style="padding: 12px; text-align: right; font-weight: 600; color: #666;">Price</th>
-                  <th style="padding: 12px; text-align: right; font-weight: 600; color: #666;">Your Share</th>
+                  <th style="padding: 8px; text-align: left; font-weight: 600; color: #666;">Item</th>
+                  <th style="padding: 8px; text-align: right; font-weight: 600; color: #666;">Price</th>
+                  <th style="padding: 8px; text-align: right; font-weight: 600; color: #666;">Your Share</th>
                 </tr>
                 ${itemsHtml}
               </table>
 
-              <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; text-align: center;">
-                <div style="color: #166534; font-size: 14px; margin-bottom: 4px;">Total Earnings</div>
-                <div style="color: #16a34a; font-size: 28px; font-weight: 700;">£${artistPayment.totalArtistShare.toFixed(2)}</div>
+              <!-- Payment Breakdown -->
+              <div style="background: #f8f8f8; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
+                <div style="font-weight: 600; font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 8px;">Payment Breakdown</div>
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="font-size: 12px;">
+                  <tr>
+                    <td style="padding: 3px 0; color: #16a34a; font-weight: 700;">Your Earnings:</td>
+                    <td style="padding: 3px 0; text-align: right; color: #16a34a; font-weight: 700; font-size: 14px;">£${artistPayment.totalArtistShare.toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td colspan="2" style="border-top: 1px dashed #ccc; padding-top: 4px; margin-top: 4px;"></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 3px 0; color: #888; font-size: 11px;">+ Stripe Processing Fee:</td>
+                    <td style="padding: 3px 0; text-align: right; color: #888; font-size: 11px;">£${totalStripeFee.toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 3px 0; color: #888; font-size: 11px;">+ Fresh Wax Fee (1%):</td>
+                    <td style="padding: 3px 0; text-align: right; color: #888; font-size: 11px;">£${totalPlatformFee.toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td colspan="2" style="border-top: 1px solid #ddd; padding-top: 4px;"></td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 3px 0; color: #111;">Customer Paid:</td>
+                    <td style="padding: 3px 0; text-align: right; color: #111; font-weight: 600;">£${totalCustomerPaid.toFixed(2)}</td>
+                  </tr>
+                </table>
               </div>
 
-              <p style="color: #888; font-size: 13px; margin-top: 24px; text-align: center;">
+              <p style="color: #888; font-size: 11px; margin: 0; text-align: center;">
                 Payments are processed monthly. View your earnings in your <a href="https://freshwax.co.uk/pro/dashboard" style="color: #dc2626;">Pro Dashboard</a>.
               </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f8f8f8; padding: 12px 20px; border-top: 1px solid #eee;">
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td style="font-size: 11px; color: #999;">Automated notification from Fresh Wax</td>
+                  <td style="font-size: 11px; color: #999; text-align: right;"><a href="https://freshwax.co.uk" style="color: #999; text-decoration: none;">freshwax.co.uk</a></td>
+                </tr>
+              </table>
             </td>
           </tr>
         </table>
