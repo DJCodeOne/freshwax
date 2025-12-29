@@ -5777,22 +5777,23 @@
 
     .player-container {
       border-radius: 8px;
-      min-height: calc(100vh - 120px) !important;
-      height: calc(100vh - 120px) !important;
-      max-height: none !important;
+      min-height: auto !important;
+      height: auto !important;
+      max-height: 60vh !important;
       overflow: hidden !important;
-      flex: 1 !important;
+      flex: none !important;
       position: relative !important;
+      aspect-ratio: 16/9;
     }
 
     .player-container .audio-player,
     .player-container .video-player {
-      position: absolute !important;
-      inset: 0 !important;
+      position: relative !important;
+      inset: auto !important;
       width: 100% !important;
       max-width: 100% !important;
       height: 100% !important;
-      max-height: none !important;
+      max-height: 60vh !important;
       overflow: hidden !important;
     }
 
@@ -5801,7 +5802,8 @@
       width: 100% !important;
       max-width: 100% !important;
       height: 100% !important;
-      max-height: none !important;
+      max-height: 60vh !important;
+      aspect-ratio: 16/9;
       object-fit: contain !important;
     }
 
@@ -5844,7 +5846,8 @@
     /* Chat section mobile */
     .chat-column.mobile-active {
       flex-direction: column;
-      height: calc(100vh - 140px);
+      height: auto;
+      max-height: 50vh;
       padding: 0.75rem;
     }
     
