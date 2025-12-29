@@ -644,15 +644,15 @@
   .meta-item {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: 0.9rem;
+    gap: 0.25rem;
+    font-size: 0.65rem;
     color: #d1d5db;
-    font-weight: 600;
+    font-weight: 500;
   }
 
   .meta-icon {
-    width: 18px;
-    height: 18px;
+    width: 12px;
+    height: 12px;
     color: #d1d5db;
   }
 
@@ -694,11 +694,16 @@
     }
 
     .mix-meta-row {
-      gap: 1.25rem;
+      gap: 0.75rem;
     }
 
     .meta-item {
-      font-size: 0.95rem;
+      font-size: 0.7rem;
+    }
+
+    .meta-icon {
+      width: 13px;
+      height: 13px;
     }
 
     .mix-stats {
@@ -747,17 +752,17 @@
     }
 
     .mix-meta-row {
-      gap: 2.5rem;
+      gap: 1rem;
     }
 
     .meta-item {
-      font-size: 1.25rem;
-      gap: 0.55rem;
+      font-size: 0.7rem;
+      gap: 0.3rem;
     }
 
     .meta-icon {
-      width: 22px;
-      height: 22px;
+      width: 13px;
+      height: 13px;
     }
 
     .mix-stats {

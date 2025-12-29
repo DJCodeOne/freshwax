@@ -2901,9 +2901,16 @@
     color: #f87171;
   }
 
-  /* Playlist mode - red text for NOW PLAYING bar */
-  .dj-info-bar.playlist-mode .dj-info-name {
+  /* Playlist mode styling */
+  .dj-info-bar.playlist-mode .dj-info-title {
+    font-size: 18px;
+    font-weight: 700;
     color: #dc2626;
+  }
+
+  .dj-info-bar.playlist-mode .dj-info-name {
+    font-size: 12px;
+    color: #fff;
   }
 
   .dj-info-bar.playlist-mode .stream-genre {
@@ -2913,6 +2920,41 @@
     min-width: 55px;
     text-align: center;
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Playlist Duration Box */
+  .np-duration-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.125rem;
+    padding: 0.25rem 0.5rem;
+    background: #222;
+    border-radius: 6px;
+    min-width: 55px;
+  }
+
+  .np-duration-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .np-duration {
+    font-size: 14px;
+    font-weight: 700;
+    color: #dc2626;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dj-info-bar.playlist-mode .np-duration-box {
+    background: rgba(220, 38, 38, 0.15);
+  }
+
+  .dj-info-bar.playlist-mode .np-duration-label {
+    color: #f87171;
   }
 
   /* Inline Reactions Styles */

@@ -436,9 +436,14 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           </button>
           <div class="dj-info-center">
             <span class="dj-info-label" id="controlsLabel">NOW PLAYING</span>
+            <span class="dj-info-title" id="npTrackTitle"></span>
             <span class="dj-info-name" id="controlsDjName">--</span>
           </div>
           <div class="dj-info-right">
+            <div class="np-duration-box" id="bottomDurationBox" style="display: none;">
+              <span class="np-duration-label" id="bottomDurationLabel">LEFT</span>
+              <span class="np-duration" id="bottomDuration">--:--</span>
+            </div>
             <span class="stream-genre" id="streamGenre">Jungle / D&B</span>
           </div>
         </div>
@@ -2494,6 +2499,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   let wasLive = false;
   let chatClearTimer = null;
   const CHAT_CLEAR_DELAY = 20 * 60 * 1000; // 20 minutes in milliseconds
+
+  // Playlist fallback timer - starts auto-play 10 seconds after stream ends
+  let playlistFallbackTimer = null;
+  const PLAYLIST_FALLBACK_DELAY = 10 * 1000; // 10 seconds
   
   function clearChatMessages() {
     const chatMessages = document.getElementById('chatMessages');
@@ -2525,7 +2534,59 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       console.log('[Chat] Chat clear cancelled - new stream started');
     }
   }
-  
+
+  // Playlist fallback: auto-play when no DJ is streaming
+  async function startPlaylistFallback() {
+    const playlistManager = window.playlistManager;
+    if (!playlistManager) {
+      console.log('[Playlist] Manager not available');
+      return;
+    }
+
+    // Check if already playing
+    if (playlistManager.isPlaying && playlistManager.queue?.length > 0) {
+      console.log('[Playlist] Already playing, resuming...');
+      await playlistManager.resume?.();
+      return;
+    }
+
+    // Try to start auto-play from history
+    console.log('[Playlist] Starting auto-play from history...');
+    const started = await playlistManager.startAutoPlay?.();
+    if (started) {
+      console.log('[Playlist] Auto-play started successfully');
+      const offlineOverlay = document.getElementById('offlineOverlay');
+      if (offlineOverlay) offlineOverlay.classList.add('hidden');
+    } else {
+      console.log('[Playlist] No tracks available for auto-play');
+    }
+  }
+
+  function schedulePlaylistFallback() {
+    // Cancel any existing timer
+    cancelPlaylistFallback();
+    // Schedule playlist fallback in 10 seconds
+    playlistFallbackTimer = setTimeout(startPlaylistFallback, PLAYLIST_FALLBACK_DELAY);
+    console.log('[Playlist] Will start auto-play in 10 seconds if no stream');
+  }
+
+  function cancelPlaylistFallback() {
+    if (playlistFallbackTimer) {
+      clearTimeout(playlistFallbackTimer);
+      playlistFallbackTimer = null;
+      console.log('[Playlist] Auto-play timer cancelled - stream active');
+    }
+  }
+
+  async function pausePlaylistForStream() {
+    const playlistManager = window.playlistManager;
+    if (playlistManager?.isPlaying) {
+      console.log('[Playlist] Pausing for live stream');
+      playlistManager.wasPausedForStream = true;
+      await playlistManager.pause?.();
+    }
+  }
+
   function getWeekStart(date) {
     const d = new Date(date);
     const day = d.getDay();
@@ -3613,14 +3674,18 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     const countdownOverlay = document.getElementById('countdownOverlay');
     const playBtn = document.getElementById('playBtn');
     
-    // Track live status changes for chat clear timer
+    // Track live status changes for chat clear timer and playlist fallback
     const isLiveNow = !!currentLive;
     if (wasLive && !isLiveNow) {
-      // Stream just ended - schedule chat clear in 20 minutes
+      // Stream just ended - schedule chat clear and playlist fallback
       scheduleChatClear();
+      schedulePlaylistFallback();
     } else if (!wasLive && isLiveNow) {
-      // Stream just started - cancel any pending chat clear
+      // Stream just started - cancel timers and pause playlist
       cancelChatClear();
+      cancelPlaylistFallback();
+      pausePlaylistForStream();
+      window.isLiveStreamActive = true;
     }
     wasLive = isLiveNow;
     
@@ -3716,14 +3781,32 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         shareBtn.classList.remove('live-active');
       }
       
+      // Mark stream as inactive
+      window.isLiveStreamActive = false;
+
       // Check for countdown
       const inLobby = upcoming?.filter(s => s.status === 'in_lobby') || [];
       if (inLobby.length > 0) {
         showCountdown(inLobby[0]);
       } else {
-        // Show offline overlay when no one is streaming and no countdown
+        // No countdown - try to start playlist, or show offline overlay
         countdownOverlay?.classList.add('hidden');
-        offlineOverlay?.classList.remove('hidden');
+
+        // Check if playlist is playing or can auto-start
+        const playlistManager = window.playlistManager;
+        if (playlistManager?.isPlaying && playlistManager?.queue?.length > 0) {
+          // Playlist is already playing - hide offline overlay
+          offlineOverlay?.classList.add('hidden');
+        } else if (!playlistFallbackTimer) {
+          // No timer running and not playing - schedule fallback
+          // (uses a short delay on initial load to avoid race conditions)
+          schedulePlaylistFallback();
+        }
+
+        // Show offline overlay if playlist isn't covering it
+        if (!playlistManager?.isPlaying) {
+          offlineOverlay?.classList.remove('hidden');
+        }
       }
     }
     
@@ -4598,6 +4681,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     const isPlaylistPlaying = detail.isPlaying && detail.queue && detail.queue.length > 0;
     const controlsLabel = document.getElementById('controlsLabel');
     const controlsDjName = document.getElementById('controlsDjName');
+    const npTrackTitle = document.getElementById('npTrackTitle');
+    const bottomDurationBox = document.getElementById('bottomDurationBox');
+    const bottomDurationLabel = document.getElementById('bottomDurationLabel');
+    const streamGenre = document.getElementById('streamGenre');
 
     if (isPlaylistPlaying) {
       // Add playlist-mode class to show the save button
@@ -4607,11 +4694,19 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       const currentIndex = detail.currentIndex || 0;
       currentPlaylistTrack = detail.queue[currentIndex];
 
-      // Update label and show track title in main position
-      if (controlsLabel) controlsLabel.textContent = 'PLAYLIST';
-      if (controlsDjName && currentPlaylistTrack) {
-        controlsDjName.textContent = currentPlaylistTrack.title || '--';
+      // Update label and show track title + selector
+      if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
+      if (npTrackTitle && currentPlaylistTrack) {
+        npTrackTitle.textContent = currentPlaylistTrack.title || '';
       }
+      if (controlsDjName && currentPlaylistTrack) {
+        controlsDjName.textContent = currentPlaylistTrack.addedByName || 'Auto-Play';
+      }
+
+      // Show duration box with "LEFT" label, hide genre
+      if (bottomDurationBox) bottomDurationBox.style.display = 'flex';
+      if (bottomDurationLabel) bottomDurationLabel.textContent = 'LEFT';
+      if (streamGenre) streamGenre.style.display = 'none';
 
       // Update button state - check if track is already in personal playlist
       if (nowPlayingSaveBtn && currentPlaylistTrack) {
@@ -4624,7 +4719,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       djInfoBar?.classList.remove('playlist-mode');
       currentPlaylistTrack = null;
       if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
+      if (npTrackTitle) npTrackTitle.textContent = '';
       if (controlsDjName) controlsDjName.textContent = '--';
+      if (bottomDurationBox) bottomDurationBox.style.display = 'none';
+      if (streamGenre) streamGenre.style.display = '';
     }
   });
 

@@ -837,60 +837,139 @@ function initShare() {
   const shareModal = document.getElementById('share-modal');
   if (!shareModal || shareModal.hasAttribute('data-share-init')) return;
   shareModal.setAttribute('data-share-init', 'true');
-  
+
   const shareModalClose = document.getElementById('share-modal-close');
   const shareModalBackdrop = document.getElementById('share-modal-backdrop');
   const shareUrlInput = document.getElementById('share-url-input');
   const copyUrlButton = document.getElementById('copy-url-button');
+  const copyBtnText = document.getElementById('copy-btn-text');
   const copyFeedback = document.getElementById('copy-feedback');
   const shareModalTitle = document.getElementById('share-modal-title');
   const shareModalArtist = document.getElementById('share-modal-artist');
-  
+  const shareModalArtwork = document.getElementById('share-modal-artwork');
+  const nativeShareBtn = document.getElementById('native-share-btn');
+
+  // Social share buttons
+  const shareTwitter = document.getElementById('share-twitter');
+  const shareFacebook = document.getElementById('share-facebook');
+  const shareWhatsapp = document.getElementById('share-whatsapp');
+  const shareTelegram = document.getElementById('share-telegram');
+  const shareReddit = document.getElementById('share-reddit');
+
+  // Store current share data for social buttons
+  window.currentShareData = null;
+
+  // Show native share button if supported
+  if (navigator.share) {
+    nativeShareBtn?.classList.remove('hidden');
+    nativeShareBtn?.classList.add('flex');
+  }
+
   document.querySelectorAll('.share-button').forEach(button => {
     if (button.hasAttribute('data-share-btn-init')) return;
     button.setAttribute('data-share-btn-init', 'true');
-    
+
     button.addEventListener('click', () => {
       const releaseId = button.getAttribute('data-release-id');
       const title = button.getAttribute('data-title');
       const artist = button.getAttribute('data-artist');
+      const artwork = button.getAttribute('data-artwork') || '/place-holder.webp';
       const url = `${window.location.origin}/item/${releaseId}`;
-      
+
+      // Store share data
+      window.currentShareData = { url, title, artist, artwork };
+
       if (shareModalTitle) shareModalTitle.textContent = title || '';
       if (shareModalArtist) shareModalArtist.textContent = artist || '';
+      if (shareModalArtwork) shareModalArtwork.src = artwork;
       if (shareUrlInput) shareUrlInput.value = url;
-      if (copyFeedback) copyFeedback.textContent = '';
-      
+      if (copyFeedback) copyFeedback.classList.add('hidden');
+      if (copyBtnText) copyBtnText.textContent = 'Copy';
+
+      // Lock body scroll
+      document.body.style.overflow = 'hidden';
       shareModal?.classList.remove('hidden');
     });
   });
-  
+
   const closeModal = () => {
+    document.body.style.overflow = '';
     shareModal?.classList.add('hidden');
   };
-  
+
   shareModalClose?.addEventListener('click', closeModal);
   shareModalBackdrop?.addEventListener('click', closeModal);
-  
+
+  // Copy button
   copyUrlButton?.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(shareUrlInput.value);
-      if (copyFeedback) {
-        copyFeedback.textContent = '✓ Link copied!';
-        copyFeedback.style.color = '#16a34a';
-      }
-      
+      if (copyBtnText) copyBtnText.textContent = 'Copied!';
+      if (copyFeedback) copyFeedback.classList.remove('hidden');
+
       setTimeout(() => {
-        if (copyFeedback) copyFeedback.textContent = '';
+        if (copyBtnText) copyBtnText.textContent = 'Copy';
+        if (copyFeedback) copyFeedback.classList.add('hidden');
       }, 3000);
     } catch (error) {
-      if (copyFeedback) {
-        copyFeedback.textContent = '✗ Failed to copy';
-        copyFeedback.style.color = '#dc2626';
-      }
+      if (copyBtnText) copyBtnText.textContent = 'Failed';
+      setTimeout(() => {
+        if (copyBtnText) copyBtnText.textContent = 'Copy';
+      }, 2000);
     }
   });
-  
+
+  // Native share
+  nativeShareBtn?.addEventListener('click', async () => {
+    if (!window.currentShareData) return;
+    const { url, title, artist } = window.currentShareData;
+    try {
+      await navigator.share({
+        title: `${title} by ${artist}`,
+        text: `Check out "${title}" by ${artist} on Fresh Wax!`,
+        url: url
+      });
+    } catch (err) {
+      // User cancelled or share failed silently
+    }
+  });
+
+  // Social share buttons
+  shareTwitter?.addEventListener('click', () => {
+    if (!window.currentShareData) return;
+    const { url, title, artist } = window.currentShareData;
+    const text = `Check out "${title}" by ${artist} on Fresh Wax! 🎵`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank', 'width=550,height=420');
+  });
+
+  shareFacebook?.addEventListener('click', () => {
+    if (!window.currentShareData) return;
+    const { url } = window.currentShareData;
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank', 'width=550,height=420');
+  });
+
+  shareWhatsapp?.addEventListener('click', () => {
+    if (!window.currentShareData) return;
+    const { url, title, artist } = window.currentShareData;
+    const text = `Check out "${title}" by ${artist} on Fresh Wax! 🎵 ${url}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  });
+
+  shareTelegram?.addEventListener('click', () => {
+    if (!window.currentShareData) return;
+    const { url, title, artist } = window.currentShareData;
+    const text = `Check out "${title}" by ${artist} on Fresh Wax! 🎵`;
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank');
+  });
+
+  shareReddit?.addEventListener('click', () => {
+    if (!window.currentShareData) return;
+    const { url, title, artist } = window.currentShareData;
+    const redditTitle = `${title} by ${artist}`;
+    window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(redditTitle)}`, '_blank');
+  });
+
+  // Escape key closes modal
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && shareModal && !shareModal.classList.contains('hidden')) {
       closeModal();
