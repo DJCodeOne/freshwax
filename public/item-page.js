@@ -974,21 +974,21 @@ async function loadSuggestions() {
         const matchLabel = release.matchType || '';
         
         return `
-          <a href="/item/${release.id}" class="suggestion-card flex-shrink-0 w-36 md:w-44 block bg-gray-800 rounded-lg overflow-hidden hover:bg-gray-700 transition-all border-2 border-gray-700 hover:border-red-600 snap-start">
-            <div class="relative">
-              <img 
-                src="${release.coverArtUrl || '/logo.webp'}" 
+          <a href="/item/${release.id}" class="suggestion-card" style="display: block; flex-shrink: 0; width: 144px; background: #1f2937; border-radius: 8px; overflow: hidden; border: 2px solid #374151; scroll-snap-align: start; text-decoration: none;">
+            <div style="position: relative;">
+              <img
+                src="${release.coverArtUrl || '/logo.webp'}"
                 alt="${release.releaseName}"
-                class="w-full aspect-square object-cover"
+                style="width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block;"
                 loading="lazy"
                 onerror="this.src='/logo.webp'"
               />
-              ${matchLabel ? `<span class="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">${matchLabel}</span>` : ''}
+              ${matchLabel ? `<span style="position: absolute; top: 8px; left: 8px; background: #dc2626; color: white; font-size: 12px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">${matchLabel}</span>` : ''}
             </div>
-            <div class="p-3">
-              <p class="font-bold text-white text-sm truncate" title="${release.releaseName || 'Untitled'}">${release.releaseName || 'Untitled'}</p>
-              <p class="text-gray-400 text-xs truncate" title="${release.artistName || 'Unknown Artist'}">${release.artistName || 'Unknown Artist'}</p>
-              <p class="text-red-500 font-bold text-sm mt-1">£${price.toFixed(2)}</p>
+            <div style="padding: 12px;">
+              <p style="font-weight: 700; color: white; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0;" title="${release.releaseName || 'Untitled'}">${release.releaseName || 'Untitled'}</p>
+              <p style="color: #9ca3af; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 4px 0 0 0;" title="${release.artistName || 'Unknown Artist'}">${release.artistName || 'Unknown Artist'}</p>
+              <p style="color: #ef4444; font-weight: 700; font-size: 14px; margin: 4px 0 0 0;">£${price.toFixed(2)}</p>
             </div>
           </a>
         `;
@@ -1044,8 +1044,8 @@ async function checkUserPurchasePermission() {
     const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
     const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
     
-    const firebaseConfig = {
-      apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+    const firebaseConfig = window.FIREBASE_CONFIG || {
+      apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
       authDomain: "freshwax-store.firebaseapp.com",
       projectId: "freshwax-store",
       storageBucket: "freshwax-store.firebasestorage.app",

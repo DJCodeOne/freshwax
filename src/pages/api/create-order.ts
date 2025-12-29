@@ -497,6 +497,112 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
+    // Send notification emails to artists for digital sales (tracks/releases)
+    const digitalItems = order.items.filter((item: any) => item.type === 'track' || item.type === 'digital' || item.type === 'release');
+    if (digitalItems.length > 0) {
+      try {
+        const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
+
+        // Group items by artist email
+        const itemsByArtist: { [email: string]: any[] } = {};
+        for (const item of digitalItems) {
+          const artistEmail = item.artistEmail;
+          if (artistEmail) {
+            if (!itemsByArtist[artistEmail]) {
+              itemsByArtist[artistEmail] = [];
+            }
+            itemsByArtist[artistEmail].push(item);
+          }
+        }
+
+        // Send email to each artist
+        for (const [artistEmail, items] of Object.entries(itemsByArtist)) {
+          if (RESEND_API_KEY && artistEmail) {
+            log.info('[create-order] Sending digital sale email to artist:', artistEmail);
+
+            const digitalHtml = buildDigitalSaleEmail(orderNumber, order, items);
+
+            const digitalResponse = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer ' + RESEND_API_KEY,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                from: 'Fresh Wax <orders@freshwax.co.uk>',
+                to: [artistEmail],
+                bcc: ['davidhagon@gmail.com'],
+                subject: '🎵 Digital Sale! ' + orderNumber,
+                html: digitalHtml
+              })
+            });
+
+            if (digitalResponse.ok) {
+              log.info('[create-order] ✓ Digital sale email sent to:', artistEmail);
+            } else {
+              const error = await digitalResponse.text();
+              console.error('[create-order] ❌ Digital sale email failed:', error);
+            }
+          }
+        }
+      } catch (digitalError) {
+        console.error('[create-order] Digital sale email error:', digitalError);
+      }
+    }
+
+    // Send notification emails to merch sellers
+    const merchItems = order.items.filter((item: any) => item.type === 'merch');
+    if (merchItems.length > 0) {
+      try {
+        const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
+
+        // Group items by seller email (use stockistEmail or artistEmail)
+        const itemsBySeller: { [email: string]: any[] } = {};
+        for (const item of merchItems) {
+          const sellerEmail = item.stockistEmail || item.artistEmail || item.sellerEmail;
+          if (sellerEmail) {
+            if (!itemsBySeller[sellerEmail]) {
+              itemsBySeller[sellerEmail] = [];
+            }
+            itemsBySeller[sellerEmail].push(item);
+          }
+        }
+
+        // Send email to each seller
+        for (const [sellerEmail, items] of Object.entries(itemsBySeller)) {
+          if (RESEND_API_KEY && sellerEmail) {
+            log.info('[create-order] Sending merch sale email to seller:', sellerEmail);
+
+            const merchHtml = buildMerchSaleEmail(orderNumber, order, items);
+
+            const merchResponse = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': 'Bearer ' + RESEND_API_KEY,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                from: 'Fresh Wax Orders <orders@freshwax.co.uk>',
+                to: [sellerEmail],
+                bcc: ['davidhagon@gmail.com'],
+                subject: '👕 Merch Order! ' + orderNumber,
+                html: merchHtml
+              })
+            });
+
+            if (merchResponse.ok) {
+              log.info('[create-order] ✓ Merch sale email sent to:', sellerEmail);
+            } else {
+              const error = await merchResponse.text();
+              console.error('[create-order] ❌ Merch sale email failed:', error);
+            }
+          }
+        }
+      } catch (merchError) {
+        console.error('[create-order] Merch sale email error:', merchError);
+      }
+    }
+
     // Update customer's order count if they have an account
     if (orderData.customer.userId) {
       try {
@@ -596,6 +702,7 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
 
     // Header with logo and brand - BLACK background
     '<tr><td style="background: #000000; padding: 32px 24px; border-radius: 12px 12px 0 0; text-align: center;">' +
+    '<img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" width="60" height="60" style="display: block; margin: 0 auto 12px; border-radius: 8px;">' +
     '<div style="font-size: 28px; font-weight: 800; letter-spacing: 1px;"><span style="color: #ffffff;">FRESH</span> <span style="color: #dc2626;">WAX</span></div>' +
     '<div style="font-size: 12px; color: #9ca3af; margin-top: 4px; letter-spacing: 2px;">JUNGLE • DRUM AND BASS</div>' +
     '</td></tr>' +
@@ -635,6 +742,7 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
     '<tr><td style="color: #6b7280; padding: 8px 0; font-size: 14px;">Subtotal</td><td style="color: #111; text-align: right; padding: 8px 0; font-size: 14px;">£' + order.totals.subtotal.toFixed(2) + '</td></tr>' +
     '<tr><td style="color: #6b7280; padding: 8px 0; font-size: 14px;">Shipping</td><td style="color: #111; text-align: right; padding: 8px 0; font-size: 14px;">' +
     (order.hasPhysicalItems ? (order.totals.shipping === 0 ? 'FREE' : '£' + order.totals.shipping.toFixed(2)) : 'Digital delivery') + '</td></tr>' +
+    (order.totals.serviceFees ? '<tr><td style="color: #9ca3af; padding: 8px 0; font-size: 13px;">Service Fee</td><td style="color: #9ca3af; text-align: right; padding: 8px 0; font-size: 13px;">£' + order.totals.serviceFees.toFixed(2) + '</td></tr>' : '') +
     '<tr><td colspan="2" style="border-top: 2px solid #dc2626; padding-top: 12px;"></td></tr>' +
     '<tr><td style="color: #111; font-weight: 700; font-size: 16px; padding: 4px 0;">Total</td>' +
     '<td style="color: #dc2626; font-weight: 700; font-size: 20px; text-align: right; padding: 4px 0;">£' + order.totals.total.toFixed(2) + '</td></tr>' +
@@ -686,6 +794,44 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
   // Calculate vinyl total
   const vinylTotal = vinylItems.reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0);
 
+  // Payment status display
+  const isTestMode = order.paymentMethod === 'test_mode';
+  const paymentStatusColor = order.paymentStatus === 'completed' ? '#16a34a' : '#f59e0b';
+  const paymentStatusText = order.paymentStatus === 'completed' ? 'PAID' : 'PENDING';
+  const paymentMethodText = isTestMode ? 'Test Mode' : (order.paymentMethod === 'stripe' ? 'Stripe' : order.paymentMethod || 'Card');
+
+  // Payment breakdown - fees are added on top, so artist gets their full asking price (subtotal)
+  const artistPayment = order.totals.subtotal; // Artist gets their asking price
+  const stripeFee = order.totals.stripeFee || 0;
+  const freshWaxFee = order.totals.freshWaxFee || 0;
+  const customerPaid = order.totals.total;
+
+  // Payment confirmation section with breakdown
+  const paymentSection = '<tr><td style="padding-bottom: 24px;">' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: ' + (order.paymentStatus === 'completed' ? '#dcfce7' : '#fef3c7') + '; border: 2px solid ' + paymentStatusColor + '; border-radius: 8px;">' +
+    '<tr><td style="padding: 16px;">' +
+    '<div style="font-weight: 700; font-size: 12px; color: ' + paymentStatusColor + '; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">💳 Payment Confirmation</div>' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
+    '<tr><td style="padding: 4px 0; color: #666; font-size: 13px;">Status:</td><td style="padding: 4px 0; font-weight: 700; color: ' + paymentStatusColor + '; font-size: 13px;">' + paymentStatusText + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #666; font-size: 13px;">Method:</td><td style="padding: 4px 0; font-weight: 600; color: #111; font-size: 13px;">' + paymentMethodText + '</td></tr>' +
+    (order.stripePaymentId ? '<tr><td style="padding: 4px 0; color: #666; font-size: 13px;">Transaction ID:</td><td style="padding: 4px 0; font-family: monospace; color: #111; font-size: 12px;">' + order.stripePaymentId + '</td></tr>' : '') +
+    '</table>' +
+
+    // Payment breakdown - shows that artist gets their full asking price
+    '<div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid ' + paymentStatusColor + ';">' +
+    '<div style="font-weight: 700; font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Payment Breakdown</div>' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
+    '<tr><td style="padding: 4px 0; color: #111; font-size: 14px; font-weight: 700;">Your Payment:</td><td style="padding: 4px 0; text-align: right; color: #16a34a; font-size: 14px; font-weight: 700;">£' + artistPayment.toFixed(2) + '</td></tr>' +
+    '<tr><td colspan="2" style="padding: 4px 0 4px 0; border-top: 1px dashed #ccc;"></td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #9ca3af; font-size: 12px;">Stripe Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #9ca3af; font-size: 12px;">£' + stripeFee.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #9ca3af; font-size: 12px;">Fresh Wax 1% (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #9ca3af; font-size: 12px;">£' + freshWaxFee.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #666; font-size: 13px;">Customer Paid:</td><td style="padding: 4px 0; text-align: right; color: #111; font-size: 13px;">£' + customerPaid.toFixed(2) + '</td></tr>' +
+    '</table></div>' +
+
+    (isTestMode ? '<div style="margin-top: 12px; padding: 8px; background: #fef3c7; border-radius: 4px; font-size: 12px; color: #92400e;">⚠️ This is a test order - no real payment was processed</div>' : '') +
+    '</td></tr></table>' +
+    '</td></tr>';
+
   return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
     '<body style="margin: 0; padding: 0; background: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #f3f4f6;"><tr><td align="center" style="padding: 40px 20px;">' +
@@ -700,6 +846,9 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
     // Main content
     '<tr><td style="background: #ffffff; padding: 32px; border-radius: 0 0 12px 12px;">' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
+
+    // Payment confirmation - NEW SECTION
+    paymentSection +
 
     // Order info box
     '<tr><td style="padding-bottom: 24px;">' +
@@ -762,6 +911,219 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
     // Footer
     '<tr><td align="center" style="padding: 24px 0;">' +
     '<div style="color: #6b7280; font-size: 13px;">This is an automated fulfillment request from Fresh Wax</div>' +
+    '<div style="margin-top: 8px;"><a href="https://freshwax.co.uk" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>' +
+    '</td></tr>' +
+
+    '</table></td></tr></table></body></html>';
+}
+
+// Build artist notification email for digital sales (tracks/releases)
+function buildDigitalSaleEmail(orderNumber: string, order: any, digitalItems: any[]): string {
+  const digitalTotal = digitalItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+
+  // Calculate fees - use passed values or calculate from subtotal
+  const subtotal = order.totals?.subtotal || digitalTotal;
+  const freshWaxFee = order.totals?.freshWaxFee || (subtotal * 0.01);
+  const baseAmount = subtotal + (order.totals?.shipping || 0) + freshWaxFee;
+  const stripeFee = order.totals?.stripeFee || (((baseAmount * 0.014) + 0.20) / 0.986);
+  const customerPaid = order.totals?.total || (subtotal + freshWaxFee + stripeFee);
+
+  let itemsHtml = '';
+  for (const item of digitalItems) {
+    const typeLabel = item.type === 'track' ? 'Single Track' : 'Digital Release';
+    itemsHtml += '<tr>' +
+      '<td style="padding: 12px; border-bottom: 1px solid #374151; color: #fff;">' + item.name + '<br><span style="font-size: 12px; color: #9ca3af;">' + typeLabel + '</span></td>' +
+      '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: center; color: #fff;">' + item.quantity + '</td>' +
+      '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: right; font-weight: 600; color: #fff;">£' + (item.price * item.quantity).toFixed(2) + '</td>' +
+      '</tr>';
+  }
+
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
+    '<body style="margin: 0; padding: 0; background: #000; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #000;"><tr><td align="center" style="padding: 40px 20px;">' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px;">' +
+
+    // Header - Fresh Wax branding
+    '<tr><td style="background: #fff; padding: 32px 24px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #dc2626; border-bottom: none;">' +
+    '<img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" width="50" height="50" style="display: block; margin: 0 auto 12px; border-radius: 6px;">' +
+    '<div style="font-size: 28px; font-weight: 800; letter-spacing: 1px;"><span style="color: #000;">FRESH</span> <span style="color: #dc2626;">WAX</span></div>' +
+    '<div style="font-size: 12px; color: #666; margin-top: 4px; letter-spacing: 2px;">JUNGLE • DRUM AND BASS</div>' +
+    '</td></tr>' +
+
+    // Sale notification header
+    '<tr><td style="background: #dc2626; padding: 20px 24px; text-align: center; border-left: 2px solid #dc2626; border-right: 2px solid #dc2626;">' +
+    '<div style="font-size: 22px; font-weight: 800; color: #fff; letter-spacing: 1px;">🎵 DIGITAL SALE!</div>' +
+    '<div style="font-size: 14px; color: rgba(255,255,255,0.9); margin-top: 6px;">Order ' + orderNumber + '</div>' +
+    '</td></tr>' +
+
+    // Content
+    '<tr><td style="background: #111; padding: 24px; border-left: 2px solid #dc2626; border-right: 2px solid #dc2626; border-bottom: 2px solid #dc2626; border-radius: 0 0 12px 12px;">' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
+
+    // Success message
+    '<tr><td style="padding-bottom: 20px; text-align: center;">' +
+    '<div style="font-size: 18px; font-weight: 700; color: #16a34a;">Someone bought your music!</div>' +
+    '<div style="font-size: 14px; color: #9ca3af; margin-top: 4px;">Customer: ' + order.customer.firstName + ' ' + order.customer.lastName + '</div>' +
+    '</td></tr>' +
+
+    // Items table
+    '<tr><td>' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #374151; border-radius: 8px; overflow: hidden; background: #1f2937;">' +
+    '<tr style="background: #374151;">' +
+    '<th style="padding: 12px; text-align: left; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Item</th>' +
+    '<th style="padding: 12px; text-align: center; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Qty</th>' +
+    '<th style="padding: 12px; text-align: right; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Price</th>' +
+    '</tr>' +
+    itemsHtml +
+    '<tr style="background: #dc2626;">' +
+    '<td colspan="2" style="padding: 12px; color: #fff; font-weight: 700;">Your Earnings</td>' +
+    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">£' + digitalTotal.toFixed(2) + '</td>' +
+    '</tr>' +
+    '</table>' +
+    '</td></tr>' +
+
+    // Payment breakdown
+    '<tr><td style="padding-top: 20px;">' +
+    '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
+    '<div style="font-weight: 700; font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Payment Breakdown</div>' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
+    '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Your Payment:</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">£' + digitalTotal.toFixed(2) + '</td></tr>' +
+    '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Processing Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + stripeFee.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Tax (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + freshWaxFee.toFixed(2) + '</td></tr>' +
+    '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
+    '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">£' + customerPaid.toFixed(2) + '</td></tr>' +
+    '</table>' +
+    '</div>' +
+    '</td></tr>' +
+
+    '</table></td></tr>' +
+
+    // Footer
+    '<tr><td align="center" style="padding: 24px 0;">' +
+    '<div style="color: #6b7280; font-size: 13px;">Automated notification from Fresh Wax</div>' +
+    '<div style="margin-top: 8px;"><a href="https://freshwax.co.uk" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>' +
+    '</td></tr>' +
+
+    '</table></td></tr></table></body></html>';
+}
+
+// Build merch seller notification email
+function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[]): string {
+  const merchTotal = merchItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+
+  // Calculate fees - use passed values or calculate from subtotal
+  const subtotal = order.totals?.subtotal || merchTotal;
+  const freshWaxFee = order.totals?.freshWaxFee || (subtotal * 0.01);
+  const baseAmount = subtotal + (order.totals?.shipping || 0) + freshWaxFee;
+  const stripeFee = order.totals?.stripeFee || (((baseAmount * 0.014) + 0.20) / 0.986);
+  const customerPaid = order.totals?.total || (subtotal + freshWaxFee + stripeFee);
+
+  let itemsHtml = '';
+  for (const item of merchItems) {
+    const details = [item.size ? 'Size: ' + item.size : '', item.color || ''].filter(Boolean).join(' • ');
+    itemsHtml += '<tr>' +
+      '<td style="padding: 12px; border-bottom: 1px solid #374151; color: #fff;">' +
+      (item.image ? '<img src="' + item.image + '" width="50" height="50" style="border-radius: 4px; margin-right: 10px; vertical-align: middle;">' : '') +
+      item.name + (details ? '<br><span style="font-size: 12px; color: #9ca3af;">' + details + '</span>' : '') + '</td>' +
+      '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: center; color: #fff;">' + item.quantity + '</td>' +
+      '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: right; font-weight: 600; color: #fff;">£' + (item.price * item.quantity).toFixed(2) + '</td>' +
+      '</tr>';
+  }
+
+  // Shipping address
+  const shippingHtml = order.shipping ?
+    '<tr><td style="padding-top: 20px;">' +
+    '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
+    '<div style="font-weight: 700; color: #9ca3af; margin-bottom: 8px; font-size: 12px; text-transform: uppercase;">Ship To</div>' +
+    '<div style="color: #fff; line-height: 1.5; font-size: 14px;">' +
+    order.customer.firstName + ' ' + order.customer.lastName + '<br>' +
+    order.shipping.address1 + '<br>' +
+    (order.shipping.address2 ? order.shipping.address2 + '<br>' : '') +
+    order.shipping.city + ', ' + order.shipping.postcode + '<br>' +
+    order.shipping.country +
+    '</div></div></td></tr>' : '';
+
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
+    '<body style="margin: 0; padding: 0; background: #000; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #000;"><tr><td align="center" style="padding: 40px 20px;">' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px;">' +
+
+    // Header - Fresh Wax branding
+    '<tr><td style="background: #fff; padding: 32px 24px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #dc2626; border-bottom: none;">' +
+    '<img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" width="50" height="50" style="display: block; margin: 0 auto 12px; border-radius: 6px;">' +
+    '<div style="font-size: 28px; font-weight: 800; letter-spacing: 1px;"><span style="color: #000;">FRESH</span> <span style="color: #dc2626;">WAX</span></div>' +
+    '<div style="font-size: 12px; color: #666; margin-top: 4px; letter-spacing: 2px;">JUNGLE • DRUM AND BASS</div>' +
+    '</td></tr>' +
+
+    // Sale notification header
+    '<tr><td style="background: #dc2626; padding: 20px 24px; text-align: center; border-left: 2px solid #dc2626; border-right: 2px solid #dc2626;">' +
+    '<div style="font-size: 22px; font-weight: 800; color: #fff; letter-spacing: 1px;">👕 MERCH ORDER!</div>' +
+    '<div style="font-size: 14px; color: rgba(255,255,255,0.9); margin-top: 6px;">Order ' + orderNumber + '</div>' +
+    '</td></tr>' +
+
+    // Content
+    '<tr><td style="background: #111; padding: 24px; border-left: 2px solid #dc2626; border-right: 2px solid #dc2626; border-bottom: 2px solid #dc2626; border-radius: 0 0 12px 12px;">' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
+
+    // Success message
+    '<tr><td style="padding-bottom: 20px; text-align: center;">' +
+    '<div style="font-size: 18px; font-weight: 700; color: #16a34a;">Someone bought your merch!</div>' +
+    '<div style="font-size: 14px; color: #9ca3af; margin-top: 4px;">Customer: ' + order.customer.firstName + ' ' + order.customer.lastName + '</div>' +
+    '</td></tr>' +
+
+    // Items table
+    '<tr><td>' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #374151; border-radius: 8px; overflow: hidden; background: #1f2937;">' +
+    '<tr style="background: #374151;">' +
+    '<th style="padding: 12px; text-align: left; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Item</th>' +
+    '<th style="padding: 12px; text-align: center; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Qty</th>' +
+    '<th style="padding: 12px; text-align: right; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Price</th>' +
+    '</tr>' +
+    itemsHtml +
+    '<tr style="background: #dc2626;">' +
+    '<td colspan="2" style="padding: 12px; color: #fff; font-weight: 700;">Your Earnings</td>' +
+    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">£' + merchTotal.toFixed(2) + '</td>' +
+    '</tr>' +
+    '</table>' +
+    '</td></tr>' +
+
+    // Shipping address
+    shippingHtml +
+
+    // Payment breakdown
+    '<tr><td style="padding-top: 20px;">' +
+    '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
+    '<div style="font-weight: 700; font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Payment Breakdown</div>' +
+    '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
+    '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Your Payment:</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">£' + merchTotal.toFixed(2) + '</td></tr>' +
+    '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Processing Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + stripeFee.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Tax (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + freshWaxFee.toFixed(2) + '</td></tr>' +
+    '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
+    '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">£' + customerPaid.toFixed(2) + '</td></tr>' +
+    '</table>' +
+    '</div>' +
+    '</td></tr>' +
+
+    // Action required
+    '<tr><td style="padding-top: 20px;">' +
+    '<div style="padding: 16px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0 8px 8px 0;">' +
+    '<div style="font-weight: 700; color: #92400e; margin-bottom: 4px;">⚠️ Action Required</div>' +
+    '<div style="font-size: 14px; color: #78350f; line-height: 1.5;">Please package and dispatch this order. Once shipped, send tracking info to <a href="mailto:orders@freshwax.co.uk" style="color: #92400e;">orders@freshwax.co.uk</a></div>' +
+    '</div>' +
+    '</td></tr>' +
+
+    // Customer email
+    '<tr><td style="padding-top: 16px;">' +
+    '<div style="font-size: 12px; color: #9ca3af;">Customer email: <strong style="color: #fff;">' + order.customer.email + '</strong></div>' +
+    '</td></tr>' +
+
+    '</table></td></tr>' +
+
+    // Footer
+    '<tr><td align="center" style="padding: 24px 0;">' +
+    '<div style="color: #6b7280; font-size: 13px;">Automated notification from Fresh Wax</div>' +
     '<div style="margin-top: 8px;"><a href="https://freshwax.co.uk" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>' +
     '</td></tr>' +
 

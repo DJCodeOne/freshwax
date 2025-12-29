@@ -1455,7 +1455,7 @@ export const prerender = false;
     const allDownloads = [];
     (ordersList || []).forEach(order => {
       (order.items || []).forEach(item => {
-        if (item.downloads?.tracks?.length > 0 || item.type === 'digital' || item.type === 'release' || item.type === 'track') {
+        if (item.downloads?.tracks?.length > 0 || item.type === 'digital' || item.type === 'release' || item.type === 'track' || item.type === 'vinyl') {
           allDownloads.push({
             ...item,
             orderNumber: order.orderNumber,

@@ -35,10 +35,11 @@ service cloud.firestore {
                       // Allow bypass field updates from REST API (API has its own key protection)
                       request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['go-liveBypassed', 'bypassedAt', 'bypassedBy', 'quickAccessCode', 'bypassRevokedAt']) ||
-                      // Allow role/pending updates from REST API (affectedKeys returns top-level keys only)
-                      // API has its own admin key protection
+                      // Allow admin API updates (affectedKeys returns top-level keys only)
+                      // API has its own admin UID protection
                       request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['roles', 'pendingRoles', 'displayName', 'approved', 'updatedAt']);
+                        .hasOnly(['roles', 'pendingRoles', 'displayName', 'approved', 'updatedAt',
+                                  'isAdmin', 'permissions', 'suspended', 'approvedAt']);
       allow delete: if isAdmin();
     }
 
@@ -74,9 +75,11 @@ service cloud.firestore {
       allow create: if (isAuthenticated() && request.auth.uid == customerId) ||
                       request.resource.data.wishlist != null;
       allow update: if isAdmin() || isOwner(customerId) ||
-                      // Allow role updates from REST API (API has admin key protection)
+                      // Allow admin API updates (API has admin UID protection)
                       request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['roles', 'isArtist', 'isMerchSupplier', 'approved', 'updatedAt']) ||
+                        .hasOnly(['roles', 'isArtist', 'isMerchSupplier', 'isDJ', 'isAdmin',
+                                  'displayName', 'name', 'fullName', 'email', 'phone', 'address',
+                                  'permissions', 'approved', 'suspended', 'adminNotes', 'updatedAt']) ||
                       // Allow wishlist updates from REST API
                       request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['wishlist', 'wishlistUpdatedAt']) ||
@@ -90,7 +93,8 @@ service cloud.firestore {
     // Note: Public read allowed for admin API (API validates admin status via uid param)
     match /orders/{orderId} {
       allow read: if true;
-      allow create: if isAuthenticated();
+      // Allow authenticated users OR test orders from API (API validates on server-side)
+      allow create: if isAuthenticated() || request.resource.data.paymentMethod == 'test_mode';
       allow update, delete: if isAdmin();
     }
 
@@ -137,10 +141,10 @@ service cloud.firestore {
                       // Allow server-side release processing (from process-release API)
                       (request.resource.data.submissionId != null && request.resource.data.status == 'pending');
       allow update: if isAdmin() ||
-                      // Allow stat updates from REST API
+                      // Allow stat updates, comments, ratings, and approval status changes from REST API
                       request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['plays', 'downloads', 'views', 'likes', 'ratings', 'updatedAt',
-                                  'status', 'published', 'approved', 'adminNotes']);
+                        .hasOnly(['plays', 'downloads', 'views', 'likes', 'ratings', 'overallRating', 'comments', 'updatedAt',
+                                  'status', 'published', 'approved', 'approvedAt', 'rejectedAt', 'adminNotes']);
       allow delete: if isAdmin();
     }
 

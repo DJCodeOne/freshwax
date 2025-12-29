@@ -884,15 +884,8 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   }
 
   .suggestion-card {
-    min-width: 160px;
     flex-shrink: 0;
     scroll-snap-align: start;
-  }
-
-  @media (min-width: 768px) {
-    .suggestion-card {
-      min-width: 200px;
-    }
   }
 
   #comments-list::-webkit-scrollbar {
@@ -1465,16 +1458,17 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       closeGiphyModal();
       return;
     }
-    
+
+    const { commentUsername, submitCommentBtn } = getCommentElements();
     const userName = currentUserName || commentUsername?.value?.trim();
     if (!userName) {
       alert('Please login to post GIFs');
       closeGiphyModal();
       return;
     }
-    
+
     closeGiphyModal();
-    
+
     // Show posting indicator
     if (submitCommentBtn) {
       submitCommentBtn.disabled = true;
@@ -1523,9 +1517,10 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       console.error('[Comments] GIF post error:', error);
       alert('Failed to post GIF. Please try again.');
     }).finally(function() {
-      if (submitCommentBtn) {
-        submitCommentBtn.disabled = false;
-        submitCommentBtn.textContent = 'Post Comment';
+      const { submitCommentBtn: btn } = getCommentElements();
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Post Comment';
       }
     });
   }
@@ -1863,4 +1858,4 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   };
 </script>
 
-<script type="module" src="/item-page.js"></script>
+<script type="module" src="/item-page.js?v=20251228b"></script>
