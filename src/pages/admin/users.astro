@@ -621,7 +621,27 @@ export const prerender = false;
 
           const isBeingUpgraded = updates.roles.artist || updates.roles.merchSupplier;
           if (isBeingUpgraded) {
-            showToast('User upgraded to Partner!', 'success');
+            // Send approval confirmation email
+            const emailType = updates.roles.artist && updates.roles.merchSupplier ? 'both' :
+                              updates.roles.artist ? 'artist' : 'merch';
+            try {
+              await fetch('/api/admin/send-approval-email', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-admin-uid': currentAdminUid
+                },
+                body: JSON.stringify({
+                  email: updates.email,
+                  name: updates.displayName,
+                  type: emailType
+                })
+              });
+              showToast('User upgraded to Partner! Confirmation email sent.', 'success');
+            } catch (emailErr) {
+              console.error('Failed to send confirmation email:', emailErr);
+              showToast('User upgraded to Partner! (Email failed)', 'success');
+            }
           } else {
             showToast('User updated successfully', 'success');
           }

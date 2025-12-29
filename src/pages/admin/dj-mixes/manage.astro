@@ -5,6 +5,10 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../../lib/firebase-rest';
 
+// Get admin key for API calls
+const runtime = (Astro.locals as any)?.runtime;
+const ADMIN_KEY = runtime?.env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+
 // Fetch all DJ mixes via REST API
 const allMixes = await queryCollection('dj-mixes', {
   orderBy: { field: 'uploadedAt', direction: 'DESCENDING' }
@@ -236,7 +240,7 @@ export const prerender = false;
   </div>
 
   <Fragment slot="scripts">
-    <script is:inline>
+    <script define:vars={{ ADMIN_KEY }}>
       // Filter functionality
       const filterTabs = document.querySelectorAll('.filter-tab');
       const searchInput = document.getElementById('searchInput');
@@ -282,7 +286,7 @@ export const prerender = false;
             const response = await fetch('/api/admin/toggle-mix-publish', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ mixId: id, published: newStatus })
+              body: JSON.stringify({ mixId: id, published: newStatus, adminKey: ADMIN_KEY })
             });
             
             if (!response.ok) throw new Error('Failed to update');
@@ -352,10 +356,13 @@ export const prerender = false;
           const response = await fetch('/api/admin/delete-mix', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mixId: id })
+            body: JSON.stringify({ mixId: id, adminKey: ADMIN_KEY })
           });
 
-          if (!response.ok) throw new Error('Failed to delete');
+          const result = await response.json();
+          console.log('[delete-mix] Response:', response.status, result);
+
+          if (!response.ok) throw new Error(result.details || result.error || 'Failed to delete');
 
           const row = btn.closest('tr');
           row.style.opacity = '0';

@@ -3,7 +3,7 @@
 // Uses soft-delete approach (sets deleted flag) since Firestore rules block hard deletes
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv, invalidateUsersCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -35,9 +35,9 @@ async function isAdmin(uid: string): Promise<boolean> {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Rate limit: destructive operations - 3 per hour
+  // Rate limit: admin delete operations - 20 per hour
   const clientId = getClientId(request);
-  const rateLimit = checkRateLimit(`delete-user:${clientId}`, RateLimiters.destructive);
+  const rateLimit = checkRateLimit(`delete-user:${clientId}`, RateLimiters.adminDelete);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
@@ -138,6 +138,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         error: 'User not found in any collection'
       }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
+
+    // Invalidate users cache so the list refreshes immediately
+    invalidateUsersCache();
 
     return new Response(JSON.stringify({
       success: true,

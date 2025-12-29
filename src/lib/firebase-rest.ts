@@ -613,6 +613,12 @@ export function invalidateMixesCache(): void {
   clearCache('dj-mixes');
 }
 
+export function invalidateUsersCache(): void {
+  clearCache('users');
+  clearCache('customers');
+  clearCache('artists');
+}
+
 export function getCacheStats(): { size: number; keys: string[] } {
   return {
     size: cache.size,

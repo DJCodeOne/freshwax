@@ -95,9 +95,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const usersMap = new Map<string, UserData>();
 
     // Load users collection (source of truth) and orders in parallel
+    // No cache for admin queries - need real-time data
     const [users, orders] = await Promise.all([
-      queryCollection('users', { limit: 500, cacheTime: 300000 }), // 5 min cache
-      queryCollection('orders', { limit: 500, cacheTime: 300000 })
+      queryCollection('users', { limit: 500, cacheTime: 0 }),
+      queryCollection('orders', { limit: 500, cacheTime: 60000 }) // 1 min cache for orders
     ]);
 
     // Process users collection - this is the SOURCE OF TRUTH

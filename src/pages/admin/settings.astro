@@ -21,6 +21,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     <div class="settings-tabs">
       <button class="tab-btn active" data-tab="artist-fields">Artist Field Permissions</button>
       <button class="tab-btn" data-tab="livestream">Livestream Settings</button>
+      <button class="tab-btn" data-tab="dj-mixes">DJ Mixes</button>
       <button class="tab-btn" data-tab="release-defaults">Release Defaults</button>
       <button class="tab-btn" data-tab="notifications">Notifications</button>
     </div>
@@ -275,6 +276,74 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
               <span class="toggle-label">Allow Stream Takeover</span>
             </label>
             <span class="form-hint">Let DJs request to take over a live stream</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DJ Mixes Tab -->
+    <div id="dj-mixes-tab" class="tab-content hidden">
+      <div class="card">
+        <div class="card-header">
+          <h2>🎧 DJ Mix Upload Settings</h2>
+          <p class="card-desc">Configure upload limits and conversion settings</p>
+        </div>
+        <div class="card-body">
+          <div class="settings-section">
+            <h3>📁 File Size Limits</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Max WAV File Size (MB)</label>
+                <input type="number" id="maxWavSizeMB" class="form-input" value="2048" min="100" max="10240" step="100" />
+                <span class="form-hint">Maximum WAV file size for browser conversion (default: 2048MB = 2GB)</span>
+              </div>
+              <div class="form-group">
+                <label>Max MP3 File Size (MB)</label>
+                <input type="number" id="maxMp3SizeMB" class="form-input" value="500" min="50" max="2048" step="50" />
+                <span class="form-hint">Maximum MP3 file size for uploads (default: 500MB)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>🔄 Conversion Settings</h3>
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="allowWavUploads" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Allow WAV Uploads</span>
+            </label>
+            <span class="form-hint">Enable WAV to MP3 conversion in browser</span>
+
+            <div class="form-group" style="margin-top: 1rem;">
+              <label>MP3 Bitrate (kbps)</label>
+              <select id="mp3Bitrate" class="form-select">
+                <option value="128">128 kbps (smaller files)</option>
+                <option value="192" selected>192 kbps (recommended)</option>
+                <option value="256">256 kbps (high quality)</option>
+                <option value="320">320 kbps (maximum quality)</option>
+              </select>
+              <span class="form-hint">Quality of converted MP3 files</span>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>📋 Upload Requirements</h3>
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="requireGenre" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Require Genre Selection</span>
+            </label>
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="requireDjName" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Require DJ Name</span>
+            </label>
+            <label class="toggle-row standalone">
+              <input type="checkbox" id="autoPublish" checked>
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">Auto-publish Mixes</span>
+            </label>
+            <span class="form-hint">Mixes go live immediately (disable to require approval)</span>
           </div>
         </div>
       </div>
@@ -590,12 +659,17 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     color: #333;
   }
 
-  .form-select {
+  .form-select,
+  .form-input {
     padding: 0.5rem;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 0.9rem;
     background: #fff;
+  }
+
+  .form-input {
+    width: 100%;
   }
 
   .form-hint {
@@ -711,6 +785,15 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       emailOnArtistEdit: false,
       emailOnBypassRequest: true,
       emailOnDJGoLive: false
+    },
+    djMixes: {
+      maxWavSizeMB: 2048,
+      maxMp3SizeMB: 500,
+      allowWavUploads: true,
+      mp3Bitrate: 192,
+      requireGenre: true,
+      requireDjName: true,
+      autoPublish: true
     }
   };
 
@@ -749,8 +832,11 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         if (result.settings.notifications) {
           currentSettings.notifications = { ...defaultSettings.notifications, ...result.settings.notifications };
         }
+        if (result.settings.djMixes) {
+          currentSettings.djMixes = { ...defaultSettings.djMixes, ...result.settings.djMixes };
+        }
       }
-      
+
       applySettingsToUI();
     } catch (error) {
       console.error('Failed to load settings:', error);
@@ -794,6 +880,18 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       const checkbox = document.getElementById(key);
       if (checkbox) checkbox.checked = value;
     });
+
+    // DJ Mixes settings
+    Object.entries(currentSettings.djMixes).forEach(([key, value]) => {
+      const el = document.getElementById(key);
+      if (el) {
+        if (el.type === 'checkbox') {
+          el.checked = value;
+        } else {
+          el.value = value;
+        }
+      }
+    });
   }
 
   function collectSettingsFromUI() {
@@ -834,7 +932,18 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       emailOnDJGoLive: document.getElementById('emailOnDJGoLive').checked
     };
 
-    return { artistEditableFields, livestream, releaseDefaults, notifications };
+    // DJ Mixes
+    const djMixes = {
+      maxWavSizeMB: parseInt(document.getElementById('maxWavSizeMB').value) || 2048,
+      maxMp3SizeMB: parseInt(document.getElementById('maxMp3SizeMB').value) || 500,
+      allowWavUploads: document.getElementById('allowWavUploads').checked,
+      mp3Bitrate: parseInt(document.getElementById('mp3Bitrate').value) || 192,
+      requireGenre: document.getElementById('requireGenre').checked,
+      requireDjName: document.getElementById('requireDjName').checked,
+      autoPublish: document.getElementById('autoPublish').checked
+    };
+
+    return { artistEditableFields, livestream, releaseDefaults, notifications, djMixes };
   }
 
   // Quick actions

@@ -22,7 +22,7 @@ function getR2Config(env: any) {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
     secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
+    bucketName: env?.R2_BUCKET_NAME || env?.R2_RELEASES_BUCKET || import.meta.env.R2_BUCKET_NAME || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
   };
 }
 
@@ -60,19 +60,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const s3Client = createS3Client(R2_CONFIG);
 
   try {
-    const { mixId, folderPath } = await request.json();
+    const { mixId, folderPath, userId } = await request.json();
 
     if (!mixId) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Mix ID is required' 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Mix ID is required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    log.info('[delete-mix] Deleting mix:', mixId);
+    if (!userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'User ID is required'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    log.info('[delete-mix] Deleting mix:', mixId, 'for user:', userId);
 
     const mixData = await getDocument('dj-mixes', mixId);
 
@@ -83,6 +93,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
         message: 'Mix not found (may already be deleted)'
       }), {
         status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Verify the user owns this mix
+    if (mixData.userId !== userId) {
+      log.error('[delete-mix] User', userId, 'does not own mix', mixId, '(owner:', mixData.userId + ')');
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You do not have permission to delete this mix'
+      }), {
+        status: 403,
         headers: { 'Content-Type': 'application/json' }
       });
     }

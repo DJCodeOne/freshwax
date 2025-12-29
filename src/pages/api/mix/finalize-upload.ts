@@ -52,6 +52,48 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // CRITICAL: Verify the audio file actually exists in R2 before saving metadata
+    // This prevents orphaned mix entries when uploads fail or are cancelled
+    try {
+      console.log(`[finalize-upload] Verifying audio file exists: ${audioUrl}`);
+      const verifyResponse = await fetch(audioUrl, { method: 'HEAD' });
+
+      if (!verifyResponse.ok) {
+        console.error(`[finalize-upload] Audio file not found: ${audioUrl} (status: ${verifyResponse.status})`);
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Audio file upload incomplete or failed. Please try uploading again.'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Also check file has content (not empty)
+      const contentLength = verifyResponse.headers.get('content-length');
+      if (!contentLength || parseInt(contentLength) < 1000) {
+        console.error(`[finalize-upload] Audio file too small or empty: ${contentLength} bytes`);
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Audio file appears to be empty or incomplete. Please try uploading again.'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      console.log(`[finalize-upload] Audio file verified: ${contentLength} bytes`);
+    } catch (verifyError) {
+      console.error(`[finalize-upload] Failed to verify audio file:`, verifyError);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Could not verify audio file. Please try uploading again.'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Get user's display name from profile
     let displayName = djName || 'Unknown DJ';
     if (userId) {

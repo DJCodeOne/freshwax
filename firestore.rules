@@ -39,7 +39,8 @@ service cloud.firestore {
                       // API has its own admin UID protection
                       request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['roles', 'pendingRoles', 'displayName', 'approved', 'updatedAt',
-                                  'isAdmin', 'permissions', 'suspended', 'approvedAt']);
+                                  'isAdmin', 'permissions', 'suspended', 'approvedAt',
+                                  'deleted', 'deletedAt', 'deletedBy']);
       allow delete: if isAdmin();
     }
 
@@ -63,7 +64,8 @@ service cloud.firestore {
                       // Allow role revocation from REST API (API has admin key protection)
                       request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['isArtist', 'isMerchSupplier', 'revokedAt', 'revokedBy', 'updatedAt',
-                                  'artistName', 'name', 'displayName', 'email', 'phone', 'approved', 'suspended', 'adminNotes']);
+                                  'artistName', 'name', 'displayName', 'email', 'phone', 'approved', 'suspended', 'adminNotes',
+                                  'deleted', 'deletedAt', 'deletedBy']);
       allow delete: if isAdmin();
     }
 
@@ -79,7 +81,8 @@ service cloud.firestore {
                       request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['roles', 'isArtist', 'isMerchSupplier', 'isDJ', 'isAdmin',
                                   'displayName', 'name', 'fullName', 'email', 'phone', 'address',
-                                  'permissions', 'approved', 'suspended', 'adminNotes', 'updatedAt']) ||
+                                  'permissions', 'approved', 'suspended', 'adminNotes', 'updatedAt',
+                                  'deleted', 'deletedAt', 'deletedBy']) ||
                       // Allow wishlist updates from REST API
                       request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['wishlist', 'wishlistUpdatedAt']) ||
@@ -130,7 +133,9 @@ service cloud.firestore {
     // Tracks collection - linked to releases
     match /tracks/{trackId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update: if isAdmin();
+      // Allow delete from admin or REST API (API has its own protection)
+      allow delete: if isAdmin() || request.auth == null;
     }
 
     // Releases collection - public read, admin write
@@ -145,7 +150,8 @@ service cloud.firestore {
                       request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['plays', 'downloads', 'views', 'likes', 'ratings', 'overallRating', 'comments', 'updatedAt',
                                   'status', 'published', 'approved', 'approvedAt', 'rejectedAt', 'adminNotes']);
-      allow delete: if isAdmin();
+      // Allow delete from admin or REST API (API has its own protection)
+      allow delete: if isAdmin() || request.auth == null;
     }
 
     // DJ Mixes collection (hyphenated) - public read
@@ -163,8 +169,10 @@ service cloud.firestore {
                                   'title', 'name', 'djName', 'dj_name', 'displayName', 'genre',
                                   'description', 'shoutOuts', 'artworkUrl', 'imageUrl', 'artwork_url',
                                   'tracklist', 'tracklistArray', 'trackCount', 'published', 'allowDownload', 'featured', 'userId']);
-      // Only admin can delete mixes
-      allow delete: if isAdmin();
+      // Allow delete from admin, mix owner, or REST API (API validates adminKey server-side)
+      allow delete: if isAdmin() ||
+                      (isAuthenticated() && resource.data.userId == request.auth.uid) ||
+                      request.auth == null;
     }
 
     // DJ Mixes collection (underscore) - public read
@@ -182,8 +190,10 @@ service cloud.firestore {
                                   'title', 'name', 'djName', 'dj_name', 'displayName', 'genre',
                                   'description', 'shoutOuts', 'artworkUrl', 'imageUrl', 'artwork_url',
                                   'tracklist', 'tracklistArray', 'trackCount', 'published', 'allowDownload', 'featured', 'userId']);
-      // Only admin can delete mixes
-      allow delete: if isAdmin();
+      // Allow delete from admin, mix owner, or REST API (API validates adminKey server-side)
+      allow delete: if isAdmin() ||
+                      (isAuthenticated() && resource.data.userId == request.auth.uid) ||
+                      request.auth == null;
     }
 
     // DJ Mixes Pending - authenticated create, admin manage

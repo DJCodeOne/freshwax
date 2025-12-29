@@ -73,7 +73,7 @@ import Footer from '../components/Footer.astro';
     </section>
 
     <!-- Quick Drop Confirmation Modal -->
-    <div id="quick-drop-modal" class="fixed inset-0 z-50 hidden">
+    <div id="quick-drop-modal" class="fixed inset-0 z-[100] hidden">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="quick-drop-modal-backdrop"></div>
       <div class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full relative z-10 overflow-hidden">
@@ -624,9 +624,9 @@ Artist - Track Title
   import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-  // Firebase config - matches working admin login
+  // Firebase config
   const firebaseConfig = {
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store",
     storageBucket: "freshwax-store.firebasestorage.app",
@@ -1039,108 +1039,44 @@ Artist - Track Title
   let activeMainFormXhr = null;
   const quickDropReadyMsg = document.getElementById('quick-drop-ready-msg');
 
-  // Load lamejs for WAV to MP3 conversion
-  let lamejsLoaded = false;
-  async function loadLamejs() {
-    if (lamejsLoaded || window.lamejs) return;
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
-      script.onload = () => {
-        lamejsLoaded = true;
-        resolve();
-      };
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-  }
-
-  // Convert WAV to MP3 using lamejs
+  // Convert WAV to MP3 using Web Worker (runs in background thread)
   async function convertWavToMp3(wavFile, onProgress) {
-    await loadLamejs();
-
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const arrayBuffer = e.target.result;
-          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      onProgress(0, 'Starting conversion...');
 
-          onProgress(10, 'Decoding audio...');
-          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      // Create worker from our hosted file
+      const worker = new Worker('/wav-converter-worker.js');
 
-          const numChannels = audioBuffer.numberOfChannels;
-          const sampleRate = audioBuffer.sampleRate;
-          const samples = audioBuffer.length;
+      worker.onmessage = (e) => {
+        const { type, progress, status, mp3Data, error } = e.data;
 
-          onProgress(20, 'Preparing conversion...');
-
-          // Get audio data
-          const leftChannel = audioBuffer.getChannelData(0);
-          const rightChannel = numChannels > 1 ? audioBuffer.getChannelData(1) : leftChannel;
-
-          // Convert float32 to int16
-          const leftInt16 = new Int16Array(samples);
-          const rightInt16 = new Int16Array(samples);
-
-          for (let i = 0; i < samples; i++) {
-            leftInt16[i] = Math.max(-32768, Math.min(32767, Math.floor(leftChannel[i] * 32767)));
-            rightInt16[i] = Math.max(-32768, Math.min(32767, Math.floor(rightChannel[i] * 32767)));
-          }
-
-          onProgress(30, 'Encoding MP3...');
-
-          // Create MP3 encoder - 192kbps for good quality
-          const mp3encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, 192);
-          const mp3Data = [];
-
-          // Encode in chunks
-          const chunkSize = 1152;
-          const totalChunks = Math.ceil(samples / chunkSize);
-
-          for (let i = 0; i < samples; i += chunkSize) {
-            const leftChunk = leftInt16.subarray(i, i + chunkSize);
-            const rightChunk = rightInt16.subarray(i, i + chunkSize);
-
-            let mp3buf;
-            if (numChannels === 1) {
-              mp3buf = mp3encoder.encodeBuffer(leftChunk);
-            } else {
-              mp3buf = mp3encoder.encodeBuffer(leftChunk, rightChunk);
-            }
-
-            if (mp3buf.length > 0) {
-              mp3Data.push(mp3buf);
-            }
-
-            // Update progress (30-90%)
-            const chunkProgress = Math.floor((i / samples) * 60) + 30;
-            if (i % (chunkSize * 100) === 0) {
-              onProgress(chunkProgress, `Encoding... ${Math.floor((i / samples) * 100)}%`);
-            }
-          }
-
-          // Flush remaining data
-          const mp3buf = mp3encoder.flush();
-          if (mp3buf.length > 0) {
-            mp3Data.push(mp3buf);
-          }
-
-          onProgress(95, 'Finalizing...');
-
-          // Create blob
-          const blob = new Blob(mp3Data, { type: 'audio/mpeg' });
-          const mp3File = new File([blob], wavFile.name.replace(/\.wav$/i, '.mp3'), { type: 'audio/mpeg' });
-
-          onProgress(100, 'Conversion complete!');
-          audioContext.close();
-
+        if (type === 'progress') {
+          onProgress(progress, status);
+        } else if (type === 'complete') {
+          worker.terminate();
+          const mp3Blob = new Blob([mp3Data], { type: 'audio/mpeg' });
+          const mp3File = new File([mp3Blob], wavFile.name.replace(/\.wav$/i, '.mp3'), { type: 'audio/mpeg' });
           resolve(mp3File);
-        } catch (err) {
-          reject(err);
+        } else if (type === 'error') {
+          worker.terminate();
+          reject(new Error(error));
         }
       };
-      reader.onerror = reject;
+
+      worker.onerror = (err) => {
+        worker.terminate();
+        reject(new Error('Worker error: ' + err.message));
+      };
+
+      // Read WAV file and send to worker
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        onProgress(2, 'Sending to converter...');
+        worker.postMessage({
+          wavData: e.target.result,
+        }, [e.target.result]);
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
       reader.readAsArrayBuffer(wavFile);
     });
   }
@@ -1190,18 +1126,101 @@ Artist - Track Title
     return { djName, title };
   }
 
+  // Track background conversion state
+  let conversionPromise = null;
+  let conversionComplete = false;
+
+  // Admin-controlled upload limits (loaded from Firebase)
+  let uploadSettings = {
+    maxWavSizeMB: 2048,  // 2GB default
+    maxMp3SizeMB: 500,
+    allowWavUploads: true
+  };
+
+  // Load upload settings from Firebase
+  async function loadUploadSettings() {
+    try {
+      const response = await fetch('/api/admin/update-settings?action=load');
+      const result = await response.json();
+      if (result.success && result.settings?.djMixes) {
+        uploadSettings = { ...uploadSettings, ...result.settings.djMixes };
+        console.log('Upload settings loaded:', uploadSettings);
+      }
+    } catch (err) {
+      console.warn('Could not load upload settings, using defaults');
+    }
+  }
+
+  // Load settings on page load
+  loadUploadSettings();
+
   // Handle Quick Drop file
   async function handleQuickDropFile(file) {
-    // Check if it's a supported format
+    // Check for supported formats
     if (!isMp3File(file) && !isWavFile(file)) {
-      alert('Quick Drop supports MP3 and WAV files only');
+      alert('Please upload an MP3 or WAV file.');
       return;
     }
 
-    // Store original filename for parsing before any conversion
+    const fileSizeMB = file.size / (1024 * 1024);
+
+    // WAV files - check if allowed and within size limit
+    if (isWavFile(file)) {
+      // Check if WAV uploads are enabled
+      if (!uploadSettings.allowWavUploads) {
+        alert('WAV uploads are currently disabled. Please upload an MP3 file instead.');
+        return;
+      }
+
+      // Check against admin-controlled size limit
+      if (fileSizeMB > uploadSettings.maxWavSizeMB) {
+        const limitDisplay = uploadSettings.maxWavSizeMB >= 1024
+          ? `${(uploadSettings.maxWavSizeMB / 1024).toFixed(1)}GB`
+          : `${uploadSettings.maxWavSizeMB}MB`;
+        const fileSizeDisplay = fileSizeMB >= 1024
+          ? `${(fileSizeMB / 1024).toFixed(1)}GB`
+          : `${fileSizeMB.toFixed(0)}MB`;
+
+        alert(
+          `This WAV file exceeds the maximum size limit.\n\n` +
+          `File size: ${fileSizeDisplay}\n` +
+          `Maximum allowed: ${limitDisplay}\n\n` +
+          `Please convert to MP3 first using:\n` +
+          `• Audacity (free): Export as MP3\n` +
+          `• Online: cloudconvert.com`
+        );
+        return;
+      }
+
+      // Show size info and confirm conversion
+      const sizeDisplay = fileSizeMB >= 1024
+        ? `${(fileSizeMB / 1024).toFixed(1)}GB`
+        : `${fileSizeMB.toFixed(0)}MB`;
+
+      if (!confirm(
+        `WAV files will be converted to MP3.\n\n` +
+        `File: ${file.name}\n` +
+        `Size: ${sizeDisplay}\n\n` +
+        `Click OK to convert, or Cancel to upload an MP3 instead.`
+      )) {
+        return;
+      }
+    }
+
+    // MP3 files - check size limit
+    if (isMp3File(file) && fileSizeMB > uploadSettings.maxMp3SizeMB) {
+      alert(
+        `This MP3 file exceeds the maximum size limit.\n\n` +
+        `File size: ${fileSizeMB.toFixed(0)}MB\n` +
+        `Maximum allowed: ${uploadSettings.maxMp3SizeMB}MB`
+      );
+      return;
+    }
+
+    // Store original filename for parsing
     quickDropOriginalFilename = file.name;
 
-    // Parse filename (use original name even if we convert)
+    // Parse filename to extract DJ name and title
     const parsed = parseFilename(quickDropOriginalFilename);
     quickDropDjName = parsed.djName;
     quickDropTitle = parsed.title || 'Untitled Mix';
@@ -1215,69 +1234,86 @@ Artist - Track Title
     quickDropModal.classList.remove('hidden');
     quickDropGenre.value = '';
     quickDropProgressContainer.classList.add('hidden');
-    quickDropConfirm.disabled = true; // Disable until ready
     quickDropCancel.disabled = false;
 
     // Handle WAV conversion
+    // Flag to track if we should auto-upload after genre selection
+    let pendingAutoUpload = false;
+
     if (isWavFile(file)) {
-      isConverting = true;
+      quickDropConfirm.disabled = true;
       quickDropConverting.classList.remove('hidden');
       quickDropReadyMsg.classList.add('hidden');
       quickDropConvertBar.style.width = '0%';
+      quickDropConvertStatus.textContent = 'Loading converter...';
 
       try {
         const mp3File = await convertWavToMp3(file, (progress, status) => {
           quickDropConvertBar.style.width = progress + '%';
           quickDropConvertStatus.textContent = status;
         });
-
         quickDropFile = mp3File;
-        isConverting = false;
         quickDropConverting.classList.add('hidden');
-        quickDropReadyMsg.classList.remove('hidden');
-        quickDropConfirm.disabled = false;
 
-        // Get duration from converted file
-        const audioUrl = URL.createObjectURL(mp3File);
-        const tempAudio = new Audio();
-        tempAudio.addEventListener('loadedmetadata', () => {
-          quickDropDuration = Math.round(tempAudio.duration);
-          quickDropDurationPreview.textContent = `Duration: ${formatDuration(quickDropDuration)}`;
-          URL.revokeObjectURL(audioUrl);
-        });
-        tempAudio.src = audioUrl;
+        // Auto-upload after conversion completes
+        if (quickDropGenre.value) {
+          // Genre already selected - start upload immediately
+          quickDropReadyMsg.classList.remove('hidden');
+          quickDropReadyMsg.innerHTML = `<p class="text-sm text-green-800"><strong>Conversion complete!</strong> Starting upload...</p>`;
+          quickDropConfirm.disabled = false;
+          // Small delay to show message, then auto-click upload
+          setTimeout(() => quickDropConfirm.click(), 500);
+        } else {
+          // Genre not selected - prompt user and auto-upload when they select
+          quickDropReadyMsg.classList.remove('hidden');
+          quickDropReadyMsg.innerHTML = `<p class="text-sm text-amber-800"><strong>Conversion complete!</strong> Select a genre to start upload.</p>`;
+          quickDropGenre.focus();
+          pendingAutoUpload = true;
 
+          // Auto-upload when genre is selected
+          const autoUploadOnGenre = () => {
+            if (quickDropGenre.value && pendingAutoUpload) {
+              pendingAutoUpload = false;
+              quickDropGenre.removeEventListener('change', autoUploadOnGenre);
+              quickDropConfirm.disabled = false;
+              quickDropReadyMsg.innerHTML = `<p class="text-sm text-green-800"><strong>Starting upload...</strong></p>`;
+              setTimeout(() => quickDropConfirm.click(), 300);
+            }
+          };
+          quickDropGenre.addEventListener('change', autoUploadOnGenre);
+          quickDropConfirm.disabled = true; // Keep disabled until genre selected
+        }
       } catch (err) {
-        console.error('WAV conversion error:', err);
-        alert('Failed to convert WAV to MP3. Please try an MP3 file instead.');
+        console.error('WAV conversion failed:', err);
+        alert('Conversion failed. Please convert to MP3 using Audacity or an online converter.');
         quickDropModal.classList.add('hidden');
-        isConverting = false;
         return;
       }
     } else {
-      // MP3 file - use directly
+      // MP3 file - use directly, no conversion needed
       quickDropFile = file;
+      quickDropConfirm.disabled = false;
       quickDropConverting.classList.add('hidden');
       quickDropReadyMsg.classList.remove('hidden');
-      quickDropConfirm.disabled = false;
-
-      // Calculate duration
-      const audioUrl = URL.createObjectURL(file);
-      const tempAudio = new Audio();
-
-      tempAudio.addEventListener('loadedmetadata', () => {
-        quickDropDuration = Math.round(tempAudio.duration);
-        quickDropDurationPreview.textContent = `Duration: ${formatDuration(quickDropDuration)}`;
-        URL.revokeObjectURL(audioUrl);
-      });
-
-      tempAudio.addEventListener('error', () => {
-        quickDropDurationPreview.textContent = 'Duration: Unknown';
-        URL.revokeObjectURL(audioUrl);
-      });
-
-      tempAudio.src = audioUrl;
+      quickDropReadyMsg.innerHTML = `<p class="text-sm text-amber-800"><strong>Ready to upload!</strong> Your mix will use the default artwork.</p>`;
     }
+
+    // Calculate duration asynchronously (doesn't block upload)
+    const audioUrl = URL.createObjectURL(file);
+    const tempAudio = new Audio();
+
+    tempAudio.addEventListener('loadedmetadata', () => {
+      quickDropDuration = Math.round(tempAudio.duration);
+      quickDropDurationPreview.textContent = `Duration: ${formatDuration(quickDropDuration)}`;
+      URL.revokeObjectURL(audioUrl);
+    });
+
+    tempAudio.addEventListener('error', () => {
+      quickDropDurationPreview.textContent = 'Duration: Unknown';
+      URL.revokeObjectURL(audioUrl);
+    });
+
+    tempAudio.src = audioUrl;
   }
 
   // Quick Drop zone event listeners

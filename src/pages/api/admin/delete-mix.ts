@@ -1,6 +1,8 @@
 // src/pages/api/admin/delete-mix.ts
 // Admin endpoint to delete DJ mix - forwards to main delete-mix endpoint
 
+export const prerender = false;
+
 import '../../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Workers
 import type { APIRoute } from 'astro';
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
@@ -21,7 +23,7 @@ function getR2Config(env: any) {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
     secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
+    bucketName: env?.R2_BUCKET_NAME || env?.R2_RELEASES_BUCKET || import.meta.env.R2_BUCKET_NAME || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
   };
 }
 
@@ -38,9 +40,9 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Rate limit: destructive operations - 3 per hour
+  // Rate limit: admin delete operations - 20 per hour
   const clientId = getClientId(request);
-  const rateLimit = checkRateLimit(`admin-delete-mix:${clientId}`, RateLimiters.destructive);
+  const rateLimit = checkRateLimit(`admin-delete-mix:${clientId}`, RateLimiters.adminDelete);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
@@ -139,12 +141,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error) {
-    log.error('[admin/delete-mix] Error:', error);
+    console.error('[admin/delete-mix] Error:', error);
+    console.error('[admin/delete-mix] Stack:', error instanceof Error ? error.stack : 'No stack');
 
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to delete mix',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -670,18 +670,25 @@ export const prerender = false;
 
   document.querySelector('.btn-delete-confirm')?.addEventListener('click', async () => {
     const mixId = document.getElementById('deleteMixId').value;
-    
+
+    if (!currentUserId) {
+      alert('You must be logged in to delete mixes');
+      return;
+    }
+
     try {
       const response = await fetch('/api/delete-mix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mixId })
+        body: JSON.stringify({ mixId, userId: currentUserId })
       });
-      
-      if (response.ok) {
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         location.reload();
       } else {
-        alert('Failed to delete mix');
+        alert('Failed to delete mix: ' + (data.error || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error:', error);

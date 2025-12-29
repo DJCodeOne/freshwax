@@ -135,6 +135,13 @@ export const RateLimiters = {
     maxRequests: 3,
     windowMs: 60 * 60 * 1000,
     blockDurationMs: 60 * 60 * 1000
+  },
+
+  // Admin delete operations: 20 per hour (admin key protected)
+  adminDelete: {
+    maxRequests: 20,
+    windowMs: 60 * 60 * 1000,
+    blockDurationMs: 10 * 60 * 1000  // 10 minute block if exceeded
   }
 };
 
