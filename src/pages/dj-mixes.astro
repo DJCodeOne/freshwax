@@ -453,33 +453,43 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
     )}
   </main>
 
-  <!-- Share Modal -->
-  <div id="shareModal" class="modal hidden">
-    <div class="modal-backdrop"></div>
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Share Mix</h3>
-        <button class="modal-close" id="closeShareModal">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-subtitle">
-          <div class="share-mix-title" id="shareModalTitle"></div>
-          <div class="share-mix-dj">by <span id="shareModalDJ"></span></div>
-        </div>
-        <div class="share-input-group">
-          <input type="text" id="shareLink" readonly />
-          <button id="copyShareButton">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+  <!-- Share Modal (Enhanced) -->
+  <div id="shareModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black bg-opacity-80 transition-opacity" id="shareModalBackdrop"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+      <div class="bg-white max-w-md w-full transform transition-all border-4 border-black rounded-lg">
+        <div class="flex items-center justify-between p-4 border-b-4 border-black">
+          <h3 class="text-base md:text-lg font-black text-black uppercase">Share Mix</h3>
+          <button id="closeShareModal" class="text-black hover:text-gray-600 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
-            <span id="copyShareButtonText">Copy</span>
           </button>
         </div>
-        <p class="copy-feedback" id="copyFeedback"></p>
+        <div class="p-4">
+          <div class="mb-3">
+            <div class="text-sm font-bold text-black break-words" id="shareModalTitle"></div>
+            <div class="text-xs text-gray-600">by <span class="font-semibold text-gray-700" id="shareModalDJ"></span></div>
+          </div>
+          <div class="flex gap-2">
+            <input
+              type="text"
+              id="shareLink"
+              readonly
+              class="flex-1 px-3 py-2 border-2 border-black text-xs md:text-sm font-mono bg-gray-100 text-black focus:outline-none focus:ring-2 focus:ring-black rounded"
+            />
+            <button
+              id="copyShareButton"
+              class="px-3 md:px-4 py-2 bg-black hover:bg-gray-800 text-white border-2 border-black transition-all font-black text-xs md:text-sm flex items-center gap-2 uppercase rounded"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+              <span id="copyShareButtonText">Copy</span>
+            </button>
+          </div>
+          <p class="text-xs text-gray-600 font-bold mt-2" id="copyFeedback"></p>
+        </div>
       </div>
     </div>
   </div>
@@ -1216,7 +1226,7 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
       };
     }
 
-    var shareModalBackdrop = document.querySelector('#shareModal .modal-backdrop');
+    var shareModalBackdrop = document.getElementById('shareModalBackdrop');
     if (shareModalBackdrop) {
       shareModalBackdrop.onclick = function() {
         document.getElementById('shareModal').classList.add('hidden');

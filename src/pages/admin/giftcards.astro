@@ -6,8 +6,9 @@ import '../../styles/admin/giftcards.css';
 
 export const prerender = false;
 
-// Get admin key from environment for client script
-const adminKey = import.meta.env.ADMIN_KEY || '';
+// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 
 <AdminLayout title="Gift Cards - Admin">

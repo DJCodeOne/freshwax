@@ -7,8 +7,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import '../../styles/admin/index.css';
 
-// Get admin key from environment for client script
-const adminKey = import.meta.env.ADMIN_KEY || '';
+// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 
 // Fetch all data using REST API with error handling
 let ordersData: any[] = [];
