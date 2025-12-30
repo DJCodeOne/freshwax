@@ -2102,11 +2102,16 @@ const pusherConfig = {
   }
 
   function triggerReactionBurst(emojiList) {
-    const x = window.innerWidth / 2;
-    const y = window.innerHeight / 2;
+    // Scatter effect - emojis appear at random positions across the screen
     const numEmojis = 6 + Math.floor(Math.random() * 5);
     for (let i = 0; i < numEmojis; i++) {
-      setTimeout(() => createFloatingEmoji(x, y, emojiList), i * 70);
+      setTimeout(() => {
+        // Random x position across screen width (with padding)
+        const x = 100 + Math.random() * (window.innerWidth - 200);
+        // Random y position in lower half of screen
+        const y = window.innerHeight * 0.4 + Math.random() * (window.innerHeight * 0.5);
+        createFloatingEmoji(x, y, emojiList);
+      }, i * 100);
     }
   }
 
