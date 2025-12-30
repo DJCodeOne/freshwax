@@ -16,6 +16,7 @@ export class EmbedPlayerManager {
   private containerId: string;
   private currentPlatform: MediaPlatform | null = null;
   private youtubePlayer: any = null;
+  private youtubePlayerReady: boolean = false;
   private vimeoPlayer: any = null;
   private soundcloudWidget: any = null;
   private directVideo: HTMLVideoElement | null = null;
@@ -97,6 +98,9 @@ export class EmbedPlayerManager {
     // Clear container and create player div
     container.innerHTML = '<div id="youtube-player"></div>';
 
+    // Reset ready flag before creating new player
+    this.youtubePlayerReady = false;
+
     // @ts-ignore - YouTube API global
     this.youtubePlayer = new YT.Player('youtube-player', {
       height: '100%',
@@ -114,6 +118,8 @@ export class EmbedPlayerManager {
       },
       events: {
         onReady: () => {
+          this.youtubePlayerReady = true;
+          console.log('[EmbedPlayerManager] YouTube player ready');
           this.callbacks.onReady?.();
           // Fallback: if pending seek is set, execute it after player is ready
           if (this.pendingSeekPosition && !this.hasInitialSeekExecuted) {
@@ -392,9 +398,9 @@ export class EmbedPlayerManager {
    * Pause current media
    */
   async pause(): Promise<void> {
-    console.log('[EmbedPlayerManager] Pause called, platform:', this.currentPlatform, 'hasPlayer:', !!this.youtubePlayer);
+    console.log('[EmbedPlayerManager] Pause called, platform:', this.currentPlatform, 'hasPlayer:', !!this.youtubePlayer, 'ready:', this.youtubePlayerReady);
     try {
-      if (this.currentPlatform === 'youtube' && this.youtubePlayer) {
+      if (this.currentPlatform === 'youtube' && this.youtubePlayer && this.youtubePlayerReady) {
         // Check if pauseVideo function exists
         if (typeof this.youtubePlayer.pauseVideo === 'function') {
           const stateBefore = typeof this.youtubePlayer.getPlayerState === 'function'
@@ -402,16 +408,12 @@ export class EmbedPlayerManager {
             : 'unknown';
           console.log('[EmbedPlayerManager] YouTube player state before pause:', stateBefore);
           this.youtubePlayer.pauseVideo();
-          // Verify pause worked
-          setTimeout(() => {
-            const stateAfter = typeof this.youtubePlayer?.getPlayerState === 'function'
-              ? this.youtubePlayer.getPlayerState()
-              : 'unknown';
-            console.log('[EmbedPlayerManager] YouTube player state after pause:', stateAfter);
-          }, 100);
+          console.log('[EmbedPlayerManager] pauseVideo() called successfully');
         } else {
           console.error('[EmbedPlayerManager] pauseVideo is not a function on youtubePlayer');
         }
+      } else if (this.currentPlatform === 'youtube' && !this.youtubePlayerReady) {
+        console.warn('[EmbedPlayerManager] YouTube player not ready yet, cannot pause');
       } else if (this.currentPlatform === 'vimeo' && this.vimeoPlayer) {
         await this.vimeoPlayer.pause();
       } else if (this.currentPlatform === 'soundcloud' && this.soundcloudWidget) {
