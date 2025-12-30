@@ -330,6 +330,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
 
+        // Broadcast updated like count to all viewers
+        if (totalLikes > 0) {
+          await triggerPusher(channel, 'like-update', {
+            totalLikes,
+            timestamp: now
+          }, env);
+        }
+
         if (!pusherSuccess) {
           return new Response(JSON.stringify({
             success: false,

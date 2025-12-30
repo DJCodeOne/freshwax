@@ -2850,6 +2850,17 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         }
       });
 
+      // Listen for like count updates from all reactions
+      reactionChannel.bind('like-update', (data) => {
+        console.log('[Reactions] Like count update from Pusher:', data);
+        if (data.totalLikes !== undefined) {
+          const likeCountEl = document.getElementById('likeCount');
+          const fsLikes = document.getElementById('fsLikes');
+          if (likeCountEl) likeCountEl.textContent = data.totalLikes;
+          if (fsLikes) fsLikes.textContent = data.totalLikes;
+        }
+      });
+
       console.log('[Reactions] Subscribed to channel:', reactionChannelName);
 
     } catch (err) {

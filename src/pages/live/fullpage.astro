@@ -2430,6 +2430,15 @@ const pusherConfig = {
       }
     });
 
+    // Listen for like count updates from all reactions
+    reactionChannel.bind('like-update', (data) => {
+      console.log('[Reactions] Like count update from Pusher:', data);
+      if (data.totalLikes !== undefined) {
+        const likeCountEl = document.getElementById('likeCount');
+        if (likeCountEl) likeCountEl.textContent = data.totalLikes;
+      }
+    });
+
     console.log('[Reactions] Subscribed to channel:', channelName);
 
     // Enable emoji animations by default when subscribed
