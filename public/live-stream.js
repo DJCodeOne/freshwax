@@ -1362,13 +1362,10 @@ function setupHlsPlayer(stream) {
     
     if (playBtn) {
       playBtn.disabled = false;
-      playBtn.onclick = () => {
+      playBtn.onclick = async () => {
         if (isPlaying) {
           videoElement.pause();
-          document.getElementById('playIcon')?.classList.remove('hidden');
-          document.getElementById('pauseIcon')?.classList.add('hidden');
-          playBtn.classList.remove('playing');
-          stopGlobalMeters();
+          // State will be updated by 'pause' event listener
         } else {
           // Remember that user wants autoplay for future page visits
           rememberAutoplay();
@@ -1377,18 +1374,16 @@ function setupHlsPlayer(stream) {
             globalAudioContext.resume();
           }
           videoElement.muted = false;
-          videoElement.play().catch(err => {
+          try {
+            await videoElement.play();
+            // State will be updated by 'play' event listener
+          } catch (err) {
             console.error('[HLS] Play error:', err);
             if (window.isMobileDevice) {
               showTapToPlay();
             }
-          });
-          document.getElementById('playIcon')?.classList.add('hidden');
-          document.getElementById('pauseIcon')?.classList.remove('hidden');
-          playBtn.classList.add('playing');
-          startGlobalMeters();
+          }
         }
-        isPlaying = !isPlaying;
       };
     }
     
@@ -1984,9 +1979,10 @@ function setupAudioPlayer(stream) {
   
   if (playBtn) {
     playBtn.disabled = false;
-    playBtn.onclick = () => {
+    playBtn.onclick = async () => {
       if (isPlaying) {
         audio?.pause();
+        isPlaying = false;
         document.getElementById('playIcon')?.classList.remove('hidden');
         document.getElementById('pauseIcon')?.classList.add('hidden');
         playBtn.classList.remove('playing');
@@ -1996,13 +1992,17 @@ function setupAudioPlayer(stream) {
         if (globalAudioContext?.state === 'suspended') {
           globalAudioContext.resume();
         }
-        audio?.play().catch(console.error);
-        document.getElementById('playIcon')?.classList.add('hidden');
-        document.getElementById('pauseIcon')?.classList.remove('hidden');
-        playBtn.classList.add('playing');
-        startGlobalMeters();
+        try {
+          await audio?.play();
+          isPlaying = true;
+          document.getElementById('playIcon')?.classList.add('hidden');
+          document.getElementById('pauseIcon')?.classList.remove('hidden');
+          playBtn.classList.add('playing');
+          startGlobalMeters();
+        } catch (err) {
+          console.error('[Audio] Play error:', err);
+        }
       }
-      isPlaying = !isPlaying;
     };
   }
   
