@@ -4321,21 +4321,25 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         }
 
         // Check if this is an audio-only stream (BUTT/Icecast) or video (HLS/Red5)
-        // Audio streams: streamType='audio', audioStreamUrl with :8000, or broadcastMode='butt'
-        const isAudioStream = currentStream.streamType === 'audio' ||
+        // Important: If hlsUrl exists, always treat as video stream (even for BUTT placeholder mode)
+        // The placeholder mode generates an HLS video stream via FFmpeg
+        const hasHlsUrl = !!currentStream.hlsUrl;
+        const isAudioStream = !hasHlsUrl && (
+                             currentStream.streamType === 'audio' ||
                              currentStream.broadcastMode === 'butt' ||
                              currentStream.audioStreamUrl?.includes(':8000') ||
-                             (!currentStream.hlsUrl && currentStream.audioStreamUrl);
+                             currentStream.audioStreamUrl);
 
         log('[Stream] Detection:', {
           streamType: currentStream.streamType,
           broadcastMode: currentStream.broadcastMode,
           hlsUrl: currentStream.hlsUrl,
           audioStreamUrl: currentStream.audioStreamUrl,
+          hasHlsUrl,
           isAudioStream
         });
 
-        if (!isAudioStream && currentStream.hlsUrl) {
+        if (hasHlsUrl) {
           // Video stream (HLS/Red5)
           videoPreview?.classList.remove('hidden');
           audioPreview?.classList.add('hidden');
@@ -6012,50 +6016,15 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
               status.innerHTML = '⚡ Stream ending in <strong>' + countdown + '</strong> seconds...';
             } else {
               clearInterval(countdownInterval);
-              btn.classList.remove('ending');
-              status.classList.remove('ending');
-              updateEndStreamButton(false, false);
-              status.textContent = 'Stream ended successfully';
-              // Stop streaming flag and cleanup preview
-              userIsStreaming = false;
+              status.textContent = 'Stream ended - refreshing...';
 
-              // Force UI to offline state immediately
-              const statusDot = document.querySelector('.status-dot');
-              const statusText = document.getElementById('statusText');
-              statusDot?.classList.add('offline');
-              statusDot?.classList.remove('live');
-              document.querySelector('.live-panel')?.classList.remove('streaming');
-              if (statusText) statusText.textContent = 'No one streaming';
-              showRelayIndicators(false);
-              document.getElementById('offlineState')?.classList.remove('hidden');
-              document.getElementById('timeRemaining')?.classList.add('hidden');
-
-              // Clear current stream reference
-              currentStream = null;
-              streamStartTime = null;
-              streamEndTime = null;
-
-              // Cleanup HLS and meters
-              cleanupHlsPlayer();
-              cleanupLivestreamChat();
-
-              // Show stream key setup section again
-              document.getElementById('streamKeySection')?.classList.remove('hidden');
-              document.getElementById('multiStreamSection')?.classList.remove('hidden');
-              document.getElementById('broadcastAudioPanel')?.classList.add('hidden');
-              stopBroadcastMeters();
-              document.querySelector('.preview-section')?.classList.remove('expanded');
-
-              // Re-enable Go Live button
-              const goLiveBtn = document.getElementById('setReadyBtn');
-              if (goLiveBtn) {
-                goLiveBtn.disabled = false;
-                goLiveBtn.classList.remove('disabled');
-              }
-
-              // Refresh stream status (backup)
-              setTimeout(() => loadStreamStatus(), 500);
+              // Record stream end before refresh
               recordStreamEnd();
+
+              // Refresh the page to ensure clean state
+              setTimeout(() => {
+                window.location.reload();
+              }, 500);
             }
           }, 1000);
         } else {
@@ -6908,7 +6877,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       // Listen for viewer count updates via Pusher (saves polling)
       livestreamChatChannel.bind('viewer-update', (data) => {
         console.log('[LivestreamChat] Viewer update:', data);
-        const viewerCount = data.currentViewers ?? data.totalViews ?? 0;
+        const viewerCount = data.count ?? data.currentViewers ?? data.totalViews ?? 0;
         updateCenterStats({ viewers: viewerCount });
       });
     }

@@ -13,6 +13,76 @@ function initFirebase(locals: any) {
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+  return env;
+}
+
+// Pusher helper
+async function triggerPusher(channel: string, event: string, data: any, env: any) {
+  try {
+    const appId = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
+    const key = env?.PUSHER_KEY || import.meta.env.PUSHER_KEY;
+    const secret = env?.PUSHER_SECRET || import.meta.env.PUSHER_SECRET;
+    const cluster = env?.PUSHER_CLUSTER || import.meta.env.PUSHER_CLUSTER || 'eu';
+
+    if (!appId || !key || !secret) return false;
+
+    const timestamp = Math.floor(Date.now() / 1000);
+    const body = JSON.stringify({ name: event, channel, data: JSON.stringify(data) });
+    const bodyMd5 = await crypto.subtle.digest('MD5', new TextEncoder().encode(body))
+      .then(buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''));
+
+    const stringToSign = `POST\n/apps/${appId}/events\nauth_key=${key}&auth_timestamp=${timestamp}&auth_version=1.0&body_md5=${bodyMd5}`;
+    const signature = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+      .then(k => crypto.subtle.sign('HMAC', k, new TextEncoder().encode(stringToSign)))
+      .then(buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''));
+
+    const url = `https://api-${cluster}.pusher.com/apps/${appId}/events?auth_key=${key}&auth_timestamp=${timestamp}&auth_version=1.0&body_md5=${bodyMd5}&auth_signature=${signature}`;
+    const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+    return resp.ok;
+  } catch (e) {
+    console.error('[Pusher] Error:', e);
+    return false;
+  }
+}
+
+// Count active viewers and broadcast via Pusher
+async function countAndBroadcastViewers(streamId: string, env: any): Promise<number> {
+  try {
+    const twoMinutesAgo = Date.now() - (2 * 60 * 1000);
+
+    // Query listeners for this stream
+    const results = await queryCollection('stream-listeners', {
+      filters: [
+        { field: 'streamId', op: 'EQUAL', value: streamId }
+      ],
+      limit: 200
+    });
+
+    // Count only recent/active listeners
+    const activeCount = results.filter(data => (data.lastSeen || 0) > twoMinutesAgo).length;
+
+    // Broadcast to Pusher on the stream's reaction channel
+    const channel = `stream-${streamId}`;
+    await triggerPusher(channel, 'viewer-update', {
+      count: activeCount,
+      streamId,
+      timestamp: Date.now()
+    }, env);
+
+    // Also update currentViewers on the stream slot
+    try {
+      await updateDocument('livestreamSlots', streamId, {
+        currentViewers: activeCount
+      });
+    } catch (e) {
+      console.log('[listeners] Could not update currentViewers:', e);
+    }
+
+    return activeCount;
+  } catch (e) {
+    console.error('[listeners] Error counting viewers:', e);
+    return 0;
+  }
 }
 
 // GET - Retrieve list of active listeners for a stream
@@ -74,7 +144,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST - Join or leave a stream as a listener
 export const POST: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
+  const env = initFirebase(locals);
   try {
     let body;
     
@@ -124,10 +194,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         console.log('[listeners] Could not increment totalViews:', e);
       }
 
+      // Count active viewers and broadcast via Pusher
+      const activeCount = await countAndBroadcastViewers(streamId, env);
+
       return new Response(JSON.stringify({
         success: true,
         message: 'Joined as listener',
-        totalViews: newTotalViews
+        totalViews: newTotalViews,
+        activeViewers: activeCount
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
@@ -137,9 +211,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Remove listener
       await deleteDocument('stream-listeners', listenerId);
 
+      // Count active viewers and broadcast via Pusher
+      const activeCount = await countAndBroadcastViewers(streamId, env);
+
       return new Response(JSON.stringify({
         success: true,
-        message: 'Left stream'
+        message: 'Left stream',
+        activeViewers: activeCount
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
@@ -155,9 +233,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         lastSeen: Date.now()
       });
 
+      // Count active viewers and broadcast via Pusher (every 30s heartbeat keeps count fresh)
+      const activeCount = await countAndBroadcastViewers(streamId, env);
+
       return new Response(JSON.stringify({
         success: true,
-        message: 'Heartbeat received'
+        message: 'Heartbeat received',
+        activeViewers: activeCount
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }

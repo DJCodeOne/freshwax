@@ -1909,6 +1909,7 @@ const pusherConfig = {
 
         setupExternalChats(stream);
         registerAsListener();
+        startHeartbeat();
       } else {
         // OFFLINE - try to start playlist auto-play
         console.log('[Stream] No live stream, checking playlist...');
@@ -2024,23 +2025,82 @@ const pusherConfig = {
     }
   }
 
-  // Listener Registration
+  // Listener Registration - supports both logged in and anonymous viewers
+  function getOrCreateSessionId() {
+    let sessionId = sessionStorage.getItem('viewerSessionId');
+    if (!sessionId) {
+      sessionId = 'anon_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+      sessionStorage.setItem('viewerSessionId', sessionId);
+    }
+    return sessionId;
+  }
+
   async function registerAsListener() {
-    if (!currentUser || !currentStream?.id) return;
+    if (!currentStream?.id) return;
+
+    // Support anonymous viewers with session ID
+    const userId = currentUser?.uid || getOrCreateSessionId();
+    const userName = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Viewer';
+    const avatarUrl = currentUser?.photoURL || null;
+
     try {
-      await fetch('/api/livestream/listeners', {
+      const resp = await fetch('/api/livestream/listeners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'join',
           streamId: currentStream.id,
-          userId: currentUser.uid,
-          userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous',
-          avatarUrl: currentUser.photoURL || null
+          userId,
+          userName,
+          avatarUrl
         })
       });
+      const data = await resp.json();
+      // Update viewer count from response
+      if (data.activeViewers !== undefined) {
+        const viewerEl = document.getElementById('viewerCount');
+        if (viewerEl) viewerEl.textContent = data.activeViewers;
+      }
     } catch (e) { console.log('[Listener] Could not register'); }
   }
+
+  // Send heartbeat to keep viewer count accurate
+  let heartbeatInterval = null;
+  function startHeartbeat() {
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+    heartbeatInterval = setInterval(async () => {
+      if (!currentStream?.id) return;
+      const userId = currentUser?.uid || getOrCreateSessionId();
+      try {
+        const resp = await fetch('/api/livestream/listeners', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'heartbeat',
+            streamId: currentStream.id,
+            userId,
+            userName: currentUser?.displayName || 'Viewer'
+          })
+        });
+        const data = await resp.json();
+        if (data.activeViewers !== undefined) {
+          const viewerEl = document.getElementById('viewerCount');
+          if (viewerEl) viewerEl.textContent = data.activeViewers;
+        }
+      } catch (e) { /* silent */ }
+    }, 30000); // Every 30 seconds
+  }
+
+  // Leave stream when closing page
+  window.addEventListener('beforeunload', () => {
+    if (!currentStream?.id) return;
+    const userId = currentUser?.uid || getOrCreateSessionId();
+    navigator.sendBeacon('/api/livestream/listeners', JSON.stringify({
+      action: 'leave',
+      streamId: currentStream.id,
+      userId
+    }));
+  });
 
   // Floating Emoji Animation
   function createFloatingEmoji(startX, startY, emojiList) {
@@ -2441,6 +2501,15 @@ const pusherConfig = {
       if (data.totalLikes !== undefined) {
         const likeCountEl = document.getElementById('likeCount');
         if (likeCountEl) likeCountEl.textContent = data.totalLikes;
+      }
+    });
+
+    // Listen for viewer count updates in real-time
+    reactionChannel.bind('viewer-update', (data) => {
+      console.log('[Viewers] Count update from Pusher:', data);
+      if (data.count !== undefined) {
+        const viewerEl = document.getElementById('viewerCount');
+        if (viewerEl) viewerEl.textContent = data.count;
       }
     });
 

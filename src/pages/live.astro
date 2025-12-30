@@ -2861,6 +2861,17 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         }
       });
 
+      // Listen for viewer count updates in real-time
+      reactionChannel.bind('viewer-update', (data) => {
+        console.log('[Viewers] Count update from Pusher:', data);
+        if (data.count !== undefined) {
+          const viewerEl = document.getElementById('viewerCount');
+          const fsViewers = document.getElementById('fsViewers');
+          if (viewerEl) viewerEl.textContent = data.count;
+          if (fsViewers) fsViewers.textContent = data.count;
+        }
+      });
+
       console.log('[Reactions] Subscribed to channel:', reactionChannelName);
 
     } catch (err) {
@@ -3159,25 +3170,47 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     }
   }
   
-  // Send heartbeat to register as listener (logged in users only)
+  // Session ID for anonymous viewer tracking
+  function getOrCreateSessionId() {
+    let sessionId = sessionStorage.getItem('viewerSessionId');
+    if (!sessionId) {
+      sessionId = 'anon_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+      sessionStorage.setItem('viewerSessionId', sessionId);
+    }
+    return sessionId;
+  }
+
+  // Send heartbeat to register as listener (works for all users)
   let heartbeatInterval = null;
-  
+
   async function sendListenerHeartbeat() {
-    if (!currentUser || !userInfo) return;
-    
+    const streamId = window.currentStreamId || document.body.dataset.streamId;
+    if (!streamId) return;
+
+    const userId = currentUser?.uid || getOrCreateSessionId();
+    const userName = userInfo?.displayName || userInfo?.firstName || 'Viewer';
+
     try {
-      const response = await fetch('/api/livestream/slots', {
+      const response = await fetch('/api/livestream/listeners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'heartbeat',
-          odamiMa: currentUser.uid,
-          name: userInfo.displayName || userInfo.firstName || 'Listener',
-          avatar: userInfo.avatar || null
+          streamId,
+          userId,
+          userName,
+          avatarUrl: userInfo?.avatar || null
         })
       });
-      
+
       const result = await response.json();
+      // Update viewer count from response
+      if (result.activeViewers !== undefined) {
+        const viewerEl = document.getElementById('viewerCount');
+        const fsViewers = document.getElementById('fsViewers');
+        if (viewerEl) viewerEl.textContent = result.activeViewers;
+        if (fsViewers) fsViewers.textContent = result.activeViewers;
+      }
       if (result.success && result.listeners) {
         updateListenersList(result.listeners);
       }
@@ -3185,17 +3218,17 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       console.error('Heartbeat failed:', e);
     }
   }
-  
+
   // Register view when entering stream (increments totalViews)
   async function registerStreamView() {
     const streamId = window.currentStreamId || document.body.dataset.streamId;
     if (!streamId) return;
 
-    const userId = currentUser?.uid || 'anon-' + Math.random().toString(36).substr(2, 9);
+    const userId = currentUser?.uid || getOrCreateSessionId();
     const userName = userInfo?.displayName || userInfo?.firstName || 'Viewer';
 
     try {
-      await fetch('/api/livestream/listeners', {
+      const resp = await fetch('/api/livestream/listeners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3206,46 +3239,55 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           avatarUrl: userInfo?.avatar || null
         })
       });
+      const data = await resp.json();
+      // Update viewer count from response
+      if (data.activeViewers !== undefined) {
+        const viewerEl = document.getElementById('viewerCount');
+        const fsViewers = document.getElementById('fsViewers');
+        if (viewerEl) viewerEl.textContent = data.activeViewers;
+        if (fsViewers) fsViewers.textContent = data.activeViewers;
+      }
       console.log('[View] Registered stream view');
     } catch (e) {
       console.log('[View] Could not register view:', e);
     }
   }
 
-  // Start heartbeat when user is logged in
+  // Start heartbeat for all viewers (logged in or anonymous)
   function startListenerHeartbeat() {
     if (heartbeatInterval) clearInterval(heartbeatInterval);
-    
+
     // Register view (increments totalViews counter)
     registerStreamView();
 
     // Send heartbeat immediately
     sendListenerHeartbeat();
-    
-    // Then every 60 seconds
-    heartbeatInterval = setInterval(sendListenerHeartbeat, 60000);
+
+    // Then every 30 seconds to keep count accurate
+    heartbeatInterval = setInterval(sendListenerHeartbeat, 30000);
   }
-  
+
   // Stop heartbeat and notify leave
   function stopListenerHeartbeat() {
     if (heartbeatInterval) {
       clearInterval(heartbeatInterval);
       heartbeatInterval = null;
     }
-    
-    if (currentUser) {
-      navigator.sendBeacon('/api/livestream/slots', JSON.stringify({
+
+    const streamId = window.currentStreamId || document.body.dataset.streamId;
+    if (streamId) {
+      const userId = currentUser?.uid || getOrCreateSessionId();
+      navigator.sendBeacon('/api/livestream/listeners', JSON.stringify({
         action: 'leave',
-        odamiMa: currentUser.uid
+        streamId,
+        userId
       }));
     }
   }
-  
-  // Start heartbeat if logged in
-  if (isLoggedIn) {
-    startListenerHeartbeat();
-  }
-  
+
+  // Start heartbeat for all viewers (logged in or anonymous)
+  startListenerHeartbeat();
+
   // Clean up on page unload
   window.addEventListener('beforeunload', stopListenerHeartbeat);
   
