@@ -367,13 +367,61 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                 </div>
                 <!-- BUTT Audio-Only Placeholder -->
                 <div id="buttAudioPreview" class="butt-audio-preview hidden">
-                  <div class="butt-placeholder">
-                    <div class="butt-live-text">
-                      <span id="buttPreviewDjName">DJ</span> is <span class="live-word">LIVE</span>
+                  <div class="audio-only-placeholder">
+                    <!-- Fresh Wax branding top right -->
+                    <div class="audio-placeholder-branding">
+                      <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
                     </div>
-                    <div class="butt-audio-badge">
-                      <span class="live-pulse"></span>
-                      AUDIO ONLY
+                    <!-- DJ Info at top -->
+                    <div class="audio-dj-info">
+                      <div class="audio-dj-name" id="buttPreviewDjName">DJ Name</div>
+                      <div class="audio-show-title">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
+                      <div class="audio-live-badge">
+                        <span class="live-pulse"></span>
+                        AUDIO ONLY
+                      </div>
+                    </div>
+                    <!-- Turntables row: Left deck, Waveform, Right deck -->
+                    <div class="turntables-row">
+                      <!-- Left Deck -->
+                      <div class="vinyl-container vinyl-left">
+                        <div class="vinyl-record">
+                          <div class="vinyl-label">
+                            <img id="buttVinylAvatar" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
+                          </div>
+                          <div class="vinyl-grooves"></div>
+                        </div>
+                        <div class="tonearm tonearm-left"></div>
+                      </div>
+                      <!-- Waveform in center -->
+                      <div class="audio-waveform">
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                      </div>
+                      <!-- Right Deck -->
+                      <div class="vinyl-container vinyl-right">
+                        <div class="vinyl-record">
+                          <div class="vinyl-label vinyl-label-right">
+                            <img id="buttVinylAvatar2" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
+                          </div>
+                          <div class="vinyl-grooves"></div>
+                        </div>
+                        <div class="tonearm tonearm-right"></div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2543,10 +2591,16 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       obsVideoPreview?.classList.add('hidden');
       obsOfflineState?.classList.add('hidden');
       buttAudioPreview?.classList.remove('hidden');
-      // Update BUTT placeholder with DJ name
+      // Update BUTT placeholder with DJ name and avatar
       const buttPreviewDjName = document.getElementById('buttPreviewDjName');
+      const buttVinylAvatar = document.getElementById('buttVinylAvatar');
+      const buttVinylAvatar2 = document.getElementById('buttVinylAvatar2');
       if (buttPreviewDjName && userInfo) {
         buttPreviewDjName.textContent = userInfo.name || 'DJ';
+      }
+      if (userInfo?.avatar) {
+        if (buttVinylAvatar) buttVinylAvatar.src = userInfo.avatar;
+        if (buttVinylAvatar2) buttVinylAvatar2.src = userInfo.avatar;
       }
       // Show broadcast audio panel for BUTT mode
       const broadcastAudioPanel = document.getElementById('broadcastAudioPanel');

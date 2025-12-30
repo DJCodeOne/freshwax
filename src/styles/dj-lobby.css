@@ -8124,49 +8124,212 @@
     overflow: hidden;
   }
 
-  .butt-placeholder {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background: #000;
+  /* Audio-Only Placeholder - Same as live page */
+  .butt-audio-preview .audio-only-placeholder {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 1rem;
+    padding: 1rem;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+    position: relative;
   }
 
-  .butt-live-text {
+  .butt-audio-preview .audio-placeholder-branding {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 2rem;
-    color: #fff;
-    letter-spacing: 3px;
-    text-align: center;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
   }
 
-  .butt-live-text .live-word {
+  .butt-audio-preview .audio-placeholder-branding .brand-fresh {
+    color: #fff;
+  }
+
+  .butt-audio-preview .audio-placeholder-branding .brand-wax {
     color: #dc2626;
   }
 
-  .butt-audio-badge {
+  .butt-audio-preview .turntables-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .butt-audio-preview .vinyl-container {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+  }
+
+  .butt-audio-preview .vinyl-record {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at center, transparent 28%, #111 29%, #111 31%, transparent 32%),
+      radial-gradient(circle at center, transparent 38%, #222 39%, #222 41%, transparent 42%),
+      radial-gradient(circle at center, transparent 58%, #1a1a1a 59%, #1a1a1a 61%, transparent 62%),
+      radial-gradient(circle at center, transparent 78%, #222 79%, #222 81%, transparent 82%),
+      linear-gradient(135deg, #111 0%, #000 100%);
+    box-shadow:
+      0 0 0 2px #333,
+      0 0 15px rgba(0,0,0,0.8);
+    animation: lobbySpin 3s linear infinite;
+  }
+
+  .butt-audio-preview .vinyl-right .vinyl-record {
+    animation: lobbySpinReverse 3s linear infinite;
+  }
+
+  @keyframes lobbySpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes lobbySpinReverse {
+    from { transform: rotate(360deg); }
+    to { transform: rotate(0deg); }
+  }
+
+  .butt-audio-preview .vinyl-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .butt-audio-preview .vinyl-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .butt-audio-preview .vinyl-label::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: #111;
+    border-radius: 50%;
+  }
+
+  .butt-audio-preview .tonearm-left {
+    position: absolute;
+    top: -5px;
+    right: -10px;
+    width: 45px;
+    height: 4px;
+    background: linear-gradient(90deg, #666 0%, #444 50%, #333 100%);
+    border-radius: 2px;
+    transform-origin: right center;
+    transform: rotate(-25deg);
+  }
+
+  .butt-audio-preview .tonearm-right {
+    position: absolute;
+    top: -5px;
+    left: -10px;
+    width: 45px;
+    height: 4px;
+    background: linear-gradient(270deg, #666 0%, #444 50%, #333 100%);
+    border-radius: 2px;
+    transform-origin: left center;
+    transform: rotate(25deg);
+  }
+
+  .butt-audio-preview .audio-dj-info {
+    text-align: center;
+  }
+
+  .butt-audio-preview .audio-dj-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+    color: #fff;
+    letter-spacing: 2px;
+  }
+
+  .butt-audio-preview .audio-show-title {
+    font-size: 0.65rem;
+    color: #888;
+    margin-bottom: 0.35rem;
+  }
+
+  .butt-audio-preview .audio-live-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    background: rgba(220, 38, 38, 0.2);
-    border: 1px solid #dc2626;
-    padding: 0.3rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    color: #f87171;
+    background: rgba(22, 163, 74, 0.2);
+    border: 1px solid #16a34a;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #16a34a;
     letter-spacing: 1px;
   }
 
-  .butt-audio-badge .live-pulse {
-    width: 8px;
-    height: 8px;
-    background: #dc2626;
+  .butt-audio-preview .live-pulse {
+    width: 6px;
+    height: 6px;
+    background: #16a34a;
     border-radius: 50%;
     animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .butt-audio-preview .audio-waveform {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 50px;
+    padding: 0 0.5rem;
+  }
+
+  .butt-audio-preview .audio-waveform .audio-bar {
+    width: 3px;
+    background: linear-gradient(to top, #16a34a, #4ade80);
+    border-radius: 2px;
+    animation: barPulse 0.8s ease-in-out infinite;
+  }
+
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(1) { height: 25%; animation-delay: 0s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(2) { height: 45%; animation-delay: 0.05s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(3) { height: 65%; animation-delay: 0.1s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(4) { height: 85%; animation-delay: 0.15s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(5) { height: 100%; animation-delay: 0.2s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(6) { height: 80%; animation-delay: 0.25s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(7) { height: 95%; animation-delay: 0.3s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(8) { height: 70%; animation-delay: 0.35s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(9) { height: 70%; animation-delay: 0.4s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(10) { height: 95%; animation-delay: 0.45s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(11) { height: 80%; animation-delay: 0.5s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(12) { height: 100%; animation-delay: 0.55s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(13) { height: 85%; animation-delay: 0.6s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(14) { height: 65%; animation-delay: 0.65s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(15) { height: 45%; animation-delay: 0.7s; }
+  .butt-audio-preview .audio-waveform .audio-bar:nth-child(16) { height: 25%; animation-delay: 0.75s; }
+
+  @keyframes barPulse {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(0.4); }
   }
 
   /* Vinyl groove background - off center */
