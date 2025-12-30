@@ -4945,8 +4945,9 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       }
       if (npTrackTitle) npTrackTitle.textContent = '';
 
-      // Hide duration box and genre in playlist mode
-      if (bottomDurationBox) bottomDurationBox.style.display = 'none';
+      // Show duration box with "LEFT" label, hide genre in playlist mode
+      if (bottomDurationBox) bottomDurationBox.style.display = 'flex';
+      if (bottomDurationLabel) bottomDurationLabel.textContent = 'LEFT';
       if (streamGenre) streamGenre.style.display = 'none';
 
       // Update button state - check if track is already in personal playlist
