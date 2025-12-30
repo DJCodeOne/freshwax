@@ -1803,6 +1803,8 @@ export class PlaylistManager {
         queueSize: this.playlist.queue.length,
         isAuthenticated: this.isAuthenticated,
         userId: this.userId,
+        // Track timing for countdown sync
+        trackStartedAt: this.playlist.trackStartedAt,
         // DJ Waitlist info
         userQueuePosition: this.getUserQueuePosition(),
         userTracksInQueue: this.getUserTracksInQueue(),

@@ -2090,7 +2090,7 @@
   }
 
   // Start the duration timer for a new track
-  async function startDurationTimer(trackId: string, platform?: string, embedId?: string) {
+  async function startDurationTimer(trackId: string, platform?: string, embedId?: string, trackStartedAt?: string | null) {
     // If same track, don't restart
     if (trackId === lastTrackId && durationInterval) return;
 
@@ -2098,7 +2098,8 @@
     stopDurationTimer();
 
     lastTrackId = trackId;
-    currentTrackStartTime = Date.now();
+    // Use trackStartedAt from server if available, otherwise fallback to current time
+    currentTrackStartTime = trackStartedAt ? new Date(trackStartedAt).getTime() : Date.now();
     currentTrackDuration = null;
 
     // Show initial state
@@ -2832,7 +2833,8 @@
       userTracksInQueue,
       isUsersTurn,
       currentDj,
-      personalPlaylist
+      personalPlaylist,
+      trackStartedAt
     } = event.detail;
 
     // Update auth state from event
@@ -2865,7 +2867,7 @@
     }
 
     // Update Now Playing Strip
-    updateNowPlayingStrip(queue, currentIndex, currentDj);
+    updateNowPlayingStrip(queue, currentIndex, currentDj, trackStartedAt);
 
     // Update queue count
     const queueCount = document.getElementById('queueCount');
@@ -2917,7 +2919,7 @@
   }
 
   // Update Now Playing Strip
-  function updateNowPlayingStrip(queue: any[], currentIndex: number, currentDj: any) {
+  function updateNowPlayingStrip(queue: any[], currentIndex: number, currentDj: any, trackStartedAt?: string | null) {
     const strip = document.getElementById('nowPlayingStrip');
     const title = document.getElementById('nowPlayingTitle');
 
@@ -2925,7 +2927,7 @@
 
     if (queue.length === 0 || currentIndex >= queue.length) {
       strip.classList.add('hidden');
-      updateVideoPreview(null, null);
+      updateVideoPreview(null, null, null);
       return;
     }
 
@@ -2934,11 +2936,11 @@
     title.textContent = currentItem?.title || 'Unknown Track';
 
     // Update video preview
-    updateVideoPreview(currentItem, currentDj);
+    updateVideoPreview(currentItem, currentDj, trackStartedAt);
   }
 
   // Update the video preview - thumbnail only, no interactive player
-  function updateVideoPreview(currentItem: any, currentDj: any) {
+  function updateVideoPreview(currentItem: any, currentDj: any, trackStartedAt?: string | null) {
     const previewContainer = document.getElementById('previewPlayerContainer');
     const previewEmpty = document.querySelector('.queue-video-preview .preview-empty') as HTMLElement;
     const previewTrackInfo = document.getElementById('previewTrackInfo');
@@ -2968,9 +2970,9 @@
       previewDjName.textContent = `Selector: ${currentDj?.userName || currentItem.addedByName || 'Unknown'}`;
     }
 
-    // Start duration timer for this track (with countdown support)
+    // Start duration timer for this track (with countdown support using server timestamp)
     const trackId = currentItem.id || currentItem.url || `${currentItem.title}-${currentItem.addedByName}`;
-    startDurationTimer(trackId, currentItem.platform, currentItem.embedId);
+    startDurationTimer(trackId, currentItem.platform, currentItem.embedId, trackStartedAt);
 
     // Show thumbnail only - no interactive player
     if (currentItem.thumbnail) {
