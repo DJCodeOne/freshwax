@@ -395,8 +395,23 @@ export class EmbedPlayerManager {
     console.log('[EmbedPlayerManager] Pause called, platform:', this.currentPlatform, 'hasPlayer:', !!this.youtubePlayer);
     try {
       if (this.currentPlatform === 'youtube' && this.youtubePlayer) {
-        console.log('[EmbedPlayerManager] Calling pauseVideo on YouTube player');
-        this.youtubePlayer.pauseVideo();
+        // Check if pauseVideo function exists
+        if (typeof this.youtubePlayer.pauseVideo === 'function') {
+          const stateBefore = typeof this.youtubePlayer.getPlayerState === 'function'
+            ? this.youtubePlayer.getPlayerState()
+            : 'unknown';
+          console.log('[EmbedPlayerManager] YouTube player state before pause:', stateBefore);
+          this.youtubePlayer.pauseVideo();
+          // Verify pause worked
+          setTimeout(() => {
+            const stateAfter = typeof this.youtubePlayer?.getPlayerState === 'function'
+              ? this.youtubePlayer.getPlayerState()
+              : 'unknown';
+            console.log('[EmbedPlayerManager] YouTube player state after pause:', stateAfter);
+          }, 100);
+        } else {
+          console.error('[EmbedPlayerManager] pauseVideo is not a function on youtubePlayer');
+        }
       } else if (this.currentPlatform === 'vimeo' && this.vimeoPlayer) {
         await this.vimeoPlayer.pause();
       } else if (this.currentPlatform === 'soundcloud' && this.soundcloudWidget) {
