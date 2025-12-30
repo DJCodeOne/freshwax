@@ -1702,6 +1702,9 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     const fsAudioPlaceholder = document.getElementById('fsAudioPlaceholder');
     const fsVideo = document.getElementById('fsVideo');
 
+    // Clear loading state when syncing
+    fsBadge?.classList.remove('is-loading');
+
     // Check if we're in audio-only mode (audioPlayer is visible)
     const audioPlayer = document.getElementById('audioPlayer');
     const isAudioMode = audioPlayer && !audioPlayer.classList.contains('hidden');
@@ -3933,16 +3936,23 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     const liveDjNameCard = document.getElementById('liveDjNameCard');
     const liveDjEndsCard = document.getElementById('liveDjEndsCard');
     const queueListCard = document.getElementById('queueListCard');
-    
+
     const streamInfoBar = document.getElementById('streamInfoBar');
     const liveBadge = document.getElementById('liveBadge');
     const liveStatusText = document.getElementById('liveStatusText');
     const streamTitle = document.getElementById('streamTitle');
     const djAvatar = document.getElementById('djAvatar');
-    
+
     const offlineOverlay = document.getElementById('offlineOverlay');
     const countdownOverlay = document.getElementById('countdownOverlay');
     const playBtn = document.getElementById('playBtn');
+
+    // Clear loading state on first data received
+    liveBadge?.classList.remove('is-loading');
+    offlineOverlay?.classList.remove('is-loading');
+    const offlineIconText = document.getElementById('offlineIconText');
+    const offlineMainText = document.getElementById('offlineMainText');
+    const offlineSubText = document.getElementById('offlineSubText');
     
     // Track live status changes for chat clear timer and playlist fallback
     // If live-stream.js already detected an active stream, don't override with slots API data
@@ -4086,6 +4096,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         // Show offline overlay if playlist isn't covering it
         if (!playlistManager?.isPlaying) {
           offlineOverlay?.classList.remove('hidden');
+          // Update offline overlay text from loading state
+          if (offlineIconText) offlineIconText.textContent = 'OFFLINE';
+          if (offlineMainText) offlineMainText.textContent = 'No one is streaming right now';
+          if (offlineSubText) offlineSubText.textContent = 'Check the schedule for upcoming streams';
         }
       }
     }

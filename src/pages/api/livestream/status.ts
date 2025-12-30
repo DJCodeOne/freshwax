@@ -116,6 +116,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // SECURITY: Do NOT expose streamKey in public response - it would allow stream hijacking
     let liveStreams = liveSlots.map(slot => ({
       id: slot.id,
+      slotId: slot.id,
       title: slot.title || `${slot.djName}'s Stream`,
       djName: slot.djName,
       djId: slot.djId,
@@ -125,6 +126,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       isLive: true,
       status: 'live',
       startedAt: slot.liveStartTime || slot.startTime,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      duration: slot.duration,
       // Always use stored hlsUrl if available (updated by DJ lobby on mode change)
       // Fall back to buildHlsUrl only if no stored URL
       hlsUrl: slot.hlsUrl || (slot.streamKey ? buildHlsUrl(slot.streamKey) : null),
