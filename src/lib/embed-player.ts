@@ -392,8 +392,10 @@ export class EmbedPlayerManager {
    * Pause current media
    */
   async pause(): Promise<void> {
+    console.log('[EmbedPlayerManager] Pause called, platform:', this.currentPlatform, 'hasPlayer:', !!this.youtubePlayer);
     try {
       if (this.currentPlatform === 'youtube' && this.youtubePlayer) {
+        console.log('[EmbedPlayerManager] Calling pauseVideo on YouTube player');
         this.youtubePlayer.pauseVideo();
       } else if (this.currentPlatform === 'vimeo' && this.vimeoPlayer) {
         await this.vimeoPlayer.pause();
@@ -401,6 +403,8 @@ export class EmbedPlayerManager {
         this.soundcloudWidget.pause();
       } else if (this.currentPlatform === 'direct' && this.directVideo) {
         this.directVideo.pause();
+      } else {
+        console.warn('[EmbedPlayerManager] No player available to pause');
       }
     } catch (error) {
       console.error('[EmbedPlayerManager] Pause error:', error);
