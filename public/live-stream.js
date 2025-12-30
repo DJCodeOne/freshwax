@@ -2475,35 +2475,38 @@ async function setupChat(streamId) {
   });
   
   // Listen for reactions from other viewers
-  chatChannel.bind('reaction', (data) => {
-    console.log('[Reaction] Received:', data);
-    console.log('[Reaction] Current user:', currentUser?.uid);
-    console.log('[Reaction] Data userId:', data.userId);
+  // Skip on fullpage - it has its own reaction handler
+  if (!window.location.pathname.includes('/live/fullpage')) {
+    chatChannel.bind('reaction', (data) => {
+      console.log('[Reaction] Received:', data);
+      console.log('[Reaction] Current user:', currentUser?.uid);
+      console.log('[Reaction] Data userId:', data.userId);
 
-    // Skip if this is our own reaction (we already showed it locally)
-    // Use a session-based check to allow same user on multiple devices
-    const reactionSessionId = data.sessionId || data.userId;
-    const mySessionId = window.reactionSessionId || currentUser?.uid;
+      // Skip if this is our own reaction (we already showed it locally)
+      // Use a session-based check to allow same user on multiple devices
+      const reactionSessionId = data.sessionId || data.userId;
+      const mySessionId = window.reactionSessionId || currentUser?.uid;
 
-    if (reactionSessionId && mySessionId && reactionSessionId === mySessionId) {
-      console.log('[Reaction] Skipping own reaction (same session)');
-      return;
-    }
+      if (reactionSessionId && mySessionId && reactionSessionId === mySessionId) {
+        console.log('[Reaction] Skipping own reaction (same session)');
+        return;
+      }
 
-    // Display the reaction animation - all reactions are emoji
-    const emoji = data.emoji || '❤️';
-    const emojiList = emoji.split(',');
-    console.log('[Reaction] Displaying emojis:', emojiList);
+      // Display the reaction animation - all reactions are emoji
+      const emoji = data.emoji || '❤️';
+      const emojiList = emoji.split(',');
+      console.log('[Reaction] Displaying emojis:', emojiList);
 
-    // Create burst of emojis in random positions
-    const numEmojis = 4 + Math.floor(Math.random() * 4);
-    console.log('[Reaction] Creating', numEmojis, 'floating emojis');
-    for (let i = 0; i < numEmojis; i++) {
-      setTimeout(() => {
-        createFloatingEmojiFromBroadcast(emojiList);
-      }, i * 70);
-    }
-  });
+      // Create burst of emojis in random positions
+      const numEmojis = 4 + Math.floor(Math.random() * 4);
+      console.log('[Reaction] Creating', numEmojis, 'floating emojis');
+      for (let i = 0; i < numEmojis; i++) {
+        setTimeout(() => {
+          createFloatingEmojiFromBroadcast(emojiList);
+        }, i * 70);
+      }
+    });
+  }
   
   // Listen for shoutouts from other viewers
   chatChannel.bind('shoutout', (data) => {
