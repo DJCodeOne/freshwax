@@ -368,7 +368,13 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                 <!-- BUTT Audio-Only Placeholder -->
                 <div id="buttAudioPreview" class="butt-audio-preview hidden">
                   <div class="butt-placeholder">
-                    <div class="butt-branding"><span class="fresh">FRESH</span><span class="wax">WAX</span></div>
+                    <div class="butt-live-text">
+                      <span id="buttPreviewDjName">DJ</span> is <span class="live-word">LIVE</span>
+                    </div>
+                    <div class="butt-audio-badge">
+                      <span class="live-pulse"></span>
+                      AUDIO ONLY
+                    </div>
                   </div>
                 </div>
                 <!-- Hidden audio element for Icecast/BUTT stream -->
@@ -2537,15 +2543,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       obsVideoPreview?.classList.add('hidden');
       obsOfflineState?.classList.add('hidden');
       buttAudioPreview?.classList.remove('hidden');
-      // Update BUTT placeholder with DJ name and title
-      const buttDjName = document.getElementById('buttDjName');
-      const buttStreamTitle = document.getElementById('buttStreamTitle');
-      if (buttDjName && userInfo) {
-        buttDjName.textContent = userInfo.name || 'DJ';
-      }
-      if (buttStreamTitle) {
-        const titleInput = document.getElementById('inlineStreamTitle');
-        buttStreamTitle.textContent = titleInput?.value || '';
+      // Update BUTT placeholder with DJ name
+      const buttPreviewDjName = document.getElementById('buttPreviewDjName');
+      if (buttPreviewDjName && userInfo) {
+        buttPreviewDjName.textContent = userInfo.name || 'DJ';
       }
       // Show broadcast audio panel for BUTT mode
       const broadcastAudioPanel = document.getElementById('broadcastAudioPanel');

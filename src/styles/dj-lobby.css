@@ -8129,6 +8129,44 @@
     width: 100%;
     height: 100%;
     background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .butt-live-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: #fff;
+    letter-spacing: 3px;
+    text-align: center;
+  }
+
+  .butt-live-text .live-word {
+    color: #dc2626;
+  }
+
+  .butt-audio-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(220, 38, 38, 0.2);
+    border: 1px solid #dc2626;
+    padding: 0.3rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    color: #f87171;
+    letter-spacing: 1px;
+  }
+
+  .butt-audio-badge .live-pulse {
+    width: 8px;
+    height: 8px;
+    background: #dc2626;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
   }
 
   /* Vinyl groove background - off center */
