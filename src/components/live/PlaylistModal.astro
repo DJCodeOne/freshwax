@@ -3125,13 +3125,36 @@
       return;
     }
 
+    // Helper to check if title is a placeholder like "Track 1234"
+    function isPlaceholderTitle(title?: string): boolean {
+      if (!title) return true;
+      return /^Track \d+$/i.test(title);
+    }
+
     container.innerHTML = tracks.map((track, index) => {
       // Get title - try multiple fields
       let title = track.title || track.name || '';
 
-      // If no title, try to extract from URL
+      // If title is a placeholder like "Track 3349", try to get a better one
+      if (isPlaceholderTitle(title)) {
+        // Try to use selector name if available
+        if (track.addedByName && track.addedByName !== 'Auto-Play') {
+          title = `Track by ${track.addedByName}`;
+        } else if (track.url) {
+          // Fall back to platform-based name
+          const url = track.url;
+          if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            title = 'YouTube Video';
+          } else if (url.includes('soundcloud.com')) {
+            title = 'SoundCloud Track';
+          } else {
+            title = 'Media Track';
+          }
+        }
+      }
+
+      // If no title at all, try to extract from URL
       if (!title && track.url) {
-        // Extract video ID or meaningful part from URL
         const url = track.url;
         if (url.includes('youtube.com') || url.includes('youtu.be')) {
           title = 'YouTube Video';
