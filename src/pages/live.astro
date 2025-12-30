@@ -3257,6 +3257,11 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   function startListenerHeartbeat() {
     if (heartbeatInterval) clearInterval(heartbeatInterval);
 
+    // Ensure we have a stream ID - default to playlist-global if none set
+    if (!window.currentStreamId) {
+      window.currentStreamId = 'playlist-global';
+    }
+
     // Register view (increments totalViews counter)
     registerStreamView();
 
@@ -3934,6 +3939,9 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     wasLive = isLiveNow;
     
     if (currentLive) {
+      // Set the stream ID for viewer tracking
+      window.currentStreamId = currentLive.slotId || currentLive.id || 'live-stream';
+
       liveStatusCard?.classList.add('is-live');
       liveIndicator?.classList.add('is-live');
       if (liveIndicatorText) liveIndicatorText.textContent = 'NOW LIVE';
@@ -5002,6 +5010,15 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   (function initAutoHideHeader() {
     const header = document.getElementById('freshwax-header');
     if (!header) return;
+
+    // Set real viewport height as CSS variable (handles mobile browser chrome)
+    function setRealVH() {
+      const vh = window.innerHeight;
+      document.documentElement.style.setProperty('--real-vh', `${vh}px`);
+    }
+    setRealVH();
+    window.addEventListener('resize', setRealVH);
+    window.addEventListener('orientationchange', () => setTimeout(setRealVH, 100));
 
     // Create hover trigger zone at the very top of the page
     let hoverZone = document.querySelector('.header-hover-zone');
