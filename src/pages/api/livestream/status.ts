@@ -97,7 +97,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // General live status check
     const statusCacheKey = 'status:general';
 
-    if (!skipCache) {
+    // Skip cache if _t parameter is present (cache buster from clients)
+    const hasCacheBuster = url.searchParams.has('_t');
+    const shouldSkipCache = skipCache || hasCacheBuster;
+
+    if (!shouldSkipCache) {
       const cached = getCached(statusCacheKey);
       if (cached) {
         const maxAge = cached.isLive ? 10 : 30;
@@ -106,10 +110,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Check livestreamSlots for slots with status='live' (new slot-based system)
+    // CRITICAL: skipCache=true here - live status must always be fresh to detect stream ends
     const liveSlots = await queryCollection('livestreamSlots', {
       filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-      limit: 5
-      // Removed skipCache: true - use cached data to reduce Firebase reads
+      limit: 5,
+      skipCache: true
     });
 
     // Convert slots to stream format for the player
