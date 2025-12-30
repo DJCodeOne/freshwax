@@ -478,7 +478,20 @@ export async function PUT({ request, locals }: APIContext) {
   }
 }
 
-// Broadcast playlist update via Pusher
+// Fetch recently played from history (top 10 items)
+async function getRecentlyPlayed(): Promise<any[]> {
+  try {
+    const historyDoc = await getDocument('liveSettings', 'playlistHistory');
+    if (historyDoc && historyDoc.items) {
+      return historyDoc.items.slice(0, 10);
+    }
+  } catch (error) {
+    console.warn('[GlobalPlaylist] Could not fetch recently played:', error);
+  }
+  return [];
+}
+
+// Broadcast playlist update via Pusher (includes recently played)
 async function broadcastPlaylistUpdate(playlist: GlobalPlaylist) {
   try {
     const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
@@ -491,9 +504,12 @@ async function broadcastPlaylistUpdate(playlist: GlobalPlaylist) {
       return;
     }
 
+    // Fetch recently played to include in broadcast
+    const recentlyPlayed = await getRecentlyPlayed();
+
     const channel = 'live-playlist';
     const event = 'playlist-update';
-    const data = JSON.stringify(playlist);
+    const data = JSON.stringify({ ...playlist, recentlyPlayed });
 
     // Create Pusher signature
     const timestamp = Math.floor(Date.now() / 1000);

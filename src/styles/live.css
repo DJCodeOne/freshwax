@@ -1,3 +1,38 @@
+  /* =====================================================
+     LAYOUT ALIGNMENT FIXES
+     ===================================================== */
+
+  /* Video player - aspect ratio based, not too tall */
+  .player-container {
+    aspect-ratio: 16 / 9 !important;
+    max-height: 50vh !important;
+  }
+
+  /* Align all columns to start at top, don't stretch */
+  .live-layout {
+    align-items: start !important;
+  }
+
+  /* Side columns match player column height */
+  .schedule-column,
+  .chat-column,
+  .emoji-column {
+    max-height: calc(50vh + 120px) !important; /* Player height + controls */
+    overflow: hidden !important;
+  }
+
+  /* Chat section fills its container */
+  .chat-section {
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+
+  /* Prevent text overflow/bleeding */
+  * {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
   /* Force select text to be visible on all browsers including iOS picker */
   select,
   select option {
@@ -7273,3 +7308,4 @@ body:has(.playlist-modal:not(.hidden)) .playlist-player {
     object-fit: contain !important;
   }
 }
+

@@ -1422,28 +1422,6 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       });
       const emojiResult = await emojiResponse.json();
       console.log('[triggerReaction] Emoji broadcast result:', emojiResult);
-
-      // Also record as like
-      console.log('[triggerReaction] Sending like...');
-      const response = await fetch('/api/livestream/react', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'like',
-          streamId,
-          userId: user.uid
-        })
-      });
-
-      const result = await response.json();
-      console.log('[triggerReaction] Like result:', result);
-      if (result.success) {
-        // Update like count in UI
-        const likeCount = document.getElementById('likeCount');
-        if (likeCount && result.totalLikes !== undefined) {
-          likeCount.textContent = result.totalLikes;
-        }
-      }
     } catch (error) {
       console.error('[Reaction] API error:', error);
     }

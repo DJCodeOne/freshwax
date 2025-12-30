@@ -49,6 +49,7 @@ export class PlaylistManager {
   private isSubscribed: boolean = false;
   private trackTimer: number | null = null; // Timer for max track duration
   private recentlyPlayed: Map<string, number> = new Map(); // URL -> timestamp
+  private globalRecentlyPlayed: any[] = []; // Recently played from Pusher (global)
   private countdownInterval: number | null = null; // Countdown display interval
   private consecutiveErrors: number = 0; // Track errors to prevent infinite loops
   private containerId: string; // Store container ID for existence check
@@ -257,13 +258,19 @@ export class PlaylistManager {
   /**
    * Handle remote playlist update from Pusher
    */
-  private async handleRemoteUpdate(newPlaylist: GlobalPlaylist): Promise<void> {
+  private async handleRemoteUpdate(newPlaylist: GlobalPlaylist & { recentlyPlayed?: any[] }): Promise<void> {
     const wasPlaying = this.playlist.isPlaying;
     const oldCurrentItem = this.playlist.queue[this.playlist.currentIndex];
     const hadItems = this.playlist.queue.length > 0;
 
-    // Update local playlist
-    this.playlist = newPlaylist;
+    // Extract and store recently played from Pusher (if included)
+    if (newPlaylist.recentlyPlayed) {
+      this.globalRecentlyPlayed = newPlaylist.recentlyPlayed;
+    }
+
+    // Update local playlist (exclude recentlyPlayed from playlist object)
+    const { recentlyPlayed: _, ...playlistWithoutRecent } = newPlaylist;
+    this.playlist = playlistWithoutRecent as GlobalPlaylist;
 
     const newCurrentItem = this.playlist.queue[this.playlist.currentIndex];
     const hasItems = this.playlist.queue.length > 0;
@@ -1819,7 +1826,9 @@ export class PlaylistManager {
         isUsersTurn: this.isUsersTurn(),
         currentDj: this.getCurrentDj(),
         // Personal playlist
-        personalPlaylist: this.getPersonalPlaylist()
+        personalPlaylist: this.getPersonalPlaylist(),
+        // Global recently played (from Pusher)
+        recentlyPlayed: this.globalRecentlyPlayed
       }
     });
     window.dispatchEvent(event);

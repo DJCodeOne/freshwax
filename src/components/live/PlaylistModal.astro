@@ -105,7 +105,7 @@
               </div>
             </div>
 
-            <!-- Video Preview Side -->
+            <!-- Now Playing Info Side -->
             <div class="queue-preview-side">
               <!-- Position Indicator (Your Track Playing) - shown above Now Playing when it's your turn -->
               <div id="yourTrackIndicator" class="your-track-indicator hidden">
@@ -114,25 +114,7 @@
               <div class="preview-header">
                 <h3>Now Playing</h3>
               </div>
-              <div id="queueVideoPreview" class="queue-video-preview">
-                <div class="preview-empty">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-                    <line x1="7" y1="2" x2="7" y2="22"></line>
-                    <line x1="17" y1="2" x2="17" y2="22"></line>
-                    <line x1="2" y1="12" x2="22" y2="12"></line>
-                    <line x1="2" y1="7" x2="7" y2="7"></line>
-                    <line x1="2" y1="17" x2="7" y2="17"></line>
-                    <line x1="17" y1="17" x2="22" y2="17"></line>
-                    <line x1="17" y1="7" x2="22" y2="7"></line>
-                  </svg>
-                  <p>No video playing</p>
-                </div>
-                <div id="previewPlayerContainer" class="preview-player-container hidden">
-                  <!-- Video iframe will be inserted here -->
-                </div>
-              </div>
-              <div id="previewTrackInfo" class="preview-track-info hidden">
+              <div id="previewTrackInfo" class="preview-track-info">
                 <div class="preview-track-title" id="previewTrackTitle">--</div>
                 <div class="preview-track-bottom">
                   <div class="preview-track-dj" id="previewTrackDj">Selector: --</div>
@@ -142,8 +124,19 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Recently Played -->
+              <div class="recently-played-section">
+                <div class="recently-played-header">
+                  <h4>Recently Played</h4>
+                </div>
+                <div id="recentlyPlayedList" class="recently-played-list">
+                  <div class="recently-played-empty">No tracks played yet</div>
+                </div>
+              </div>
             </div>
           </div>
+          <div class="preview-divider"></div>
         </div>
 
         <!-- Right Column: My Playlist Section -->
@@ -285,6 +278,12 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Freshwax Footer -->
+      <div class="playlist-modal-footer">
+        <span class="footer-logo">freshwax</span>
+        <span class="footer-tagline">community playlist</span>
       </div>
 
     </div>
@@ -600,6 +599,97 @@
     border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
+  .preview-divider {
+    height: 3px;
+    background: linear-gradient(90deg, #dc2626, #ef4444);
+    margin-top: 1rem;
+    border-radius: 0;
+    /* Full width - break out of container */
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    width: 100vw;
+  }
+
+  /* Recently Played Section */
+  .recently-played-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .recently-played-header h4 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .recently-played-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .recently-played-empty {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .recently-played-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .recently-played-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .recently-played-number {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.3);
+    min-width: 18px;
+    text-align: center;
+  }
+
+  .recently-played-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .recently-played-title {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .recently-played-dj {
+    font-size: 0.65rem;
+    color: #60a5fa;
+  }
+
+  .recently-played-time {
+    font-size: 0.65rem;
+    color: rgba(156, 163, 175, 0.8);
+  }
+
   .preview-track-title {
     font-size: 0.85rem;
     font-weight: 600;
@@ -806,6 +896,32 @@
     flex-direction: column;
     padding: 1.5rem 2rem;
     overflow: hidden;
+  }
+
+  /* Freshwax branded footer */
+  .playlist-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .playlist-modal-footer .footer-logo {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #ef4444;
+    text-transform: lowercase;
+    letter-spacing: 0.5px;
+  }
+
+  .playlist-modal-footer .footer-tagline {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 400;
   }
 
   /* Queue item card style - compact rows for all items */
@@ -2369,6 +2485,8 @@
         console.log('[PlaylistModal] Playlist button clicked');
         modal?.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+        // Update recently played when modal opens
+        updateRecentlyPlayed();
       });
     }
 
@@ -2834,7 +2952,8 @@
       isUsersTurn,
       currentDj,
       personalPlaylist,
-      trackStartedAt
+      trackStartedAt,
+      recentlyPlayed
     } = event.detail;
 
     // Update auth state from event
@@ -2880,6 +2999,20 @@
 
     // Update personal playlist (pass count of user's tracks in queue)
     renderPersonalPlaylist(personalPlaylist || [], userTracksInQueue || 0);
+
+    // Update recently played tracks (use Pusher data if available)
+    if (recentlyPlayed && recentlyPlayed.length > 0) {
+      // Use data from Pusher - no API call needed
+      recentlyPlayedCache = recentlyPlayed;
+      recentlyPlayedCacheTime = Date.now();
+      const listContainer = document.getElementById('recentlyPlayedList');
+      if (listContainer) {
+        renderRecentlyPlayed(listContainer, recentlyPlayed);
+      }
+    } else {
+      // Fallback to API fetch (initial load only)
+      updateRecentlyPlayed();
+    }
   }
 
   // Update position indicator based on user's queue position
@@ -2939,63 +3072,138 @@
     updateVideoPreview(currentItem, currentDj, trackStartedAt);
   }
 
-  // Update the video preview - thumbnail only, no interactive player
+  // Cache for global recently played to avoid excessive API calls
+  let recentlyPlayedCache: any[] | null = null;
+  let recentlyPlayedCacheTime = 0;
+  const CACHE_TTL = 30000; // 30 seconds cache
+
+  // Update Recently Played list from server (global history)
+  async function updateRecentlyPlayed() {
+    const listContainer = document.getElementById('recentlyPlayedList');
+    if (!listContainer) return;
+
+    // Show loading state briefly
+    if (!recentlyPlayedCache) {
+      listContainer.innerHTML = '<div class="recently-played-empty">Loading...</div>';
+    }
+
+    try {
+      // Use cached data if fresh enough
+      const now = Date.now();
+      if (recentlyPlayedCache && (now - recentlyPlayedCacheTime) < CACHE_TTL) {
+        renderRecentlyPlayed(listContainer, recentlyPlayedCache);
+        return;
+      }
+
+      // Fetch from server API (global history)
+      const response = await fetch('/api/playlist/history');
+      const result = await response.json();
+
+      if (result.success && result.items) {
+        recentlyPlayedCache = result.items.slice(0, 10);
+        recentlyPlayedCacheTime = now;
+        renderRecentlyPlayed(listContainer, recentlyPlayedCache);
+      } else {
+        listContainer.innerHTML = '<div class="recently-played-empty">No tracks played yet</div>';
+      }
+    } catch (error) {
+      console.warn('[PlaylistModal] Could not fetch recently played:', error);
+      // Fallback to local history if server fails
+      const localHistory = playlistManager?.getPlayHistory() || [];
+      if (localHistory.length > 0) {
+        renderRecentlyPlayed(listContainer, localHistory.slice(0, 10));
+      } else {
+        listContainer.innerHTML = '<div class="recently-played-empty">No tracks played yet</div>';
+      }
+    }
+  }
+
+  // Render the recently played list
+  function renderRecentlyPlayed(container: HTMLElement, tracks: any[]) {
+    if (!tracks || tracks.length === 0) {
+      container.innerHTML = '<div class="recently-played-empty">No tracks played yet</div>';
+      return;
+    }
+
+    container.innerHTML = tracks.map((track, index) => {
+      // Get title - try multiple fields
+      let title = track.title || track.name || '';
+
+      // If no title, try to extract from URL
+      if (!title && track.url) {
+        // Extract video ID or meaningful part from URL
+        const url = track.url;
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+          title = 'YouTube Video';
+        } else if (url.includes('soundcloud.com')) {
+          title = 'SoundCloud Track';
+        } else {
+          title = 'Media Track';
+        }
+      }
+
+      if (!title) title = 'Unknown Track';
+      const truncatedTitle = title.length > 40 ? title.slice(0, 40) + '...' : title;
+
+      // Format time since played - always relative timestamp
+      let timeAgo = '';
+      if (track.playedAt) {
+        const playedTime = new Date(track.playedAt).getTime();
+        const now = Date.now();
+        const diffMs = now - playedTime;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+        const diffWeeks = Math.floor(diffDays / 7);
+
+        if (diffMins < 1) {
+          timeAgo = 'Just now';
+        } else if (diffMins < 60) {
+          timeAgo = `${diffMins}m ago`;
+        } else if (diffHours < 24) {
+          timeAgo = `${diffHours}h ago`;
+        } else if (diffDays < 7) {
+          timeAgo = `${diffDays}d ago`;
+        } else {
+          timeAgo = `${diffWeeks}w ago`;
+        }
+      }
+
+      return `
+        <div class="recently-played-item">
+          <span class="recently-played-number">${index + 1}</span>
+          <div class="recently-played-info">
+            <span class="recently-played-title" title="${title}">${truncatedTitle}</span>
+            <span class="recently-played-time">${timeAgo}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Update the track info display (video player removed, just showing track details)
   function updateVideoPreview(currentItem: any, currentDj: any, trackStartedAt?: string | null) {
-    const previewContainer = document.getElementById('previewPlayerContainer');
-    const previewEmpty = document.querySelector('.queue-video-preview .preview-empty') as HTMLElement;
     const previewTrackInfo = document.getElementById('previewTrackInfo');
     const previewTitle = document.getElementById('previewTrackTitle');
     const previewDjName = document.getElementById('previewTrackDj');
 
-    if (!previewContainer) return;
-
     if (!currentItem) {
       // No track playing - show empty state
-      previewContainer.classList.add('hidden');
-      previewContainer.innerHTML = '';
-      if (previewEmpty) previewEmpty.style.display = 'flex';
       if (previewTrackInfo) previewTrackInfo.classList.add('hidden');
+      if (previewTitle) previewTitle.textContent = '--';
+      if (previewDjName) previewDjName.textContent = 'Selector: --';
       stopDurationTimer();
       return;
     }
 
-    // Hide empty state, show preview
-    if (previewEmpty) previewEmpty.style.display = 'none';
-    previewContainer.classList.remove('hidden');
-
     // Update track info
-    if (previewTrackInfo && previewTitle && previewDjName) {
-      previewTrackInfo.classList.remove('hidden');
-      previewTitle.textContent = currentItem.title || 'Unknown Track';
-      previewDjName.textContent = `Selector: ${currentDj?.userName || currentItem.addedByName || 'Unknown'}`;
-    }
+    if (previewTrackInfo) previewTrackInfo.classList.remove('hidden');
+    if (previewTitle) previewTitle.textContent = currentItem.title || 'Unknown Track';
+    if (previewDjName) previewDjName.textContent = `Selector: ${currentDj?.userName || currentItem.addedByName || 'Unknown'}`;
 
     // Start duration timer for this track (with countdown support using server timestamp)
     const trackId = currentItem.id || currentItem.url || `${currentItem.title}-${currentItem.addedByName}`;
     startDurationTimer(trackId, currentItem.platform, currentItem.embedId, trackStartedAt);
-
-    // Show thumbnail only - no interactive player
-    if (currentItem.thumbnail) {
-      previewContainer.innerHTML = `
-        <div class="preview-thumbnail-wrapper">
-          <img src="${currentItem.thumbnail}" alt="${currentItem.title || 'Now Playing'}" />
-          <div class="preview-playing-indicator">
-            <span class="playing-bar"></span>
-            <span class="playing-bar"></span>
-            <span class="playing-bar"></span>
-          </div>
-        </div>
-      `;
-    } else {
-      previewContainer.innerHTML = `
-        <div class="preview-no-thumb">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polygon points="10 8 16 12 10 16 10 8"></polygon>
-          </svg>
-        </div>
-      `;
-    }
   }
 
   // Add playlist update listener once
