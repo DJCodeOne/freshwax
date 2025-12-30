@@ -8208,11 +8208,15 @@
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
+  }
+
+  .butt-audio-preview .vinyl-label-right {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   }
 
   .butt-audio-preview .vinyl-avatar {

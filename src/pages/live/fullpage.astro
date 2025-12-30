@@ -159,33 +159,60 @@ const pusherConfig = {
           </div>
         </div>
 
-        <!-- Audio Player -->
+        <!-- Audio Player (BUTT mode - two turntables) -->
         <div id="audioPlayer" class="audio-player hidden">
-          <div class="audio-content">
-            <div class="audio-cover">
-              <img id="streamCover" src="/place-holder.webp" alt="Stream Cover" />
+          <div class="fp-audio-placeholder">
+            <!-- Fresh Wax branding top right -->
+            <div class="fp-audio-placeholder-branding">
+              <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
             </div>
-            <div class="audio-info">
-              <div class="audio-live-badge">
-                <span class="live-pulse"></span>
-                <span>LIVE</span>
+            <div class="fp-audio-dj-info">
+              <div class="fp-audio-dj-name" id="audioDjName">DJ Name</div>
+              <div class="fp-audio-show-title" id="audioShowTitle">Live Session</div>
+              <div class="fp-audio-live-badge">
+                <span class="fp-live-pulse"></span>
+                AUDIO ONLY
               </div>
-              <div class="audio-title" id="audioTitle">Live Stream</div>
-              <div class="audio-dj" id="audioDjName">DJ Name</div>
             </div>
-            <div class="audio-bars">
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
-              <div class="audio-bar"></div>
+            <div class="fp-turntables-row">
+              <div class="fp-vinyl-container fp-vinyl-left">
+                <div class="fp-vinyl-record">
+                  <div class="fp-vinyl-label">
+                    <img id="vinylDjAvatar" src="/place-holder.webp" alt="DJ" class="fp-vinyl-avatar" />
+                  </div>
+                </div>
+                <div class="fp-tonearm fp-tonearm-left"></div>
+              </div>
+              <div class="fp-audio-waveform">
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+                <div class="fp-audio-bar"></div>
+              </div>
+              <div class="fp-vinyl-container fp-vinyl-right">
+                <div class="fp-vinyl-record">
+                  <div class="fp-vinyl-label fp-vinyl-label-right">
+                    <img id="vinylDjAvatar2" src="/place-holder.webp" alt="DJ" class="fp-vinyl-avatar" />
+                  </div>
+                </div>
+                <div class="fp-tonearm fp-tonearm-right"></div>
+              </div>
             </div>
           </div>
           <audio id="audioElement" crossorigin="anonymous" preload="auto"></audio>
@@ -1201,6 +1228,325 @@ const pusherConfig = {
   .login-toast-close:hover {
     color: #dc2626;
   }
+
+  /* Fullpage Audio Placeholder (BUTT mode - two turntables) */
+  .fp-audio-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+    padding: 2rem;
+    position: relative;
+  }
+
+  .fp-audio-placeholder-branding {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    letter-spacing: 2px;
+  }
+
+  .fp-audio-placeholder-branding .brand-fresh {
+    color: #fff;
+  }
+
+  .fp-audio-placeholder-branding .brand-wax {
+    color: #dc2626;
+  }
+
+  .fp-audio-dj-info {
+    text-align: center;
+  }
+
+  .fp-audio-dj-name {
+    font-family: 'Inter', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 2px;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+  }
+
+  .fp-audio-show-title {
+    font-size: 1.1rem;
+    color: #888;
+    margin-bottom: 0.75rem;
+  }
+
+  .fp-audio-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(22, 163, 74, 0.2);
+    border: 1px solid #16a34a;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #16a34a;
+    letter-spacing: 1px;
+  }
+
+  .fp-live-pulse {
+    width: 8px;
+    height: 8px;
+    background: #16a34a;
+    border-radius: 50%;
+    animation: fpPulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes fpPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .fp-turntables-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+  }
+
+  .fp-vinyl-container {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    flex-shrink: 0;
+  }
+
+  .fp-vinyl-record {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at center, transparent 28%, #111 29%, #111 31%, transparent 32%),
+      radial-gradient(circle at center, transparent 38%, #222 39%, #222 41%, transparent 42%),
+      radial-gradient(circle at center, transparent 58%, #1a1a1a 59%, #1a1a1a 61%, transparent 62%),
+      radial-gradient(circle at center, transparent 78%, #222 79%, #222 81%, transparent 82%),
+      radial-gradient(circle at center, transparent 88%, #333 89%, #333 91%, transparent 92%),
+      linear-gradient(135deg, #111 0%, #000 100%);
+    box-shadow:
+      0 0 0 3px #333,
+      0 0 40px rgba(0,0,0,0.8),
+      inset 0 0 70px rgba(0,0,0,0.5);
+    animation: fpSpin 3s linear infinite;
+  }
+
+  .fp-vinyl-record-reverse {
+    animation: fpSpinReverse 3s linear infinite;
+  }
+
+  @keyframes fpSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes fpSpinReverse {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(-360deg); }
+  }
+
+  .fp-vinyl-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    box-shadow: inset 0 2px 12px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .fp-vinyl-label-right {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  }
+
+  .fp-vinyl-label::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: #111;
+    border-radius: 50%;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+  }
+
+  .fp-vinyl-avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255,255,255,0.2);
+  }
+
+  .fp-tonearm-left {
+    position: absolute;
+    top: -12px;
+    right: -25px;
+    width: 110px;
+    height: 8px;
+    background: linear-gradient(90deg, #666 0%, #444 50%, #333 100%);
+    border-radius: 4px;
+    transform-origin: right center;
+    transform: rotate(-25deg);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  }
+
+  .fp-tonearm-left::before {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: -4px;
+    width: 16px;
+    height: 16px;
+    background: #555;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+
+  .fp-tonearm-left::after {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 1px;
+    width: 12px;
+    height: 6px;
+    background: #888;
+    border-radius: 2px;
+  }
+
+  .fp-tonearm-right {
+    position: absolute;
+    top: -12px;
+    left: -25px;
+    width: 110px;
+    height: 8px;
+    background: linear-gradient(270deg, #666 0%, #444 50%, #333 100%);
+    border-radius: 4px;
+    transform-origin: left center;
+    transform: rotate(25deg);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  }
+
+  .fp-tonearm-right::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: -4px;
+    width: 16px;
+    height: 16px;
+    background: #555;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+
+  .fp-tonearm-right::after {
+    content: '';
+    position: absolute;
+    right: -6px;
+    top: 1px;
+    width: 12px;
+    height: 6px;
+    background: #888;
+    border-radius: 2px;
+  }
+
+  .fp-audio-waveform {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 140px;
+    padding: 0 1rem;
+  }
+
+  .fp-audio-bar {
+    width: 5px;
+    background: linear-gradient(to top, #16a34a, #4ade80);
+    border-radius: 3px;
+    animation: fpBarPulse 0.8s ease-in-out infinite;
+  }
+
+  .fp-audio-bar:nth-child(1) { height: 20%; animation-delay: 0s; }
+  .fp-audio-bar:nth-child(2) { height: 35%; animation-delay: 0.04s; }
+  .fp-audio-bar:nth-child(3) { height: 50%; animation-delay: 0.08s; }
+  .fp-audio-bar:nth-child(4) { height: 65%; animation-delay: 0.12s; }
+  .fp-audio-bar:nth-child(5) { height: 80%; animation-delay: 0.16s; }
+  .fp-audio-bar:nth-child(6) { height: 95%; animation-delay: 0.2s; }
+  .fp-audio-bar:nth-child(7) { height: 100%; animation-delay: 0.24s; }
+  .fp-audio-bar:nth-child(8) { height: 90%; animation-delay: 0.28s; }
+  .fp-audio-bar:nth-child(9) { height: 75%; animation-delay: 0.32s; }
+  .fp-audio-bar:nth-child(10) { height: 85%; animation-delay: 0.36s; }
+  .fp-audio-bar:nth-child(11) { height: 85%; animation-delay: 0.4s; }
+  .fp-audio-bar:nth-child(12) { height: 75%; animation-delay: 0.44s; }
+  .fp-audio-bar:nth-child(13) { height: 90%; animation-delay: 0.48s; }
+  .fp-audio-bar:nth-child(14) { height: 100%; animation-delay: 0.52s; }
+  .fp-audio-bar:nth-child(15) { height: 95%; animation-delay: 0.56s; }
+  .fp-audio-bar:nth-child(16) { height: 80%; animation-delay: 0.6s; }
+  .fp-audio-bar:nth-child(17) { height: 65%; animation-delay: 0.64s; }
+  .fp-audio-bar:nth-child(18) { height: 50%; animation-delay: 0.68s; }
+  .fp-audio-bar:nth-child(19) { height: 35%; animation-delay: 0.72s; }
+  .fp-audio-bar:nth-child(20) { height: 20%; animation-delay: 0.76s; }
+
+  @keyframes fpBarPulse {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(0.4); }
+  }
+
+  /* Mobile responsive for fullpage turntables */
+  @media (max-width: 768px) {
+    .fp-turntables-row {
+      gap: 0.75rem;
+    }
+    .fp-vinyl-container {
+      width: 100px;
+      height: 100px;
+    }
+    .fp-vinyl-record {
+      width: 100px;
+      height: 100px;
+    }
+    .fp-vinyl-label {
+      width: 35px;
+      height: 35px;
+    }
+    .fp-vinyl-avatar {
+      width: 26px;
+      height: 26px;
+    }
+    .fp-tonearm-left, .fp-tonearm-right {
+      width: 50px;
+      height: 5px;
+      top: -6px;
+    }
+    .fp-tonearm-left { right: -12px; }
+    .fp-tonearm-right { left: -12px; }
+    .fp-audio-waveform {
+      height: 80px;
+      gap: 2px;
+    }
+    .fp-audio-bar {
+      width: 3px;
+    }
+    .fp-audio-dj-name {
+      font-size: 1.5rem;
+    }
+    .fp-audio-show-title {
+      font-size: 0.85rem;
+    }
+  }
 </style>
 
 <script define:vars={{ giphyApiKey }}>
@@ -1510,6 +1856,16 @@ const pusherConfig = {
         if (audioTitleEl) audioTitleEl.textContent = stream.title || 'Live Stream';
         const audioDjEl = document.getElementById('audioDjName');
         if (audioDjEl) audioDjEl.textContent = stream.djName || 'DJ';
+        const audioShowTitleEl = document.getElementById('audioShowTitle');
+        if (audioShowTitleEl) audioShowTitleEl.textContent = stream.title || 'Live Session';
+
+        // Update vinyl avatars
+        const vinylAvatar1 = document.getElementById('vinylDjAvatar');
+        const vinylAvatar2 = document.getElementById('vinylDjAvatar2');
+        if (stream.djAvatar) {
+          if (vinylAvatar1) vinylAvatar1.src = stream.djAvatar;
+          if (vinylAvatar2) vinylAvatar2.src = stream.djAvatar;
+        }
 
         if (stream.djAvatar) {
           const djAvatarEl = document.getElementById('djAvatar');
@@ -2079,6 +2435,58 @@ const pusherConfig = {
     // Enable emoji animations by default when subscribed
     window.emojiAnimationsEnabled = true;
   }
+
+  // Subscribe to live-status channel for DJ stream start/end
+  function setupLiveStatusListener() {
+    const config = window.PUSHER_CONFIG;
+    if (!config?.key || !window.fullpagePusher) {
+      console.log('[LiveStatus] Pusher not ready, retrying...');
+      setTimeout(setupLiveStatusListener, 2000);
+      return;
+    }
+
+    const liveStatusChannel = window.fullpagePusher.subscribe('live-status');
+
+    liveStatusChannel.bind('stream-started', (data) => {
+      console.log('[LiveStatus] DJ went live:', data.djName);
+      // Stop playlist completely when DJ goes live
+      const playlistManager = window.playlistManager;
+      if (playlistManager) {
+        console.log('[Playlist] Stopping for live stream');
+        playlistManager.wasPausedForStream = playlistManager.isPlaying;
+        playlistManager.pause?.();
+        playlistManager.clearQueue?.();
+        // Hide playlist player, show video player
+        const embedPlayer = document.getElementById('embedPlayer');
+        if (embedPlayer) embedPlayer.classList.add('hidden');
+        const videoPlayer = document.getElementById('videoPlayer');
+        if (videoPlayer) videoPlayer.classList.remove('hidden');
+        window.isLiveStreamActive = true;
+      }
+      // Trigger live-stream.js to fetch stream and load HLS player
+      if (typeof window.checkLiveStatus === 'function') {
+        window.checkLiveStatus();
+      }
+    });
+
+    liveStatusChannel.bind('stream-ended', (data) => {
+      console.log('[LiveStatus] Stream ended:', data.djName);
+      // Resume playlist after 10 second delay
+      setTimeout(() => {
+        const playlistManager = window.playlistManager;
+        if (playlistManager?.wasPausedForStream) {
+          console.log('[Playlist] Resuming after stream ended (10s delay)');
+          playlistManager.wasPausedForStream = false;
+          playlistManager.play?.();
+        }
+      }, 10000);
+    });
+
+    console.log('[LiveStatus] Subscribed to live-status channel');
+  }
+
+  // Setup live status listener after Pusher is ready
+  setTimeout(setupLiveStatusListener, 2000);
 
   function escapeHtml(text) {
     const div = document.createElement('div');

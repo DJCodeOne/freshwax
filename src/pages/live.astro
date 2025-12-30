@@ -154,7 +154,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
             </div>
             <div class="fs-vinyl-container fs-vinyl-right">
               <div class="fs-vinyl-record">
-                <div class="fs-vinyl-label">
+                <div class="fs-vinyl-label fs-vinyl-label-right">
                   <img id="fsVinylDjAvatar2" src="/place-holder.webp" alt="DJ" class="fs-vinyl-avatar" />
                 </div>
               </div>
@@ -1433,14 +1433,22 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   }
   
   function triggerReactionBurst(element, emojiList) {
-    // Get position from element
+    // Get position from element or default to video player area
     let x = window.innerWidth / 2;
     let y = window.innerHeight / 2;
-    
+
     if (element && element.getBoundingClientRect) {
       const rect = element.getBoundingClientRect();
       x = rect.left + rect.width / 2;
       y = rect.top + rect.height / 2;
+    } else {
+      // Position over the video player when no element provided (incoming reactions from other users)
+      const playerContainer = document.getElementById('playerContainer');
+      if (playerContainer) {
+        const rect = playerContainer.getBoundingClientRect();
+        x = rect.left + rect.width / 2;
+        y = rect.top + rect.height * 0.7; // Start near bottom of player
+      }
     }
     
     // Create burst of emojis
