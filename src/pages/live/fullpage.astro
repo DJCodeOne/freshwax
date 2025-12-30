@@ -2136,14 +2136,48 @@ const pusherConfig = {
     console.log('[Presence] Subscribed to:', presenceChannelName);
   }
 
-  // Start heartbeat - now just sets up presence channel (no Firebase polling)
+  // Heartbeat interval
+  let heartbeatInterval = null;
+
+  // Start heartbeat - register and keep viewer count accurate
   function startHeartbeat() {
     if (!currentStream?.id) return;
+
+    // Setup presence channel for real-time updates
     setupPresenceChannel(currentStream.id);
+
+    // Also register via listeners endpoint (triggers Pusher broadcast)
+    registerAsListener();
+
+    // Send heartbeat every 60 seconds
+    heartbeatInterval = setInterval(async () => {
+      if (!currentStream?.id) return;
+      const userId = currentUser?.uid || getOrCreateSessionId();
+      try {
+        const resp = await fetch('/api/livestream/listeners', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'heartbeat',
+            streamId: currentStream.id,
+            userId,
+            userName: currentUser?.displayName || 'Viewer'
+          })
+        });
+        const data = await resp.json();
+        if (data.activeViewers !== undefined) {
+          const viewerEl = document.getElementById('viewerCount');
+          if (viewerEl) viewerEl.textContent = data.activeViewers;
+        }
+      } catch (e) { /* silent */ }
+    }, 60000);
   }
 
   // Leave stream when closing page
   window.addEventListener('beforeunload', () => {
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+    }
     if (!currentStream?.id) return;
     const userId = currentUser?.uid || getOrCreateSessionId();
     navigator.sendBeacon('/api/livestream/listeners', JSON.stringify({

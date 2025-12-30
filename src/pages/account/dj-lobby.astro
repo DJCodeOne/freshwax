@@ -4485,17 +4485,24 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       // Need a current stream to show viewers
       if (!currentStream || !currentStream.id) {
         updateCenterStats({ viewers: 0 });
+        const chatViewers = document.getElementById('chatViewers');
+        if (chatViewers) chatViewers.textContent = '0 watching';
         return;
       }
 
       const response = await fetch(`/api/livestream/listeners?streamId=${currentStream.id}`);
       const result = await response.json();
 
-      if (result.success && result.listeners && result.listeners.length > 0) {
-        const newCount = result.listeners.length;
+      if (result.success) {
+        const newCount = result.count || (result.listeners?.length ?? 0);
         updateCenterStats({ viewers: newCount });
+        // Also update chat header
+        const chatViewers = document.getElementById('chatViewers');
+        if (chatViewers) chatViewers.textContent = `${newCount} watching`;
       } else {
         updateCenterStats({ viewers: 0 });
+        const chatViewers = document.getElementById('chatViewers');
+        if (chatViewers) chatViewers.textContent = '0 watching';
       }
     } catch (e) {
       console.error('Failed to load viewers:', e);
@@ -6879,6 +6886,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         console.log('[LivestreamChat] Viewer update:', data);
         const viewerCount = data.count ?? data.currentViewers ?? data.totalViews ?? 0;
         updateCenterStats({ viewers: viewerCount });
+        // Also update the chat header watching count
+        const chatViewers = document.getElementById('chatViewers');
+        if (chatViewers) chatViewers.textContent = `${viewerCount} watching`;
       });
     }
 

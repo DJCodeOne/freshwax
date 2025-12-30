@@ -1779,6 +1779,10 @@ export class PlaylistManager {
       currentItem.title = title;
       // Update the UI with the new title
       this.renderUI();
+
+      // Also update server history with the real title
+      // This ensures recently played shows correct titles
+      this.logToServerHistory(currentItem);
     }
   }
 

@@ -2914,6 +2914,19 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         }
       });
 
+      // Listen for viewer count updates from listeners endpoint (fallback)
+      reactionChannel.bind('viewer-update', (data) => {
+        console.log('[Viewers] Count update from Pusher:', data);
+        if (data.count !== undefined) {
+          const viewerEl = document.getElementById('viewerCount');
+          const fsViewers = document.getElementById('fsViewers');
+          const chatViewers = document.getElementById('chatViewers');
+          if (viewerEl) viewerEl.textContent = data.count;
+          if (fsViewers) fsViewers.textContent = data.count;
+          if (chatViewers) chatViewers.textContent = `${data.count} watching`;
+        }
+      });
+
       console.log('[Presence] Subscribed to:', presenceChannelName);
       console.log('[Reactions] Subscribed to:', reactionChannelName);
 
@@ -3223,15 +3236,15 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     return sessionId;
   }
 
-  // Register view once for analytics (totalViews counter)
-  // Pusher presence channel handles real-time viewer counting - no Firebase polling needed!
+  // Register view and trigger viewer count broadcast
+  // This calls the listeners endpoint which broadcasts viewer-update via Pusher
   async function registerStreamView() {
-    const streamId = window.currentStreamId || document.body.dataset.streamId;
-    if (!streamId || streamId === 'playlist-global') return; // Only track real streams
+    const streamId = window.currentStreamId || document.body.dataset.streamId || 'playlist-global';
+    if (!streamId) return;
 
     try {
-      // Just increment totalViews for analytics - one Firebase write per page load
-      await fetch('/api/livestream/listeners', {
+      // Register as viewer - this triggers a Pusher broadcast with current viewer count
+      const resp = await fetch('/api/livestream/listeners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3241,28 +3254,68 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           userName: userInfo?.name || 'Viewer'
         })
       });
-      console.log('[Analytics] Registered stream view for:', streamId);
+      const data = await resp.json();
+      console.log('[Viewers] Registered, active viewers:', data.activeViewers);
+
+      // Update viewer count immediately from response
+      if (data.activeViewers !== undefined) {
+        const viewerEl = document.getElementById('viewerCount');
+        const fsViewers = document.getElementById('fsViewers');
+        const chatViewers = document.getElementById('chatViewers');
+        if (viewerEl) viewerEl.textContent = data.activeViewers;
+        if (fsViewers) fsViewers.textContent = data.activeViewers;
+        if (chatViewers) chatViewers.textContent = `${data.activeViewers} watching`;
+      }
     } catch (e) {
-      // Non-critical - don't spam console
+      console.warn('[Viewers] Registration failed:', e);
     }
   }
 
-  // Register view once on page load (for analytics only - Pusher handles live count)
+  // Heartbeat interval for viewer tracking
+  let heartbeatInterval = null;
+
+  // Register view on page load and start heartbeat
   function startListenerHeartbeat() {
     // Ensure we have a stream ID - default to playlist-global if none set
     if (!window.currentStreamId) {
       window.currentStreamId = 'playlist-global';
     }
 
-    // Register view once (increments totalViews counter for analytics)
-    // No continuous heartbeat needed - Pusher presence handles live count!
+    // Register immediately
     registerStreamView();
+
+    // Send heartbeat every 60 seconds to keep viewer count accurate
+    // This is less frequent than before (was 30s) to reduce Firebase writes
+    heartbeatInterval = setInterval(async () => {
+      const streamId = window.currentStreamId || 'playlist-global';
+      try {
+        await fetch('/api/livestream/listeners', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'heartbeat',
+            streamId,
+            userId: currentUser?.uid || getOrCreateSessionId(),
+            userName: userInfo?.name || 'Viewer'
+          })
+        });
+      } catch (e) { /* silent */ }
+    }, 60000); // Every 60 seconds
   }
 
-  // No cleanup needed - Pusher automatically handles member removal
+  // Clean up heartbeat on page unload
   function stopListenerHeartbeat() {
-    // Pusher presence channel automatically detects when user disconnects
-    // No Firebase call needed!
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+    }
+    // Send leave notification
+    const streamId = window.currentStreamId || 'playlist-global';
+    navigator.sendBeacon('/api/livestream/listeners', JSON.stringify({
+      action: 'leave',
+      streamId,
+      userId: currentUser?.uid || getOrCreateSessionId()
+    }));
   }
 
   // Start heartbeat for all viewers (logged in or anonymous)
@@ -4964,7 +5017,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       // Get the playlist manager and add to personal playlist
       const manager = window.playlistManager;
       if (manager) {
-        const result = await manager.addToPersonalPlaylist(currentPlaylistTrack);
+        // Pass the URL string, not the whole object
+        const result = await manager.addToPersonalPlaylist(currentPlaylistTrack.url);
         if (result.success) {
           nowPlayingSaveBtn.classList.add('saved');
           nowPlayingSaveBtn.title = 'Already in My Playlist';

@@ -8,10 +8,15 @@ const isProduction = process.env.NODE_ENV === 'production' || process.env.npm_li
 
 export default defineConfig({
   integrations: [tailwind()],
-  
+
   // Astro 5: use 'static' or 'server'
   // For hybrid behavior, use 'server' + prerender on individual pages
   output: 'server',
+
+  // Disable CSRF check for API routes (needed for Pusher auth)
+  security: {
+    checkOrigin: false
+  },
   
   adapter: isProduction 
     ? cloudflare({ 
