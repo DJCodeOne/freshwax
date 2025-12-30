@@ -4938,18 +4938,15 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       const currentIndex = detail.currentIndex || 0;
       currentPlaylistTrack = detail.queue[currentIndex];
 
-      // Update label and show track title + selector
+      // Update label and show track title only - keep it simple
       if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
-      if (npTrackTitle && currentPlaylistTrack) {
-        npTrackTitle.textContent = currentPlaylistTrack.title || '';
-      }
       if (controlsDjName && currentPlaylistTrack) {
-        controlsDjName.textContent = currentPlaylistTrack.addedByName || 'Auto-Play';
+        controlsDjName.textContent = currentPlaylistTrack.title || '';
       }
+      if (npTrackTitle) npTrackTitle.textContent = '';
 
-      // Show duration box with "LEFT" label, hide genre
-      if (bottomDurationBox) bottomDurationBox.style.display = 'flex';
-      if (bottomDurationLabel) bottomDurationLabel.textContent = 'LEFT';
+      // Hide duration box and genre in playlist mode
+      if (bottomDurationBox) bottomDurationBox.style.display = 'none';
       if (streamGenre) streamGenre.style.display = 'none';
 
       // Update button state - check if track is already in personal playlist
