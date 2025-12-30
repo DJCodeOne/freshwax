@@ -3098,6 +3098,12 @@ function createFloatingEmojiFromBroadcast(emojiList) {
     return;
   }
 
+  // Only show emojis on live stream pages (ViewTransitions keeps Pusher alive across pages)
+  const path = window.location.pathname;
+  if (!path.startsWith('/live') && !path.includes('/account/dj-lobby')) {
+    return;
+  }
+
   console.log('[Reaction] createFloatingEmojiFromBroadcast called with:', emojiList);
   const playerArea = document.querySelector('.video-player') || document.querySelector('.player-wrapper') || document.querySelector('.player-column');
   let x, y;

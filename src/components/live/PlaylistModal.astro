@@ -632,9 +632,7 @@
   .recently-played-list {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    max-height: 300px;
-    overflow-y: auto;
+    gap: 0.4rem;
   }
 
   .recently-played-empty {
@@ -669,6 +667,10 @@
   .recently-played-info {
     flex: 1;
     min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
   }
 
   .recently-played-title {
@@ -688,12 +690,14 @@
   .recently-played-time {
     font-size: 0.65rem;
     color: rgba(156, 163, 175, 0.8);
+    flex-shrink: 0;
+    text-align: right;
   }
 
   .preview-track-title {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #fff;
+    color: #dc2626;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
