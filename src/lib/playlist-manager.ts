@@ -483,6 +483,7 @@ export class PlaylistManager {
   async pause(): Promise<void> {
     this.clearTrackTimer();
     this.stopCountdown();
+    console.log('[PlaylistManager] Calling player.pause(), player exists:', !!this.player);
     await this.player.pause();
     this.stopPlaylistMeters();
     this.disableEmojis();
