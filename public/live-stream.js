@@ -260,6 +260,29 @@ const EMOJI_CATEGORIES = {
 // INITIALIZATION
 // ==========================================
 async function init() {
+  // FIRST: Start fallback timer to hide initializing overlay (ensures it always fades even if API errors)
+  // This MUST be first before any code that could throw an error
+  try {
+    const initOverlay = document.getElementById('initializingOverlay');
+    if (initOverlay && !initOverlay.classList.contains('hidden')) {
+      console.log('[Init] Setting up overlay fallback timers');
+      setTimeout(() => {
+        if (initOverlay && !initOverlay.classList.contains('hidden') && !initOverlay.classList.contains('fade-out')) {
+          console.log('[Init] Fallback: starting overlay fade');
+          initOverlay.classList.add('fade-out');
+        }
+      }, 5000);
+      setTimeout(() => {
+        if (initOverlay && !initOverlay.classList.contains('hidden')) {
+          console.log('[Init] Fallback: hiding overlay');
+          initOverlay.classList.add('hidden');
+        }
+      }, 10000);
+    }
+  } catch (e) {
+    console.error('[Init] Error setting up overlay timers:', e);
+  }
+
   // Check device type for optimizations
   detectMobileDevice();
 
@@ -886,6 +909,18 @@ async function checkLiveStatus() {
     const response = await fetch(`/api/livestream/status?_t=${cacheBuster}`);
     const result = await response.json();
 
+    console.log('[checkLiveStatus] API response:', {
+      success: result.success,
+      isLive: result.isLive,
+      primaryStream: result.primaryStream ? {
+        djName: result.primaryStream.djName,
+        broadcastMode: result.primaryStream.broadcastMode,
+        hlsUrl: result.primaryStream.hlsUrl,
+        audioStreamUrl: result.primaryStream.audioStreamUrl,
+        streamSource: result.primaryStream.streamSource
+      } : null
+    });
+
     if (result.success && result.isLive && result.primaryStream) {
       // LIVE STREAM ACTIVE - Track state and pause playlist
       wasLiveStreamActive = true;
@@ -995,6 +1030,9 @@ async function checkLiveStatus() {
   }
 }
 
+// Expose checkLiveStatus globally so Pusher handlers can trigger it
+window.checkLiveStatus = checkLiveStatus;
+
 // Enable/disable reaction buttons based on stream status
 function setReactionButtonsEnabled(enabled) {
   const reactionButtons = document.querySelectorAll('.reaction-btn, .anim-toggle-btn, .fs-reaction-btn, #animToggleBtn, #fsAnimToggleBtn');
@@ -1032,6 +1070,39 @@ function setChatEnabled(enabled) {
 // Show offline state
 function showOfflineState(scheduled) {
   window.isLiveStreamActive = false;
+
+  // Hide initializing overlay since there's no live stream
+  const initOverlay = document.getElementById('initializingOverlay');
+  if (initOverlay) {
+    initOverlay.classList.add('hidden');
+  }
+
+  // Remove loading state from badges and overlays
+  const liveBadge = document.getElementById('liveBadge');
+  const liveStatusText = document.getElementById('liveStatusText');
+  const offlineOverlay = document.getElementById('offlineOverlay');
+  const offlineIconText = document.getElementById('offlineIconText');
+  const offlineMainText = document.getElementById('offlineMainText');
+  const offlineSubText = document.getElementById('offlineSubText');
+
+  if (liveBadge) {
+    liveBadge.classList.remove('is-loading', 'is-live');
+  }
+  if (liveStatusText) {
+    liveStatusText.textContent = 'OFFLINE';
+  }
+  if (offlineOverlay) {
+    offlineOverlay.classList.remove('is-loading');
+  }
+  if (offlineIconText) {
+    offlineIconText.textContent = 'OFFLINE';
+  }
+  if (offlineMainText) {
+    offlineMainText.textContent = 'No one is streaming right now';
+  }
+  if (offlineSubText) {
+    offlineSubText.textContent = 'Check the schedule or start your own stream!';
+  }
 
   // Only disable emojis and chat if playlist is also not playing
   const pm = window.playlistManager;
@@ -1094,25 +1165,56 @@ function showLiveStream(stream) {
 
   // Hide all offline states (main page and fullscreen mode)
   document.getElementById('offlineState')?.classList.add('hidden');
-  document.getElementById('offlineOverlay')?.classList.add('hidden');
+  const offlineOverlay = document.getElementById('offlineOverlay');
+  if (offlineOverlay) {
+    offlineOverlay.classList.remove('is-loading');
+    offlineOverlay.classList.add('hidden');
+  }
   document.getElementById('fsOfflineOverlay')?.classList.add('hidden');
   document.getElementById('liveState')?.classList.remove('hidden');
 
-  // Update live badge (main page)
+  // Start timers to fade/hide initializing overlay (it's visible by default on page load)
+  const initOverlay = document.getElementById('initializingOverlay');
+  if (initOverlay && !initOverlay.classList.contains('hidden')) {
+    // Start fade out after 5 seconds
+    setTimeout(() => {
+      if (!initOverlay.classList.contains('hidden')) {
+        initOverlay.classList.add('fade-out');
+      }
+    }, 5000);
+
+    // Fully hide after 10 seconds (fade completes)
+    setTimeout(() => {
+      initOverlay.classList.add('hidden');
+    }, 10000);
+  }
+
+  // Update live badge (main page) - remove loading, add live
   const liveBadge = document.getElementById('liveBadge');
   const liveStatusText = document.getElementById('liveStatusText');
-  if (liveBadge) liveBadge.classList.add('is-live');
+  if (liveBadge) {
+    liveBadge.classList.remove('is-loading');
+    liveBadge.classList.add('is-live');
+  }
   if (liveStatusText) liveStatusText.textContent = 'LIVE';
 
-  // Update fullscreen mode live badge
+  // Update fullscreen mode live badge - remove loading, add live
   const fsBadge = document.getElementById('fsLiveBadge');
   const fsStatus = document.getElementById('fsLiveStatus');
-  if (fsBadge) fsBadge.classList.add('is-live');
+  if (fsBadge) {
+    fsBadge.classList.remove('is-loading');
+    fsBadge.classList.add('is-live');
+  }
   if (fsStatus) fsStatus.textContent = 'LIVE';
-  
+
+  // Add is-live class to bottom DJ info bar
+  const djInfoBar = document.querySelector('.dj-info-bar');
+  if (djInfoBar) djInfoBar.classList.add('is-live');
+
   // Update stream info (main page and fullscreen mode)
   const elements = {
     djName: stream.djName,
+    controlsDjName: stream.djName || 'DJ', // Bottom bar DJ name
     streamGenre: stream.genre || 'Jungle / D&B',
     viewerCount: stream.totalViews || stream.currentViewers || 0,
     likeCount: stream.totalLikes || 0,
@@ -1140,10 +1242,12 @@ function showLiveStream(stream) {
   const djAvatar = document.getElementById('djAvatar');
   const streamCover = document.getElementById('streamCover');
   const vinylDjAvatar = document.getElementById('vinylDjAvatar');
+  const vinylDjAvatar2 = document.getElementById('vinylDjAvatar2');
 
   if (stream.djAvatar && djAvatar) djAvatar.src = stream.djAvatar;
   if (stream.coverImage && streamCover) streamCover.src = stream.coverImage;
   if (stream.djAvatar && vinylDjAvatar) vinylDjAvatar.src = stream.djAvatar;
+  if (stream.djAvatar && vinylDjAvatar2) vinylDjAvatar2.src = stream.djAvatar;
 
   // Update fullscreen mode images
   const fsDjAvatar = document.getElementById('fsDjAvatar');
@@ -1153,12 +1257,24 @@ function showLiveStream(stream) {
   // Placeholder mode = audio only (BUTT/Icecast), skip HLS
   const isPlaceholder = stream.broadcastMode === 'placeholder' || stream.broadcastMode === 'audio';
 
+  console.log('[Stream] Player selection:', {
+    broadcastMode: stream.broadcastMode,
+    isPlaceholder,
+    streamSource: stream.streamSource,
+    hlsUrl: stream.hlsUrl,
+    audioStreamUrl: stream.audioStreamUrl,
+    twitchChannel: stream.twitchChannel
+  });
+
   if (stream.streamSource === 'twitch' && stream.twitchChannel) {
+    console.log('[Stream] Using Twitch player');
     setupTwitchPlayer(stream);
   } else if (!isPlaceholder && (stream.streamSource === 'red5' || stream.hlsUrl)) {
+    console.log('[Stream] Using HLS player');
     setupHlsPlayer(stream);
   } else {
     // Audio mode - use Icecast
+    console.log('[Stream] Using Audio/Icecast player');
     if (!stream.audioStreamUrl) {
       stream.audioStreamUrl = 'https://icecast.freshwax.co.uk/live';
     }
@@ -1285,40 +1401,73 @@ function setupHlsPlayer(stream) {
       hlsPlayer = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
-        backBufferLength: 90,
-        // Buffer settings for stable playback
-        maxBufferLength: window.isMobileDevice ? 30 : 60,
-        maxMaxBufferLength: window.isMobileDevice ? 60 : 120,
-        // Live sync settings - helps prevent audio cuts
-        liveSyncDurationCount: 3,
-        liveMaxLatencyDurationCount: 10,
+        // Fast start settings - reduced initial buffer for quicker connection
+        maxBufferLength: window.isMobileDevice ? 10 : 15,
+        maxMaxBufferLength: window.isMobileDevice ? 30 : 60,
+        maxBufferSize: 30 * 1000 * 1000, // 30MB max buffer
+        maxBufferHole: 0.5,
+        // Live sync - start from live edge quickly
+        liveSyncDurationCount: 2,
+        liveMaxLatencyDurationCount: 5,
         liveDurationInfinity: true,
+        liveBackBufferLength: 30,
+        // Faster initial manifest parsing
+        initialLiveManifestSize: 1,
+        // Start from live edge
+        startPosition: -1,
+        // Aggressive loading for faster start
+        startFragPrefetch: true,
+        testBandwidth: false,
         // Stall recovery - auto-recover from buffer stalls
-        highBufferWatchdogPeriod: 2,
-        nudgeOffset: 0.1,
+        highBufferWatchdogPeriod: 1,
+        nudgeOffset: 0.2,
         nudgeMaxRetry: 5,
-        // Fragment loading retry settings
-        fragLoadingMaxRetry: 6,
-        fragLoadingMaxRetryTimeout: 64000,
-        manifestLoadingMaxRetry: 4,
-        levelLoadingMaxRetry: 4
+        // Fragment loading - faster retries
+        fragLoadingMaxRetry: 4,
+        fragLoadingRetryDelay: 500,
+        fragLoadingMaxRetryTimeout: 20000,
+        manifestLoadingMaxRetry: 3,
+        manifestLoadingRetryDelay: 500,
+        manifestLoadingMaxRetryTimeout: 15000,
+        levelLoadingMaxRetry: 3,
+        levelLoadingRetryDelay: 500,
+        levelLoadingMaxRetryTimeout: 15000
       });
 
       hlsPlayer.loadSource(hlsUrl);
       hlsPlayer.attachMedia(videoElement);
 
+      // Log when fragments start loading for debugging
+      hlsPlayer.on(Hls.Events.FRAG_LOADING, () => {
+        console.log('[HLS] Fragment loading...');
+      });
+
+      hlsPlayer.on(Hls.Events.FRAG_LOADED, () => {
+        console.log('[HLS] Fragment loaded');
+      });
+
       hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
         console.log('[HLS] Manifest parsed, attempting autoplay');
-        // Always try unmuted autoplay first, fall back to play button if blocked
+        // Try muted autoplay first (faster, less likely to be blocked), then unmute
         const attemptAutoplay = async () => {
           try {
-            videoElement.muted = false;
+            // First try muted (guaranteed to work)
+            videoElement.muted = true;
             await videoElement.play();
             isPlaying = true;
             document.getElementById('playIcon')?.classList.add('hidden');
             document.getElementById('pauseIcon')?.classList.remove('hidden');
             document.getElementById('playBtn')?.classList.add('playing');
-            console.log('[HLS] Unmuted autoplay successful');
+            console.log('[HLS] Muted autoplay successful');
+
+            // Now try to unmute (user may have interacted before)
+            try {
+              videoElement.muted = false;
+              console.log('[HLS] Unmuted successfully');
+            } catch (unmuteErr) {
+              console.log('[HLS] Could not unmute, user interaction required');
+            }
+
             rememberAutoplay();
             // Initialize audio analyzer for LED meters
             initGlobalAudioAnalyzer(videoElement);
@@ -1352,7 +1501,7 @@ function setupHlsPlayer(stream) {
                     showReconnecting();
                     hlsPlayer.loadSource(hlsUrl);
                   }
-                }, 3000);
+                }, 1000); // Faster retry - 1 second
               } else {
                 console.log('[HLS] Max retries reached, stream appears to be offline');
                 hlsPlayer.destroy();
@@ -1372,7 +1521,7 @@ function setupHlsPlayer(stream) {
               setTimeout(() => {
                 showReconnecting();
                 setupHlsPlayer(currentStream);
-              }, 5000);
+              }, 2000); // Faster retry - 2 seconds
               break;
           }
         }
@@ -2022,22 +2171,86 @@ function setupTwitchPlayer(stream) {
 // AUDIO PLAYER (Icecast)
 // ==========================================
 function setupAudioPlayer(stream) {
+  console.log('[Audio] setupAudioPlayer called with stream:', {
+    audioStreamUrl: stream.audioStreamUrl,
+    hlsUrl: stream.hlsUrl,
+    broadcastMode: stream.broadcastMode
+  });
+
   document.getElementById('audioPlayer')?.classList.remove('hidden');
   document.getElementById('videoPlayer')?.classList.add('hidden');
-  
+
   const audio = document.getElementById('audioElement');
   const playBtn = document.getElementById('playBtn');
   const volumeSlider = document.getElementById('volumeSlider');
-  
+
+  console.log('[Audio] Audio element found:', !!audio, 'playBtn:', !!playBtn);
+
   if (stream.audioStreamUrl && audio) {
+    console.log('[Audio] Setting audio src to:', stream.audioStreamUrl);
     audio.src = stream.audioStreamUrl;
+    audio.load();
+    console.log('[Audio] Audio loaded, readyState:', audio.readyState);
+
+    // Add event listeners for debugging
+    audio.oncanplay = () => console.log('[Audio] canplay event - readyState:', audio.readyState);
+    audio.onerror = (e) => console.error('[Audio] ERROR:', audio.error?.code, audio.error?.message);
+    audio.onplaying = () => console.log('[Audio] playing event - audio is now playing');
+    audio.onpause = () => console.log('[Audio] pause event');
+    audio.onstalled = () => console.log('[Audio] stalled event - download stalled');
+    audio.onwaiting = () => console.log('[Audio] waiting event - buffering');
+
+    // Try autoplay (muted first for browser policy, then unmute)
+    const attemptAutoplay = async () => {
+      console.log('[Audio] Attempting autoplay...');
+      try {
+        audio.muted = true;
+        console.log('[Audio] Audio muted, calling play()...');
+        await audio.play();
+        console.log('[Audio] Muted autoplay successful, readyState:', audio.readyState);
+        isPlaying = true;
+
+        // Try to unmute
+        try {
+          audio.muted = false;
+          console.log('[Audio] Unmuted successfully, volume:', audio.volume);
+        } catch (e) {
+          console.log('[Audio] Could not unmute - user interaction required');
+        }
+
+        // Hide initializing overlay early since audio is playing
+        const initOverlay = document.getElementById('initializingOverlay');
+        if (initOverlay && !initOverlay.classList.contains('hidden')) {
+          initOverlay.classList.add('fade-out');
+          setTimeout(() => initOverlay.classList.add('hidden'), 500);
+        }
+
+        // Update play button state
+        document.getElementById('playIcon')?.classList.add('hidden');
+        document.getElementById('pauseIcon')?.classList.remove('hidden');
+        playBtn?.classList.add('playing');
+
+        // Initialize audio analyzer for LED meters
+        initGlobalAudioAnalyzer(audio);
+        startGlobalMeters();
+      } catch (err) {
+        console.error('[Audio] Autoplay FAILED:', err.name, err.message);
+        // Show play button for user to click
+        document.getElementById('playIcon')?.classList.remove('hidden');
+        document.getElementById('pauseIcon')?.classList.add('hidden');
+        playBtn?.classList.remove('playing');
+      }
+    };
+    attemptAutoplay();
+  } else {
+    console.log('[Audio] SKIPPING audio setup - audioStreamUrl:', stream.audioStreamUrl, 'audio element:', !!audio);
   }
-  
+
   if (audio && volumeSlider) {
     audio.volume = volumeSlider.value / 100;
   }
-  
-  // Just enable the button - unified handler in setupPlaylistPlayButton() handles all modes
+
+  // Enable the button - unified handler in setupPlaylistPlayButton() handles all modes
   if (playBtn) {
     playBtn.disabled = false;
   }
@@ -3071,21 +3284,30 @@ async function safeInit() {
     return;
   }
 
-  // Prevent double initialization
-  if (isInitialized) {
-    console.log('[LiveStream] Already initialized, refreshing stream status...');
-    // Just refresh the stream data
-    checkForLiveStream();
-    return;
-  }
-
-  isInitialized = true;
+  // Allow re-initialization (for View Transitions navigation)
   console.log('[LiveStream] Initializing...');
+  isInitialized = true;
   await init();
 }
 
 // Initial load
 safeInit();
+
+// Cleanup before navigating away (Astro View Transitions)
+document.addEventListener('astro:before-swap', () => {
+  console.log('[LiveStream] Cleaning up before navigation...');
+  // Destroy HLS player to prevent memory leaks and conflicts
+  if (hlsPlayer) {
+    try {
+      hlsPlayer.destroy();
+      hlsPlayer = null;
+    } catch (e) {
+      console.error('[LiveStream] Error destroying HLS player:', e);
+    }
+  }
+  // Reset initialization flag
+  isInitialized = false;
+});
 
 // Re-initialize on Astro View Transitions navigation
 document.addEventListener('astro:page-load', () => {

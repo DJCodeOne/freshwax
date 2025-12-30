@@ -2647,14 +2647,25 @@
 
   
   .offline-state {
-    text-align: center;
-    padding: 1.5rem;
-    color: #fff;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    background: #000;
   }
-  
-  .offline-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.5; }
-  .offline-state h3 { font-size: 1.25rem; margin-bottom: 0.35rem; }
-  .offline-state p { color: #888; font-size: 0.9rem; }
+
+  .preview-branding {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    opacity: 0.7;
+  }
+
+  .preview-branding .fresh { color: #fff; }
+  .preview-branding .wax { color: #dc2626; }
 
   /* DJ IS LIVE Indicator - Centered overlay with glowing LED */
   .dj-is-live-indicator {
@@ -2726,45 +2737,58 @@
   }
   
   .audio-preview {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    background: #000;
+  }
+
+  /* Lobby Audio Placeholder - Centered DJ is LIVE text */
+  .lobby-audio-placeholder {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
-    padding: 2rem;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    gap: 1rem;
   }
-  
-  .audio-visualizer {
-    display: flex;
-    gap: 6px;
-    height: 80px;
-    align-items: flex-end;
+
+  .lobby-live-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: #fff;
+    letter-spacing: 3px;
+    text-align: center;
   }
-  
-  .viz-bar {
-    width: 8px;
-    background: linear-gradient(to top, #dc2626, #f87171);
+
+  .lobby-live-text .live-word {
+    color: #dc2626;
+  }
+
+  .lobby-audio-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(220, 38, 38, 0.2);
+    border: 1px solid #dc2626;
+    padding: 0.3rem 0.75rem;
     border-radius: 4px;
-    animation: viz 0.5s ease-in-out infinite alternate;
+    font-size: 0.7rem;
+    color: #f87171;
+    letter-spacing: 1px;
   }
-  
-  .viz-bar:nth-child(1) { height: 25px; animation-delay: 0s; }
-  .viz-bar:nth-child(2) { height: 50px; animation-delay: 0.1s; }
-  .viz-bar:nth-child(3) { height: 35px; animation-delay: 0.2s; }
-  .viz-bar:nth-child(4) { height: 65px; animation-delay: 0.3s; }
-  .viz-bar:nth-child(5) { height: 45px; animation-delay: 0.4s; }
-  .viz-bar:nth-child(6) { height: 55px; animation-delay: 0.5s; }
-  .viz-bar:nth-child(7) { height: 30px; animation-delay: 0.6s; }
-  .viz-bar:nth-child(8) { height: 70px; animation-delay: 0.7s; }
-  
-  @keyframes viz { to { height: 80px; } }
-  
-  .stream-cover {
-    width: 150px;
-    height: 150px;
-    border-radius: 12px;
-    object-fit: cover;
-    border: 3px solid #333;
-    background: #fff;
+
+  .lobby-audio-live-badge .live-pulse {
+    width: 8px;
+    height: 8px;
+    background: #dc2626;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
   }
   
   /* Time Remaining */
@@ -8095,44 +8119,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
+    background: #000;
     border-radius: 8px;
     overflow: hidden;
   }
 
-  /* Ambient glow background */
-  .butt-audio-preview::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 300px;
-    height: 300px;
-    transform: translate(-50%, -50%);
-    background: radial-gradient(circle, rgba(220, 38, 38, 0.12) 0%, transparent 70%);
-    animation: ambientPulse 3s ease-in-out infinite;
-    pointer-events: none;
-  }
-
-  @keyframes ambientPulse {
-    0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.9); }
-    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
-  }
-
   .butt-placeholder {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    padding: 1.5rem;
-    text-align: center;
-    z-index: 1;
     width: 100%;
     height: 100%;
-    background: #0a0a0a;
-    overflow: hidden;
+    background: #000;
   }
 
   /* Vinyl groove background - off center */
@@ -8563,19 +8559,6 @@
     50% { opacity: 0.4; transform: scale(0.9); }
   }
 
-  /* Corner accents - subtle tech feel */
-  .butt-audio-preview::after {
-    content: '';
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 24px;
-    height: 24px;
-    border-top: 1px solid rgba(220, 38, 38, 0.2);
-    border-right: 1px solid rgba(220, 38, 38, 0.2);
-    pointer-events: none;
-    z-index: 5;
-  }
 
   .butt-corner-bl {
     position: absolute;
@@ -9012,11 +8995,12 @@
 .init-modal-footer {
   display: flex;
   justify-content: center;
+  gap: 1rem;
 }
 
-.init-close-btn {
-  padding: 0.875rem 2.5rem;
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
+.init-back-btn,
+.init-go-live-btn {
+  padding: 0.875rem 2rem;
   border: none;
   border-radius: 12px;
   color: #fff;
@@ -9028,18 +9012,34 @@
   overflow: hidden;
 }
 
-.init-close-btn:disabled {
+.init-back-btn {
+  background: #333;
+  border: 1px solid #444;
+}
+
+.init-go-live-btn {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+
+.init-back-btn:disabled,
+.init-go-live-btn:disabled {
   background: #333;
   color: #666;
   cursor: not-allowed;
+  border-color: #333;
 }
 
-.init-close-btn:not(:disabled):hover {
+.init-back-btn:not(:disabled):hover {
+  background: #444;
+  transform: translateY(-2px);
+}
+
+.init-go-live-btn:not(:disabled):hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 30px rgba(220, 38, 38, 0.4);
 }
 
-.init-close-btn:not(:disabled)::after {
+.init-go-live-btn:not(:disabled)::after {
   content: '';
   position: absolute;
   top: 0;
@@ -9054,7 +9054,8 @@
   100% { left: 100%; }
 }
 
-.init-close-text {
+.init-back-text,
+.init-go-live-text {
   position: relative;
   z-index: 1;
 }
@@ -9073,5 +9074,16 @@
 
   .init-check-item {
     padding: 0.75rem;
+  }
+
+  .init-modal-footer {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .init-back-btn,
+  .init-go-live-btn {
+    width: 100%;
+    padding: 1rem;
   }
 }

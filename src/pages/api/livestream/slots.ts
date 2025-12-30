@@ -263,22 +263,68 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Default: Get schedule
     const cacheKey = `${startDate}-${endDate}-${djId || 'all'}`;
     let slots = forceRefresh ? null : getFromCache(cacheKey);
+    const now = new Date();
 
-    if (!slots) {
-      // Add limit to prevent unbounded reads - schedule rarely exceeds 200 slots
-      const allSlots = await queryCollection('livestreamSlots', {
-        skipCache: true,
-        limit: 200  // Max 200 slots to prevent runaway
-      });
-      slots = allSlots.filter((slot: any) => slot.startTime >= startDate && slot.startTime <= endDate);
-      if (djId) slots = slots.filter((slot: any) => slot.djId === djId);
-      setCache(cacheKey, slots);
+    // Always fetch fresh data to check for expired live slots
+    const allSlots = await queryCollection('livestreamSlots', {
+      skipCache: true,
+      limit: 200  // Max 200 slots to prevent runaway
+    });
+
+    // Auto-end expired live slots (unless DJ has consecutive booking) - runs on EVERY request
+    const liveSlots = allSlots.filter((s: any) => s.status === 'live');
+    for (const liveSlot of liveSlots) {
+      const slotEnd = new Date(liveSlot.endTime);
+      if (now > slotEnd) {
+        // Check if DJ has a consecutive booking starting at/around their end time
+        const hasConsecutive = allSlots.some((s: any) => {
+          if (s.id === liveSlot.id || s.djId !== liveSlot.djId) return false;
+          if (!['scheduled', 'in_lobby', 'queued'].includes(s.status)) return false;
+          const nextStart = new Date(s.startTime);
+          // Allow 5 minute grace between consecutive slots
+          return Math.abs(nextStart.getTime() - slotEnd.getTime()) <= 5 * 60 * 1000;
+        });
+
+        if (!hasConsecutive) {
+          // Auto-end this slot
+          console.log(`[slots] Auto-ending expired slot ${liveSlot.id} for ${liveSlot.djName}`);
+          try {
+            await updateDocument('livestreamSlots', liveSlot.id, {
+              status: 'completed',
+              endedAt: now.toISOString(),
+              updatedAt: now.toISOString(),
+              autoEnded: true,
+              autoEndReason: 'slot_time_expired'
+            });
+            // Update local allSlots data
+            liveSlot.status = 'completed';
+            // Broadcast end via Pusher
+            const env = locals?.runtime?.env;
+            await broadcastLiveStatus('stream-ended', {
+              djId: liveSlot.djId,
+              djName: liveSlot.djName,
+              slotId: liveSlot.id,
+              reason: 'time_expired'
+            }, env);
+            // Invalidate cache since we changed data
+            invalidateCache();
+          } catch (autoEndError) {
+            console.error('[slots] Failed to auto-end slot:', autoEndError);
+          }
+        } else {
+          console.log(`[slots] ${liveSlot.djName} has consecutive booking, not auto-ending`);
+        }
+      }
     }
 
-    const now = new Date().toISOString();
+    // Filter slots for the requested date range
+    slots = allSlots.filter((slot: any) => slot.startTime >= startDate && slot.startTime <= endDate);
+    if (djId) slots = slots.filter((slot: any) => slot.djId === djId);
+
+    const nowISO = now.toISOString();
     // Find any slot that's currently live (regardless of scheduled end time - they might still be streaming)
     const liveSlot = slots.find((slot: any) => slot.status === 'live');
-    const upcomingSlots = slots.filter((slot: any) => slot.startTime > now && ['scheduled', 'in_lobby', 'queued'].includes(slot.status));
+    const upcomingSlots = slots.filter((slot: any) => slot.startTime > nowISO && ['scheduled', 'in_lobby', 'queued'].includes(slot.status));
 
     // SECURITY: Sanitize all slots to remove stream keys from public response
     return new Response(JSON.stringify({
@@ -305,6 +351,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // POST: Book, cancel, go live, etc.
 export const POST: APIRoute = async ({ request, locals }) => {
   initServices(locals);
+  const env = locals?.runtime?.env;
   try {
     const data = await request.json();
     const { action } = data;

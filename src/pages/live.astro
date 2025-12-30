@@ -107,6 +107,61 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         <div class="fs-video-container">
           <video id="fsVideo" class="fs-video hidden" controls playsinline></video>
         </div>
+        <!-- Fullscreen Audio Placeholder (BUTT mode) -->
+        <div id="fsAudioPlaceholder" class="fs-audio-placeholder hidden">
+          <!-- Fresh Wax branding top right -->
+          <div class="fs-audio-placeholder-branding">
+            <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
+          </div>
+          <div class="fs-audio-dj-info">
+            <div class="fs-audio-dj-name" id="fsAudioDjName">DJ Name</div>
+            <div class="fs-audio-show-title">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
+            <div class="fs-audio-live-badge">
+              <span class="fs-live-pulse"></span>
+              AUDIO ONLY
+            </div>
+          </div>
+          <div class="fs-turntables-row">
+            <div class="fs-vinyl-container fs-vinyl-left">
+              <div class="fs-vinyl-record">
+                <div class="fs-vinyl-label">
+                  <img id="fsVinylDjAvatar" src="/place-holder.webp" alt="DJ" class="fs-vinyl-avatar" />
+                </div>
+              </div>
+              <div class="fs-tonearm fs-tonearm-left"></div>
+            </div>
+            <div class="fs-audio-waveform">
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+              <div class="fs-audio-bar"></div>
+            </div>
+            <div class="fs-vinyl-container fs-vinyl-right">
+              <div class="fs-vinyl-record">
+                <div class="fs-vinyl-label">
+                  <img id="fsVinylDjAvatar2" src="/place-holder.webp" alt="DJ" class="fs-vinyl-avatar" />
+                </div>
+              </div>
+              <div class="fs-tonearm fs-tonearm-right"></div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="fs-chat">
         <div class="fs-chat-header">
@@ -289,21 +344,48 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
               </div>
             </div>
           </div>
-          
+
+          <!-- Initializing Overlay - shown while stream connects, hidden after audio plays or 10s -->
+          <div id="initializingOverlay" class="initializing-overlay">
+            <div class="initializing-content">
+              <div class="initializing-spinner"></div>
+              <h2 class="initializing-title">CONNECTING</h2>
+              <p class="initializing-text">Initializing audio stream...</p>
+              <div class="initializing-bars">
+                <div class="init-bar"></div>
+                <div class="init-bar"></div>
+                <div class="init-bar"></div>
+                <div class="init-bar"></div>
+                <div class="init-bar"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Inline fallback script to ensure overlay always hides -->
+          <script>
+            (function() {
+              var overlay = document.getElementById('initializingOverlay');
+              if (overlay) {
+                setTimeout(function() {
+                  if (overlay && !overlay.classList.contains('hidden')) {
+                    overlay.classList.add('fade-out');
+                  }
+                }, 5000);
+                setTimeout(function() {
+                  if (overlay) {
+                    overlay.classList.add('hidden');
+                  }
+                }, 10000);
+              }
+            })();
+          </script>
+
           <div id="audioPlayer" class="audio-player hidden">
             <div class="audio-only-placeholder">
-              <!-- Spinning Vinyl -->
-              <div class="vinyl-container">
-                <div class="vinyl-record">
-                  <div class="vinyl-label">
-                    <img id="vinylDjAvatar" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
-                  </div>
-                  <div class="vinyl-grooves"></div>
-                </div>
-                <div class="tonearm"></div>
+              <!-- Fresh Wax branding top right -->
+              <div class="audio-placeholder-branding">
+                <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
               </div>
-              
-              <!-- DJ Info -->
+              <!-- DJ Info at top -->
               <div class="audio-dj-info">
                 <div class="audio-dj-name" id="audioDjName">DJ Name</div>
                 <div class="audio-show-title" id="audioShowTitle">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
@@ -312,21 +394,50 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
                   AUDIO ONLY
                 </div>
               </div>
-              
-              <!-- Audio Bars -->
-              <div class="audio-bars">
-                <div class="audio-bar"></div>
-                <div class="audio-bar"></div>
-                <div class="audio-bar"></div>
-                <div class="audio-bar"></div>
-                <div class="audio-bar"></div>
-                <div class="audio-bar"></div>
-                <div class="audio-bar"></div>
-                <div class="audio-bar"></div>
-                <div class="audio-bar"></div>
-                <div class="audio-bar"></div>
-                <div class="audio-bar"></div>
-                <div class="audio-bar"></div>
+
+              <!-- Turntables row: Left deck, Waveform, Right deck -->
+              <div class="turntables-row">
+                <!-- Left Deck -->
+                <div class="vinyl-container vinyl-left">
+                  <div class="vinyl-record">
+                    <div class="vinyl-label">
+                      <img id="vinylDjAvatar" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
+                    </div>
+                    <div class="vinyl-grooves"></div>
+                  </div>
+                  <div class="tonearm tonearm-left"></div>
+                </div>
+
+                <!-- Waveform in center -->
+                <div class="audio-waveform">
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                  <div class="audio-bar"></div>
+                </div>
+
+                <!-- Right Deck -->
+                <div class="vinyl-container vinyl-right">
+                  <div class="vinyl-record">
+                    <div class="vinyl-label vinyl-label-right">
+                      <img id="vinylDjAvatar2" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
+                    </div>
+                    <div class="vinyl-grooves"></div>
+                  </div>
+                  <div class="tonearm tonearm-right"></div>
+                </div>
               </div>
             </div>
             <audio id="audioElement" crossorigin="anonymous" preload="auto"></audio>
@@ -346,7 +457,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
             <svg id="playIcon" class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
             <svg id="pauseIcon" class="pause-icon hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
           </button>
-          
+
           <!-- Stereo LED Meters (for live stream) -->
           <div class="stereo-meters-wrapper hidden" id="stereoMetersWrapper">
             <button id="toggleMetersBtn" class="toggle-meters-btn" title="Toggle LED meters">
@@ -454,6 +565,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           </button>
           <div class="dj-info-center">
             <span class="dj-info-label" id="controlsLabel">NOW PLAYING</span>
+            <span class="dj-info-name" id="controlsDjName">--</span>
             <span class="dj-info-title" id="npTrackTitle"></span>
           </div>
           <div class="dj-info-right">
@@ -1564,17 +1676,44 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     const fsAvatar = document.getElementById('fsDjAvatar');
     const fsName = document.getElementById('fsDjName');
     const fsOffline = document.getElementById('fsOfflineOverlay');
-    
+    const fsAudioPlaceholder = document.getElementById('fsAudioPlaceholder');
+    const fsVideo = document.getElementById('fsVideo');
+
+    // Check if we're in audio-only mode (audioPlayer is visible)
+    const audioPlayer = document.getElementById('audioPlayer');
+    const isAudioMode = audioPlayer && !audioPlayer.classList.contains('hidden');
+
     if (mainBadge?.classList.contains('is-live')) {
       fsBadge?.classList.add('is-live');
       if (fsStatus) fsStatus.textContent = 'LIVE';
       fsOffline?.classList.add('hidden');
+
+      // Show/hide audio placeholder based on mode
+      if (isAudioMode) {
+        fsAudioPlaceholder?.classList.remove('hidden');
+        fsVideo?.classList.add('hidden');
+
+        // Sync DJ info to fullscreen audio placeholder
+        const mainDjName = document.getElementById('audioDjName');
+        const mainDjAvatar = document.getElementById('vinylDjAvatar');
+        const fsAudioDjName = document.getElementById('fsAudioDjName');
+        const fsVinylAvatar = document.getElementById('fsVinylDjAvatar');
+        const fsVinylAvatar2 = document.getElementById('fsVinylDjAvatar2');
+
+        if (fsAudioDjName && mainDjName) fsAudioDjName.textContent = mainDjName.textContent;
+        if (fsVinylAvatar && mainDjAvatar) fsVinylAvatar.src = mainDjAvatar.src;
+        if (fsVinylAvatar2 && mainDjAvatar) fsVinylAvatar2.src = mainDjAvatar.src;
+      } else {
+        fsAudioPlaceholder?.classList.add('hidden');
+        fsVideo?.classList.remove('hidden');
+      }
     } else {
       fsBadge?.classList.remove('is-live');
       if (fsStatus) fsStatus.textContent = 'OFFLINE';
       fsOffline?.classList.remove('hidden');
+      fsAudioPlaceholder?.classList.add('hidden');
     }
-    
+
     const mainTitle = document.getElementById('streamTitle');
     const mainAvatar = document.getElementById('djAvatar');
     const mainName = document.getElementById('controlsDjName');
@@ -2575,10 +2714,18 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 
   async function pausePlaylistForStream() {
     const playlistManager = window.playlistManager;
-    if (playlistManager?.isPlaying) {
-      console.log('[Playlist] Pausing for live stream');
-      playlistManager.wasPausedForStream = true;
+    if (playlistManager) {
+      console.log('[Playlist] Stopping for live stream');
+      playlistManager.wasPausedForStream = playlistManager.isPlaying;
+      // Completely stop and clear the playlist
       await playlistManager.pause?.();
+      await playlistManager.clearQueue?.();
+      // Hide the playlist player container
+      const embedPlayer = document.getElementById('embedPlayer');
+      if (embedPlayer) embedPlayer.classList.add('hidden');
+      // Show video player for live stream
+      const videoPlayer = document.getElementById('videoPlayer');
+      if (videoPlayer) videoPlayer.classList.remove('hidden');
     }
   }
 
@@ -2628,6 +2775,12 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 
       liveStatusChannel.bind('stream-started', (data) => {
         console.log('[LiveStatus] DJ went live:', data.djName);
+        // Pause playlist when DJ goes live
+        pausePlaylistForStream();
+        // Trigger live-stream.js to fetch stream and load HLS player
+        if (typeof window.checkLiveStatus === 'function') {
+          window.checkLiveStatus();
+        }
         // Refresh schedule immediately
         scheduleCache = null;
         loadSchedule(true);
@@ -2638,6 +2791,15 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         // Refresh schedule immediately to remove completed DJ
         scheduleCache = null;
         loadSchedule(true);
+        // Resume playlist after 10 second delay
+        setTimeout(() => {
+          const playlistManager = window.playlistManager;
+          if (playlistManager?.wasPausedForStream) {
+            console.log('[Playlist] Resuming after stream ended (10s delay)');
+            playlistManager.wasPausedForStream = false;
+            playlistManager.play?.();
+          }
+        }, 10000);
       });
 
       console.log('[LiveStatus] Subscribed to live-status channel');
@@ -3588,14 +3750,18 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   function renderTodaySchedule() {
     const list = document.getElementById('scheduleList');
     if (!list) return;
-    
+
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    
+
     // Filter to today's slots that are current or future (not completed/cancelled shows)
     const todaySlots = allSlots.filter(s => {
       if (!s.startTime.startsWith(today)) return false;
       if (s.status === 'cancelled' || s.status === 'completed') return false;
+
+      // Hide expired slots (endTime has passed) unless currently live
+      const endTime = new Date(s.endTime);
+      if (endTime < now && s.status !== 'live') return false;
 
       // Show if live, scheduled, in_lobby, or queued
       return ['live', 'scheduled', 'in_lobby', 'queued'].includes(s.status);
@@ -3670,6 +3836,13 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     const playBtn = document.getElementById('playBtn');
     
     // Track live status changes for chat clear timer and playlist fallback
+    // If live-stream.js already detected an active stream, don't override with slots API data
+    // This handles audio-only/BUTT streams where slots API returns currentLive: null
+    if (!currentLive && window.isLiveStreamActive) {
+      console.log('[Schedule] Skipping offline state - live-stream.js detected active stream');
+      return;
+    }
+
     const isLiveNow = !!currentLive;
     if (wasLive && !isLiveNow) {
       // Stream just ended - schedule chat clear and playlist fallback
@@ -4748,4 +4921,4 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   });
 </script>
 
-<script type="module" src="/live-stream.js?v=20251230-wave3"></script>
+<script type="module" src="/live-stream.js?v=20251230-audio-autoplay"></script>
