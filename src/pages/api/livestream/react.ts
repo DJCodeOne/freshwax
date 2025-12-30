@@ -299,8 +299,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     switch (action) {
       case 'emoji': {
-        // Broadcast emoji reaction to all viewers via Pusher
-        // No database write needed - just broadcast for real-time display
+        // Broadcast emoji reaction to all viewers via Pusher and increment counter
         const { sessionId } = data;
         const channel = `stream-${streamId}`;
         const reactionData = {
@@ -316,6 +315,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const pusherSuccess = await triggerPusher(channel, 'reaction', reactionData, env);
         console.log('[react.ts] Pusher broadcast result:', pusherSuccess);
 
+        // Increment total likes counter
+        let totalLikes = 0;
+        try {
+          const result = await incrementField('livestreamSlots', streamId, 'totalLikes', 1);
+          totalLikes = result.newValue;
+        } catch (e) {
+          try {
+            const result = await incrementField('livestreams', streamId, 'totalLikes', 1);
+            totalLikes = result.newValue;
+          } catch (e2) {
+            // Stream doesn't exist in either collection (playlist mode) - that's OK
+            console.log('[react] Stream not found for reaction counter, skipping increment');
+          }
+        }
+
         if (!pusherSuccess) {
           return new Response(JSON.stringify({
             success: false,
@@ -327,7 +341,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           success: true,
           message: 'Reaction broadcast',
           channel,
-          pusherSuccess
+          pusherSuccess,
+          totalLikes
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
       

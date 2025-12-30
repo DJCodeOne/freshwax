@@ -1515,6 +1515,11 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     btn?.classList.add('liked');
     setTimeout(() => btn?.classList.remove('liked'), 300);
 
+    // Optimistic UI - increment count immediately
+    const likeCountEl = document.getElementById('likeCount');
+    const currentCount = parseInt(likeCountEl?.textContent || '0');
+    if (likeCountEl) likeCountEl.textContent = currentCount + 1;
+
     // Broadcast to all viewers and increment like count via API
     try {
       // Get current stream ID from the page
@@ -1523,9 +1528,11 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 
       if (!streamId) {
         console.log('[Reaction] No active stream to react to');
+        // Revert optimistic update
+        if (likeCountEl) likeCountEl.textContent = currentCount;
         return;
       }
-      
+
       // Broadcast emoji reaction to all viewers
       console.log('[triggerReaction] Sending emoji broadcast...');
       const emojiResponse = await fetch('/api/livestream/react', {
@@ -1543,8 +1550,15 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       });
       const emojiResult = await emojiResponse.json();
       console.log('[triggerReaction] Emoji broadcast result:', emojiResult);
+
+      // Update with actual count from server if available
+      if (emojiResult.success && emojiResult.totalLikes !== undefined && likeCountEl) {
+        likeCountEl.textContent = emojiResult.totalLikes;
+      }
     } catch (error) {
       console.error('[Reaction] API error:', error);
+      // Revert optimistic update on error
+      if (likeCountEl) likeCountEl.textContent = currentCount;
     }
   }
   
