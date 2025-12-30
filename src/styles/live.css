@@ -1,4 +1,36 @@
   /* =====================================================
+     AUTO-HIDE HEADER ON LIVE PAGE
+     ===================================================== */
+
+  /* Header auto-hide state */
+  #freshwax-header.header-auto-hide {
+    transform: translateY(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+
+  /* Show header when hovering near top or when header itself is hovered */
+  #freshwax-header.header-auto-hide:hover,
+  #freshwax-header.header-auto-hide.header-visible {
+    transform: translateY(0);
+  }
+
+  /* Hover trigger zone at top of page */
+  .header-hover-zone {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    z-index: 99998;
+    pointer-events: auto;
+  }
+
+  /* Adjust main content when header is hidden */
+  body.header-hidden main {
+    margin-top: 0 !important;
+  }
+
+  /* =====================================================
      LAYOUT ALIGNMENT FIXES
      ===================================================== */
 

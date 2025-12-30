@@ -3129,47 +3129,39 @@
       return;
     }
 
-    // Helper to check if title is a placeholder like "Track 1234"
+    // Helper to check if title is a placeholder like "Track 1234" or similar
     function isPlaceholderTitle(title?: string): boolean {
       if (!title) return true;
-      return /^Track \d+$/i.test(title);
+      // Match various placeholder patterns
+      return /^Track\s*\d+$/i.test(title) ||
+             /^YouTube Video$/i.test(title) ||
+             /^SoundCloud Track$/i.test(title) ||
+             /^Media Track$/i.test(title) ||
+             /^Unknown Track$/i.test(title);
     }
 
-    container.innerHTML = tracks.map((track, index) => {
-      // Get title - try multiple fields
-      let title = track.title || track.name || '';
+    // Extract YouTube video ID from URL
+    function getYouTubeId(url: string): string | null {
+      const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+      return match ? match[1] : null;
+    }
 
-      // If title is a placeholder like "Track 3349", try to get a better one
-      if (isPlaceholderTitle(title)) {
-        // Try to use selector name if available
+    // Render initial HTML with placeholders for loading
+    container.innerHTML = tracks.slice(0, 10).map((track, index) => {
+      let title = track.title || track.name || '';
+      const needsFetch = isPlaceholderTitle(title) && track.url;
+
+      // For initial display, show "Loading..." for YouTube tracks that need fetching
+      if (needsFetch && (track.url.includes('youtube.com') || track.url.includes('youtu.be'))) {
+        title = 'Loading...';
+      } else if (isPlaceholderTitle(title)) {
         if (track.addedByName && track.addedByName !== 'Auto-Play') {
           title = `Track by ${track.addedByName}`;
-        } else if (track.url) {
-          // Fall back to platform-based name
-          const url = track.url;
-          if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            title = 'YouTube Video';
-          } else if (url.includes('soundcloud.com')) {
-            title = 'SoundCloud Track';
-          } else {
-            title = 'Media Track';
-          }
-        }
-      }
-
-      // If no title at all, try to extract from URL
-      if (!title && track.url) {
-        const url = track.url;
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
-          title = 'YouTube Video';
-        } else if (url.includes('soundcloud.com')) {
-          title = 'SoundCloud Track';
         } else {
-          title = 'Media Track';
+          title = 'Unknown Track';
         }
       }
 
-      if (!title) title = 'Unknown Track';
       const truncatedTitle = title.length > 40 ? title.slice(0, 40) + '...' : title;
 
       // Format time since played - always relative timestamp
@@ -3200,12 +3192,61 @@
         <div class="recently-played-item">
           <span class="recently-played-number">${index + 1}</span>
           <div class="recently-played-info">
-            <span class="recently-played-title" title="${title}">${truncatedTitle}</span>
+            <span class="recently-played-title" data-track-index="${index}" title="${title}">${truncatedTitle}</span>
             <span class="recently-played-time">${timeAgo}</span>
           </div>
         </div>
       `;
     }).join('');
+
+    // Now asynchronously fetch real titles for YouTube tracks
+    tracks.slice(0, 10).forEach(async (track, index) => {
+      const title = track.title || track.name || '';
+      const needsFetch = isPlaceholderTitle(title) && track.url;
+
+      if (needsFetch && (track.url.includes('youtube.com') || track.url.includes('youtu.be'))) {
+        const videoId = getYouTubeId(track.url);
+        if (videoId) {
+          try {
+            // Use oEmbed API to get the actual title (no API key needed)
+            const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+            const response = await fetch(oembedUrl);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.title) {
+                // Find and update the DOM element
+                const titleEl = container.querySelector(`.recently-played-title[data-track-index="${index}"]`) as HTMLElement;
+                if (titleEl) {
+                  const truncatedTitle = data.title.length > 40 ? data.title.slice(0, 40) + '...' : data.title;
+                  titleEl.textContent = truncatedTitle;
+                  titleEl.setAttribute('title', data.title);
+                }
+                // Also update the track object in cache for future renders
+                track.title = data.title;
+              }
+            }
+          } catch (e) {
+            console.warn('[PlaylistModal] Could not fetch YouTube title for', videoId, e);
+          }
+        }
+      }
+    });
+  }
+
+  // Helper to check if title is a placeholder
+  function isPlaceholderTitleForPreview(title?: string): boolean {
+    if (!title) return true;
+    return /^Track\s*\d+$/i.test(title) ||
+           /^YouTube Video$/i.test(title) ||
+           /^SoundCloud Track$/i.test(title) ||
+           /^Media Track$/i.test(title) ||
+           /^Unknown Track$/i.test(title);
+  }
+
+  // Extract YouTube video ID from URL
+  function getYouTubeIdForPreview(url: string): string | null {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+    return match ? match[1] : null;
   }
 
   // Update the track info display (video player removed, just showing track details)
@@ -3225,7 +3266,35 @@
 
     // Update track info
     if (previewTrackInfo) previewTrackInfo.classList.remove('hidden');
-    if (previewTitle) previewTitle.textContent = currentItem.title || 'Unknown Track';
+
+    // Check if we need to fetch the real title
+    const title = currentItem.title || 'Unknown Track';
+    const needsFetch = isPlaceholderTitleForPreview(title) && currentItem.url;
+
+    if (needsFetch && (currentItem.url.includes('youtube.com') || currentItem.url.includes('youtu.be'))) {
+      // Show loading state first
+      if (previewTitle) previewTitle.textContent = 'Loading...';
+
+      // Fetch real title asynchronously
+      const videoId = getYouTubeIdForPreview(currentItem.url);
+      if (videoId) {
+        fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+          .then(response => response.ok ? response.json() : null)
+          .then(data => {
+            if (data?.title && previewTitle) {
+              previewTitle.textContent = data.title;
+              // Update the item for future use
+              currentItem.title = data.title;
+            }
+          })
+          .catch(() => {
+            if (previewTitle) previewTitle.textContent = title;
+          });
+      }
+    } else {
+      if (previewTitle) previewTitle.textContent = title;
+    }
+
     if (previewDjName) previewDjName.textContent = `Selector: ${currentDj?.userName || currentItem.addedByName || 'Unknown'}`;
 
     // Start duration timer for this track (with countdown support using server timestamp)

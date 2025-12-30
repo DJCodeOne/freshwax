@@ -4996,3 +4996,77 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 </script>
 
 <script type="module" src="/live-stream.js?v=20251230-audio-autoplay"></script>
+
+<script>
+  // Auto-hide header on live page
+  (function initAutoHideHeader() {
+    const header = document.getElementById('freshwax-header');
+    if (!header) return;
+
+    // Create hover trigger zone at the very top of the page
+    let hoverZone = document.querySelector('.header-hover-zone');
+    if (!hoverZone) {
+      hoverZone = document.createElement('div');
+      hoverZone.className = 'header-hover-zone';
+      document.body.appendChild(hoverZone);
+    }
+
+    // Add auto-hide class to header
+    header.classList.add('header-auto-hide');
+    document.body.classList.add('header-hidden');
+
+    // Show header when hovering near the top
+    hoverZone.addEventListener('mouseenter', () => {
+      header.classList.add('header-visible');
+    });
+
+    // Keep header visible while mouse is over it
+    header.addEventListener('mouseenter', () => {
+      header.classList.add('header-visible');
+    });
+
+    // Hide header when mouse leaves both the trigger zone and header
+    header.addEventListener('mouseleave', (e) => {
+      // Check if mouse moved to the hover zone
+      const rect = hoverZone.getBoundingClientRect();
+      if (e.clientY > rect.bottom) {
+        header.classList.remove('header-visible');
+      }
+    });
+
+    hoverZone.addEventListener('mouseleave', (e) => {
+      // Check if mouse moved to the header
+      const headerRect = header.getBoundingClientRect();
+      if (e.clientY > headerRect.bottom || e.clientY < headerRect.top) {
+        // Give a small delay to allow mouse to move to header
+        setTimeout(() => {
+          if (!header.matches(':hover')) {
+            header.classList.remove('header-visible');
+          }
+        }, 100);
+      }
+    });
+
+    // Also show header when scrolled to very top
+    let lastScrollY = window.scrollY;
+    window.addEventListener('scroll', () => {
+      if (window.scrollY === 0 && lastScrollY > 0) {
+        // Just scrolled to top - briefly show header
+        header.classList.add('header-visible');
+        setTimeout(() => {
+          if (!header.matches(':hover') && !hoverZone.matches(':hover')) {
+            header.classList.remove('header-visible');
+          }
+        }, 2000);
+      }
+      lastScrollY = window.scrollY;
+    }, { passive: true });
+
+    // Clean up on page navigation (View Transitions)
+    document.addEventListener('astro:before-swap', () => {
+      header.classList.remove('header-auto-hide', 'header-visible');
+      document.body.classList.remove('header-hidden');
+      hoverZone?.remove();
+    });
+  })();
+</script>

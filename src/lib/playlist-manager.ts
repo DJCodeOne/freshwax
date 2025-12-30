@@ -259,6 +259,13 @@ export class PlaylistManager {
    * Handle remote playlist update from Pusher
    */
   private async handleRemoteUpdate(newPlaylist: GlobalPlaylist & { recentlyPlayed?: any[] }): Promise<void> {
+    // If live stream is active, ignore "isPlaying" from remote updates
+    const liveStreamActive = (window as any).isLiveStreamActive;
+    if (liveStreamActive && newPlaylist.isPlaying) {
+      console.log('[PlaylistManager] Remote update blocked - live stream is active');
+      newPlaylist.isPlaying = false; // Force playlist to not play
+    }
+
     const wasPlaying = this.playlist.isPlaying;
     const oldCurrentItem = this.playlist.queue[this.playlist.currentIndex];
     const hadItems = this.playlist.queue.length > 0;
@@ -357,6 +364,19 @@ export class PlaylistManager {
 
       if (!parsed.isValid) {
         return { success: false, error: parsed.error || 'Invalid URL' };
+      }
+
+      // Check duration for YouTube videos before adding
+      if (parsed.platform === 'youtube' && parsed.embedId) {
+        const duration = await this.fetchVideoDuration(url.trim(), parsed.platform, parsed.embedId);
+        if (duration && duration > MAX_TRACK_DURATION_SECONDS) {
+          const mins = Math.floor(duration / 60);
+          const secs = Math.floor(duration % 60);
+          return {
+            success: false,
+            error: `Track is too long (${mins}:${secs.toString().padStart(2, '0')}). Maximum allowed is 10 minutes.`
+          };
+        }
       }
 
       // Fetch metadata for thumbnail/title
@@ -476,6 +496,12 @@ export class PlaylistManager {
    * Play playlist (viewer action - syncs to all)
    */
   async play(): Promise<void> {
+    // Don't play if live stream is active
+    if ((window as any).isLiveStreamActive) {
+      console.log('[PlaylistManager] Play blocked - live stream is active');
+      return;
+    }
+
     if (this.playlist.queue.length === 0) {
       console.warn('[PlaylistManager] Cannot play - queue is empty');
       return;
@@ -561,6 +587,12 @@ export class PlaylistManager {
    * Called by live-stream.js when going offline with empty queue
    */
   async startAutoPlay(): Promise<boolean> {
+    // Don't start if live stream is active
+    if ((window as any).isLiveStreamActive) {
+      console.log('[PlaylistManager] Auto-play skipped - live stream is active');
+      return false;
+    }
+
     // Don't start if already playing or queue has items
     if (this.playlist.isPlaying || this.playlist.queue.length > 0) {
       console.log('[PlaylistManager] Auto-play skipped - already playing or queue not empty');
@@ -684,6 +716,12 @@ export class PlaylistManager {
    * Play current track (with lock to prevent race conditions)
    */
   private async playCurrent(): Promise<void> {
+    // Don't play if live stream is active
+    if ((window as any).isLiveStreamActive) {
+      console.log('[PlaylistManager] playCurrent blocked - live stream is active');
+      return;
+    }
+
     const currentItem = this.playlist.queue[this.playlist.currentIndex];
     if (!currentItem) return;
 
@@ -736,6 +774,24 @@ export class PlaylistManager {
       }
 
       await this.player.loadItem(currentItem);
+
+      // Check duration after loading - skip if exceeds 10 minute limit
+      try {
+        // Wait a moment for player to have duration info
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const duration = await this.player.getDuration();
+
+        if (duration > MAX_TRACK_DURATION_SECONDS) {
+          console.log(`[PlaylistManager] Track exceeds 10 minute limit (${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')}), skipping to next`);
+          this.clearTrackTimer();
+          // Don't unlock yet - let handleTrackEnded handle it
+          this.isPlayingLocked = false;
+          await this.handleTrackEnded();
+          return;
+        }
+      } catch (e) {
+        console.warn('[PlaylistManager] Could not check duration, allowing track to play:', e);
+      }
 
       this.renderUI();
 
@@ -1736,6 +1792,13 @@ export class PlaylistManager {
 
       if (result.success && result.playlist) {
         this.playlist = result.playlist;
+
+        // If live stream is active, force playlist to not play
+        if ((window as any).isLiveStreamActive && this.playlist.isPlaying) {
+          console.log('[PlaylistManager] Live stream active - forcing playlist to not play');
+          this.playlist.isPlaying = false;
+        }
+
         console.log('[PlaylistManager] Loaded global playlist:', this.playlist.queue.length, 'items, trackStartedAt:', this.playlist.trackStartedAt, 'isPlaying:', this.playlist.isPlaying);
 
         // Check for stale or invalid playlist states
