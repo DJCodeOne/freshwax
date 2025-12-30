@@ -101,7 +101,7 @@ If you don't have a static IP, use a dynamic DNS service:
 - **Stream Duration** - Track how long the DJ has been live
 
 ### For DJs
-- **Go Live Dashboard** (`/account/go-live`) - Start/stop streams
+- **DJ Lobby** (`/account/dj-lobby`) - Start/stop streams
 - **Red5 RTMP Streaming** - Connect via OBS/Streamlabs
 - **Audio Streaming** - Connect via BUTT/IceCast
 - **Twitch Restream** - Embed Twitch streams

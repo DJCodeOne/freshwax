@@ -23,6 +23,7 @@ function getPusherConfig() {
 let pusher = null;
 let lobbyChannel = null;
 let privateChannel = null;
+let liveStatusChannel = null;
 let currentUser = null;
 let userInfo = null;
 let onlineDjs = [];
@@ -107,6 +108,32 @@ export async function initDjLobbyPusher(user, info) {
     console.error('[DJLobby DEBUG] Private channel subscription error:', error);
   });
 
+  // Subscribe to live-status channel for stream-started/stream-ended events
+  console.log('[DJLobby DEBUG] Subscribing to live-status channel...');
+  liveStatusChannel = pusher.subscribe('live-status');
+
+  liveStatusChannel.bind('pusher:subscription_succeeded', () => {
+    console.log('[DJLobby DEBUG] Successfully subscribed to live-status');
+  });
+
+  liveStatusChannel.bind('stream-started', (data) => {
+    console.log('[DJLobby] Stream started:', data);
+    // Reload stream status to update UI
+    if (window.loadStreamStatus) {
+      window.loadStreamStatus();
+    }
+  });
+
+  liveStatusChannel.bind('stream-ended', (data) => {
+    console.log('[DJLobby] Stream ended:', data);
+    // Reset UI to non-streaming state
+    resetStreamUI();
+    // Reload stream status to update UI
+    if (window.loadStreamStatus) {
+      window.loadStreamStatus();
+    }
+  });
+
   // Set up event handlers
   setupLobbyEvents();
   setupPrivateEvents();
@@ -131,6 +158,64 @@ async function loadPusherScript() {
     script.onerror = reject;
     document.head.appendChild(script);
   });
+}
+
+// Reset UI when stream ends
+function resetStreamUI() {
+  console.log('[DJLobby] Resetting stream UI...');
+
+  // Reset Ready button
+  const readyBtn = document.getElementById('setReadyBtn');
+  const readyBtnText = document.getElementById('readyBtnText');
+  if (readyBtn) {
+    readyBtn.classList.remove('is-ready-state', 'is-ready');
+    readyBtn.style.background = '';
+    readyBtn.disabled = false;
+    readyBtn.classList.add('glow');
+  }
+  if (readyBtnText) {
+    readyBtnText.textContent = "I'm Ready";
+  }
+
+  // Hide GO LIVE button
+  const goLiveBtn = document.getElementById('goLiveBtn');
+  if (goLiveBtn) {
+    goLiveBtn.classList.add('hidden');
+    goLiveBtn.disabled = false;
+    const goLiveBtnText = document.getElementById('goLiveBtnText');
+    if (goLiveBtnText) goLiveBtnText.textContent = 'GO LIVE!';
+  }
+
+  // Reset End Stream button
+  const endStreamBtn = document.getElementById('endStreamBtn');
+  if (endStreamBtn) {
+    endStreamBtn.disabled = true;
+    endStreamBtn.innerHTML = '<span class="end-icon">⏹</span><span class="end-text">End Stream</span>';
+  }
+
+  // Reset status text
+  const endStreamStatus = document.getElementById('endStreamStatus');
+  if (endStreamStatus) {
+    endStreamStatus.textContent = 'No active stream';
+  }
+
+  // Hide broadcast audio panel
+  const broadcastAudioPanel = document.getElementById('broadcastAudioPanel');
+  if (broadcastAudioPanel) {
+    broadcastAudioPanel.classList.add('hidden');
+  }
+
+  // Show stream key section
+  const streamKeySection = document.getElementById('streamKeySection');
+  if (streamKeySection) {
+    streamKeySection.classList.remove('hidden');
+  }
+
+  // Collapse preview section
+  const previewSection = document.querySelector('.preview-section');
+  if (previewSection) {
+    previewSection.classList.remove('expanded');
+  }
 }
 
 // ==========================================
@@ -915,7 +1000,12 @@ export async function cleanup() {
     pusher.unsubscribe(`private-dj-${currentUser.uid}`);
     privateChannel = null;
   }
-  
+
+  if (liveStatusChannel) {
+    pusher.unsubscribe('live-status');
+    liveStatusChannel = null;
+  }
+
   // Disconnect Pusher
   if (pusher) {
     pusher.disconnect();

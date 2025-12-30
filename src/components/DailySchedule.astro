@@ -1470,10 +1470,10 @@ const { mode, id = 'dailySchedule' } = Astro.props;
                 if (result.success) {
                   // Successfully extended booking - go to go-live page
                   alert(`Your ${new Date(result.originalStartTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} booking has been extended to start now!`);
-                  window.location.href = '/account/go-live';
+                  window.location.href = '/account/dj-lobby';
                 } else if (result.noUpcomingBooking) {
                   // No upcoming booking - just go to go-live page for ad-hoc streaming
-                  window.location.href = '/account/go-live';
+                  window.location.href = '/account/dj-lobby';
                 } else {
                   alert(result.error || 'Could not start early. Try the Go Live page.');
                   goLiveBlock.innerHTML = `
@@ -1484,10 +1484,10 @@ const { mode, id = 'dailySchedule' } = Astro.props;
                 }
               } catch (e) {
                 console.error('Early start error:', e);
-                window.location.href = '/account/go-live';
+                window.location.href = '/account/dj-lobby';
               }
             } else {
-              window.location.href = '/account/go-live';
+              window.location.href = '/account/dj-lobby';
             }
           });
         } else if (scheduleMode === 'booking' && !bookingsDisabled) {
@@ -1540,7 +1540,7 @@ const { mode, id = 'dailySchedule' } = Astro.props;
         block.style.cursor = 'pointer';
         block.addEventListener('click', (e) => {
           e.stopPropagation();
-          window.location.href = '/account/go-live';
+          window.location.href = '/account/dj-lobby';
         });
       }
 

@@ -74,7 +74,7 @@ export const djMixFAQs: FAQ[] = [
   },
   {
     question: "Can I upload my own DJ mix?",
-    answer: "We accept mix submissions from DJs! You'll need to register as a DJ on our platform and meet our eligibility requirements. Check the <a href='/account/go-live'>DJ requirements</a> page for more information."
+    answer: "We accept mix submissions from DJs! You'll need to register as a DJ on our platform and meet our eligibility requirements. Check the <a href='/account/dj-lobby'>DJ requirements</a> page for more information."
   },
   {
     question: "What audio quality are the mixes?",
@@ -98,7 +98,7 @@ export const liveStreamFAQs: FAQ[] = [
   },
   {
     question: "Can I become a resident DJ?",
-    answer: "We're always looking for talented DJs to book a slot. Upload a mix to our platform and apply through the <a href='/account/go-live'>Go Live</a> section of your account."
+    answer: "We're always looking for talented DJs to book a slot. Upload a mix to our platform and apply through the <a href='/account/dj-lobby'>Go Live</a> section of your account."
   },
   {
     question: "Are past streams available to rewatch?",

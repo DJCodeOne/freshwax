@@ -139,18 +139,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const mixId = `${sanitizedDjName}_${sanitizedMixTitle}_${timestamp}`;
     const folderPath = `dj-mixes/${mixId}`;
 
-    log.info(`[upload-mix] Uploading: ${djName} - ${mixTitle} (${(audioFile.size / 1024 / 1024).toFixed(2)} MB)`);
+    // Detect audio format - small WAVs are converted client-side, large WAVs upload directly
+    const isWav = audioFile.type === 'audio/wav' || audioFile.type === 'audio/x-wav' || audioFile.name.toLowerCase().endsWith('.wav');
+    const audioExt = isWav ? 'wav' : 'mp3';
+    const audioContentType = isWav ? 'audio/wav' : 'audio/mpeg';
+
+    log.info(`[upload-mix] Uploading: ${djName} - ${mixTitle} (${(audioFile.size / 1024 / 1024).toFixed(2)} MB, ${audioExt.toUpperCase()})`);
 
     // Upload audio to R2
     const audioBuffer = await audioFile.arrayBuffer();
-    const audioKey = `${folderPath}/audio.mp3`;
-    
+    const audioKey = `${folderPath}/audio.${audioExt}`;
+
     await s3Client.send(
       new PutObjectCommand({
         Bucket: R2_CONFIG.bucketName,
         Key: audioKey,
         Body: Buffer.from(audioBuffer),
-        ContentType: 'audio/mpeg',
+        ContentType: audioContentType,
         CacheControl: 'public, max-age=31536000',
       })
     );
