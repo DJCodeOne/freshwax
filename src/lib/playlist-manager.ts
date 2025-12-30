@@ -55,6 +55,7 @@ export class PlaylistManager {
   private lastPlayedUrl: string | null = null; // Track last played URL to avoid immediate repeats
   private isPlayingLocked: boolean = false; // Prevent concurrent play operations
   private pendingPlayRequest: boolean = false; // Queue a play request if locked
+  private isPausedLocally: boolean = false; // Track if user has paused locally
 
   constructor(containerId: string) {
     this.containerId = containerId;
@@ -481,13 +482,14 @@ export class PlaylistManager {
    * Pause playlist (LOCAL ONLY - doesn't affect other users)
    */
   async pause(): Promise<void> {
+    this.isPausedLocally = true; // Set local pause flag
     this.clearTrackTimer();
     this.stopCountdown();
     console.log('[PlaylistManager] Calling player.pause(), player exists:', !!this.player);
     await this.player.pause();
     this.stopPlaylistMeters();
     this.disableEmojis();
-    console.log('[PlaylistManager] Paused locally, meters stopped');
+    console.log('[PlaylistManager] Paused locally, isPausedLocally set to true');
   }
 
   /**
@@ -495,6 +497,8 @@ export class PlaylistManager {
    */
   async resume(): Promise<void> {
     if (this.playlist.queue.length === 0) return;
+
+    this.isPausedLocally = false; // Clear local pause flag
 
     // Fetch latest playlist state to get current trackStartedAt
     try {
@@ -675,6 +679,9 @@ export class PlaylistManager {
   private async playCurrent(): Promise<void> {
     const currentItem = this.playlist.queue[this.playlist.currentIndex];
     if (!currentItem) return;
+
+    // Clear local pause flag when starting playback
+    this.isPausedLocally = false;
 
     // Check if container exists before trying to play
     // (prevents errors when playlist manager exists but player isn't on page)
@@ -1948,6 +1955,8 @@ export class PlaylistManager {
   }
 
   get isPlaying(): boolean {
+    // If user has paused locally, report as not playing
+    if (this.isPausedLocally) return false;
     return this.playlist.isPlaying;
   }
 

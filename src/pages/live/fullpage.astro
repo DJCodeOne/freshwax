@@ -973,6 +973,7 @@ const pusherConfig = {
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
+    position: relative; /* Required for absolute positioned iframes */
   }
 
   /* Ensure Fresh Wax chat has proper internal layout */
@@ -1003,7 +1004,8 @@ const pusherConfig = {
   }
 
   /* External Chat Frames */
-  .external-chat-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: none; background: #18181b; }
+  .external-chat-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: none; background: #18181b; display: none; }
+  .external-chat-frame.loaded { display: block; }
   #youtubeChatFrame { background: #0f0f0f; }
 
   .external-chat-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #555; text-align: center; padding: 1rem; background: #111; }
@@ -2905,16 +2907,16 @@ const pusherConfig = {
       const placeholder = document.getElementById('twitchChatPlaceholder');
       if (frame && currentTwitchChannel) {
         frame.src = `https://www.twitch.tv/embed/${currentTwitchChannel}/chat?${parentParams}&darkpopout`;
-        frame.style.display = 'block';
-        if (placeholder) placeholder.style.display = 'none';
+        frame.classList.add('loaded');
+        placeholder?.classList.add('hidden');
       }
     } else if (chatType === 'youtube') {
       const frame = document.getElementById('youtubeChatFrame');
       const placeholder = document.getElementById('youtubeChatPlaceholder');
       if (frame && currentYoutubeVideoId) {
         frame.src = `https://www.youtube.com/live_chat?v=${currentYoutubeVideoId}&embed_domain=${host}`;
-        frame.style.display = 'block';
-        if (placeholder) placeholder.style.display = 'none';
+        frame.classList.add('loaded');
+        placeholder?.classList.add('hidden');
       }
     }
   }

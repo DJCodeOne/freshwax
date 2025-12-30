@@ -379,10 +379,12 @@ function handlePlaylistUpdate(event) {
         playIcon?.classList.add('hidden');
         pauseIcon?.classList.remove('hidden');
         playBtn.classList.add('playing');
+        showPlaylistWave(); // Show sound wave for playlist
       } else {
         playIcon?.classList.remove('hidden');
         pauseIcon?.classList.add('hidden');
         playBtn.classList.remove('playing');
+        pausePlaylistWave(); // Pause sound wave when not playing
       }
     }
 
@@ -506,69 +508,99 @@ function setupPlaylistListener() {
   window.addEventListener('playlistUpdate', handlePlaylistUpdate);
 }
 
-// Set up play button to control playlist when no live stream
+// Unified play button handler - handles playlist, HLS, and audio modes
 function setupPlaylistPlayButton() {
   const playBtn = document.getElementById('playBtn');
   if (!playBtn) return;
 
-  // Use addEventListener instead of overwriting onclick
-  // This allows the HLS player to set its own onclick later
-  playBtn.addEventListener('click', async (e) => {
-    console.log('[Playlist] Play button clicked, state:', {
+  // Single unified click handler for all modes (like fullpage.astro)
+  playBtn.onclick = async () => {
+    const playIcon = document.getElementById('playIcon');
+    const pauseIcon = document.getElementById('pauseIcon');
+    const videoElement = document.getElementById('hlsVideoElement');
+    const audioElement = document.getElementById('audioElement');
+    const playlistPlayer = document.getElementById('playlistPlayer');
+
+    console.log('[PlayBtn] Clicked, state:', {
       isLiveStreamActive: window.isLiveStreamActive,
-      isPlaylistActive: window.isPlaylistActive,
       isPlaylistPlaying: window.isPlaylistPlaying,
       hasPlaylistManager: !!window.playlistManager
     });
 
-    // If live stream is active, let the HLS onclick handler deal with it
-    if (window.isLiveStreamActive) {
-      return; // Don't interfere with live stream controls
-    }
+    // Check if playlist is visible (playlist mode)
+    const playlistVisible = playlistPlayer && !playlistPlayer.classList.contains('hidden');
 
-    // Get playlist manager - it should exist if playlist was ever active
-    const pm = window.playlistManager;
-    if (!pm) {
-      console.warn('[Playlist] No playlist manager available');
+    // Priority 1: Handle Playlist mode (when no live stream)
+    if (playlistVisible && window.playlistManager && !window.isLiveStreamActive) {
+      const pm = window.playlistManager;
+      const isCurrentlyPlaying = window.isPlaylistPlaying || playBtn.classList.contains('playing');
+
+      try {
+        if (isCurrentlyPlaying) {
+          await pm.pause();
+          window.isPlaylistPlaying = false;
+          playIcon?.classList.remove('hidden');
+          pauseIcon?.classList.add('hidden');
+          playBtn.classList.remove('playing');
+          pausePlaylistWave(); // Pause sound wave animation
+          console.log('[PlayBtn] Playlist paused');
+        } else {
+          await pm.resume();
+          window.isPlaylistPlaying = true;
+          playIcon?.classList.add('hidden');
+          pauseIcon?.classList.remove('hidden');
+          playBtn.classList.add('playing');
+          showPlaylistWave(); // Show and animate sound wave
+          console.log('[PlayBtn] Playlist resumed');
+        }
+      } catch (error) {
+        console.error('[PlayBtn] Playlist error:', error);
+      }
       return;
     }
 
-    const playIcon = document.getElementById('playIcon');
-    const pauseIcon = document.getElementById('pauseIcon');
+    // Priority 2: Handle HLS video stream
+    if (videoElement && !videoElement.classList.contains('hidden') && window.isLiveStreamActive) {
+      if (videoElement.paused) {
+        rememberAutoplay();
+        initGlobalAudioAnalyzer(videoElement);
+        if (globalAudioContext?.state === 'suspended') {
+          globalAudioContext.resume();
+        }
+        videoElement.muted = false;
+        try {
+          await videoElement.play();
+          // State updated by 'play' event listener
+        } catch (err) {
+          console.error('[PlayBtn] HLS play error:', err);
+        }
+      } else {
+        videoElement.pause();
+        // State updated by 'pause' event listener
+      }
+      return;
+    }
 
-    // Check if currently playing by looking at both the flag AND the button state
-    const isCurrentlyPlaying = window.isPlaylistPlaying || playBtn.classList.contains('playing');
-
-    try {
-      if (isCurrentlyPlaying) {
-        // Pause playlist - PlaylistManager.pause() handles:
-        // - stopping playlist simulated meters
-        // - disabling emojis and reaction buttons
-        await pm.pause();
-        window.isPlaylistPlaying = false;
-        window.isPlaylistActive = true; // Keep playlist active even when paused
+    // Priority 3: Handle audio stream
+    if (audioElement && !audioElement.classList.contains('hidden')) {
+      if (audioElement.paused) {
+        try {
+          await audioElement.play();
+          playIcon?.classList.add('hidden');
+          pauseIcon?.classList.remove('hidden');
+        } catch (err) {
+          console.error('[PlayBtn] Audio play error:', err);
+        }
+      } else {
+        audioElement.pause();
         playIcon?.classList.remove('hidden');
         pauseIcon?.classList.add('hidden');
-        playBtn.classList.remove('playing');
-        console.log('[Playlist] Paused via play button');
-      } else {
-        // Resume playlist - PlaylistManager.resume() handles:
-        // - starting playlist simulated meters
-        // - enabling emojis and reaction buttons
-        await pm.resume();
-        window.isPlaylistPlaying = true;
-        window.isPlaylistActive = true;
-        playIcon?.classList.add('hidden');
-        pauseIcon?.classList.remove('hidden');
-        playBtn.classList.add('playing');
-        console.log('[Playlist] Resumed via play button');
       }
-    } catch (error) {
-      console.error('[Playlist] Error toggling playback:', error);
+      return;
     }
-  });
+  };
 
-  console.log('[Playlist] Play button control set up');
+  console.log('[PlayBtn] Unified handler set up');
 }
 
 // Set up volume slider for playlist mode (runs on init, before HLS might set its own handler)
@@ -1050,6 +1082,8 @@ function showLiveStream(stream) {
   window.emojiAnimationsEnabled = true; // Enable emoji animations when live
   setReactionButtonsEnabled(true); // Enable reaction buttons
   setChatEnabled(true); // Enable chat when live
+  hidePlaylistWave(); // Hide sound wave
+  showLiveMeters(); // Show LED meters for live stream
 
   // Expose stream ID globally for reaction buttons
   window.currentStreamId = stream.id;
@@ -1359,32 +1393,10 @@ function setupHlsPlayer(stream) {
     // ==========================================
     const playBtn = document.getElementById('playBtn');
     const volumeSlider = document.getElementById('volumeSlider');
-    
+
+    // Just enable the button - unified handler in setupPlaylistPlayButton() handles all modes
     if (playBtn) {
       playBtn.disabled = false;
-      playBtn.onclick = async () => {
-        if (isPlaying) {
-          videoElement.pause();
-          // State will be updated by 'pause' event listener
-        } else {
-          // Remember that user wants autoplay for future page visits
-          rememberAutoplay();
-          initGlobalAudioAnalyzer(videoElement);
-          if (globalAudioContext?.state === 'suspended') {
-            globalAudioContext.resume();
-          }
-          videoElement.muted = false;
-          try {
-            await videoElement.play();
-            // State will be updated by 'play' event listener
-          } catch (err) {
-            console.error('[HLS] Play error:', err);
-            if (window.isMobileDevice) {
-              showTapToPlay();
-            }
-          }
-        }
-      };
     }
     
     // Volume slider handler - controls both HLS video and playlist
@@ -1640,6 +1652,54 @@ function stopGlobalMeters() {
 
 function startGlobalMeters() {
   if (!globalAnimationId) updateGlobalMeters();
+}
+
+// Switch to LED meters visualization (for live stream)
+function showLiveMeters() {
+  const metersWrapper = document.getElementById('stereoMetersWrapper');
+  const waveWrapper = document.getElementById('soundWaveWrapper');
+  if (metersWrapper) metersWrapper.classList.remove('hidden');
+  if (waveWrapper) waveWrapper.classList.add('hidden');
+  startGlobalMeters();
+}
+
+// Hide LED meters (for playlist mode)
+function hideLiveMeters() {
+  const metersWrapper = document.getElementById('stereoMetersWrapper');
+  if (metersWrapper) metersWrapper.classList.add('hidden');
+  stopGlobalMeters();
+}
+
+// Switch to sound wave visualization (for playlist)
+function showPlaylistWave() {
+  const metersWrapper = document.getElementById('stereoMetersWrapper');
+  const waveWrapper = document.getElementById('soundWaveWrapper');
+  // Hide LED meters completely
+  if (metersWrapper) metersWrapper.classList.add('hidden');
+  stopGlobalMeters();
+  // Show and animate wave
+  if (waveWrapper) {
+    waveWrapper.classList.remove('hidden');
+    waveWrapper.classList.remove('paused');
+  }
+}
+
+// Pause sound wave animation
+function pausePlaylistWave() {
+  const waveWrapper = document.getElementById('soundWaveWrapper');
+  if (waveWrapper) waveWrapper.classList.add('paused');
+}
+
+// Resume sound wave animation
+function resumePlaylistWave() {
+  const waveWrapper = document.getElementById('soundWaveWrapper');
+  if (waveWrapper) waveWrapper.classList.remove('paused');
+}
+
+// Hide sound wave (for live stream mode)
+function hidePlaylistWave() {
+  const waveWrapper = document.getElementById('soundWaveWrapper');
+  if (waveWrapper) waveWrapper.classList.add('hidden');
 }
 
 // ==========================================
@@ -1977,33 +2037,9 @@ function setupAudioPlayer(stream) {
     audio.volume = volumeSlider.value / 100;
   }
   
+  // Just enable the button - unified handler in setupPlaylistPlayButton() handles all modes
   if (playBtn) {
     playBtn.disabled = false;
-    playBtn.onclick = async () => {
-      if (isPlaying) {
-        audio?.pause();
-        isPlaying = false;
-        document.getElementById('playIcon')?.classList.remove('hidden');
-        document.getElementById('pauseIcon')?.classList.add('hidden');
-        playBtn.classList.remove('playing');
-        stopGlobalMeters();
-      } else {
-        initGlobalAudioAnalyzer(audio);
-        if (globalAudioContext?.state === 'suspended') {
-          globalAudioContext.resume();
-        }
-        try {
-          await audio?.play();
-          isPlaying = true;
-          document.getElementById('playIcon')?.classList.add('hidden');
-          document.getElementById('pauseIcon')?.classList.remove('hidden');
-          playBtn.classList.add('playing');
-          startGlobalMeters();
-        } catch (err) {
-          console.error('[Audio] Play error:', err);
-        }
-      }
-    };
   }
   
   if (volumeSlider) {

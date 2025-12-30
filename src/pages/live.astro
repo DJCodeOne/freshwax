@@ -347,8 +347,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
             <svg id="pauseIcon" class="pause-icon hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
           </button>
           
-          <!-- Stereo LED Meters -->
-          <div class="stereo-meters-wrapper">
+          <!-- Stereo LED Meters (for live stream) -->
+          <div class="stereo-meters-wrapper hidden" id="stereoMetersWrapper">
             <button id="toggleMetersBtn" class="toggle-meters-btn" title="Toggle LED meters">
               <svg class="meters-visible-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
                 <rect x="3" y="12" width="3" height="8" rx="1"/>
@@ -403,6 +403,24 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
                   <div class="led red clip"></div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Sound Wave Animation (for playlist) -->
+          <div class="sound-wave-wrapper paused" id="soundWaveWrapper">
+            <div class="sound-wave">
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
             </div>
           </div>
           
@@ -4752,4 +4770,4 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   });
 </script>
 
-<script type="module" src="/live-stream.js?v=20251225-autoplay"></script>
+<script type="module" src="/live-stream.js?v=20251230-wave3"></script>

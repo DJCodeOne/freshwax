@@ -541,8 +541,8 @@ export const prerender = false;
       </div>`;
     }
 
-    // Time rows (6am to midnight)
-    for (let hour = 6; hour <= 23; hour++) {
+    // Time rows (midnight to 23:00)
+    for (let hour = 0; hour <= 23; hour++) {
       html += `<div class="time-label">${hour.toString().padStart(2, '0')}:00</div>`;
 
       for (let day = 0; day < 7; day++) {
@@ -569,9 +569,9 @@ export const prerender = false;
 
       // Find the cell
       const dayIndex = Math.floor((startTime - currentWeekStart) / (24 * 60 * 60 * 1000));
-      const hourIndex = startTime.getHours() - 6;
+      const hourIndex = startTime.getHours();
 
-      if (hourIndex < 0 || hourIndex > 17 || dayIndex < 0 || dayIndex > 6) return;
+      if (hourIndex < 0 || hourIndex > 23 || dayIndex < 0 || dayIndex > 6) return;
 
       const cellIndex = (hourIndex * 8) + dayIndex + 8; // +8 for header row, +1 for time column
       const cell = cells[cellIndex - 1]; // -1 because cells doesn't include headers

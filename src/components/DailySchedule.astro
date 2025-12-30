@@ -22,7 +22,17 @@ const { mode, id = 'dailySchedule' } = Astro.props;
       </div>
       <button type="button" class="nav-btn next-day">→</button>
     </div>
-    
+
+    {mode === 'booking' && (
+      <div class="header-booking-inline">
+        <span class="selection-count">No slots selected</span>
+        <div class="booking-actions">
+          <button type="button" class="clear-btn">Clear</button>
+          <button type="button" class="save-btn" disabled>Save Booking</button>
+        </div>
+      </div>
+    )}
+
     <div class="header-right">
       {mode === 'admin' && (
         <div class="admin-controls">
@@ -78,20 +88,6 @@ const { mode, id = 'dailySchedule' } = Astro.props;
   </div>
 
   <!-- Footer (mode-specific) -->
-  {mode === 'booking' && (
-    <div class="booking-footer">
-      <div class="selection-info">
-        <span class="selection-count">No slots selected</span>
-        <span class="selection-hint">Click available slots to book (max 2 hours/day)</span>
-      </div>
-      <div class="booking-actions">
-        <button type="button" class="clear-btn">Clear</button>
-        <button type="button" class="cancel-btn">Cancel</button>
-        <button type="button" class="save-btn" disabled>Save Booking</button>
-      </div>
-    </div>
-  )}
-
   {mode === 'admin' && (
     <div class="admin-footer">
       <div class="stats-info">
@@ -245,10 +241,78 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.25rem 1.25rem;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
     background: var(--bg-dark, #000);
     color: #fff;
     margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .header-booking-inline {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .header-booking-inline .selection-count {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.8);
+    white-space: nowrap;
+  }
+
+  .header-booking-inline .booking-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .header-booking-inline .clear-btn,
+  .header-booking-inline .cancel-btn {
+    padding: 0.4rem 0.75rem;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.8);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .header-booking-inline .clear-btn:hover {
+    border-color: #dc2626;
+    color: #dc2626;
+    background: rgba(220,38,38,0.1);
+  }
+
+  .header-booking-inline .cancel-btn:hover {
+    border-color: #fff;
+    color: #fff;
+  }
+
+  .header-booking-inline .save-btn {
+    padding: 0.4rem 1rem;
+    background: #dc2626;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .header-booking-inline .save-btn:hover:not(:disabled) {
+    background: #b91c1c;
+  }
+
+  .header-booking-inline .save-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   .date-nav {
@@ -297,6 +361,11 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     font-weight: 700;
     text-transform: uppercase;
     cursor: pointer;
+  }
+
+  /* Hide TODAY button in booking mode */
+  .mode-booking .today-btn {
+    display: none !important;
   }
 
   .header-right {
@@ -484,9 +553,9 @@ const { mode, id = 'dailySchedule' } = Astro.props;
 
   /* Grid cells - using :global for JS-generated content */
   :global(.schedule-grid .time-label) {
-    padding: 1rem 0.75rem;
+    padding: 0.25rem;
     font-family: 'Inter', sans-serif;
-    font-size: 0.9375rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: #333;
     text-align: center;
@@ -495,6 +564,7 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     display: flex;
     align-items: center;
     justify-content: center;
+    height: 48px;
   }
 
   :global(.schedule-grid .time-label.past) {
@@ -503,10 +573,11 @@ const { mode, id = 'dailySchedule' } = Astro.props;
   }
 
   :global(.schedule-grid .slot-cell) {
-    padding: 0.5rem;
+    padding: 0.25rem;
     border-bottom: 1px solid var(--border-light, #e5e5e5);
-    min-height: 64px;
-    transition: all 0.2s ease;
+    height: 48px;
+    max-height: 48px;
+    overflow: hidden;
   }
 
   :global(.schedule-grid .slot-cell.past) {
@@ -521,7 +592,6 @@ const { mode, id = 'dailySchedule' } = Astro.props;
 
   :global(.schedule-grid .slot-cell.available:hover) {
     background: rgba(22, 163, 74, 0.12);
-    transform: scale(1.01);
   }
 
   :global(.mode-public .slot-cell.available) {
@@ -552,16 +622,16 @@ const { mode, id = 'dailySchedule' } = Astro.props;
 
   /* Slot blocks */
   :global(.slot-block) {
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
     height: 100%;
-    min-height: 52px;
+    max-height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
   :global(.slot-block.booked) {
@@ -573,8 +643,6 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
     color: #fff;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
-    transform: scale(1.02);
   }
 
   :global(.slot-block.live) {
@@ -604,7 +672,6 @@ const { mode, id = 'dailySchedule' } = Astro.props;
 
   :global(.slot-block.my-booking:hover) {
     background: linear-gradient(135deg, #047857 0%, #059669 100%);
-    transform: scale(1.02);
   }
 
   :global(.slot-block .cancel-hint) {
@@ -616,38 +683,46 @@ const { mode, id = 'dailySchedule' } = Astro.props;
   }
 
   :global(.slot-block.past-slot) {
-    background: #f0f0f0;
-    border: 1px dashed #ccc;
-    color: #999;
+    background: #f8f8f8;
+    border: none;
+    color: #ccc;
+    min-height: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   :global(.slot-block.past-slot .past-text) {
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.6rem;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #aaa;
+    letter-spacing: 0.02em;
+    color: #bbb;
+  }
+
+  /* Hide past slot text in admin mode - just show empty cell */
+  :global(.mode-admin .slot-block.past-slot) {
+    display: none;
   }
 
   /* Go Live Now - current hour with no booking */
   :global(.slot-block.go-live-now) {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    border: 2px solid #34d399;
+    border: 1px solid #34d399;
     color: white;
     cursor: pointer;
-    animation: pulse-glow 2s ease-in-out infinite;
   }
 
   :global(.slot-block.go-live-now:hover) {
     background: linear-gradient(135deg, #059669 0%, #047857 100%);
-    transform: scale(1.02);
   }
 
   :global(.slot-block.go-live-now .go-live-text) {
-    font-family: 'Inter', sans-serif; font-weight: 700;
-    font-size: 1.25rem;
-    letter-spacing: 0.1em;
+    font-family: 'Inter', sans-serif;
     font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
   }
 
   /* Current hour slot styling */
@@ -684,18 +759,18 @@ const { mode, id = 'dailySchedule' } = Astro.props;
   }
 
   :global(.slot-block .dj-name) {
-    font-family: 'Inter', sans-serif; font-weight: 700;
-    font-size: 1.375rem;
-    letter-spacing: 0.03em;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
     line-height: 1.2;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
   }
 
   :global(.slot-block .slot-time) {
-    font-size: 0.75rem;
-    font-weight: 600;
-    opacity: 0.9;
-    margin-top: 0.125rem;
+    font-size: 0.6rem;
+    font-weight: 500;
+    opacity: 0.85;
+    margin-top: 0;
   }
 
   :global(.slot-block .status-badge) {
