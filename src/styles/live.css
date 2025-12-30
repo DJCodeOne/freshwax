@@ -3441,8 +3441,12 @@
   }
 
   .dj-info-bar.playlist-mode .dj-info-name {
-    font-size: 12px;
-    color: #fff;
+    font-size: 14px;
+    color: #dc2626;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   .dj-info-bar.playlist-mode .stream-genre {
