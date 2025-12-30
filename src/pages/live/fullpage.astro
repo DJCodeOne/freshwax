@@ -2064,31 +2064,82 @@ const pusherConfig = {
     } catch (e) { console.log('[Listener] Could not register'); }
   }
 
-  // Send heartbeat to keep viewer count accurate
-  let heartbeatInterval = null;
-  function startHeartbeat() {
-    if (heartbeatInterval) clearInterval(heartbeatInterval);
-    heartbeatInterval = setInterval(async () => {
-      if (!currentStream?.id) return;
-      const userId = currentUser?.uid || getOrCreateSessionId();
-      try {
-        const resp = await fetch('/api/livestream/listeners', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'heartbeat',
-            streamId: currentStream.id,
-            userId,
-            userName: currentUser?.displayName || 'Viewer'
-          })
-        });
-        const data = await resp.json();
-        if (data.activeViewers !== undefined) {
-          const viewerEl = document.getElementById('viewerCount');
-          if (viewerEl) viewerEl.textContent = data.activeViewers;
+  // Setup Pusher presence channel for automatic viewer tracking
+  // This replaces Firebase heartbeat polling with Pusher's built-in presence
+  let presenceChannel = null;
+
+  async function setupPresenceChannel(streamId) {
+    if (!streamId || presenceChannel) return;
+
+    const config = window.PUSHER_CONFIG;
+    if (!config?.key) {
+      console.log('[Presence] No Pusher config');
+      return;
+    }
+
+    // Wait for Pusher to be loaded
+    if (!window.Pusher) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    const userId = currentUser?.uid || getOrCreateSessionId();
+    const userName = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Viewer';
+    const userAvatar = currentUser?.photoURL || '';
+
+    // Create presence-enabled Pusher instance
+    const presencePusher = new window.Pusher(config.key, {
+      cluster: config.cluster || 'eu',
+      forceTLS: true,
+      authEndpoint: '/api/pusher/auth',
+      auth: {
+        headers: {
+          'x-user-id': userId,
+          'x-user-name': userName,
+          'x-user-avatar': userAvatar
         }
-      } catch (e) { /* silent */ }
-    }, 30000); // Every 30 seconds
+      }
+    });
+
+    const presenceChannelName = `presence-stream-${streamId}`;
+    presenceChannel = presencePusher.subscribe(presenceChannelName);
+    window.presenceChannel = presenceChannel;
+
+    // Update viewer count from presence members
+    function updateViewerCount() {
+      const count = presenceChannel.members?.count || 0;
+      const viewerEl = document.getElementById('viewerCount');
+      if (viewerEl) viewerEl.textContent = count;
+      console.log('[Presence] Viewer count:', count);
+    }
+
+    presenceChannel.bind('pusher:subscription_succeeded', (members) => {
+      console.log('[Presence] Subscribed, members:', members.count);
+      updateViewerCount();
+    });
+
+    presenceChannel.bind('pusher:member_added', (member) => {
+      console.log('[Presence] Member joined:', member.info?.name);
+      updateViewerCount();
+    });
+
+    presenceChannel.bind('pusher:member_removed', (member) => {
+      console.log('[Presence] Member left:', member.info?.name);
+      updateViewerCount();
+    });
+
+    console.log('[Presence] Subscribed to:', presenceChannelName);
+  }
+
+  // Start heartbeat - now just sets up presence channel (no Firebase polling)
+  function startHeartbeat() {
+    if (!currentStream?.id) return;
+    setupPresenceChannel(currentStream.id);
   }
 
   // Leave stream when closing page

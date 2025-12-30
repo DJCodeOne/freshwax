@@ -2827,8 +2827,61 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 
       console.log('[LiveStatus] Subscribed to live-status channel');
 
-      // Also subscribe to reaction/shoutout channel
+      // Subscribe to presence channel for viewer tracking (no Firebase needed!)
       const streamId = window.currentStreamId || 'playlist-global';
+      const presenceChannelName = `presence-stream-${streamId}`;
+
+      // Get user info for presence data
+      const userId = currentUser?.uid || getOrCreateSessionId();
+      const userName = userInfo?.name || 'Viewer';
+      const userAvatar = userInfo?.avatar || '';
+
+      // Create Pusher instance with presence auth
+      const presencePusher = new window.Pusher(config.key, {
+        cluster: config.cluster || 'eu',
+        forceTLS: true,
+        authEndpoint: '/api/pusher/auth',
+        auth: {
+          headers: {
+            'x-user-id': userId,
+            'x-user-name': userName,
+            'x-user-avatar': userAvatar
+          }
+        }
+      });
+
+      // Subscribe to presence channel - Pusher tracks members automatically!
+      const presenceChannel = presencePusher.subscribe(presenceChannelName);
+      window.presenceChannel = presenceChannel; // Store for later use
+
+      // Update viewer count when members change
+      function updateViewerCount() {
+        const count = presenceChannel.members?.count || 0;
+        console.log('[Presence] Member count:', count);
+        const viewerEl = document.getElementById('viewerCount');
+        const fsViewers = document.getElementById('fsViewers');
+        const chatViewers = document.getElementById('chatViewers');
+        if (viewerEl) viewerEl.textContent = count;
+        if (fsViewers) fsViewers.textContent = count;
+        if (chatViewers) chatViewers.textContent = `${count} watching`;
+      }
+
+      presenceChannel.bind('pusher:subscription_succeeded', (members) => {
+        console.log('[Presence] Subscribed! Members:', members.count);
+        updateViewerCount();
+      });
+
+      presenceChannel.bind('pusher:member_added', (member) => {
+        console.log('[Presence] Member joined:', member.info?.name);
+        updateViewerCount();
+      });
+
+      presenceChannel.bind('pusher:member_removed', (member) => {
+        console.log('[Presence] Member left:', member.info?.name);
+        updateViewerCount();
+      });
+
+      // Also subscribe to regular channel for reactions/shoutouts
       const reactionChannelName = `stream-${streamId}`;
       const reactionChannel = statusPusher.subscribe(reactionChannelName);
 
@@ -2861,18 +2914,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         }
       });
 
-      // Listen for viewer count updates in real-time
-      reactionChannel.bind('viewer-update', (data) => {
-        console.log('[Viewers] Count update from Pusher:', data);
-        if (data.count !== undefined) {
-          const viewerEl = document.getElementById('viewerCount');
-          const fsViewers = document.getElementById('fsViewers');
-          if (viewerEl) viewerEl.textContent = data.count;
-          if (fsViewers) fsViewers.textContent = data.count;
-        }
-      });
-
-      console.log('[Reactions] Subscribed to channel:', reactionChannelName);
+      console.log('[Presence] Subscribed to:', presenceChannelName);
+      console.log('[Reactions] Subscribed to:', reactionChannelName);
 
     } catch (err) {
       console.warn('[LiveStatus] Failed to setup Pusher:', err);
@@ -3180,114 +3223,46 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     return sessionId;
   }
 
-  // Send heartbeat to register as listener (works for all users)
-  let heartbeatInterval = null;
-
-  async function sendListenerHeartbeat() {
-    const streamId = window.currentStreamId || document.body.dataset.streamId;
-    if (!streamId) return;
-
-    const userId = currentUser?.uid || getOrCreateSessionId();
-    const userName = userInfo?.displayName || userInfo?.firstName || 'Viewer';
-
-    try {
-      const response = await fetch('/api/livestream/listeners', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'heartbeat',
-          streamId,
-          userId,
-          userName,
-          avatarUrl: userInfo?.avatar || null
-        })
-      });
-
-      const result = await response.json();
-      // Update viewer count from response
-      if (result.activeViewers !== undefined) {
-        const viewerEl = document.getElementById('viewerCount');
-        const fsViewers = document.getElementById('fsViewers');
-        if (viewerEl) viewerEl.textContent = result.activeViewers;
-        if (fsViewers) fsViewers.textContent = result.activeViewers;
-      }
-      if (result.success && result.listeners) {
-        updateListenersList(result.listeners);
-      }
-    } catch (e) {
-      console.error('Heartbeat failed:', e);
-    }
-  }
-
-  // Register view when entering stream (increments totalViews)
+  // Register view once for analytics (totalViews counter)
+  // Pusher presence channel handles real-time viewer counting - no Firebase polling needed!
   async function registerStreamView() {
     const streamId = window.currentStreamId || document.body.dataset.streamId;
-    if (!streamId) return;
-
-    const userId = currentUser?.uid || getOrCreateSessionId();
-    const userName = userInfo?.displayName || userInfo?.firstName || 'Viewer';
+    if (!streamId || streamId === 'playlist-global') return; // Only track real streams
 
     try {
-      const resp = await fetch('/api/livestream/listeners', {
+      // Just increment totalViews for analytics - one Firebase write per page load
+      await fetch('/api/livestream/listeners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'join',
           streamId,
-          userId,
-          userName,
-          avatarUrl: userInfo?.avatar || null
+          userId: currentUser?.uid || getOrCreateSessionId(),
+          userName: userInfo?.name || 'Viewer'
         })
       });
-      const data = await resp.json();
-      // Update viewer count from response
-      if (data.activeViewers !== undefined) {
-        const viewerEl = document.getElementById('viewerCount');
-        const fsViewers = document.getElementById('fsViewers');
-        if (viewerEl) viewerEl.textContent = data.activeViewers;
-        if (fsViewers) fsViewers.textContent = data.activeViewers;
-      }
-      console.log('[View] Registered stream view');
+      console.log('[Analytics] Registered stream view for:', streamId);
     } catch (e) {
-      console.log('[View] Could not register view:', e);
+      // Non-critical - don't spam console
     }
   }
 
-  // Start heartbeat for all viewers (logged in or anonymous)
+  // Register view once on page load (for analytics only - Pusher handles live count)
   function startListenerHeartbeat() {
-    if (heartbeatInterval) clearInterval(heartbeatInterval);
-
     // Ensure we have a stream ID - default to playlist-global if none set
     if (!window.currentStreamId) {
       window.currentStreamId = 'playlist-global';
     }
 
-    // Register view (increments totalViews counter)
+    // Register view once (increments totalViews counter for analytics)
+    // No continuous heartbeat needed - Pusher presence handles live count!
     registerStreamView();
-
-    // Send heartbeat immediately
-    sendListenerHeartbeat();
-
-    // Then every 30 seconds to keep count accurate
-    heartbeatInterval = setInterval(sendListenerHeartbeat, 30000);
   }
 
-  // Stop heartbeat and notify leave
+  // No cleanup needed - Pusher automatically handles member removal
   function stopListenerHeartbeat() {
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
-      heartbeatInterval = null;
-    }
-
-    const streamId = window.currentStreamId || document.body.dataset.streamId;
-    if (streamId) {
-      const userId = currentUser?.uid || getOrCreateSessionId();
-      navigator.sendBeacon('/api/livestream/listeners', JSON.stringify({
-        action: 'leave',
-        streamId,
-        userId
-      }));
-    }
+    // Pusher presence channel automatically detects when user disconnects
+    // No Firebase call needed!
   }
 
   // Start heartbeat for all viewers (logged in or anonymous)
