@@ -1642,14 +1642,13 @@ export class PlaylistManager {
   }
 
   /**
-   * Handle track ended - remove finished track and play next
+   * Handle track ended - tell SERVER to pick next track
+   * Server is the source of truth to ensure all clients play the same track
    */
   private async handleTrackEnded(): Promise<void> {
     // Clear timers first
     this.clearTrackTimer();
     this.stopCountdown();
-
-    console.log('[PlaylistManager] Track ended, removing and playing next');
 
     const finishedItem = this.playlist.queue[this.playlist.currentIndex];
     if (!finishedItem) {
@@ -1657,59 +1656,54 @@ export class PlaylistManager {
       return;
     }
 
-    // Remove the finished item from queue
-    this.playlist.queue.splice(this.playlist.currentIndex, 1);
+    console.log('[PlaylistManager] Track ended, telling server to pick next:', finishedItem.title || finishedItem.url);
 
-    // Adjust currentIndex to stay in bounds
-    const now = new Date().toISOString();
-    if (this.playlist.queue.length === 0) {
-      // Queue is empty - try to auto-play a random track from history
-      const randomTrack = await this.pickRandomFromHistory();
-      if (randomTrack) {
-        // Add the random track to queue and continue playing
-        this.playlist.queue.push(randomTrack);
-        this.playlist.currentIndex = 0;
-        this.playlist.isPlaying = true;
-        this.playlist.trackStartedAt = now;
-        console.log('[PlaylistManager] Queue empty - auto-playing from history:', randomTrack.title || randomTrack.url);
-      } else {
-        // No tracks available from history - stop playback
-        this.playlist.currentIndex = 0;
-        this.playlist.isPlaying = false;
-        this.playlist.trackStartedAt = null; // Clear track start time
-        await this.player.destroy();
-        this.disableEmojis();
-        this.updateNowPlayingDisplay(null);
-        this.showOfflineOverlay();
-      }
-    } else {
-      // Keep currentIndex in bounds (it now points to the next item)
-      if (this.playlist.currentIndex >= this.playlist.queue.length) {
-        this.playlist.currentIndex = 0; // Wrap to start
-      }
-      // Reset trackStartedAt for the new track - this is critical for sync!
-      this.playlist.trackStartedAt = now;
-    }
-
-    this.playlist.lastUpdated = now;
-
-    // Sync to server
+    // Tell the SERVER to handle track end - it will pick the next track
+    // This ensures all clients play the same track (server is source of truth)
     try {
-      await fetch('/api/playlist/global', {
+      const response = await fetch('/api/playlist/global', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'sync',
-          playlist: this.playlist
+          action: 'trackEnded',
+          trackId: finishedItem.id // Prevent race conditions
         })
       });
-    } catch (error) {
-      console.error('[PlaylistManager] Error syncing after track ended:', error);
-    }
 
-    // Play next if queue not empty
-    if (this.playlist.queue.length > 0 && this.playlist.isPlaying) {
-      await this.playCurrent();
+      const result = await response.json();
+
+      if (result.success && result.playlist) {
+        // Update local state with server response
+        this.playlist = result.playlist;
+
+        // If alreadyHandled, another client processed this first
+        // Just wait for Pusher to sync - don't start playback here
+        if (result.alreadyHandled) {
+          console.log('[PlaylistManager] trackEnded already handled by another client, waiting for Pusher');
+          // Pusher will trigger handleRemoteUpdate which will start playback
+          return;
+        }
+
+        // We were the first client to process - start playing immediately
+        // Other clients will sync via Pusher broadcast
+        if (this.playlist.queue.length > 0 && this.playlist.isPlaying) {
+          await this.playCurrent();
+        } else {
+          // No tracks - show offline state
+          await this.player.destroy();
+          this.disableEmojis();
+          this.updateNowPlayingDisplay(null);
+          this.showOfflineOverlay();
+        }
+      }
+    } catch (error) {
+      console.error('[PlaylistManager] Error calling trackEnded:', error);
+      // Fallback: just stop playback on error
+      this.playlist.isPlaying = false;
+      await this.player.destroy();
+      this.disableEmojis();
+      this.updateNowPlayingDisplay(null);
+      this.showOfflineOverlay();
     }
 
     this.renderUI();

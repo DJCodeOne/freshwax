@@ -443,6 +443,51 @@ export async function PUT({ request, locals }: APIContext) {
           // Update track start time based on new state
           playlist.trackStartedAt = playlist.isPlaying ? now : null;
           break;
+        case 'trackEnded':
+          // SERVER picks next track - ensures all clients play the same thing
+          // Use trackId to prevent race conditions (multiple clients calling trackEnded)
+          const { trackId } = body;
+          const currentTrack = playlist.queue[0];
+
+          // If trackId provided and doesn't match current track, already handled by another client
+          if (trackId && currentTrack && currentTrack.id !== trackId) {
+            console.log('[GlobalPlaylist] trackEnded ignored - track already changed');
+            // Return current playlist with alreadyHandled flag - client should NOT start playback
+            // (Pusher will handle sync for this client)
+            return new Response(JSON.stringify({
+              success: true,
+              alreadyHandled: true,
+              playlist
+            }), {
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+
+          // Remove the finished track (always index 0 for queue-style playlist)
+          if (playlist.queue.length > 0) {
+            playlist.queue.shift(); // Remove first item
+          }
+
+          // If queue is now empty, pick a random track from history
+          if (playlist.queue.length === 0) {
+            const randomTrack = await pickRandomFromServerHistory();
+            if (randomTrack) {
+              playlist.queue.push(randomTrack);
+              playlist.isPlaying = true;
+              playlist.trackStartedAt = now;
+              console.log('[GlobalPlaylist] Auto-play: picked', randomTrack.title || randomTrack.url);
+            } else {
+              // No tracks available - stop playback
+              playlist.isPlaying = false;
+              playlist.trackStartedAt = null;
+              console.log('[GlobalPlaylist] No tracks for auto-play, stopping');
+            }
+          } else {
+            // Queue has more items, continue with next
+            playlist.trackStartedAt = now;
+          }
+          playlist.currentIndex = 0; // Always play from front of queue
+          break;
       }
 
       playlist.lastUpdated = now;
@@ -489,6 +534,60 @@ async function getRecentlyPlayed(): Promise<any[]> {
     console.warn('[GlobalPlaylist] Could not fetch recently played:', error);
   }
   return [];
+}
+
+// Pick a random track from server-side history for auto-play
+// This ensures ALL clients get the SAME track (server is source of truth)
+async function pickRandomFromServerHistory(): Promise<PlaylistItem | null> {
+  try {
+    // Try multiple history shards (playlistHistory_1, playlistHistory_2, etc.)
+    const allItems: any[] = [];
+
+    // Check main history doc first
+    const mainHistory = await getDocument('liveSettings', 'playlistHistory');
+    if (mainHistory?.items?.length > 0) {
+      allItems.push(...mainHistory.items);
+    }
+
+    // Check sharded history docs (for large history)
+    for (let i = 1; i <= 10; i++) {
+      try {
+        const shardDoc = await getDocument('liveSettings', `playlistHistory_${i}`);
+        if (shardDoc?.items?.length > 0) {
+          allItems.push(...shardDoc.items);
+        }
+      } catch {
+        break; // No more shards
+      }
+    }
+
+    if (allItems.length === 0) {
+      console.log('[GlobalPlaylist] No tracks in history for auto-play');
+      return null;
+    }
+
+    console.log('[GlobalPlaylist] History has', allItems.length, 'tracks for auto-play');
+
+    // Pick a random track
+    const randomIndex = Math.floor(Math.random() * allItems.length);
+    const selected = allItems[randomIndex];
+
+    // Convert to PlaylistItem format
+    return {
+      id: `auto_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`,
+      url: selected.url,
+      platform: selected.platform || 'youtube',
+      embedId: selected.embedId,
+      title: selected.title,
+      thumbnail: selected.thumbnail,
+      addedBy: 'system',
+      addedByName: 'Auto-Play',
+      addedAt: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('[GlobalPlaylist] Error picking random track:', error);
+    return null;
+  }
 }
 
 // Broadcast playlist update via Pusher (includes recently played)
