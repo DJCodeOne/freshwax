@@ -6,7 +6,7 @@ import type { APIContext } from 'astro';
 
 // Hardcoded admin UIDs for verification
 export const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
-export const ADMIN_EMAILS = ['freshwaxonline@gmail.com'];
+export const ADMIN_EMAILS = ['freshwaxonline@gmail.com', 'davidhagon@gmail.com'];
 
 // Get admin key from environment
 export function getAdminKey(locals: any): string {

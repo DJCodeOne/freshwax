@@ -211,8 +211,8 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
 
 // Hardcoded admin UIDs (same as other admin endpoints)
 const ADMIN_UIDS = [
-  '8WmxYeCp4PSym5iWHahgizokn5F2',
-  'davidhagon'
+  'Y3TGc171cHSWTqZDRSniyu7Jxc33',  // freshwaxonline@gmail.com
+  '8WmxYeCp4PSym5iWHahgizokn5F2'   // davidhagon@gmail.com
 ];
 
 // Send bot message to a stream

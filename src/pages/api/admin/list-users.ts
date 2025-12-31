@@ -44,7 +44,7 @@ interface UserData {
 
 // Hardcoded admin UIDs for verification
 const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
-const ADMIN_EMAILS = ['freshwaxonline@gmail.com'];
+const ADMIN_EMAILS = ['freshwaxonline@gmail.com', 'davidhagon@gmail.com'];
 
 async function isAdmin(uid: string): Promise<boolean> {
   if (ADMIN_UIDS.includes(uid)) return true;
