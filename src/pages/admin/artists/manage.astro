@@ -499,6 +499,9 @@ export const prerender = false;
         saveBtn.disabled = true;
 
         try {
+          // Get the admin's ID token for authenticated Firestore writes
+          const idToken = await auth.currentUser.getIdToken();
+
           const status = document.querySelector('input[name="editStatus"]:checked')?.value;
           const newIsArtist = document.getElementById('editRoleArtist').checked;
           const newIsMerchSupplier = document.getElementById('editRoleMerch').checked;
@@ -516,6 +519,7 @@ export const prerender = false;
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               adminUid: adminUid,
+              idToken: idToken,
               partnerId: currentPartnerId,
               updates: {
                 name: name,

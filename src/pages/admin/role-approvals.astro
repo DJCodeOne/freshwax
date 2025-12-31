@@ -70,17 +70,17 @@ import '../../styles/global.css';
   <style>
     .admin-page {
       min-height: 100vh;
-      background: var(--bg-primary, #0a0a0a);
+      background: #f5f5f5;
     }
 
     .admin-header {
       padding: 1.5rem 2rem;
-      border-bottom: 1px solid var(--border-color, #262626);
-      background: var(--bg-secondary, #141414);
+      border-bottom: 1px solid #e5e5e5;
+      background: #fff;
     }
 
     .back-link {
-      color: var(--text-secondary, #a3a3a3);
+      color: #666;
       text-decoration: none;
       font-size: 0.875rem;
       display: inline-block;
@@ -88,11 +88,11 @@ import '../../styles/global.css';
     }
 
     .back-link:hover {
-      color: var(--accent, #22c55e);
+      color: #000;
     }
 
     .admin-header h1 {
-      color: var(--text-primary, #fff);
+      color: #000;
       margin: 0;
     }
 
@@ -106,7 +106,7 @@ import '../../styles/global.css';
       display: flex;
       gap: 0.5rem;
       margin-bottom: 1.5rem;
-      border-bottom: 1px solid var(--border-color, #262626);
+      border-bottom: 1px solid #e5e5e5;
       padding-bottom: 0.5rem;
       flex-wrap: wrap;
     }
@@ -118,32 +118,34 @@ import '../../styles/global.css';
       padding: 0.75rem 1.25rem;
       background: transparent;
       border: none;
-      color: var(--text-secondary, #a3a3a3);
+      color: #666;
       cursor: pointer;
       border-radius: 6px;
       transition: all 0.2s;
+      font-size: 0.9rem;
     }
 
     .tab:hover {
-      color: var(--text-primary, #fff);
-      background: var(--bg-secondary, #141414);
+      color: #000;
+      background: #f0f0f0;
     }
 
     .tab.active {
-      color: var(--accent, #22c55e);
-      background: rgba(34, 197, 94, 0.1);
+      color: #000;
+      background: #000;
+      color: #fff;
     }
 
     .tab .badge {
-      background: var(--bg-tertiary, #1a1a1a);
-      color: var(--text-secondary, #a3a3a3);
+      background: #e5e5e5;
+      color: #666;
       padding: 0.15rem 0.5rem;
       border-radius: 10px;
       font-size: 0.75rem;
     }
 
     .tab.active .badge {
-      background: var(--accent, #22c55e);
+      background: #fff;
       color: #000;
     }
 
@@ -164,21 +166,21 @@ import '../../styles/global.css';
     .loading {
       text-align: center;
       padding: 3rem;
-      color: var(--text-secondary, #a3a3a3);
+      color: #666;
     }
 
     .empty-state {
       text-align: center;
       padding: 3rem;
-      color: var(--text-secondary, #a3a3a3);
-      background: var(--bg-secondary, #141414);
-      border: 1px dashed var(--border-color, #262626);
+      color: #666;
+      background: #fff;
+      border: 1px dashed #ddd;
       border-radius: 8px;
     }
 
     .request-card {
-      background: var(--bg-secondary, #141414);
-      border: 1px solid var(--border-color, #262626);
+      background: #fff;
+      border: 1px solid #e5e5e5;
       border-radius: 8px;
       padding: 1.5rem;
     }
@@ -200,24 +202,24 @@ import '../../styles/global.css';
 
     .request-name {
       font-weight: 600;
-      color: var(--text-primary, #fff);
+      color: #000;
       font-size: 1.1rem;
     }
 
     .request-email {
-      color: var(--text-secondary, #a3a3a3);
+      color: #666;
       font-size: 0.875rem;
     }
 
     .request-date {
-      color: var(--text-muted, #666);
+      color: #999;
       font-size: 0.8rem;
     }
 
     .request-details {
       margin-bottom: 1rem;
       padding: 1rem;
-      background: var(--bg-tertiary, #1a1a1a);
+      background: #f9f9f9;
       border-radius: 6px;
     }
 
@@ -232,12 +234,12 @@ import '../../styles/global.css';
 
     .detail-label {
       width: 120px;
-      color: var(--text-secondary, #a3a3a3);
+      color: #666;
       font-size: 0.875rem;
     }
 
     .detail-value {
-      color: var(--text-primary, #fff);
+      color: #000;
       font-size: 0.875rem;
       flex: 1;
     }
@@ -258,27 +260,32 @@ import '../../styles/global.css';
     }
 
     .btn-approve {
-      background: var(--accent, #22c55e);
-      color: #000;
+      background: #000;
+      color: #fff;
     }
 
     .btn-approve:hover {
-      background: var(--accent-hover, #16a34a);
+      background: #333;
     }
 
     .btn-deny {
       background: transparent;
-      color: #ef4444;
-      border: 1px solid #ef4444;
+      color: #dc2626;
+      border: 1px solid #dc2626;
     }
 
     .btn-deny:hover {
-      background: rgba(239, 68, 68, 0.1);
+      background: rgba(220, 38, 38, 0.1);
     }
 
     .btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    @media (max-width: 600px) {
+      .tabs { flex-direction: column; }
+      .tab { width: 100%; justify-content: center; }
     }
   </style>
 

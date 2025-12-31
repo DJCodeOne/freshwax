@@ -3,7 +3,7 @@
 // Uses Firebase REST API - only updates fields allowed by Firestore rules
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv, clearCache } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -33,9 +33,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { adminUid, partnerId, updates } = body;
+    const { adminUid, idToken, partnerId, updates } = body;
 
-    console.log('[update-partner] Request:', { adminUid, partnerId, updates });
+    console.log('[update-partner] Request:', { adminUid, partnerId, hasToken: !!idToken, updates });
 
     if (!adminUid || !partnerId) {
       return new Response(JSON.stringify({
@@ -91,7 +91,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (updates.suspended !== undefined) artistUpdate.suspended = updates.suspended;
 
       try {
-        await updateDocument('artists', partnerId, artistUpdate);
+        await updateDocument('artists', partnerId, artistUpdate, idToken);
         results.push('artists:updated');
         console.log('[update-partner] Updated artists:', artistUpdate);
       } catch (e) {
@@ -103,35 +103,49 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // Update users collection if it exists
-    // Allowed fields: roles, pendingRoles, displayName, approved, updatedAt
-    if (userDoc) {
-      const userUpdate: any = {
-        updatedAt: now
-      };
+    // Update or create users collection document
+    // This is the source of truth for list-partners API
+    const userUpdate: any = {
+      updatedAt: now
+    };
 
-      if (updates.name !== undefined) userUpdate.displayName = updates.name;
-      if (updates.approved !== undefined) userUpdate.approved = updates.approved;
+    if (updates.name !== undefined) userUpdate.displayName = updates.name;
+    if (updates.approved !== undefined) userUpdate.approved = updates.approved;
 
-      // Build roles object
-      if (updates.isArtist !== undefined || updates.isMerchSupplier !== undefined || updates.isVinylSeller !== undefined) {
-        userUpdate.roles = {
-          customer: true,
-          dj: true,
-          artist: updates.isArtist ?? userDoc.roles?.artist ?? false,
-          merchSupplier: updates.isMerchSupplier ?? userDoc.roles?.merchSupplier ?? false,
-          vinylSeller: updates.isVinylSeller ?? userDoc.roles?.vinylSeller ?? false,
-          admin: updates.isAdmin ?? userDoc.roles?.admin ?? false
-        };
-      }
+    // Build roles object
+    userUpdate.roles = {
+      customer: true,
+      dj: true,
+      artist: updates.isArtist ?? userDoc?.roles?.artist ?? artistDoc?.isArtist ?? false,
+      merchSupplier: updates.isMerchSupplier ?? userDoc?.roles?.merchSupplier ?? artistDoc?.isMerchSupplier ?? false,
+      vinylSeller: updates.isVinylSeller ?? userDoc?.roles?.vinylSeller ?? artistDoc?.isVinylSeller ?? false,
+      admin: updates.isAdmin ?? userDoc?.roles?.admin ?? false
+    };
 
-      try {
-        await updateDocument('users', partnerId, userUpdate);
+    try {
+      if (userDoc) {
+        // Update existing users document
+        await updateDocument('users', partnerId, userUpdate, idToken);
         results.push('users:updated');
         console.log('[update-partner] Updated users:', userUpdate);
-      } catch (e) {
-        console.warn('[update-partner] users update failed (non-critical):', e instanceof Error ? e.message : e);
+      } else {
+        // Create users document if it doesn't exist (required for list-partners)
+        const { setDocument } = await import('../../../lib/firebase-rest');
+        await setDocument('users', partnerId, {
+          uid: partnerId,
+          email: updates.email || artistDoc?.email || '',
+          displayName: updates.name || artistDoc?.artistName || artistDoc?.name || '',
+          fullName: updates.name || artistDoc?.artistName || artistDoc?.name || '',
+          approved: updates.approved !== false,
+          roles: userUpdate.roles,
+          createdAt: artistDoc?.createdAt || now,
+          updatedAt: now
+        }, idToken);
+        results.push('users:created');
+        console.log('[update-partner] Created users document:', partnerId);
       }
+    } catch (e) {
+      console.warn('[update-partner] users update failed:', e instanceof Error ? e.message : e);
     }
 
     // Update or create customers collection record
@@ -159,7 +173,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           vinylSeller: updates.isVinylSeller ?? customerDoc.roles?.vinylSeller ?? false
         };
 
-        await updateDocument('customers', partnerId, customerUpdate);
+        await updateDocument('customers', partnerId, customerUpdate, idToken);
         results.push('customers:updated');
       } else if (isBeingDowngraded && artistDoc) {
         // Create customers record for downgraded partner so they appear in User Management
@@ -184,7 +198,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           approved: true,
           createdAt: artistDoc.createdAt || now,
           updatedAt: now
-        });
+        }, idToken);
         results.push('customers:created');
         console.log('[update-partner] Created customers record for downgraded partner');
       }
@@ -214,7 +228,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             totalListings: 0,
             createdAt: now,
             updatedAt: now
-          });
+          }, idToken);
           results.push('vinylSellers:created');
           console.log('[update-partner] Created vinylSellers record for promoted partner');
         } else if (vinylSellerDoc) {
@@ -223,7 +237,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             approved: updates.isVinylSeller && updates.approved !== false,
             suspended: updates.suspended === true || updates.isVinylSeller === false,
             updatedAt: now
-          });
+          }, idToken);
           results.push('vinylSellers:updated');
         }
       } catch (e) {
@@ -232,6 +246,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     console.log('[update-partner] Completed:', results);
+
+    // Invalidate caches so list-partners sees the update immediately
+    clearCache('users');
+    clearCache('artists');
+    clearCache('query:users');
 
     return new Response(JSON.stringify({
       success: true,
