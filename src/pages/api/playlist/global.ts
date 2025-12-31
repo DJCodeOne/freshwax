@@ -567,9 +567,9 @@ async function getRecentlyPlayed(): Promise<any[]> {
 // Add a track to the recently played list (keeps only last 10)
 async function addToRecentlyPlayed(track: any): Promise<void> {
   try {
-    // Skip if no valid title (placeholder titles like "TRACK 1234")
-    if (!track.title || /^TRACK\s+\d+/i.test(track.title)) {
-      console.log('[GlobalPlaylist] Skipping recently played - no valid title');
+    // Always save tracks - UI will fetch real titles async if needed
+    if (!track.url) {
+      console.log('[GlobalPlaylist] Skipping recently played - no URL');
       return;
     }
 

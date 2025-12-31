@@ -136,7 +136,6 @@
               </div>
             </div>
           </div>
-          <div class="preview-divider"></div>
         </div>
 
         <!-- Right Column: My Playlist Section -->
@@ -282,7 +281,7 @@
 
       <!-- Freshwax Footer -->
       <div class="playlist-modal-footer">
-        <span class="footer-logo">freshwax</span>
+        <span class="footer-logo"><span class="footer-fresh">Fresh</span><span class="footer-wax">Wax</span></span>
         <span class="footer-tagline">community playlist</span>
       </div>
 
@@ -599,20 +598,6 @@
     border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .preview-divider {
-    height: 3px;
-    background: linear-gradient(90deg, #dc2626, #ef4444);
-    margin-top: 1rem;
-    border-radius: 0;
-    /* Full width - break out of container */
-    position: relative;
-    left: 50%;
-    right: 50%;
-    margin-left: -50vw;
-    margin-right: -50vw;
-    width: 100vw;
-  }
-
   /* Recently Played Section */
   .recently-played-section {
     margin-top: 1rem;
@@ -917,9 +902,15 @@
     font-family: 'Archivo Black', sans-serif;
     font-size: 0.9rem;
     font-weight: 700;
-    color: #ef4444;
-    text-transform: lowercase;
     letter-spacing: 0.5px;
+  }
+
+  .playlist-modal-footer .footer-fresh {
+    color: #ffffff;
+  }
+
+  .playlist-modal-footer .footer-wax {
+    color: #ef4444;
   }
 
   .playlist-modal-footer .footer-tagline {
