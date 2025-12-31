@@ -1551,8 +1551,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       const emojiResult = await emojiResponse.json();
       console.log('[triggerReaction] Emoji broadcast result:', emojiResult);
 
-      // Update with actual count from server if available
-      if (emojiResult.success && emojiResult.totalLikes !== undefined && likeCountEl) {
+      // Update with actual count from server if available (only if > 0, otherwise keep optimistic count)
+      if (emojiResult.success && emojiResult.totalLikes > 0 && likeCountEl) {
         likeCountEl.textContent = emojiResult.totalLikes;
       }
     } catch (error) {
@@ -1637,8 +1637,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           });
 
           const result = await response.json();
-          // Update with actual count from server
-          if (result.success && result.totalLikes !== undefined && likeCountEl) {
+          // Update with actual count from server (only if > 0)
+          if (result.success && result.totalLikes > 0 && likeCountEl) {
             likeCountEl.textContent = result.totalLikes;
           }
         } catch (error) {
@@ -2909,7 +2909,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       // Listen for like count updates from all reactions
       reactionChannel.bind('like-update', (data) => {
         console.log('[Reactions] Like count update from Pusher:', data);
-        if (data.totalLikes !== undefined) {
+        if (data.totalLikes > 0) {
           const likeCountEl = document.getElementById('likeCount');
           const fsLikes = document.getElementById('fsLikes');
           if (likeCountEl) likeCountEl.textContent = data.totalLikes;
