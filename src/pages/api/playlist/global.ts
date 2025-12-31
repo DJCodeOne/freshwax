@@ -234,7 +234,7 @@ export async function POST({ request, locals }: APIContext) {
     });
 
     // Trigger Pusher broadcast
-    await broadcastPlaylistUpdate(playlist);
+    await broadcastPlaylistUpdate(playlist, (locals as any)?.runtime?.env);
 
     return new Response(JSON.stringify({
       success: true,
@@ -348,7 +348,7 @@ export async function DELETE({ request, locals }: APIContext) {
     });
 
     // Trigger Pusher broadcast
-    await broadcastPlaylistUpdate(playlist);
+    await broadcastPlaylistUpdate(playlist, (locals as any)?.runtime?.env);
 
     return new Response(JSON.stringify({
       success: true,
@@ -503,7 +503,7 @@ export async function PUT({ request, locals }: APIContext) {
     });
 
     // Trigger Pusher broadcast
-    await broadcastPlaylistUpdate(playlist);
+    await broadcastPlaylistUpdate(playlist, (locals as any)?.runtime?.env);
 
     return new Response(JSON.stringify({
       success: true,
@@ -591,12 +591,20 @@ async function pickRandomFromServerHistory(): Promise<PlaylistItem | null> {
 }
 
 // Broadcast playlist update via Pusher (includes recently played)
-async function broadcastPlaylistUpdate(playlist: GlobalPlaylist) {
+async function broadcastPlaylistUpdate(playlist: GlobalPlaylist, env?: any) {
   try {
-    const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
-    const PUSHER_KEY = import.meta.env.PUSHER_KEY;
-    const PUSHER_SECRET = import.meta.env.PUSHER_SECRET;
-    const PUSHER_CLUSTER = import.meta.env.PUSHER_CLUSTER || 'eu';
+    const PUSHER_APP_ID = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
+    const PUSHER_KEY = env?.PUSHER_KEY || env?.PUBLIC_PUSHER_KEY || import.meta.env.PUSHER_KEY;
+    const PUSHER_SECRET = env?.PUSHER_SECRET || import.meta.env.PUSHER_SECRET;
+    const PUSHER_CLUSTER = env?.PUSHER_CLUSTER || env?.PUBLIC_PUSHER_CLUSTER || import.meta.env.PUSHER_CLUSTER || 'eu';
+
+    console.log('[GlobalPlaylist] Broadcast attempt - env available:', !!env);
+    console.log('[GlobalPlaylist] Pusher config:', {
+      hasAppId: !!PUSHER_APP_ID,
+      hasKey: !!PUSHER_KEY,
+      hasSecret: !!PUSHER_SECRET,
+      cluster: PUSHER_CLUSTER
+    });
 
     if (!PUSHER_APP_ID || !PUSHER_KEY || !PUSHER_SECRET) {
       console.warn('[GlobalPlaylist] Pusher not configured, skipping broadcast');
@@ -620,13 +628,14 @@ async function broadcastPlaylistUpdate(playlist: GlobalPlaylist) {
 
     const url = `https://api-${PUSHER_CLUSTER}.pusher.com/apps/${PUSHER_APP_ID}/events?auth_key=${PUSHER_KEY}&auth_timestamp=${timestamp}&auth_version=1.0&body_md5=${bodyMd5}&auth_signature=${signature}`;
 
-    await fetch(url, {
+    const pusherResponse = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body
     });
 
-    console.log('[GlobalPlaylist] Broadcast sent');
+    const pusherResult = await pusherResponse.text();
+    console.log('[GlobalPlaylist] Broadcast response:', pusherResponse.status, pusherResult);
   } catch (error) {
     console.error('[GlobalPlaylist] Broadcast error:', error);
   }

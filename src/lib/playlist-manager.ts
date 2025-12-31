@@ -1646,17 +1646,26 @@ export class PlaylistManager {
    * Server is the source of truth to ensure all clients play the same track
    */
   private async handleTrackEnded(): Promise<void> {
+    console.log('[PlaylistManager] handleTrackEnded called');
+    console.log('[PlaylistManager] Current playlist state:', JSON.stringify({
+      queueLength: this.playlist.queue.length,
+      currentIndex: this.playlist.currentIndex,
+      isPlaying: this.playlist.isPlaying
+    }));
+
     // Clear timers first
     this.clearTrackTimer();
     this.stopCountdown();
 
     const finishedItem = this.playlist.queue[this.playlist.currentIndex];
     if (!finishedItem) {
-      console.log('[PlaylistManager] No item to remove');
+      console.log('[PlaylistManager] No item to remove - queue empty or index out of bounds');
+      console.log('[PlaylistManager] Queue:', this.playlist.queue);
+      console.log('[PlaylistManager] Index:', this.playlist.currentIndex);
       return;
     }
 
-    console.log('[PlaylistManager] Track ended, telling server to pick next:', finishedItem.title || finishedItem.url);
+    console.log('[PlaylistManager] Track ended, telling server to pick next:', finishedItem.title || finishedItem.url, 'ID:', finishedItem.id);
 
     // Tell the SERVER to handle track end - it will pick the next track
     // This ensures all clients play the same track (server is source of truth)
@@ -1671,21 +1680,19 @@ export class PlaylistManager {
       });
 
       const result = await response.json();
+      console.log('[PlaylistManager] trackEnded API response:', JSON.stringify(result));
 
       if (result.success && result.playlist) {
-        // Update local state with server response
+        // Update local state with server response (server is source of truth)
         this.playlist = result.playlist;
 
-        // If alreadyHandled, another client processed this first
-        // Just wait for Pusher to sync - don't start playback here
         if (result.alreadyHandled) {
-          console.log('[PlaylistManager] trackEnded already handled by another client, waiting for Pusher');
-          // Pusher will trigger handleRemoteUpdate which will start playback
-          return;
+          console.log('[PlaylistManager] trackEnded handled by another client, using server response');
+        } else {
+          console.log('[PlaylistManager] trackEnded processed, playing next track');
         }
 
-        // We were the first client to process - start playing immediately
-        // Other clients will sync via Pusher broadcast
+        // Play the new track (whether we were first or not - server has the correct track)
         if (this.playlist.queue.length > 0 && this.playlist.isPlaying) {
           await this.playCurrent();
         } else {
