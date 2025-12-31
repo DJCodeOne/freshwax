@@ -259,6 +259,12 @@ export class PlaylistManager {
    * Handle remote playlist update from Pusher
    */
   private async handleRemoteUpdate(newPlaylist: GlobalPlaylist & { recentlyPlayed?: any[] }): Promise<void> {
+    console.log('[PlaylistManager] handleRemoteUpdate received:', JSON.stringify({
+      newQueueLength: newPlaylist.queue.length,
+      newIsPlaying: newPlaylist.isPlaying,
+      newCurrentId: newPlaylist.queue[0]?.id
+    }));
+
     // If live stream is active, ignore "isPlaying" from remote updates
     const liveStreamActive = (window as any).isLiveStreamActive;
     if (liveStreamActive && newPlaylist.isPlaying) {
@@ -307,17 +313,31 @@ export class PlaylistManager {
     const shouldStartPlaying = !wasPlaying && this.playlist.isPlaying && hasItems;
     const currentItemChanged = oldCurrentItem?.id !== newCurrentItem?.id && newCurrentItem != null;
 
+    console.log('[PlaylistManager] Remote update decision:', JSON.stringify({
+      wasPlaying,
+      isPlaying: this.playlist.isPlaying,
+      oldCurrentId: oldCurrentItem?.id,
+      newCurrentId: newCurrentItem?.id,
+      currentItemChanged,
+      shouldStartPlaying
+    }));
+
     if (shouldStartPlaying) {
       // Starting playback for the first time
+      console.log('[PlaylistManager] Remote update: starting playback');
       await this.playCurrent();
     } else if (this.playlist.isPlaying && currentItemChanged) {
       // The current track changed (next/skip was triggered, not just queue addition)
+      console.log('[PlaylistManager] Remote update: track changed, playing new track');
       await this.playCurrent();
     } else if (!this.playlist.isPlaying && wasPlaying) {
       // Playlist was paused remotely
+      console.log('[PlaylistManager] Remote update: pausing');
       this.stopCountdown();
       await this.player.pause();
       this.disableEmojis();
+    } else {
+      console.log('[PlaylistManager] Remote update: no action needed');
     }
     // If just adding items to queue while playing, do nothing - let current track continue
 
