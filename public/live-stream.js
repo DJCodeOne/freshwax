@@ -2630,6 +2630,15 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
         </div>
       ` : '';
 
+      // System messages (e.g., skip notifications) - simple centered styling
+      if (msg.type === 'system' || msg.userId === 'system') {
+        return `
+          <div class="chat-message chat-system-message" style="padding: 0.5rem; margin: 0.5rem 0; animation: slideIn 0.2s ease-out; background: rgba(34, 197, 94, 0.1); border-radius: 8px; text-align: center; border: 1px solid rgba(34, 197, 94, 0.3);">
+            <div style="color: #22c55e; font-size: 0.875rem; font-weight: 500;">${escapeHtml(msg.message)}</div>
+          </div>
+        `;
+      }
+
       // Bot messages have special styling (no reply button)
       if (isBot) {
         return `
@@ -2997,14 +3006,32 @@ function setupChatInput(streamId) {
         if (window.playlistManager && window.isPlaylistActive) {
           window.playlistManager.skipTrack();
           console.log('[Chat] Admin used !skip command');
-          // Show confirmation in chat area (local only)
-          const chatMessages = document.getElementById('chatMessages');
-          if (chatMessages) {
-            const skipNotice = document.createElement('div');
-            skipNotice.className = 'chat-system-message';
-            skipNotice.textContent = '⏭️ Track skipped by admin';
-            chatMessages.appendChild(skipNotice);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+          // Send skip notification to chat API so it broadcasts to all users
+          const streamId = window.currentStreamId || 'playlist-global';
+          try {
+            await fetch('/api/livestream/chat', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                streamId: streamId,
+                userId: 'system',
+                userName: 'System',
+                message: '⏭️ Track skipped by admin',
+                type: 'system'
+              })
+            });
+            console.log('[Chat] Skip notification broadcast to all users');
+          } catch (err) {
+            console.error('[Chat] Failed to broadcast skip notification:', err);
+            // Fallback: show local message if broadcast fails
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) {
+              const skipNotice = document.createElement('div');
+              skipNotice.className = 'chat-system-message';
+              skipNotice.textContent = '⏭️ Track skipped by admin';
+              chatMessages.appendChild(skipNotice);
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
           }
         } else {
           console.log('[Chat] !skip: No playlist active');
