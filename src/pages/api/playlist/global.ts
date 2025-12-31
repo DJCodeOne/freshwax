@@ -450,7 +450,7 @@ export async function PUT({ request, locals }: APIContext) {
         case 'trackEnded':
           // SERVER picks next track - ensures all clients play the same thing
           // Use trackId to prevent race conditions (multiple clients calling trackEnded)
-          const { trackId } = body;
+          const { trackId, finishedTrackTitle } = body;
           const currentTrack = playlist.queue[0];
 
           // If trackId provided and doesn't match current track, already handled by another client
@@ -464,6 +464,18 @@ export async function PUT({ request, locals }: APIContext) {
               playlist
             }), {
               headers: { 'Content-Type': 'application/json' }
+            });
+          }
+
+          // Save the finished track to recently played before removing
+          if (currentTrack) {
+            // Use the title from the client if provided (it has the resolved title)
+            // Otherwise fall back to the track's title
+            const trackTitle = finishedTrackTitle || currentTrack.title;
+            await addToRecentlyPlayed({
+              ...currentTrack,
+              title: trackTitle,
+              playedAt: now
             });
           }
 
@@ -550,6 +562,43 @@ async function getRecentlyPlayed(): Promise<any[]> {
     console.warn('[GlobalPlaylist] Could not fetch recently played:', error);
   }
   return [];
+}
+
+// Add a track to the recently played list (keeps only last 10)
+async function addToRecentlyPlayed(track: any): Promise<void> {
+  try {
+    // Skip if no valid title (placeholder titles like "TRACK 1234")
+    if (!track.title || /^TRACK\s+\d+/i.test(track.title)) {
+      console.log('[GlobalPlaylist] Skipping recently played - no valid title');
+      return;
+    }
+
+    // Get current history
+    const historyDoc = await getDocument('liveSettings', 'playlistHistory');
+    let items: any[] = historyDoc?.items || [];
+
+    // Create the history item
+    const historyItem = {
+      id: track.id,
+      url: track.url,
+      platform: track.platform,
+      embedId: track.embedId,
+      title: track.title,
+      thumbnail: track.thumbnail,
+      addedBy: track.addedBy,
+      addedByName: track.addedByName,
+      playedAt: track.playedAt || new Date().toISOString()
+    };
+
+    // Prepend to list and keep only last 10
+    items = [historyItem, ...items.filter(item => item.id !== track.id)].slice(0, 10);
+
+    // Save to Firestore
+    await setDocument('liveSettings', 'playlistHistory', { items });
+    console.log('[GlobalPlaylist] Added to recently played:', track.title);
+  } catch (error) {
+    console.error('[GlobalPlaylist] Error adding to recently played:', error);
+  }
 }
 
 // Pick a random track from server-side history for auto-play

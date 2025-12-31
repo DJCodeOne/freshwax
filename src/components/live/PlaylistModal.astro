@@ -3146,17 +3146,17 @@
       return match ? match[1] : null;
     }
 
-    // Render initial HTML with placeholders for loading
+    // Render initial HTML - show best available title (no async loading)
     container.innerHTML = tracks.slice(0, 10).map((track, index) => {
       let title = track.title || track.name || '';
-      const needsFetch = isPlaceholderTitle(title) && track.url;
 
-      // For initial display, show "Loading..." for YouTube tracks that need fetching
-      if (needsFetch && (track.url.includes('youtube.com') || track.url.includes('youtu.be'))) {
-        title = 'Loading...';
-      } else if (isPlaceholderTitle(title)) {
-        if (track.addedByName && track.addedByName !== 'Auto-Play') {
+      // If placeholder title, show a fallback
+      if (isPlaceholderTitle(title)) {
+        if (track.addedByName && track.addedByName !== 'Auto-Play' && track.addedByName !== 'Playlist Import') {
           title = `Track by ${track.addedByName}`;
+        } else if (track.embedId) {
+          // Show video ID as last resort
+          title = `Video: ${track.embedId}`;
         } else {
           title = 'Unknown Track';
         }
@@ -3199,21 +3199,20 @@
       `;
     }).join('');
 
-    // Now asynchronously fetch real titles for YouTube tracks
+    // Asynchronously fetch real titles for YouTube tracks with placeholder titles
     tracks.slice(0, 10).forEach(async (track, index) => {
       const title = track.title || track.name || '';
       const needsFetch = isPlaceholderTitle(title) && track.url;
 
       if (needsFetch && (track.url.includes('youtube.com') || track.url.includes('youtu.be'))) {
-        const videoId = getYouTubeId(track.url);
+        const videoId = getYouTubeId(track.url) || track.embedId;
         if (videoId) {
           try {
-            // Use oEmbed API to get the actual title (no API key needed)
-            const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-            const response = await fetch(oembedUrl);
+            // Use our server-side endpoint to avoid CORS issues
+            const response = await fetch(`/api/youtube/title?videoId=${videoId}`);
             if (response.ok) {
               const data = await response.json();
-              if (data.title) {
+              if (data.success && data.title) {
                 // Find and update the DOM element
                 const titleEl = container.querySelector(`.recently-played-title[data-track-index="${index}"]`) as HTMLElement;
                 if (titleEl) {
@@ -3297,9 +3296,8 @@
 
     if (previewDjName) previewDjName.textContent = `Selector: ${currentDj?.userName || currentItem.addedByName || 'Unknown'}`;
 
-    // Start duration timer for this track (with countdown support using server timestamp)
-    const trackId = currentItem.id || currentItem.url || `${currentItem.title}-${currentItem.addedByName}`;
-    startDurationTimer(trackId, currentItem.platform, currentItem.embedId, trackStartedAt);
+    // Duration timer is now handled by playlist-manager which updates previewDuration directly
+    // This prevents the timer from showing elapsed time before switching to countdown
   }
 
   // Add playlist update listener once

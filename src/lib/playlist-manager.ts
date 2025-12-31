@@ -1709,7 +1709,8 @@ export class PlaylistManager {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'trackEnded',
-          trackId: finishedItem.id // Prevent race conditions
+          trackId: finishedItem.id, // Prevent race conditions
+          finishedTrackTitle: finishedItem.title // Send resolved title for recently played
         })
       });
 
