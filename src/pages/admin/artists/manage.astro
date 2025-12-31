@@ -1,6 +1,6 @@
 ---
 // src/pages/admin/artists/manage.astro
-// Admin Partner Management - Artists & Merch Suppliers
+// Admin Partner Management - Artists, Merch Suppliers & Vinyl Sellers
 // DJs are now customer-level (no approval needed)
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 export const prerender = false;
@@ -35,6 +35,10 @@ export const prerender = false;
       <div class="stat-value" id="merchCount">0</div>
       <div class="stat-label">Merch Suppliers</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-value" id="vinylCount">0</div>
+      <div class="stat-label">Vinyl Sellers</div>
+    </div>
   </div>
 
   <!-- Toolbar -->
@@ -51,6 +55,7 @@ export const prerender = false;
         <span class="filter-divider"></span>
         <button class="filter-tab" data-filter="artist">🎵 Artists</button>
         <button class="filter-tab" data-filter="merch">👕 Merch</button>
+        <button class="filter-tab" data-filter="vinyl">📀 Vinyl</button>
       </div>
     </div>
   </div>
@@ -150,6 +155,17 @@ export const prerender = false;
                     <div class="role-info">
                       <strong>Merch Supplier</strong>
                       <span>Manage merchandise, track stock & sales</span>
+                    </div>
+                    <span class="role-check">✓</span>
+                  </div>
+                </label>
+                <label class="role-card-select">
+                  <input type="checkbox" id="editRoleVinyl" name="roles" value="vinyl">
+                  <div class="role-card-content">
+                    <span class="role-icon">📀</span>
+                    <div class="role-info">
+                      <strong>Vinyl Seller</strong>
+                      <span>Sell vinyl records in Crates marketplace</span>
                     </div>
                     <span class="role-check">✓</span>
                   </div>
@@ -298,6 +314,7 @@ export const prerender = false;
             avatarUrl: null,
             isArtist: p.isArtist === true,
             isMerchSupplier: p.isMerchSupplier === true,
+            isVinylSeller: p.isVinylSeller === true,
             approved: p.isApproved === true,
             suspended: p.isDisabled === true,
             notes: '',
@@ -336,12 +353,14 @@ export const prerender = false;
         const pending = allPartners.filter(p => !p.approved && !p.suspended);
         const artists = allPartners.filter(p => p.isArtist);
         const merch = allPartners.filter(p => p.isMerchSupplier);
-        
+        const vinyl = allPartners.filter(p => p.isVinylSeller);
+
         document.getElementById('totalCount').textContent = allPartners.length;
         document.getElementById('approvedCount').textContent = approved.length;
         document.getElementById('pendingCount').textContent = pending.length;
         document.getElementById('artistCount').textContent = artists.length;
         document.getElementById('merchCount').textContent = merch.length;
+        document.getElementById('vinylCount').textContent = vinyl.length;
       }
       
       function renderPartners() {
@@ -359,6 +378,7 @@ export const prerender = false;
             case 'pending': return !p.approved && !p.suspended;
             case 'artist': return p.isArtist;
             case 'merch': return p.isMerchSupplier;
+            case 'vinyl': return p.isVinylSeller;
             default: return true;
           }
         });
@@ -381,6 +401,7 @@ export const prerender = false;
           const roles = [];
           if (p.isArtist) roles.push('<span class="badge badge-info">🎵 Artist</span>');
           if (p.isMerchSupplier) roles.push('<span class="badge badge-purple">👕 Merch</span>');
+          if (p.isVinylSeller) roles.push('<span class="badge badge-orange">📀 Vinyl</span>');
           
           let statusBadge;
           if (p.suspended) {
@@ -451,7 +472,8 @@ export const prerender = false;
         document.getElementById('editNotes').value = partner.notes;
         document.getElementById('editRoleArtist').checked = partner.isArtist;
         document.getElementById('editRoleMerch').checked = partner.isMerchSupplier;
-        
+        document.getElementById('editRoleVinyl').checked = partner.isVinylSeller;
+
         if (partner.suspended) document.getElementById('statusSuspended').checked = true;
         else if (partner.approved) document.getElementById('statusApproved').checked = true;
         else document.getElementById('statusPending').checked = true;
@@ -480,6 +502,7 @@ export const prerender = false;
           const status = document.querySelector('input[name="editStatus"]:checked')?.value;
           const newIsArtist = document.getElementById('editRoleArtist').checked;
           const newIsMerchSupplier = document.getElementById('editRoleMerch').checked;
+          const newIsVinylSeller = document.getElementById('editRoleVinyl').checked;
           const name = document.getElementById('editName').value.trim();
 
           if (!name) {
@@ -501,6 +524,7 @@ export const prerender = false;
                 adminNotes: document.getElementById('editNotes').value.trim(),
                 isArtist: newIsArtist,
                 isMerchSupplier: newIsMerchSupplier,
+                isVinylSeller: newIsVinylSeller,
                 approved: status === 'approved',
                 suspended: status === 'suspended'
               }
@@ -516,7 +540,7 @@ export const prerender = false;
           closeModal('editModal');
 
           // Check if user is still a partner
-          const isStillPartner = newIsArtist || newIsMerchSupplier;
+          const isStillPartner = newIsArtist || newIsMerchSupplier || newIsVinylSeller;
 
           if (!isStillPartner) {
             allPartners = allPartners.filter(p => p.id !== currentPartnerId);
@@ -604,7 +628,7 @@ export const prerender = false;
 </AdminLayout>
 
 <style is:global>
-  .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; }
+  .stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; }
   .stat-card { background: #fff; border: 2px solid #e5e5e5; padding: 1.25rem; text-align: center; }
   .stat-card.success { border-color: #16a34a; }
   .stat-card.warning { border-color: #d97706; }
@@ -643,6 +667,7 @@ export const prerender = false;
   .spinner { width: 40px; height: 40px; border: 3px solid #e5e5e5; border-top-color: #dc2626; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .badge-purple { background: #7c3aed; color: #fff; }
+  .badge-orange { background: #ea580c; color: #fff; }
   .btn-group { display: flex; gap: 0.5rem; justify-content: flex-end; }
   .btn-outline { background: transparent; border: 1px solid #ccc; color: #666; }
   .btn-outline:hover { background: #f5f5f5; }
@@ -650,6 +675,7 @@ export const prerender = false;
   .modal-lg { max-width: 600px; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
   
+  @media (max-width: 1400px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .status-options { grid-template-columns: 1fr; } .form-row { grid-template-columns: 1fr; } }
   @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr; } }

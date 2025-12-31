@@ -56,6 +56,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       const requests = {
         artist: [] as any[],
         merchSeller: [] as any[],
+        vinylSeller: [] as any[],
         djBypass: [] as any[]
       };
 
@@ -65,6 +66,8 @@ export const GET: APIRoute = async ({ request, url }) => {
           requests.artist.push(req);
         } else if (roleType === 'merchSeller') {
           requests.merchSeller.push(req);
+        } else if (roleType === 'vinylSeller') {
+          requests.vinylSeller.push(req);
         } else if (roleType === 'djBypass') {
           requests.djBypass.push(req);
         }
@@ -94,7 +97,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { action, uid, roleType, reason, adminUid, artistName, bio, links, businessName, description, website } = body;
+    const { action, uid, roleType, reason, adminUid, artistName, bio, links, businessName, description, website, storeName, location, discogsUrl } = body;
 
     // Request a role (user action)
     if (action === 'requestRole') {
@@ -105,7 +108,7 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 400 });
       }
 
-      const validRoles = ['artist', 'merchSeller', 'djBypass'];
+      const validRoles = ['artist', 'merchSeller', 'vinylSeller', 'djBypass'];
       if (!validRoles.includes(roleType)) {
         return new Response(JSON.stringify({
           success: false,
@@ -152,6 +155,11 @@ export const POST: APIRoute = async ({ request }) => {
         requestData.businessName = businessName || '';
         requestData.description = description || '';
         requestData.website = website || '';
+      } else if (roleType === 'vinylSeller') {
+        requestData.storeName = storeName || '';
+        requestData.description = description || '';
+        requestData.location = location || '';
+        requestData.discogsUrl = discogsUrl || '';
       } else if (roleType === 'djBypass') {
         requestData.reason = reason || '';
       }
@@ -219,6 +227,7 @@ export const POST: APIRoute = async ({ request }) => {
           [`roles.${roleKey}`]: true,
           isArtist: roleType === 'artist' ? true : (existingCustomer?.isArtist || false),
           isMerchSupplier: roleType === 'merchSeller' ? true : (existingCustomer?.isMerchSupplier || false),
+          isVinylSeller: roleType === 'vinylSeller' ? true : (existingCustomer?.isVinylSeller || false),
           approved: true,
           updatedAt: new Date().toISOString()
         };
@@ -300,12 +309,66 @@ export const POST: APIRoute = async ({ request }) => {
         }
       }
 
+      // For vinylSeller role, create vinylSellers collection entry
+      if (roleType === 'vinylSeller') {
+        try {
+          const pendingData = userData?.pendingRoles?.vinylSeller || {};
+          const existingVinylSeller = await getDocument('vinylSellers', uid);
+
+          const vinylSellerData = {
+            id: uid,
+            userId: uid,
+            storeName: pendingData.storeName || userData?.displayName || 'Vinyl Store',
+            description: pendingData.description || '',
+            location: pendingData.location || '',
+            discogsUrl: pendingData.discogsUrl || '',
+            email: userData?.email || '',
+            displayName: userData?.displayName || '',
+            approved: true,
+            suspended: false,
+            totalSales: 0,
+            activeListings: 0,
+            ratings: {
+              average: 0,
+              count: 0,
+              breakdown: {
+                communication: 0,
+                accuracy: 0,
+                shipping: 0
+              }
+            },
+            approvedAt: new Date().toISOString(),
+            approvedBy: adminUid,
+            updatedAt: new Date().toISOString()
+          };
+
+          if (existingVinylSeller) {
+            await updateDocument('vinylSellers', uid, {
+              ...vinylSellerData,
+              createdAt: existingVinylSeller.createdAt || new Date().toISOString()
+            });
+            console.log(`[roles/manage] Updated vinylSellers/${uid}`);
+          } else {
+            await setDocument('vinylSellers', uid, {
+              ...vinylSellerData,
+              createdAt: new Date().toISOString()
+            });
+            console.log(`[roles/manage] Created vinylSellers/${uid}`);
+          }
+        } catch (vinylError) {
+          console.error(`[roles/manage] Failed to create/update vinylSellers collection for ${uid}:`, vinylError);
+        }
+      }
+
       // Create notification for user
+      const roleDisplayName = roleType === 'djBypass' ? 'DJ Bypass' :
+                              roleType === 'merchSeller' ? 'Merch Seller' :
+                              roleType === 'vinylSeller' ? 'Vinyl Seller' : 'Artist';
       await addDocument('notifications', {
         userId: uid,
         type: 'role_approved',
-        title: `${roleType === 'djBypass' ? 'DJ Bypass' : roleType === 'merchSeller' ? 'Merch Seller' : 'Artist'} Request Approved`,
-        message: `Your ${roleType === 'djBypass' ? 'DJ bypass' : roleType} request has been approved!`,
+        title: `${roleDisplayName} Request Approved`,
+        message: `Your ${roleDisplayName} request has been approved!`,
         read: false,
         createdAt: new Date()
       });
@@ -349,10 +412,13 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       // Create notification for user
+      const denyRoleDisplayName = roleType === 'djBypass' ? 'DJ Bypass' :
+                                   roleType === 'merchSeller' ? 'Merch Seller' :
+                                   roleType === 'vinylSeller' ? 'Vinyl Seller' : 'Artist';
       await addDocument('notifications', {
         userId: uid,
         type: 'role_denied',
-        title: `${roleType === 'djBypass' ? 'DJ Bypass' : roleType === 'merchSeller' ? 'Merch Seller' : 'Artist'} Request Denied`,
+        title: `${denyRoleDisplayName} Request Denied`,
         message: reason ? `Your request was denied: ${reason}` : 'Your request was denied.',
         read: false,
         createdAt: new Date()
@@ -398,6 +464,7 @@ export const POST: APIRoute = async ({ request }) => {
           };
           if (roleType === 'artist') customerUpdate.isArtist = false;
           if (roleType === 'merchSeller') customerUpdate.isMerchSupplier = false;
+          if (roleType === 'vinylSeller') customerUpdate.isVinylSeller = false;
           await updateDocument('customers', uid, customerUpdate);
         }
       } catch (e) {
@@ -421,6 +488,25 @@ export const POST: APIRoute = async ({ request }) => {
           }
         } catch (e) {
           console.error(`[roles/manage] Failed to update artists/${uid} during revoke:`, e);
+        }
+      }
+
+      // Update vinylSellers collection if revoking vinyl seller role
+      if (roleType === 'vinylSeller') {
+        try {
+          const existingVinylSeller = await getDocument('vinylSellers', uid);
+          if (existingVinylSeller) {
+            await updateDocument('vinylSellers', uid, {
+              approved: false,
+              suspended: true,
+              updatedAt: new Date().toISOString(),
+              revokedAt: new Date().toISOString(),
+              revokedBy: adminUid
+            });
+            console.log(`[roles/manage] Revoked vinylSeller from vinylSellers/${uid}`);
+          }
+        } catch (e) {
+          console.error(`[roles/manage] Failed to update vinylSellers/${uid} during revoke:`, e);
         }
       }
 

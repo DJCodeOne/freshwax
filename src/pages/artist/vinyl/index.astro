@@ -1,0 +1,549 @@
+---
+// src/pages/artist/vinyl/index.astro
+// Vinyl seller's listings management page
+import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+export const prerender = false;
+---
+
+<ProDashboardLayout title="My Vinyl Listings" activeNav="vinyl">
+  <div class="page-header">
+    <div class="header-content">
+      <h1>My Vinyl Listings</h1>
+      <p class="subtitle">Manage your records in the Crates marketplace</p>
+    </div>
+    <a href="/artist/vinyl/new" class="btn btn-primary">+ List New Vinyl</a>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value" id="totalCount">0</div>
+      <div class="stat-label">Total Listings</div>
+    </div>
+    <div class="stat-card success">
+      <div class="stat-value" id="publishedCount">0</div>
+      <div class="stat-label">Published</div>
+    </div>
+    <div class="stat-card warning">
+      <div class="stat-value" id="pendingCount">0</div>
+      <div class="stat-label">Pending Review</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="draftCount">0</div>
+      <div class="stat-label">Drafts</div>
+    </div>
+    <div class="stat-card info">
+      <div class="stat-value" id="soldCount">0</div>
+      <div class="stat-label">Sold</div>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="filter-bar">
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-filter="all">All</button>
+      <button class="filter-tab" data-filter="published">Published</button>
+      <button class="filter-tab" data-filter="pending">Pending</button>
+      <button class="filter-tab" data-filter="draft">Drafts</button>
+      <button class="filter-tab" data-filter="sold">Sold</button>
+    </div>
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Search listings...">
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loadingState" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading your listings...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div id="emptyState" class="empty-state" style="display:none;">
+    <div class="empty-icon">📀</div>
+    <h3>No listings yet</h3>
+    <p>Start selling your vinyl collection on Fresh Wax Crates</p>
+    <a href="/artist/vinyl/new" class="btn btn-primary">List Your First Record</a>
+  </div>
+
+  <!-- Listings Grid -->
+  <div id="listingsGrid" class="listings-grid" style="display:none;">
+  </div>
+</ProDashboardLayout>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  let currentUser = null;
+  let allListings = [];
+  let currentFilter = 'all';
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = '/login?redirect=/artist/vinyl';
+      return;
+    }
+    currentUser = user;
+    loadListings();
+  });
+
+  async function loadListings() {
+    try {
+      const response = await fetch(`/api/vinyl/listing?sellerId=${currentUser.uid}`);
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load listings');
+      }
+
+      allListings = data.listings || [];
+      updateStats();
+      renderListings();
+
+      document.getElementById('loadingState').style.display = 'none';
+
+      if (allListings.length === 0) {
+        document.getElementById('emptyState').style.display = 'flex';
+      } else {
+        document.getElementById('listingsGrid').style.display = 'grid';
+      }
+
+    } catch (error) {
+      console.error('Error loading listings:', error);
+      document.getElementById('loadingState').innerHTML = `
+        <div class="empty-icon">❌</div>
+        <h3>Error loading listings</h3>
+        <p>${error.message}</p>
+      `;
+    }
+  }
+
+  function updateStats() {
+    const published = allListings.filter(l => l.status === 'published');
+    const pending = allListings.filter(l => l.status === 'pending');
+    const draft = allListings.filter(l => l.status === 'draft');
+    const sold = allListings.filter(l => l.status === 'sold');
+
+    document.getElementById('totalCount').textContent = allListings.length;
+    document.getElementById('publishedCount').textContent = published.length;
+    document.getElementById('pendingCount').textContent = pending.length;
+    document.getElementById('draftCount').textContent = draft.length;
+    document.getElementById('soldCount').textContent = sold.length;
+  }
+
+  function renderListings() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+    let filtered = allListings.filter(l => {
+      // Exclude deleted
+      if (l.deleted) return false;
+
+      // Search filter
+      const matchesSearch = !searchTerm ||
+        (l.artist || '').toLowerCase().includes(searchTerm) ||
+        (l.title || '').toLowerCase().includes(searchTerm) ||
+        (l.label || '').toLowerCase().includes(searchTerm);
+
+      if (!matchesSearch) return false;
+
+      // Status filter
+      switch (currentFilter) {
+        case 'published': return l.status === 'published';
+        case 'pending': return l.status === 'pending';
+        case 'draft': return l.status === 'draft';
+        case 'sold': return l.status === 'sold';
+        default: return true;
+      }
+    });
+
+    const grid = document.getElementById('listingsGrid');
+    const emptyState = document.getElementById('emptyState');
+
+    if (filtered.length === 0) {
+      grid.style.display = 'none';
+      emptyState.style.display = 'flex';
+      emptyState.querySelector('h3').textContent = currentFilter === 'all' ? 'No listings yet' : `No ${currentFilter} listings`;
+      emptyState.querySelector('p').textContent = currentFilter === 'all'
+        ? 'Start selling your vinyl collection on Fresh Wax Crates'
+        : 'Try a different filter';
+      return;
+    }
+
+    emptyState.style.display = 'none';
+    grid.style.display = 'grid';
+
+    grid.innerHTML = filtered.map(l => {
+      const imageUrl = l.images && l.images[0] ? l.images[0] : '/placeholder-vinyl.png';
+      const statusClass = getStatusClass(l.status);
+      const statusLabel = getStatusLabel(l.status);
+
+      return `
+        <div class="listing-card" data-id="${l.id}">
+          <div class="listing-image" style="background-image: url('${imageUrl}');">
+            <span class="status-badge ${statusClass}">${statusLabel}</span>
+          </div>
+          <div class="listing-info">
+            <h3>${l.artist || 'Unknown Artist'}</h3>
+            <p class="title">${l.title || 'Untitled'}</p>
+            <div class="meta">
+              <span class="condition">${l.mediaCondition || 'N/A'} / ${l.sleeveCondition || 'N/A'}</span>
+              <span class="price">£${(l.price || 0).toFixed(2)}</span>
+            </div>
+            <div class="actions">
+              ${l.status === 'draft' ? `
+                <a href="/artist/vinyl/edit/${l.id}" class="btn-sm">Edit</a>
+                <button class="btn-sm btn-success" onclick="publishListing('${l.id}')">Publish</button>
+                <button class="btn-sm btn-danger" onclick="deleteListing('${l.id}')">Delete</button>
+              ` : l.status === 'pending' ? `
+                <a href="/artist/vinyl/edit/${l.id}" class="btn-sm">Edit</a>
+                <button class="btn-sm" onclick="unpublishListing('${l.id}')">Unpublish</button>
+              ` : l.status === 'published' ? `
+                <a href="/crates/${l.id}" class="btn-sm" target="_blank">View</a>
+                <button class="btn-sm" onclick="unpublishListing('${l.id}')">Unpublish</button>
+              ` : l.status === 'sold' ? `
+                <span class="sold-label">Sold!</span>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function getStatusClass(status) {
+    switch (status) {
+      case 'published': return 'success';
+      case 'pending': return 'warning';
+      case 'draft': return 'secondary';
+      case 'sold': return 'info';
+      default: return '';
+    }
+  }
+
+  function getStatusLabel(status) {
+    switch (status) {
+      case 'published': return 'Live';
+      case 'pending': return 'Pending Review';
+      case 'draft': return 'Draft';
+      case 'sold': return 'Sold';
+      default: return status;
+    }
+  }
+
+  // Filter handlers
+  document.querySelectorAll('.filter-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      renderListings();
+    });
+  });
+
+  document.getElementById('searchInput').addEventListener('input', () => renderListings());
+
+  // Actions
+  window.publishListing = async function(id) {
+    if (!confirm('Submit this listing for review?')) return;
+
+    try {
+      const response = await fetch('/api/vinyl/listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'publish',
+          sellerId: currentUser.uid,
+          listingId: id
+        })
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      alert('Listing submitted for review!');
+      loadListings();
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+
+  window.unpublishListing = async function(id) {
+    if (!confirm('Unpublish this listing? It will be moved to drafts.')) return;
+
+    try {
+      const response = await fetch('/api/vinyl/listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'unpublish',
+          sellerId: currentUser.uid,
+          listingId: id
+        })
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      loadListings();
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+
+  window.deleteListing = async function(id) {
+    if (!confirm('Delete this listing? This cannot be undone.')) return;
+
+    try {
+      const response = await fetch('/api/vinyl/listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete',
+          sellerId: currentUser.uid,
+          listingId: id
+        })
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      loadListings();
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+</script>
+
+<style>
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .page-header h1 { margin: 0; font-size: 1.75rem; }
+  .subtitle { color: #666; margin: 0.25rem 0 0; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-primary { background: #000; color: #fff; }
+  .btn-primary:hover { background: #333; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .stat-card.success { border-color: #16a34a; }
+  .stat-card.warning { border-color: #d97706; }
+  .stat-card.info { border-color: #0284c7; }
+
+  .stat-value { font-size: 1.75rem; font-weight: 800; }
+  .stat-card.success .stat-value { color: #16a34a; }
+  .stat-card.warning .stat-value { color: #d97706; }
+  .stat-card.info .stat-value { color: #0284c7; }
+  .stat-label { font-size: 0.8rem; color: #666; margin-top: 0.25rem; }
+
+  .filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .filter-tabs { display: flex; gap: 0.5rem; }
+
+  .filter-tab {
+    padding: 0.5rem 1rem;
+    background: #f5f5f5;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  .filter-tab.active { background: #000; color: #fff; }
+
+  .search-box input {
+    padding: 0.5rem 1rem;
+    border: 1px solid #ddd;
+    width: 250px;
+    font-size: 0.9rem;
+  }
+
+  .loading-state, .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e5e5;
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 1rem;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+  .empty-state h3 { margin: 0 0 0.5rem; }
+  .empty-state p { color: #666; margin: 0 0 1.5rem; }
+
+  .listings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .listing-card {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+
+  .listing-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+  .listing-image {
+    aspect-ratio: 1;
+    background-size: cover;
+    background-position: center;
+    background-color: #f5f5f5;
+    position: relative;
+  }
+
+  .status-badge {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: #000;
+    color: #fff;
+  }
+
+  .status-badge.success { background: #16a34a; }
+  .status-badge.warning { background: #d97706; }
+  .status-badge.secondary { background: #666; }
+  .status-badge.info { background: #0284c7; }
+
+  .listing-info { padding: 1rem; }
+
+  .listing-info h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .listing-info .title {
+    margin: 0.25rem 0 0.75rem;
+    color: #666;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .condition {
+    font-size: 0.8rem;
+    color: #666;
+    background: #f5f5f5;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .price { font-weight: 700; }
+
+  .actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-sm {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    background: #f5f5f5;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    color: #333;
+  }
+
+  .btn-sm:hover { background: #e5e5e5; }
+  .btn-sm.btn-success { background: #16a34a; color: #fff; }
+  .btn-sm.btn-danger { background: #dc2626; color: #fff; }
+
+  .sold-label {
+    color: #16a34a;
+    font-weight: 600;
+  }
+
+  @media (max-width: 900px) {
+    .stats-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media (max-width: 600px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .filter-bar { flex-direction: column; }
+    .filter-tabs { flex-wrap: wrap; }
+    .search-box input { width: 100%; }
+  }
+</style>

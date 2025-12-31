@@ -84,6 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Roles
       if (updates.isArtist !== undefined) artistUpdate.isArtist = updates.isArtist;
       if (updates.isMerchSupplier !== undefined) artistUpdate.isMerchSupplier = updates.isMerchSupplier;
+      if (updates.isVinylSeller !== undefined) artistUpdate.isVinylSeller = updates.isVinylSeller;
 
       // Status
       if (updates.approved !== undefined) artistUpdate.approved = updates.approved;
@@ -113,12 +114,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (updates.approved !== undefined) userUpdate.approved = updates.approved;
 
       // Build roles object
-      if (updates.isArtist !== undefined || updates.isMerchSupplier !== undefined) {
+      if (updates.isArtist !== undefined || updates.isMerchSupplier !== undefined || updates.isVinylSeller !== undefined) {
         userUpdate.roles = {
           customer: true,
           dj: true,
           artist: updates.isArtist ?? userDoc.roles?.artist ?? false,
           merchSupplier: updates.isMerchSupplier ?? userDoc.roles?.merchSupplier ?? false,
+          vinylSeller: updates.isVinylSeller ?? userDoc.roles?.vinylSeller ?? false,
           admin: updates.isAdmin ?? userDoc.roles?.admin ?? false
         };
       }
@@ -136,7 +138,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // This ensures downgraded partners appear in User Management
     try {
       const customerDoc = await getDocument('customers', partnerId);
-      const isBeingDowngraded = updates.isArtist === false && updates.isMerchSupplier === false;
+      const isBeingDowngraded = updates.isArtist === false && updates.isMerchSupplier === false && updates.isVinylSeller === false;
 
       if (customerDoc) {
         // Update existing customer record
@@ -146,13 +148,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         if (updates.isArtist !== undefined) customerUpdate.isArtist = updates.isArtist;
         if (updates.isMerchSupplier !== undefined) customerUpdate.isMerchSupplier = updates.isMerchSupplier;
+        if (updates.isVinylSeller !== undefined) customerUpdate.isVinylSeller = updates.isVinylSeller;
         if (updates.approved !== undefined) customerUpdate.approved = updates.approved;
 
         customerUpdate.roles = {
           customer: true,
           dj: true,
           artist: updates.isArtist ?? customerDoc.roles?.artist ?? false,
-          merch: updates.isMerchSupplier ?? customerDoc.roles?.merch ?? false
+          merch: updates.isMerchSupplier ?? customerDoc.roles?.merch ?? false,
+          vinylSeller: updates.isVinylSeller ?? customerDoc.roles?.vinylSeller ?? false
         };
 
         await updateDocument('customers', partnerId, customerUpdate);
@@ -169,11 +173,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
           isDJ: true,
           isArtist: false,
           isMerchSupplier: false,
+          isVinylSeller: false,
           roles: {
             customer: true,
             dj: true,
             artist: false,
-            merch: false
+            merch: false,
+            vinylSeller: false
           },
           approved: true,
           createdAt: artistDoc.createdAt || now,
@@ -184,6 +190,45 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     } catch (e) {
       console.warn('[update-partner] customers update failed:', e instanceof Error ? e.message : e);
+    }
+
+    // Update or create vinylSellers collection record
+    if (updates.isVinylSeller !== undefined) {
+      try {
+        const vinylSellerDoc = await getDocument('vinylSellers', partnerId);
+
+        if (updates.isVinylSeller === true && !vinylSellerDoc) {
+          // Create vinylSellers record for newly promoted user
+          const { setDocument } = await import('../../../lib/firebase-rest');
+          await setDocument('vinylSellers', partnerId, {
+            id: partnerId,
+            userId: partnerId,
+            storeName: updates.name || artistDoc?.artistName || 'Vinyl Store',
+            description: '',
+            location: '',
+            discogsUrl: '',
+            approved: updates.approved !== false,
+            suspended: false,
+            ratings: { average: 0, count: 0, breakdown: { communication: 0, accuracy: 0, shipping: 0 } },
+            totalSales: 0,
+            totalListings: 0,
+            createdAt: now,
+            updatedAt: now
+          });
+          results.push('vinylSellers:created');
+          console.log('[update-partner] Created vinylSellers record for promoted partner');
+        } else if (vinylSellerDoc) {
+          // Update existing vinylSellers record
+          await updateDocument('vinylSellers', partnerId, {
+            approved: updates.isVinylSeller && updates.approved !== false,
+            suspended: updates.suspended === true || updates.isVinylSeller === false,
+            updatedAt: now
+          });
+          results.push('vinylSellers:updated');
+        }
+      } catch (e) {
+        console.warn('[update-partner] vinylSellers update failed:', e instanceof Error ? e.message : e);
+      }
     }
 
     console.log('[update-partner] Completed:', results);

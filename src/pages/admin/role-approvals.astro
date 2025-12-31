@@ -1,6 +1,6 @@
 ---
 // Admin Role Approvals
-// Approve or deny Artist, Merch Seller, and DJ Bypass requests
+// Approve or deny Artist, Merch Seller, Vinyl Seller, and DJ Bypass requests
 import '../../styles/global.css';
 ---
 <html lang="en">
@@ -27,6 +27,10 @@ import '../../styles/global.css';
           Merch Seller Requests
           <span class="badge" id="merchCount">0</span>
         </button>
+        <button class="tab" data-tab="vinyl">
+          Vinyl Seller Requests
+          <span class="badge" id="vinylCount">0</span>
+        </button>
         <button class="tab" data-tab="dj">
           DJ Bypass Requests
           <span class="badge" id="djCount">0</span>
@@ -43,6 +47,13 @@ import '../../styles/global.css';
       <!-- Merch Seller Requests Tab -->
       <div class="tab-content" id="merchTab">
         <div class="requests-list" id="merchRequests">
+          <div class="loading">Loading requests...</div>
+        </div>
+      </div>
+
+      <!-- Vinyl Seller Requests Tab -->
+      <div class="tab-content" id="vinylTab">
+        <div class="requests-list" id="vinylRequests">
           <div class="loading">Loading requests...</div>
         </div>
       </div>
@@ -331,6 +342,7 @@ import '../../styles/global.css';
 
       const artistRequests = [];
       const merchRequests = [];
+      const vinylRequests = [];
       const djRequests = [];
 
       snapshot.forEach(doc => {
@@ -343,6 +355,9 @@ import '../../styles/global.css';
         if (pending.merchSeller?.status === 'pending') {
           merchRequests.push({ ...user, request: pending.merchSeller, type: 'merchSeller' });
         }
+        if (pending.vinylSeller?.status === 'pending') {
+          vinylRequests.push({ ...user, request: pending.vinylSeller, type: 'vinylSeller' });
+        }
         if (pending.djBypass?.status === 'pending') {
           djRequests.push({ ...user, request: pending.djBypass, type: 'djBypass' });
         }
@@ -351,11 +366,13 @@ import '../../styles/global.css';
       // Update counts
       document.getElementById('artistCount').textContent = artistRequests.length;
       document.getElementById('merchCount').textContent = merchRequests.length;
+      document.getElementById('vinylCount').textContent = vinylRequests.length;
       document.getElementById('djCount').textContent = djRequests.length;
 
       // Render lists
       renderArtistRequests(artistRequests);
       renderMerchRequests(merchRequests);
+      renderVinylRequests(vinylRequests);
       renderDJRequests(djRequests);
     }
 
@@ -437,6 +454,49 @@ import '../../styles/global.css';
       `).join('');
     }
 
+    function renderVinylRequests(requests) {
+      const container = document.getElementById('vinylRequests');
+
+      if (requests.length === 0) {
+        container.innerHTML = '<div class="empty-state">No pending vinyl seller requests</div>';
+        return;
+      }
+
+      container.innerHTML = requests.map(r => `
+        <div class="request-card" data-uid="${r.uid}">
+          <div class="request-header">
+            <div class="request-user">
+              <div class="request-name">${r.displayName || 'Unknown'}</div>
+              <div class="request-email">${r.email}</div>
+              <div class="request-date">Requested: ${formatDate(r.request.requestedAt)}</div>
+            </div>
+          </div>
+          <div class="request-details">
+            <div class="detail-row">
+              <span class="detail-label">Store Name:</span>
+              <span class="detail-value">${r.request.storeName || '-'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Description:</span>
+              <span class="detail-value">${r.request.description || '-'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Location:</span>
+              <span class="detail-value">${r.request.location || '-'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Discogs:</span>
+              <span class="detail-value">${r.request.discogsUrl ? `<a href="${r.request.discogsUrl}" target="_blank" style="color:#22c55e">${r.request.discogsUrl}</a>` : '-'}</span>
+            </div>
+          </div>
+          <div class="request-actions">
+            <button class="btn btn-approve" onclick="approveRequest('${r.uid}', 'vinylSeller')">Approve</button>
+            <button class="btn btn-deny" onclick="denyRequest('${r.uid}', 'vinylSeller')">Deny</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
     function renderDJRequests(requests) {
       const container = document.getElementById('djRequests');
       
@@ -503,6 +563,10 @@ import '../../styles/global.css';
           updateData['roles.merchSeller'] = true;
           updateData['pendingRoles.merchSeller.status'] = 'approved';
           updateData['pendingRoles.merchSeller.approvedAt'] = serverTimestamp();
+        } else if (roleType === 'vinylSeller') {
+          updateData['roles.vinylSeller'] = true;
+          updateData['pendingRoles.vinylSeller.status'] = 'approved';
+          updateData['pendingRoles.vinylSeller.approvedAt'] = serverTimestamp();
         }
 
         await updateDoc(userRef, updateData);
@@ -542,6 +606,10 @@ import '../../styles/global.css';
           updateData['pendingRoles.merchSeller.status'] = 'denied';
           updateData['pendingRoles.merchSeller.deniedAt'] = serverTimestamp();
           updateData['pendingRoles.merchSeller.denialReason'] = reason;
+        } else if (roleType === 'vinylSeller') {
+          updateData['pendingRoles.vinylSeller.status'] = 'denied';
+          updateData['pendingRoles.vinylSeller.deniedAt'] = serverTimestamp();
+          updateData['pendingRoles.vinylSeller.denialReason'] = reason;
         }
 
         await updateDoc(userRef, updateData);

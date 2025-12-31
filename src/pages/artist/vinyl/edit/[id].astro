@@ -1,0 +1,448 @@
+---
+// src/pages/artist/vinyl/edit/[id].astro
+// Edit vinyl listing page
+import ProDashboardLayout from '../../../../layouts/ProDashboardLayout.astro';
+
+const { id } = Astro.params;
+
+export const prerender = false;
+---
+
+<ProDashboardLayout title="Edit Listing" activeNav="vinyl">
+  <div class="page-header">
+    <div class="header-content">
+      <a href="/artist/vinyl" class="back-link">← Back to My Listings</a>
+      <h1>Edit Listing</h1>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loadingState" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading listing...</p>
+  </div>
+
+  <form id="listingForm" class="listing-form" style="display:none;">
+    <input type="hidden" id="listingId" value={id}>
+
+    <!-- Record Details Section -->
+    <section class="form-section">
+      <h2>Record Details</h2>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="artist">Artist <span class="required">*</span></label>
+          <input type="text" id="artist" name="artist" required maxlength="100">
+        </div>
+        <div class="form-group">
+          <label for="title">Title <span class="required">*</span></label>
+          <input type="text" id="title" name="title" required maxlength="100">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="label">Label</label>
+          <input type="text" id="label" name="label" maxlength="100">
+        </div>
+        <div class="form-group">
+          <label for="catalogNumber">Catalogue Number</label>
+          <input type="text" id="catalogNumber" name="catalogNumber" maxlength="50">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="format">Format <span class="required">*</span></label>
+          <select id="format" name="format" required>
+            <option value="LP">LP (12" Album)</option>
+            <option value="12&quot;">12" Single</option>
+            <option value="10&quot;">10"</option>
+            <option value="7&quot;">7"</option>
+            <option value="EP">EP</option>
+            <option value="Box Set">Box Set</option>
+            <option value="Compilation">Compilation</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="releaseYear">Release Year</label>
+          <input type="number" id="releaseYear" name="releaseYear" min="1900" max="2030">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="genre">Genre</label>
+        <input type="text" id="genre" name="genre" maxlength="50">
+      </div>
+    </section>
+
+    <!-- Condition Section -->
+    <section class="form-section">
+      <h2>Condition</h2>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="mediaCondition">Media Condition <span class="required">*</span></label>
+          <select id="mediaCondition" name="mediaCondition" required>
+            <option value="">Select condition...</option>
+            <option value="M">M - Mint</option>
+            <option value="NM">NM - Near Mint</option>
+            <option value="VG+">VG+ - Very Good Plus</option>
+            <option value="VG">VG - Very Good</option>
+            <option value="G+">G+ - Good Plus</option>
+            <option value="G">G - Good</option>
+            <option value="F">F - Fair</option>
+            <option value="P">P - Poor</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="sleeveCondition">Sleeve Condition <span class="required">*</span></label>
+          <select id="sleeveCondition" name="sleeveCondition" required>
+            <option value="">Select condition...</option>
+            <option value="M">M - Mint</option>
+            <option value="NM">NM - Near Mint</option>
+            <option value="VG+">VG+ - Very Good Plus</option>
+            <option value="VG">VG - Very Good</option>
+            <option value="G+">G+ - Good Plus</option>
+            <option value="G">G - Good</option>
+            <option value="F">F - Fair</option>
+            <option value="P">P - Poor</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="conditionNotes">Condition Notes</label>
+        <textarea id="conditionNotes" name="conditionNotes" maxlength="500" rows="3"></textarea>
+      </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="form-section">
+      <h2>Pricing</h2>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="price">Price (GBP) <span class="required">*</span></label>
+          <div class="input-prefix">
+            <span class="prefix">£</span>
+            <input type="number" id="price" name="price" required min="0.01" max="10000" step="0.01">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="shippingCost">Shipping Cost (GBP) <span class="required">*</span></label>
+          <div class="input-prefix">
+            <span class="prefix">£</span>
+            <input type="number" id="shippingCost" name="shippingCost" required min="0" max="100" step="0.01">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Description Section -->
+    <section class="form-section">
+      <h2>Description</h2>
+      <div class="form-group">
+        <textarea id="description" name="description" maxlength="2000" rows="5"></textarea>
+      </div>
+    </section>
+
+    <!-- Current Images -->
+    <section class="form-section">
+      <h2>Current Images</h2>
+      <div id="currentImages" class="current-images"></div>
+      <p class="form-hint">To change images, delete this listing and create a new one.</p>
+    </section>
+
+    <!-- Actions -->
+    <div class="form-actions">
+      <button type="button" class="btn btn-danger" id="deleteBtn">Delete Listing</button>
+      <button type="submit" class="btn btn-primary" id="saveBtn">Save Changes</button>
+    </div>
+  </form>
+</ProDashboardLayout>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  let currentUser = null;
+  let listing = null;
+
+  const listingId = document.getElementById('listingId').value;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = '/login?redirect=/artist/vinyl';
+      return;
+    }
+    currentUser = user;
+    loadListing();
+  });
+
+  async function loadListing() {
+    try {
+      const response = await fetch(`/api/vinyl/listing?id=${listingId}`);
+      const data = await response.json();
+
+      if (!data.success || !data.listing) {
+        throw new Error(data.error || 'Listing not found');
+      }
+
+      listing = data.listing;
+
+      // Verify ownership
+      if (listing.sellerId !== currentUser.uid) {
+        alert('You do not have permission to edit this listing.');
+        window.location.href = '/artist/vinyl';
+        return;
+      }
+
+      // Populate form
+      document.getElementById('artist').value = listing.artist || '';
+      document.getElementById('title').value = listing.title || '';
+      document.getElementById('label').value = listing.label || '';
+      document.getElementById('catalogNumber').value = listing.catalogNumber || '';
+      document.getElementById('format').value = listing.format || 'LP';
+      document.getElementById('releaseYear').value = listing.releaseYear || '';
+      document.getElementById('genre').value = listing.genre || '';
+      document.getElementById('mediaCondition').value = listing.mediaCondition || '';
+      document.getElementById('sleeveCondition').value = listing.sleeveCondition || '';
+      document.getElementById('conditionNotes').value = listing.conditionNotes || '';
+      document.getElementById('price').value = listing.price || '';
+      document.getElementById('shippingCost').value = listing.shippingCost || 0;
+      document.getElementById('description').value = listing.description || '';
+
+      // Show current images
+      const imagesContainer = document.getElementById('currentImages');
+      if (listing.images && listing.images.length > 0) {
+        imagesContainer.innerHTML = listing.images.map(url =>
+          `<div class="image-thumb" style="background-image: url('${url}');"></div>`
+        ).join('');
+      } else {
+        imagesContainer.innerHTML = '<p class="text-muted">No images</p>';
+      }
+
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('listingForm').style.display = 'block';
+
+    } catch (error) {
+      console.error('Error loading listing:', error);
+      document.getElementById('loadingState').innerHTML = `
+        <div class="empty-icon">❌</div>
+        <h3>Error loading listing</h3>
+        <p>${error.message}</p>
+        <a href="/artist/vinyl" class="btn">Back to Listings</a>
+      `;
+    }
+  }
+
+  // Form submission
+  document.getElementById('listingForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
+
+    try {
+      const formData = new FormData(e.target);
+
+      const updateData = {
+        action: 'update',
+        sellerId: currentUser.uid,
+        listingId: listingId,
+        artist: formData.get('artist'),
+        title: formData.get('title'),
+        label: formData.get('label'),
+        catalogNumber: formData.get('catalogNumber'),
+        format: formData.get('format'),
+        releaseYear: formData.get('releaseYear') ? parseInt(formData.get('releaseYear')) : null,
+        genre: formData.get('genre'),
+        mediaCondition: formData.get('mediaCondition'),
+        sleeveCondition: formData.get('sleeveCondition'),
+        conditionNotes: formData.get('conditionNotes'),
+        price: parseFloat(formData.get('price')),
+        shippingCost: parseFloat(formData.get('shippingCost') || '0'),
+        description: formData.get('description')
+      };
+
+      const response = await fetch('/api/vinyl/listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update listing');
+      }
+
+      alert('Listing updated successfully!');
+      window.location.href = '/artist/vinyl';
+
+    } catch (error) {
+      alert('Error: ' + error.message);
+    } finally {
+      saveBtn.textContent = 'Save Changes';
+      saveBtn.disabled = false;
+    }
+  });
+
+  // Delete handler
+  document.getElementById('deleteBtn').addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to delete this listing? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/vinyl/listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete',
+          sellerId: currentUser.uid,
+          listingId: listingId
+        })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete listing');
+      }
+
+      window.location.href = '/artist/vinyl';
+
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  });
+</script>
+
+<style>
+  .page-header { margin-bottom: 2rem; }
+  .back-link { color: #666; text-decoration: none; font-size: 0.9rem; }
+  .back-link:hover { color: #000; }
+  .page-header h1 { margin: 0.5rem 0 0; font-size: 1.75rem; }
+
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e5e5;
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 1rem;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+
+  .listing-form { max-width: 800px; }
+
+  .form-section {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-section h2 {
+    font-size: 1.1rem;
+    margin: 0 0 1rem;
+  }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none;
+    border-color: #000;
+  }
+
+  .required { color: #dc2626; }
+  .form-hint { font-size: 0.8rem; color: #999; margin-top: 0.5rem; }
+  .text-muted { color: #999; }
+
+  .input-prefix { position: relative; }
+  .input-prefix .prefix {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+  }
+  .input-prefix input { padding-left: 1.75rem; }
+
+  .current-images {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .image-thumb {
+    width: 80px;
+    height: 80px;
+    background-size: cover;
+    background-position: center;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    padding: 1rem 0;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .btn-primary { background: #000; color: #fff; }
+  .btn-primary:hover { background: #333; }
+  .btn-danger { background: #dc2626; color: #fff; }
+  .btn-danger:hover { background: #b91c1c; }
+
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+    .form-actions { flex-direction: column-reverse; }
+    .btn { width: 100%; text-align: center; }
+  }
+</style>

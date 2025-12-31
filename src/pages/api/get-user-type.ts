@@ -29,11 +29,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   try {
     // Fetch all possible user documents in parallel
-    const [userDoc, artistDoc, customerDoc, adminDoc] = await Promise.all([
+    const [userDoc, artistDoc, customerDoc, adminDoc, vinylSellerDoc] = await Promise.all([
       getDocument('users', uid),
       getDocument('artists', uid),
       getDocument('customers', uid),
       getDocument('admins', uid),
+      getDocument('vinylSellers', uid),
     ]);
 
     let name = '';
@@ -41,6 +42,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     let isArtist = false;
     let isDJ = false;
     let isMerchSupplier = false;
+    let isVinylSeller = false;
     let isApproved = false;
     let isAdmin = false;
     let partnerDisplayName = '';
@@ -74,7 +76,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         isCustomer = userDoc.roles.customer === true;
         isArtist = userDoc.roles.artist === true;
         isDJ = userDoc.roles.dj === true || userDoc.roles.djEligible === true;
-        isMerchSupplier = userDoc.roles.merchSupplier === true;
+        isMerchSupplier = userDoc.roles.merchSupplier === true || userDoc.roles.merchSeller === true;
+        isVinylSeller = userDoc.roles.vinylSeller === true;
       } else {
         isCustomer = true;
       }
@@ -124,6 +127,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
       } else if (!avatarUrl) {
         avatarUrl = customerDoc.photoURL || '';
       }
+      // Check for vinyl seller flag in customers
+      isVinylSeller = isVinylSeller || customerDoc.isVinylSeller === true;
+    }
+
+    // Check vinylSellers collection
+    if (vinylSellerDoc) {
+      isVinylSeller = true;
+      isApproved = isApproved || vinylSellerDoc.approved === true;
+      if (!partnerDisplayName && vinylSellerDoc.storeName) {
+        partnerDisplayName = vinylSellerDoc.storeName;
+      }
     }
 
     // Check for admin email - include authEmail from Firebase Auth as fallback
@@ -133,7 +147,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       isAdmin = true;
     }
 
-    const hasPartnerRole = isArtist || isDJ || isMerchSupplier;
+    const hasPartnerRole = isArtist || isDJ || isMerchSupplier || isVinylSeller;
     const isPro = hasPartnerRole && isApproved;
 
     // Get referral code from user document (generated when upgrading to Pro)
@@ -163,6 +177,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       isArtist = true;
       isDJ = true;
       isMerchSupplier = true;
+      isVinylSeller = true;
       isApproved = true;
     }
 
@@ -173,11 +188,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
       isApproved: isAdmin ? true : isApproved,
       isPro: isAdmin ? true : isPro,
       isAdmin,
+      isVinylSeller,
       roles: {
         customer: isCustomer,
         artist: isArtist,
         dj: isDJ,
         merchSupplier: isMerchSupplier,
+        vinylSeller: isVinylSeller,
         admin: isAdmin
       },
       displayName: partnerDisplayName || name,

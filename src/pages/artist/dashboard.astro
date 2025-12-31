@@ -37,7 +37,10 @@ let stats = {
   pendingReleases: 0,
   merchProducts: 0,
   merchSold: 0,
-  totalOrders: 0
+  totalOrders: 0,
+  vinylListings: 0,
+  vinylSold: 0,
+  vinylOrders: 0
 };
 
 if (partnerId) {
@@ -58,14 +61,15 @@ if (partnerId) {
         console.log('[Partner Dashboard] User roles:', JSON.stringify(userData?.roles));
 
         // Check if they have partner roles
-        if (userData.roles?.artist || userData.roles?.dj || userData.roles?.merchSupplier) {
+        if (userData.roles?.artist || userData.roles?.dj || userData.roles?.merchSupplier || userData.roles?.vinylSeller) {
           partner = {
             id: partnerId,
             artistName: userData.partnerInfo?.displayName || userData.displayName || userData.fullName || userData.name || 'Partner',
             email: userData.email,
             isArtist: userData.roles?.artist || false,
             isDJ: userData.roles?.dj || false,
-            isMerchSupplier: userData.roles?.merchSupplier || false,
+            isMerchSupplier: userData.roles?.merchSupplier || userData.roles?.merchSeller || false,
+            isVinylSeller: userData.roles?.vinylSeller || false,
             approved: userData.partnerInfo?.approved || userData.approved || false,
             avatarUrl: userData.avatarUrl || null
           };
@@ -84,6 +88,7 @@ if (partnerId) {
         isArtist: true,
         isDJ: true,
         isMerchSupplier: true,
+        isVinylSeller: true,
         approved: true,
         avatarUrl: null
       };
@@ -111,6 +116,7 @@ if (partnerId) {
       const effectiveIsArtist = partner.isArtist !== false;
       const effectiveIsDJ = !!partner.isDJ || effectiveIsArtist;
       const effectiveIsMerchSupplier = !!partner.isMerchSupplier;
+      const effectiveIsVinylSeller = !!partner.isVinylSeller;
 
       // Fetch artist/label stats (only if approved)
       if (effectiveIsArtist && approved) {
@@ -200,6 +206,46 @@ if (partnerId) {
           }, 0);
         }
       }
+
+      // Fetch vinyl seller stats (only if approved)
+      if (effectiveIsVinylSeller && approved) {
+        try {
+          // Query vinyl listings by seller
+          const vinylListings = await queryCollection('vinylListings', {
+            filters: [{ field: 'sellerId', op: 'EQUAL', value: partnerId }]
+          });
+
+          stats.vinylListings = vinylListings.length;
+
+          // Count sold listings
+          stats.vinylSold = vinylListings.filter(l => l.status === 'sold').length;
+
+          // Get vinyl listing IDs for order matching
+          const listingIds = vinylListings.map(l => l.id);
+
+          // Fetch orders containing vinyl items
+          if (listingIds.length > 0) {
+            const orders = await queryCollection('orders', {
+              orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+              limit: 100
+            });
+
+            let vinylOrderCount = 0;
+            orders.filter(o => o.status !== 'cancelled').forEach(order => {
+              const vinylItems = (order.items || []).filter((item: any) =>
+                listingIds.includes(item.productId) || item.sellerId === partnerId || item.type === 'vinyl'
+              );
+              if (vinylItems.length > 0) {
+                vinylOrderCount++;
+              }
+            });
+
+            stats.vinylOrders = vinylOrderCount;
+          }
+        } catch (vinylError) {
+          console.error('[Partner Dashboard] Error fetching vinyl stats:', vinylError);
+        }
+      }
     }
   } catch (e) {
     console.error('Error fetching partner:', e);
@@ -213,10 +259,12 @@ const isApproved = partner?.approved === true;
 const isArtist = partner?.isArtist !== false;
 const isDJ = partner?.isDJ || isArtist;
 const isMerchSupplier = partner?.isMerchSupplier || false;
+const isVinylSeller = partner?.isVinylSeller || false;
 
 // Show sections (even if grayed out)
 const showReleaseSection = isArtist;
 const showMerchSection = isMerchSupplier;
+const showVinylSection = isVinylSeller;
 
 const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num || 0);
 
@@ -269,6 +317,7 @@ export const prerender = false;
                 {isArtist && <span class={`role-badge artist ${!isApproved ? 'pending' : ''}`}>Artist / Producer / Label {!isApproved && '(Pending)'}</span>}
                 {isDJ && <span class="role-badge dj">DJ</span>}
                 {isMerchSupplier && <span class={`role-badge merch ${!isApproved ? 'pending' : ''}`}>Merch Supplier {!isApproved && '(Pending)'}</span>}
+                {isVinylSeller && <span class={`role-badge vinyl ${!isApproved ? 'pending' : ''}`}>Vinyl Seller {!isApproved && '(Pending)'}</span>}
               </div>
             </div>
           </div>
@@ -402,6 +451,91 @@ export const prerender = false;
                 <div class="card-body">
                   <h3>Analytics</h3>
                   <p>Sales trends and insights</p>
+                </div>
+                <span class="card-arrow">→</span>
+              </a>
+            </div>
+          </section>
+        )}
+
+        <!-- VINYL SECTION (Requires Approval) -->
+        {showVinylSection && (
+          <section class={`dashboard-section vinyl-section ${!isApproved ? 'restricted' : ''}`}>
+            <div class="section-header">
+              <div class="section-title-wrap">
+                <span class="section-icon">📀</span>
+                <h2>Vinyl Crates</h2>
+                {!isApproved && <span class="section-badge pending-orange">Approval Required</span>}
+              </div>
+              <p class="section-desc">Manage your vinyl listings, sales, and reviews</p>
+            </div>
+
+            {!isApproved && (
+              <div class="restricted-overlay">
+                <div class="restricted-message">
+                  <span class="lock-icon">🔒</span>
+                  <h3>Awaiting Approval</h3>
+                  <p>This section will be available once your account is approved.</p>
+                </div>
+              </div>
+            )}
+
+            <div class="stats-row">
+              <div class="stat-card">
+                <div class="stat-number">{stats.vinylListings}</div>
+                <div class="stat-label">Listings</div>
+              </div>
+              <div class="stat-card green">
+                <div class="stat-number">{stats.vinylSold}</div>
+                <div class="stat-label">Sold</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-number">{stats.vinylOrders}</div>
+                <div class="stat-label">Orders</div>
+              </div>
+            </div>
+
+            <div class="cards-grid vinyl-grid">
+              <a href={isApproved ? "/artist/vinyl/new" : "#"} class={`action-card vinyl-card primary-orange ${!isApproved ? 'disabled' : ''}`}>
+                <div class="card-icon-wrap">
+                  <div class="card-icon">➕</div>
+                </div>
+                <div class="card-body">
+                  <h3>List Vinyl</h3>
+                  <p>Add new records to Crates</p>
+                </div>
+                <span class="card-arrow">→</span>
+              </a>
+
+              <a href={isApproved ? "/artist/vinyl" : "#"} class={`action-card vinyl-card ${!isApproved ? 'disabled' : ''}`}>
+                <div class="card-icon-wrap">
+                  <div class="card-icon">📦</div>
+                </div>
+                <div class="card-body">
+                  <h3>My Listings</h3>
+                  <p>View and manage your vinyl</p>
+                </div>
+                <span class="card-arrow">→</span>
+              </a>
+
+              <a href={isApproved ? "/artist/vinyl/orders" : "#"} class={`action-card vinyl-card ${!isApproved ? 'disabled' : ''}`}>
+                <div class="card-icon-wrap">
+                  <div class="card-icon">📋</div>
+                </div>
+                <div class="card-body">
+                  <h3>Orders</h3>
+                  <p>Track sales and shipments</p>
+                </div>
+                <span class="card-arrow">→</span>
+              </a>
+
+              <a href={isApproved ? "/crates" : "#"} class={`action-card vinyl-card ${!isApproved ? 'disabled' : ''}`} target="_blank">
+                <div class="card-icon-wrap">
+                  <div class="card-icon">🛒</div>
+                </div>
+                <div class="card-body">
+                  <h3>View Crates</h3>
+                  <p>See the marketplace</p>
                 </div>
                 <span class="card-arrow">→</span>
               </a>
@@ -621,6 +755,8 @@ export const prerender = false;
   .role-badge.dj { background: #dc2626; color: #fff; }
   .role-badge.merch { background: linear-gradient(to bottom, #374151, #1f2937); color: #fff; border: 2px solid #4b5563; }
   .role-badge.merch.pending { background: #fbbf24; color: #000; }
+  .role-badge.vinyl { background: linear-gradient(to bottom, #f97316, #ea580c); color: #fff; }
+  .role-badge.vinyl.pending { background: #fbbf24; color: #000; }
   
   .approval-notice {
     display: flex;
@@ -705,15 +841,96 @@ export const prerender = false;
   .section-badge.available { background: rgba(16, 185, 129, 0.2); color: #10b981; }
   .section-badge.pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
   .section-badge.pending-red { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+  .section-badge.pending-orange { background: rgba(249, 115, 22, 0.2); color: #f97316; }
   
   .dashboard-section.releases-section {
     border-color: rgba(239, 68, 68, 0.3);
   }
-  
+
   .dashboard-section.releases-section:hover {
     border-color: rgba(239, 68, 68, 0.5);
   }
-  
+
+  .dashboard-section.vinyl-section {
+    border-color: rgba(249, 115, 22, 0.3);
+  }
+
+  .dashboard-section.vinyl-section:hover {
+    border-color: rgba(249, 115, 22, 0.5);
+  }
+
+  /* Vinyl Cards Grid - 2x2 Layout */
+  .cards-grid.vinyl-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .action-card.vinyl-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.25rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .action-card.vinyl-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(249, 115, 22, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .action-card.vinyl-card .card-icon-wrap {
+    flex-shrink: 0;
+  }
+
+  .action-card.vinyl-card .card-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(234, 88, 12, 0.2));
+    border: 1px solid rgba(249, 115, 22, 0.3);
+    border-radius: 12px;
+    font-size: 1.5rem;
+  }
+
+  .action-card.vinyl-card.primary-orange {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(234, 88, 12, 0.1));
+    border-color: rgba(249, 115, 22, 0.5);
+  }
+
+  .action-card.vinyl-card.primary-orange:hover {
+    border-color: #f97316;
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.25), rgba(234, 88, 12, 0.15));
+  }
+
+  .action-card.vinyl-card .card-body h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.125rem;
+  }
+
+  .action-card.vinyl-card .card-body p {
+    font-size: 0.8rem;
+    color: #6b7280;
+  }
+
+  .action-card.vinyl-card .card-arrow {
+    font-size: 1.25rem;
+    color: #4b5563;
+  }
+
+  .action-card.vinyl-card:hover .card-arrow {
+    color: #f97316;
+  }
+
+  @media (max-width: 640px) {
+    .cards-grid.vinyl-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
   .section-desc { color: #9ca3af; font-size: 1.0625rem; margin-left: 2.5rem; }
   
   /* Stats Row */
@@ -1029,7 +1246,7 @@ export const prerender = false;
         console.log('[Partner Dashboard Client] Profile:', profile);
         
         // If they have any partner role, set the cookie and reload
-        if (profile.success && (profile.isPro || profile.roles?.artist || profile.roles?.dj || profile.roles?.merchSupplier)) {
+        if (profile.success && (profile.isPro || profile.roles?.artist || profile.roles?.dj || profile.roles?.merchSupplier || profile.roles?.vinylSeller)) {
           document.cookie = `partnerId=${user.uid}; path=/; max-age=2592000; SameSite=Lax`;
           console.log('[Partner Dashboard Client] Set partnerId cookie, reloading...');
           window.location.reload();

@@ -1,0 +1,604 @@
+---
+// src/pages/artist/vinyl/orders.astro
+// Vinyl seller's orders management page
+import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+export const prerender = false;
+---
+
+<ProDashboardLayout title="Vinyl Orders" activeNav="vinyl">
+  <div class="page-header">
+    <div class="header-content">
+      <h1>Vinyl Orders</h1>
+      <p class="subtitle">Manage orders for your vinyl listings</p>
+    </div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-grid">
+    <div class="stat-card warning">
+      <div class="stat-value" id="awaitingCount">0</div>
+      <div class="stat-label">Awaiting Shipment</div>
+    </div>
+    <div class="stat-card info">
+      <div class="stat-value" id="shippedCount">0</div>
+      <div class="stat-label">Shipped</div>
+    </div>
+    <div class="stat-card success">
+      <div class="stat-value" id="deliveredCount">0</div>
+      <div class="stat-label">Delivered</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="totalEarnings">£0</div>
+      <div class="stat-label">Total Earnings</div>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="filter-bar">
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-filter="all">All Orders</button>
+      <button class="filter-tab" data-filter="awaiting">Awaiting Shipment</button>
+      <button class="filter-tab" data-filter="shipped">Shipped</button>
+      <button class="filter-tab" data-filter="delivered">Delivered</button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="loadingState" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading your orders...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div id="emptyState" class="empty-state" style="display:none;">
+    <div class="empty-icon">📦</div>
+    <h3>No orders yet</h3>
+    <p>When someone buys your vinyl, orders will appear here</p>
+  </div>
+
+  <!-- Orders List -->
+  <div id="ordersList" class="orders-list" style="display:none;">
+  </div>
+
+  <!-- Ship Order Modal -->
+  <div id="shipModal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Mark as Shipped</h3>
+        <button class="modal-close" onclick="closeShipModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="carrier">Carrier</label>
+          <select id="carrier">
+            <option value="Royal Mail">Royal Mail</option>
+            <option value="Evri">Evri (Hermes)</option>
+            <option value="DPD">DPD</option>
+            <option value="UPS">UPS</option>
+            <option value="FedEx">FedEx</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="trackingNumber">Tracking Number (Optional)</label>
+          <input type="text" id="trackingNumber" placeholder="e.g. AB123456789GB">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeShipModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmShip()">Mark as Shipped</button>
+      </div>
+    </div>
+  </div>
+</ProDashboardLayout>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  let currentUser = null;
+  let allOrders = [];
+  let currentFilter = 'all';
+  let currentOrderId = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = '/login?redirect=/artist/vinyl/orders';
+      return;
+    }
+    currentUser = user;
+    loadOrders();
+  });
+
+  async function loadOrders() {
+    try {
+      // Query orders where sellerId matches current user
+      const projectId = 'freshwax-store';
+      const apiKey = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+
+      const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery?key=${apiKey}`;
+
+      const response = await fetch(queryUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId: 'vinylOrders' }],
+            where: {
+              fieldFilter: {
+                field: { fieldPath: 'sellerId' },
+                op: 'EQUAL',
+                value: { stringValue: currentUser.uid }
+              }
+            },
+            orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'DESCENDING' }],
+            limit: 100
+          }
+        })
+      });
+
+      const results = await response.json();
+
+      allOrders = results
+        .filter(r => r.document)
+        .map(r => {
+          const doc = r.document;
+          const id = doc.name.split('/').pop();
+          const fields = doc.fields || {};
+
+          const parseValue = (v) => {
+            if (!v) return null;
+            if (v.stringValue !== undefined) return v.stringValue;
+            if (v.integerValue !== undefined) return parseInt(v.integerValue);
+            if (v.doubleValue !== undefined) return v.doubleValue;
+            if (v.booleanValue !== undefined) return v.booleanValue;
+            if (v.timestampValue) return v.timestampValue;
+            if (v.arrayValue) return (v.arrayValue.values || []).map(parseValue);
+            if (v.mapValue) {
+              const obj = {};
+              for (const [k, val] of Object.entries(v.mapValue.fields || {})) {
+                obj[k] = parseValue(val);
+              }
+              return obj;
+            }
+            return null;
+          };
+
+          const order = { id };
+          for (const [key, value] of Object.entries(fields)) {
+            order[key] = parseValue(value);
+          }
+          return order;
+        });
+
+      updateStats();
+      renderOrders();
+
+      document.getElementById('loadingState').style.display = 'none';
+
+      if (allOrders.length === 0) {
+        document.getElementById('emptyState').style.display = 'flex';
+      } else {
+        document.getElementById('ordersList').style.display = 'block';
+      }
+
+    } catch (error) {
+      console.error('Error loading orders:', error);
+      document.getElementById('loadingState').innerHTML = `
+        <div class="empty-icon">❌</div>
+        <h3>Error loading orders</h3>
+        <p>${error.message}</p>
+      `;
+    }
+  }
+
+  function updateStats() {
+    const awaiting = allOrders.filter(o => o.status === 'paid');
+    const shipped = allOrders.filter(o => o.status === 'shipped');
+    const delivered = allOrders.filter(o => o.status === 'delivered');
+    const earnings = allOrders
+      .filter(o => ['paid', 'shipped', 'delivered'].includes(o.status))
+      .reduce((sum, o) => sum + (o.sellerPayout || 0), 0);
+
+    document.getElementById('awaitingCount').textContent = awaiting.length;
+    document.getElementById('shippedCount').textContent = shipped.length;
+    document.getElementById('deliveredCount').textContent = delivered.length;
+    document.getElementById('totalEarnings').textContent = '£' + earnings.toFixed(2);
+  }
+
+  function renderOrders() {
+    let filtered = allOrders.filter(o => {
+      switch (currentFilter) {
+        case 'awaiting': return o.status === 'paid';
+        case 'shipped': return o.status === 'shipped';
+        case 'delivered': return o.status === 'delivered';
+        default: return true;
+      }
+    });
+
+    const list = document.getElementById('ordersList');
+    const emptyState = document.getElementById('emptyState');
+
+    if (filtered.length === 0) {
+      list.style.display = 'none';
+      emptyState.style.display = 'flex';
+      return;
+    }
+
+    emptyState.style.display = 'none';
+    list.style.display = 'block';
+
+    list.innerHTML = filtered.map(o => {
+      const statusClass = getStatusClass(o.status);
+      const statusLabel = getStatusLabel(o.status);
+      const date = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Unknown';
+
+      const items = (o.items || []).map(item =>
+        `<div class="item-row">
+          <span class="item-title">${item.artist || ''} - ${item.title || ''}</span>
+          <span class="item-price">£${(item.price || 0).toFixed(2)}</span>
+        </div>`
+      ).join('');
+
+      const address = o.shippingAddress ? `
+        <div class="address">
+          <strong>Ship to:</strong><br>
+          ${o.shippingAddress.name || ''}<br>
+          ${o.shippingAddress.line1 || ''}<br>
+          ${o.shippingAddress.line2 ? o.shippingAddress.line2 + '<br>' : ''}
+          ${o.shippingAddress.city || ''}, ${o.shippingAddress.postcode || ''}<br>
+          ${o.shippingAddress.country || 'United Kingdom'}
+        </div>
+      ` : '';
+
+      return `
+        <div class="order-card">
+          <div class="order-header">
+            <div class="order-id">
+              <span class="label">Order</span>
+              <code>${o.id.substring(0, 12)}...</code>
+            </div>
+            <div class="order-date">${date}</div>
+            <span class="status-badge ${statusClass}">${statusLabel}</span>
+          </div>
+
+          <div class="order-body">
+            <div class="order-items">${items}</div>
+            ${address}
+          </div>
+
+          <div class="order-footer">
+            <div class="order-totals">
+              <span>Your payout: <strong>£${(o.sellerPayout || 0).toFixed(2)}</strong></span>
+            </div>
+            <div class="order-actions">
+              ${o.status === 'paid' ? `
+                <button class="btn btn-primary" onclick="openShipModal('${o.id}')">Mark as Shipped</button>
+              ` : o.status === 'shipped' ? `
+                <span class="shipped-info">
+                  ${o.carrier ? `<span>${o.carrier}</span>` : ''}
+                  ${o.trackingNumber ? `<code>${o.trackingNumber}</code>` : ''}
+                </span>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function getStatusClass(status) {
+    switch (status) {
+      case 'paid': return 'warning';
+      case 'shipped': return 'info';
+      case 'delivered': return 'success';
+      default: return '';
+    }
+  }
+
+  function getStatusLabel(status) {
+    switch (status) {
+      case 'paid': return 'Awaiting Shipment';
+      case 'shipped': return 'Shipped';
+      case 'delivered': return 'Delivered';
+      case 'cancelled': return 'Cancelled';
+      case 'refunded': return 'Refunded';
+      default: return status;
+    }
+  }
+
+  // Filter handlers
+  document.querySelectorAll('.filter-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      renderOrders();
+    });
+  });
+
+  // Ship modal
+  window.openShipModal = function(orderId) {
+    currentOrderId = orderId;
+    document.getElementById('shipModal').style.display = 'flex';
+  };
+
+  window.closeShipModal = function() {
+    currentOrderId = null;
+    document.getElementById('shipModal').style.display = 'none';
+    document.getElementById('carrier').value = 'Royal Mail';
+    document.getElementById('trackingNumber').value = '';
+  };
+
+  window.confirmShip = async function() {
+    if (!currentOrderId) return;
+
+    const carrier = document.getElementById('carrier').value;
+    const trackingNumber = document.getElementById('trackingNumber').value.trim();
+
+    try {
+      const response = await fetch('/api/admin/vinyl/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update-status',
+          orderId: currentOrderId,
+          status: 'shipped',
+          carrier,
+          trackingNumber
+        })
+      });
+
+      // Also update tracking info
+      if (carrier || trackingNumber) {
+        await fetch('/api/admin/vinyl/order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'add-tracking',
+            orderId: currentOrderId,
+            carrier,
+            trackingNumber
+          })
+        });
+      }
+
+      closeShipModal();
+      loadOrders();
+
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+</script>
+
+<style>
+  .page-header { margin-bottom: 2rem; }
+  .page-header h1 { margin: 0; font-size: 1.75rem; }
+  .subtitle { color: #666; margin: 0.25rem 0 0; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .stat-card.success { border-color: #16a34a; }
+  .stat-card.warning { border-color: #d97706; }
+  .stat-card.info { border-color: #0284c7; }
+
+  .stat-value { font-size: 1.75rem; font-weight: 800; }
+  .stat-card.success .stat-value { color: #16a34a; }
+  .stat-card.warning .stat-value { color: #d97706; }
+  .stat-card.info .stat-value { color: #0284c7; }
+  .stat-label { font-size: 0.8rem; color: #666; margin-top: 0.25rem; }
+
+  .filter-bar { margin-bottom: 1.5rem; }
+  .filter-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+  .filter-tab {
+    padding: 0.5rem 1rem;
+    background: #f5f5f5;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  .filter-tab.active { background: #000; color: #fff; }
+
+  .loading-state, .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e5e5;
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 1rem;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+  .empty-state h3 { margin: 0 0 0.5rem; }
+  .empty-state p { color: #666; margin: 0; }
+
+  .orders-list { display: flex; flex-direction: column; gap: 1rem; }
+
+  .order-card {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    overflow: hidden;
+  }
+
+  .order-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #fafafa;
+    border-bottom: 1px solid #e5e5e5;
+    flex-wrap: wrap;
+  }
+
+  .order-id { flex: 1; }
+  .order-id .label { font-size: 0.8rem; color: #666; display: block; }
+  .order-id code { font-size: 0.9rem; }
+
+  .order-date { font-size: 0.9rem; color: #666; }
+
+  .status-badge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: #000;
+    color: #fff;
+  }
+
+  .status-badge.success { background: #16a34a; }
+  .status-badge.warning { background: #d97706; }
+  .status-badge.info { background: #0284c7; }
+
+  .order-body {
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .order-items { display: flex; flex-direction: column; gap: 0.5rem; }
+
+  .item-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .item-title { font-weight: 500; }
+  .item-price { color: #666; }
+
+  .address {
+    font-size: 0.9rem;
+    color: #666;
+    line-height: 1.5;
+  }
+
+  .address strong { color: #333; }
+
+  .order-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #fafafa;
+    border-top: 1px solid #e5e5e5;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .shipped-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+  }
+
+  .shipped-info code { background: #f5f5f5; padding: 0.25rem 0.5rem; }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-primary { background: #000; color: #fff; }
+  .btn-primary:hover { background: #333; }
+  .btn-secondary { background: #f5f5f5; color: #333; }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal {
+    background: #fff;
+    width: 90%;
+    max-width: 400px;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .modal-header h3 { margin: 0; }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+  }
+
+  .modal-body { padding: 1rem; }
+
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    font-size: 1rem;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-top: 1px solid #e5e5e5;
+  }
+
+  @media (max-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .order-body { grid-template-columns: 1fr; }
+  }
+</style>

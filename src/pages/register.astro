@@ -99,6 +99,14 @@ const firebaseConfig = {
               <span class="role-desc">Sell merchandise through Fresh Wax. Requires admin approval.</span>
             </div>
           </label>
+
+          <label class="role-option">
+            <input type="checkbox" name="requestVinylSeller" id="requestVinylSeller">
+            <div class="role-content">
+              <span class="role-title">Vinyl Seller</span>
+              <span class="role-desc">Sell vinyl records through the Crates marketplace. Requires admin approval.</span>
+            </div>
+          </label>
         </div>
 
         <div id="artistDetails" class="conditional-fields" style="display: none;">
@@ -128,6 +136,25 @@ const firebaseConfig = {
           <div class="form-group">
             <label for="merchWebsite">Website (optional)</label>
             <input type="text" id="merchWebsite" name="merchWebsite" placeholder="https://yourwebsite.com">
+          </div>
+        </div>
+
+        <div id="vinylDetails" class="conditional-fields" style="display: none;">
+          <div class="form-group">
+            <label for="vinylStoreName">Store / Seller Name</label>
+            <input type="text" id="vinylStoreName" name="vinylStoreName" placeholder="Your store or seller name">
+          </div>
+          <div class="form-group">
+            <label for="vinylDescription">Tell us about your collection</label>
+            <textarea id="vinylDescription" name="vinylDescription" rows="3" placeholder="What kind of vinyl do you sell? Genres, era, condition, quantity..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="vinylLocation">Location (City/Region)</label>
+            <input type="text" id="vinylLocation" name="vinylLocation" placeholder="e.g. London, Manchester, Bristol">
+          </div>
+          <div class="form-group">
+            <label for="vinylDiscogsUrl">Discogs Profile (optional)</label>
+            <input type="text" id="vinylDiscogsUrl" name="vinylDiscogsUrl" placeholder="https://discogs.com/user/yourname">
           </div>
         </div>
 
@@ -518,8 +545,10 @@ const firebaseConfig = {
     // Toggle conditional fields
     const artistCheckbox = document.getElementById('requestArtist');
     const merchCheckbox = document.getElementById('requestMerchSeller');
+    const vinylCheckbox = document.getElementById('requestVinylSeller');
     const artistDetails = document.getElementById('artistDetails');
     const merchDetails = document.getElementById('merchDetails');
+    const vinylDetails = document.getElementById('vinylDetails');
 
     artistCheckbox.addEventListener('change', () => {
       artistDetails.style.display = artistCheckbox.checked ? 'block' : 'none';
@@ -527,6 +556,10 @@ const firebaseConfig = {
 
     merchCheckbox.addEventListener('change', () => {
       merchDetails.style.display = merchCheckbox.checked ? 'block' : 'none';
+    });
+
+    vinylCheckbox.addEventListener('change', () => {
+      vinylDetails.style.display = vinylCheckbox.checked ? 'block' : 'none';
     });
 
     // Form submission
@@ -551,6 +584,7 @@ const firebaseConfig = {
       const confirmPassword = document.getElementById('confirmPassword').value;
       const requestArtist = artistCheckbox.checked;
       const requestMerchSeller = merchCheckbox.checked;
+      const requestVinylSeller = vinylCheckbox.checked;
 
       // Validation
       if (password !== confirmPassword) {
@@ -589,7 +623,8 @@ const firebaseConfig = {
             customer: true,  // Auto-granted
             djEligible: false,  // Must meet requirements
             artist: false,  // Requires approval
-            merchSeller: false  // Requires approval
+            merchSeller: false,  // Requires approval
+            vinylSeller: false  // Requires approval
           },
           pendingRoles: {}
         };
@@ -613,6 +648,18 @@ const firebaseConfig = {
             businessName: document.getElementById('businessName').value.trim(),
             description: document.getElementById('merchDescription').value.trim(),
             website: document.getElementById('merchWebsite').value.trim()
+          };
+        }
+
+        // Add vinyl seller request if selected
+        if (requestVinylSeller) {
+          userData.pendingRoles.vinylSeller = {
+            requestedAt: serverTimestamp(),
+            status: 'pending',
+            storeName: document.getElementById('vinylStoreName').value.trim(),
+            description: document.getElementById('vinylDescription').value.trim(),
+            location: document.getElementById('vinylLocation').value.trim(),
+            discogsUrl: document.getElementById('vinylDiscogsUrl').value.trim()
           };
         }
 
@@ -660,12 +707,30 @@ const firebaseConfig = {
           });
         }
 
+        if (requestVinylSeller) {
+          await setDoc(doc(db, 'pendingRoleRequests', `${user.uid}_vinylSeller`), {
+            id: `${user.uid}_vinylSeller`,
+            uid: user.uid,
+            userId: user.uid,
+            roleType: 'vinylSeller',
+            displayName: displayName,
+            email: user.email,
+            status: 'pending',
+            requestedAt: serverTimestamp(),
+            storeName: document.getElementById('vinylStoreName').value.trim(),
+            description: document.getElementById('vinylDescription').value.trim(),
+            location: document.getElementById('vinylLocation').value.trim(),
+            discogsUrl: document.getElementById('vinylDiscogsUrl').value.trim()
+          });
+        }
+
         // Show success message
         let successMsg = 'Account created successfully!';
-        if (requestArtist || requestMerchSeller) {
+        if (requestArtist || requestMerchSeller || requestVinylSeller) {
           const roles = [];
           if (requestArtist) roles.push('Artist');
           if (requestMerchSeller) roles.push('Merch Seller');
+          if (requestVinylSeller) roles.push('Vinyl Seller');
           successMsg += ` Your ${roles.join(' and ')} request${roles.length > 1 ? 's have' : ' has'} been sent for approval.`;
         }
         formSuccess.textContent = successMsg;

@@ -1,6 +1,6 @@
 ---
 // Request Role Page
-// Users can request Artist or Merch Seller roles
+// Users can request Artist, Merch Seller, or Vinyl Seller roles
 import '../../styles/global.css';
 ---
 <html lang="en">
@@ -14,7 +14,7 @@ import '../../styles/global.css';
     <header class="page-header">
       <a href="/account/dashboard" class="back-link">← Back to Account</a>
       <h1>Request Pro Access</h1>
-      <p>Apply for Artist or Merch Seller roles to access the Pro Dashboard</p>
+      <p>Apply for Artist, Merch Seller, or Vinyl Seller roles to access the Pro Dashboard</p>
     </header>
 
     <main class="page-content" id="pageContent">
@@ -81,6 +81,39 @@ import '../../styles/global.css';
             <div class="form-group">
               <label for="merchWebsite">Website (optional)</label>
               <input type="text" id="merchWebsite" placeholder="https://yourwebsite.com">
+            </div>
+            <button type="submit" class="btn btn-primary">Submit Request</button>
+          </form>
+        </div>
+
+        <!-- Vinyl Seller Request -->
+        <div class="request-card" id="vinylRequestCard">
+          <div class="card-header">
+            <div class="card-icon">📀</div>
+            <div class="card-title">
+              <h3>Vinyl Seller</h3>
+              <p>Sell vinyl records through the Crates marketplace</p>
+            </div>
+          </div>
+
+          <div id="vinylStatus" class="request-status"></div>
+
+          <form id="vinylForm" class="request-form">
+            <div class="form-group">
+              <label for="vinylStoreName">Store / Seller Name *</label>
+              <input type="text" id="vinylStoreName" required placeholder="Your store or seller name">
+            </div>
+            <div class="form-group">
+              <label for="vinylDescription">Tell us about your collection *</label>
+              <textarea id="vinylDescription" required rows="3" placeholder="What kind of vinyl do you sell? Genres, era, condition, quantity..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="vinylLocation">Location (City/Region)</label>
+              <input type="text" id="vinylLocation" placeholder="e.g. London, Manchester, Bristol">
+            </div>
+            <div class="form-group">
+              <label for="vinylDiscogsUrl">Discogs Profile (optional)</label>
+              <input type="text" id="vinylDiscogsUrl" placeholder="https://discogs.com/user/yourname">
             </div>
             <button type="submit" class="btn btn-primary">Submit Request</button>
           </form>
@@ -436,14 +469,22 @@ import '../../styles/global.css';
         } else if (pendingRoles.merchSeller?.status === 'pending') {
           rolesHtml += `<span class="role-badge pending">⏳ Merch Seller (Pending)</span>`;
         }
+        if (roles.vinylSeller) {
+          rolesHtml += `<span class="role-badge active">✓ Vinyl Seller</span>`;
+        } else if (pendingRoles.vinylSeller?.status === 'pending') {
+          rolesHtml += `<span class="role-badge pending">⏳ Vinyl Seller (Pending)</span>`;
+        }
 
         rolesGrid.innerHTML = rolesHtml;
 
         // Update Artist form/status
         updateArtistSection(roles, pendingRoles);
-        
+
         // Update Merch form/status
         updateMerchSection(roles, pendingRoles);
+
+        // Update Vinyl Seller form/status
+        updateVinylSection(roles, pendingRoles);
 
         // Load DJ eligibility
         await loadDJEligibility(uid, roles, pendingRoles);
@@ -492,6 +533,26 @@ import '../../styles/global.css';
         merchStatus.textContent = `✗ Request denied: ${pendingRoles.merchSeller.denialReason || 'No reason provided'}`;
       } else {
         merchStatus.style.display = 'none';
+      }
+    }
+
+    function updateVinylSection(roles, pendingRoles) {
+      const vinylForm = document.getElementById('vinylForm');
+      const vinylStatus = document.getElementById('vinylStatus');
+
+      if (roles.vinylSeller) {
+        vinylForm.style.display = 'none';
+        vinylStatus.className = 'request-status approved';
+        vinylStatus.innerHTML = '✓ You have Vinyl Seller access. <a href="/pro">Go to Pro Dashboard</a>';
+      } else if (pendingRoles.vinylSeller?.status === 'pending') {
+        vinylForm.style.display = 'none';
+        vinylStatus.className = 'request-status pending';
+        vinylStatus.textContent = '⏳ Your request is pending review';
+      } else if (pendingRoles.vinylSeller?.status === 'denied') {
+        vinylStatus.className = 'request-status denied';
+        vinylStatus.textContent = `✗ Request denied: ${pendingRoles.vinylSeller.denialReason || 'No reason provided'}`;
+      } else {
+        vinylStatus.style.display = 'none';
       }
     }
 
@@ -595,6 +656,42 @@ import '../../styles/global.css';
             businessName: document.getElementById('businessName').value,
             description: document.getElementById('merchDescription').value,
             website: document.getElementById('merchWebsite').value
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          alert('Request submitted! We\'ll review it shortly.');
+          location.reload();
+        } else {
+          alert(data.error || 'Error submitting request');
+        }
+      } catch (error) {
+        alert('Error submitting request');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Submit Request';
+    });
+
+    document.getElementById('vinylForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      try {
+        const response = await fetch('/api/roles/manage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'requestRole',
+            uid: currentUser.uid,
+            roleType: 'vinylSeller',
+            storeName: document.getElementById('vinylStoreName').value,
+            description: document.getElementById('vinylDescription').value,
+            location: document.getElementById('vinylLocation').value,
+            discogsUrl: document.getElementById('vinylDiscogsUrl').value
           })
         });
 

@@ -1,0 +1,743 @@
+---
+// Admin Vinyl Listings Management
+// View and manage all vinyl listings
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { queryCollection } from '../../../lib/firebase-rest';
+
+// Fetch all vinyl listings
+let vinylListings: any[] = [];
+let vinylSellers: any[] = [];
+
+try {
+  const results = await Promise.allSettled([
+    queryCollection('vinylListings', { limit: 500 }),
+    queryCollection('vinylSellers', { limit: 100 })
+  ]);
+
+  vinylListings = results[0].status === 'fulfilled' ? results[0].value : [];
+  vinylSellers = results[1].status === 'fulfilled' ? results[1].value : [];
+} catch (error) {
+  console.error('[Admin Vinyl Listings] Error fetching data:', error);
+}
+
+// Sort by created date descending
+vinylListings.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+// Create seller lookup
+const sellerMap = new Map(vinylSellers.map(s => [s.id, s]));
+
+// Stats
+const publishedCount = vinylListings.filter(l => l.status === 'published').length;
+const pendingCount = vinylListings.filter(l => l.status === 'pending').length;
+const soldCount = vinylListings.filter(l => l.status === 'sold').length;
+const draftCount = vinylListings.filter(l => l.status === 'draft').length;
+
+// Format helpers
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+};
+
+const formatDate = (date: any) => {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
+export const prerender = false;
+---
+
+<AdminLayout title="Vinyl Listings" activeNav="vinyl">
+  <Fragment slot="breadcrumb">
+    <div class="header-breadcrumb">
+      <a href="/admin">Admin</a>
+      <span class="breadcrumb-sep">/</span>
+      <a href="/admin/vinyl">Vinyl</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>Listings</span>
+    </div>
+  </Fragment>
+
+  <Fragment slot="actions">
+    <button class="btn btn-ghost" onclick="window.location.reload()">
+      <span>↻</span> Refresh
+    </button>
+  </Fragment>
+
+  <!-- Stats -->
+  <div class="stats-grid cols-4 mb-4">
+    <div class="stat-card success">
+      <div class="stat-label">Published</div>
+      <div class="stat-value">{publishedCount}</div>
+    </div>
+    <div class="stat-card warning">
+      <div class="stat-label">Pending</div>
+      <div class="stat-value">{pendingCount}</div>
+    </div>
+    <div class="stat-card info">
+      <div class="stat-label">Sold</div>
+      <div class="stat-value">{soldCount}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Draft</div>
+      <div class="stat-value">{draftCount}</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="filters-row">
+        <div class="filter-group">
+          <label>Status</label>
+          <select id="filterStatus" class="filter-select">
+            <option value="">All</option>
+            <option value="published">Published</option>
+            <option value="pending">Pending</option>
+            <option value="sold">Sold</option>
+            <option value="draft">Draft</option>
+            <option value="removed">Removed</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Seller</label>
+          <select id="filterSeller" class="filter-select">
+            <option value="">All Sellers</option>
+            {vinylSellers.map(seller => (
+              <option value={seller.id}>{seller.storeName || seller.email}</option>
+            ))}
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Search</label>
+          <input type="text" id="filterSearch" class="filter-input" placeholder="Artist, title, label..." />
+        </div>
+        <button id="clearFilters" class="btn btn-ghost">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Listings Table -->
+  <div class="card">
+    <div class="card-header">
+      <h2>📦 All Vinyl Listings</h2>
+      <span class="badge">{vinylListings.length} total</span>
+    </div>
+    {vinylListings.length === 0 ? (
+      <div class="card-body">
+        <div class="empty-state">
+          <div class="empty-state-icon">💿</div>
+          <div class="empty-state-title">No listings yet</div>
+          <p class="empty-state-text">Vinyl listings will appear here.</p>
+        </div>
+      </div>
+    ) : (
+      <div class="table-wrapper">
+        <table class="data-table" id="listingsTable">
+          <thead>
+            <tr>
+              <th>Record</th>
+              <th>Seller</th>
+              <th>Price</th>
+              <th>Condition</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {vinylListings.map(listing => {
+              const seller = sellerMap.get(listing.sellerId);
+              return (
+                <tr
+                  data-listing-id={listing.id}
+                  data-status={listing.status}
+                  data-seller={listing.sellerId}
+                  data-search={`${listing.artist} ${listing.title} ${listing.label || ''} ${listing.catalogNumber || ''}`.toLowerCase()}
+                >
+                  <td>
+                    <div class="listing-info">
+                      {listing.images?.[0] && (
+                        <img src={listing.images[0]} alt="" class="listing-thumb" />
+                      )}
+                      <div class="listing-details">
+                        <span class="listing-title">{listing.artist} - {listing.title}</span>
+                        <span class="listing-meta">{listing.label || '-'} {listing.catalogNumber && `(${listing.catalogNumber})`}</span>
+                        <span class="listing-meta">{listing.format || '-'} {listing.releaseYear && `• ${listing.releaseYear}`}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="seller-link">
+                      <span>{seller?.storeName || listing.sellerName || 'Unknown'}</span>
+                    </div>
+                  </td>
+                  <td class="font-bold">{formatCurrency(listing.price)}</td>
+                  <td>
+                    <div class="condition-badges">
+                      <span class="condition-badge" title="Media">M: {listing.mediaCondition || '-'}</span>
+                      {listing.sleeveCondition && (
+                        <span class="condition-badge" title="Sleeve">S: {listing.sleeveCondition}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td>
+                    <span class={`badge badge-${listing.status === 'published' ? 'success' : listing.status === 'sold' ? 'info' : listing.status === 'pending' ? 'warning' : 'secondary'}`}>
+                      {listing.status || 'draft'}
+                    </span>
+                  </td>
+                  <td class="cell-secondary">{formatDate(listing.createdAt)}</td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="btn btn-ghost btn-sm edit-listing-btn" data-listing-id={listing.id} title="Edit">
+                        ✏️
+                      </button>
+                      {listing.status === 'pending' && (
+                        <button class="btn btn-ghost btn-sm approve-listing-btn" data-listing-id={listing.id} title="Approve">
+                          ✓
+                        </button>
+                      )}
+                      {listing.status === 'published' && (
+                        <button class="btn btn-ghost btn-sm remove-listing-btn" data-listing-id={listing.id} title="Remove">
+                          🚫
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+
+  <!-- Edit Listing Modal -->
+  <div id="editListingModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3>Edit Vinyl Listing</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="editListingForm">
+        <input type="hidden" id="editListingId" name="listingId" />
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editArtist">Artist *</label>
+            <input type="text" id="editArtist" name="artist" required />
+          </div>
+          <div class="form-group">
+            <label for="editTitle">Title *</label>
+            <input type="text" id="editTitle" name="title" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editLabel">Label</label>
+            <input type="text" id="editLabel" name="label" />
+          </div>
+          <div class="form-group">
+            <label for="editCatalogNumber">Catalogue Number</label>
+            <input type="text" id="editCatalogNumber" name="catalogNumber" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editFormat">Format</label>
+            <select id="editFormat" name="format">
+              <option value="">Select...</option>
+              <option value="LP">LP (12" Album)</option>
+              <option value="EP">EP</option>
+              <option value="12">12" Single</option>
+              <option value="10">10"</option>
+              <option value="7">7" Single</option>
+              <option value="2xLP">2xLP</option>
+              <option value="3xLP">3xLP</option>
+              <option value="Box Set">Box Set</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="editReleaseYear">Release Year</label>
+            <input type="text" id="editReleaseYear" name="releaseYear" placeholder="e.g. 1995" />
+          </div>
+          <div class="form-group">
+            <label for="editGenre">Genre</label>
+            <input type="text" id="editGenre" name="genre" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editMediaCondition">Media Condition *</label>
+            <select id="editMediaCondition" name="mediaCondition" required>
+              <option value="">Select...</option>
+              <option value="M">M - Mint</option>
+              <option value="NM">NM - Near Mint</option>
+              <option value="VG+">VG+ - Very Good Plus</option>
+              <option value="VG">VG - Very Good</option>
+              <option value="G+">G+ - Good Plus</option>
+              <option value="G">G - Good</option>
+              <option value="F">F - Fair</option>
+              <option value="P">P - Poor</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="editSleeveCondition">Sleeve Condition</label>
+            <select id="editSleeveCondition" name="sleeveCondition">
+              <option value="">Select...</option>
+              <option value="M">M - Mint</option>
+              <option value="NM">NM - Near Mint</option>
+              <option value="VG+">VG+ - Very Good Plus</option>
+              <option value="VG">VG - Very Good</option>
+              <option value="G+">G+ - Good Plus</option>
+              <option value="G">G - Good</option>
+              <option value="F">F - Fair</option>
+              <option value="P">P - Poor</option>
+              <option value="Generic">Generic</option>
+              <option value="None">No Sleeve</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="editConditionNotes">Condition Notes</label>
+          <textarea id="editConditionNotes" name="conditionNotes" rows="2" placeholder="Describe any wear, marks, etc."></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editPrice">Price (GBP) *</label>
+            <input type="number" id="editPrice" name="price" step="0.01" min="0" required />
+          </div>
+          <div class="form-group">
+            <label for="editShippingCost">Shipping Cost</label>
+            <input type="number" id="editShippingCost" name="shippingCost" step="0.01" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="editStatus">Status</label>
+            <select id="editStatus" name="status">
+              <option value="draft">Draft</option>
+              <option value="pending">Pending Review</option>
+              <option value="published">Published</option>
+              <option value="sold">Sold</option>
+              <option value="removed">Removed</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="editDescription">Description</label>
+          <textarea id="editDescription" name="description" rows="3"></textarea>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label>
+            <input type="checkbox" id="editFeatured" name="featured" />
+            Featured Listing
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</AdminLayout>
+
+<style>
+  .filters-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .filter-group label {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+  }
+
+  .filter-select, .filter-input {
+    padding: 0.5rem 0.75rem;
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.875rem;
+    min-width: 150px;
+  }
+
+  .filter-select:focus, .filter-input:focus {
+    outline: none;
+    border-color: #f97316;
+  }
+
+  .listing-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .listing-thumb {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    background: #374151;
+  }
+
+  .listing-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .listing-title {
+    font-weight: 500;
+    color: #fff;
+  }
+
+  .listing-meta {
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .condition-badges {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .condition-badge {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    background: #374151;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  /* Modal Styles */
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal.hidden { display: none; }
+
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .modal-content {
+    position: relative;
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-content.modal-large {
+    max-width: 700px;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .modal-header h3 { margin: 0; font-size: 1.25rem; }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .modal-close:hover { color: #fff; }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.875rem;
+    color: #9ca3af;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.875rem;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: #f97316;
+  }
+
+  .checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+
+  .checkbox-group input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #f97316;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #374151;
+  }
+</style>
+
+<script>
+  // Filter functionality
+  const filterStatus = document.getElementById('filterStatus') as HTMLSelectElement;
+  const filterSeller = document.getElementById('filterSeller') as HTMLSelectElement;
+  const filterSearch = document.getElementById('filterSearch') as HTMLInputElement;
+  const clearFilters = document.getElementById('clearFilters');
+  const table = document.getElementById('listingsTable');
+
+  function applyFilters() {
+    const status = filterStatus?.value || '';
+    const seller = filterSeller?.value || '';
+    const search = filterSearch?.value.toLowerCase() || '';
+
+    table?.querySelectorAll('tbody tr').forEach(row => {
+      const rowStatus = row.getAttribute('data-status') || '';
+      const rowSeller = row.getAttribute('data-seller') || '';
+      const rowSearch = row.getAttribute('data-search') || '';
+
+      const matchStatus = !status || rowStatus === status;
+      const matchSeller = !seller || rowSeller === seller;
+      const matchSearch = !search || rowSearch.includes(search);
+
+      (row as HTMLElement).style.display = matchStatus && matchSeller && matchSearch ? '' : 'none';
+    });
+  }
+
+  filterStatus?.addEventListener('change', applyFilters);
+  filterSeller?.addEventListener('change', applyFilters);
+  filterSearch?.addEventListener('input', applyFilters);
+
+  clearFilters?.addEventListener('click', () => {
+    if (filterStatus) filterStatus.value = '';
+    if (filterSeller) filterSeller.value = '';
+    if (filterSearch) filterSearch.value = '';
+    applyFilters();
+  });
+
+  // Modal functions
+  function openModal() {
+    document.getElementById('editListingModal')?.classList.remove('hidden');
+  }
+
+  function closeModal() {
+    document.getElementById('editListingModal')?.classList.add('hidden');
+  }
+
+  window.openModal = openModal;
+  window.closeModal = closeModal;
+
+  // Edit listing
+  document.querySelectorAll('.edit-listing-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const listingId = btn.getAttribute('data-listing-id');
+      if (!listingId) return;
+
+      try {
+        const response = await fetch(`/api/admin/vinyl/listing?id=${listingId}`);
+        const data = await response.json();
+
+        if (data.success && data.listing) {
+          const l = data.listing;
+          (document.getElementById('editListingId') as HTMLInputElement).value = l.id;
+          (document.getElementById('editArtist') as HTMLInputElement).value = l.artist || '';
+          (document.getElementById('editTitle') as HTMLInputElement).value = l.title || '';
+          (document.getElementById('editLabel') as HTMLInputElement).value = l.label || '';
+          (document.getElementById('editCatalogNumber') as HTMLInputElement).value = l.catalogNumber || '';
+          (document.getElementById('editFormat') as HTMLSelectElement).value = l.format || '';
+          (document.getElementById('editReleaseYear') as HTMLInputElement).value = l.releaseYear || '';
+          (document.getElementById('editGenre') as HTMLInputElement).value = l.genre || '';
+          (document.getElementById('editMediaCondition') as HTMLSelectElement).value = l.mediaCondition || '';
+          (document.getElementById('editSleeveCondition') as HTMLSelectElement).value = l.sleeveCondition || '';
+          (document.getElementById('editConditionNotes') as HTMLTextAreaElement).value = l.conditionNotes || '';
+          (document.getElementById('editPrice') as HTMLInputElement).value = l.price?.toString() || '';
+          (document.getElementById('editShippingCost') as HTMLInputElement).value = l.shippingCost?.toString() || '';
+          (document.getElementById('editStatus') as HTMLSelectElement).value = l.status || 'draft';
+          (document.getElementById('editDescription') as HTMLTextAreaElement).value = l.description || '';
+          (document.getElementById('editFeatured') as HTMLInputElement).checked = l.featured || false;
+
+          openModal();
+        } else {
+          alert('Failed to load listing');
+        }
+      } catch (error) {
+        alert('Error loading listing');
+      }
+    });
+  });
+
+  // Save listing
+  document.getElementById('editListingForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const listingId = formData.get('listingId');
+
+    try {
+      const response = await fetch('/api/admin/vinyl/listing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update',
+          listingId,
+          artist: formData.get('artist'),
+          title: formData.get('title'),
+          label: formData.get('label'),
+          catalogNumber: formData.get('catalogNumber'),
+          format: formData.get('format'),
+          releaseYear: formData.get('releaseYear'),
+          genre: formData.get('genre'),
+          mediaCondition: formData.get('mediaCondition'),
+          sleeveCondition: formData.get('sleeveCondition'),
+          conditionNotes: formData.get('conditionNotes'),
+          price: parseFloat(formData.get('price') as string) || 0,
+          shippingCost: parseFloat(formData.get('shippingCost') as string) || 0,
+          status: formData.get('status'),
+          description: formData.get('description'),
+          featured: formData.get('featured') === 'on'
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        closeModal();
+        window.location.reload();
+      } else {
+        alert('Failed to save: ' + result.error);
+      }
+    } catch (error) {
+      alert('Error saving listing');
+    }
+  });
+
+  // Approve listing
+  document.querySelectorAll('.approve-listing-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Approve this listing?')) return;
+
+      const listingId = btn.getAttribute('data-listing-id');
+
+      try {
+        const response = await fetch('/api/admin/vinyl/listing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'approve', listingId })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          window.location.reload();
+        } else {
+          alert('Failed: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error approving listing');
+      }
+    });
+  });
+
+  // Remove listing
+  document.querySelectorAll('.remove-listing-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const reason = prompt('Reason for removing this listing:');
+      if (reason === null) return;
+
+      const listingId = btn.getAttribute('data-listing-id');
+
+      try {
+        const response = await fetch('/api/admin/vinyl/listing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'remove', listingId, reason })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          window.location.reload();
+        } else {
+          alert('Failed: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error removing listing');
+      }
+    });
+  });
+</script>

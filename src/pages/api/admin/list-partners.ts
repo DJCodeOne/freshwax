@@ -75,16 +75,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
       limit: 500
     });
 
-    // Process users - only include those with artist or merch roles
+    // Process users - only include those with artist, merch, or vinyl seller roles
     for (const user of users) {
       if (user.deleted === true) continue;
 
       const roles = user.roles || {};
       const isArtist = roles.artist === true;
       const isMerchSupplier = roles.merchSupplier === true || roles.merchSeller === true;
+      const isVinylSeller = roles.vinylSeller === true;
 
-      // Only include if they have artist or merch role
-      if (!isArtist && !isMerchSupplier) continue;
+      // Only include if they have artist, merch, or vinyl seller role
+      if (!isArtist && !isMerchSupplier && !isVinylSeller) continue;
 
       partners.push({
         id: user.id,
@@ -98,10 +99,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
         isArtist: isArtist,
         isDJ: roles.dj !== false,
         isMerchSupplier: isMerchSupplier,
+        isVinylSeller: isVinylSeller,
         isApproved: user.approved === true ||
                     user.partnerInfo?.approved === true ||
                     user.pendingRoles?.artist?.status === 'approved' ||
-                    user.pendingRoles?.merchSeller?.status === 'approved',
+                    user.pendingRoles?.merchSeller?.status === 'approved' ||
+                    user.pendingRoles?.vinylSeller?.status === 'approved',
         isDisabled: user.disabled === true || user.suspended === true,
         canBuy: user.permissions?.canBuy ?? true,
         canComment: user.permissions?.canComment ?? true,
@@ -121,6 +124,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         total: partners.length,
         artists: partners.filter(p => p.isArtist).length,
         merch: partners.filter(p => p.isMerchSupplier).length,
+        vinyl: partners.filter(p => p.isVinylSeller).length,
         pending: partners.filter(p => !p.isApproved).length,
         approved: partners.filter(p => p.isApproved).length
       }

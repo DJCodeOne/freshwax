@@ -41,6 +41,8 @@ export interface UserRoles {
   dj?: boolean;
   artist?: boolean;
   merchSupplier?: boolean;
+  merchSeller?: boolean;
+  vinylSeller?: boolean;
 }
 
 export interface PendingRole {
@@ -466,6 +468,95 @@ export interface PendingRoleRequest extends Timestamps {
   reviewedBy?: string;
   reviewedAt?: string;
   reviewNotes?: string;
+}
+
+// ============================================
+// VINYL CRATES MARKETPLACE
+// ============================================
+
+export type VinylCondition = 'M' | 'NM' | 'VG+' | 'VG' | 'G+' | 'G' | 'F' | 'P';
+export type VinylListingStatus = 'draft' | 'pending' | 'published' | 'sold' | 'removed';
+
+export interface VinylListing extends Timestamps {
+  id: string;
+  sellerId: string;
+  sellerName: string;
+  sellerStoreName?: string;
+
+  // Record details
+  artist: string;
+  title: string;
+  label?: string;
+  catalogNumber?: string;
+  releaseYear?: string;
+  genre?: string;
+  format?: string; // LP, EP, 12", 7", etc.
+
+  // Condition
+  mediaCondition: VinylCondition;
+  sleeveCondition?: VinylCondition;
+  conditionNotes?: string;
+
+  // Pricing & shipping
+  price: number;
+  shippingCost?: number;
+  shipsFrom?: string;
+
+  // Media
+  images: string[];
+  audioSampleUrl?: string;
+
+  // Description
+  description?: string;
+
+  // Status
+  status: VinylListingStatus;
+  featured?: boolean;
+
+  // Stats
+  views?: number;
+  saves?: number;
+}
+
+export interface VinylSeller extends Timestamps {
+  id: string;
+  userId: string;
+  storeName: string;
+  description?: string;
+  location?: string;
+  discogsUrl?: string;
+
+  // Status
+  approved: boolean;
+  suspended?: boolean;
+
+  // Stats
+  totalSales?: number;
+  activeListings?: number;
+  ratings?: SellerRatings;
+}
+
+export interface SellerRatings {
+  average: number;
+  count: number;
+  breakdown: {
+    communication: number;
+    accuracy: number;
+    shipping: number;
+  };
+}
+
+export interface SellerReview extends Timestamps {
+  id: string;
+  sellerId: string;
+  buyerId: string;
+  buyerName: string;
+  orderId: string;
+  rating: number;
+  communicationRating?: number;
+  accuracyRating?: number;
+  shippingRating?: number;
+  review?: string;
 }
 
 // ============================================

@@ -1,0 +1,695 @@
+---
+// Admin Vinyl Sellers Management
+// Manage vinyl sellers, listings, orders, and reviews
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { queryCollection, getDocument } from '../../../lib/firebase-rest';
+
+// Fetch vinyl data
+let vinylSellers: any[] = [];
+let vinylListings: any[] = [];
+let vinylOrders: any[] = [];
+let pendingSellerRequests: any[] = [];
+
+try {
+  const results = await Promise.allSettled([
+    queryCollection('vinylSellers', { limit: 100 }),
+    queryCollection('vinylListings', { limit: 200 }),
+    queryCollection('orders', {
+      filters: [{ field: 'hasVinylItems', op: 'EQUAL', value: true }],
+      limit: 100
+    }),
+    queryCollection('pendingRoleRequests', {
+      filters: [{ field: 'roleType', op: 'EQUAL', value: 'vinylSeller' }]
+    })
+  ]);
+
+  vinylSellers = results[0].status === 'fulfilled' ? results[0].value : [];
+  vinylListings = results[1].status === 'fulfilled' ? results[1].value : [];
+  vinylOrders = results[2].status === 'fulfilled' ? results[2].value : [];
+  pendingSellerRequests = results[3].status === 'fulfilled'
+    ? results[3].value.filter((r: any) => r.status === 'pending')
+    : [];
+} catch (error) {
+  console.error('[Admin Vinyl] Error fetching data:', error);
+}
+
+// Calculate stats
+const approvedSellers = vinylSellers.filter(s => s.approved === true);
+const suspendedSellers = vinylSellers.filter(s => s.suspended === true);
+const activeListings = vinylListings.filter(l => l.status === 'published');
+const soldListings = vinylListings.filter(l => l.status === 'sold');
+const pendingListings = vinylListings.filter(l => l.status === 'pending');
+
+// Calculate revenue from vinyl orders
+const totalVinylRevenue = vinylOrders.reduce((sum, order) => {
+  const vinylItems = (order.items || []).filter((item: any) => item.type === 'vinyl');
+  return sum + vinylItems.reduce((itemSum: number, item: any) => itemSum + (item.price || 0) * (item.quantity || 1), 0);
+}, 0);
+
+// Recent activity
+const recentSellers = [...vinylSellers]
+  .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+  .slice(0, 10);
+
+const recentListings = [...vinylListings]
+  .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+  .slice(0, 10);
+
+const recentOrders = [...vinylOrders]
+  .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+  .slice(0, 10);
+
+// Format helpers
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+};
+
+const formatDate = (date: any) => {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
+export const prerender = false;
+---
+
+<AdminLayout title="Vinyl Sellers" activeNav="vinyl">
+  <Fragment slot="breadcrumb">
+    <div class="header-breadcrumb">
+      <a href="/admin">Admin</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>Vinyl Sellers</span>
+    </div>
+  </Fragment>
+
+  <Fragment slot="actions">
+    <button class="btn btn-ghost" onclick="window.location.reload()">
+      <span>↻</span> Refresh
+    </button>
+  </Fragment>
+
+  <!-- Alerts -->
+  {pendingSellerRequests.length > 0 && (
+    <div class="alerts-section mb-4">
+      <a href="/admin/role-approvals" class="alert-item alert-warning">
+        <span class="alert-icon">👤</span>
+        <span class="alert-text">{pendingSellerRequests.length} vinyl seller request{pendingSellerRequests.length !== 1 ? 's' : ''} awaiting approval</span>
+        <span class="alert-arrow">→</span>
+      </a>
+    </div>
+  )}
+
+  <!-- Stats Grid -->
+  <div class="stats-grid cols-6 mb-4">
+    <div class="stat-card highlight">
+      <div class="stat-label">Active Sellers</div>
+      <div class="stat-value">{approvedSellers.length}</div>
+      <div class="stat-detail">{suspendedSellers.length} suspended</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Active Listings</div>
+      <div class="stat-value">{activeListings.length}</div>
+      <div class="stat-detail">{pendingListings.length} pending</div>
+    </div>
+
+    <div class="stat-card success">
+      <div class="stat-label">Sold</div>
+      <div class="stat-value">{soldListings.length}</div>
+      <div class="stat-detail">Records sold</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Total Listings</div>
+      <div class="stat-value">{vinylListings.length}</div>
+      <div class="stat-detail">All time</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Vinyl Orders</div>
+      <div class="stat-value">{vinylOrders.length}</div>
+      <div class="stat-detail">Total orders</div>
+    </div>
+
+    <div class="stat-card success">
+      <div class="stat-label">Revenue</div>
+      <div class="stat-value">{formatCurrency(totalVinylRevenue)}</div>
+      <div class="stat-detail">From vinyl sales</div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="actions-grid mb-4">
+    <a href="/admin/role-approvals" class="action-card" style="position: relative;">
+      <span class="card-icon">✅</span>
+      <span class="card-title">Approve Sellers</span>
+      {pendingSellerRequests.length > 0 && (
+        <span class="card-badge">{pendingSellerRequests.length}</span>
+      )}
+    </a>
+    <a href="/admin/vinyl/listings" class="action-card">
+      <span class="card-icon">📦</span>
+      <span class="card-title">All Listings</span>
+    </a>
+    <a href="/admin/vinyl/orders" class="action-card">
+      <span class="card-icon">📋</span>
+      <span class="card-title">Vinyl Orders</span>
+    </a>
+    <a href="/crates" class="action-card" target="_blank">
+      <span class="card-icon">📀</span>
+      <span class="card-title">View Crates</span>
+    </a>
+  </div>
+
+  <!-- Two Column Layout -->
+  <div class="grid grid-2 gap-2">
+    <!-- Sellers List -->
+    <div class="card">
+      <div class="card-header">
+        <h2>👤 Vinyl Sellers</h2>
+        <span class="badge">{vinylSellers.length} total</span>
+      </div>
+      {vinylSellers.length === 0 ? (
+        <div class="card-body">
+          <div class="empty-state">
+            <div class="empty-state-icon">📀</div>
+            <div class="empty-state-title">No vinyl sellers yet</div>
+            <p class="empty-state-text">Approved vinyl sellers will appear here.</p>
+          </div>
+        </div>
+      ) : (
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Store Name</th>
+                <th>Location</th>
+                <th>Listings</th>
+                <th>Rating</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentSellers.map(seller => {
+                const sellerListings = vinylListings.filter(l => l.sellerId === seller.id);
+                const activeCount = sellerListings.filter(l => l.status === 'published').length;
+                return (
+                  <tr data-seller-id={seller.id}>
+                    <td>
+                      <div class="seller-info">
+                        <span class="seller-name">{seller.storeName || 'Unnamed'}</span>
+                        <span class="seller-email">{seller.email}</span>
+                      </div>
+                    </td>
+                    <td class="cell-secondary">{seller.location || '-'}</td>
+                    <td>{activeCount} / {sellerListings.length}</td>
+                    <td>
+                      {seller.ratings?.average ? (
+                        <span class="rating">
+                          <span class="rating-star">★</span>
+                          {seller.ratings.average.toFixed(1)}
+                          <span class="rating-count">({seller.ratings.count})</span>
+                        </span>
+                      ) : (
+                        <span class="text-muted">No ratings</span>
+                      )}
+                    </td>
+                    <td>
+                      <span class={`badge badge-${seller.suspended ? 'danger' : seller.approved ? 'success' : 'warning'}`}>
+                        {seller.suspended ? 'Suspended' : seller.approved ? 'Active' : 'Pending'}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="action-buttons">
+                        <button class="btn btn-ghost btn-sm edit-seller-btn" data-seller-id={seller.id} title="Edit">
+                          ✏️
+                        </button>
+                        {!seller.suspended ? (
+                          <button class="btn btn-ghost btn-sm suspend-seller-btn" data-seller-id={seller.id} title="Suspend">
+                            🚫
+                          </button>
+                        ) : (
+                          <button class="btn btn-ghost btn-sm unsuspend-seller-btn" data-seller-id={seller.id} title="Unsuspend">
+                            ✓
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+
+    <!-- Recent Listings -->
+    <div class="card">
+      <div class="card-header">
+        <h2>📦 Recent Listings</h2>
+        <a href="/admin/vinyl/listings" class="btn btn-ghost btn-sm">View All →</a>
+      </div>
+      {vinylListings.length === 0 ? (
+        <div class="card-body">
+          <div class="empty-state">
+            <div class="empty-state-icon">💿</div>
+            <div class="empty-state-title">No listings yet</div>
+            <p class="empty-state-text">Vinyl listings will appear here.</p>
+          </div>
+        </div>
+      ) : (
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Record</th>
+                <th>Seller</th>
+                <th>Price</th>
+                <th>Condition</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentListings.map(listing => (
+                <tr>
+                  <td>
+                    <div class="listing-info">
+                      <span class="listing-title">{listing.artist} - {listing.title}</span>
+                      <span class="listing-label">{listing.label || '-'}</span>
+                    </div>
+                  </td>
+                  <td class="cell-secondary">{listing.sellerName || 'Unknown'}</td>
+                  <td class="font-bold">{formatCurrency(listing.price)}</td>
+                  <td>
+                    <span class="condition-badge">{listing.mediaCondition || '-'}</span>
+                  </td>
+                  <td>
+                    <span class={`badge badge-${listing.status === 'published' ? 'success' : listing.status === 'sold' ? 'info' : 'warning'}`}>
+                      {listing.status || 'draft'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- Recent Orders -->
+  <div class="card mt-4">
+    <div class="card-header">
+      <h2>📋 Recent Vinyl Orders</h2>
+      <a href="/admin/vinyl/orders" class="btn btn-ghost btn-sm">View All →</a>
+    </div>
+    {vinylOrders.length === 0 ? (
+      <div class="card-body">
+        <div class="empty-state">
+          <div class="empty-state-icon">📭</div>
+          <div class="empty-state-title">No vinyl orders yet</div>
+          <p class="empty-state-text">Orders containing vinyl items will appear here.</p>
+        </div>
+      </div>
+    ) : (
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Customer</th>
+              <th>Items</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentOrders.map(order => {
+              const vinylItems = (order.items || []).filter((item: any) => item.type === 'vinyl');
+              return (
+                <tr>
+                  <td class="cell-mono">#{order.orderNumber || order.id?.slice(-6).toUpperCase()}</td>
+                  <td>{order.customerName || order.email || 'Unknown'}</td>
+                  <td>{vinylItems.length} vinyl item{vinylItems.length !== 1 ? 's' : ''}</td>
+                  <td class="font-bold">{formatCurrency(order.total)}</td>
+                  <td>
+                    <span class={`badge badge-${order.status}`}>{order.status}</span>
+                  </td>
+                  <td class="cell-secondary">{formatDate(order.createdAt)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+
+  <!-- Edit Seller Modal -->
+  <div id="editSellerModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Edit Vinyl Seller</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="editSellerForm">
+        <input type="hidden" id="editSellerId" name="sellerId" />
+        <div class="form-group">
+          <label for="editStoreName">Store Name</label>
+          <input type="text" id="editStoreName" name="storeName" required />
+        </div>
+        <div class="form-group">
+          <label for="editDescription">Description</label>
+          <textarea id="editDescription" name="description" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="editLocation">Location</label>
+          <input type="text" id="editLocation" name="location" />
+        </div>
+        <div class="form-group">
+          <label for="editDiscogsUrl">Discogs URL</label>
+          <input type="text" id="editDiscogsUrl" name="discogsUrl" />
+        </div>
+        <div class="form-group checkbox-group">
+          <label>
+            <input type="checkbox" id="editApproved" name="approved" />
+            Approved
+          </label>
+          <label>
+            <input type="checkbox" id="editSuspended" name="suspended" />
+            Suspended
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</AdminLayout>
+
+<style>
+  .seller-info, .listing-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .seller-name, .listing-title {
+    font-weight: 500;
+    color: #fff;
+  }
+
+  .seller-email, .listing-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .rating {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: #fbbf24;
+  }
+
+  .rating-star {
+    font-size: 0.875rem;
+  }
+
+  .rating-count {
+    color: #6b7280;
+    font-size: 0.75rem;
+  }
+
+  .condition-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: #374151;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  /* Modal Styles */
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal.hidden {
+    display: none;
+  }
+
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  .modal-content {
+    position: relative;
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .modal-close:hover {
+    color: #fff;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.875rem;
+    color: #9ca3af;
+  }
+
+  .form-group input[type="text"],
+  .form-group textarea {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.875rem;
+  }
+
+  .form-group input:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: #f97316;
+  }
+
+  .checkbox-group {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+
+  .checkbox-group input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #f97316;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #374151;
+  }
+</style>
+
+<script>
+  // Modal functions
+  function openModal() {
+    document.getElementById('editSellerModal')?.classList.remove('hidden');
+  }
+
+  function closeModal() {
+    document.getElementById('editSellerModal')?.classList.add('hidden');
+  }
+
+  // Make functions global
+  window.openModal = openModal;
+  window.closeModal = closeModal;
+
+  // Edit seller button handlers
+  document.querySelectorAll('.edit-seller-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const sellerId = btn.dataset.sellerId;
+      if (!sellerId) return;
+
+      // Fetch seller data
+      try {
+        const response = await fetch(`/api/admin/vinyl/seller?id=${sellerId}`);
+        const data = await response.json();
+
+        if (data.success && data.seller) {
+          const seller = data.seller;
+          document.getElementById('editSellerId').value = seller.id;
+          document.getElementById('editStoreName').value = seller.storeName || '';
+          document.getElementById('editDescription').value = seller.description || '';
+          document.getElementById('editLocation').value = seller.location || '';
+          document.getElementById('editDiscogsUrl').value = seller.discogsUrl || '';
+          document.getElementById('editApproved').checked = seller.approved || false;
+          document.getElementById('editSuspended').checked = seller.suspended || false;
+
+          openModal();
+        } else {
+          alert('Failed to load seller data');
+        }
+      } catch (error) {
+        alert('Error loading seller: ' + error.message);
+      }
+    });
+  });
+
+  // Save seller changes
+  document.getElementById('editSellerForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const sellerId = formData.get('sellerId');
+
+    try {
+      const response = await fetch('/api/admin/vinyl/seller', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update',
+          sellerId,
+          storeName: formData.get('storeName'),
+          description: formData.get('description'),
+          location: formData.get('location'),
+          discogsUrl: formData.get('discogsUrl'),
+          approved: formData.get('approved') === 'on',
+          suspended: formData.get('suspended') === 'on'
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        closeModal();
+        window.location.reload();
+      } else {
+        alert('Failed to save: ' + result.error);
+      }
+    } catch (error) {
+      alert('Error saving: ' + error.message);
+    }
+  });
+
+  // Suspend seller
+  document.querySelectorAll('.suspend-seller-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Suspend this seller? They will not be able to list or sell vinyl.')) return;
+
+      const sellerId = btn.dataset.sellerId;
+
+      try {
+        const response = await fetch('/api/admin/vinyl/seller', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'suspend', sellerId })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          window.location.reload();
+        } else {
+          alert('Failed to suspend: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    });
+  });
+
+  // Unsuspend seller
+  document.querySelectorAll('.unsuspend-seller-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Unsuspend this seller?')) return;
+
+      const sellerId = btn.dataset.sellerId;
+
+      try {
+        const response = await fetch('/api/admin/vinyl/seller', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'unsuspend', sellerId })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          window.location.reload();
+        } else {
+          alert('Failed to unsuspend: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    });
+  });
+</script>
