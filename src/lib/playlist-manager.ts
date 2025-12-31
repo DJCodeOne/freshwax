@@ -1215,8 +1215,9 @@ export class PlaylistManager {
    * Start countdown display that updates every second
    */
   private async startCountdown(totalDuration: number): Promise<void> {
-    // Get bottom duration element only (top is for live stream duration)
+    // Get duration elements
     const bottomDurationEl = document.getElementById('bottomDuration');
+    const previewDurationEl = document.getElementById('previewDuration');
     const genreEl = document.getElementById('streamGenre');
 
     // Set genre to "Playlist" instead of showing countdown there
@@ -1230,8 +1231,9 @@ export class PlaylistManager {
         const currentTime = await this.player.getCurrentTime();
         const remaining = Math.max(0, totalDuration - currentTime);
         const formattedTime = this.formatDuration(remaining);
-        // Update bottom duration only (top bar shows live stream duration)
+        // Update both bottom duration and preview duration in modal
         if (bottomDurationEl) bottomDurationEl.textContent = formattedTime;
+        if (previewDurationEl) previewDurationEl.textContent = formattedTime;
       } catch (error) {
         // Silently fail if player not ready
       }
