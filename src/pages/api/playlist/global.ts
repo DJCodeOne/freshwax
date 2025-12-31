@@ -181,7 +181,8 @@ export async function POST({ request, locals }: APIContext) {
         currentIndex: doc.currentIndex || 0,
         isPlaying: doc.isPlaying || false,
         lastUpdated: doc.lastUpdated || new Date().toISOString(),
-        trackStartedAt: doc.trackStartedAt || null
+        trackStartedAt: doc.trackStartedAt || null,
+        reactionCount: doc.reactionCount || 0
       };
     }
 
@@ -417,7 +418,8 @@ export async function PUT({ request, locals }: APIContext) {
         currentIndex: doc.currentIndex || 0,
         isPlaying: doc.isPlaying || false,
         lastUpdated: doc.lastUpdated || new Date().toISOString(),
-        trackStartedAt: doc.trackStartedAt || null
+        trackStartedAt: doc.trackStartedAt || null,
+        reactionCount: doc.reactionCount || 0
       };
 
       const now = new Date().toISOString();
@@ -495,6 +497,11 @@ export async function PUT({ request, locals }: APIContext) {
         case 'react':
           // Increment global reaction count
           playlist.reactionCount = (playlist.reactionCount || 0) + 1;
+          // Broadcast emoji animation to all viewers
+          const { emoji, sessionId } = body;
+          if (emoji) {
+            await broadcastEmojiReaction(emoji, sessionId, (locals as any)?.runtime?.env);
+          }
           break;
       }
 
@@ -596,6 +603,51 @@ async function pickRandomFromServerHistory(): Promise<PlaylistItem | null> {
   } catch (error) {
     console.error('[GlobalPlaylist] Error picking random track:', error);
     return null;
+  }
+}
+
+// Broadcast emoji reaction to all viewers via Pusher
+async function broadcastEmojiReaction(emoji: string, sessionId: string, env?: any) {
+  try {
+    const PUSHER_APP_ID = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
+    const PUSHER_KEY = env?.PUSHER_KEY || env?.PUBLIC_PUSHER_KEY || import.meta.env.PUSHER_KEY;
+    const PUSHER_SECRET = env?.PUSHER_SECRET || import.meta.env.PUSHER_SECRET;
+    const PUSHER_CLUSTER = env?.PUSHER_CLUSTER || env?.PUBLIC_PUSHER_CLUSTER || import.meta.env.PUSHER_CLUSTER || 'eu';
+
+    if (!PUSHER_APP_ID || !PUSHER_KEY || !PUSHER_SECRET) {
+      console.warn('[GlobalPlaylist] Pusher not configured, skipping emoji broadcast');
+      return;
+    }
+
+    // Broadcast to the stream channel (same channel livestream uses)
+    const channel = 'stream-playlist-global';
+    const event = 'reaction';
+    const data = JSON.stringify({
+      type: 'emoji',
+      emoji: emoji,
+      sessionId: sessionId || '',
+      timestamp: Date.now()
+    });
+
+    // Create Pusher signature
+    const timestamp = Math.floor(Date.now() / 1000);
+    const body = JSON.stringify({ name: event, channel, data });
+    const bodyMd5 = md5(body);
+
+    const stringToSign = `POST\n/apps/${PUSHER_APP_ID}/events\nauth_key=${PUSHER_KEY}&auth_timestamp=${timestamp}&auth_version=1.0&body_md5=${bodyMd5}`;
+    const signature = await hmacSha256(PUSHER_SECRET, stringToSign);
+
+    const url = `https://api-${PUSHER_CLUSTER}.pusher.com/apps/${PUSHER_APP_ID}/events?auth_key=${PUSHER_KEY}&auth_timestamp=${timestamp}&auth_version=1.0&body_md5=${bodyMd5}&auth_signature=${signature}`;
+
+    const pusherResponse = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+
+    console.log('[GlobalPlaylist] Emoji broadcast response:', pusherResponse.status);
+  } catch (error) {
+    console.error('[GlobalPlaylist] Emoji broadcast error:', error);
   }
 }
 

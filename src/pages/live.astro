@@ -1526,19 +1526,34 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 
     try {
       if (isPlaylistMode) {
-        // Playlist mode - use global playlist API for reactions
-        console.log('[triggerReaction] Playlist mode - using playlist API');
-        const response = await fetch('/api/playlist/global', {
+        // Playlist mode - use livestream react API with playlist-global streamId
+        // This ensures emojis broadcast to all viewers (same as fullscreen page)
+        console.log('[triggerReaction] Playlist mode - using livestream react API');
+        const emojiResponse = await fetch('/api/livestream/react', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'emoji',
+            streamId: 'playlist-global',
+            userId: user.uid,
+            userName: user.displayName || user.email?.split('@')[0] || 'Viewer',
+            emoji: emojiList.join(','),
+            emojiType: emojiType,
+            sessionId: reactionSessionId
+          })
+        });
+        const emojiResult = await emojiResponse.json();
+        console.log('[triggerReaction] Playlist emoji result:', emojiResult);
+
+        // Also update the global reaction count
+        const countResponse = await fetch('/api/playlist/global', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'react' })
         });
-        const result = await response.json();
-        console.log('[triggerReaction] Playlist react result:', result);
-
-        // Update with actual count from server
-        if (result.success && result.playlist?.reactionCount !== undefined && likeCountEl) {
-          likeCountEl.textContent = result.playlist.reactionCount;
+        const countResult = await countResponse.json();
+        if (countResult.success && countResult.playlist?.reactionCount !== undefined && likeCountEl) {
+          likeCountEl.textContent = countResult.playlist.reactionCount;
         }
       } else if (streamId) {
         // Livestream mode - use livestream react API

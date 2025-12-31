@@ -282,8 +282,20 @@ export class PlaylistManager {
     }
 
     // Update local playlist (exclude recentlyPlayed from playlist object)
+    // But preserve local titles if we have better (non-placeholder) titles
     const { recentlyPlayed: _, ...playlistWithoutRecent } = newPlaylist;
+    const oldQueue = this.playlist.queue;
     this.playlist = playlistWithoutRecent as GlobalPlaylist;
+
+    // Preserve better titles from local queue (prevents Pusher from overwriting fetched titles)
+    this.playlist.queue = this.playlist.queue.map(item => {
+      const oldItem = oldQueue.find(old => old.id === item.id);
+      if (oldItem && !this.isPlaceholderTitle(oldItem.title) && this.isPlaceholderTitle(item.title)) {
+        // Local has real title, remote has placeholder - keep local title
+        return { ...item, title: oldItem.title };
+      }
+      return item;
+    });
 
     const newCurrentItem = this.playlist.queue[this.playlist.currentIndex];
     const hasItems = this.playlist.queue.length > 0;
