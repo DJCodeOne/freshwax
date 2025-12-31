@@ -6,13 +6,25 @@ import type { APIRoute } from 'astro';
 
 export const prerender = false;
 
+// Handle CORS preflight
+export const OPTIONS: APIRoute = async () => {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, x-user-id, x-user-name, x-user-avatar'
+    }
+  });
+};
+
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = (locals as any)?.runtime?.env;
 
-    // Get Pusher credentials - check both runtime env and build-time env
+    // Get Pusher credentials - check both runtime env and build-time env (with PUBLIC_ fallback)
     const appId = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
-    const key = env?.PUSHER_KEY || import.meta.env.PUSHER_KEY;
+    const key = env?.PUSHER_KEY || env?.PUBLIC_PUSHER_KEY || import.meta.env.PUSHER_KEY || import.meta.env.PUBLIC_PUSHER_KEY;
     const secret = env?.PUSHER_SECRET || import.meta.env.PUSHER_SECRET;
 
     // Debug logging
@@ -84,13 +96,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
+    // Log successful auth
+    console.log('[Pusher Auth] Success for user:', userId, 'channel:', channelName);
+
     // Return auth response in Pusher's expected format
     return new Response(JSON.stringify({
       auth: key + ':' + signatureHex,
       channel_data: JSON.stringify(presenceData)
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, x-user-id, x-user-name, x-user-avatar'
+      }
     });
 
   } catch (error: any) {

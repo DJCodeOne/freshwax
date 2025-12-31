@@ -1898,6 +1898,13 @@ export class PlaylistManager {
    * Render UI (dispatch event for components to update)
    */
   private renderUI(): void {
+    // Update reaction count display
+    const reactionCount = this.playlist.reactionCount || 0;
+    const likeCountEl = document.getElementById('likeCount');
+    const fsLikes = document.getElementById('fsLikes');
+    if (likeCountEl) likeCountEl.textContent = String(reactionCount);
+    if (fsLikes) fsLikes.textContent = String(reactionCount);
+
     const event = new CustomEvent('playlistUpdate', {
       detail: {
         queue: this.playlist.queue,
@@ -1916,7 +1923,9 @@ export class PlaylistManager {
         // Personal playlist
         personalPlaylist: this.getPersonalPlaylist(),
         // Global recently played (from Pusher)
-        recentlyPlayed: this.globalRecentlyPlayed
+        recentlyPlayed: this.globalRecentlyPlayed,
+        // Reaction count
+        reactionCount: reactionCount
       }
     });
     window.dispatchEvent(event);

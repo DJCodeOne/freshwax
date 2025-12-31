@@ -37,6 +37,7 @@ interface GlobalPlaylist {
   isPlaying: boolean;
   lastUpdated: string;
   trackStartedAt?: string | null;
+  reactionCount?: number; // Global reaction count, resets per track
 }
 
 // Convert Firestore document fields to JSON
@@ -344,7 +345,8 @@ export async function DELETE({ request, locals }: APIContext) {
       currentIndex: playlist.currentIndex,
       isPlaying: playlist.isPlaying,
       lastUpdated: playlist.lastUpdated,
-      trackStartedAt: playlist.trackStartedAt || null
+      trackStartedAt: playlist.trackStartedAt || null,
+      reactionCount: playlist.reactionCount || 0
     });
 
     // Trigger Pusher broadcast
@@ -487,6 +489,12 @@ export async function PUT({ request, locals }: APIContext) {
             playlist.trackStartedAt = now;
           }
           playlist.currentIndex = 0; // Always play from front of queue
+          playlist.reactionCount = 0; // Reset reactions for new track
+          break;
+
+        case 'react':
+          // Increment global reaction count
+          playlist.reactionCount = (playlist.reactionCount || 0) + 1;
           break;
       }
 
@@ -499,7 +507,8 @@ export async function PUT({ request, locals }: APIContext) {
       currentIndex: playlist.currentIndex,
       isPlaying: playlist.isPlaying,
       lastUpdated: playlist.lastUpdated,
-      trackStartedAt: playlist.trackStartedAt || null
+      trackStartedAt: playlist.trackStartedAt || null,
+      reactionCount: playlist.reactionCount || 0
     });
 
     // Trigger Pusher broadcast

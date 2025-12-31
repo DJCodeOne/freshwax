@@ -1520,40 +1520,52 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     const currentCount = parseInt(likeCountEl?.textContent || '0');
     if (likeCountEl) likeCountEl.textContent = currentCount + 1;
 
-    // Broadcast to all viewers and increment like count via API
+    // Check if we're in playlist mode or livestream mode
+    const isPlaylistMode = window.isPlaylistActive;
+    const streamId = window.currentStreamId || document.body.dataset.streamId;
+
     try {
-      // Get current stream ID from the page
-      const streamId = window.currentStreamId || document.body.dataset.streamId;
-      console.log('[triggerReaction] StreamId:', streamId);
+      if (isPlaylistMode) {
+        // Playlist mode - use global playlist API for reactions
+        console.log('[triggerReaction] Playlist mode - using playlist API');
+        const response = await fetch('/api/playlist/global', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'react' })
+        });
+        const result = await response.json();
+        console.log('[triggerReaction] Playlist react result:', result);
 
-      if (!streamId) {
-        console.log('[Reaction] No active stream to react to');
-        // Revert optimistic update
+        // Update with actual count from server
+        if (result.success && result.playlist?.reactionCount !== undefined && likeCountEl) {
+          likeCountEl.textContent = result.playlist.reactionCount;
+        }
+      } else if (streamId) {
+        // Livestream mode - use livestream react API
+        console.log('[triggerReaction] Livestream mode - streamId:', streamId);
+        const emojiResponse = await fetch('/api/livestream/react', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'emoji',
+            streamId,
+            userId: user.uid,
+            userName: user.displayName || user.email?.split('@')[0] || 'Viewer',
+            emoji: emojiList.join(','),
+            emojiType: emojiType,
+            sessionId: reactionSessionId
+          })
+        });
+        const emojiResult = await emojiResponse.json();
+        console.log('[triggerReaction] Emoji broadcast result:', emojiResult);
+
+        // Update with actual count from server if available (only if > 0)
+        if (emojiResult.success && emojiResult.totalLikes > 0 && likeCountEl) {
+          likeCountEl.textContent = emojiResult.totalLikes;
+        }
+      } else {
+        console.log('[Reaction] No active stream or playlist to react to');
         if (likeCountEl) likeCountEl.textContent = currentCount;
-        return;
-      }
-
-      // Broadcast emoji reaction to all viewers
-      console.log('[triggerReaction] Sending emoji broadcast...');
-      const emojiResponse = await fetch('/api/livestream/react', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'emoji',
-          streamId,
-          userId: user.uid,
-          userName: user.displayName || user.email?.split('@')[0] || 'Viewer',
-          emoji: emojiList.join(','),
-          emojiType: emojiType,
-          sessionId: reactionSessionId
-        })
-      });
-      const emojiResult = await emojiResponse.json();
-      console.log('[triggerReaction] Emoji broadcast result:', emojiResult);
-
-      // Update with actual count from server if available (only if > 0, otherwise keep optimistic count)
-      if (emojiResult.success && emojiResult.totalLikes > 0 && likeCountEl) {
-        likeCountEl.textContent = emojiResult.totalLikes;
       }
     } catch (error) {
       console.error('[Reaction] API error:', error);
@@ -2834,10 +2846,28 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       const streamId = window.currentStreamId || 'playlist-global';
       const presenceChannelName = `presence-stream-${streamId}`;
 
-      // Get user info for presence data
-      const userId = currentUser?.uid || getOrCreateSessionId();
-      const userName = userInfo?.name || 'Viewer';
-      const userAvatar = userInfo?.avatar || '';
+      // Get user info for presence data - check multiple sources
+      // 1. Current userInfo (if already loaded)
+      // 2. Cached auth from localStorage (for faster initial load)
+      // 3. Firebase currentUser
+      // 4. Session ID as fallback
+      let cachedAuth = null;
+      try {
+        const cached = localStorage.getItem('fw_auth_cache');
+        if (cached) {
+          cachedAuth = JSON.parse(cached);
+          // Only use cache if less than 1 hour old
+          if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt > 3600000) {
+            cachedAuth = null;
+          }
+        }
+      } catch (e) { /* ignore */ }
+
+      const userId = currentUser?.uid || cachedAuth?.id || getOrCreateSessionId();
+      const userName = userInfo?.name || cachedAuth?.name || currentUser?.displayName || 'Viewer';
+      const userAvatar = userInfo?.avatar || cachedAuth?.avatarUrl || currentUser?.photoURL || '';
+
+      console.log('[Presence] Subscribing as:', userName, 'with ID:', userId);
 
       // Create Pusher instance with presence auth
       const presencePusher = new window.Pusher(config.key, {
@@ -2853,35 +2883,90 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         }
       });
 
+      // Store for potential re-subscription
+      window.presencePusher = presencePusher;
+
       // Subscribe to presence channel - Pusher tracks members automatically!
       const presenceChannel = presencePusher.subscribe(presenceChannelName);
       window.presenceChannel = presenceChannel; // Store for later use
 
-      // Update viewer count when members change
-      function updateViewerCount() {
-        const count = presenceChannel.members?.count || 0;
+      // Update viewer count and online users list
+      // Use window.presenceChannel so this works after re-subscription
+      function updateOnlineUsers() {
+        const channel = window.presenceChannel;
+        const count = channel?.members?.count || 0;
         console.log('[Presence] Member count:', count);
+
+        // Update count displays
         const viewerEl = document.getElementById('viewerCount');
         const fsViewers = document.getElementById('fsViewers');
         const chatViewers = document.getElementById('chatViewers');
+        const onlineCount = document.getElementById('onlineUserCount');
         if (viewerEl) viewerEl.textContent = count;
         if (fsViewers) fsViewers.textContent = count;
         if (chatViewers) chatViewers.textContent = `${count} watching`;
+        if (onlineCount) onlineCount.textContent = count;
+
+        // Update online users list
+        const usersList = document.getElementById('onlineUsersList');
+        if (usersList && channel?.members) {
+          usersList.innerHTML = '';
+          if (count === 0) {
+            usersList.innerHTML = '<p class="no-users-msg">No users online</p>';
+          } else {
+            channel.members.each((member) => {
+              const userEl = document.createElement('div');
+              userEl.className = 'online-user-item';
+              userEl.dataset.userId = member.id;
+
+              const avatar = member.info?.avatar;
+              const name = member.info?.name || 'Viewer';
+
+              if (avatar) {
+                userEl.innerHTML = `<div class="online-user-avatar"><img src="${avatar}" alt="${name}" /></div><span class="online-user-name">${name}</span>`;
+              } else {
+                userEl.innerHTML = `<div class="online-user-avatar">${name.charAt(0).toUpperCase()}</div><span class="online-user-name">${name}</span>`;
+              }
+
+              usersList.appendChild(userEl);
+            });
+          }
+        }
       }
 
+      // Expose globally for re-subscription
+      window.updateOnlineUsers = updateOnlineUsers;
+
+      // Log connection state changes
+      presencePusher.connection.bind('state_change', (states) => {
+        console.log('[Presence] Connection state changed:', states.previous, '->', states.current);
+      });
+
+      presencePusher.connection.bind('error', (err) => {
+        console.error('[Presence] Connection error:', err);
+      });
+
       presenceChannel.bind('pusher:subscription_succeeded', (members) => {
-        console.log('[Presence] Subscribed! Members:', members.count);
-        updateViewerCount();
+        console.log('[Presence] Subscribed to channel:', presenceChannelName);
+        console.log('[Presence] My user ID:', members.myID);
+        console.log('[Presence] Member count:', members.count);
+        console.log('[Presence] All member IDs:', Object.keys(members.members || {}));
+        updateOnlineUsers();
+      });
+
+      presenceChannel.bind('pusher:subscription_error', (error) => {
+        console.error('[Presence] Subscription error:', error);
+        console.error('[Presence] Error details:', JSON.stringify(error));
       });
 
       presenceChannel.bind('pusher:member_added', (member) => {
-        console.log('[Presence] Member joined:', member.info?.name);
-        updateViewerCount();
+        console.log('[Presence] Member joined:', member.id, member.info?.name);
+        updateOnlineUsers();
       });
 
       presenceChannel.bind('pusher:member_removed', (member) => {
-        console.log('[Presence] Member left:', member.info?.name);
-        updateViewerCount();
+        console.log('[Presence] Member left:', member.id, member.info?.name);
+        updateOnlineUsers();
       });
 
       // Also subscribe to regular channel for reactions/shoutouts
@@ -2978,9 +3063,52 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
             name: displayName,
             displayName: displayName,
             id: userId,
+            avatarUrl: result.avatarUrl || currentUser?.photoURL || '',
             cachedAt: Date.now()
           }));
         } catch (e) { /* Ignore storage errors */ }
+
+        // Re-subscribe to presence channel with correct user info
+        // This ensures the user's name shows correctly in the online list
+        if (window.presencePusher && window.presenceChannel) {
+          const streamId = window.currentStreamId || 'playlist-global';
+          const channelName = `presence-stream-${streamId}`;
+          console.log('[Presence] Re-subscribing with correct user info:', displayName);
+
+          // Unsubscribe and re-subscribe with correct auth headers
+          window.presencePusher.unsubscribe(channelName);
+
+          // Update auth headers
+          window.presencePusher.config.auth = {
+            headers: {
+              'x-user-id': userId,
+              'x-user-name': displayName,
+              'x-user-avatar': result.avatarUrl || currentUser?.photoURL || ''
+            }
+          };
+
+          // Re-subscribe
+          const newChannel = window.presencePusher.subscribe(channelName);
+          window.presenceChannel = newChannel;
+
+          // Re-bind events
+          newChannel.bind('pusher:subscription_succeeded', () => {
+            console.log('[Presence] Re-subscribed with correct user info');
+            if (typeof window.updateOnlineUsers === 'function') {
+              window.updateOnlineUsers();
+            }
+          });
+          newChannel.bind('pusher:member_added', () => {
+            if (typeof window.updateOnlineUsers === 'function') {
+              window.updateOnlineUsers();
+            }
+          });
+          newChannel.bind('pusher:member_removed', () => {
+            if (typeof window.updateOnlineUsers === 'function') {
+              window.updateOnlineUsers();
+            }
+          });
+        }
 
         // Dispatch event for components waiting for auth (like PlaylistModal)
         document.dispatchEvent(new CustomEvent('userAuthReady', {

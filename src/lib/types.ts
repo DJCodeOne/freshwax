@@ -319,6 +319,7 @@ export interface GlobalPlaylist {
   // Sync fields for real-time playback synchronization
   trackStartedAt?: string;  // ISO timestamp when current track started
   trackPosition?: number;   // Current position in seconds (for sync accuracy)
+  reactionCount?: number;   // Global reaction count, resets per track
 }
 
 export interface GlobalPlaylistItem extends PlaylistItem {
