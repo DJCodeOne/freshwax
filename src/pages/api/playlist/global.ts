@@ -593,8 +593,11 @@ async function addToRecentlyPlayed(track: any): Promise<void> {
     // Prepend to list and keep only last 10
     items = [historyItem, ...items.filter(item => item.id !== track.id)].slice(0, 10);
 
-    // Save to Firestore
-    await setDocument('liveSettings', 'playlistHistory', { items });
+    // Save to Firestore (include lastUpdated for Firestore rules)
+    await setDocument('liveSettings', 'playlistHistory', {
+      items,
+      lastUpdated: new Date().toISOString()
+    });
     console.log('[GlobalPlaylist] Added to recently played:', track.title);
   } catch (error) {
     console.error('[GlobalPlaylist] Error adding to recently played:', error);
