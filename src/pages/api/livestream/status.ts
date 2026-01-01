@@ -139,7 +139,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       hlsUrl: slot.hlsUrl || (slot.streamKey ? buildHlsUrl(slot.streamKey) : null),
       broadcastMode: slot.broadcastMode || 'video',
       // streamKey intentionally omitted - security risk
-      streamSource: 'red5',
+      streamSource: slot.isRelay ? 'relay' : 'red5',
+      isRelay: slot.isRelay || false,
+      relaySource: slot.relaySource || null,
       currentViewers: slot.currentViewers || 0,
       totalViews: slot.totalViews || 0,
       totalLikes: slot.totalLikes || 0,

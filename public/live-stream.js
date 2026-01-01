@@ -1235,7 +1235,12 @@ function showLiveStream(stream) {
   // Set stream title with proper HTML styling (LIVE white, SESSION red)
   const streamTitleEl = document.getElementById('streamTitle');
   if (streamTitleEl) {
-    streamTitleEl.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
+    if (stream.isRelay && stream.relaySource?.stationName) {
+      // Show relay attribution
+      streamTitleEl.innerHTML = `<span class="title-live">RELAY</span> <span class="title-relay-from">from ${stream.relaySource.stationName}</span>`;
+    } else {
+      streamTitleEl.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
+    }
   }
 
   // Update images (main page)
@@ -1273,9 +1278,13 @@ function showLiveStream(stream) {
     console.log('[Stream] Using HLS player');
     setupHlsPlayer(stream);
   } else {
-    // Audio mode - use Icecast
+    // Audio mode - use Icecast or relay source
     console.log('[Stream] Using Audio/Icecast player');
-    if (!stream.audioStreamUrl) {
+    if (stream.isRelay && stream.relaySource?.url) {
+      // Relay from external station
+      console.log('[Stream] Using relay source:', stream.relaySource.stationName);
+      stream.audioStreamUrl = stream.relaySource.url;
+    } else if (!stream.audioStreamUrl) {
       stream.audioStreamUrl = 'https://icecast.freshwax.co.uk/live';
     }
     setupAudioPlayer(stream);
@@ -2639,17 +2648,17 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
         `;
       }
 
-      // Bot messages have special styling (no reply button)
+      // Bot messages have special styling (no reply button) - Blue theme
       if (isBot) {
         return `
-          <div class="chat-message chat-bot-message" style="padding: 0.5rem; margin: 0.25rem 0; animation: slideIn 0.2s ease-out; background: linear-gradient(135deg, #1a1a2e 0%, #2d1f3d 100%); border-radius: 8px; border-left: 3px solid #a855f7;">
+          <div class="chat-message chat-bot-message" style="padding: 0.5rem; margin: 0.25rem 0; animation: slideIn 0.2s ease-out; background: linear-gradient(135deg, #1a1a2e 0%, #1e293b 100%); border-radius: 8px; border-left: 3px solid #3b82f6;">
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
               <img src="/logo.webp" alt="Bot" style="width: 20px; height: 20px; border-radius: 50%; background: #fff; padding: 2px;" />
-              <span style="font-weight: 600; color: #a855f7; font-size: 0.8125rem;">FreshWax</span>
-              <span style="background: #a855f7; color: #fff; font-size: 0.625rem; padding: 0.125rem 0.375rem; border-radius: 4px; font-weight: 600;">BOT</span>
+              <span style="font-weight: 600; color: #3b82f6; font-size: 0.8125rem;">FreshWax</span>
+              <span style="background: #3b82f6; color: #fff; font-size: 0.625rem; padding: 0.125rem 0.375rem; border-radius: 4px; font-weight: 600;">BOT</span>
               <span style="font-size: 0.6875rem; color: #666; margin-left: auto;">${time}</span>
             </div>
-            <div style="color: #e9d5ff; font-size: 0.875rem; word-break: break-word; line-height: 1.5; white-space: pre-line;">${escapeHtml(msg.message)}</div>
+            <div style="color: #bfdbfe; font-size: 0.875rem; word-break: break-word; line-height: 1.5; white-space: pre-line;">${escapeHtml(msg.message)}</div>
           </div>
         `;
       }
@@ -3003,46 +3012,161 @@ function setupChatInput(streamId) {
     const message = input.value.trim();
     input.value = '';
 
-    // Check for !skip command (admin only)
+    // Check for !skip command (Plus members get 3/day, admins unlimited)
     if (message.toLowerCase() === '!skip') {
-      if (ADMIN_UIDS.includes(currentUser.uid)) {
-        if (window.playlistManager && window.isPlaylistActive) {
-          window.playlistManager.skipTrack();
-          console.log('[Chat] Admin used !skip command');
-          // Send skip notification to chat API so it broadcasts to all users
-          const streamId = window.currentStreamId || 'playlist-global';
-          try {
-            await fetch('/api/livestream/chat', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                streamId: streamId,
-                userId: 'system',
-                userName: 'System',
-                message: '⏭️ Track skipped by admin',
-                type: 'system'
-              })
-            });
-            console.log('[Chat] Skip notification broadcast to all users');
-          } catch (err) {
-            console.error('[Chat] Failed to broadcast skip notification:', err);
-            // Fallback: show local message if broadcast fails
-            const chatMessages = document.getElementById('chatMessages');
-            if (chatMessages) {
-              const skipNotice = document.createElement('div');
-              skipNotice.className = 'chat-system-message';
-              skipNotice.textContent = '⏭️ Track skipped by admin';
-              chatMessages.appendChild(skipNotice);
-              chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
+      if (!window.playlistManager || !window.isPlaylistActive) {
+        console.log('[Chat] !skip: No playlist active');
+        return;
+      }
+
+      try {
+        // Call skip API to check permission and track usage
+        const skipResponse = await fetch('/api/playlist/skip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUser.uid })
+        });
+        const skipResult = await skipResponse.json();
+
+        if (!skipResult.allowed) {
+          // Show error message to user
+          const chatMessages = document.getElementById('chatMessages');
+          if (chatMessages) {
+            const errorNotice = document.createElement('div');
+            errorNotice.className = 'chat-system-message chat-error';
+            errorNotice.textContent = skipResult.reason || 'Cannot skip right now';
+            chatMessages.appendChild(errorNotice);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            // Auto-remove after 5 seconds
+            setTimeout(() => errorNotice.remove(), 5000);
           }
-        } else {
-          console.log('[Chat] !skip: No playlist active');
+          console.log('[Chat] !skip denied:', skipResult.reason);
+          return;
         }
-      } else {
-        console.log('[Chat] !skip command attempted by non-admin');
+
+        // Skip allowed - execute it
+        window.playlistManager.skipTrack();
+        console.log('[Chat] !skip executed:', skipResult.isAdmin ? 'admin' : `Plus user (${skipResult.remaining} remaining)`);
+
+        // Determine skip message based on who skipped
+        const skipMessage = skipResult.isAdmin
+          ? '⏭️ Track skipped by admin'
+          : `⏭️ Track skipped by Plus member (${skipResult.remaining} skips remaining today)`;
+
+        // Broadcast skip notification to all users
+        const streamId = window.currentStreamId || 'playlist-global';
+        await fetch('/api/livestream/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            streamId: streamId,
+            userId: 'system',
+            userName: 'System',
+            message: skipMessage,
+            type: 'system'
+          })
+        });
+        console.log('[Chat] Skip notification broadcast to all users');
+      } catch (err) {
+        console.error('[Chat] !skip error:', err);
+        // Show error to user
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+          const errorNotice = document.createElement('div');
+          errorNotice.className = 'chat-system-message chat-error';
+          errorNotice.textContent = 'Failed to skip track. Please try again.';
+          chatMessages.appendChild(errorNotice);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+          setTimeout(() => errorNotice.remove(), 5000);
+        }
       }
       return; // Don't send !skip to chat
+    }
+
+    // Check for Plus-only chat commands: !ping, !vibe, !quote, !hype, !shoutout, !np, !uptime
+    const plusCommands = ['!ping', '!vibe', '!quote', '!hype', '!shoutout', '!np', '!uptime'];
+    const lowerMessage = message.toLowerCase();
+    const matchedCommand = plusCommands.find(cmd => lowerMessage.startsWith(cmd));
+
+    if (matchedCommand) {
+      const command = matchedCommand.slice(1); // Remove the !
+      const args = message.slice(matchedCommand.length).trim();
+
+      try {
+        // Get current track info if available
+        let currentTrack = null;
+        if (window.playlistManager && window.playlistManager.playlist) {
+          const queue = window.playlistManager.playlist.queue;
+          if (queue && queue.length > 0) {
+            currentTrack = {
+              title: queue[0].title,
+              artist: queue[0].artist
+            };
+          }
+        }
+
+        // Get stream start time if available
+        const streamStartTime = window.streamStartTime || null;
+
+        const response = await fetch('/api/chat/plus-command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: currentUser.uid,
+            userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+            command,
+            args,
+            streamId: window.currentStreamId || 'playlist-global',
+            streamStartTime,
+            currentTrack
+          })
+        });
+
+        const result = await response.json();
+
+        if (!result.allowed) {
+          // Show error message for non-Plus users
+          const chatMessages = document.getElementById('chatMessages');
+          if (chatMessages) {
+            const errorNotice = document.createElement('div');
+            errorNotice.className = 'chat-system-message chat-error';
+            errorNotice.textContent = result.error || 'This command requires Plus membership';
+            chatMessages.appendChild(errorNotice);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            setTimeout(() => errorNotice.remove(), 5000);
+          }
+          return;
+        }
+
+        // Broadcast the bot response to chat
+        const streamId = window.currentStreamId || 'playlist-global';
+        await fetch('/api/livestream/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            streamId: streamId,
+            userId: result.type === 'system' ? 'system' : 'bot',
+            userName: result.type === 'system' ? 'System' : 'FreshWax Bot',
+            message: result.response,
+            type: result.type || 'bot',
+            isBot: true
+          })
+        });
+
+        console.log('[Chat] Plus command executed:', command);
+      } catch (err) {
+        console.error('[Chat] Plus command error:', err);
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+          const errorNotice = document.createElement('div');
+          errorNotice.className = 'chat-system-message chat-error';
+          errorNotice.textContent = 'Command failed. Please try again.';
+          chatMessages.appendChild(errorNotice);
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+          setTimeout(() => errorNotice.remove(), 5000);
+        }
+      }
+      return; // Don't send command to regular chat
     }
 
     // Get reply data and clear it

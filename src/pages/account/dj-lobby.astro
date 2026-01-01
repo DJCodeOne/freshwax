@@ -843,6 +843,20 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         <div class="stream-key-section" id="streamKeySection">
           <div id="keyAvailable" class="key-available">
             <div class="go-live-grid-compact">
+              <!-- Stream Mode Toggle: Direct vs Relay (Plus/Pro only) -->
+              <div class="stream-mode-toggle" id="streamModeToggle">
+                <button type="button" class="mode-btn active" id="directModeBtn" title="Stream directly from your software">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9 8h2v8H9zm4 2h2v6h-2z"/></svg>
+                  Direct
+                </button>
+                <button type="button" class="mode-btn" id="relayModeBtn" title="Relay from external radio station">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                  Relay
+                </button>
+              </div>
+
+              <!-- Direct Streaming Section -->
+              <div id="directStreamSection">
               <!-- Software Toggle: OBS vs BUTT -->
               <div class="software-toggle-row">
                 <button type="button" class="software-btn active" id="obsSettingsBtn" title="OBS / RTMP Settings">
@@ -904,6 +918,21 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                   </div>
                 </div>
               </div>
+              </div><!-- End Direct Stream Section -->
+
+              <!-- Relay Section (hidden by default) -->
+              <div id="relayStreamSection" class="hidden">
+                <div class="relay-source-selector">
+                  <div class="relay-header">
+                    <span class="relay-label">Select Station</span>
+                    <span class="relay-status" id="relayStationStatus"></span>
+                  </div>
+                  <div class="relay-stations-inline" id="relayStationsInline">
+                    <!-- Stations loaded dynamically -->
+                  </div>
+                  <p class="relay-hint-text">You must be currently streaming on the selected station</p>
+                </div>
+              </div><!-- End Relay Stream Section -->
 
               <div class="setup-row">
                 <div class="setup-field">
@@ -1962,23 +1991,47 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
   });
 
-  // Relay Sources Modal
+  // Relay Sources Modal - Hardcoded approved stations (no Firebase reads)
+  const APPROVED_RELAY_STATIONS = [
+    {
+      id: 'underground-lair',
+      name: 'The Underground Lair',
+      streamUrl: 'https://stream.rcast.net/2745',
+      websiteUrl: 'https://www.theundergroundlair.fr',
+      logoUrl: '/place-holder.webp',
+      genre: 'Jungle / D&B / Breakcore',
+      description: 'Underground Music Webradio',
+      checkUrl: 'https://meta.rcast.net/2745'
+    }
+    // Add more approved stations here
+  ];
+
   let relaySources = [];
   let selectedRelaySource = null;
 
   async function loadRelaySources() {
-    try {
-      const response = await fetch('/api/livestream/relay-sources');
-      const result = await response.json();
-      if (result.success && result.sources) {
-        relaySources = result.sources.filter(s => s.active);
-        renderRelaySources();
+    // Use hardcoded stations instead of Firebase to save reads
+    relaySources = APPROVED_RELAY_STATIONS.map(s => ({ ...s, isCurrentlyLive: false }));
+
+    // Check live status for each station
+    for (const source of relaySources) {
+      if (source.checkUrl) {
+        try {
+          const response = await fetch(source.checkUrl, { signal: AbortSignal.timeout(5000) });
+          if (response.ok) {
+            const text = await response.text();
+            const nowPlaying = text.trim();
+            source.isCurrentlyLive = nowPlaying && nowPlaying !== 'Unknown - Track';
+            source.nowPlaying = source.isCurrentlyLive ? nowPlaying : '';
+          }
+        } catch {
+          // Station offline or unreachable
+          source.isCurrentlyLive = false;
+        }
       }
-    } catch (e) {
-      console.error('Error loading relay sources:', e);
-      document.getElementById('relaySourcesList').innerHTML =
-        '<div class="no-sources-message">Unable to load stations</div>';
     }
+
+    renderRelaySources();
   }
 
   function renderRelaySources() {
@@ -2055,6 +2108,80 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
     document.getElementById('relaySourcesModal').classList.add('hidden');
   });
+
+  // Stream Mode Toggle (Direct vs Relay)
+  let currentStreamMode = 'direct'; // 'direct' or 'relay'
+
+  function setStreamMode(mode) {
+    currentStreamMode = mode;
+    const directBtn = document.getElementById('directModeBtn');
+    const relayBtn = document.getElementById('relayModeBtn');
+    const directSection = document.getElementById('directStreamSection');
+    const relaySection = document.getElementById('relayStreamSection');
+
+    if (mode === 'relay') {
+      directBtn?.classList.remove('active');
+      relayBtn?.classList.add('active');
+      directSection?.classList.add('hidden');
+      relaySection?.classList.remove('hidden');
+      // Render inline relay stations
+      renderInlineRelayStations();
+    } else {
+      directBtn?.classList.add('active');
+      relayBtn?.classList.remove('active');
+      directSection?.classList.remove('hidden');
+      relaySection?.classList.add('hidden');
+      // Clear relay selection when switching back
+      selectedRelaySource = null;
+    }
+    log('[StreamMode] Set to:', mode);
+  }
+
+  function renderInlineRelayStations() {
+    const container = document.getElementById('relayStationsInline');
+    if (!container) return;
+
+    if (relaySources.length === 0) {
+      container.innerHTML = '<div class="relay-station-card"><span style="color:#888">Loading stations...</span></div>';
+      loadRelaySources().then(() => renderInlineRelayStations());
+      return;
+    }
+
+    container.innerHTML = relaySources.map(source => `
+      <div class="relay-station-card ${selectedRelaySource?.id === source.id ? 'selected' : ''}"
+           data-id="${source.id}"
+           data-url="${source.streamUrl}"
+           data-name="${source.name}">
+        <img src="${source.logoUrl || '/place-holder.webp'}" alt="${source.name}" class="relay-station-logo" />
+        <div class="relay-station-info">
+          <div class="relay-station-name">${source.name}</div>
+          <div class="relay-station-genre">${source.genre || 'Various'}</div>
+          ${source.nowPlaying ? `<div class="relay-station-genre" style="color:#22c55e;font-size:0.7rem;">Now: ${source.nowPlaying.substring(0, 30)}${source.nowPlaying.length > 30 ? '...' : ''}</div>` : ''}
+        </div>
+        <span class="relay-station-badge ${source.isCurrentlyLive ? 'live' : 'offline'}">
+          ${source.isCurrentlyLive ? 'LIVE' : 'OFFLINE'}
+        </span>
+      </div>
+    `).join('');
+
+    // Add click handlers
+    container.querySelectorAll('.relay-station-card').forEach(card => {
+      card.addEventListener('click', () => {
+        container.querySelectorAll('.relay-station-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedRelaySource = {
+          id: card.dataset.id,
+          url: card.dataset.url,
+          name: card.dataset.name
+        };
+        log('[Relay] Selected station:', selectedRelaySource.name);
+      });
+    });
+  }
+
+  // Mode toggle button handlers
+  document.getElementById('directModeBtn')?.addEventListener('click', () => setStreamMode('direct'));
+  document.getElementById('relayModeBtn')?.addEventListener('click', () => setStreamMode('relay'));
 
   function showAccessDenied() {
     document.getElementById('authGate').classList.add('hidden');
@@ -5655,21 +5782,19 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     title = document.getElementById('inlineStreamTitle')?.value?.trim() || 'Live Session';
     genre = document.getElementById('inlineStreamGenre')?.value || 'Jungle / D&B';
 
-    // Check for user-entered relay URL
-    const userRelayUrl = document.getElementById('relayUrl')?.value?.trim() || null;
+    // Check for relay mode using the mode toggle
+    const isRelayMode = currentStreamMode === 'relay';
+    const userRelayUrl = isRelayMode && selectedRelaySource ? selectedRelaySource.url : null;
     const relaySourceName = selectedRelaySource?.name || 'External Source';
 
-    // Determine stream mode based on relay URL
-    const isRelayMode = userRelayUrl || (currentStreamSource === 'relay' && approvedRelayData?.relayUrl);
-
-    // For OBS mode, check stream key
+    // For Direct mode, check stream key
     if (!isRelayMode && !currentStreamKey) {
       throw new Error('No stream key available. Please refresh and try again.');
     }
 
-    // For relay mode, check relay URL
-    if (isRelayMode && !userRelayUrl && !approvedRelayData?.relayUrl) {
-      throw new Error('No relay URL provided.');
+    // For Relay mode, check relay source is selected
+    if (isRelayMode && !selectedRelaySource) {
+      throw new Error('Please select a radio station to relay from.');
     }
 
     log('[GoLive] Starting go live with key:', currentStreamKey?.substring(0, 10) + '...');
@@ -5693,8 +5818,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     };
 
     if (isRelayMode) {
-      requestBody.relayUrl = userRelayUrl || approvedRelayData.relayUrl;
-      requestBody.stationName = userRelayUrl ? relaySourceName : approvedRelayData.stationName;
+      requestBody.relayUrl = userRelayUrl;
+      requestBody.stationName = relaySourceName;
     } else {
       requestBody.streamKey = currentStreamKey;
     }
@@ -7108,16 +7233,30 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     const modal = document.getElementById('initModal');
     if (!modal) return;
 
+    // Check if in relay mode
+    const isRelayMode = currentStreamMode === 'relay';
+
     // Reset modal state
     const progressFill = document.getElementById('initProgressFill');
     const progressText = document.getElementById('initProgressText');
     const backBtn = document.getElementById('initBackBtn');
     const goLiveBtn = document.getElementById('initGoLiveBtn');
+    const modalHeader = modal.querySelector('.init-modal-header h2');
+    const modalSubtitle = modal.querySelector('.init-subtitle');
 
     if (progressFill) progressFill.style.width = '0%';
     if (progressText) progressText.textContent = 'Starting up...';
     if (backBtn) backBtn.disabled = true;
     if (goLiveBtn) goLiveBtn.disabled = true;
+
+    // Update modal title for relay mode
+    if (isRelayMode) {
+      if (modalHeader) modalHeader.textContent = 'Relay Mode';
+      if (modalSubtitle) modalSubtitle.textContent = `Connecting to ${selectedRelaySource?.name || 'external station'}...`;
+    } else {
+      if (modalHeader) modalHeader.textContent = 'Initialising Stream';
+      if (modalSubtitle) modalSubtitle.textContent = 'Checking your connections...';
+    }
 
     // Reset check items
     ['initCheckObs', 'initCheckButt', 'initCheckLevels'].forEach(id => {
@@ -7127,18 +7266,125 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       }
     });
 
-    document.getElementById('initObsStatus').textContent = 'Checking...';
-    document.getElementById('initButtStatus').textContent = 'Checking...';
-    document.getElementById('initLevelsStatus').textContent = 'Waiting...';
+    // Update labels for relay mode
+    if (isRelayMode) {
+      document.querySelector('#initCheckObs .init-check-label').textContent = 'Relay Source';
+      document.getElementById('initObsStatus').textContent = 'Checking station...';
+      document.querySelector('#initCheckButt .init-check-label').textContent = 'Audio Stream';
+      document.getElementById('initButtStatus').textContent = 'Waiting...';
+      document.querySelector('#initCheckLevels .init-check-label').textContent = 'Ready to Relay';
+      document.getElementById('initLevelsStatus').textContent = 'Waiting...';
+    } else {
+      document.querySelector('#initCheckObs .init-check-label').textContent = 'OBS / Video Stream';
+      document.getElementById('initObsStatus').textContent = 'Checking...';
+      document.querySelector('#initCheckButt .init-check-label').textContent = 'BUTT / Audio Stream';
+      document.getElementById('initButtStatus').textContent = 'Checking...';
+      document.querySelector('#initCheckLevels .init-check-label').textContent = 'Audio Levels';
+      document.getElementById('initLevelsStatus').textContent = 'Waiting...';
+    }
 
     // Show modal
     modal.classList.remove('hidden');
 
-    // Refresh Icecast status immediately for accurate BUTT detection, then start checks
-    checkIcecastStatus().then(() => {
-      // Start checking connections after Icecast status is updated
-      setTimeout(() => startConnectionChecks(), 300);
-    });
+    if (isRelayMode) {
+      // For relay mode, check if the relay source is online
+      startRelayChecks();
+    } else {
+      // Refresh Icecast status immediately for accurate BUTT detection, then start checks
+      checkIcecastStatus().then(() => {
+        // Start checking connections after Icecast status is updated
+        setTimeout(() => startConnectionChecks(), 300);
+      });
+    }
+  }
+
+  async function startRelayChecks() {
+    const progressFill = document.getElementById('initProgressFill');
+    const progressText = document.getElementById('initProgressText');
+    const backBtn = document.getElementById('initBackBtn');
+    const goLiveBtn = document.getElementById('initGoLiveBtn');
+
+    // Check 1: Verify relay source is selected
+    if (progressFill) progressFill.style.width = '30%';
+    if (progressText) progressText.textContent = 'Checking relay source...';
+
+    const obsCheck = document.getElementById('initCheckObs');
+    obsCheck?.classList.add('checking');
+
+    await new Promise(r => setTimeout(r, 500));
+
+    if (!selectedRelaySource) {
+      obsCheck?.classList.remove('checking');
+      obsCheck?.classList.add('error');
+      document.getElementById('initObsStatus').textContent = 'No station selected';
+      if (backBtn) backBtn.disabled = false;
+      return;
+    }
+
+    // Check if relay source is online by fetching metadata
+    let isRelayLive = false;
+    const relayStation = relaySources.find(s => s.id === selectedRelaySource.id);
+    if (relayStation?.checkUrl) {
+      try {
+        const response = await fetch(relayStation.checkUrl, { signal: AbortSignal.timeout(5000) });
+        if (response.ok) {
+          const text = await response.text();
+          isRelayLive = text.trim() && text.trim() !== 'Unknown - Track';
+        }
+      } catch {
+        isRelayLive = false;
+      }
+    } else {
+      // No check URL, assume it's available
+      isRelayLive = true;
+    }
+
+    obsCheck?.classList.remove('checking');
+    if (isRelayLive) {
+      obsCheck?.classList.add('connected');
+      document.getElementById('initObsStatus').textContent = `${selectedRelaySource.name} is LIVE`;
+    } else {
+      obsCheck?.classList.add('disconnected');
+      document.getElementById('initObsStatus').textContent = `${selectedRelaySource.name} appears offline`;
+    }
+
+    // Check 2: Audio stream availability
+    if (progressFill) progressFill.style.width = '60%';
+    if (progressText) progressText.textContent = 'Verifying audio stream...';
+
+    const buttCheck = document.getElementById('initCheckButt');
+    buttCheck?.classList.add('checking');
+    await new Promise(r => setTimeout(r, 500));
+
+    buttCheck?.classList.remove('checking');
+    if (isRelayLive) {
+      buttCheck?.classList.add('connected');
+      document.getElementById('initButtStatus').textContent = 'Stream URL verified';
+    } else {
+      buttCheck?.classList.add('disconnected');
+      document.getElementById('initButtStatus').textContent = 'Stream may not be available';
+    }
+
+    // Check 3: Ready status
+    if (progressFill) progressFill.style.width = '100%';
+    if (progressText) progressText.textContent = isRelayLive ? 'Ready to go live!' : 'Warning: Source may be offline';
+
+    const levelsCheck = document.getElementById('initCheckLevels');
+    levelsCheck?.classList.add('checking');
+    await new Promise(r => setTimeout(r, 300));
+
+    levelsCheck?.classList.remove('checking');
+    if (isRelayLive) {
+      levelsCheck?.classList.add('connected');
+      document.getElementById('initLevelsStatus').textContent = 'All checks passed!';
+    } else {
+      levelsCheck?.classList.add('disconnected');
+      document.getElementById('initLevelsStatus').textContent = 'You can still try to go live';
+    }
+
+    // Enable buttons
+    if (backBtn) backBtn.disabled = false;
+    if (goLiveBtn) goLiveBtn.disabled = false;
   }
 
   function hideInitModal() {
@@ -7349,6 +7595,14 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     if (goLiveBtn) {
       goLiveBtn.classList.add('hidden');
     }
+    // Show the stream key section again (contains Direct/Relay toggle)
+    document.getElementById('streamKeySection')?.classList.remove('hidden');
+    // Hide the audio panel
+    document.getElementById('broadcastAudioPanel')?.classList.add('hidden');
+    // Reset preview section
+    document.querySelector('.preview-section')?.classList.remove('expanded');
+    // Reset userIsStreaming flag
+    userIsStreaming = false;
   });
 
   // Go Live button handler - trigger go live and close modal

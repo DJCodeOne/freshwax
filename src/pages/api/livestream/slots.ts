@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, setDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { generateStreamKey as generateSecureStreamKey, buildRtmpUrl, buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { broadcastLiveStatus } from '../../../lib/pusher';
+import { APPROVED_RELAY_STATIONS } from '../../../lib/relay-stations';
 
 // Helper to initialize services
 function initServices(locals: any) {
@@ -1068,12 +1069,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
-      // Verify the user has an approved relay URL
-      const userData = await getDocument('users', djId);
-      if (!userData?.approvedRelay?.relayUrl) {
+      // Verify the relay URL is from an approved station
+      const approvedStation = APPROVED_RELAY_STATIONS.find(s => s.streamUrl === relayUrl);
+      if (!approvedStation) {
         return new Response(JSON.stringify({
           success: false,
-          error: 'No approved relay URL found'
+          error: 'Relay URL is not from an approved station'
         }), { status: 403, headers: { 'Content-Type': 'application/json' } });
       }
 
@@ -1105,10 +1106,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         description: data.description || '',
         streamKey: relayStreamKey,
         rtmpUrl: buildRtmpUrl(relayStreamKey),
-        hlsUrl: buildHlsUrl(relayStreamKey),
+        // Use freshwax-main HLS for relay - FFmpeg generates spectrum video from relay audio
+        hlsUrl: buildHlsUrl('freshwax-main'),
         status: 'live',
         createdAt: nowISO,
         startedAt: nowISO,
+        broadcastMode: 'video', // Video mode - shows spectrum visualization
         isRelay: true,
         relaySource: {
           url: relayUrl,
