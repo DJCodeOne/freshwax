@@ -33,12 +33,10 @@ export const prerender = false;
           </div>
         </div>
         <div class="dashboard-header-right">
-          <button id="goPlusHeaderBtn" class="go-plus-header-btn hidden" title="Upgrade to Plus">
-            <svg class="crown-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-              <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
-            </svg>
-            <span class="goplus-text">Go Plus</span>
-          </button>
+          <a href="#" id="goPlusHeaderBtn" class="pro-dashboard-btn" style="background: #374151;" title="Upgrade to Plus">
+            <span class="pro-icon">👑</span>
+            <span class="pro-text">Go Plus</span>
+          </a>
           <a href="/artist/dashboard" id="proDashboardBtn" class="pro-dashboard-btn disabled" title="Available for approved partners">
             <span class="pro-icon">⚡</span>
             <span class="pro-text">Pro Dashboard</span>
@@ -587,7 +585,26 @@ export const prerender = false;
   <Footer />
 </Layout>
 
-
+<script is:inline>
+  // Go Plus button handler - separate script to avoid module loading issues
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('[GoPlusInit] Setting up Go Plus button');
+    var btn = document.getElementById('goPlusHeaderBtn');
+    var modal = document.getElementById('goPlusModal');
+    console.log('[GoPlusInit] Button:', btn, 'Modal:', modal);
+    if (btn) {
+      btn.onclick = function(e) {
+        e.preventDefault();
+        console.log('[GoPlusInit] Button clicked!');
+        if (modal) {
+          modal.classList.remove('hidden');
+          document.body.style.overflow = 'hidden';
+        }
+      };
+      console.log('[GoPlusInit] Click handler attached');
+    }
+  });
+</script>
 
 <script>
   import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
@@ -2694,16 +2711,24 @@ export const prerender = false;
 
   // Go Plus Modal functionality
   function initGoPlusModal() {
+    console.log('[Dashboard] initGoPlusModal called');
     const goPlusHeaderBtn = document.getElementById('goPlusHeaderBtn');
     const modal = document.getElementById('goPlusModal');
     const closeBtn = document.getElementById('goPlusModalClose');
     const backdrop = modal?.querySelector('.goplus-modal-backdrop');
     const upgradeBtn = document.getElementById('goPlusUpgradeBtn');
 
-    if (!goPlusHeaderBtn || !modal) return;
+    console.log('[Dashboard] Go Plus button:', goPlusHeaderBtn);
+    console.log('[Dashboard] Go Plus modal:', modal);
+
+    if (!goPlusHeaderBtn || !modal) {
+      console.log('[Dashboard] Missing elements, cannot init Go Plus modal');
+      return;
+    }
 
     // Open modal when header button is clicked
     goPlusHeaderBtn.addEventListener('click', () => {
+      console.log('[Dashboard] Go Plus button clicked!');
       modal.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
     });
@@ -2959,6 +2984,9 @@ export const prerender = false;
 
           // Check for successful upgrade redirect
           checkUpgradeSuccess();
+
+          // Initialize Go Plus modal
+          initGoPlusModal();
 
         } catch (error) {
           console.error('[Dashboard] Error loading dashboard:', error);
