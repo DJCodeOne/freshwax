@@ -1049,8 +1049,9 @@ const pusherConfig = {
   .chat-hint { font-size: 0.65rem; color: #9ca3af; }
 
   .chat-message { display: flex; flex-direction: row; align-items: flex-start; gap: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 8px; width: 100%; box-sizing: border-box; }
-  .chat-message-avatar { width: 36px; height: 36px; min-width: 36px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; overflow: hidden; color: #fff; font-weight: 600; }
+  .chat-message-avatar { width: 36px; height: 36px; min-width: 36px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; overflow: hidden; color: #fff; font-weight: 600; position: relative; }
   .chat-message-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .chat-message-avatar.is-pro { box-shadow: 0 0 0 2px #f59e0b; }
   .chat-message-content { flex: 1; min-width: 0; overflow: hidden; text-align: left; display: flex; flex-direction: column; }
   .chat-message-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; flex-wrap: nowrap; width: 100%; }
   .chat-message-name { font-weight: 600; font-size: 0.9rem; color: #dc2626; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
@@ -1114,6 +1115,7 @@ const pusherConfig = {
   .expanded-chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
   .expanded-chat-messages .chat-message { display: flex; flex-direction: row; align-items: flex-start; gap: 0.75rem; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 10px; }
   .expanded-chat-messages .chat-message-avatar { width: 36px; height: 36px; min-width: 36px; border-radius: 50%; background: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 600; color: #fff; flex-shrink: 0; }
+  .expanded-chat-messages .chat-message-avatar.is-pro { box-shadow: 0 0 0 2px #f59e0b; }
   .expanded-chat-messages .chat-message-content { flex: 1; min-width: 0; }
   .expanded-chat-messages .chat-message-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; }
   .expanded-chat-messages .chat-message-name { font-weight: 600; font-size: 0.875rem; color: #dc2626; }
@@ -2189,6 +2191,12 @@ const pusherConfig = {
 
   // Floating Emoji Animation
   function createFloatingEmoji(startX, startY, emojiList) {
+    // Only show emojis on live pages (ViewTransitions keeps scripts alive across pages)
+    const path = window.location.pathname;
+    if (!path.startsWith('/live') && !path.includes('/account/dj-lobby')) {
+      return;
+    }
+
     if (!animationsEnabled) return;
 
     const emoji = document.createElement('div');
@@ -2247,6 +2255,12 @@ const pusherConfig = {
   }
 
   function triggerReactionBurst(emojiList) {
+    // Only show emojis on live pages (ViewTransitions keeps scripts alive across pages)
+    const path = window.location.pathname;
+    if (!path.startsWith('/live') && !path.includes('/account/dj-lobby')) {
+      return;
+    }
+
     // Scatter effect - emojis appear at random positions across the screen
     const numEmojis = 1;
     for (let i = 0; i < numEmojis; i++) {
@@ -2349,12 +2363,15 @@ const pusherConfig = {
         ? `<img src="${avatarUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />`
         : (msg.userName || 'U')[0].toUpperCase();
 
+      // Plus member crown badge
+      const crownBadge = msg.isPro ? '<svg viewBox="0 0 24 24" fill="#f59e0b" width="12" height="12" style="margin-left: 3px; vertical-align: middle;"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>' : '';
+
       return `
         <div class="chat-message">
-          <div class="chat-message-avatar">${avatarHtml}</div>
+          <div class="chat-message-avatar${msg.isPro ? ' is-pro' : ''}">${avatarHtml}</div>
           <div class="chat-message-content">
             <div class="chat-message-header">
-              <span class="chat-message-name">${escapeHtml(msg.userName || 'User')}</span>
+              <span class="chat-message-name" style="display: inline-flex; align-items: center;">${escapeHtml(msg.userName || 'User')}${crownBadge}</span>
               <span class="chat-message-time">${time}</span>
             </div>
             ${content}
@@ -2414,12 +2431,15 @@ const pusherConfig = {
       ? `<img src="${avatarUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />`
       : (msg.userName || 'U')[0].toUpperCase();
 
+    // Plus member crown badge
+    const crownBadge = msg.isPro ? '<svg viewBox="0 0 24 24" fill="#f59e0b" width="12" height="12" style="margin-left: 3px; vertical-align: middle;"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>' : '';
+
     const messageHtml = `
       <div class="chat-message">
-        <div class="chat-message-avatar">${avatarHtml}</div>
+        <div class="chat-message-avatar${msg.isPro ? ' is-pro' : ''}">${avatarHtml}</div>
         <div class="chat-message-content">
           <div class="chat-message-header">
-            <span class="chat-message-name">${escapeHtml(msg.userName || 'User')}</span>
+            <span class="chat-message-name" style="display: inline-flex; align-items: center;">${escapeHtml(msg.userName || 'User')}${crownBadge}</span>
             <span class="chat-message-time">${time}</span>
           </div>
           ${content}

@@ -33,6 +33,12 @@ export const prerender = false;
           </div>
         </div>
         <div class="dashboard-header-right">
+          <button id="goPlusHeaderBtn" class="go-plus-header-btn hidden" title="Upgrade to Plus">
+            <svg class="crown-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+              <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
+            </svg>
+            <span class="goplus-text">Go Plus</span>
+          </button>
           <a href="/artist/dashboard" id="proDashboardBtn" class="pro-dashboard-btn disabled" title="Available for approved partners">
             <span class="pro-icon">⚡</span>
             <span class="pro-text">Pro Dashboard</span>
@@ -106,19 +112,7 @@ export const prerender = false;
               </div>
             </div>
 
-            <div class="subscription-upgrade" id="subscriptionUpgrade">
-              <div class="upgrade-benefits">
-                <h4>Go Plus - £10/year</h4>
-                <ul>
-                  <li>Unlimited DJ mix uploads</li>
-                  <li>2 hours live streaming per day</li>
-                  <li>Stream long duration events</li>
-                  <li>Record Live stream button enabled</li>
-                  <li>Plus badge on profile</li>
-                </ul>
-              </div>
-              <button class="upgrade-btn" id="upgradeBtn">Go Plus</button>
-            </div>
+            <!-- Upgrade section removed - now in Go Plus modal -->
 
             <div class="subscription-pro hidden" id="subscriptionPro">
               <div class="pro-active">
@@ -554,6 +548,38 @@ export const prerender = false;
           </div>
         </div>
 
+      </div>
+    </div>
+
+    <!-- Go Plus Modal -->
+    <div id="goPlusModal" class="goplus-modal hidden">
+      <div class="goplus-modal-backdrop"></div>
+      <div class="goplus-modal-content">
+        <button class="goplus-modal-close" id="goPlusModalClose">&times;</button>
+        <div class="goplus-modal-header">
+          <svg class="goplus-modal-crown" viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+            <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
+          </svg>
+          <h2>Go Plus</h2>
+          <p class="goplus-price">£10<span>/year</span></p>
+        </div>
+        <div class="goplus-modal-body">
+          <ul class="goplus-benefits">
+            <li><span class="benefit-icon">✓</span> 5 DJ mix uploads per week (vs 2 standard)</li>
+            <li><span class="benefit-icon">✓</span> Long duration events up to 24 hours</li>
+            <li><span class="benefit-icon">✓</span> Book multiple slots for day-long events</li>
+            <li><span class="benefit-icon">✓</span> Record live stream button enabled</li>
+            <li><span class="benefit-icon">✓</span> Gold crown on your chat avatar</li>
+            <li><span class="benefit-icon">✓</span> Priority in DJ Lobby queue</li>
+          </ul>
+        </div>
+        <div class="goplus-modal-footer">
+          <button id="goPlusUpgradeBtn" class="goplus-upgrade-btn">
+            <span class="btn-text">Upgrade Now</span>
+            <span class="btn-loading hidden">Processing...</span>
+          </button>
+          <p class="goplus-secure">Secure payment via Stripe</p>
+        </div>
       </div>
     </div>
   </main>
@@ -2491,6 +2517,7 @@ export const prerender = false;
       const upgradeSection = document.getElementById('subscriptionUpgrade');
       const proSection = document.getElementById('subscriptionPro');
       const proExpires = document.getElementById('proExpires');
+      const goPlusHeaderBtn = document.getElementById('goPlusHeaderBtn');
 
       // Update tier badge
       if (result.subscription.isPro) {
@@ -2502,6 +2529,9 @@ export const prerender = false;
         // Show pro section, hide upgrade
         if (upgradeSection) upgradeSection.classList.add('hidden');
         if (proSection) proSection.classList.remove('hidden');
+
+        // Hide Go Plus header button for Plus members
+        if (goPlusHeaderBtn) goPlusHeaderBtn.classList.add('hidden');
 
         // Show expiry date
         if (proExpires && result.subscription.expiresAt) {
@@ -2520,6 +2550,9 @@ export const prerender = false;
         // Show upgrade section, hide pro
         if (upgradeSection) upgradeSection.classList.remove('hidden');
         if (proSection) proSection.classList.add('hidden');
+
+        // Show Go Plus header button for non-Plus users
+        if (goPlusHeaderBtn) goPlusHeaderBtn.classList.remove('hidden');
       }
 
       // Update usage stats
@@ -2532,12 +2565,6 @@ export const prerender = false;
       if (mixUploadsLimit) mixUploadsLimit.textContent = result.limits.mixUploadsPerWeek === 'unlimited' ? '∞' : result.limits.mixUploadsPerWeek;
       if (streamTimeUsed) streamTimeUsed.textContent = Math.floor(result.usage.streamMinutesToday / 60);
       if (streamTimeLimit) streamTimeLimit.textContent = result.limits.streamHoursPerDay;
-
-      // Set up upgrade button
-      const upgradeBtn = document.getElementById('upgradeBtn');
-      if (upgradeBtn) {
-        upgradeBtn.addEventListener('click', handleUpgradeClick);
-      }
 
     } catch (error) {
       console.error('Error loading subscription:', error);
@@ -2608,10 +2635,20 @@ export const prerender = false;
       return;
     }
 
-    const upgradeBtn = document.getElementById('upgradeBtn');
-    if (upgradeBtn) {
-      upgradeBtn.disabled = true;
-      upgradeBtn.textContent = 'Processing...';
+    const goPlusHeaderBtn = document.getElementById('goPlusHeaderBtn');
+    const goPlusUpgradeBtn = document.getElementById('goPlusUpgradeBtn');
+
+    // Disable buttons and show processing state
+    if (goPlusHeaderBtn) {
+      goPlusHeaderBtn.disabled = true;
+      goPlusHeaderBtn.querySelector('.goplus-text').textContent = 'Processing...';
+    }
+    if (goPlusUpgradeBtn) {
+      goPlusUpgradeBtn.disabled = true;
+      const btnText = goPlusUpgradeBtn.querySelector('.btn-text');
+      const btnLoading = goPlusUpgradeBtn.querySelector('.btn-loading');
+      if (btnText) btnText.classList.add('hidden');
+      if (btnLoading) btnLoading.classList.remove('hidden');
     }
 
     try {
@@ -2640,11 +2677,58 @@ export const prerender = false;
       console.error('Upgrade error:', error);
       alert('Failed to start upgrade process. Please try again.');
 
-      if (upgradeBtn) {
-        upgradeBtn.disabled = false;
-        upgradeBtn.textContent = 'Go Plus';
+      // Reset buttons
+      if (goPlusHeaderBtn) {
+        goPlusHeaderBtn.disabled = false;
+        goPlusHeaderBtn.querySelector('.goplus-text').textContent = 'Go Plus';
+      }
+      if (goPlusUpgradeBtn) {
+        goPlusUpgradeBtn.disabled = false;
+        const btnText = goPlusUpgradeBtn.querySelector('.btn-text');
+        const btnLoading = goPlusUpgradeBtn.querySelector('.btn-loading');
+        if (btnText) btnText.classList.remove('hidden');
+        if (btnLoading) btnLoading.classList.add('hidden');
       }
     }
+  }
+
+  // Go Plus Modal functionality
+  function initGoPlusModal() {
+    const goPlusHeaderBtn = document.getElementById('goPlusHeaderBtn');
+    const modal = document.getElementById('goPlusModal');
+    const closeBtn = document.getElementById('goPlusModalClose');
+    const backdrop = modal?.querySelector('.goplus-modal-backdrop');
+    const upgradeBtn = document.getElementById('goPlusUpgradeBtn');
+
+    if (!goPlusHeaderBtn || !modal) return;
+
+    // Open modal when header button is clicked
+    goPlusHeaderBtn.addEventListener('click', () => {
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    });
+
+    // Close modal function
+    function closeModal() {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    // Close on X button
+    closeBtn?.addEventListener('click', closeModal);
+
+    // Close on backdrop click
+    backdrop?.addEventListener('click', closeModal);
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeModal();
+      }
+    });
+
+    // Handle upgrade button in modal
+    upgradeBtn?.addEventListener('click', handleUpgradeClick);
   }
 
   // Check URL params for successful upgrade
@@ -2888,6 +2972,7 @@ export const prerender = false;
           initTabs();
           initLogout();
           initProfileForm();
+          initGoPlusModal();
         }
         
       } else {
@@ -2902,6 +2987,203 @@ export const prerender = false;
 </script>
 
 <style>
+  /* Go Plus Header Button - Grey with Gold Crown */
+  .go-plus-header-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #374151;
+    color: #fff;
+    border: 1px solid #4b5563;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .go-plus-header-btn:hover {
+    background: #4b5563;
+    transform: translateY(-1px);
+  }
+
+  .go-plus-header-btn .crown-icon {
+    color: #f59e0b;
+    width: 18px;
+    height: 18px;
+  }
+
+  .go-plus-header-btn.hidden {
+    display: none;
+  }
+
+  /* Go Plus Modal */
+  .goplus-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .goplus-modal.hidden {
+    display: none;
+  }
+
+  .goplus-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+  }
+
+  .goplus-modal-content {
+    position: relative;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 2px solid #f59e0b;
+    border-radius: 1rem;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(245, 158, 11, 0.2);
+    animation: modalSlideIn 0.3s ease-out;
+  }
+
+  @keyframes modalSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .goplus-modal-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 2rem;
+    height: 2rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 1.25rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+
+  .goplus-modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .goplus-modal-header {
+    text-align: center;
+    padding: 2rem 1.5rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .goplus-modal-crown {
+    color: #f59e0b;
+    margin-bottom: 0.5rem;
+  }
+
+  .goplus-modal-header h2 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .goplus-price {
+    margin: 0.5rem 0 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .goplus-price span {
+    font-size: 1rem;
+    font-weight: 400;
+    color: #9ca3af;
+  }
+
+  .goplus-modal-body {
+    padding: 1.5rem;
+  }
+
+  .goplus-benefits {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .goplus-benefits li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0;
+    color: #e5e7eb;
+    font-size: 0.95rem;
+  }
+
+  .benefit-icon {
+    color: #10b981;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .goplus-modal-footer {
+    padding: 1rem 1.5rem 1.5rem;
+    text-align: center;
+  }
+
+  .goplus-upgrade-btn {
+    width: 100%;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #000;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+  }
+
+  .goplus-upgrade-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+  }
+
+  .goplus-upgrade-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .goplus-secure {
+    margin: 0.75rem 0 0;
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
   /* Subscription Card Styles */
   .subscription-card {
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);

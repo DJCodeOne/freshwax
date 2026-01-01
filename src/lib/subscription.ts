@@ -10,18 +10,20 @@ export type SubscriptionTier = typeof SUBSCRIPTION_TIERS[keyof typeof SUBSCRIPTI
 
 export const TIER_LIMITS = {
   [SUBSCRIPTION_TIERS.FREE]: {
-    mixUploadsPerWeek: 1,
-    streamHoursPerDay: 1,
-    maxConcurrentSlots: 1,
+    mixUploadsPerWeek: 2,
+    streamHoursPerDay: 2, // Can be split into 2x1 hour slots or run concurrently
+    maxConcurrentSlots: 2,
+    canBookLongEvents: false,
     name: 'Standard',
     price: 0,
   },
   [SUBSCRIPTION_TIERS.PRO]: {
-    mixUploadsPerWeek: Infinity,
-    streamHoursPerDay: 2, // Base limit, can request more for events
+    mixUploadsPerWeek: 5,
+    streamHoursPerDay: 2, // Base limit, Plus can book long events up to 24 hours
     maxConcurrentSlots: 2,
-    name: 'Pro',
-    price: 10, // £10 lifetime
+    canBookLongEvents: true, // Can book multiple slots for day-long events up to 24 hours
+    name: 'Plus',
+    price: 10, // £10/year
   },
 } as const;
 
@@ -108,7 +110,7 @@ export function canUploadMix(tier: SubscriptionTier, usage: UserUsage): { allowe
   if (remaining <= 0) {
     return {
       allowed: false,
-      reason: `You've reached your weekly limit of ${limits.mixUploadsPerWeek} mix upload${limits.mixUploadsPerWeek > 1 ? 's' : ''}. Upgrade to Pro for unlimited uploads.`,
+      reason: `You've reached your weekly limit of ${limits.mixUploadsPerWeek} mix uploads. Go Plus for 5 uploads per week.`,
       remaining: 0
     };
   }
@@ -139,8 +141,8 @@ export function canBookStreamSlot(
     const hoursUsed = Math.floor(minutesToday / 60);
     const hoursLimit = totalHoursAllowed;
     const upgradeMsg = tier === SUBSCRIPTION_TIERS.FREE
-      ? 'Upgrade to Pro for 2 hours per day.'
-      : (approvedEventHours === 0 ? 'Request extended hours for events.' : '');
+      ? 'Go Plus for long duration events up to 24 hours.'
+      : (approvedEventHours === 0 ? 'Use Long Event to book extended hours.' : '');
     return {
       allowed: false,
       reason: `You've used ${hoursUsed} of your ${hoursLimit} hour${hoursLimit > 1 ? 's' : ''} today. ${upgradeMsg}`,
@@ -157,20 +159,21 @@ export function getTierBenefits(tier: SubscriptionTier): string[] {
 
   if (tier === SUBSCRIPTION_TIERS.FREE) {
     return [
-      `${limits.mixUploadsPerWeek} DJ mix upload per week`,
-      `${limits.streamHoursPerDay} hour live streaming per day`,
+      `${limits.mixUploadsPerWeek} DJ mix uploads per week`,
+      `${limits.streamHoursPerDay} hours live streaming per day`,
+      'Can split into 2x1 hour slots',
       'Access to DJ Lobby',
       'Basic profile page',
     ];
   }
 
   return [
-    'Unlimited DJ mix uploads',
+    `${limits.mixUploadsPerWeek} DJ mix uploads per week`,
     `${limits.streamHoursPerDay} hours live streaming per day`,
-    'Request extended hours for events',
-    'Multiple concurrent stream slots',
-    'Priority in DJ Lobby',
-    'Pro badge on profile',
-    'Early access to new features',
+    'Long duration events up to 24 hours',
+    'Book multiple slots for day-long events',
+    'Record live stream button',
+    'Gold crown on chat avatar',
+    'Priority in DJ Lobby queue',
   ];
 }

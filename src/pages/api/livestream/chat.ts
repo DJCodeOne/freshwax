@@ -447,7 +447,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { streamId, userId, userName, userAvatar, message, type, giphyUrl, giphyId, replyTo, replyToUserName, replyToPreview } = data;
+    const { streamId, userId, userName, userAvatar, isPro, message, type, giphyUrl, giphyId, replyTo, replyToUserName, replyToPreview } = data;
     
     if (!streamId || !userId || !message) {
       return new Response(JSON.stringify({
@@ -523,6 +523,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       userId,
       userName: userName || 'Anonymous',
       userAvatar: userAvatar || null,
+      isPro: isPro === true, // Plus member status for crown display
       message: message.substring(0, 500), // Limit message length
       type: type || 'text',
       giphyUrl: giphyUrl || null,
