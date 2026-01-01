@@ -1,0 +1,714 @@
+---
+// src/pages/admin/plus-accounts.astro
+// Plus subscription management page
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { queryCollection } from '../../lib/firebase-rest';
+
+export const prerender = false;
+
+// Fetch users with Plus subscriptions
+let plusUsers: any[] = [];
+let allUsersWithSubs: any[] = [];
+
+try {
+  // Query users collection for subscription data
+  const usersData = await queryCollection('users', { limit: 1000 });
+
+  // Filter users who have subscription data
+  allUsersWithSubs = usersData.filter((user: any) => user.subscription);
+
+  // Filter for Plus members (active or expired)
+  plusUsers = allUsersWithSubs.filter((user: any) => {
+    const sub = user.subscription;
+    return sub && sub.tier === 'pro';
+  });
+
+  // Sort by subscription date (newest first)
+  plusUsers.sort((a, b) => {
+    const dateA = a.subscription?.subscribedAt ? new Date(a.subscription.subscribedAt).getTime() : 0;
+    const dateB = b.subscription?.subscribedAt ? new Date(b.subscription.subscribedAt).getTime() : 0;
+    return dateB - dateA;
+  });
+
+} catch (error) {
+  console.error('[Plus Accounts] Error fetching data:', error);
+}
+
+// Calculate stats
+const now = new Date();
+const activeCount = plusUsers.filter(u => {
+  if (!u.subscription?.expiresAt) return false;
+  return new Date(u.subscription.expiresAt) > now;
+}).length;
+
+const expiredCount = plusUsers.filter(u => {
+  if (!u.subscription?.expiresAt) return true;
+  return new Date(u.subscription.expiresAt) <= now;
+}).length;
+
+const thisMonthCount = plusUsers.filter(u => {
+  if (!u.subscription?.subscribedAt) return false;
+  const subDate = new Date(u.subscription.subscribedAt);
+  return subDate.getMonth() === now.getMonth() && subDate.getFullYear() === now.getFullYear();
+}).length;
+
+// Helper to generate Plus account number from user ID and subscription date
+function generatePlusNumber(userId: string, subscribedAt: string): string {
+  const date = subscribedAt ? new Date(subscribedAt) : new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const userHash = userId.slice(-4).toUpperCase();
+  return `FWP-${year}${month}-${userHash}`;
+}
+
+// Helper to calculate days remaining
+function getDaysRemaining(expiresAt: string): { days: number; status: string; color: string } {
+  if (!expiresAt) return { days: 0, status: 'Unknown', color: 'gray' };
+
+  const expDate = new Date(expiresAt);
+  const diffMs = expDate.getTime() - now.getTime();
+  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (days < 0) {
+    return { days: Math.abs(days), status: `Expired ${Math.abs(days)}d ago`, color: 'red' };
+  } else if (days <= 30) {
+    return { days, status: `${days}d remaining`, color: 'orange' };
+  } else {
+    return { days, status: `${days}d remaining`, color: 'green' };
+  }
+}
+
+// Format date
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+}
+---
+
+<AdminLayout title="Plus Accounts" activeNav="plus-accounts">
+  <Fragment slot="breadcrumb">
+    <div class="header-breadcrumb">
+      <a href="/admin">Admin</a>
+      <span class="separator">/</span>
+      <span>Plus Accounts</span>
+    </div>
+  </Fragment>
+
+  <Fragment slot="actions">
+    <button class="btn btn-ghost" onclick="window.location.reload()">
+      ↻ Refresh
+    </button>
+  </Fragment>
+
+  <!-- Stats Grid -->
+  <div class="stats-grid cols-4 mb-4">
+    <div class="stat-card highlight">
+      <div class="stat-label">Total Plus Members</div>
+      <div class="stat-value">{plusUsers.length}</div>
+      <div class="stat-detail">All time</div>
+    </div>
+
+    <div class="stat-card success">
+      <div class="stat-label">Active</div>
+      <div class="stat-value">{activeCount}</div>
+      <div class="stat-detail">Currently subscribed</div>
+    </div>
+
+    <div class="stat-card warning">
+      <div class="stat-label">Expired</div>
+      <div class="stat-value">{expiredCount}</div>
+      <div class="stat-detail">Need renewal</div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">This Month</div>
+      <div class="stat-value">{thisMonthCount}</div>
+      <div class="stat-detail">New subscriptions</div>
+    </div>
+  </div>
+
+  <!-- Plus Users Table -->
+  <div class="card">
+    <div class="card-header">
+      <h2>👑 Plus Members</h2>
+      <div class="header-actions">
+        <input type="text" id="searchInput" placeholder="Search by email or name..." class="search-input" />
+      </div>
+    </div>
+
+    {plusUsers.length === 0 ? (
+      <div class="card-body">
+        <div class="empty-state">
+          <div class="empty-state-icon">👑</div>
+          <div class="empty-state-title">No Plus Members Yet</div>
+          <p class="empty-state-text">Plus subscriptions will appear here once users upgrade.</p>
+        </div>
+      </div>
+    ) : (
+      <div class="table-wrapper">
+        <table class="data-table" id="plusTable">
+          <thead>
+            <tr>
+              <th>Plus ID</th>
+              <th>User</th>
+              <th>Status</th>
+              <th>Subscribed</th>
+              <th>Expires</th>
+              <th>Time Left</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {plusUsers.map(user => {
+              const plusNumber = generatePlusNumber(user.id, user.subscription?.subscribedAt);
+              const remaining = getDaysRemaining(user.subscription?.expiresAt);
+              const isActive = remaining.color !== 'red';
+
+              return (
+                <tr class={`plus-row ${isActive ? '' : 'expired'}`} data-search={`${user.email || ''} ${user.displayName || ''} ${plusNumber}`.toLowerCase()}>
+                  <td>
+                    <code class="plus-id">{plusNumber}</code>
+                  </td>
+                  <td>
+                    <div class="user-cell">
+                      <span class="user-name">{user.displayName || 'Unknown'}</span>
+                      <span class="user-email">{user.email || '-'}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class={`badge badge-${isActive ? 'success' : 'danger'}`}>
+                      {isActive ? 'Active' : 'Expired'}
+                    </span>
+                  </td>
+                  <td class="cell-secondary">
+                    {formatDate(user.subscription?.subscribedAt)}
+                  </td>
+                  <td class="cell-secondary">
+                    {formatDate(user.subscription?.expiresAt)}
+                  </td>
+                  <td>
+                    <span class={`time-badge time-${remaining.color}`}>
+                      {remaining.status}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="btn btn-sm btn-ghost" onclick={`viewUser('${user.id}')`} title="View User">
+                        👁
+                      </button>
+                      <button class="btn btn-sm btn-ghost" onclick={`extendSubscription('${user.id}')`} title="Extend Subscription">
+                        ➕
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+
+  <!-- User Details Modal -->
+  <div id="userModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>User Details</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="userModalBody">
+        Loading...
+      </div>
+    </div>
+  </div>
+
+  <!-- Extend Subscription Modal -->
+  <div id="extendModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeExtendModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Extend Subscription</h3>
+        <button class="modal-close" onclick="closeExtendModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Extend subscription for user: <strong id="extendUserName"></strong></p>
+        <div class="form-group">
+          <label>Extension Period</label>
+          <select id="extensionPeriod" class="form-select">
+            <option value="30">30 days</option>
+            <option value="90">90 days (3 months)</option>
+            <option value="180">180 days (6 months)</option>
+            <option value="365" selected>365 days (1 year)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Reason (optional)</label>
+          <input type="text" id="extensionReason" class="form-input" placeholder="e.g., Customer service, promotional" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeExtendModal()">Cancel</button>
+        <button class="btn btn-primary" id="confirmExtendBtn">Extend Subscription</button>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .stats-grid.cols-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .stats-grid.cols-4 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .stat-card {
+    background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .stat-card.highlight {
+    border-color: #f59e0b;
+    background: linear-gradient(180deg, #292524 0%, #1c1917 100%);
+  }
+
+  .stat-card.success {
+    border-color: #22c55e;
+  }
+
+  .stat-card.warning {
+    border-color: #f59e0b;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0.25rem 0;
+  }
+
+  .stat-detail {
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .search-input {
+    padding: 0.5rem 1rem;
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.875rem;
+    width: 250px;
+  }
+
+  .search-input::placeholder {
+    color: #6b7280;
+  }
+
+  .plus-id {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8rem;
+    background: #292524;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    color: #f59e0b;
+  }
+
+  .user-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .user-name {
+    font-weight: 500;
+    color: #fff;
+  }
+
+  .user-email {
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+
+  .time-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .time-green {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+  }
+
+  .time-orange {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+  }
+
+  .time-red {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
+
+  .time-gray {
+    background: rgba(107, 114, 128, 0.15);
+    color: #6b7280;
+  }
+
+  .plus-row.expired {
+    opacity: 0.7;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .badge-success {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+  }
+
+  .badge-danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
+
+  /* Modal Styles */
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .modal.hidden {
+    display: none;
+  }
+
+  .modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  .modal-content {
+    position: relative;
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #374151;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .modal-close:hover {
+    color: #fff;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    max-height: 60vh;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #374151;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: #9ca3af;
+  }
+
+  .form-select,
+  .form-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.875rem;
+  }
+
+  .form-select:focus,
+  .form-input:focus {
+    outline: none;
+    border-color: #f59e0b;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+  }
+
+  .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state-text {
+    color: #6b7280;
+  }
+</style>
+
+<script>
+  // Search functionality
+  const searchInput = document.getElementById('searchInput');
+  const tableRows = document.querySelectorAll('#plusTable tbody tr');
+
+  searchInput?.addEventListener('input', (e) => {
+    const query = (e.target as HTMLInputElement).value.toLowerCase();
+
+    tableRows.forEach(row => {
+      const searchData = row.getAttribute('data-search') || '';
+      if (searchData.includes(query)) {
+        (row as HTMLElement).style.display = '';
+      } else {
+        (row as HTMLElement).style.display = 'none';
+      }
+    });
+  });
+
+  // Modal functions
+  let currentUserId = '';
+
+  function viewUser(userId: string) {
+    currentUserId = userId;
+    const modal = document.getElementById('userModal');
+    const body = document.getElementById('userModalBody');
+
+    if (modal && body) {
+      modal.classList.remove('hidden');
+      body.innerHTML = 'Loading user details...';
+
+      // Fetch user details
+      fetch(`/api/admin/user-details?userId=${userId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.user) {
+            const u = data.user;
+            body.innerHTML = `
+              <div class="user-details">
+                <div class="detail-row">
+                  <span class="detail-label">User ID</span>
+                  <code class="detail-value">${u.id}</code>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Email</span>
+                  <span class="detail-value">${u.email || '-'}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Display Name</span>
+                  <span class="detail-value">${u.displayName || '-'}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Subscription Tier</span>
+                  <span class="detail-value">${u.subscription?.tier || 'free'}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Subscribed At</span>
+                  <span class="detail-value">${u.subscription?.subscribedAt ? new Date(u.subscription.subscribedAt).toLocaleString() : '-'}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Expires At</span>
+                  <span class="detail-value">${u.subscription?.expiresAt ? new Date(u.subscription.expiresAt).toLocaleString() : '-'}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Subscription ID</span>
+                  <code class="detail-value">${u.subscription?.subscriptionId || '-'}</code>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Account Created</span>
+                  <span class="detail-value">${u.createdAt ? new Date(u.createdAt).toLocaleString() : '-'}</span>
+                </div>
+              </div>
+            `;
+          } else {
+            body.innerHTML = '<p class="error">Failed to load user details</p>';
+          }
+        })
+        .catch(err => {
+          body.innerHTML = '<p class="error">Error loading user details</p>';
+        });
+    }
+  }
+
+  function closeModal() {
+    document.getElementById('userModal')?.classList.add('hidden');
+  }
+
+  function extendSubscription(userId: string) {
+    currentUserId = userId;
+    const modal = document.getElementById('extendModal');
+    const userRow = document.querySelector(`tr[data-search*="${userId}"]`);
+    const userName = userRow?.querySelector('.user-name')?.textContent || 'Unknown';
+
+    const nameEl = document.getElementById('extendUserName');
+    if (nameEl) nameEl.textContent = userName;
+
+    modal?.classList.remove('hidden');
+  }
+
+  function closeExtendModal() {
+    document.getElementById('extendModal')?.classList.add('hidden');
+  }
+
+  // Confirm extension
+  document.getElementById('confirmExtendBtn')?.addEventListener('click', async () => {
+    const days = parseInt((document.getElementById('extensionPeriod') as HTMLSelectElement).value);
+    const reason = (document.getElementById('extensionReason') as HTMLInputElement).value;
+    const btn = document.getElementById('confirmExtendBtn') as HTMLButtonElement;
+
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+
+    try {
+      const response = await fetch('/api/admin/extend-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUserId, days, reason })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('Subscription extended successfully!');
+        closeExtendModal();
+        window.location.reload();
+      } else {
+        alert('Failed to extend: ' + result.error);
+      }
+    } catch (error) {
+      alert('Error extending subscription');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Extend Subscription';
+    }
+  });
+
+  // Make functions global
+  (window as any).viewUser = viewUser;
+  (window as any).closeModal = closeModal;
+  (window as any).extendSubscription = extendSubscription;
+  (window as any).closeExtendModal = closeExtendModal;
+</script>
+
+<style>
+  .user-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #374151;
+  }
+
+  .detail-row:last-child {
+    border-bottom: none;
+  }
+
+  .detail-label {
+    color: #9ca3af;
+    font-size: 0.875rem;
+  }
+
+  .detail-value {
+    color: #fff;
+    font-size: 0.875rem;
+    text-align: right;
+    word-break: break-all;
+  }
+
+  code.detail-value {
+    font-family: 'Fira Code', monospace;
+    background: #111827;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+  }
+
+  .error {
+    color: #ef4444;
+    text-align: center;
+  }
+</style>
