@@ -103,6 +103,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Check if user was Plus but expired (for renewal prompts)
+    const wasPlus = subscription.tier === SUBSCRIPTION_TIERS.PRO;
+    const isExpired = wasPlus && subscription.expiresAt && new Date(subscription.expiresAt) <= new Date();
+    const isExpiringSoon = wasPlus && subscription.expiresAt && !isExpired &&
+      new Date(subscription.expiresAt) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Within 7 days
+
     // Default: return full status
     return new Response(JSON.stringify({
       success: true,
@@ -110,8 +116,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
         tier: effectiveTier,
         tierName: limits.name,
         isPro: effectiveTier === SUBSCRIPTION_TIERS.PRO,
+        wasPlus,
+        isExpired,
+        isExpiringSoon,
         expiresAt: subscription.expiresAt,
         subscribedAt: subscription.subscribedAt,
+        plusId: subscription.plusId,
       },
       usage: {
         mixUploadsThisWeek: usage.mixUploadsThisWeek,

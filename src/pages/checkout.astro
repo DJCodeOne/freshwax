@@ -22,13 +22,7 @@ export const prerender = false;
       </header>
     </div>
     
-    <!-- Test Banner -->
-    <div class="test-banner">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-      </svg>
-      Test Mode — No Payment Will Be Taken
-    </div>
+    <!-- PayPal SDK loaded dynamically when needed -->
     
     <div id="error-message" class="error-message"></div>
     
@@ -157,6 +151,12 @@ export const prerender = false;
     const hasPhysicalItems = cart.some(item =>
       item.type === 'vinyl' || item.type === 'merch' || item.productType === 'vinyl' || item.productType === 'merch'
     );
+
+    // Free orders: no shipping, no fees
+    if (subtotal === 0) {
+      return { subtotal: 0, shipping: 0, hasPhysicalItems, freshWaxFee: 0, stripeFee: 0, serviceFees: 0, total: 0 };
+    }
+
     const shipping = hasPhysicalItems ? (subtotal >= 50 ? 0 : 4.99) : 0;
 
     // Service fees added on top so artists get their full asking price
@@ -486,24 +486,82 @@ export const prerender = false;
         </div>
         ` : ''}
         
-        <!-- Payment -->
+        <!-- Payment / Complete Order Section -->
         <div style="background: #fff; border: 2px solid #d1d5db; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
           <div style="padding: 1rem 1.25rem; background: linear-gradient(to right, #1f2937 0%, #374151 100%); border-bottom: 2px solid #dc2626;">
-            <h2 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">PAYMENT</h2>
+            <h2 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">${total === 0 ? 'COMPLETE ORDER' : 'PAYMENT METHOD'}</h2>
           </div>
           <div style="padding: 1.25rem;">
-            <p style="font-size: 0.9375rem; color: #6b7280; line-height: 1.6; text-align: center; padding: 0.5rem 0;">
-              This is a test checkout. No payment will be processed.<br>
-              Click below to complete your order and receive download links.
-            </p>
-            <button type="submit" id="submitBtn" style="width: 100%; padding: 1rem; margin-top: 1rem; background: #dc2626; color: #fff; border: none; border-radius: 10px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.375rem; font-weight: 400; letter-spacing: 0.06em; cursor: pointer; transition: all 0.2s;">
-              COMPLETE ORDER — £${total.toFixed(2)}
+            ${total === 0 ? `
+            <!-- Free Order - No Payment Required -->
+            <div style="text-align: center; margin-bottom: 1.25rem;">
+              <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #dcfce7; border: 2px solid #16a34a; border-radius: 10px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span style="font-size: 1.125rem; font-weight: 700; color: #16a34a;">FREE ORDER - No Payment Required</span>
+              </div>
+            </div>
+            <button type="submit" id="submitBtn" style="width: 100%; padding: 1rem; background: #16a34a; color: #fff; border: none; border-radius: 10px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.375rem; letter-spacing: 0.06em; cursor: pointer; transition: all 0.2s;">
+              COMPLETE FREE ORDER
             </button>
-            <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.875rem; font-size: 0.8125rem; color: #6b7280;">
+            ` : `
+            <!-- Payment Options -->
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
+              <label style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: #f9fafb; border: 2px solid #d1d5db; border-radius: 10px; cursor: pointer; transition: all 0.2s;" id="stripeOption" onclick="selectPaymentMethod('stripe')">
+                <input type="radio" name="paymentMethod" value="stripe" checked style="width: 20px; height: 20px; accent-color: #dc2626;">
+                <div style="flex: 1;">
+                  <div style="font-weight: 600; color: #111827; font-size: 1rem;">Credit / Debit Card</div>
+                  <div style="font-size: 0.8125rem; color: #6b7280;">Visa, Mastercard, Amex</div>
+                </div>
+                <svg width="40" height="25" viewBox="0 0 40 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="40" height="25" rx="3" fill="#635BFF"/>
+                  <path d="M17.5 16.5L19.5 8.5H22L20 16.5H17.5Z" fill="white"/>
+                  <path d="M28.5 8.7C28 8.5 27.2 8.3 26.2 8.3C23.8 8.3 22.1 9.5 22.1 11.2C22.1 12.5 23.3 13.2 24.2 13.6C25.1 14 25.4 14.3 25.4 14.7C25.4 15.3 24.7 15.6 24 15.6C23 15.6 22.5 15.5 21.7 15.1L21.4 15L21.1 17C21.7 17.3 22.8 17.5 24 17.5C26.5 17.5 28.2 16.3 28.2 14.5C28.2 13.5 27.5 12.7 26.2 12.1C25.4 11.7 24.9 11.4 24.9 11C24.9 10.6 25.4 10.2 26.3 10.2C27.1 10.2 27.7 10.4 28.1 10.5L28.4 10.6L28.5 8.7Z" fill="white"/>
+                  <path d="M32.5 8.5H30.5C29.9 8.5 29.4 8.7 29.2 9.3L25.7 16.5H28.2L28.7 15.1H31.7L32 16.5H34.2L32.5 8.5ZM29.4 13.3C29.6 12.8 30.5 10.5 30.5 10.5C30.5 10.5 30.7 10 30.8 9.6L31 10.4C31 10.4 31.5 12.6 31.6 13.3H29.4Z" fill="white"/>
+                  <path d="M15.2 8.5L12.8 14L12.5 12.5C12 11.1 10.7 9.5 9.2 8.7L11.3 16.5H13.9L17.8 8.5H15.2Z" fill="white"/>
+                  <path d="M11 8.5H7.1L7 8.7C10 9.5 12 11.5 12.5 13.5L11.9 9.4C11.8 8.7 11.4 8.5 11 8.5Z" fill="#FAA61A"/>
+                </svg>
+              </label>
+
+              <label style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: #f9fafb; border: 2px solid #d1d5db; border-radius: 10px; cursor: pointer; transition: all 0.2s;" id="paypalOption" onclick="selectPaymentMethod('paypal')">
+                <input type="radio" name="paymentMethod" value="paypal" style="width: 20px; height: 20px; accent-color: #dc2626;">
+                <div style="flex: 1;">
+                  <div style="font-weight: 600; color: #111827; font-size: 1rem;">PayPal</div>
+                  <div style="font-size: 0.8125rem; color: #6b7280;">Pay securely with PayPal</div>
+                </div>
+                <svg width="80" height="22" viewBox="0 0 101 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12.237 4.5H7.55c-.3 0-.56.217-.61.515L5.176 16.84c-.036.22.135.42.36.42h2.23c.3 0 .56-.217.61-.515l.48-3.07c.05-.298.31-.515.61-.515h1.4c2.92 0 4.6-1.412 5.04-4.212.2-1.225.008-2.188-.57-2.862-.63-.74-1.75-1.135-3.1-1.135zm.51 4.15c-.24 1.6-1.46 1.6-2.64 1.6h-.67l.47-2.99c.028-.18.18-.31.36-.31h.31c.8 0 1.56 0 1.95.456.23.273.3.678.22 1.244z" fill="#253B80"/>
+                  <path d="M32.69 8.59h-2.24c-.18 0-.33.13-.36.31l-.1.61-.15-.22c-.47-.68-1.51-.91-2.55-.91-2.39 0-4.43 1.81-4.83 4.35-.21 1.27.09 2.48.82 3.33.67.78 1.62 1.1 2.76 1.1 1.95 0 3.03-1.25 3.03-1.25l-.1.6c-.04.22.13.42.36.42h2.01c.3 0 .56-.22.61-.52l1.2-7.6c.04-.22-.13-.42-.36-.42zm-3.05 4.21c-.21 1.24-1.2 2.08-2.46 2.08-.63 0-1.14-.2-1.46-.59-.32-.38-.44-.93-.34-1.53.2-1.23 1.21-2.09 2.45-2.09.62 0 1.12.21 1.45.6.34.4.47.95.36 1.53z" fill="#253B80"/>
+                  <path d="M49.63 8.59h-2.25c-.2 0-.39.1-.5.27l-2.9 4.26-1.23-4.1c-.08-.26-.31-.43-.58-.43h-2.21c-.25 0-.42.24-.34.47l2.31 6.8-2.18 3.07c-.17.24 0 .57.29.57h2.24c.2 0 .38-.1.5-.26l6.98-10.08c.17-.24 0-.57-.28-.57z" fill="#253B80"/>
+                  <path d="M59.49 4.5h-4.69c-.3 0-.56.217-.61.515l-1.76 11.825c-.04.22.13.42.36.42h2.42c.21 0 .39-.15.43-.36l.5-3.16c.05-.3.31-.52.61-.52h1.4c2.92 0 4.6-1.41 5.04-4.21.2-1.23.01-2.19-.57-2.87-.63-.74-1.75-1.13-3.1-1.13zm.51 4.15c-.24 1.6-1.46 1.6-2.64 1.6h-.67l.47-2.99c.03-.18.18-.31.36-.31h.31c.8 0 1.56 0 1.95.46.23.27.3.68.22 1.24z" fill="#179BD7"/>
+                  <path d="M79.95 8.59h-2.24c-.18 0-.33.13-.36.31l-.1.61-.15-.22c-.47-.68-1.51-.91-2.55-.91-2.39 0-4.43 1.81-4.83 4.35-.21 1.27.09 2.48.82 3.33.67.78 1.62 1.1 2.76 1.1 1.95 0 3.03-1.25 3.03-1.25l-.1.6c-.04.22.13.42.36.42h2.01c.3 0 .56-.22.61-.52l1.2-7.6c.04-.22-.13-.42-.36-.42zm-3.05 4.21c-.21 1.24-1.2 2.08-2.46 2.08-.63 0-1.14-.2-1.46-.59-.32-.38-.44-.93-.34-1.53.2-1.23 1.21-2.09 2.45-2.09.62 0 1.12.21 1.45.6.34.4.47.95.36 1.53z" fill="#179BD7"/>
+                  <path d="M88.45 4.96l-1.79 11.39c-.04.22.13.42.36.42h1.93c.3 0 .56-.22.61-.52l1.76-11.82c.04-.22-.13-.42-.36-.42h-2.15c-.18 0-.33.13-.36.31z" fill="#179BD7"/>
+                </svg>
+              </label>
+            </div>
+
+            <!-- Stripe Payment Button (shown by default) -->
+            <div id="stripePaymentSection">
+              <button type="submit" id="submitBtn" style="width: 100%; padding: 1rem; background: #dc2626; color: #fff; border: none; border-radius: 10px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.375rem; font-weight: 400; letter-spacing: 0.06em; cursor: pointer; transition: all 0.2s;">
+                PAY WITH CARD
+              </button>
+            </div>
+
+            <!-- PayPal Button Container (hidden by default) -->
+            <div id="paypalPaymentSection" style="display: none;">
+              <div id="paypal-button-container" style="min-height: 55px;"></div>
+              <p style="text-align: center; font-size: 0.8125rem; color: #6b7280; margin-top: 0.75rem;">
+                You'll be redirected to PayPal to complete payment
+              </p>
+            </div>
+            `}
+
+            <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 1rem; font-size: 0.8125rem; color: #6b7280;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
               </svg>
-              Secure Checkout
+              ${total === 0 ? 'Secure Checkout' : 'Secure, Encrypted Checkout'}
             </div>
           </div>
         </div>
@@ -546,25 +604,258 @@ export const prerender = false;
     
     // Make postcode lookup available globally
     window.lookupPostcode = lookupPostcode;
-    
+
+    // Make payment method selection available globally
+    window.selectPaymentMethod = selectPaymentMethod;
+
     document.getElementById('checkoutForm').addEventListener('submit', handleSubmit);
+
+    // Initialize PayPal buttons when PayPal is selected
+    setupPaymentMethods();
+  }
+
+  let selectedPaymentMethod = 'stripe';
+  let paypalButtonsRendered = false;
+
+  function selectPaymentMethod(method) {
+    selectedPaymentMethod = method;
+
+    const stripeOption = document.getElementById('stripeOption');
+    const paypalOption = document.getElementById('paypalOption');
+    const stripeSection = document.getElementById('stripePaymentSection');
+    const paypalSection = document.getElementById('paypalPaymentSection');
+
+    if (method === 'stripe') {
+      stripeOption.style.borderColor = '#dc2626';
+      stripeOption.style.background = '#fef2f2';
+      paypalOption.style.borderColor = '#d1d5db';
+      paypalOption.style.background = '#f9fafb';
+      stripeSection.style.display = 'block';
+      paypalSection.style.display = 'none';
+      document.querySelector('input[name="paymentMethod"][value="stripe"]').checked = true;
+    } else {
+      paypalOption.style.borderColor = '#dc2626';
+      paypalOption.style.background = '#fef2f2';
+      stripeOption.style.borderColor = '#d1d5db';
+      stripeOption.style.background = '#f9fafb';
+      stripeSection.style.display = 'none';
+      paypalSection.style.display = 'block';
+      document.querySelector('input[name="paymentMethod"][value="paypal"]').checked = true;
+
+      // Load PayPal SDK and render buttons
+      loadPayPalSDK();
+    }
+  }
+
+  function setupPaymentMethods() {
+    // Set default styling
+    const stripeOption = document.getElementById('stripeOption');
+    if (stripeOption) {
+      stripeOption.style.borderColor = '#dc2626';
+      stripeOption.style.background = '#fef2f2';
+    }
+  }
+
+  // PayPal SDK loading
+  let paypalSDKLoaded = false;
+  const PAYPAL_CLIENT_ID = import.meta.env.PUBLIC_PAYPAL_CLIENT_ID || 'AQkKjFyHAg4zN1wet1V2Q-oPsb0OFZaZ04CGvGDDvLzFJOdXlvRZ14tempEhVRebsCf2onRKT_QQ70vS';
+
+  function loadPayPalSDK() {
+    if (paypalSDKLoaded) {
+      renderPayPalButtons();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=GBP&intent=capture`;
+    script.async = true;
+    script.onload = () => {
+      paypalSDKLoaded = true;
+      renderPayPalButtons();
+    };
+    script.onerror = () => {
+      console.error('[Checkout] Failed to load PayPal SDK');
+      document.getElementById('paypal-button-container').innerHTML = '<p style="color: #dc2626; text-align: center;">Failed to load PayPal. Please try again or use card payment.</p>';
+    };
+    document.head.appendChild(script);
+  }
+
+  function renderPayPalButtons() {
+    if (paypalButtonsRendered || !window.paypal) return;
+
+    const container = document.getElementById('paypal-button-container');
+    if (!container) return;
+
+    // Set flag immediately to prevent double rendering
+    paypalButtonsRendered = true;
+    container.innerHTML = '';
+
+    window.paypal.Buttons({
+      style: {
+        layout: 'vertical',
+        color: 'gold',
+        shape: 'rect',
+        label: 'paypal',
+        height: 55
+      },
+
+      createOrder: async function(data, actions) {
+        const form = document.getElementById('checkoutForm');
+        const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals();
+
+        // Validate form
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          throw new Error('Please fill in all required fields');
+        }
+
+        const orderData = {
+          customer: {
+            email: form.email.value,
+            firstName: form.firstName.value,
+            lastName: form.lastName.value,
+            phone: form.phone?.value || '',
+            userId: currentUser?.uid || null
+          },
+          shipping: hasPhysicalItems ? {
+            address1: form.address1.value,
+            address2: form.address2?.value || '',
+            city: form.city.value,
+            county: form.county?.value || '',
+            postcode: form.postcode.value,
+            country: form.country.value
+          } : null,
+          items: cart.map(item => ({
+            id: item.id || item.productId,
+            productId: item.productId || item.id,
+            releaseId: item.releaseId || item.productId || item.id,
+            trackId: item.trackId || null,
+            name: item.name,
+            type: item.type || item.productType,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image || item.artwork,
+            size: item.size || null,
+            color: typeof item.color === 'object' ? item.color.name : item.color || null
+          })),
+          totals: { subtotal, shipping, freshWaxFee, stripeFee, serviceFees, total },
+          hasPhysicalItems
+        };
+
+        // Create PayPal order
+        const response = await fetch('/api/paypal/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to create PayPal order');
+        }
+
+        // Store order data for capture
+        window.pendingPayPalOrderData = orderData;
+
+        return result.orderId;
+      },
+
+      onApprove: async function(data, actions) {
+        const errorMsg = document.getElementById('error-message');
+        errorMsg.style.display = 'none';
+
+        try {
+          // Get idToken if logged in
+          let idToken = null;
+          if (currentUser) {
+            try {
+              idToken = await currentUser.getIdToken();
+            } catch (e) {
+              console.warn('Could not get ID token');
+            }
+          }
+
+          // Capture the payment
+          const response = await fetch('/api/paypal/capture-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              paypalOrderId: data.orderID,
+              orderData: window.pendingPayPalOrderData,
+              idToken
+            })
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            // Clear cart
+            const customerId = getCustomerIdFromCookie();
+            if (customerId) {
+              localStorage.removeItem('freshwax_cart_' + customerId);
+            }
+            localStorage.removeItem('cart');
+            window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
+
+            // Redirect to confirmation
+            window.location.href = `/order-confirmation/${result.orderId}`;
+          } else {
+            throw new Error(result.error || 'Payment failed');
+          }
+        } catch (error) {
+          console.error('PayPal capture error:', error);
+          errorMsg.textContent = error.message || 'Payment failed. Please try again.';
+          errorMsg.style.display = 'block';
+        }
+      },
+
+      onError: function(err) {
+        console.error('PayPal error:', err);
+        const errorMsg = document.getElementById('error-message');
+        errorMsg.textContent = 'PayPal error. Please try again or use card payment.';
+        errorMsg.style.display = 'block';
+      },
+
+      onCancel: function() {
+        console.log('PayPal payment cancelled');
+      }
+    }).render('#paypal-button-container').catch(err => {
+      console.error('PayPal render error:', err);
+      // Reset flag on error so user can retry
+      paypalButtonsRendered = false;
+    });
   }
   
   async function handleSubmit(e) {
     e.preventDefault();
-    
+
+    const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals();
+
+    // If PayPal is selected and not a free order, don't process here (PayPal buttons handle it)
+    if (selectedPaymentMethod === 'paypal' && total > 0) {
+      return;
+    }
+
     const submitBtn = document.getElementById('submitBtn');
     const errorMsg = document.getElementById('error-message');
-    
+
     submitBtn.disabled = true;
-    submitBtn.textContent = 'PROCESSING...';
     submitBtn.style.background = '#333';
-    submitBtn.style.color = '#666';
+    submitBtn.style.color = '#999';
     errorMsg.style.display = 'none';
-    
+
+    // Check if this is a free order
+    const isFreeOrder = total === 0;
+
+    if (isFreeOrder) {
+      submitBtn.textContent = 'PROCESSING...';
+    } else {
+      submitBtn.textContent = 'REDIRECTING TO PAYMENT...';
+    }
+
     const form = e.target;
-    const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals();
-    
+
     // Save details to customer account if checkbox is checked
     const saveDetails = form.saveDetails?.checked;
     if (saveDetails && currentUser) {
@@ -587,7 +878,7 @@ export const prerender = false;
         console.error('Error saving customer details:', e);
       }
     }
-    
+
     const orderData = {
       customer: {
         email: form.email.value,
@@ -621,9 +912,7 @@ export const prerender = false;
         title: item.title || null
       })),
       totals: { subtotal, shipping, freshWaxFee, stripeFee, serviceFees, total },
-      hasPhysicalItems,
-      paymentMethod: 'test_mode',
-      paymentStatus: 'completed'
+      hasPhysicalItems
     };
 
     try {
@@ -636,35 +925,63 @@ export const prerender = false;
         }
       }
 
-      const response = await fetch('/api/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        // Clear customer-specific cart
-        const customerId = getCustomerIdFromCookie();
-        if (customerId) {
-          localStorage.removeItem('freshwax_cart_' + customerId);
+      // Handle free orders (total = 0) differently
+      if (isFreeOrder) {
+        console.log('[Checkout] Processing free order...');
+
+        const response = await fetch('/api/complete-free-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.orderId) {
+          console.log('[Checkout] Free order completed:', result.orderNumber);
+
+          // Clear cart
+          const customerId = getCustomerIdFromCookie();
+          if (customerId) {
+            localStorage.removeItem('freshwax_cart_' + customerId);
+          }
+
+          // Redirect to success page
+          window.location.href = '/checkout/success?orderId=' + result.orderId;
+        } else {
+          throw new Error(result.error || 'Failed to complete free order');
         }
-        localStorage.removeItem('cart'); // Also clear legacy cart
-        window.dispatchEvent(new CustomEvent('cart-updated', { detail: { items: [] } }));
-        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
-        window.location.href = `/order-confirmation/${result.orderId}`;
       } else {
-        throw new Error(result.error || 'Failed to create order');
+        // Create Stripe checkout session
+        const response = await fetch('/api/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData)
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.checkoutUrl) {
+          // Redirect to Stripe checkout
+          window.location.href = result.checkoutUrl;
+        } else {
+          throw new Error(result.error || 'Failed to create checkout session');
+        }
       }
     } catch (error) {
       console.error('Checkout error:', error);
       errorMsg.textContent = error.message || 'Something went wrong. Please try again.';
       errorMsg.style.display = 'block';
       submitBtn.disabled = false;
-      submitBtn.textContent = `COMPLETE ORDER — £${total.toFixed(2)}`;
-      submitBtn.style.background = '#fff';
-      submitBtn.style.color = '#000';
+
+      if (isFreeOrder) {
+        submitBtn.textContent = 'COMPLETE FREE ORDER';
+        submitBtn.style.background = '#16a34a';
+      } else {
+        submitBtn.textContent = `PAY WITH CARD — £${total.toFixed(2)}`;
+        submitBtn.style.background = '#dc2626';
+      }
+      submitBtn.style.color = '#fff';
     }
   }
   

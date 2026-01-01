@@ -1354,6 +1354,12 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   let emojiAnimationsEnabled = true;
   
   function createFloatingEmoji(startX, startY, emojiList) {
+    // Only show emojis on live pages (ViewTransitions keeps scripts alive across pages)
+    const path = window.location.pathname;
+    if (!path.startsWith('/live') && !path.includes('/account/dj-lobby')) {
+      return;
+    }
+
     // Check if animations are enabled
     if (!emojiAnimationsEnabled) return;
     
@@ -1434,6 +1440,12 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   }
   
   function triggerReactionBurst(element, emojiList) {
+    // Only show emojis on live pages (ViewTransitions keeps scripts alive across pages)
+    const path = window.location.pathname;
+    if (!path.startsWith('/live') && !path.includes('/account/dj-lobby')) {
+      return;
+    }
+
     // Get position from element or default to video player area
     let x = window.innerWidth / 2;
     let y = window.innerHeight / 2;
@@ -2995,16 +3007,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         }
       });
 
-      reactionChannel.bind('reaction', (data) => {
-        console.log('[Reactions] Received from Pusher:', data);
-        // Skip if this is our own reaction
-        if (data.sessionId === window.reactionSessionId) return;
-        // Trigger floating emoji animation from center (null element = use center)
-        const emojiList = data.emoji?.split(',') || ['❤️'];
-        if (typeof triggerReactionBurst === 'function') {
-          triggerReactionBurst(null, emojiList);
-        }
-      });
+      // NOTE: Reaction animations are handled by live-stream.js chatChannel.bind('reaction')
+      // to avoid duplicate emoji animations - DO NOT add a handler here
 
       // Listen for like count updates from all reactions
       reactionChannel.bind('like-update', (data) => {

@@ -24,7 +24,14 @@ export async function POST({ request, locals }: any) {
     const updates = await request.json();
     log.info('[update-release] Request body:', JSON.stringify(updates, null, 2));
 
-    const { id, ...updateData } = updates;
+    const { id, idToken, ...updateData } = updates;
+
+    // Also check Authorization header for token
+    const authHeader = request.headers.get('Authorization');
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const authToken = idToken || bearerToken;
+
+    console.log('[update-release] Auth token received:', authToken ? 'YES (' + authToken.substring(0, 20) + '...)' : 'NO');
 
     if (!id) {
       log.error('[update-release] No release ID provided');
@@ -65,8 +72,8 @@ export async function POST({ request, locals }: any) {
 
     log.info('[update-release] Cleaned data:', JSON.stringify(cleanedData, null, 2));
 
-    // Update in Firestore
-    await updateDocument('releases', id, cleanedData);
+    // Update in Firestore (pass auth token for authenticated writes)
+    await updateDocument('releases', id, cleanedData, authToken);
     log.info('[update-release] Updated in Firestore');
 
     // Also update the master list
@@ -93,7 +100,7 @@ export async function POST({ request, locals }: any) {
           await updateDocument('system', 'releases-master', {
             releases: releasesList,
             lastUpdated: new Date().toISOString()
-          });
+          }, authToken);
 
           log.info('[update-release] Updated master list');
         }
@@ -115,11 +122,13 @@ export async function POST({ request, locals }: any) {
     });
 
   } catch (error: any) {
-    log.error('[update-release] Critical error:', error.message);
+    console.error('[update-release] Critical error:', error.message);
+    console.error('[update-release] Stack:', error.stack);
 
     return new Response(JSON.stringify({
       error: 'Internal server error',
-      message: error.message
+      message: error.message,
+      stack: error.stack
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

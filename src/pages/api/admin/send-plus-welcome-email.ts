@@ -147,6 +147,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 </li>
                 <li style="padding-left: 24px; position: relative;">
                   <span style="position: absolute; left: 0; color: #f59e0b;">✓</span>
+                  1,000 tracks in cloud playlist (sync across devices)
+                </li>
+                <li style="padding-left: 24px; position: relative;">
+                  <span style="position: absolute; left: 0; color: #f59e0b;">✓</span>
+                  !skip command (3 skips per day)
+                </li>
+                <li style="padding-left: 24px; position: relative;">
+                  <span style="position: absolute; left: 0; color: #f59e0b;">✓</span>
                   Record live stream button enabled
                 </li>
                 <li style="padding-left: 24px; position: relative;">

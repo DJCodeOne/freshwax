@@ -2568,8 +2568,41 @@ export const prerender = false;
         if (upgradeSection) upgradeSection.classList.remove('hidden');
         if (proSection) proSection.classList.add('hidden');
 
+        // Check if expired Plus user - show special renewal message
+        if (result.subscription.wasPlus && result.subscription.isExpired) {
+          const upgradeTitle = document.querySelector('.upgrade-title');
+          const upgradeSubtitle = document.querySelector('.upgrade-subtitle');
+          if (upgradeTitle) upgradeTitle.textContent = 'Renew Your Plus Membership';
+          if (upgradeSubtitle) upgradeSubtitle.textContent = 'Your Plus subscription has expired. Renew now to restore your benefits!';
+
+          // Change button text
+          if (goPlusHeaderBtn) {
+            const btnText = goPlusHeaderBtn.querySelector('.pro-text');
+            if (btnText) btnText.textContent = 'Renew Plus';
+          }
+
+          // Show Plus ID if available
+          if (result.subscription.plusId && proExpires) {
+            proExpires.textContent = `Your Plus ID: ${result.subscription.plusId} (expired)`;
+            proExpires.style.color = '#ef4444';
+          }
+        }
+
         // Show Go Plus header button for non-Plus users
         if (goPlusHeaderBtn) goPlusHeaderBtn.classList.remove('hidden');
+      }
+
+      // Check for expiring soon warning (for active Plus users)
+      if (result.subscription.isPro && result.subscription.isExpiringSoon) {
+        const expiryWarning = document.createElement('div');
+        expiryWarning.className = 'expiry-warning';
+        expiryWarning.innerHTML = `
+          <span class="warning-icon">⚠️</span>
+          <span>Your Plus membership expires soon! <a href="#" onclick="document.getElementById('goPlusModal').classList.remove('hidden'); document.body.style.overflow='hidden'; return false;">Renew now</a></span>
+        `;
+        if (proExpires && proExpires.parentNode) {
+          proExpires.parentNode.insertBefore(expiryWarning, proExpires.nextSibling);
+        }
       }
 
       // Update usage stats
@@ -3364,6 +3397,25 @@ export const prerender = false;
     margin: 0;
     color: #888;
     font-size: 0.85rem;
+  }
+
+  .expiry-warning {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: #f59e0b;
+  }
+
+  .expiry-warning a {
+    color: #f59e0b;
+    font-weight: 600;
+    text-decoration: underline;
   }
 
   /* Referral Code Section */

@@ -149,7 +149,10 @@ service cloud.firestore {
                       // Allow stat updates, comments, ratings, and approval status changes from REST API
                       request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['plays', 'downloads', 'views', 'likes', 'ratings', 'overallRating', 'comments', 'updatedAt',
-                                  'status', 'published', 'approved', 'approvedAt', 'rejectedAt', 'adminNotes']);
+                                  'status', 'published', 'approved', 'approvedAt', 'rejectedAt', 'adminNotes',
+                                  'pricing', 'pricePerSale', 'trackPrice', 'vinylPrice', 'freeDownload',
+                                  'releaseName', 'releaseDescription', 'artist', 'labelName', 'copyrightHolder',
+                                  'releaseDate', 'genre', 'subgenre', 'coverUrl', 'tracks', 'metadata']);
       // Allow delete from admin or REST API (API has its own protection)
       allow delete: if isAdmin() || request.auth == null;
     }

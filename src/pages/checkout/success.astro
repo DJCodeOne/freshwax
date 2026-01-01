@@ -1,0 +1,151 @@
+---
+// src/pages/checkout/success.astro
+// Handles Stripe checkout success redirect
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+export const prerender = false;
+
+// Get session ID from URL (Stripe) or orderId (free orders)
+const sessionId = Astro.url.searchParams.get('session_id');
+const orderId = Astro.url.searchParams.get('orderId');
+---
+
+<Layout title="Payment Processing" noindex={true}>
+  <Header />
+
+  <main style="padding: 4rem 1.5rem; min-height: 60vh; display: flex; align-items: center; justify-content: center;">
+    <div style="max-width: 500px; width: 100%; text-align: center;">
+      <div id="loading-state">
+        <div style="width: 80px; height: 80px; border: 4px solid #e5e7eb; border-top-color: #dc2626; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1.5rem;"></div>
+        <h1 style="font-family: 'Inter', sans-serif; font-size: 1.75rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem;">Processing Payment...</h1>
+        <p style="color: #6b7280; font-size: 1rem;">Please wait while we confirm your order.</p>
+      </div>
+
+      <div id="success-state" style="display: none;">
+        <div style="width: 80px; height: 80px; background: #dcfce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+        </div>
+        <h1 style="font-family: 'Inter', sans-serif; font-size: 1.75rem; font-weight: 700; color: #16a34a; margin-bottom: 0.5rem;">Payment Successful!</h1>
+        <p style="color: #6b7280; font-size: 1rem; margin-bottom: 1.5rem;">Your order has been confirmed. Redirecting...</p>
+      </div>
+
+      <div id="error-state" style="display: none;">
+        <div style="width: 80px; height: 80px; background: #fef2f2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="3">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 8v4m0 4h.01"/>
+          </svg>
+        </div>
+        <h1 style="font-family: 'Inter', sans-serif; font-size: 1.75rem; font-weight: 700; color: #dc2626; margin-bottom: 0.5rem;">Something Went Wrong</h1>
+        <p id="error-message" style="color: #6b7280; font-size: 1rem; margin-bottom: 1.5rem;">We couldn't verify your payment.</p>
+        <a href="/checkout" style="display: inline-block; padding: 0.875rem 2rem; background: #dc2626; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">Try Again</a>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+
+  <style>
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</Layout>
+
+<script define:vars={{ sessionId, orderId }}>
+  async function verifyPayment() {
+    const loadingState = document.getElementById('loading-state');
+    const successState = document.getElementById('success-state');
+    const errorState = document.getElementById('error-state');
+    const errorMessage = document.getElementById('error-message');
+
+    // Handle free orders (have orderId instead of session_id)
+    if (orderId) {
+      console.log('[success] Free order detected:', orderId);
+
+      // Clear cart
+      const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
+      if (customerId) {
+        localStorage.removeItem('freshwax_cart_' + customerId);
+      }
+      localStorage.removeItem('cart');
+      window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
+
+      // Show success and redirect
+      loadingState.style.display = 'none';
+      successState.style.display = 'block';
+
+      setTimeout(() => {
+        window.location.href = `/account/orders`;
+      }, 1500);
+      return;
+    }
+
+    if (!sessionId) {
+      // No session ID - something went wrong
+      loadingState.style.display = 'none';
+      errorState.style.display = 'block';
+      errorMessage.textContent = 'No payment session found.';
+      return;
+    }
+
+    try {
+      // Wait a moment for webhook to process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Check if order exists for this session
+      console.log('[success] Verifying session:', sessionId);
+      const response = await fetch(`/api/stripe/verify-session?session_id=${sessionId}`);
+      const result = await response.json();
+      console.log('[success] Verify result:', JSON.stringify(result));
+
+      // Clear cart for any successful payment
+      if (result.success || result.paymentStatus === 'paid') {
+        console.log('[success] Payment successful, clearing cart');
+        const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
+        if (customerId) {
+          localStorage.removeItem('freshwax_cart_' + customerId);
+        }
+        localStorage.removeItem('cart');
+        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
+      }
+
+      if (result.success && result.orderId) {
+        loadingState.style.display = 'none';
+        successState.style.display = 'block';
+
+        // Redirect to order confirmation
+        setTimeout(() => {
+          window.location.href = `/order-confirmation/${result.orderId}`;
+        }, 1500);
+      } else if (result.success || result.paymentStatus === 'paid') {
+        // Payment successful but order might not have been created
+        console.log('[success] Payment OK but no orderId. Error:', result.error);
+        loadingState.style.display = 'none';
+        successState.style.display = 'block';
+
+        setTimeout(() => {
+          // Redirect to account orders
+          window.location.href = '/account/orders';
+        }, 2000);
+      } else {
+        // Payment failed or not completed
+        console.error('[success] Payment verification failed:', result.error);
+        loadingState.style.display = 'none';
+        errorState.style.display = 'block';
+        errorMessage.textContent = result.error || 'Payment verification failed';
+      }
+    } catch (error) {
+      console.error('[success] Verification error:', error);
+      loadingState.style.display = 'none';
+      errorState.style.display = 'block';
+    }
+  }
+
+  // Start verification
+  verifyPayment();
+</script>

@@ -128,7 +128,7 @@ export const prerender = false;
   
   .order-card {
     background: #111;
-    border: 1px solid #222;
+    border: 2px solid #fff;
     border-radius: 12px;
     overflow: hidden;
   }
@@ -321,7 +321,7 @@ export const prerender = false;
 <script is:inline>
   // CORRECT Firebase config - matches login page
   var firebaseConfig = {
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store",
     storageBucket: "freshwax-store.firebasestorage.app",
@@ -359,7 +359,7 @@ export const prerender = false;
   }
   
   function fetchOrders(userId) {
-    return fetch('/api/get-orders?customerId=' + userId)
+    return fetch('/api/get-orders?userId=' + userId)
       .then(function(response) { return response.json(); })
       .then(function(data) {
         if (data.success) {
@@ -412,8 +412,8 @@ export const prerender = false;
         }
       }
       
-      var canDownload = hasDigital && 
-        (order.status === 'completed' || order.status === 'paid' || order.paymentStatus === 'paid');
+      var canDownload = hasDigital &&
+        (order.orderStatus === 'completed' || order.orderStatus === 'paid' || order.paymentStatus === 'completed' || order.paymentStatus === 'paid');
       
       html += 
         '<div class="order-card">' +
@@ -432,7 +432,7 @@ export const prerender = false;
                 '<span class="order-info-value">' + items.length + '</span>' +
               '</div>' +
             '</div>' +
-            '<span class="order-status ' + getStatusClass(order.status) + '">' + (order.status || 'Pending') + '</span>' +
+            '<span class="order-status ' + getStatusClass(order.orderStatus) + '">' + (order.orderStatus || 'Pending') + '</span>' +
           '</div>' +
           '<div class="order-items">' + itemsHtml + '</div>' +
           '<div class="order-footer">' +

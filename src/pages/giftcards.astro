@@ -111,12 +111,12 @@ const faqs = [
         <p class="buy-subtitle">Perfect for birthdays, Christmas, or just because. Send credit to any music lover.</p>
         
         <div class="amount-selector">
-          <button type="button" class="amount-btn" onclick="selectAmount(5, this)">£5</button>
-          <button type="button" class="amount-btn" onclick="selectAmount(10, this)">£10</button>
-          <button type="button" class="amount-btn" onclick="selectAmount(20, this)">£20</button>
-          <button type="button" class="amount-btn" onclick="selectAmount(50, this)">£50</button>
-          <button type="button" class="amount-btn" onclick="selectAmount(75, this)">£75</button>
-          <button type="button" class="amount-btn" onclick="selectAmount('custom', this)">Custom</button>
+          <button type="button" class="amount-btn" data-amount="5">£5</button>
+          <button type="button" class="amount-btn" data-amount="10">£10</button>
+          <button type="button" class="amount-btn" data-amount="20">£20</button>
+          <button type="button" class="amount-btn" data-amount="50">£50</button>
+          <button type="button" class="amount-btn" data-amount="75">£75</button>
+          <button type="button" class="amount-btn" data-amount="custom">Custom</button>
         </div>
         
         <div id="customAmountWrapper" class="custom-amount-wrapper hidden">
@@ -285,7 +285,7 @@ const faqs = [
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
   const firebaseConfig = {
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store",
     storageBucket: "freshwax-store.firebasestorage.app",
@@ -295,8 +295,9 @@ const faqs = [
 
   const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  
+
   let currentUser = null;
+  let selectedAmount = 0;
   
   // Helper to get authenticated user (waits for auth to be ready)
   async function getAuthUser() {
@@ -556,13 +557,12 @@ const faqs = [
   document.getElementById('purchaseSignInLink')?.addEventListener('click', handleAuthLinkClick);
   document.getElementById('purchaseRegisterLink')?.addEventListener('click', handleAuthLinkClick);
   
-  // Amount selection - using global function for onclick handlers
-  let selectedAmount = 0;
+  // Amount selection - using event delegation
   const customAmountWrapper = document.getElementById('customAmountWrapper');
   const customAmountInput = document.getElementById('customAmount');
   const selectedAmountDisplay = document.getElementById('selectedAmount');
   const purchaseBtn = document.getElementById('purchaseBtn');
-  
+
   // Initialize display
   if (selectedAmountDisplay) {
     selectedAmountDisplay.textContent = '£0';
@@ -571,7 +571,7 @@ const faqs = [
     purchaseBtn.querySelector('.btn-text').textContent = 'Select an amount';
     purchaseBtn.disabled = true;
   }
-  
+
   function updateSelectedAmount(amount) {
     selectedAmount = amount;
     if (selectedAmountDisplay) {
@@ -587,15 +587,20 @@ const faqs = [
       }
     }
   }
-  
-  // Global function for amount button clicks (called via onclick)
-  window.selectAmount = function(amount, btn) {
+
+  // Event delegation for amount buttons
+  document.querySelector('.amount-selector')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.amount-btn');
+    if (!btn) return;
+
+    const amount = btn.dataset.amount;
+
     // Remove active class from all buttons
     document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
-    
+
     // Add active to clicked button
     btn.classList.add('active');
-    
+
     if (amount === 'custom') {
       customAmountWrapper?.classList.remove('hidden');
       const customVal = parseInt(customAmountInput?.value) || 0;
@@ -604,8 +609,8 @@ const faqs = [
       customAmountWrapper?.classList.add('hidden');
       updateSelectedAmount(parseInt(amount));
     }
-  };
-  
+  });
+
   customAmountInput?.addEventListener('input', (e) => {
     let value = parseInt(e.target.value) || 0;
     if (value > 500) {

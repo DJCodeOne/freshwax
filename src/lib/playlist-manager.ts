@@ -1443,6 +1443,7 @@ export class PlaylistManager {
 
   /**
    * Load personal playlist from Firebase (called when user authenticates)
+   * Cloud sync is Plus-only - Standard users only use localStorage
    */
   async loadPersonalPlaylistFromServer(): Promise<void> {
     if (!this.userId) {
@@ -1453,6 +1454,16 @@ export class PlaylistManager {
     try {
       const response = await fetch(`/api/playlist/personal?userId=${encodeURIComponent(this.userId)}`);
       const result = await response.json();
+
+      // Check if user has Plus for cloud sync
+      if (result.isPlus === false) {
+        console.log('[PlaylistManager] User is not Plus - using local storage only');
+        // Store Plus status for later use
+        (window as any).userHasCloudSync = false;
+        return;
+      }
+
+      (window as any).userHasCloudSync = true;
 
       if (result.success && Array.isArray(result.playlist)) {
         // Merge with localStorage (Firebase takes priority for duplicates)
@@ -1496,12 +1507,19 @@ export class PlaylistManager {
 
   /**
    * Save personal playlist to Firebase (async, non-blocking)
+   * Only saves for Plus users - Standard users use local storage only
    */
   private async savePersonalPlaylistToServer(): Promise<void> {
     if (!this.userId) return;
 
+    // Skip if user doesn't have cloud sync (not Plus)
+    if ((window as any).userHasCloudSync === false) {
+      console.log('[PlaylistManager] Skipping Firebase save - user is not Plus');
+      return;
+    }
+
     try {
-      await fetch('/api/playlist/personal', {
+      const response = await fetch('/api/playlist/personal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1509,7 +1527,19 @@ export class PlaylistManager {
           items: this.personalPlaylist
         })
       });
-      console.log('[PlaylistManager] Personal playlist saved to Firebase');
+
+      const result = await response.json();
+
+      if (result.isPlus === false) {
+        // User is not Plus - mark it and skip future saves
+        (window as any).userHasCloudSync = false;
+        console.log('[PlaylistManager] Cloud sync is Plus-only - using local storage');
+        return;
+      }
+
+      if (result.success) {
+        console.log('[PlaylistManager] Personal playlist saved to Firebase (cloud sync)');
+      }
     } catch (error) {
       console.error('[PlaylistManager] Error saving personal playlist to Firebase:', error);
     }
@@ -1517,6 +1547,8 @@ export class PlaylistManager {
 
   /**
    * Add a track to personal playlist (for later use)
+   * Plus users: 1000 tracks with cloud sync
+   * Standard users: 100 tracks local only
    */
   async addToPersonalPlaylist(url: string): Promise<{ success: boolean; message?: string; error?: string }> {
     if (!url || !url.trim()) {
@@ -1529,9 +1561,17 @@ export class PlaylistManager {
       return { success: false, error: 'This track is already in your playlist' };
     }
 
+    // Determine max size based on subscription
+    const hasCloudSync = (window as any).userHasCloudSync === true;
+    const maxSize = hasCloudSync ? 1000 : 100;
+
     // Check max size
-    if (this.personalPlaylist.length >= MAX_PERSONAL_PLAYLIST_SIZE) {
-      return { success: false, error: `Personal playlist is full (${MAX_PERSONAL_PLAYLIST_SIZE} items max)` };
+    if (this.personalPlaylist.length >= maxSize) {
+      if (hasCloudSync) {
+        return { success: false, error: `Your cloud playlist is full (${maxSize} tracks max)` };
+      } else {
+        return { success: false, error: `Your playlist is full (${maxSize} tracks). Upgrade to Plus for 1,000 tracks with cloud sync!` };
+      }
     }
 
     try {

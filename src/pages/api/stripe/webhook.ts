@@ -358,6 +358,138 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Order should already be created by checkout.session.completed
     }
 
+    // Handle subscription renewal (invoice.payment_succeeded for recurring payments)
+    if (event.type === 'invoice.payment_succeeded') {
+      const invoice = event.data.object;
+      console.log('[Stripe Webhook] ========== INVOICE PAYMENT SUCCEEDED ==========');
+      console.log('[Stripe Webhook] Invoice ID:', invoice.id);
+      console.log('[Stripe Webhook] Billing reason:', invoice.billing_reason);
+      console.log('[Stripe Webhook] Subscription:', invoice.subscription);
+
+      // Only process subscription renewals, not initial payments
+      if (invoice.billing_reason === 'subscription_cycle' && invoice.subscription) {
+        console.log('[Stripe Webhook] 👑 Processing Plus subscription RENEWAL...');
+
+        // Get subscription details from Stripe
+        const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
+        if (stripeSecretKey) {
+          try {
+            const subResponse = await fetch(
+              `https://api.stripe.com/v1/subscriptions/${invoice.subscription}`,
+              {
+                headers: { 'Authorization': `Bearer ${stripeSecretKey}` }
+              }
+            );
+            const subscription = await subResponse.json();
+
+            if (subscription.metadata?.userId) {
+              const userId = subscription.metadata.userId;
+              const email = invoice.customer_email || subscription.metadata.email;
+
+              // Calculate new expiry (extend by 1 year from current expiry or now)
+              const FIREBASE_PROJECT_ID = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+              const FIREBASE_API_KEY = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
+
+              // Get current user to check existing expiry
+              const userResponse = await fetch(
+                `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${userId}?key=${FIREBASE_API_KEY}`
+              );
+              const userData = await userResponse.json();
+
+              let baseDate = new Date();
+              if (userData.fields?.subscription?.mapValue?.fields?.expiresAt?.stringValue) {
+                const currentExpiry = new Date(userData.fields.subscription.mapValue.fields.expiresAt.stringValue);
+                if (currentExpiry > baseDate) {
+                  baseDate = currentExpiry; // Extend from current expiry if not yet expired
+                }
+              }
+
+              const newExpiry = new Date(baseDate);
+              newExpiry.setFullYear(newExpiry.getFullYear() + 1); // Add 1 year
+
+              // Update subscription expiry
+              const updateData = {
+                fields: {
+                  'subscription': {
+                    mapValue: {
+                      fields: {
+                        tier: { stringValue: 'pro' },
+                        expiresAt: { stringValue: newExpiry.toISOString() },
+                        lastRenewal: { stringValue: new Date().toISOString() },
+                        subscriptionId: { stringValue: invoice.subscription },
+                        paymentMethod: { stringValue: 'stripe' }
+                      }
+                    }
+                  }
+                }
+              };
+
+              // Preserve existing fields
+              if (userData.fields?.subscription?.mapValue?.fields?.subscribedAt?.stringValue) {
+                updateData.fields.subscription.mapValue.fields.subscribedAt =
+                  userData.fields.subscription.mapValue.fields.subscribedAt;
+              }
+              if (userData.fields?.subscription?.mapValue?.fields?.plusId?.stringValue) {
+                updateData.fields.subscription.mapValue.fields.plusId =
+                  userData.fields.subscription.mapValue.fields.plusId;
+              }
+
+              const updateResponse = await fetch(
+                `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${userId}?updateMask.fieldPaths=subscription&key=${FIREBASE_API_KEY}`,
+                {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(updateData)
+                }
+              );
+
+              if (updateResponse.ok) {
+                console.log('[Stripe Webhook] ✓ Subscription renewed for:', userId);
+                console.log('[Stripe Webhook] New expiry:', newExpiry.toISOString());
+
+                // Send renewal confirmation email
+                try {
+                  const origin = new URL(request.url).origin;
+                  await fetch(`${origin}/api/admin/send-plus-welcome-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      email: email,
+                      name: subscription.metadata.userName || email?.split('@')[0],
+                      subscribedAt: userData.fields?.subscription?.mapValue?.fields?.subscribedAt?.stringValue,
+                      expiresAt: newExpiry.toISOString(),
+                      plusId: userData.fields?.subscription?.mapValue?.fields?.plusId?.stringValue,
+                      isRenewal: true
+                    })
+                  });
+                  console.log('[Stripe Webhook] ✓ Renewal email sent to:', email);
+                } catch (emailError) {
+                  console.error('[Stripe Webhook] Failed to send renewal email:', emailError);
+                }
+              } else {
+                console.error('[Stripe Webhook] Failed to update subscription on renewal');
+              }
+            } else {
+              console.log('[Stripe Webhook] No userId in subscription metadata');
+            }
+          } catch (subError) {
+            console.error('[Stripe Webhook] Error processing renewal:', subError);
+          }
+        }
+      }
+    }
+
+    // Handle subscription cancelled/expired
+    if (event.type === 'customer.subscription.deleted') {
+      const subscription = event.data.object;
+      console.log('[Stripe Webhook] ========== SUBSCRIPTION CANCELLED ==========');
+      console.log('[Stripe Webhook] Subscription ID:', subscription.id);
+
+      // User's subscription has been cancelled - they'll naturally lose Plus when expiresAt passes
+      // The getEffectiveTier() function handles this automatically
+      // Optionally, we could immediately downgrade or send a cancellation email here
+    }
+
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

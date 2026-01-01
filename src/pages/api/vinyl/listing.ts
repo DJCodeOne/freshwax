@@ -226,6 +226,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const newId = generateListingId();
         const now = new Date().toISOString();
 
+        // Process tracks - sanitize each track object
+        const tracks = (data.tracks || []).slice(0, 20).map((track: any, index: number) => ({
+          position: index + 1,
+          side: ['A', 'B', 'C', 'D'].includes(track.side) ? track.side : 'A',
+          name: (track.name || '').trim().slice(0, 100),
+          audioSampleUrl: track.audioSampleUrl || null,
+          audioSampleDuration: track.audioSampleDuration || null
+        }));
+
         const listing = {
           id: newId,
           sellerId,
@@ -244,8 +253,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           shippingCost: Math.round((data.shippingCost || 0) * 100) / 100,
           description: (data.description || '').trim().slice(0, MAX_DESCRIPTION_LENGTH),
           images: (data.images || []).slice(0, MAX_IMAGES),
-          audioSampleUrl: data.audioSampleUrl || null,
-          audioSampleDuration: data.audioSampleDuration || null,
+          tracks: tracks,
+          // Legacy fields for backward compatibility
+          audioSampleUrl: tracks.length > 0 && tracks[0].audioSampleUrl ? tracks[0].audioSampleUrl : (data.audioSampleUrl || null),
+          audioSampleDuration: tracks.length > 0 && tracks[0].audioSampleDuration ? tracks[0].audioSampleDuration : (data.audioSampleDuration || null),
           status: 'draft',
           views: 0,
           saves: 0,
@@ -303,8 +314,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const allowedFields = [
           'title', 'artist', 'label', 'catalogNumber', 'format', 'releaseYear',
           'genre', 'mediaCondition', 'sleeveCondition', 'conditionNotes',
-          'price', 'shippingCost', 'description', 'images', 'audioSampleUrl', 'audioSampleDuration'
+          'price', 'shippingCost', 'description', 'images', 'tracks', 'audioSampleUrl', 'audioSampleDuration'
         ];
+
+        // If tracks are being updated, sanitize them
+        if (data.tracks) {
+          data.tracks = data.tracks.slice(0, 20).map((track: any, index: number) => ({
+            position: index + 1,
+            side: ['A', 'B', 'C', 'D'].includes(track.side) ? track.side : 'A',
+            name: (track.name || '').trim().slice(0, 100),
+            audioSampleUrl: track.audioSampleUrl || null,
+            audioSampleDuration: track.audioSampleDuration || null
+          }));
+        }
 
         for (const field of allowedFields) {
           if (data[field] !== undefined) {

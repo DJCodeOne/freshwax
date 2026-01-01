@@ -899,6 +899,7 @@ const firebaseConfig = {
   document.addEventListener('astro:page-load', async () => {
     initHeader();
     updateHeaderCartBadge();
+    initGoPlusModal();
 
     // Ensure auth state is available for new page components
     // Re-create authReady promise for components that might be waiting

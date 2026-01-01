@@ -56,6 +56,7 @@ export interface UserSubscription {
   subscribedAt?: string;
   expiresAt?: string;
   paymentMethod?: string;
+  plusId?: string;
 }
 
 export interface UserUsage {
@@ -215,7 +216,7 @@ export function getTierBenefits(tier: SubscriptionTier): string[] {
       `${limits.mixUploadsPerWeek} DJ mix uploads per week`,
       `${limits.streamHoursPerDay} hours live streaming per day`,
       'Can split into 2x1 hour slots',
-      `${limits.playlistTrackLimit} tracks in personal playlist`,
+      `${limits.playlistTrackLimit} tracks in playlist (local only)`,
       'Access to DJ Lobby',
       'Basic profile page',
     ];
@@ -226,7 +227,8 @@ export function getTierBenefits(tier: SubscriptionTier): string[] {
     `${limits.streamHoursPerDay} hours live streaming per day`,
     'Long duration events up to 24 hours',
     'Book multiple slots for day-long events',
-    `${limits.playlistTrackLimit.toLocaleString()} tracks in personal playlist`,
+    `${limits.playlistTrackLimit.toLocaleString()} tracks in cloud playlist`,
+    'Playlist syncs across all devices',
     `!skip command (${limits.skipsPerDay} per day)`,
     'Record live stream button',
     'Gold crown on chat avatar',

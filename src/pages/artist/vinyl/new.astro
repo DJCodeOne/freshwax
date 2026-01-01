@@ -78,77 +78,89 @@ export const prerender = false;
       </div>
     </section>
 
-    <!-- Audio Sample Section -->
+    <!-- Tracklist Section -->
     <section class="form-section">
-      <h2>Audio Sample <span class="optional">(Optional)</span></h2>
-      <p class="section-desc">Drop your full track and select up to 1:30 for the sample clip. Will be converted to MP3 128kbps.</p>
+      <h2>Tracklist</h2>
+      <p class="section-desc">Add tracks from your record. Each track can have a sample clip (up to 1:30, converted to MP3 128kbps).</p>
 
-      <div class="audio-upload" id="audioUpload">
-        <input type="file" accept="audio/*" id="audioInput" class="audio-input">
+      <div id="tracklistContainer">
+        <!-- Tracks will be added here dynamically -->
+      </div>
 
-        <!-- Drop zone / Upload state -->
-        <label for="audioInput" class="audio-label" id="audioLabel">
-          <span class="icon">🎵</span>
-          <span class="text">Drop full track here or click to browse</span>
-          <span class="hint">WAV, MP3, FLAC, OGG supported</span>
-        </label>
+      <button type="button" class="add-track-btn" id="addTrackBtn">
+        <span class="plus">+</span> Add Track
+      </button>
+    </section>
 
-        <!-- Loading state -->
-        <div class="audio-loading" id="audioLoading" style="display:none;">
-          <div class="spinner"></div>
-          <span>Loading waveform...</span>
+    <!-- Waveform Modal -->
+    <div class="modal-overlay" id="waveformModal" style="display:none;">
+      <div class="modal-content waveform-modal">
+        <div class="modal-header">
+          <h3>Select Sample Clip</h3>
+          <button type="button" class="modal-close" id="closeWaveformModal">&times;</button>
         </div>
 
-        <!-- Waveform editor -->
-        <div class="waveform-editor" id="waveformEditor" style="display:none;">
-          <div class="waveform-header">
-            <span class="track-name" id="trackName">track.mp3</span>
-            <button type="button" class="change-track-btn" id="changeTrack">Change track</button>
+        <div class="audio-upload-modal">
+          <input type="file" accept="audio/*" id="modalAudioInput" class="audio-input">
+
+          <!-- Drop zone -->
+          <label for="modalAudioInput" class="audio-label" id="modalAudioLabel">
+            <span class="icon">🎵</span>
+            <span class="text">Drop full track here or click to browse</span>
+            <span class="hint">WAV, MP3, FLAC, OGG supported</span>
+          </label>
+
+          <!-- Loading state -->
+          <div class="audio-loading" id="modalAudioLoading" style="display:none;">
+            <div class="spinner"></div>
+            <span>Loading waveform...</span>
           </div>
 
-          <div class="waveform-container">
-            <div id="waveform"></div>
-          </div>
-
-          <div class="region-controls">
-            <div class="time-display">
-              <div class="time-input">
-                <label>Start</label>
-                <input type="text" id="regionStart" value="0:00" readonly>
-              </div>
-              <div class="region-duration">
-                <span id="regionDuration">0:00</span>
-                <span class="max-hint">/ 1:30 max</span>
-              </div>
-              <div class="time-input">
-                <label>End</label>
-                <input type="text" id="regionEnd" value="0:00" readonly>
-              </div>
+          <!-- Waveform editor -->
+          <div class="waveform-editor" id="modalWaveformEditor" style="display:none;">
+            <div class="waveform-header">
+              <span class="track-name" id="modalTrackName">track.mp3</span>
+              <button type="button" class="change-track-btn" id="modalChangeTrack">Change file</button>
             </div>
 
-            <div class="playback-controls">
-              <button type="button" class="play-btn" id="playRegion">
-                <span class="play-icon">▶</span> Play Selection
-              </button>
-              <button type="button" class="reset-btn" id="resetRegion">Reset to Start</button>
+            <div class="waveform-container">
+              <div id="modalWaveform"></div>
             </div>
 
-            <p class="region-hint">Drag the highlighted region or its edges to select your sample clip</p>
-          </div>
+            <div class="region-controls">
+              <div class="time-display">
+                <div class="time-input">
+                  <label>Start</label>
+                  <input type="text" id="modalRegionStart" value="0:00" readonly>
+                </div>
+                <div class="region-duration">
+                  <span id="modalRegionDuration">0:00</span>
+                  <span class="max-hint">/ 1:30 max</span>
+                </div>
+                <div class="time-input">
+                  <label>End</label>
+                  <input type="text" id="modalRegionEnd" value="0:00" readonly>
+                </div>
+              </div>
 
-          <div class="sample-ready" id="sampleReady" style="display:none;">
-            <span class="check">✓</span>
-            <span>Sample clip ready (<span id="finalDuration">0:00</span>)</span>
+              <div class="playback-controls">
+                <button type="button" class="play-btn" id="modalPlayRegion">
+                  <span class="play-icon">▶</span> Play Selection
+                </button>
+                <button type="button" class="reset-btn" id="modalResetRegion">Reset to Start</button>
+              </div>
+
+              <p class="region-hint">Drag the highlighted region or its edges to select your sample clip</p>
+            </div>
           </div>
         </div>
 
-        <!-- Processing state -->
-        <div class="audio-processing" id="audioProcessing" style="display:none;">
-          <div class="spinner"></div>
-          <span id="processingText">Converting to MP3...</span>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelWaveformModal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirmWaveformModal" disabled>Use This Sample</button>
         </div>
       </div>
-    </section>
+    </div>
 
     <!-- Record Details Section -->
     <section class="form-section">
@@ -326,11 +338,13 @@ export const prerender = false;
   document.head.appendChild(lameScript);
 </script>
 
-<!-- WaveSurfer.js for waveform visualization -->
-<script src="https://unpkg.com/wavesurfer.js@7"></script>
-<script src="https://unpkg.com/wavesurfer.js@7/dist/plugins/regions.min.js"></script>
+<!-- LameJS is loaded above -->
 
 <script type="module">
+  // Import WaveSurfer as ES module
+  import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesurfer.esm.js';
+  import RegionsPlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/plugins/regions.esm.js';
+
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
@@ -346,11 +360,20 @@ export const prerender = false;
   let currentUser = null;
   let sellerInfo = null;
   let uploadedImages = [];
-  let audioFile = null;
-  let convertedAudioBlob = null;
-  let audioDuration = 0;
 
   const MAX_AUDIO_DURATION = 90; // 1:30 in seconds
+
+  // Tracklist state - array of track objects
+  let tracks = [];
+  let trackIdCounter = 0;
+
+  // Modal waveform state
+  let modalWavesurfer = null;
+  let modalActiveRegion = null;
+  let modalOriginalAudioBuffer = null;
+  let modalRegionStart = 0;
+  let modalRegionEnd = 0;
+  let currentEditingTrackId = null;
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
@@ -417,23 +440,167 @@ export const prerender = false;
     });
   });
 
-  // Waveform and region variables
-  let wavesurfer = null;
-  let activeRegion = null;
-  let originalAudioBuffer = null;
-  let regionStart = 0;
-  let regionEnd = 0;
+  // =====================
+  // TRACKLIST MANAGEMENT
+  // =====================
 
-  // Initialize waveform with regions plugin
-  function initWaveform() {
-    if (wavesurfer) {
-      wavesurfer.destroy();
+  function createTrackRow(trackId) {
+    const track = tracks.find(t => t.id === trackId);
+    if (!track) return null;
+
+    const row = document.createElement('div');
+    row.className = 'track-row';
+    row.dataset.trackId = trackId;
+
+    row.innerHTML = `
+      <div class="track-number">${tracks.indexOf(track) + 1}</div>
+      <div class="track-fields">
+        <div class="track-field track-side">
+          <select class="track-side-select" data-field="side">
+            <option value="A" ${track.side === 'A' ? 'selected' : ''}>A</option>
+            <option value="B" ${track.side === 'B' ? 'selected' : ''}>B</option>
+            <option value="C" ${track.side === 'C' ? 'selected' : ''}>C</option>
+            <option value="D" ${track.side === 'D' ? 'selected' : ''}>D</option>
+          </select>
+        </div>
+        <div class="track-field track-name-field">
+          <input type="text" class="track-name-input" data-field="name" placeholder="Track name" value="${track.name}" maxlength="100">
+        </div>
+        <div class="track-field track-sample">
+          <button type="button" class="add-sample-btn ${track.audioBlob ? 'has-sample' : ''}" data-action="add-sample">
+            ${track.audioBlob ? `<span class="sample-icon">&#9834;</span> ${formatDuration(track.audioDuration)}` : '<span class="sample-icon">+</span> Sample'}
+          </button>
+        </div>
+      </div>
+      <button type="button" class="remove-track-btn" data-action="remove">&times;</button>
+    `;
+
+    // Event listeners for this row
+    row.querySelector('.track-side-select').addEventListener('change', (e) => {
+      track.side = e.target.value;
+    });
+
+    row.querySelector('.track-name-input').addEventListener('input', (e) => {
+      track.name = e.target.value;
+    });
+
+    row.querySelector('.add-sample-btn').addEventListener('click', () => {
+      openWaveformModal(trackId);
+    });
+
+    row.querySelector('.remove-track-btn').addEventListener('click', () => {
+      removeTrack(trackId);
+    });
+
+    return row;
+  }
+
+  function addTrack() {
+    const trackId = ++trackIdCounter;
+    const track = {
+      id: trackId,
+      side: 'A',
+      name: '',
+      audioFile: null,
+      audioBlob: null,
+      audioDuration: 0,
+      regionStart: 0,
+      regionEnd: 0
+    };
+    tracks.push(track);
+    renderTracklist();
+  }
+
+  function removeTrack(trackId) {
+    tracks = tracks.filter(t => t.id !== trackId);
+    renderTracklist();
+  }
+
+  function renderTracklist() {
+    const container = document.getElementById('tracklistContainer');
+    container.innerHTML = '';
+
+    tracks.forEach((track, index) => {
+      const row = createTrackRow(track.id);
+      if (row) {
+        // Update track number
+        row.querySelector('.track-number').textContent = index + 1;
+        container.appendChild(row);
+      }
+    });
+  }
+
+  // Add Track button
+  document.getElementById('addTrackBtn').addEventListener('click', addTrack);
+
+  // =====================
+  // WAVEFORM MODAL
+  // =====================
+
+  function openWaveformModal(trackId) {
+    currentEditingTrackId = trackId;
+    const track = tracks.find(t => t.id === trackId);
+    if (!track) return;
+
+    const modal = document.getElementById('waveformModal');
+    const audioLabel = document.getElementById('modalAudioLabel');
+    const audioLoading = document.getElementById('modalAudioLoading');
+    const waveformEditor = document.getElementById('modalWaveformEditor');
+    const confirmBtn = document.getElementById('confirmWaveformModal');
+
+    // Reset modal state
+    audioLabel.style.display = 'flex';
+    audioLoading.style.display = 'none';
+    waveformEditor.style.display = 'none';
+    confirmBtn.disabled = true;
+
+    // If track already has audio, reload it
+    if (track.audioFile) {
+      loadAudioIntoModal(track.audioFile, track.regionStart, track.regionEnd);
     }
 
-    const regions = WaveSurfer.Regions.create();
+    modal.style.display = 'flex';
+  }
 
-    wavesurfer = WaveSurfer.create({
-      container: '#waveform',
+  function closeWaveformModal() {
+    const modal = document.getElementById('waveformModal');
+    modal.style.display = 'none';
+
+    // Clean up waveform
+    if (modalWavesurfer) {
+      modalWavesurfer.destroy();
+      modalWavesurfer = null;
+    }
+    modalActiveRegion = null;
+    modalOriginalAudioBuffer = null;
+    currentEditingTrackId = null;
+
+    // Reset input
+    document.getElementById('modalAudioInput').value = '';
+  }
+
+  // Modal close buttons
+  document.getElementById('closeWaveformModal').addEventListener('click', closeWaveformModal);
+  document.getElementById('cancelWaveformModal').addEventListener('click', closeWaveformModal);
+
+  // Close on overlay click
+  document.getElementById('waveformModal').addEventListener('click', (e) => {
+    if (e.target.id === 'waveformModal') {
+      closeWaveformModal();
+    }
+  });
+
+  // Initialize modal waveform with regions plugin
+  function initModalWaveform() {
+    if (modalWavesurfer) {
+      modalWavesurfer.destroy();
+    }
+
+    // Create regions plugin instance (imported at top of module)
+    const regions = RegionsPlugin.create();
+
+    modalWavesurfer = WaveSurfer.create({
+      container: '#modalWaveform',
       waveColor: '#999',
       progressColor: '#000',
       cursorColor: '#333',
@@ -450,15 +617,14 @@ export const prerender = false;
       let duration = end - start;
 
       if (duration > MAX_AUDIO_DURATION) {
-        // Trim from the end
         end = start + MAX_AUDIO_DURATION;
         region.setOptions({ start, end });
         duration = MAX_AUDIO_DURATION;
       }
 
-      regionStart = start;
-      regionEnd = end;
-      updateRegionDisplay();
+      modalRegionStart = start;
+      modalRegionEnd = end;
+      updateModalRegionDisplay();
     });
 
     regions.on('region-clicked', (region, e) => {
@@ -466,80 +632,68 @@ export const prerender = false;
       region.play();
     });
 
-    return { wavesurfer, regions };
+    return { wavesurfer: modalWavesurfer, regions };
   }
 
-  function updateRegionDisplay() {
-    const duration = regionEnd - regionStart;
-    document.getElementById('regionStart').value = formatDuration(regionStart);
-    document.getElementById('regionEnd').value = formatDuration(regionEnd);
-    document.getElementById('regionDuration').textContent = formatDuration(duration);
-    document.getElementById('finalDuration').textContent = formatDuration(duration);
+  function updateModalRegionDisplay() {
+    const duration = modalRegionEnd - modalRegionStart;
+    document.getElementById('modalRegionStart').value = formatDuration(modalRegionStart);
+    document.getElementById('modalRegionEnd').value = formatDuration(modalRegionEnd);
+    document.getElementById('modalRegionDuration').textContent = formatDuration(duration);
 
     // Show warning if at max
-    const durationEl = document.getElementById('regionDuration');
+    const durationEl = document.getElementById('modalRegionDuration');
     if (duration >= MAX_AUDIO_DURATION - 0.5) {
       durationEl.style.color = '#dc2626';
     } else {
       durationEl.style.color = '#000';
     }
 
-    // Show ready indicator
-    if (duration > 0) {
-      document.getElementById('sampleReady').style.display = 'flex';
-      audioDuration = duration;
-    }
+    // Enable confirm button
+    document.getElementById('confirmWaveformModal').disabled = duration <= 0;
   }
 
-  // Audio file handler
-  document.getElementById('audioInput').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    audioFile = file;
-
-    const audioLabel = document.getElementById('audioLabel');
-    const audioLoading = document.getElementById('audioLoading');
-    const waveformEditor = document.getElementById('waveformEditor');
+  async function loadAudioIntoModal(file, startAt = 0, endAt = null) {
+    const audioLabel = document.getElementById('modalAudioLabel');
+    const audioLoading = document.getElementById('modalAudioLoading');
+    const waveformEditor = document.getElementById('modalWaveformEditor');
 
     // Show loading state
     audioLabel.style.display = 'none';
     audioLoading.style.display = 'flex';
 
     try {
-      // Initialize wavesurfer
-      const { wavesurfer: ws, regions } = initWaveform();
+      const { wavesurfer: ws, regions } = initModalWaveform();
 
-      // Load the file
-      const fileUrl = URL.createObjectURL(file);
-      await ws.load(fileUrl);
+      // Load the file directly as blob (avoids CSP blob: URL issues)
+      await ws.loadBlob(file);
 
       // Store decoded audio for later extraction
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const arrayBuffer = await file.arrayBuffer();
-      originalAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      modalOriginalAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
       // Get duration and set initial region
       const totalDuration = ws.getDuration();
-      const initialEnd = Math.min(totalDuration, MAX_AUDIO_DURATION);
+      const initialEnd = endAt !== null ? Math.min(endAt, totalDuration) : Math.min(totalDuration, MAX_AUDIO_DURATION);
+      const initialStart = Math.min(startAt, totalDuration);
 
       // Create the selection region
-      activeRegion = regions.addRegion({
-        start: 0,
+      modalActiveRegion = regions.addRegion({
+        start: initialStart,
         end: initialEnd,
         color: 'rgba(0, 0, 0, 0.2)',
         drag: true,
         resize: true,
-        minLength: 5, // Minimum 5 seconds
+        minLength: 5,
       });
 
-      regionStart = 0;
-      regionEnd = initialEnd;
-      audioDuration = initialEnd;
+      modalRegionStart = initialStart;
+      modalRegionEnd = initialEnd;
 
       // Update display
-      document.getElementById('trackName').textContent = file.name;
-      updateRegionDisplay();
+      document.getElementById('modalTrackName').textContent = file.name;
+      updateModalRegionDisplay();
 
       // Show waveform editor
       audioLoading.style.display = 'none';
@@ -547,28 +701,43 @@ export const prerender = false;
 
     } catch (error) {
       console.error('Failed to load audio:', error);
-      alert('Failed to load audio file. Please try a different file format.');
+      alert('Failed to load audio: ' + (error.message || 'Unknown error. Please try a different file format.'));
       audioLoading.style.display = 'none';
       audioLabel.style.display = 'flex';
-      e.target.value = '';
     }
+  }
+
+  // Modal audio file handler
+  document.getElementById('modalAudioInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Store file reference for the track
+    if (currentEditingTrackId) {
+      const track = tracks.find(t => t.id === currentEditingTrackId);
+      if (track) {
+        track.audioFile = file;
+      }
+    }
+
+    await loadAudioIntoModal(file);
   });
 
-  // Drag and drop support
-  const audioUpload = document.getElementById('audioUpload');
-  audioUpload.addEventListener('dragover', (e) => {
+  // Modal drag and drop
+  const modalAudioLabel = document.getElementById('modalAudioLabel');
+  modalAudioLabel.addEventListener('dragover', (e) => {
     e.preventDefault();
-    audioUpload.classList.add('drag-over');
+    modalAudioLabel.classList.add('drag-over');
   });
-  audioUpload.addEventListener('dragleave', () => {
-    audioUpload.classList.remove('drag-over');
+  modalAudioLabel.addEventListener('dragleave', () => {
+    modalAudioLabel.classList.remove('drag-over');
   });
-  audioUpload.addEventListener('drop', (e) => {
+  modalAudioLabel.addEventListener('drop', (e) => {
     e.preventDefault();
-    audioUpload.classList.remove('drag-over');
+    modalAudioLabel.classList.remove('drag-over');
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('audio/')) {
-      const input = document.getElementById('audioInput');
+      const input = document.getElementById('modalAudioInput');
       const dt = new DataTransfer();
       dt.items.add(file);
       input.files = dt.files;
@@ -576,58 +745,79 @@ export const prerender = false;
     }
   });
 
-  // Play region button
-  document.getElementById('playRegion').addEventListener('click', () => {
-    if (activeRegion) {
-      activeRegion.play();
+  // Modal play region button
+  document.getElementById('modalPlayRegion').addEventListener('click', () => {
+    if (modalActiveRegion) {
+      modalActiveRegion.play();
     }
   });
 
-  // Reset region button
-  document.getElementById('resetRegion').addEventListener('click', () => {
-    if (activeRegion && wavesurfer) {
-      const totalDuration = wavesurfer.getDuration();
+  // Modal reset region button
+  document.getElementById('modalResetRegion').addEventListener('click', () => {
+    if (modalActiveRegion && modalWavesurfer) {
+      const totalDuration = modalWavesurfer.getDuration();
       const newEnd = Math.min(totalDuration, MAX_AUDIO_DURATION);
-      activeRegion.setOptions({ start: 0, end: newEnd });
-      regionStart = 0;
-      regionEnd = newEnd;
-      updateRegionDisplay();
+      modalActiveRegion.setOptions({ start: 0, end: newEnd });
+      modalRegionStart = 0;
+      modalRegionEnd = newEnd;
+      updateModalRegionDisplay();
     }
   });
 
-  // Change track button
-  document.getElementById('changeTrack').addEventListener('click', () => {
-    const audioInput = document.getElementById('audioInput');
-    const audioLabel = document.getElementById('audioLabel');
-    const waveformEditor = document.getElementById('waveformEditor');
-    const sampleReady = document.getElementById('sampleReady');
+  // Modal change track button
+  document.getElementById('modalChangeTrack').addEventListener('click', () => {
+    const audioInput = document.getElementById('modalAudioInput');
+    const audioLabel = document.getElementById('modalAudioLabel');
+    const waveformEditor = document.getElementById('modalWaveformEditor');
 
-    // Reset everything
-    if (wavesurfer) {
-      wavesurfer.destroy();
-      wavesurfer = null;
+    // Reset waveform
+    if (modalWavesurfer) {
+      modalWavesurfer.destroy();
+      modalWavesurfer = null;
     }
-    activeRegion = null;
-    originalAudioBuffer = null;
-    audioFile = null;
-    convertedAudioBlob = null;
-    audioDuration = 0;
+    modalActiveRegion = null;
+    modalOriginalAudioBuffer = null;
 
     audioInput.value = '';
     waveformEditor.style.display = 'none';
-    sampleReady.style.display = 'none';
     audioLabel.style.display = 'flex';
+    document.getElementById('confirmWaveformModal').disabled = true;
+  });
+
+  // Confirm waveform selection
+  document.getElementById('confirmWaveformModal').addEventListener('click', async () => {
+    if (!currentEditingTrackId || !modalOriginalAudioBuffer || modalRegionEnd <= modalRegionStart) {
+      return;
+    }
+
+    const track = tracks.find(t => t.id === currentEditingTrackId);
+    if (!track) return;
+
+    // Extract the selected region and convert to MP3
+    const audioBlob = await extractAndConvertRegion(modalOriginalAudioBuffer, modalRegionStart, modalRegionEnd);
+
+    if (audioBlob) {
+      track.audioBlob = audioBlob;
+      track.audioDuration = modalRegionEnd - modalRegionStart;
+      track.regionStart = modalRegionStart;
+      track.regionEnd = modalRegionEnd;
+
+      // Update the track row display
+      renderTracklist();
+    }
+
+    closeWaveformModal();
   });
 
   // Extract selected region and convert to MP3
-  async function extractAndConvertRegion() {
-    if (!originalAudioBuffer || regionEnd <= regionStart) {
+  async function extractAndConvertRegion(audioBuffer, regionStart, regionEnd) {
+    if (!audioBuffer || regionEnd <= regionStart) {
       return null;
     }
 
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const sampleRate = originalAudioBuffer.sampleRate;
-    const channels = originalAudioBuffer.numberOfChannels;
+    const sampleRate = audioBuffer.sampleRate;
+    const channels = audioBuffer.numberOfChannels;
 
     // Calculate sample positions
     const startSample = Math.floor(regionStart * sampleRate);
@@ -639,7 +829,7 @@ export const prerender = false;
 
     // Copy the samples
     for (let channel = 0; channel < channels; channel++) {
-      const sourceData = originalAudioBuffer.getChannelData(channel);
+      const sourceData = audioBuffer.getChannelData(channel);
       const destData = extractedBuffer.getChannelData(channel);
       for (let i = 0; i < length; i++) {
         destData[i] = sourceData[startSample + i];
@@ -798,7 +988,7 @@ export const prerender = false;
 
       for (let i = 0; i < imagesToUpload.length; i++) {
         status.textContent = `Uploading image ${i + 1} of ${imagesToUpload.length}...`;
-        progress.style.width = `${((i + 1) / (imagesToUpload.length + 2)) * 100}%`;
+        progress.style.width = `${((i + 1) / (imagesToUpload.length + tracks.length + 2)) * 100}%`;
 
         const imgData = new FormData();
         imgData.append('file', imagesToUpload[i].file);
@@ -818,23 +1008,22 @@ export const prerender = false;
         imageUrls.push(result.url);
       }
 
-      // Upload audio if present - extract selected region first
-      let audioUrl = null;
-      if (originalAudioBuffer && regionEnd > regionStart) {
-        status.textContent = 'Extracting audio sample...';
-        progress.style.width = '70%';
+      // Upload track audio samples
+      const tracksWithAudio = tracks.filter(t => t.audioBlob);
+      const uploadedTracks = [];
 
-        // Extract the selected region and convert to MP3
-        const audioBlob = await extractAndConvertRegion();
+      for (let i = 0; i < tracks.length; i++) {
+        const track = tracks[i];
+        let audioUrl = null;
 
-        if (audioBlob) {
-          status.textContent = 'Uploading audio sample...';
-          progress.style.width = '80%';
+        if (track.audioBlob) {
+          status.textContent = `Uploading audio for track ${i + 1}...`;
+          progress.style.width = `${((imagesToUpload.length + i + 1) / (imagesToUpload.length + tracks.length + 2)) * 100}%`;
 
           const audioData = new FormData();
-          audioData.append('file', audioBlob, 'sample.mp3');
+          audioData.append('file', track.audioBlob, `track_${i + 1}_sample.mp3`);
           audioData.append('sellerId', sellerInfo.id);
-          audioData.append('duration', (regionEnd - regionStart).toString());
+          audioData.append('duration', track.audioDuration.toString());
 
           const response = await fetch('/api/vinyl/upload-audio', {
             method: 'POST',
@@ -847,8 +1036,14 @@ export const prerender = false;
           }
 
           audioUrl = result.url;
-          audioDuration = regionEnd - regionStart;
         }
+
+        uploadedTracks.push({
+          side: track.side,
+          name: track.name,
+          audioSampleUrl: audioUrl,
+          audioSampleDuration: track.audioDuration || null
+        });
       }
 
       // Create listing
@@ -873,8 +1068,7 @@ export const prerender = false;
         shippingCost: parseFloat(formData.get('shippingCost') || '0'),
         description: formData.get('description'),
         images: imageUrls,
-        audioSampleUrl: audioUrl,
-        audioSampleDuration: audioUrl ? audioDuration : null
+        tracks: uploadedTracks
       };
 
       const createResponse = await fetch('/api/vinyl/listing', {
@@ -1335,6 +1529,268 @@ export const prerender = false;
     transition: width 0.3s;
   }
 
+  /* Tracklist Styles */
+  #tracklistContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .track-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .track-row:hover {
+    border-color: #ccc;
+  }
+
+  .track-number {
+    width: 32px;
+    height: 32px;
+    background: #000;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .track-fields {
+    display: flex;
+    gap: 1rem;
+    flex: 1;
+    align-items: center;
+  }
+
+  .track-field.track-side {
+    flex-shrink: 0;
+  }
+
+  .track-side-select {
+    width: 60px;
+    padding: 0.6rem 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    background: #fafafa;
+    cursor: pointer;
+  }
+
+  .track-side-select:focus {
+    outline: none;
+    border-color: #000;
+    background: #fff;
+  }
+
+  .track-field.track-name-field {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .track-name-input {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95rem;
+  }
+
+  .track-name-input::placeholder {
+    color: #aaa;
+  }
+
+  .track-name-input:focus {
+    outline: none;
+    border-color: #000;
+  }
+
+  .track-field.track-sample {
+    flex-shrink: 0;
+  }
+
+  .add-sample-btn {
+    padding: 0.6rem 1rem;
+    background: #f8f8f8;
+    border: 1px dashed #ccc;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.15s ease;
+  }
+
+  .add-sample-btn:hover {
+    background: #f0f0f0;
+    border-color: #999;
+    color: #333;
+  }
+
+  .add-sample-btn.has-sample {
+    background: #e8f5e9;
+    border: 1px solid #81c784;
+    border-style: solid;
+    color: #2e7d32;
+    font-weight: 500;
+  }
+
+  .add-sample-btn .sample-icon {
+    font-size: 1.1rem;
+  }
+
+  .remove-track-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 1.3rem;
+    color: #bbb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+  }
+
+  .remove-track-btn:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #dc2626;
+  }
+
+  .add-track-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 1rem;
+    background: #fafafa;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: #666;
+    transition: all 0.15s ease;
+  }
+
+  .add-track-btn:hover {
+    background: #f0f0f0;
+    border-color: #bbb;
+    color: #333;
+  }
+
+  .add-track-btn .plus {
+    font-size: 1.4rem;
+    font-weight: 300;
+    line-height: 1;
+  }
+
+  /* Waveform Modal Styles */
+  .waveform-modal {
+    width: 90%;
+    max-width: 700px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .modal-close:hover {
+    color: #000;
+  }
+
+  .audio-upload-modal {
+    padding: 1.5rem;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .audio-upload-modal .audio-label {
+    border: 2px dashed #ddd;
+    padding: 2rem;
+    text-align: center;
+    background: #fafafa;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: #666;
+  }
+
+  .audio-upload-modal .audio-label:hover,
+  .audio-upload-modal .audio-label.drag-over {
+    border-color: #999;
+    background: #f0f0f0;
+  }
+
+  .audio-upload-modal .audio-label .icon {
+    font-size: 2rem;
+  }
+
+  .audio-upload-modal .audio-label .hint {
+    font-size: 0.8rem;
+    color: #999;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e5e5;
+    background: #fafafa;
+  }
+
+  .modal-footer .btn {
+    min-width: 120px;
+  }
+
+  .modal-footer .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   @media (max-width: 600px) {
     .image-grid { grid-template-columns: repeat(2, 1fr); }
     .form-row { grid-template-columns: 1fr; }
@@ -1344,5 +1800,57 @@ export const prerender = false;
     .play-btn, .reset-btn { width: 100%; justify-content: center; }
     .time-display { gap: 0.5rem; }
     .region-duration { font-size: 1.2rem; }
+
+    .track-row {
+      flex-wrap: wrap;
+      padding: 0.875rem 1rem;
+      gap: 0.75rem;
+    }
+
+    .track-number {
+      width: 28px;
+      height: 28px;
+      font-size: 0.8rem;
+    }
+
+    .track-fields {
+      flex-wrap: wrap;
+      width: calc(100% - 70px);
+      gap: 0.5rem;
+    }
+
+    .track-field.track-side {
+      order: 1;
+    }
+
+    .track-field.track-sample {
+      order: 2;
+    }
+
+    .track-field.track-name-field {
+      width: 100%;
+      order: 3;
+      margin-top: 0.25rem;
+    }
+
+    .track-side-select,
+    .track-name-input,
+    .add-sample-btn {
+      padding: 0.5rem 0.6rem;
+      font-size: 0.9rem;
+    }
+
+    .waveform-modal {
+      width: 95%;
+      max-height: 95vh;
+    }
+
+    .modal-footer {
+      flex-direction: column;
+    }
+
+    .modal-footer .btn {
+      width: 100%;
+    }
   }
 </style>

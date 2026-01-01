@@ -728,8 +728,10 @@ export async function updateDocument(
 
   if (!response.ok) {
     const error = await response.text();
-    log.error('updateDocument error:', error);
-    throw new Error(`Failed to update document: ${response.status}`);
+    console.error('updateDocument error:', response.status, error);
+    console.error('updateDocument collection:', collection, 'docId:', docId);
+    console.error('updateDocument had token:', !!idToken);
+    throw new Error(`Failed to update document: ${response.status} - ${error}`);
   }
 
   // Invalidate cache

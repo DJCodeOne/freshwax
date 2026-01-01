@@ -13,6 +13,7 @@ echo.
 
 REM yt-dlp path (installed via winget)
 SET YTDLP=C:\Users\Owner\AppData\Local\Microsoft\WinGet\Packages\yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe\yt-dlp.exe
+SET FFMPEG=C:\ffmpeg\bin
 
 REM Check if yt-dlp exists
 IF NOT EXIST "%YTDLP%" (
@@ -69,6 +70,7 @@ REM   --write-thumbnail = Save thumbnail
 "%YTDLP%" ^
     --batch-file "%URLS_FILE%" ^
     --download-archive "%ARCHIVE_FILE%" ^
+    --ffmpeg-location "%FFMPEG%" ^
     -x --audio-format mp3 --audio-quality 0 ^
     -o "%OUTPUT_DIR%\%%(title)s [%%(id)s].%%(ext)s" ^
     --no-overwrites ^
