@@ -2657,8 +2657,9 @@ export const prerender = false;
 
     // Disable buttons and show processing state
     if (goPlusHeaderBtn) {
-      goPlusHeaderBtn.disabled = true;
-      goPlusHeaderBtn.querySelector('.goplus-text').textContent = 'Processing...';
+      goPlusHeaderBtn.style.pointerEvents = 'none';
+      const btnText = goPlusHeaderBtn.querySelector('.pro-text');
+      if (btnText) btnText.textContent = 'Processing...';
     }
     if (goPlusUpgradeBtn) {
       goPlusUpgradeBtn.disabled = true;
@@ -2696,8 +2697,9 @@ export const prerender = false;
 
       // Reset buttons
       if (goPlusHeaderBtn) {
-        goPlusHeaderBtn.disabled = false;
-        goPlusHeaderBtn.querySelector('.goplus-text').textContent = 'Go Plus';
+        goPlusHeaderBtn.style.pointerEvents = '';
+        const btnText = goPlusHeaderBtn.querySelector('.pro-text');
+        if (btnText) btnText.textContent = 'Go Plus';
       }
       if (goPlusUpgradeBtn) {
         goPlusUpgradeBtn.disabled = false;
