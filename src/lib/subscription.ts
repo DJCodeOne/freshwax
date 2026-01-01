@@ -14,6 +14,7 @@ export const TIER_LIMITS = {
     streamHoursPerDay: 2, // Can be split into 2x1 hour slots or run concurrently
     maxConcurrentSlots: 2,
     canBookLongEvents: false,
+    playlistTrackLimit: 100, // Max tracks in personal playlist
     name: 'Standard',
     price: 0,
   },
@@ -22,6 +23,7 @@ export const TIER_LIMITS = {
     streamHoursPerDay: 2, // Base limit, Plus can book long events up to 24 hours
     maxConcurrentSlots: 2,
     canBookLongEvents: true, // Can book multiple slots for day-long events up to 24 hours
+    playlistTrackLimit: 1000, // Max tracks in personal playlist
     name: 'Plus',
     price: 10, // £10/year
   },
@@ -153,6 +155,27 @@ export function canBookStreamSlot(
   return { allowed: true, remainingMinutes };
 }
 
+// Check if user can add track to playlist
+export function canAddToPlaylist(tier: SubscriptionTier, currentTrackCount: number): { allowed: boolean; reason?: string; limit: number; remaining: number } {
+  const limits = TIER_LIMITS[tier];
+  const limit = limits.playlistTrackLimit;
+  const remaining = limit - currentTrackCount;
+
+  if (remaining <= 0) {
+    const upgradeMsg = tier === SUBSCRIPTION_TIERS.FREE
+      ? 'Go Plus for up to 1,000 tracks in your playlist.'
+      : '';
+    return {
+      allowed: false,
+      reason: `Your playlist is full (${limit} tracks). ${upgradeMsg}`,
+      limit,
+      remaining: 0
+    };
+  }
+
+  return { allowed: true, limit, remaining };
+}
+
 // Format tier benefits for display
 export function getTierBenefits(tier: SubscriptionTier): string[] {
   const limits = TIER_LIMITS[tier];
@@ -162,6 +185,7 @@ export function getTierBenefits(tier: SubscriptionTier): string[] {
       `${limits.mixUploadsPerWeek} DJ mix uploads per week`,
       `${limits.streamHoursPerDay} hours live streaming per day`,
       'Can split into 2x1 hour slots',
+      `${limits.playlistTrackLimit} tracks in personal playlist`,
       'Access to DJ Lobby',
       'Basic profile page',
     ];
@@ -172,6 +196,7 @@ export function getTierBenefits(tier: SubscriptionTier): string[] {
     `${limits.streamHoursPerDay} hours live streaming per day`,
     'Long duration events up to 24 hours',
     'Book multiple slots for day-long events',
+    `${limits.playlistTrackLimit.toLocaleString()} tracks in personal playlist`,
     'Record live stream button',
     'Gold crown on chat avatar',
     'Priority in DJ Lobby queue',
