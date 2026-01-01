@@ -15,6 +15,7 @@ export const TIER_LIMITS = {
     maxConcurrentSlots: 2,
     canBookLongEvents: false,
     playlistTrackLimit: 100, // Max tracks in personal playlist
+    skipsPerDay: 0, // Standard users cannot skip tracks
     name: 'Standard',
     price: 0,
   },
@@ -24,6 +25,7 @@ export const TIER_LIMITS = {
     maxConcurrentSlots: 2,
     canBookLongEvents: true, // Can book multiple slots for day-long events up to 24 hours
     playlistTrackLimit: 1000, // Max tracks in personal playlist
+    skipsPerDay: 3, // Plus users can !skip up to 3 times per day
     name: 'Plus',
     price: 10, // £10/year
   },
@@ -155,6 +157,34 @@ export function canBookStreamSlot(
   return { allowed: true, remainingMinutes };
 }
 
+// Check if user can skip a track (!skip command)
+export function canSkipTrack(tier: SubscriptionTier, skipsUsedToday: number): { allowed: boolean; reason?: string; limit: number; remaining: number } {
+  const limits = TIER_LIMITS[tier];
+  const limit = limits.skipsPerDay;
+
+  if (limit === 0) {
+    return {
+      allowed: false,
+      reason: '!skip is a Plus member feature. Go Plus for 3 skips per day.',
+      limit: 0,
+      remaining: 0
+    };
+  }
+
+  const remaining = limit - skipsUsedToday;
+
+  if (remaining <= 0) {
+    return {
+      allowed: false,
+      reason: `You've used all ${limit} skips for today. Resets at midnight.`,
+      limit,
+      remaining: 0
+    };
+  }
+
+  return { allowed: true, limit, remaining };
+}
+
 // Check if user can add track to playlist
 export function canAddToPlaylist(tier: SubscriptionTier, currentTrackCount: number): { allowed: boolean; reason?: string; limit: number; remaining: number } {
   const limits = TIER_LIMITS[tier];
@@ -197,6 +227,7 @@ export function getTierBenefits(tier: SubscriptionTier): string[] {
     'Long duration events up to 24 hours',
     'Book multiple slots for day-long events',
     `${limits.playlistTrackLimit.toLocaleString()} tracks in personal playlist`,
+    `!skip command (${limits.skipsPerDay} per day)`,
     'Record live stream button',
     'Gold crown on chat avatar',
     'Priority in DJ Lobby queue',
