@@ -935,9 +935,18 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
               </div><!-- End Relay Stream Section -->
 
               <div class="setup-row">
-                <div class="setup-field">
+                <div class="setup-field title-field">
                   <label for="inlineStreamTitle">Title</label>
-                  <input type="text" id="inlineStreamTitle" placeholder="Friday Night Session" maxlength="40" />
+                  <div class="title-input-row">
+                    <input type="text" id="inlineStreamTitle" placeholder="Friday Night Session" maxlength="40" />
+                    <button type="button" id="saveTitleBtn" class="title-action-btn save-btn" title="Save title">
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    </button>
+                    <button type="button" id="clearTitleBtn" class="title-action-btn clear-btn hidden" title="Clear title">
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    </button>
+                  </div>
+                  <span id="titleSavedMsg" class="title-saved-msg hidden">Title saved!</span>
                 </div>
                 <div class="setup-field">
                   <label for="inlineStreamGenre">Genre</label>
@@ -2182,6 +2191,57 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   // Mode toggle button handlers
   document.getElementById('directModeBtn')?.addEventListener('click', () => setStreamMode('direct'));
   document.getElementById('relayModeBtn')?.addEventListener('click', () => setStreamMode('relay'));
+
+  // Title Save/Clear button handlers
+  let savedTitle = '';
+
+  document.getElementById('saveTitleBtn')?.addEventListener('click', () => {
+    const titleInput = document.getElementById('inlineStreamTitle');
+    const saveBtn = document.getElementById('saveTitleBtn');
+    const clearBtn = document.getElementById('clearTitleBtn');
+    const savedMsg = document.getElementById('titleSavedMsg');
+
+    if (!titleInput?.value?.trim()) {
+      titleInput?.focus();
+      return;
+    }
+
+    // Save the title
+    savedTitle = titleInput.value.trim();
+    titleInput.readOnly = true;
+    titleInput.style.background = '#0a0a0a';
+    titleInput.style.color = '#22c55e';
+
+    // Update buttons
+    saveBtn?.classList.add('saved');
+    clearBtn?.classList.remove('hidden');
+
+    // Show saved message briefly
+    savedMsg?.classList.remove('hidden');
+    setTimeout(() => savedMsg?.classList.add('hidden'), 2000);
+
+    log('[Title] Saved:', savedTitle);
+  });
+
+  document.getElementById('clearTitleBtn')?.addEventListener('click', () => {
+    const titleInput = document.getElementById('inlineStreamTitle');
+    const saveBtn = document.getElementById('saveTitleBtn');
+    const clearBtn = document.getElementById('clearTitleBtn');
+
+    // Clear and reset
+    savedTitle = '';
+    titleInput.value = '';
+    titleInput.readOnly = false;
+    titleInput.style.background = '';
+    titleInput.style.color = '';
+    titleInput.focus();
+
+    // Update buttons
+    saveBtn?.classList.remove('saved');
+    clearBtn?.classList.add('hidden');
+
+    log('[Title] Cleared');
+  });
 
   function showAccessDenied() {
     document.getElementById('authGate').classList.add('hidden');
