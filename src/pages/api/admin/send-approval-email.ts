@@ -58,6 +58,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Determine role labels and content based on type
     const isArtist = type === 'artist' || type === 'both';
     const isMerch = type === 'merch' || type === 'both';
+    const isVinyl = type === 'vinylSeller';
 
     // Build the approval message
     let approvalText = '';
@@ -65,6 +66,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       approvalText = 'Your <strong style="color: #22c55e;">Artist</strong> and <strong style="color: #22c55e;">Merch</strong> application has been approved.';
     } else if (type === 'artist') {
       approvalText = 'Your <strong style="color: #22c55e;">Artist</strong> application has been approved.';
+    } else if (type === 'vinylSeller') {
+      approvalText = 'Your <strong style="color: #22c55e;">Vinyl Seller</strong> application has been approved.';
+    } else if (type === 'merchSeller') {
+      approvalText = 'Your <strong style="color: #22c55e;">Merch Seller</strong> application has been approved.';
     } else {
       approvalText = 'Your <strong style="color: #22c55e;">Partner</strong> application has been approved.';
     }
@@ -75,6 +80,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       subjectRole = 'Artist & Merch Partner';
     } else if (type === 'artist') {
       subjectRole = 'Artist';
+    } else if (type === 'vinylSeller') {
+      subjectRole = 'Vinyl Seller';
+    } else if (type === 'merchSeller') {
+      subjectRole = 'Merch Seller';
     } else {
       subjectRole = 'Partner';
     }
@@ -93,7 +102,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 <li>Monitor your inventory</li>
                 <li>Track orders and sales</li>`;
     }
-    if (isArtist || isMerch) {
+    if (isVinyl) {
+      featuresList += `
+                <li>List your vinyl records for sale</li>
+                <li>Upload photos and audio samples</li>
+                <li>Manage your vinyl listings</li>
+                <li>Track orders and sales</li>`;
+    }
+    if (isArtist || isMerch || isVinyl) {
       featuresList += `
                 <li>View your earnings</li>`;
     }

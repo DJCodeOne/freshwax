@@ -557,30 +557,64 @@ import '../../styles/global.css';
           updatedAt: serverTimestamp()
         };
 
-        // Set the role to true
+        // Set the role to true and mark as approved
         if (roleType === 'djBypass') {
           updateData['roles.djEligible'] = true;
           updateData['pendingRoles.djBypass.status'] = 'approved';
           updateData['pendingRoles.djBypass.approvedAt'] = serverTimestamp();
         } else if (roleType === 'artist') {
           updateData['roles.artist'] = true;
+          updateData['approved'] = true;
+          updateData['partnerInfo.approved'] = true;
           updateData['pendingRoles.artist.status'] = 'approved';
           updateData['pendingRoles.artist.approvedAt'] = serverTimestamp();
         } else if (roleType === 'merchSeller') {
           updateData['roles.merchSeller'] = true;
+          updateData['approved'] = true;
+          updateData['partnerInfo.approved'] = true;
           updateData['pendingRoles.merchSeller.status'] = 'approved';
           updateData['pendingRoles.merchSeller.approvedAt'] = serverTimestamp();
         } else if (roleType === 'vinylSeller') {
           updateData['roles.vinylSeller'] = true;
+          updateData['approved'] = true;
+          updateData['partnerInfo.approved'] = true;
           updateData['pendingRoles.vinylSeller.status'] = 'approved';
           updateData['pendingRoles.vinylSeller.approvedAt'] = serverTimestamp();
         }
 
         await updateDoc(userRef, updateData);
 
+        // Get user info for email
+        const userSnap = await getDoc(userRef);
+        const userData = userSnap.data();
+        const userEmail = userData?.email;
+        const userName = userData?.displayName || userData?.pendingRoles?.[roleType]?.displayName || 'Partner';
+
+        // Send approval email (don't block on this)
+        if (userEmail && roleType !== 'djBypass') {
+          try {
+            const adminUid = auth.currentUser?.uid;
+            await fetch('/api/admin/send-approval-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-admin-uid': adminUid || ''
+              },
+              body: JSON.stringify({
+                email: userEmail,
+                name: userName,
+                type: roleType
+              })
+            });
+            console.log('[role-approvals] Approval email sent to', userEmail);
+          } catch (emailError) {
+            console.error('[role-approvals] Failed to send approval email:', emailError);
+          }
+        }
+
         // Remove card from UI
         document.querySelector(`.request-card[data-uid="${uid}"]`)?.remove();
-        
+
         // Update count
         await loadRequests();
 

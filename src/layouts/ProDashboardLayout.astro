@@ -427,6 +427,11 @@ const { title, activeSection } = Astro.props;
       color: #d4d4d4;
     }
 
+    .role-badge.vinyl {
+      background: rgba(249, 115, 22, 0.15);
+      color: #fb923c;
+    }
+
     .content-body {
       flex: 1;
       padding: 2rem;
@@ -477,11 +482,20 @@ const { title, activeSection } = Astro.props;
           { href: '/pro/merch/analytics', label: 'Analytics', icon: 'analytics' },
           { href: '/pro/merch/account', label: 'Account', icon: 'settings' }
         ]
+      },
+      vinylSeller: {
+        title: 'Vinyl Crates',
+        items: [
+          { href: '/artist/vinyl', label: 'My Listings', icon: 'vinyl' },
+          { href: '/artist/vinyl/new', label: 'List Vinyl', icon: 'plus' },
+          { href: '/artist/vinyl/orders', label: 'Orders', icon: 'orders' }
+        ]
       }
     };
 
     const icons = {
       disc: '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path>',
+      vinyl: '<circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3"></path>',
       plus: '<path d="M12 5v14M5 12h14"></path>',
       chart: '<path d="M18 20V10M12 20V4M6 20v-6"></path>',
       analytics: '<path d="M21 21H3M21 21V3M3 21V3M7 14l4-4 4 4 4-4"></path>',
@@ -519,18 +533,31 @@ const { title, activeSection } = Astro.props;
         </div>`;
       }
 
+      if (roles.vinylSeller) {
+        html += `<div class="nav-section">
+          <div class="nav-section-title">${navItems.vinylSeller.title}</div>
+          ${navItems.vinylSeller.items.map(item => `
+            <a href="${item.href}" class="nav-link ${activeSection === item.href ? 'active' : ''}">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons[item.icon] || ''}</svg>
+              ${item.label}
+            </a>
+          `).join('')}
+        </div>`;
+      }
+
       sidebarNav.innerHTML = html;
     }
 
     function showUserInfo(user, roles) {
       const userName = userInfo.querySelector('.user-name');
       const userRoles = userInfo.querySelector('.user-roles');
-      
+
       userName.textContent = user.displayName || user.email;
-      
+
       let badges = '';
       if (roles.artist) badges += '<span class="role-badge artist">Artist</span>';
       if (roles.merchSeller) badges += '<span class="role-badge merch">Merch Seller</span>';
+      if (roles.vinylSeller) badges += '<span class="role-badge vinyl">Vinyl Seller</span>';
       userRoles.innerHTML = badges;
     }
 
@@ -562,7 +589,7 @@ const { title, activeSection } = Astro.props;
         }
 
         // If no roles found, try artists collection
-        if (!roles.artist && !roles.merchSeller) {
+        if (!roles.artist && !roles.merchSeller && !roles.vinylSeller) {
           console.log('[ProDashboard] No roles in users doc, trying artists collection...');
           const artistDoc = await getDoc(doc(db, 'artists', user.uid));
           console.log('[ProDashboard] Artist doc exists:', artistDoc.exists());
@@ -570,21 +597,22 @@ const { title, activeSection } = Astro.props;
             const artistData = artistDoc.data();
             roles = {
               artist: artistData.isArtist !== false,
-              merchSeller: artistData.isMerchSupplier || false
+              merchSeller: artistData.isMerchSupplier || false,
+              vinylSeller: artistData.isVinylSeller || false
             };
           }
         }
 
         // Admin override - give full access
-        if (isAdmin && !roles.artist && !roles.merchSeller) {
+        if (isAdmin && !roles.artist && !roles.merchSeller && !roles.vinylSeller) {
           console.log('[ProDashboard] Admin override applied');
-          roles = { artist: true, merchSeller: true };
+          roles = { artist: true, merchSeller: true, vinylSeller: true };
         }
 
         console.log('[ProDashboard] Final roles:', roles);
 
         // Check if user has any pro roles
-        if (!roles.artist && !roles.merchSeller) {
+        if (!roles.artist && !roles.merchSeller && !roles.vinylSeller) {
           console.log('[ProDashboard] No roles, showing access denied');
           loadingState.style.display = 'none';
           accessDenied.style.display = 'flex';
