@@ -5269,25 +5269,27 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   }
   
   function showKeyNotAvailable() {
-    // Called when user has no booked slot - but we still generate a key for them
+    // Called when user has no booked slot - show message to book a slot
     const slotTimeDisplay = document.getElementById('slotTimeDisplay');
     const countdownEl = document.getElementById('countdownToSlot');
+    const streamKeyEl = document.getElementById('myStreamKey');
+    const setReadyBtn = document.getElementById('setReadyBtn');
 
     if (slotTimeDisplay) slotTimeDisplay.textContent = 'No slot booked';
-    if (countdownEl) countdownEl.textContent = 'You can still go live anytime';
+    if (countdownEl) countdownEl.textContent = 'Book a slot to go live';
 
-    // Always generate a stream key for DJs, even without a booked slot
-    if (!currentStreamKey) {
-      loadStreamKeyForGoLive();
-    } else {
-      // Display existing key
-      const streamKeyEl = document.getElementById('myStreamKey');
-      if (streamKeyEl) {
-        streamKeyEl.classList.remove('key-loading');
-        streamKeyEl.classList.add('key-reveal');
-        streamKeyEl.innerHTML = `<span class="key-text">${currentStreamKey}</span>`;
-      }
-      startObsPreviewCheck();
+    // Show "no slot" message instead of generating a key
+    if (streamKeyEl) {
+      streamKeyEl.classList.remove('key-loading');
+      streamKeyEl.classList.add('key-unavailable');
+      streamKeyEl.innerHTML = '<span class="key-no-slot">Book a slot first</span>';
+    }
+
+    // Disable the Ready button when no slot
+    if (setReadyBtn) {
+      setReadyBtn.disabled = true;
+      setReadyBtn.classList.remove('glow');
+      setReadyBtn.title = 'You need to book a slot first';
     }
   }
 
@@ -5336,23 +5338,23 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         startObsPreviewCheck();
       }
     } else {
-      if (slotTimeDisplay) slotTimeDisplay.textContent = 'Your slot: --:-- - --:--';
-      if (countdownEl) countdownEl.textContent = '';
-    }
+      // No booked slot - show message instead of generating a key
+      if (slotTimeDisplay) slotTimeDisplay.textContent = 'No slot booked';
+      if (countdownEl) countdownEl.textContent = 'Book a slot to go live';
 
-    // Always generate a stream key if we don't have one
-    if (!currentStreamKey) {
-      loadStreamKeyForGoLive();
-    } else if (!streamKeyDisplayed) {
-      // Display existing key only if not already shown
       if (streamKeyEl) {
         streamKeyEl.classList.remove('key-loading');
-        streamKeyEl.classList.add('key-reveal');
-        streamKeyEl.innerHTML = `<span class="key-text">${currentStreamKey}</span>`;
-        streamKeyDisplayed = true;
+        streamKeyEl.classList.add('key-unavailable');
+        streamKeyEl.innerHTML = '<span class="key-no-slot">Book a slot first</span>';
       }
-      // Start checking for OBS preview stream
-      startObsPreviewCheck();
+
+      // Disable the Ready button when no slot
+      const setReadyBtn = document.getElementById('setReadyBtn');
+      if (setReadyBtn) {
+        setReadyBtn.disabled = true;
+        setReadyBtn.classList.remove('glow');
+        setReadyBtn.title = 'You need to book a slot first';
+      }
     }
   }
   

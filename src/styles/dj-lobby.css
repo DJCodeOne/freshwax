@@ -3524,6 +3524,18 @@
     position: relative;
   }
 
+  /* No slot booked - key unavailable */
+  .cred-value-compact code.key-unavailable {
+    color: #666;
+    background: #1a1a1a;
+  }
+
+  .cred-value-compact code.key-unavailable .key-no-slot {
+    color: #888;
+    font-style: italic;
+    font-size: 0.85rem;
+  }
+
   .cred-value-compact code.key-reveal .key-text {
     display: inline-block;
     animation: keyReveal 2.5s ease-out forwards;
