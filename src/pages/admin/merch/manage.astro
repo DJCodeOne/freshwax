@@ -5,6 +5,10 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../../lib/firebase-rest';
 
+// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+
 let products = [];
 let errorMessage = '';
 
@@ -288,7 +292,9 @@ export const prerender = false;
   }
 </style>
 
-<script>
+<script define:vars={{ adminKey }}>
+  const ADMIN_KEY = adminKey;
+
   // Filter functionality
   document.addEventListener('DOMContentLoaded', () => {
     const table = document.getElementById('productsTable');
@@ -368,11 +374,11 @@ export const prerender = false;
   // Delete function
   function deleteProduct(id: string) {
     if (!confirm('Are you sure you want to delete this product?')) return;
-    
+
     fetch('/api/delete-merch', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+      body: JSON.stringify({ productId: id })
     })
     .then(res => res.json())
     .then(data => {

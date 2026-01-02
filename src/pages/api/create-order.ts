@@ -281,6 +281,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       preOrderDeliveryDate: latestPreOrderDate,
       paymentMethod: orderData.paymentMethod || 'test_mode',
       paymentStatus: 'completed',
+      status: hasPreOrderItems ? 'awaiting_release' : (orderData.hasPhysicalItems ? 'processing' : 'completed'),
       orderStatus: hasPreOrderItems ? 'awaiting_release' : (orderData.hasPhysicalItems ? 'processing' : 'completed'),
       createdAt: now,
       updatedAt: now
@@ -435,7 +436,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           body: JSON.stringify({
             from: 'Fresh Wax <orders@freshwax.co.uk>',
             to: [order.customer.email],
-            bcc: ['davidhagon@gmail.com'],
+            bcc: ['freshwaxonline@gmail.com'],
             subject: 'Order Confirmed - ' + shortOrderNumber,
             html: emailHtml
           })
@@ -477,7 +478,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             body: JSON.stringify({
               from: 'Fresh Wax Orders <orders@freshwax.co.uk>',
               to: [STOCKIST_EMAIL],
-              bcc: ['davidhagon@gmail.com'],
+              bcc: ['freshwaxonline@gmail.com'],
               subject: '📦 VINYL FULFILLMENT REQUIRED - ' + orderNumber,
               html: fulfillmentHtml
             })
@@ -531,7 +532,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               body: JSON.stringify({
                 from: 'Fresh Wax <orders@freshwax.co.uk>',
                 to: [artistEmail],
-                bcc: ['davidhagon@gmail.com'],
+                bcc: ['freshwaxonline@gmail.com'],
                 subject: '🎵 Digital Sale! ' + orderNumber,
                 html: digitalHtml
               })
@@ -584,7 +585,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               body: JSON.stringify({
                 from: 'Fresh Wax Orders <orders@freshwax.co.uk>',
                 to: [sellerEmail],
-                bcc: ['davidhagon@gmail.com'],
+                bcc: ['freshwaxonline@gmail.com'],
                 subject: '👕 Merch Order! ' + orderNumber,
                 html: merchHtml
               })

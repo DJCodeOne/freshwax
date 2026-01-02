@@ -4,11 +4,31 @@
 
 import type { APIRoute } from 'astro';
 import { AwsClient } from 'aws4fetch';
-import { setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { saSetDocument } from '../../lib/firebase-service-account';
 import { createLogger, errorResponse, successResponse, getEnv, ApiErrors } from '../../lib/api-utils';
 import type { Track } from '../../lib/types';
 
 const log = createLogger('process-release');
+
+// Build service account key from individual env vars
+function getServiceAccountKey(env: any): string | null {
+  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+  const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+  if (!clientEmail || !privateKey) return null;
+
+  return JSON.stringify({
+    type: 'service_account',
+    project_id: projectId,
+    private_key_id: 'auto',
+    private_key: privateKey.replace(/\\n/g, '\n'),
+    client_email: clientEmail,
+    client_id: '',
+    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: 'https://oauth2.googleapis.com/token'
+  });
+}
 
 // Get R2 configuration
 function getR2Config(env: any) {
@@ -30,12 +50,15 @@ function createReleaseFolderName(artistName: string, releaseName: string): strin
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase
   const env = getEnv(locals);
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
+  // Get service account key for Firestore writes
+  const serviceAccountKey = getServiceAccountKey(env);
+  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+
+  if (!serviceAccountKey) {
+    return ApiErrors.notConfigured('Firebase service account');
+  }
 
   try {
     let { submissionId } = await request.json();
@@ -69,14 +92,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const endpoint = `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`;
     const bucketUrl = `${endpoint}/${R2_CONFIG.bucketName}`;
 
-    // Get metadata.json from submission (handle root vs submissions folder)
+    // Get metadata from submission (handle root vs submissions folder)
+    // Try info.json first (new uploader format), then metadata.json (legacy)
     const submissionPrefix = isRootLevel ? submissionId : `submissions/${submissionId}`;
-    const metadataKey = `${submissionPrefix}/metadata.json`;
-    const metadataUrl = `${bucketUrl}/${encodeURIComponent(metadataKey)}`;
 
-    const metadataResponse = await awsClient.fetch(metadataUrl);
+    let metadataResponse: Response | null = null;
+
+    // Try info.json first (new uploader format)
+    const infoKey = `${submissionPrefix}/info.json`;
+    const infoUrl = `${bucketUrl}/${encodeURIComponent(infoKey)}`;
+    metadataResponse = await awsClient.fetch(infoUrl);
+
+    // Fall back to metadata.json if info.json not found
     if (!metadataResponse.ok) {
-      return ApiErrors.notFound('Metadata not found');
+      const metadataKey = `${submissionPrefix}/metadata.json`;
+      const metadataUrl = `${bucketUrl}/${encodeURIComponent(metadataKey)}`;
+      metadataResponse = await awsClient.fetch(metadataUrl);
+    }
+
+    if (!metadataResponse.ok) {
+      log.error(`Metadata not found at ${submissionPrefix}/info.json or metadata.json`);
+      return ApiErrors.notFound('Metadata not found - ensure info.json exists in submission folder');
     }
 
     const metadata = await metadataResponse.json() as any;
@@ -344,8 +380,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       submittedBy: metadata.submittedBy || ''
     };
 
-    // Save to Firebase
-    await setDocument('releases', releaseId, releaseData);
+    // Save to Firebase using service account auth
+    await saSetDocument(serviceAccountKey, projectId, 'releases', releaseId, releaseData);
 
     log.info(`Created release: ${releaseId}`);
 

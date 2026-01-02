@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -90,7 +91,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     // Store items data (compressed)
-    const itemsJson = JSON.stringify(orderData.items.map((item: any) => ({
+    const compressedItems = orderData.items.map((item: any) => ({
       id: item.id,
       productId: item.productId,
       releaseId: item.releaseId,
@@ -100,12 +101,45 @@ export const POST: APIRoute = async ({ request, locals }) => {
       price: item.price,
       quantity: item.quantity,
       size: item.size,
-      color: item.color
-    })));
+      color: item.color,
+      image: item.image,
+      artwork: item.artwork,
+      artist: item.artist,
+      title: item.title
+    }));
+    const itemsJson = JSON.stringify(compressedItems);
 
-    // If items fit in metadata, store directly; otherwise we'll need session retrieval
+    // If items fit in metadata, store directly; otherwise store in Firestore
     if (itemsJson.length <= 500) {
       (metadata as any).items_json = itemsJson;
+    } else {
+      // Items too large for metadata - store in Firestore pendingCheckouts collection
+      console.log('[Stripe] Items JSON too large (' + itemsJson.length + ' chars), storing in Firestore');
+
+      // Initialize Firebase
+      initFirebaseEnv(env || {
+        FIREBASE_PROJECT_ID: import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
+        FIREBASE_API_KEY: import.meta.env.FIREBASE_API_KEY
+      });
+
+      try {
+        const pendingCheckout = {
+          items: compressedItems,
+          customer: orderData.customer,
+          shipping: orderData.shipping || null,
+          totals: orderData.totals,
+          hasPhysicalItems: orderData.hasPhysicalItems,
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hour expiry
+        };
+
+        const docRef = await addDocument('pendingCheckouts', pendingCheckout);
+        (metadata as any).pending_checkout_id = docRef.id;
+        console.log('[Stripe] Stored pending checkout:', docRef.id);
+      } catch (pendingErr) {
+        console.error('[Stripe] Failed to store pending checkout:', pendingErr);
+        // Continue anyway - webhook can fall back to line items
+      }
     }
 
     // Build request body
@@ -157,15 +191,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       bodyParams.append('shipping_address_collection[allowed_countries][6]', 'US');
       bodyParams.append('shipping_address_collection[allowed_countries][7]', 'CA');
       bodyParams.append('shipping_address_collection[allowed_countries][8]', 'AU');
-    }
-
-    // If items JSON was too large, store order data in custom session
-    if (itemsJson.length > 500) {
-      // We'll store the full order data reference and retrieve it in webhook
-      // For now, we'll pass the order ID through idToken if available
-      if (orderData.idToken) {
-        bodyParams.append('metadata[has_idToken]', 'true');
-      }
     }
 
     console.log('[Stripe] Creating checkout session...');

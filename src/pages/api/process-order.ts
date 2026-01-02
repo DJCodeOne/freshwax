@@ -337,6 +337,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       hasVinylItems: processedItems.some(item => item.requiresDropship),
       paymentMethod: orderData.paymentMethod || 'stripe',
       paymentStatus: 'completed',
+      status: hasPhysicalItems ? 'processing' : 'completed',
       orderStatus: hasPhysicalItems ? 'processing' : 'completed',
       createdAt: now,
       updatedAt: now,

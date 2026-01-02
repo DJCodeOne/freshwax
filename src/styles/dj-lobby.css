@@ -8434,7 +8434,7 @@
   }
 
   .butt-audio-preview .vinyl-right .vinyl-record {
-    animation: lobbySpinReverse 3s linear infinite;
+    animation: lobbySpin 3s linear infinite;
   }
 
   @keyframes lobbySpin {
@@ -8582,6 +8582,203 @@
     0%, 100% { transform: scaleY(1); }
     50% { transform: scaleY(0.4); }
   }
+
+  /* Live Stream Panel Audio-Only Placeholder (same as BUTT preview) */
+  #audioPreview .audio-only-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+    position: relative;
+  }
+
+  #audioPreview .audio-placeholder-branding {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.75rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+  }
+
+  #audioPreview .audio-placeholder-branding .brand-fresh {
+    color: #fff;
+  }
+
+  #audioPreview .audio-placeholder-branding .brand-wax {
+    color: #dc2626;
+  }
+
+  #audioPreview .turntables-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  #audioPreview .vinyl-container {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+  }
+
+  #audioPreview .vinyl-record {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at center, transparent 28%, #111 29%, #111 31%, transparent 32%),
+      radial-gradient(circle at center, transparent 38%, #222 39%, #222 41%, transparent 42%),
+      radial-gradient(circle at center, transparent 58%, #1a1a1a 59%, #1a1a1a 61%, transparent 62%),
+      radial-gradient(circle at center, transparent 78%, #222 79%, #222 81%, transparent 82%),
+      linear-gradient(135deg, #111 0%, #000 100%);
+    box-shadow:
+      0 0 0 2px #333,
+      0 0 15px rgba(0,0,0,0.8);
+    animation: lobbySpin 3s linear infinite;
+  }
+
+  #audioPreview .vinyl-right .vinyl-record {
+    animation: lobbySpin 3s linear infinite;
+  }
+
+  #audioPreview .vinyl-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #audioPreview .vinyl-label-right {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  }
+
+  #audioPreview .vinyl-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  #audioPreview .vinyl-label::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: #111;
+    border-radius: 50%;
+  }
+
+  #audioPreview .tonearm-left {
+    position: absolute;
+    top: -5px;
+    right: -10px;
+    width: 45px;
+    height: 4px;
+    background: linear-gradient(90deg, #666 0%, #444 50%, #333 100%);
+    border-radius: 2px;
+    transform-origin: right center;
+    transform: rotate(-25deg);
+  }
+
+  #audioPreview .tonearm-right {
+    position: absolute;
+    top: -5px;
+    left: -10px;
+    width: 45px;
+    height: 4px;
+    background: linear-gradient(270deg, #666 0%, #444 50%, #333 100%);
+    border-radius: 2px;
+    transform-origin: left center;
+    transform: rotate(25deg);
+  }
+
+  #audioPreview .audio-dj-info {
+    text-align: center;
+  }
+
+  #audioPreview .audio-dj-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+    color: #fff;
+    letter-spacing: 2px;
+  }
+
+  #audioPreview .audio-show-title {
+    font-size: 0.65rem;
+    color: #888;
+    margin-bottom: 0.35rem;
+  }
+
+  #audioPreview .audio-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(22, 163, 74, 0.2);
+    border: 1px solid #16a34a;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: #16a34a;
+    letter-spacing: 1px;
+  }
+
+  #audioPreview .live-pulse {
+    width: 6px;
+    height: 6px;
+    background: #16a34a;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  #audioPreview .audio-waveform {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 50px;
+    padding: 0 0.5rem;
+  }
+
+  #audioPreview .audio-waveform .audio-bar {
+    width: 3px;
+    background: linear-gradient(to top, #16a34a, #4ade80);
+    border-radius: 2px;
+    animation: barPulse 0.8s ease-in-out infinite;
+  }
+
+  #audioPreview .audio-waveform .audio-bar:nth-child(1) { height: 25%; animation-delay: 0s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(2) { height: 45%; animation-delay: 0.05s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(3) { height: 65%; animation-delay: 0.1s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(4) { height: 85%; animation-delay: 0.15s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(5) { height: 100%; animation-delay: 0.2s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(6) { height: 80%; animation-delay: 0.25s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(7) { height: 95%; animation-delay: 0.3s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(8) { height: 70%; animation-delay: 0.35s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(9) { height: 70%; animation-delay: 0.4s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(10) { height: 95%; animation-delay: 0.45s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(11) { height: 80%; animation-delay: 0.5s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(12) { height: 100%; animation-delay: 0.55s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(13) { height: 85%; animation-delay: 0.6s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(14) { height: 65%; animation-delay: 0.65s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(15) { height: 45%; animation-delay: 0.7s; }
+  #audioPreview .audio-waveform .audio-bar:nth-child(16) { height: 25%; animation-delay: 0.75s; }
 
   /* Vinyl groove background - off center */
   .butt-vinyl-bg {

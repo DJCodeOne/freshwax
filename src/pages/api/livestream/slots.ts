@@ -1047,7 +1047,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // START RELAY - Start a relay stream from an external source
     if (action === 'start_relay') {
-      const { djId, djName, relayUrl, stationName, title, genre } = data;
+      const { djId, djName, relayUrl, stationName, title, genre, twitchUsername, twitchStreamKey } = data;
 
       if (!djId || !djName || !relayUrl) {
         return new Response(JSON.stringify({ success: false, error: 'DJ ID, name, and relay URL required' }), {
@@ -1106,12 +1106,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         description: data.description || '',
         streamKey: relayStreamKey,
         rtmpUrl: buildRtmpUrl(relayStreamKey),
-        // Use freshwax-main HLS for relay - FFmpeg generates spectrum video from relay audio
-        hlsUrl: buildHlsUrl('freshwax-main'),
+        // Relay uses audio-only placeholder mode with turntables visualization
+        hlsUrl: null,
+        audioStreamUrl: relayUrl, // Play audio directly from relay source
         status: 'live',
         createdAt: nowISO,
         startedAt: nowISO,
-        broadcastMode: 'video', // Video mode - shows spectrum visualization
+        broadcastMode: 'placeholder', // Audio-only mode - shows turntables + waveform
         isRelay: true,
         relaySource: {
           url: relayUrl,
@@ -1120,6 +1121,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         viewerPeak: 0,
         totalViews: 0,
         currentViewers: 0,
+        twitchUsername: twitchUsername || null, // For Twitch chat integration
+        twitchStreamKey: twitchStreamKey || null, // DJ's personal Twitch stream key for multi-streaming
       };
 
       await setDocument('livestreamSlots', relaySlotId, newSlot, idToken);

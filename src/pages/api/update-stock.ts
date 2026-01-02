@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { requireAdminAuth } from '../../lib/admin';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -34,6 +35,10 @@ interface StockUpdate {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication required
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
@@ -264,7 +269,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-export const GET: APIRoute = async ({ url, locals }) => {
+export const GET: APIRoute = async ({ url, request, locals }) => {
+  // Admin authentication required
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 

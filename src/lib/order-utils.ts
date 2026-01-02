@@ -147,6 +147,171 @@ export async function processItemsWithDownloads(items: any[]): Promise<any[]> {
   }));
 }
 
+// Update stock for vinyl items
+export async function updateVinylStock(items: any[], orderNumber: string, orderId: string, idToken?: string): Promise<void> {
+  const now = new Date().toISOString();
+
+  for (const item of items) {
+    if (item.type === 'vinyl' && (item.releaseId || item.productId)) {
+      const releaseId = item.releaseId || item.productId;
+      try {
+        log.info('[order-utils] Updating vinyl stock for:', item.name, 'qty:', item.quantity);
+
+        const releaseData = await getDocument('releases', releaseId);
+
+        if (releaseData && releaseData.vinylStock !== undefined) {
+          const previousStock = releaseData.vinylStock || 0;
+          const newStock = Math.max(0, previousStock - (item.quantity || 1));
+
+          await updateDocument('releases', releaseId, {
+            vinylStock: newStock,
+            vinylSold: (releaseData.vinylSold || 0) + (item.quantity || 1),
+            updatedAt: now
+          });
+
+          // Record stock movement
+          await addDocument('vinyl-stock-movements', {
+            releaseId: releaseId,
+            releaseName: item.name || releaseData.releaseName,
+            type: 'sell',
+            quantity: item.quantity || 1,
+            stockDelta: -(item.quantity || 1),
+            previousStock: previousStock,
+            newStock: newStock,
+            orderId: orderId,
+            orderNumber: orderNumber,
+            notes: 'Order ' + orderNumber,
+            createdAt: now,
+            createdBy: 'system'
+          }, idToken);
+
+          log.info('[order-utils] ✓ Vinyl stock updated:', item.name, previousStock, '->', newStock);
+        }
+      } catch (stockErr) {
+        console.error('[order-utils] Vinyl stock update error:', stockErr);
+      }
+    }
+  }
+}
+
+// Refund stock when order is cancelled
+export async function refundOrderStock(orderId: string, items: any[], orderNumber: string, idToken?: string): Promise<void> {
+  const now = new Date().toISOString();
+
+  for (const item of items) {
+    // Refund merch stock
+    if (item.type === 'merch' && item.productId) {
+      try {
+        log.info('[order-utils] Refunding merch stock for:', item.name, 'qty:', item.quantity);
+
+        const productData = await getDocument('merch', item.productId);
+
+        if (productData) {
+          const variantStock = productData.variantStock || {};
+          const size = (item.size || 'onesize').toLowerCase().replace(/\s/g, '-');
+          const color = (item.color || 'default').toLowerCase().replace(/\s/g, '-');
+          let variantKey = size + '_' + color;
+
+          if (!variantStock[variantKey]) {
+            const keys = Object.keys(variantStock);
+            if (keys.length === 1) variantKey = keys[0];
+          }
+
+          const variant = variantStock[variantKey];
+
+          if (variant) {
+            const previousStock = variant.stock || 0;
+            const newStock = previousStock + (item.quantity || 1);
+
+            variant.stock = newStock;
+            variant.sold = Math.max(0, (variant.sold || 0) - (item.quantity || 1));
+            variantStock[variantKey] = variant;
+
+            let totalStock = 0;
+            let totalSold = 0;
+            Object.values(variantStock).forEach((v: any) => {
+              totalStock += v.stock || 0;
+              totalSold += v.sold || 0;
+            });
+
+            await updateDocument('merch', item.productId, {
+              variantStock: variantStock,
+              totalStock: totalStock,
+              soldStock: totalSold,
+              isLowStock: totalStock <= (productData.lowStockThreshold || 5) && totalStock > 0,
+              isOutOfStock: totalStock === 0,
+              updatedAt: now
+            });
+
+            // Record refund movement
+            await addDocument('merch-stock-movements', {
+              productId: item.productId,
+              productName: item.name,
+              sku: productData.sku,
+              variantKey: variantKey,
+              variantSku: variant.sku,
+              type: 'return',
+              quantity: item.quantity || 1,
+              stockDelta: item.quantity || 1,
+              previousStock: previousStock,
+              newStock: newStock,
+              orderId: orderId,
+              orderNumber: orderNumber,
+              notes: 'Order cancelled - ' + orderNumber,
+              createdAt: now,
+              createdBy: 'system'
+            }, idToken);
+
+            log.info('[order-utils] ✓ Merch stock refunded:', item.name, previousStock, '->', newStock);
+          }
+        }
+      } catch (refundErr) {
+        console.error('[order-utils] Merch refund error:', refundErr);
+      }
+    }
+
+    // Refund vinyl stock
+    if (item.type === 'vinyl' && (item.releaseId || item.productId)) {
+      const releaseId = item.releaseId || item.productId;
+      try {
+        log.info('[order-utils] Refunding vinyl stock for:', item.name, 'qty:', item.quantity);
+
+        const releaseData = await getDocument('releases', releaseId);
+
+        if (releaseData) {
+          const previousStock = releaseData.vinylStock || 0;
+          const newStock = previousStock + (item.quantity || 1);
+
+          await updateDocument('releases', releaseId, {
+            vinylStock: newStock,
+            vinylSold: Math.max(0, (releaseData.vinylSold || 0) - (item.quantity || 1)),
+            updatedAt: now
+          });
+
+          await addDocument('vinyl-stock-movements', {
+            releaseId: releaseId,
+            releaseName: item.name || releaseData.releaseName,
+            type: 'return',
+            quantity: item.quantity || 1,
+            stockDelta: item.quantity || 1,
+            previousStock: previousStock,
+            newStock: newStock,
+            orderId: orderId,
+            orderNumber: orderNumber,
+            notes: 'Order cancelled - ' + orderNumber,
+            createdAt: now,
+            createdBy: 'system'
+          }, idToken);
+
+          log.info('[order-utils] ✓ Vinyl stock refunded:', item.name, previousStock, '->', newStock);
+        }
+      } catch (refundErr) {
+        console.error('[order-utils] Vinyl refund error:', refundErr);
+      }
+    }
+  }
+}
+
 // Update stock for merch items
 export async function updateMerchStock(items: any[], orderNumber: string, orderId: string, idToken?: string): Promise<void> {
   const now = new Date().toISOString();
@@ -286,7 +451,7 @@ export async function sendOrderConfirmationEmail(
       body: JSON.stringify({
         from: 'Fresh Wax <orders@freshwax.co.uk>',
         to: [order.customer.email],
-        bcc: ['davidhagon@gmail.com'],
+        bcc: ['freshwaxonline@gmail.com'],
         subject: 'Order Confirmed - ' + shortOrderNumber,
         html: emailHtml
       })
@@ -332,7 +497,7 @@ export async function sendVinylFulfillmentEmail(
       body: JSON.stringify({
         from: 'Fresh Wax Orders <orders@freshwax.co.uk>',
         to: [STOCKIST_EMAIL],
-        bcc: ['davidhagon@gmail.com'],
+        bcc: ['freshwaxonline@gmail.com'],
         subject: '📦 VINYL FULFILLMENT REQUIRED - ' + orderNumber,
         html: fulfillmentHtml
       })
@@ -386,7 +551,7 @@ export async function sendDigitalSaleEmails(
         body: JSON.stringify({
           from: 'Fresh Wax <orders@freshwax.co.uk>',
           to: [artistEmail],
-          bcc: ['davidhagon@gmail.com'],
+          bcc: ['freshwaxonline@gmail.com'],
           subject: '🎵 Digital Sale! ' + orderNumber,
           html: digitalHtml
         })
@@ -435,7 +600,7 @@ export async function sendMerchSaleEmails(
         body: JSON.stringify({
           from: 'Fresh Wax Orders <orders@freshwax.co.uk>',
           to: [sellerEmail],
-          bcc: ['davidhagon@gmail.com'],
+          bcc: ['freshwaxonline@gmail.com'],
           subject: '👕 Merch Order! ' + orderNumber,
           html: merchHtml
         })
@@ -563,6 +728,10 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
       paymentIntentId: orderData.paymentIntentId || null,
       paypalOrderId: orderData.paypalOrderId || null,
       paymentStatus: 'completed',
+      // Use both status and orderStatus for compatibility
+      // status is used by UI pages and update-order-status API
+      // orderStatus is legacy field kept for backward compatibility
+      status: hasPreOrderItems ? 'awaiting_release' : (orderData.hasPhysicalItems ? 'processing' : 'completed'),
       orderStatus: hasPreOrderItems ? 'awaiting_release' : (orderData.hasPhysicalItems ? 'processing' : 'completed'),
       createdAt: now,
       updatedAt: now
@@ -580,6 +749,9 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
 
     // Update stock for merch items
     await updateMerchStock(order.items, orderNumber, orderRef.id, idToken);
+
+    // Update stock for vinyl items
+    await updateVinylStock(order.items, orderNumber, orderRef.id, idToken);
 
     // Send confirmation email
     console.log('[createOrder] Sending confirmation email...');

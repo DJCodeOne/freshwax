@@ -1333,9 +1333,11 @@ export const prerender = false;
         day: 'numeric', month: 'short', year: 'numeric'
       }) : '';
       
-      const statusClass = order.orderStatus === 'completed' ? 'status-completed' : 
-                          order.orderStatus === 'shipped' ? 'status-shipped' : 'status-processing';
-      const statusText = order.orderStatus ? order.orderStatus.charAt(0).toUpperCase() + order.orderStatus.slice(1) : 'Processing';
+      // Use status (new) or orderStatus (legacy) for compatibility
+      const orderStatus = order.status || order.orderStatus;
+      const statusClass = orderStatus === 'completed' ? 'status-completed' :
+                          orderStatus === 'shipped' ? 'status-shipped' : 'status-processing';
+      const statusText = orderStatus ? orderStatus.charAt(0).toUpperCase() + orderStatus.slice(1) : 'Processing';
       
       const items = order.items || [];
       
@@ -2349,7 +2351,7 @@ export const prerender = false;
           <td>${new Date(order.createdAt || order.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
           <td>${(order.items || []).map(i => i.title || i.name).join(', ') || 'N/A'}</td>
           <td>£${(order.total || 0).toFixed(2)}</td>
-          <td>${order.status || 'Completed'}</td>
+          <td>${order.status || order.orderStatus || 'Completed'}</td>
         </tr>
       `).join('');
       

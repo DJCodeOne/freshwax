@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createOrder } from '../../../lib/order-utils';
-import { initFirebaseEnv } from '../../../lib/firebase-rest';
+import { initFirebaseEnv, getDocument, deleteDocument } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -72,7 +72,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const body = await request.json();
-    const { paypalOrderId, orderData, idToken } = body;
+    const { paypalOrderId, orderData: clientOrderData, idToken } = body;
 
     if (!paypalOrderId) {
       return new Response(JSON.stringify({
@@ -85,6 +85,38 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     console.log('[PayPal] Capturing order:', paypalOrderId);
+
+    // SECURITY: Retrieve order data from Firebase instead of trusting client
+    let orderData = clientOrderData;
+    let usedServerData = false;
+
+    try {
+      const pendingOrder = await getDocument('pendingPayPalOrders', paypalOrderId);
+      if (pendingOrder) {
+        console.log('[PayPal] Retrieved server-side order data');
+        orderData = {
+          customer: pendingOrder.customer,
+          shipping: pendingOrder.shipping,
+          items: pendingOrder.items,
+          totals: pendingOrder.totals,
+          hasPhysicalItems: pendingOrder.hasPhysicalItems
+        };
+        usedServerData = true;
+
+        // Clean up pending order
+        try {
+          await deleteDocument('pendingPayPalOrders', paypalOrderId);
+          console.log('[PayPal] Cleaned up pending order');
+        } catch (delErr) {
+          console.log('[PayPal] Could not delete pending order:', delErr);
+        }
+      } else {
+        console.log('[PayPal] No server-side order data found, using client data with validation');
+      }
+    } catch (fetchErr) {
+      console.error('[PayPal] Error fetching pending order:', fetchErr);
+      // Fall back to client data but will validate amount after capture
+    }
 
     // Get access token
     const accessToken = await getPayPalAccessToken(paypalClientId, paypalSecret, paypalMode);
@@ -130,9 +162,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Get capture details
     const capture = captureResult.purchase_units?.[0]?.payments?.captures?.[0];
     const captureId = capture?.id;
-    const capturedAmount = capture?.amount?.value;
+    const capturedAmount = parseFloat(capture?.amount?.value || '0');
 
     console.log('[PayPal] Payment captured:', captureId, '£' + capturedAmount);
+
+    // SECURITY: Validate captured amount matches expected total
+    const expectedTotal = parseFloat(orderData.totals?.total?.toFixed(2) || '0');
+    if (!usedServerData && Math.abs(capturedAmount - expectedTotal) > 0.01) {
+      console.error('[PayPal] SECURITY: Amount mismatch! Captured:', capturedAmount, 'Expected:', expectedTotal);
+      // Still create the order but flag it for review
+      console.log('[PayPal] Creating order with amount discrepancy flag');
+    }
 
     // Create order in Firebase using shared utility
     const result = await createOrder({

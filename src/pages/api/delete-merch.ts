@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getDocument, deleteDocument, updateDocument, addDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { requireAdminAuth } from '../../lib/admin';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -47,6 +48,10 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication required
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   // Rate limit: destructive operations - 3 per hour
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`delete-merch:${clientId}`, RateLimiters.destructive);

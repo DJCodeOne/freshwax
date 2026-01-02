@@ -9,6 +9,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { setDocument, updateDocument, getDocument, addDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { processImageToSquareWebP } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { requireAdminAuth } from '../../lib/admin';
 
 // Image processing settings
 const IMAGE_SIZE = 800;
@@ -77,6 +78,10 @@ function sanitizeForPath(str: string): string {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication required
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   // Rate limit: upload operations - 10 per hour
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`upload-merch:${clientId}`, RateLimiters.upload);

@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -47,6 +48,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const env = (locals as any)?.runtime?.env;
+
+    // Initialize Firebase for storing pending orders
+    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
+    const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
+    initFirebaseEnv({
+      FIREBASE_PROJECT_ID: projectId,
+      FIREBASE_API_KEY: apiKey,
+    });
 
     // Get PayPal credentials
     const paypalClientId = env?.PAYPAL_CLIENT_ID || import.meta.env.PAYPAL_CLIENT_ID;
@@ -196,9 +205,40 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const paypalResult = await createResponse.json();
     console.log('[PayPal] Order created:', paypalResult.id);
 
-    // Store order data temporarily for capture (using the PayPal order ID as key)
-    // In a production system, you might want to store this in a database
-    // For now, we'll pass it through the capture endpoint
+    // Store order data in Firebase for secure retrieval during capture
+    // This prevents client-side tampering with order data
+    try {
+      const pendingOrder = {
+        paypalOrderId: paypalResult.id,
+        customer: orderData.customer,
+        shipping: orderData.shipping || null,
+        items: orderData.items.map((item: any) => ({
+          id: item.id,
+          productId: item.productId,
+          releaseId: item.releaseId,
+          trackId: item.trackId,
+          name: item.name,
+          type: item.type,
+          price: item.price,
+          quantity: item.quantity || 1,
+          size: item.size,
+          color: item.color,
+          image: item.image,
+          artwork: item.artwork,
+          artist: item.artist
+        })),
+        totals: orderData.totals,
+        hasPhysicalItems: orderData.hasPhysicalItems,
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() // 2 hour expiry
+      };
+
+      await addDocument('pendingPayPalOrders', pendingOrder, paypalResult.id);
+      console.log('[PayPal] Stored pending order data:', paypalResult.id);
+    } catch (storeErr) {
+      console.error('[PayPal] Failed to store pending order:', storeErr);
+      // Continue anyway - capture endpoint will fall back to client data with amount validation
+    }
 
     return new Response(JSON.stringify({
       success: true,

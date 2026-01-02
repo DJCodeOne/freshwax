@@ -3,6 +3,10 @@
 // Stock inventory management - receive, adjust, and track merch stock
 import '../../../styles/admin/inventory.css';
 export const prerender = false;
+
+// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -272,7 +276,9 @@ export const prerender = false;
   
   <div class="toast" id="toast"></div>
 
-  <script>
+  <script define:vars={{ adminKey }}>
+    const ADMIN_KEY = adminKey;
+
     let allProducts = [];
     let selectedProduct = null;
     let selectedVariant = null;
@@ -304,7 +310,9 @@ export const prerender = false;
     // Load all data
     async function loadData() {
       try {
-        const response = await fetch('/api/update-stock');
+        const response = await fetch('/api/update-stock', {
+          headers: { 'X-Admin-Key': ADMIN_KEY }
+        });
         const data = await response.json();
         
         if (data.success) {
@@ -465,7 +473,7 @@ export const prerender = false;
       try {
         const response = await fetch('/api/update-stock', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
           body: JSON.stringify({
             productId,
             variantKey,
@@ -714,11 +722,11 @@ export const prerender = false;
       const btn = document.getElementById('submitReceive');
       btn.disabled = true;
       document.getElementById('submitText').textContent = 'Processing...';
-      
+
       try {
         const response = await fetch('/api/update-stock', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
           body: JSON.stringify({
             productId: selectedProduct.productId,
             variantKey: selectedVariant,
@@ -812,11 +820,11 @@ export const prerender = false;
       const qty = parseInt(document.getElementById('modalQty').value) || 0;
       const operation = document.getElementById('modalOperation').value;
       const notes = document.getElementById('modalNotes').value.trim();
-      
+
       try {
         const response = await fetch('/api/update-stock', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
           body: JSON.stringify({
             productId: modalProduct.productId,
             variantKey: modalVariant,
@@ -1083,13 +1091,13 @@ export const prerender = false;
       for (const change of changes) {
         const newStock = parseInt(change.counted);
         const adjustment = newStock - change.system;
-        
+
         if (adjustment === 0) continue;
-        
+
         try {
           const response = await fetch('/api/update-stock', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
             body: JSON.stringify({
               productId: change.productId,
               variantKey: change.variant,

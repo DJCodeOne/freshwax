@@ -171,7 +171,50 @@ export const GET: APIRoute = async ({ url, locals }) => {
       console.log('[verify-session] ⚠️ No paymentIntentId in session');
     }
 
-    // Order not found - create it now as fallback (webhook may have failed)
+    // Order not found - wait a bit more and check again (webhook might be processing)
+    console.log('[verify-session] No order found yet, waiting for webhook to complete...');
+    await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 more seconds
+
+    // Check again after waiting
+    if (paymentIntentId) {
+      console.log('[verify-session] Re-checking for order after wait...');
+      const retryResponse = await fetch(queryUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId: 'orders' }],
+            where: {
+              fieldFilter: {
+                field: { fieldPath: 'paymentIntentId' },
+                op: 'EQUAL',
+                value: { stringValue: paymentIntentId }
+              }
+            },
+            limit: 1
+          }
+        })
+      });
+
+      if (retryResponse.ok) {
+        const retryResults = await retryResponse.json();
+        if (retryResults && retryResults[0]?.document) {
+          const docPath = retryResults[0].document.name;
+          const orderId = docPath.split('/').pop();
+          console.log('[verify-session] ✅ ORDER FOUND ON RETRY');
+          console.log('[verify-session] Order ID:', orderId);
+          return new Response(JSON.stringify({
+            success: true,
+            orderId,
+            paymentStatus: session.payment_status
+          }), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      }
+    }
+
+    // Order still not found - create it now as fallback (webhook may have failed)
     console.log('[verify-session] ========== FALLBACK ORDER CREATION ==========');
     console.log('[verify-session] Order not found for paymentIntentId:', paymentIntentId);
     console.log('[verify-session] Creating order as fallback...');

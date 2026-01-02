@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { createOrder } from '../../../lib/order-utils';
-import { initFirebaseEnv } from '../../../lib/firebase-rest';
+import { initFirebaseEnv, getDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -227,10 +227,43 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       console.log('[Stripe Webhook] ✓ Customer email found:', metadata.customer_email);
+
+      // IDEMPOTENCY CHECK: Check if order already exists for this payment intent
+      const paymentIntentId = session.payment_intent;
+      if (paymentIntentId) {
+        console.log('[Stripe Webhook] Checking for existing order with paymentIntentId:', paymentIntentId);
+        try {
+          const existingOrders = await queryCollection('orders', {
+            filters: [{ field: 'paymentIntentId', op: 'EQUAL', value: paymentIntentId }],
+            limit: 1
+          });
+
+          if (existingOrders && existingOrders.length > 0) {
+            console.log('[Stripe Webhook] ⚠️ Order already exists for this payment intent:', existingOrders[0].id);
+            console.log('[Stripe Webhook] Order number:', existingOrders[0].orderNumber);
+            console.log('[Stripe Webhook] Skipping duplicate order creation');
+            return new Response(JSON.stringify({
+              received: true,
+              message: 'Order already exists',
+              orderId: existingOrders[0].id
+            }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+          console.log('[Stripe Webhook] ✓ No existing order found - proceeding with creation');
+        } catch (idempotencyErr) {
+          console.error('[Stripe Webhook] ⚠️ Idempotency check failed:', idempotencyErr);
+          // Continue anyway - better to risk duplicate than fail order
+        }
+      }
+
       console.log('[Stripe Webhook] 📦 Creating order...');
 
-      // Parse items from metadata
+      // Parse items from metadata or retrieve from pending checkout
       let items: any[] = [];
+
+      // First try items_json in metadata
       if (metadata.items_json) {
         try {
           items = JSON.parse(metadata.items_json);
@@ -239,8 +272,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
           console.error('[Stripe Webhook] ❌ Error parsing items_json:', e);
           console.error('[Stripe Webhook] items_json value:', metadata.items_json?.substring(0, 200));
         }
-      } else {
-        console.log('[Stripe Webhook] ⚠️ No items_json in metadata');
+      }
+
+      // If no items in metadata, try pending checkout
+      if (items.length === 0 && metadata.pending_checkout_id) {
+        console.log('[Stripe Webhook] Retrieving items from pending checkout:', metadata.pending_checkout_id);
+        try {
+          const pendingCheckout = await getDocument('pendingCheckouts', metadata.pending_checkout_id);
+          if (pendingCheckout && pendingCheckout.items) {
+            items = pendingCheckout.items;
+            console.log('[Stripe Webhook] ✓ Retrieved', items.length, 'items from pending checkout');
+
+            // Clean up pending checkout
+            try {
+              await deleteDocument('pendingCheckouts', metadata.pending_checkout_id);
+              console.log('[Stripe Webhook] ✓ Cleaned up pending checkout');
+            } catch (cleanupErr) {
+              console.log('[Stripe Webhook] ⚠️ Could not clean up pending checkout:', cleanupErr);
+            }
+          } else {
+            console.log('[Stripe Webhook] ⚠️ Pending checkout not found or has no items');
+          }
+        } catch (pendingErr) {
+          console.error('[Stripe Webhook] ❌ Error retrieving pending checkout:', pendingErr);
+        }
+      }
+
+      // If still no items, log warning
+      if (items.length === 0) {
+        console.log('[Stripe Webhook] ⚠️ No items found in metadata or pending checkout');
       }
 
       // If no items in metadata, try to retrieve from session line items

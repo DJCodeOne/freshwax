@@ -36,3 +36,10 @@
 /api/*
   Cache-Control: no-cache, no-store, must-revalidate
   X-Robots-Tag: noindex
+
+# Don't cache dynamic pages (prices, ratings change)
+/item/*
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/releases/*
+  Cache-Control: no-cache, no-store, must-revalidate

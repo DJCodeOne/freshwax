@@ -7,6 +7,7 @@ import '../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToSquareWebP } from '../../lib/image-processing';
+import { requireAdminAuth } from '../../lib/admin';
 
 export const prerender = false;
 
@@ -38,6 +39,10 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication required
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   const env = (locals as any)?.runtime?.env;
   const r2Config = getR2Config(env);
   const s3Client = createS3Client(r2Config);

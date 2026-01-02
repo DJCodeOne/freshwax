@@ -8,6 +8,10 @@ import '../../../../styles/admin/merch/edit.css';
 
 export const prerender = false;
 
+// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+
 const { id } = Astro.params;
 
 // Fetch product from Firebase
@@ -359,7 +363,9 @@ const getStockBadgeClass = (stock) => {
 </AdminLayout>
 
 
-<script define:vars={{ id, product }}>
+<script define:vars={{ id, product, adminKey }}>
+  const ADMIN_KEY = adminKey;
+
   // Get initial images array
   let images = [];
   if (product.images && product.images.length > 0) {
@@ -580,9 +586,10 @@ const getStockBadgeClass = (stock) => {
         formData.append('file', file);
         formData.append('folder', `merch/${id}`);
         formData.append('filename', `${Date.now()}_${i}.webp`);
-        
+
         const response = await fetch('/api/upload-merch-image', {
           method: 'POST',
+          headers: { 'X-Admin-Key': ADMIN_KEY },
           body: formData
         });
         
@@ -624,7 +631,7 @@ const getStockBadgeClass = (stock) => {
     try {
       const response = await fetch('/api/update-merch', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
         body: JSON.stringify({
           productId: id,
           images: images.map((img, idx) => ({
@@ -652,11 +659,11 @@ const getStockBadgeClass = (stock) => {
     if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
       return;
     }
-    
+
     fetch('/api/delete-merch', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+      body: JSON.stringify({ productId: id })
     })
     .then(res => res.json())
     .then(data => {

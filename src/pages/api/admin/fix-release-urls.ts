@@ -2,7 +2,7 @@
 // Update release URLs from submissions/ to releases/
 
 import type { APIRoute } from 'astro';
-import { saGetDocument, saSetDocument } from '../../../lib/firebase-service-account';
+import { saGetDocument, saSetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
@@ -34,10 +34,45 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const { releaseId, oldPrefix, newPrefix } = await request.json();
+    const { releaseId, oldPrefix, newPrefix, createNew, releaseData, collection, docId, updateData } = await request.json();
+
+    // Generic document update mode (for any collection)
+    if (collection && docId && updateData) {
+      await saUpdateDocument(serviceAccountKey, projectId, collection, docId, {
+        ...updateData,
+        updatedAt: new Date().toISOString()
+      });
+      return new Response(JSON.stringify({
+        success: true,
+        collection,
+        docId,
+        message: 'Document updated'
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     if (!releaseId) {
       return new Response(JSON.stringify({ error: 'releaseId required' }), { status: 400 });
+    }
+
+    // Create new release mode
+    if (createNew && releaseData) {
+      const now = new Date().toISOString();
+      const newRelease = {
+        ...releaseData,
+        id: releaseId,
+        createdAt: now,
+        updatedAt: now
+      };
+      await saSetDocument(serviceAccountKey, projectId, 'releases', releaseId, newRelease);
+      return new Response(JSON.stringify({
+        success: true,
+        releaseId,
+        message: 'Release created'
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     const old = oldPrefix || 'submissions/Code_One-1765771210267';

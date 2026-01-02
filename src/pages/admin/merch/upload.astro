@@ -3,6 +3,10 @@
 // Merch upload - log new products as they arrive
 import '../../../styles/admin/merch/upload.css';
 export const prerender = false;
+
+// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 
 <!DOCTYPE html>
@@ -347,7 +351,9 @@ export const prerender = false;
 
   <div class="toast" id="toast"></div>
 
-  <script>
+  <script define:vars={{ adminKey }}>
+    const ADMIN_KEY = adminKey;
+
     // State
     let uploadedImages = [];
     let suppliers = [];
@@ -866,6 +872,7 @@ export const prerender = false;
         // Submit
         const response = await fetch('/api/upload-merch', {
           method: 'POST',
+          headers: { 'X-Admin-Key': ADMIN_KEY },
           body: formData
         });
         

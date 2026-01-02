@@ -46,8 +46,13 @@ function calculateMetrics(ordersSubset) {
   }, 0);
   
   const fees = ordersSubset.reduce((sum, o) => {
-    // Platform fee could be in different places
-    const fee = o.platformFee || o.fees || o.serviceFee || o.totals?.platformFee || 0;
+    // Platform fees are stored in totals object from createOrder()
+    // Check for serviceFees (combined) or individual fees
+    const serviceFees = o.totals?.serviceFees || 0;
+    const freshWaxFee = o.totals?.freshWaxFee || 0;
+    const stripeFee = o.totals?.stripeFee || 0;
+    // Use serviceFees if available, otherwise sum individual fees, otherwise try legacy fields
+    const fee = serviceFees || (freshWaxFee + stripeFee) || o.platformFee || o.fees || 0;
     return sum + fee;
   }, 0);
   

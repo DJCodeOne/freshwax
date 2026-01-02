@@ -93,56 +93,82 @@ const orderId = Astro.url.searchParams.get('orderId');
       return;
     }
 
-    try {
-      // Wait a moment for webhook to process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+    // Retry logic with exponential backoff
+    const maxRetries = 4;
+    const baseDelay = 2000; // 2 seconds
 
-      // Check if order exists for this session
-      console.log('[success] Verifying session:', sessionId);
-      const response = await fetch(`/api/stripe/verify-session?session_id=${sessionId}`);
-      const result = await response.json();
-      console.log('[success] Verify result:', JSON.stringify(result));
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Wait before checking (longer on each retry)
+        const delay = attempt === 1 ? baseDelay : baseDelay * Math.pow(1.5, attempt - 1);
+        console.log(`[success] Attempt ${attempt}/${maxRetries}, waiting ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
 
-      // Clear cart for any successful payment
-      if (result.success || result.paymentStatus === 'paid') {
-        console.log('[success] Payment successful, clearing cart');
-        const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
-        if (customerId) {
-          localStorage.removeItem('freshwax_cart_' + customerId);
+        // Check if order exists for this session
+        console.log('[success] Verifying session:', sessionId);
+        const response = await fetch(`/api/stripe/verify-session?session_id=${sessionId}`);
+        const result = await response.json();
+        console.log('[success] Verify result:', JSON.stringify(result));
+
+        // Clear cart for any successful payment
+        if (result.success || result.paymentStatus === 'paid') {
+          console.log('[success] Payment successful, clearing cart');
+          const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
+          if (customerId) {
+            localStorage.removeItem('freshwax_cart_' + customerId);
+          }
+          localStorage.removeItem('cart');
+          window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
         }
-        localStorage.removeItem('cart');
-        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
+
+        if (result.success && result.orderId) {
+          loadingState.style.display = 'none';
+          successState.style.display = 'block';
+
+          // Redirect to order confirmation
+          setTimeout(() => {
+            window.location.href = `/order-confirmation/${result.orderId}`;
+          }, 1500);
+          return; // Success - exit retry loop
+        } else if (result.success || result.paymentStatus === 'paid') {
+          // Payment successful but order might not have been created yet
+          if (attempt < maxRetries) {
+            console.log(`[success] Payment OK but no orderId yet. Retrying (${attempt}/${maxRetries})...`);
+            continue; // Try again
+          }
+
+          // Last attempt - show success anyway
+          console.log('[success] Payment OK but no orderId after retries. Redirecting to orders.');
+          loadingState.style.display = 'none';
+          successState.style.display = 'block';
+
+          setTimeout(() => {
+            window.location.href = '/account/orders';
+          }, 2000);
+          return;
+        } else {
+          // Payment failed or not completed
+          if (attempt < maxRetries && result.error !== 'Payment not completed') {
+            console.log(`[success] Verification failed, retrying (${attempt}/${maxRetries})...`);
+            continue;
+          }
+
+          console.error('[success] Payment verification failed:', result.error);
+          loadingState.style.display = 'none';
+          errorState.style.display = 'block';
+          errorMessage.textContent = result.error || 'Payment verification failed';
+          return;
+        }
+      } catch (error) {
+        console.error(`[success] Verification error (attempt ${attempt}):`, error);
+        if (attempt === maxRetries) {
+          loadingState.style.display = 'none';
+          errorState.style.display = 'block';
+          errorMessage.textContent = 'Unable to verify payment. Please check your orders.';
+          return;
+        }
+        // Continue to next retry
       }
-
-      if (result.success && result.orderId) {
-        loadingState.style.display = 'none';
-        successState.style.display = 'block';
-
-        // Redirect to order confirmation
-        setTimeout(() => {
-          window.location.href = `/order-confirmation/${result.orderId}`;
-        }, 1500);
-      } else if (result.success || result.paymentStatus === 'paid') {
-        // Payment successful but order might not have been created
-        console.log('[success] Payment OK but no orderId. Error:', result.error);
-        loadingState.style.display = 'none';
-        successState.style.display = 'block';
-
-        setTimeout(() => {
-          // Redirect to account orders
-          window.location.href = '/account/orders';
-        }, 2000);
-      } else {
-        // Payment failed or not completed
-        console.error('[success] Payment verification failed:', result.error);
-        loadingState.style.display = 'none';
-        errorState.style.display = 'block';
-        errorMessage.textContent = result.error || 'Payment verification failed';
-      }
-    } catch (error) {
-      console.error('[success] Verification error:', error);
-      loadingState.style.display = 'none';
-      errorState.style.display = 'block';
     }
   }
 

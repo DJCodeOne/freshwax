@@ -2,6 +2,10 @@
 // src/pages/admin/merch/image-processor.astro
 // Bulk image processor - resize, convert to WebP, upload to R2
 export const prerender = false;
+
+// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -194,7 +198,9 @@ export const prerender = false;
   
   <div class="toast" id="toast"></div>
 
-  <script>
+  <script define:vars={{ adminKey }}>
+    const ADMIN_KEY = adminKey;
+
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const processingStatus = document.getElementById('processingStatus');
@@ -437,9 +443,10 @@ export const prerender = false;
           formData.append('file', img.main.blob, img.main.filename);
           formData.append('folder', 'merch/' + folderName);
           formData.append('filename', img.main.filename);
-          
+
           const response = await fetch('/api/upload-merch-image', {
             method: 'POST',
+            headers: { 'X-Admin-Key': ADMIN_KEY },
             body: formData
           });
           

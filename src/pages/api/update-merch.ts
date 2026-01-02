@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { requireAdminAuth } from '../../lib/admin';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -46,6 +47,10 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication required
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebase(locals);

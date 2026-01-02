@@ -1,6 +1,7 @@
 // src/pages/api/update-release.ts
-// Firebase-based release update API
-import { getDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+// Firebase-based release update API - uses service account for writes
+import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { saUpdateDocument } from '../../lib/firebase-service-account';
 
 export const prerender = false;
 
@@ -10,12 +11,33 @@ const log = {
   error: (...args: any[]) => console.error(...args),
 };
 
+// Build service account key from individual env vars
+function getServiceAccountKey(env: any): string | null {
+  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+  const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+  if (!clientEmail || !privateKey) return null;
+
+  return JSON.stringify({
+    type: 'service_account',
+    project_id: projectId,
+    private_key_id: 'auto',
+    private_key: privateKey.replace(/\\n/g, '\n'),
+    client_email: clientEmail,
+    client_id: '',
+    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: 'https://oauth2.googleapis.com/token'
+  });
+}
+
 export async function POST({ request, locals }: any) {
   log.info('[update-release] POST request received');
 
   try {
-    // Initialize Firebase environment
     const env = locals?.runtime?.env || {};
+
+    // Initialize Firebase environment for reads
     initFirebaseEnv({
       FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
       FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
@@ -25,13 +47,6 @@ export async function POST({ request, locals }: any) {
     log.info('[update-release] Request body:', JSON.stringify(updates, null, 2));
 
     const { id, idToken, ...updateData } = updates;
-
-    // Also check Authorization header for token
-    const authHeader = request.headers.get('Authorization');
-    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-    const authToken = idToken || bearerToken;
-
-    console.log('[update-release] Auth token received:', authToken ? 'YES (' + authToken.substring(0, 20) + '...)' : 'NO');
 
     if (!id) {
       log.error('[update-release] No release ID provided');
@@ -70,10 +85,34 @@ export async function POST({ request, locals }: any) {
     // Add updatedAt timestamp
     cleanedData.updatedAt = new Date().toISOString();
 
+    // Sync pricing object when price fields are updated
+    if (cleanedData.pricePerSale !== undefined || cleanedData.trackPrice !== undefined) {
+      const existingPricing = releaseDoc.pricing || {};
+      cleanedData.pricing = {
+        ...existingPricing,
+        digital: cleanedData.pricePerSale ?? existingPricing.digital ?? 0,
+        track: cleanedData.trackPrice ?? existingPricing.track ?? 0
+      };
+    }
+
     log.info('[update-release] Cleaned data:', JSON.stringify(cleanedData, null, 2));
 
-    // Update in Firestore (pass auth token for authenticated writes)
-    await updateDocument('releases', id, cleanedData, authToken);
+    // Get service account key for writes
+    const serviceAccountKey = getServiceAccountKey(env);
+    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+
+    if (!serviceAccountKey) {
+      log.error('[update-release] Service account not configured');
+      return new Response(JSON.stringify({
+        error: 'Service account not configured'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Update in Firestore using service account auth
+    await saUpdateDocument(serviceAccountKey, projectId, 'releases', id, cleanedData);
     log.info('[update-release] Updated in Firestore');
 
     // Also update the master list
@@ -97,10 +136,10 @@ export async function POST({ request, locals }: any) {
             updatedAt: cleanedData.updatedAt
           };
 
-          await updateDocument('system', 'releases-master', {
+          await saUpdateDocument(serviceAccountKey, projectId, 'system', 'releases-master', {
             releases: releasesList,
             lastUpdated: new Date().toISOString()
-          }, authToken);
+          });
 
           log.info('[update-release] Updated master list');
         }

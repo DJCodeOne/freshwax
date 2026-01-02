@@ -412,8 +412,10 @@ export const prerender = false;
         }
       }
       
+      // Use status (new) or orderStatus (legacy) for compatibility
+      var orderStatus = order.status || order.orderStatus;
       var canDownload = hasDigital &&
-        (order.orderStatus === 'completed' || order.orderStatus === 'paid' || order.paymentStatus === 'completed' || order.paymentStatus === 'paid');
+        (orderStatus === 'completed' || orderStatus === 'paid' || order.paymentStatus === 'completed' || order.paymentStatus === 'paid');
       
       html += 
         '<div class="order-card">' +
@@ -432,7 +434,7 @@ export const prerender = false;
                 '<span class="order-info-value">' + items.length + '</span>' +
               '</div>' +
             '</div>' +
-            '<span class="order-status ' + getStatusClass(order.orderStatus) + '">' + (order.orderStatus || 'Pending') + '</span>' +
+            '<span class="order-status ' + getStatusClass(orderStatus) + '">' + (orderStatus || 'Pending') + '</span>' +
           '</div>' +
           '<div class="order-items">' + itemsHtml + '</div>' +
           '<div class="order-footer">' +
