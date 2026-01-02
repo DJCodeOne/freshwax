@@ -287,3 +287,24 @@ export async function saUpdateDocument(
 
   return result;
 }
+
+// Delete a document with service account auth
+export async function saDeleteDocument(
+  serviceAccountKey: string,
+  projectId: string,
+  collection: string,
+  docId: string
+): Promise<void> {
+  const token = await getServiceAccountToken(serviceAccountKey);
+  const url = getFirestoreUrl(projectId, `${collection}/${docId}`);
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  if (!response.ok && response.status !== 404) {
+    const error = await response.text();
+    throw new Error(`Failed to delete document: ${error}`);
+  }
+}

@@ -522,7 +522,7 @@ function handlePlaylistUpdate(event) {
         offlineMainText.textContent = 'No one is streaming right now';
       }
       if (offlineSubText) {
-        offlineSubText.textContent = 'Check the schedule for upcoming shows';
+        offlineSubText.textContent = 'The playlist will start in a moment';
       }
     }
 
@@ -1112,7 +1112,7 @@ function showOfflineState(scheduled) {
     offlineMainText.textContent = 'No one is streaming right now';
   }
   if (offlineSubText) {
-    offlineSubText.textContent = 'Check the schedule or start your own stream!';
+    offlineSubText.textContent = 'The playlist will start in a moment';
   }
 
   // Only disable emojis and chat if playlist is also not playing

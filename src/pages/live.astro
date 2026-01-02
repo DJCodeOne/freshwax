@@ -102,6 +102,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           <div class="fs-offline-content">
             <div class="fs-offline-icon">OFFLINE</div>
             <h2>No one is streaming right now</h2>
+            <p class="fs-offline-subtext" style="font-size: 0.875rem; color: #888; margin-top: 0.5rem;">The playlist will start in a moment</p>
           </div>
         </div>
         <div class="fs-video-container">
@@ -4246,7 +4247,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           // Update offline overlay text from loading state
           if (offlineIconText) offlineIconText.textContent = 'OFFLINE';
           if (offlineMainText) offlineMainText.textContent = 'No one is streaming right now';
-          if (offlineSubText) offlineSubText.textContent = 'Check the schedule for upcoming streams';
+          if (offlineSubText) offlineSubText.textContent = 'The playlist will start in a moment';
         }
       }
     }

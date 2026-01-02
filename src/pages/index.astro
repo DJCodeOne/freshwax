@@ -344,6 +344,15 @@ const featuredReleases = await getLiveReleases(20);
   /* Release items animation */
   .release-item {
     animation: fadeInUp 0.6s ease-out backwards;
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #dc2626;
+  }
+
+  .release-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
   }
 
   .release-item:nth-child(1) { animation-delay: 0.05s; }

@@ -41,6 +41,7 @@ const {
   releaseDate = new Date().toISOString(),
   pricePerSale,
   trackPrice,
+  saleDiscount = 0,
   vinylRelease = false,
   vinylRecordCount = '',
   vinylPrice = 0,
@@ -138,7 +139,10 @@ const formattedDate = release ? new Date(releaseDate).toLocaleDateString('en-GB'
 }) : '';
 
 const vinylAvailable = vinylRelease && parseInt(vinylRecordCount || '0') > 0;
-const digitalPrice = actualPricePerSale || actualTrackPrice * tracksWithIds.length;
+const originalDigitalPrice = actualPricePerSale || actualTrackPrice * tracksWithIds.length;
+const hasSale = saleDiscount > 0;
+const digitalPrice = hasSale ? originalDigitalPrice * (1 - saleDiscount / 100) : originalDigitalPrice;
+const saleTrackPrice = hasSale ? actualTrackPrice * (1 - saleDiscount / 100) : actualTrackPrice;
 const displayGenre = genre.toLowerCase() === 'dnb' ? 'Drum and Bass' : genre;
 
 // Pre-order logic - if release date is in the future
@@ -189,12 +193,17 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
             
             <div class="lg:col-span-1">
-              <img 
-                src={coverArtUrl} 
-                alt={`${releaseName} by ${artistName}`}
-                class="w-full border-2 md:border-4 border-white shadow-2xl mb-4 md:mb-6"
-                onerror="this.src='/place-holder.webp'"
-              />
+              <div class="relative">
+                <img
+                  src={coverArtUrl}
+                  alt={`${releaseName} by ${artistName}`}
+                  class="w-full border-2 md:border-4 border-white shadow-2xl mb-4 md:mb-6"
+                  onerror="this.src='/place-holder.webp'"
+                />
+                {hasSale && (
+                  <div class="sale-badge-item">{saleDiscount}% OFF</div>
+                )}
+              </div>
               
               <!-- Digital and Vinyl Buttons -->
               <div class="flex flex-col gap-2 mb-4 md:mb-6">
@@ -226,7 +235,11 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
                     </svg>
                   )}
-                  {isPreOrder ? `Pre-order Digital - £${digitalPrice.toFixed(2)}` : `Digital Download - £${digitalPrice.toFixed(2)}`}
+                  {isPreOrder ? `Pre-order Digital - £${digitalPrice.toFixed(2)}` : (
+                    hasSale ? (
+                      <span>Digital Download - <span class="line-through text-gray-400">£{originalDigitalPrice.toFixed(2)}</span> <span class="text-green-400 font-black">£{digitalPrice.toFixed(2)}</span></span>
+                    ) : `Digital Download - £${digitalPrice.toFixed(2)}`
+                  )}
                 </button>
                 
                 <button 
@@ -412,7 +425,13 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
         <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-3 md:p-6 mb-4 md:mb-6">
           <div class="flex items-center justify-between mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 border-red-600">
             <h2 class="text-xl md:text-3xl font-black text-white uppercase tracking-wider drop-shadow-lg">Tracklist</h2>
-            <span class="text-xs md:text-sm font-black text-white">£{actualTrackPrice.toFixed(2)} per track</span>
+            <span class="text-xs md:text-sm font-black text-white">
+              {hasSale ? (
+                <><span class="line-through text-gray-400">£{actualTrackPrice.toFixed(2)}</span> <span class="text-green-400">£{saleTrackPrice.toFixed(2)}</span> per track</>
+              ) : (
+                <>£{actualTrackPrice.toFixed(2)} per track</>
+              )}
+            </span>
           </div>
 
           <div class="space-y-2" id="full-track-list">
@@ -858,6 +877,30 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
 </div>
 
 <style>
+  /* Sale Badge */
+  .sale-badge-item {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 900;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.5);
+    border: 2px solid #fff;
+    animation: pulse-sale 2s ease-in-out infinite;
+    z-index: 10;
+  }
+
+  @keyframes pulse-sale {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
   .rating-star {
     color: #d1d5db;
     transition: all 0.2s;

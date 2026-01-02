@@ -95,6 +95,24 @@ export async function POST({ request, locals }: any) {
       };
     }
 
+    // Handle per-track BPM and Key updates
+    if (cleanedData.trackUpdates && Array.isArray(cleanedData.trackUpdates)) {
+      const existingTracks = releaseDoc.tracks || [];
+      const updatedTracks = existingTracks.map((track: any, idx: number) => {
+        const trackUpdate = cleanedData.trackUpdates.find((t: any) => t.index === idx);
+        if (trackUpdate) {
+          return {
+            ...track,
+            bpm: trackUpdate.bpm ?? track.bpm,
+            key: trackUpdate.key ?? track.key
+          };
+        }
+        return track;
+      });
+      cleanedData.tracks = updatedTracks;
+      delete cleanedData.trackUpdates; // Remove trackUpdates from the data to save
+    }
+
     log.info('[update-release] Cleaned data:', JSON.stringify(cleanedData, null, 2));
 
     // Get service account key for writes
