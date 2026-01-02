@@ -1861,19 +1861,31 @@ const pusherConfig = {
         const audioShowTitleEl = document.getElementById('audioShowTitle');
         if (audioShowTitleEl) audioShowTitleEl.textContent = stream.title || 'Live Session';
 
-        // Update vinyl avatars
+        // Update vinyl avatars and DJ avatar
+        console.log('[Stream] Setting DJ avatar:', stream.djAvatar);
         const vinylAvatar1 = document.getElementById('vinylDjAvatar');
         const vinylAvatar2 = document.getElementById('vinylDjAvatar2');
-        if (stream.djAvatar) {
-          if (vinylAvatar1) vinylAvatar1.src = stream.djAvatar;
-          if (vinylAvatar2) vinylAvatar2.src = stream.djAvatar;
-        }
+        const djAvatarEl = document.getElementById('djAvatar');
+        const streamCoverEl = document.getElementById('streamCover');
 
         if (stream.djAvatar) {
-          const djAvatarEl = document.getElementById('djAvatar');
-          if (djAvatarEl) djAvatarEl.src = stream.djAvatar;
-          const streamCoverEl = document.getElementById('streamCover');
-          if (streamCoverEl) streamCoverEl.src = stream.djAvatar;
+          if (vinylAvatar1) {
+            vinylAvatar1.src = stream.djAvatar;
+            console.log('[Stream] Set vinylDjAvatar to:', stream.djAvatar);
+          }
+          if (vinylAvatar2) {
+            vinylAvatar2.src = stream.djAvatar;
+            console.log('[Stream] Set vinylDjAvatar2 to:', stream.djAvatar);
+          }
+          if (djAvatarEl) {
+            djAvatarEl.src = stream.djAvatar;
+            console.log('[Stream] Set djAvatar to:', stream.djAvatar);
+          }
+          if (streamCoverEl) {
+            streamCoverEl.src = stream.djAvatar;
+          }
+        } else {
+          console.log('[Stream] No djAvatar in stream data');
         }
 
         document.getElementById('offlineOverlay')?.classList.add('hidden');
@@ -1897,15 +1909,43 @@ const pusherConfig = {
           document.getElementById('audioPlayer')?.classList.remove('hidden');
           document.getElementById('videoPlayer')?.classList.add('hidden');
 
-          // Set up Icecast audio - load immediately for placeholder mode
+          // Set up audio - use relay source if available, otherwise Icecast
           const audioElement = document.getElementById('audioElement');
-          const icecastUrl = 'https://icecast.freshwax.co.uk/live';
-          window.currentIcecastUrl = icecastUrl;
+          let audioUrl = 'https://icecast.freshwax.co.uk/live';
+
+          // Check for relay source
+          if (stream.isRelay && stream.relaySource?.url) {
+            audioUrl = stream.relaySource.url;
+            console.log('[Audio] Using relay source:', stream.relaySource.stationName);
+          } else if (stream.audioStreamUrl) {
+            audioUrl = stream.audioStreamUrl;
+          }
+
+          window.currentIcecastUrl = audioUrl;
 
           if (audioElement) {
-            audioElement.src = icecastUrl;
+            audioElement.src = audioUrl;
             audioElement.load();
-            console.log('[Audio] Icecast stream loaded:', icecastUrl);
+            console.log('[Audio] Stream loaded:', audioUrl);
+
+            // Try autoplay (muted first for browser policy)
+            try {
+              audioElement.muted = true;
+              await audioElement.play();
+              console.log('[Audio] Muted autoplay successful');
+              audioElement.muted = false;
+              console.log('[Audio] Unmuted, volume:', audioElement.volume);
+
+              // Update play button state
+              const playIcon = document.getElementById('playIcon');
+              const pauseIcon = document.getElementById('pauseIcon');
+              const playBtn = document.getElementById('playPauseBtn');
+              playIcon?.classList.add('hidden');
+              pauseIcon?.classList.remove('hidden');
+              playBtn?.classList.add('playing');
+            } catch (err) {
+              console.log('[Audio] Autoplay blocked, user must click play:', err.message);
+            }
           }
         }
 
@@ -2000,6 +2040,7 @@ const pusherConfig = {
 
       // YouTube
       const youtubeVideoId = stream?.youtubeLiveId || stream?.youtubeIntegration?.videoId;
+      console.log('[YouTube] Setting up chat, videoId:', youtubeVideoId, 'stream.youtubeLiveId:', stream?.youtubeLiveId);
       if (youtubeVideoId) {
         currentYoutubeVideoId = youtubeVideoId;
         if (youtubeFrame) {
@@ -2987,6 +3028,13 @@ const pusherConfig = {
     console.log('[Fullpage] Loading stream status...');
     loadStreamStatus().then(() => {
       console.log('[Fullpage] Stream status loaded');
+
+      // Subscribe to chat AFTER stream status is loaded (so currentStream is set)
+      subscribeToChatMessages();
+
+      // Subscribe to Pusher for reactions
+      setTimeout(() => subscribeToReactions(), 500);
+
       // Retry playlist check after a delay if not live (playlist manager may not be ready yet)
       if (!window.isLiveStreamActive) {
         setTimeout(() => {
@@ -3001,16 +3049,6 @@ const pusherConfig = {
     // Clear any existing poll interval and create new one
     if (streamPollInterval) clearInterval(streamPollInterval);
     streamPollInterval = setInterval(loadStreamStatus, 30000);
-
-    // Subscribe to chat after a delay (works for both live streams and playlist mode)
-    setTimeout(() => {
-      subscribeToChatMessages();
-    }, 2000);
-
-    // Subscribe to Pusher for reactions from other users
-    setTimeout(() => {
-      subscribeToReactions();
-    }, 2500);
 
     // Listen for playlist updates from PlaylistModal
     window.addEventListener('playlistUpdate', (e) => {

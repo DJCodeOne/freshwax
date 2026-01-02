@@ -356,6 +356,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                     <span class="indicator-dot disconnected" id="buttDot"></span>
                     <span class="indicator-label">BUTT</span>
                   </div>
+                  <div class="indicator source-toggle" id="relayIndicator" title="Relay from external station - Click to select">
+                    <span class="indicator-dot disconnected" id="relayDot"></span>
+                    <span class="indicator-label">Relay</span>
+                  </div>
                 </div>
               </div>
               <div class="player-wrapper" id="obsPlayerWrapper">
@@ -375,7 +379,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                     <!-- DJ Info at top -->
                     <div class="audio-dj-info">
                       <div class="audio-dj-name" id="buttPreviewDjName">DJ Name</div>
-                      <div class="audio-show-title">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
+                      <div class="audio-show-title" id="buttPreviewShowTitle">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
                       <div class="audio-live-badge">
                         <span class="live-pulse"></span>
                         AUDIO ONLY
@@ -425,8 +429,64 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                     </div>
                   </div>
                 </div>
+                <!-- Relay Preview Placeholder -->
+                <div id="relayPreview" class="butt-audio-preview hidden">
+                  <div class="audio-only-placeholder">
+                    <div class="audio-placeholder-branding">
+                      <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
+                    </div>
+                    <div class="audio-dj-info">
+                      <div class="audio-dj-name" id="relayPreviewDjName">DJ Name</div>
+                      <div class="audio-show-title" id="relayPreviewStationName">Relayed from <span class="brand-fresh">Station</span></div>
+                      <div class="audio-live-badge">
+                        <span class="live-pulse"></span>
+                        RELAY
+                      </div>
+                    </div>
+                    <div class="turntables-row">
+                      <div class="vinyl-container vinyl-left">
+                        <div class="vinyl-record">
+                          <div class="vinyl-label">
+                            <img id="relayVinylAvatar" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
+                          </div>
+                          <div class="vinyl-grooves"></div>
+                        </div>
+                        <div class="tonearm tonearm-left"></div>
+                      </div>
+                      <div class="audio-waveform">
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                      </div>
+                      <div class="vinyl-container vinyl-right">
+                        <div class="vinyl-record">
+                          <div class="vinyl-label vinyl-label-right">
+                            <img id="relayVinylAvatar2" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
+                          </div>
+                          <div class="vinyl-grooves"></div>
+                        </div>
+                        <div class="tonearm tonearm-right"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <!-- Hidden audio element for Icecast/BUTT stream -->
                 <audio id="icecastAudio" crossorigin="anonymous" preload="none" style="display:none;"></audio>
+                <!-- Hidden audio element for Relay stream preview -->
+                <audio id="relayAudio" crossorigin="anonymous" preload="none" style="display:none;"></audio>
               </div>
             </div>
 
@@ -480,6 +540,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                     <span class="indicator-dot disconnected" id="previewButtDot"></span>
                     <span class="indicator-label">BUTT</span>
                   </div>
+                  <div class="indicator" id="previewRelayIndicator" title="Relay Stream">
+                    <span class="indicator-dot disconnected" id="previewRelayDot"></span>
+                    <span class="indicator-label">Relay</span>
+                  </div>
                 </div>
               </div>
               <div class="player-wrapper preview-player" id="previewPlayer">
@@ -494,15 +558,61 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                 </div>
 
                 <div id="audioPreview" class="audio-preview hidden">
-                  <div class="lobby-audio-placeholder">
-                    <!-- Centered DJ is LIVE text -->
-                    <div class="lobby-live-text">
-                      <span id="lobbyLiveDjName">DJ Name</span> is <span class="live-word">LIVE</span>
+                  <div class="audio-only-placeholder">
+                    <!-- Fresh Wax branding top right -->
+                    <div class="audio-placeholder-branding">
+                      <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
                     </div>
-                    <!-- Audio Only badge below -->
-                    <div class="lobby-audio-live-badge">
-                      <span class="live-pulse"></span>
-                      AUDIO ONLY
+                    <!-- DJ Info at top -->
+                    <div class="audio-dj-info">
+                      <div class="audio-dj-name" id="lobbyLiveDjName">DJ Name</div>
+                      <div class="audio-show-title" id="lobbyLiveShowTitle">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
+                      <div class="audio-live-badge">
+                        <span class="live-pulse"></span>
+                        <span id="lobbyLiveBadgeText">AUDIO ONLY</span>
+                      </div>
+                    </div>
+                    <!-- Turntables row: Left deck, Waveform, Right deck -->
+                    <div class="turntables-row">
+                      <!-- Left Deck -->
+                      <div class="vinyl-container vinyl-left">
+                        <div class="vinyl-record">
+                          <div class="vinyl-label">
+                            <img id="liveVinylAvatar" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
+                          </div>
+                          <div class="vinyl-grooves"></div>
+                        </div>
+                        <div class="tonearm tonearm-left"></div>
+                      </div>
+                      <!-- Waveform in center -->
+                      <div class="audio-waveform">
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                        <div class="audio-bar"></div>
+                      </div>
+                      <!-- Right Deck -->
+                      <div class="vinyl-container vinyl-right">
+                        <div class="vinyl-record">
+                          <div class="vinyl-label vinyl-label-right">
+                            <img id="liveVinylAvatar2" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
+                          </div>
+                          <div class="vinyl-grooves"></div>
+                        </div>
+                        <div class="tonearm tonearm-right"></div>
+                      </div>
                     </div>
                   </div>
                   <audio id="audioElement" crossorigin="anonymous" autoplay></audio>
@@ -2127,23 +2237,135 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     const relayBtn = document.getElementById('relayModeBtn');
     const directSection = document.getElementById('directStreamSection');
     const relaySection = document.getElementById('relayStreamSection');
+    const relayPreview = document.getElementById('relayPreview');
+    const obsOfflineState = document.getElementById('obsOfflineState');
+    const obsVideoPreview = document.getElementById('obsVideoPreview');
+    const buttAudioPreview = document.getElementById('buttAudioPreview');
+
+    const obsIndicator = document.getElementById('obsIndicator');
+    const buttIndicator = document.getElementById('buttIndicator');
+    const relayIndicator = document.getElementById('relayIndicator');
+    const relayDot = document.getElementById('relayDot');
+    const previewRelayDot = document.getElementById('previewRelayDot');
 
     if (mode === 'relay') {
       directBtn?.classList.remove('active');
       relayBtn?.classList.add('active');
       directSection?.classList.add('hidden');
       relaySection?.classList.remove('hidden');
+      // Show relay preview in left panel, hide others
+      relayPreview?.classList.remove('hidden');
+      obsOfflineState?.classList.add('hidden');
+      obsVideoPreview?.classList.add('hidden');
+      buttAudioPreview?.classList.add('hidden');
+      // Disable OBS and BUTT tabs, activate Relay tab
+      obsIndicator?.classList.add('disabled');
+      obsIndicator?.classList.remove('active');
+      buttIndicator?.classList.add('disabled');
+      buttIndicator?.classList.remove('active');
+      relayIndicator?.classList.add('active');
+      relayIndicator?.classList.remove('disabled');
       // Render inline relay stations
       renderInlineRelayStations();
+      // Update relay preview with user info
+      updateRelayPreview();
     } else {
       directBtn?.classList.add('active');
       relayBtn?.classList.remove('active');
       directSection?.classList.remove('hidden');
       relaySection?.classList.add('hidden');
+      // Hide relay preview, show offline state
+      relayPreview?.classList.add('hidden');
+      obsOfflineState?.classList.remove('hidden');
+      // Direct mode: Enable OBS and BUTT, disable Relay
+      obsIndicator?.classList.remove('disabled');
+      buttIndicator?.classList.remove('disabled');
+      relayIndicator?.classList.add('disabled');
+      relayIndicator?.classList.remove('active');
+      // Reset relay dots to disconnected
+      relayDot?.classList.remove('connected');
+      relayDot?.classList.add('disconnected');
+      previewRelayDot?.classList.remove('connected');
+      previewRelayDot?.classList.add('disconnected');
+      // Stop relay audio preview
+      const relayAudio = document.getElementById('relayAudio');
+      if (relayAudio) {
+        relayAudio.pause();
+        relayAudio.src = '';
+      }
       // Clear relay selection when switching back
       selectedRelaySource = null;
     }
     log('[StreamMode] Set to:', mode);
+  }
+
+  function updateRelayPreview() {
+    const djNameEl = document.getElementById('relayPreviewDjName');
+    const stationNameEl = document.getElementById('relayPreviewStationName');
+    const vinylAvatar1 = document.getElementById('relayVinylAvatar');
+    const vinylAvatar2 = document.getElementById('relayVinylAvatar2');
+    const relayDot = document.getElementById('relayDot');
+    const previewRelayDot = document.getElementById('previewRelayDot');
+
+    // Set DJ name from user info
+    if (djNameEl && userInfo?.name) {
+      djNameEl.textContent = userInfo.name;
+    }
+
+    // Set station name or custom title if selected
+    if (stationNameEl && selectedRelaySource?.name) {
+      // Use saved title if available, otherwise show station name
+      if (savedTitle) {
+        stationNameEl.innerHTML = savedTitle;
+      } else {
+        stationNameEl.innerHTML = `Relayed from <span class="brand-fresh">${selectedRelaySource.name}</span>`;
+      }
+      // Keep dot disconnected until audio actually connects
+      // The dot will turn green in startRelayAudioPreview when audio plays
+    } else if (stationNameEl) {
+      stationNameEl.innerHTML = `<span style="color:#888">Select a station below</span>`;
+      // Keep dot disconnected when no station selected
+      relayDot?.classList.remove('connected');
+      relayDot?.classList.add('disconnected');
+      previewRelayDot?.classList.remove('connected');
+      previewRelayDot?.classList.add('disconnected');
+    }
+
+    // Set avatar (use userInfo.avatar like BUTT preview does)
+    const avatarUrl = userInfo?.avatar || currentUser?.photoURL || '/place-holder.webp';
+    if (vinylAvatar1) vinylAvatar1.src = avatarUrl;
+    if (vinylAvatar2) vinylAvatar2.src = avatarUrl;
+  }
+
+  function startRelayAudioPreview(stationUrl) {
+    const relayAudio = document.getElementById('relayAudio');
+    const relayDot = document.getElementById('relayDot');
+    const previewRelayDot = document.getElementById('previewRelayDot');
+
+    if (relayAudio && stationUrl) {
+      // Set up event listener for when audio starts playing
+      relayAudio.onplaying = () => {
+        log('[RelayPreview] Audio connected and playing');
+        relayDot?.classList.remove('disconnected');
+        relayDot?.classList.add('connected');
+        previewRelayDot?.classList.remove('disconnected');
+        previewRelayDot?.classList.add('connected');
+      };
+
+      // Set up event listener for when audio fails/stops
+      relayAudio.onerror = () => {
+        log('[RelayPreview] Audio connection error');
+        relayDot?.classList.remove('connected');
+        relayDot?.classList.add('disconnected');
+        previewRelayDot?.classList.remove('connected');
+        previewRelayDot?.classList.add('disconnected');
+      };
+
+      relayAudio.src = stationUrl;
+      relayAudio.play().catch(e => {
+        log('[RelayPreview] Audio autoplay blocked:', e.message);
+      });
+    }
   }
 
   function renderInlineRelayStations() {
@@ -2184,6 +2406,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           name: card.dataset.name
         };
         log('[Relay] Selected station:', selectedRelaySource.name);
+        // Update the relay preview in left panel
+        updateRelayPreview();
+        // Start playing the relay audio preview
+        startRelayAudioPreview(selectedRelaySource.url);
       });
     });
   }
@@ -2220,6 +2446,19 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     savedMsg?.classList.remove('hidden');
     setTimeout(() => savedMsg?.classList.add('hidden'), 2000);
 
+    // Update preview titles based on current mode
+    if (currentStreamMode === 'relay') {
+      const relayPreviewStationName = document.getElementById('relayPreviewStationName');
+      if (relayPreviewStationName) {
+        relayPreviewStationName.innerHTML = savedTitle;
+      }
+    }
+    // Also update BUTT preview title
+    const buttPreviewShowTitle = document.getElementById('buttPreviewShowTitle');
+    if (buttPreviewShowTitle) {
+      buttPreviewShowTitle.innerHTML = savedTitle;
+    }
+
     log('[Title] Saved:', savedTitle);
   });
 
@@ -2239,6 +2478,19 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Update buttons
     saveBtn?.classList.remove('saved');
     clearBtn?.classList.add('hidden');
+
+    // Revert relay preview title to station name if in relay mode
+    if (currentStreamMode === 'relay' && selectedRelaySource?.name) {
+      const relayPreviewStationName = document.getElementById('relayPreviewStationName');
+      if (relayPreviewStationName) {
+        relayPreviewStationName.innerHTML = `Relayed from <span class="brand-fresh">${selectedRelaySource.name}</span>`;
+      }
+    }
+    // Revert BUTT preview title to default
+    const buttPreviewShowTitle = document.getElementById('buttPreviewShowTitle');
+    if (buttPreviewShowTitle) {
+      buttPreviewShowTitle.innerHTML = 'Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span>';
+    }
 
     log('[Title] Cleared');
   });
@@ -2754,15 +3006,26 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     currentPreviewSource = source;
     const obsIndicator = document.getElementById('obsIndicator');
     const buttIndicator = document.getElementById('buttIndicator');
+    const relayIndicator = document.getElementById('relayIndicator');
     const obsVideoPreview = document.getElementById('obsVideoPreview');
     const buttAudioPreview = document.getElementById('buttAudioPreview');
+    const relayPreview = document.getElementById('relayPreview');
     const obsOfflineState = document.getElementById('obsOfflineState');
+
+    // Reset all indicators
+    obsIndicator?.classList.remove('active');
+    buttIndicator?.classList.remove('active');
+    relayIndicator?.classList.remove('active');
 
     if (source === 'obs') {
       // OBS mode - show video or offline state
       obsIndicator?.classList.add('active');
-      buttIndicator?.classList.remove('active');
       buttAudioPreview?.classList.add('hidden');
+      relayPreview?.classList.add('hidden');
+      // Direct mode: OBS and BUTT enabled, Relay disabled
+      obsIndicator?.classList.remove('disabled');
+      buttIndicator?.classList.remove('disabled');
+      relayIndicator?.classList.add('disabled');
       // Show OBS content if streaming, otherwise show offline
       if (currentObsPreviewUrl && obsHlsPlayer) {
         obsVideoPreview?.classList.remove('hidden');
@@ -2773,11 +3036,15 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       }
     } else if (source === 'butt') {
       // BUTT mode - show audio-only placeholder
-      obsIndicator?.classList.remove('active');
       buttIndicator?.classList.add('active');
       obsVideoPreview?.classList.add('hidden');
       obsOfflineState?.classList.add('hidden');
       buttAudioPreview?.classList.remove('hidden');
+      relayPreview?.classList.add('hidden');
+      // Direct mode: OBS and BUTT enabled, Relay disabled
+      obsIndicator?.classList.remove('disabled');
+      buttIndicator?.classList.remove('disabled');
+      relayIndicator?.classList.add('disabled');
       // Update BUTT placeholder with DJ name and avatar
       const buttPreviewDjName = document.getElementById('buttPreviewDjName');
       const buttVinylAvatar = document.getElementById('buttVinylAvatar');
@@ -2796,6 +3063,27 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       if (!broadcastMeterAnimationId) {
         initBroadcastMeters();
       }
+    } else if (source === 'relay') {
+      // Relay mode - show relay placeholder with turntables
+      relayIndicator?.classList.add('active');
+      obsVideoPreview?.classList.add('hidden');
+      obsOfflineState?.classList.add('hidden');
+      buttAudioPreview?.classList.add('hidden');
+      relayPreview?.classList.remove('hidden');
+      // Disable OBS and BUTT tabs in relay mode
+      obsIndicator?.classList.add('disabled');
+      buttIndicator?.classList.add('disabled');
+      // Update relay preview with user info
+      updateRelayPreview();
+      // Also switch to relay mode in the stream mode toggle
+      setStreamMode('relay');
+      // Show broadcast audio panel for relay mode
+      const broadcastAudioPanel = document.getElementById('broadcastAudioPanel');
+      broadcastAudioPanel?.classList.remove('hidden');
+      // Start broadcast meters if not already running
+      if (!broadcastMeterAnimationId) {
+        initBroadcastMeters();
+      }
     }
     // Switch audio analyser source for meters
     switchAudioSource(source);
@@ -2806,9 +3094,17 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   function initSourceToggle() {
     const obsIndicator = document.getElementById('obsIndicator');
     const buttIndicator = document.getElementById('buttIndicator');
+    const relayIndicator = document.getElementById('relayIndicator');
 
-    obsIndicator?.addEventListener('click', () => setPreviewSource('obs'));
-    buttIndicator?.addEventListener('click', () => setPreviewSource('butt'));
+    obsIndicator?.addEventListener('click', () => {
+      if (!obsIndicator.classList.contains('disabled')) setPreviewSource('obs');
+    });
+    buttIndicator?.addEventListener('click', () => {
+      if (!buttIndicator.classList.contains('disabled')) setPreviewSource('butt');
+    });
+    relayIndicator?.addEventListener('click', () => {
+      if (!relayIndicator.classList.contains('disabled')) setPreviewSource('relay');
+    });
 
     // Update BUTT placeholder when title changes
     const titleInput = document.getElementById('inlineStreamTitle');
@@ -4533,15 +4829,36 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           // Setup HLS video player (includes auto-play)
           setupHlsPlayer(currentStream);
         } else {
-          // Audio-only stream (BUTT/Icecast)
+          // Audio-only stream (BUTT/Icecast/Relay)
           log('[Stream] Showing audio placeholder for audio-only stream');
           audioPreview?.classList.remove('hidden');
           videoPreview?.classList.add('hidden');
           offlineState?.classList.add('hidden'); // Ensure offline state is hidden
           cleanupHlsPlayer();
-          // Populate lobby audio placeholder with DJ name
+
+          // Populate lobby audio placeholder with DJ info
           const lobbyLiveDjName = document.getElementById('lobbyLiveDjName');
+          const lobbyLiveShowTitle = document.getElementById('lobbyLiveShowTitle');
+          const lobbyLiveBadgeText = document.getElementById('lobbyLiveBadgeText');
+          const liveVinylAvatar = document.getElementById('liveVinylAvatar');
+          const liveVinylAvatar2 = document.getElementById('liveVinylAvatar2');
+
           if (lobbyLiveDjName) lobbyLiveDjName.textContent = currentStream.djName || 'DJ';
+
+          // Update show title and badge for relay streams
+          if (currentStream.isRelay && currentStream.relaySource?.stationName) {
+            if (lobbyLiveShowTitle) lobbyLiveShowTitle.innerHTML = `Relayed from <span class="brand-fresh">${currentStream.relaySource.stationName}</span>`;
+            if (lobbyLiveBadgeText) lobbyLiveBadgeText.textContent = 'RELAY';
+          } else {
+            if (lobbyLiveShowTitle) lobbyLiveShowTitle.innerHTML = 'Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span>';
+            if (lobbyLiveBadgeText) lobbyLiveBadgeText.textContent = 'AUDIO ONLY';
+          }
+
+          // Set DJ avatar on vinyl labels
+          const djAvatar = currentStream.djAvatar || '/place-holder.webp';
+          if (liveVinylAvatar) liveVinylAvatar.src = djAvatar;
+          if (liveVinylAvatar2) liveVinylAvatar2.src = djAvatar;
+
           // Setup audio stream with auto-play
           const audioEl = document.getElementById('audioElement');
           const audioUrl = currentStream.audioStreamUrl || currentStream.streamUrl;
@@ -5868,10 +6185,14 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     const twitchStreamKey = document.getElementById('twitchStreamKey')?.value?.trim() || null;
 
     // Build request body based on source type
+    // Get avatar URL - use userInfo.avatar (from API), currentUser.photoURL (Firebase Auth), or placeholder
+    const avatarUrl = userInfo?.avatar || currentUser?.photoURL || '/place-holder.webp';
+
     const requestBody = {
       action: isRelayMode ? 'start_relay' : 'go_live',
       djId: currentUser.uid,
       djName: userInfo.name,
+      djAvatar: avatarUrl,
       title: title,
       genre: genre,
       twitchUsername: twitchUsername,

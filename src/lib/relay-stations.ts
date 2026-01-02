@@ -23,6 +23,15 @@ export const APPROVED_RELAY_STATIONS: RelayStation[] = [
     genre: 'Jungle / D&B / Breakcore',
     description: 'Underground Music Webradio - Jungle, DnB, Breakcore, Hip-Hop, Dub',
     checkUrl: 'https://meta.rcast.net/2745'
+  },
+  {
+    id: 'somafm-groovesalad',
+    name: 'SomaFM Groove Salad',
+    streamUrl: 'https://ice1.somafm.com/groovesalad-128-mp3',
+    websiteUrl: 'https://somafm.com/groovesalad/',
+    logoUrl: '/images/relay/somafm.png',
+    genre: 'Electronic / Ambient',
+    description: '24/7 ambient/downtempo - test station for relay'
   }
   // Add more stations here as needed
 ];
