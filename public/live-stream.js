@@ -344,6 +344,20 @@ async function init() {
       console.log('[Init] Live stream active, using live stream channel');
     }
   }, 500);
+
+  // Additional sync after 1 second to catch any late playlist manager initialization
+  setTimeout(() => {
+    if (!window.isLiveStreamActive) {
+      syncPlayButtonWithPlaylist();
+    }
+  }, 1000);
+
+  // Final sync after 2.5 seconds for slow page loads (e.g., returning from another site)
+  setTimeout(() => {
+    if (!window.isLiveStreamActive) {
+      syncPlayButtonWithPlaylist();
+    }
+  }, 2500);
 }
 
 // Diagnostic function - run window.debugReactions() in console
@@ -359,6 +373,9 @@ window.debugReactions = function() {
   return 'Check values above';
 };
 
+// Track when sync happened to prevent race conditions (used across multiple functions)
+let lastSyncTime = 0;
+
 // Named handler for playlist updates (allows removal to prevent duplicates)
 function handlePlaylistUpdate(event) {
   const { queue, isPlaying } = event.detail;
@@ -371,11 +388,18 @@ function handlePlaylistUpdate(event) {
   const playIcon = document.getElementById('playIcon');
   const pauseIcon = document.getElementById('pauseIcon');
 
-  console.log('[Playlist] Update received:', { queueLength: queue.length, isPlaying, isLiveStreamActive: window.isLiveStreamActive });
+  console.log('[Playlist] Update received:', { queueLength: queue.length, isPlaying, isLiveStreamActive: window.isLiveStreamActive, hidden: document.hidden });
 
   // Store playlist state globally
   window.isPlaylistActive = queue.length > 0;
-  window.isPlaylistPlaying = isPlaying;
+
+  // Don't set isPlaylistPlaying to false if tab is hidden or recent sync (prevents tab-switch issues)
+  const timeSinceSync = Date.now() - lastSyncTime;
+  if (!isPlaying && (document.hidden || timeSinceSync < 5000)) {
+    console.log('[Playlist] Not updating isPlaylistPlaying to false - tab hidden or recent sync');
+  } else {
+    window.isPlaylistPlaying = isPlaying;
+  }
 
   // IMPORTANT: Don't override live stream view with playlist
   if (window.isLiveStreamActive) {
@@ -403,8 +427,16 @@ function handlePlaylistUpdate(event) {
     // Enable play button for playlist control
     if (playBtn) {
       playBtn.disabled = false;
-      // Update play/pause icons based on playlist state
-      if (isPlaying) {
+
+      // Check if we should ignore pause state (tab hidden or recent visibility sync)
+      const timeSinceSync = Date.now() - lastSyncTime;
+      const ignorePauseState = !isPlaying && (document.hidden || timeSinceSync < 5000);
+
+      if (ignorePauseState) {
+        console.log('[Playlist] Ignoring pause state in update - tab hidden or recent sync');
+        // Don't change button state, just keep it enabled
+      } else if (isPlaying) {
+        // Update play/pause icons based on playlist state
         playIcon?.classList.add('hidden');
         pauseIcon?.classList.remove('hidden');
         playBtn.classList.add('playing');
@@ -464,21 +496,26 @@ function handlePlaylistUpdate(event) {
     // No playlist items - hide playlist player
     if (playlistPlayer) playlistPlayer.classList.add('hidden');
 
+    // Check if we recently synced (prevents race condition on tab switch)
+    // Use 5-second window to give plenty of buffer for async operations
+    const timeSinceSync = Date.now() - lastSyncTime;
+    const recentlySynced = timeSinceSync < 5000;
+
     // Show offline overlay if no live stream is active
-    if (!window.isLiveStreamActive && offlineOverlay) {
+    if (!window.isLiveStreamActive && offlineOverlay && !recentlySynced) {
       offlineOverlay.classList.remove('hidden');
     }
 
-    // Disable play button if no playlist and no live stream
-    if (playBtn && !window.isLiveStreamActive) {
+    // Disable play button if no playlist and no live stream (but not if recently synced)
+    if (playBtn && !window.isLiveStreamActive && !recentlySynced) {
       playBtn.disabled = true;
       playIcon?.classList.remove('hidden');
       pauseIcon?.classList.add('hidden');
       playBtn.classList.remove('playing');
     }
 
-    // Disable emojis and chat if no live stream either
-    if (!window.isLiveStreamActive) {
+    // Disable emojis and chat if no live stream either (but not if recently synced)
+    if (!window.isLiveStreamActive && !recentlySynced) {
       window.emojiAnimationsEnabled = false;
       setReactionButtonsEnabled(false);
       setChatEnabled(false);
@@ -535,6 +572,66 @@ function setupPlaylistListener() {
   // Remove any existing listener to prevent duplicates on View Transitions
   window.removeEventListener('playlistUpdate', handlePlaylistUpdate);
   window.addEventListener('playlistUpdate', handlePlaylistUpdate);
+
+  // Listen for state changes from embedded player (when user clicks play/pause on the video itself)
+  window.removeEventListener('playlistStateChange', handlePlaylistStateChange);
+  window.addEventListener('playlistStateChange', handlePlaylistStateChange);
+}
+
+// Handle state changes from the embedded player (YouTube play/pause controls)
+function handlePlaylistStateChange(event) {
+  const { state, isPlaying } = event.detail;
+  const playBtn = document.getElementById('playBtn');
+  const playIcon = document.getElementById('playIcon');
+  const pauseIcon = document.getElementById('pauseIcon');
+
+  console.log('[Playlist] State change from player:', state, 'isPlaying:', isPlaying, 'hidden:', document.hidden);
+
+  // Don't override if live stream is active
+  if (window.isLiveStreamActive) return;
+
+  // IMPORTANT: Ignore pause events when tab is hidden (browser throttles video playback)
+  // This prevents the button from changing state when user switches tabs
+  if (!isPlaying && document.hidden) {
+    console.log('[Playlist] Ignoring pause event - tab is hidden');
+    return;
+  }
+
+  // Also ignore pause events during recent visibility sync (extra protection)
+  const timeSinceSync = Date.now() - lastSyncTime;
+  if (!isPlaying && timeSinceSync < 5000) {
+    console.log('[Playlist] Ignoring pause event - recent visibility sync');
+    return;
+  }
+
+  // Update global state
+  window.isPlaylistPlaying = isPlaying;
+
+  if (isPlaying) {
+    // Video started playing (from player controls)
+    if (playBtn) {
+      playBtn.disabled = false;
+      playIcon?.classList.add('hidden');
+      pauseIcon?.classList.remove('hidden');
+      playBtn.classList.add('playing');
+    }
+    // Enable emojis and waveform
+    window.emojiAnimationsEnabled = true;
+    setReactionButtonsEnabled(true);
+    showPlaylistWave();
+    console.log('[Playlist] Enabled emojis from player play');
+  } else {
+    // Video paused (from player controls)
+    if (playBtn) {
+      playIcon?.classList.remove('hidden');
+      pauseIcon?.classList.add('hidden');
+      playBtn.classList.remove('playing');
+    }
+    // Keep emojis and reactions enabled when paused - only disable when no content
+    // This prevents tab switching from disabling reactions
+    pausePlaylistWave();
+    console.log('[Playlist] Paused - keeping emojis enabled');
+  }
 }
 
 // Unified play button handler - handles playlist, HLS, and audio modes
@@ -701,11 +798,114 @@ function getPlaylistManager() {
     if (volumeSlider) {
       playlistManager.setVolume(parseInt(volumeSlider.value));
     }
+
+    // Sync play button state with current playlist state
+    syncPlayButtonWithPlaylist();
   } else {
     console.log('[Playlist] Manager not yet available, will retry later');
+    // Retry after a short delay
+    setTimeout(() => {
+      if (!playlistManager && window.playlistManager) {
+        getPlaylistManager();
+      }
+    }, 500);
   }
 
   return playlistManager;
+}
+
+// Sync play button state with current playlist manager state
+function syncPlayButtonWithPlaylist(retryCount = 0) {
+  const pm = window.playlistManager;
+  const playBtn = document.getElementById('playBtn');
+  const playIcon = document.getElementById('playIcon');
+  const pauseIcon = document.getElementById('pauseIcon');
+  const playlistPlayer = document.getElementById('playlistPlayer');
+  const offlineOverlay = document.getElementById('offlineOverlay');
+
+  // Don't override if live stream is active
+  if (window.isLiveStreamActive) return;
+
+  // If no playlist manager yet, retry a few times
+  if (!pm) {
+    if (retryCount < 5) {
+      console.log('[Playlist] Manager not ready, retrying...', retryCount + 1);
+      setTimeout(() => syncPlayButtonWithPlaylist(retryCount + 1), 500);
+    }
+    return;
+  }
+
+  // Check if playlist has items - use the getter for consistency
+  let hasQueue = false;
+  let isPlaying = false;
+
+  // Try pm.queue getter first (the proper way to access queue)
+  if (pm.queue && pm.queue.length > 0) {
+    hasQueue = true;
+    isPlaying = pm.isPlaying;
+  }
+  // Fallback: try internal state
+  else if (pm.playlist && pm.playlist.queue && pm.playlist.queue.length > 0) {
+    hasQueue = true;
+    isPlaying = pm.playlist.isPlaying;
+  }
+  // Fallback: check if playlist player iframe has content
+  else if (playlistPlayer && !playlistPlayer.classList.contains('hidden')) {
+    hasQueue = true;
+    isPlaying = playBtn?.classList.contains('playing') || false;
+  }
+  // Fallback: check window state
+  else if (window.isPlaylistActive) {
+    hasQueue = true;
+    isPlaying = window.isPlaylistPlaying || false;
+  }
+
+  console.log('[Playlist] Syncing button state:', { hasQueue, isPlaying, isLiveStreamActive: window.isLiveStreamActive, retryCount });
+
+  if (hasQueue) {
+    // Mark sync time to prevent race conditions with polling
+    lastSyncTime = Date.now();
+
+    // Enable play button for playlist
+    if (playBtn) {
+      playBtn.disabled = false;
+
+      if (isPlaying) {
+        playIcon?.classList.add('hidden');
+        pauseIcon?.classList.remove('hidden');
+        playBtn.classList.add('playing');
+        showPlaylistWave();
+      } else {
+        playIcon?.classList.remove('hidden');
+        pauseIcon?.classList.add('hidden');
+        playBtn.classList.remove('playing');
+        pausePlaylistWave();
+      }
+    }
+
+    // Show playlist player, hide offline overlay
+    if (playlistPlayer) {
+      playlistPlayer.classList.remove('hidden');
+      playlistPlayer.style.display = 'block';
+    }
+    if (offlineOverlay) {
+      offlineOverlay.classList.add('hidden');
+    }
+
+    // Update global state
+    window.isPlaylistActive = true;
+    window.isPlaylistPlaying = isPlaying;
+    window.emojiAnimationsEnabled = true;
+
+    // Enable reaction buttons and chat
+    setReactionButtonsEnabled(true);
+    setChatEnabled(true);
+
+    console.log('[Playlist] Button synced - playlist active, playing:', isPlaying);
+  } else if (retryCount < 5) {
+    // No queue found yet, retry in case playlist is still loading
+    setTimeout(() => syncPlayButtonWithPlaylist(retryCount + 1), 500);
+  }
 }
 
 // Detect mobile device
@@ -837,10 +1037,17 @@ function handleVisibilityChange() {
     // Page hidden - audio continues in background on mobile
     console.log('[Live] Page hidden, audio continues');
   } else {
-    // Page visible - refresh viewer count
+    // Page visible - prevent race condition by marking sync time IMMEDIATELY
+    // This prevents handlePlaylistUpdate from disabling the button before sync completes
+    lastSyncTime = Date.now();
+    console.log('[Live] Page visible, syncing button state');
+
+    // Refresh viewer count
     if (currentStream) {
       refreshViewerCount(currentStream.id);
     }
+    // Re-sync play button state when page becomes visible
+    syncPlayButtonWithPlaylist();
   }
 }
 
@@ -1115,10 +1322,16 @@ function showOfflineState(scheduled) {
     offlineSubText.textContent = 'The playlist will start in a moment';
   }
 
-  // Only disable emojis and chat if playlist is also not playing
+  // Only disable emojis and chat if playlist also has no items
+  // Check for queue items (not playing state) - paused playlist should still allow reactions
   const pm = window.playlistManager;
-  const isPlaylistPlaying = pm && pm.isPlaying && pm.queue.length > 0;
-  if (!isPlaylistPlaying) {
+  const hasPlaylistItems = pm && pm.queue && pm.queue.length > 0;
+
+  // Don't disable if we just synced (prevents race condition on tab switch)
+  const timeSinceSync = Date.now() - lastSyncTime;
+  const recentlysynced = timeSinceSync < 3000;
+
+  if (!hasPlaylistItems && !recentlysynced) {
     window.emojiAnimationsEnabled = false;
     setReactionButtonsEnabled(false);
     setChatEnabled(false);
@@ -1605,9 +1818,8 @@ function setupHlsPlayer(stream) {
       document.getElementById('pauseIcon')?.classList.add('hidden');
       playBtn?.classList.remove('playing');
       updateMiniPlayer(false);
-      // Disable emojis and meters when paused
-      window.emojiAnimationsEnabled = false;
-      setReactionButtonsEnabled(false);
+      // Keep emojis enabled when paused - only stop meters
+      // This prevents tab switching from disabling reactions
       stopGlobalMeters();
     });
   }

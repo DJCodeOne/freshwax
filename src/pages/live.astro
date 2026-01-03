@@ -4210,9 +4210,13 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         if (controlsSetTitle) controlsSetTitle.textContent = 'Waiting for stream...';
       }
       if (djInfoBar) djInfoBar.classList.remove('is-live');
-      
-      if (playBtn) playBtn.disabled = true;
-      
+
+      // Only disable play button if playlist is NOT active
+      // This prevents the button from being greyed out during tab switching when playlist is playing
+      if (playBtn && !window.isPlaylistActive && !playlistIsPlaying) {
+        playBtn.disabled = true;
+      }
+
       // Deactivate share button when offline
       const shareBtn = document.getElementById('shareBtn');
       if (shareBtn) {
