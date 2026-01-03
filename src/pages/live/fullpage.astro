@@ -1,13 +1,13 @@
 ---
 // src/pages/live/fullpage.astro
-// Full page live stream view - immersive player with 3 chat columns
+// Full page live stream view - immersive player with chat
 import { ClientRouter } from 'astro:transitions';
-import PlaylistModal from '../../components/live/PlaylistModal.astro';
+import LiveChat from '../../components/live/LiveChat.astro';
 export const prerender = false;
 
 const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6SfraYr';
 
-// Pusher config for client-side (PUBLIC_ prefixed vars are safe to expose)
+// Pusher config for client-side
 const pusherConfig = {
   key: import.meta.env.PUBLIC_PUSHER_KEY || '',
   cluster: import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu'
@@ -24,16 +24,22 @@ const pusherConfig = {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/live.css" />
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+  <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 
-  <!-- Pusher config for real-time features -->
-  <script define:vars={{ pusherConfig }}>
+  <script define:vars={{ pusherConfig, giphyApiKey }}>
     window.PUSHER_CONFIG = pusherConfig;
+    window.GIPHY_API_KEY = giphyApiKey;
+    window.isFullpageMode = true;
   </script>
 
   <ClientRouter />
 </head>
-<body>
+<body class="fullpage-body">
+
+  <!-- Emoji Animation Container -->
+  <div id="emojiAnimationContainer" class="emoji-animation-container"></div>
 
   <!-- Shoutout Modal -->
   <div id="shoutoutModal" class="modal hidden">
@@ -63,173 +69,110 @@ const pusherConfig = {
     </div>
   </div>
 
-  <!-- Emoji Modal -->
-  <div id="emojiModal" class="modal hidden">
-    <div class="modal-backdrop" data-close-modal></div>
-    <div class="modal-content picker-modal-content">
-      <div class="picker-modal-header">
-        <h3>Choose an Emoji</h3>
-        <button class="modal-close" data-close-modal>&times;</button>
-      </div>
-      <div class="emoji-categories">
-        <button class="emoji-cat active" data-cat="music">Music</button>
-        <button class="emoji-cat" data-cat="reactions">Fire</button>
-        <button class="emoji-cat" data-cat="faces">Faces</button>
-        <button class="emoji-cat" data-cat="vibes">Vibes</button>
-      </div>
-      <div class="emoji-grid" id="emojiGrid"></div>
-    </div>
-  </div>
-
-  <!-- GIF Modal -->
-  <div id="giphyModal" class="modal hidden">
-    <div class="modal-backdrop" data-close-modal></div>
-    <div class="modal-content picker-modal-content">
-      <div class="picker-modal-header">
-        <h3>Search GIFs</h3>
-        <button class="modal-close" data-close-modal>&times;</button>
-      </div>
-      <div class="giphy-search">
-        <input type="text" id="giphySearch" placeholder="Search GIFs..." autocomplete="off" />
-      </div>
-      <div class="giphy-grid" id="giphyGrid">
-        <p class="giphy-hint">Search for a GIF above</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="fullpage-container">
-    <!-- Player Section -->
-    <div class="player-section">
+  <div class="fp-layout">
+    <!-- Main Content Area -->
+    <main class="fp-main">
       <!-- Top Bar -->
-      <div class="top-bar">
-        <a href="/live" class="back-btn">
+      <div class="fp-top-bar">
+        <a href="/live" class="fp-back-btn">
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
             <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
           </svg>
           <span>Back</span>
         </a>
 
-        <div class="stream-info">
-          <h1 id="streamTitle">No Live Streams</h1>
-        </div>
-
-        <div class="stream-stats">
-          <!-- Watching count -->
-          <div class="stat viewers-stat">
-            <span class="stat-icon">&#x1F441;</span>
-            <span class="stat-value" id="viewerCount">0</span>
-            <span class="stat-label">watching</span>
-          </div>
-          <!-- Duration timer (moved from bottom bar) -->
-          <div class="stat duration-stat" id="topDurationStat">
-            <span class="np-duration-label" id="npDurationLabel">DURATION</span>
-            <span class="np-duration" id="npDuration">--:--</span>
-          </div>
-          <!-- DJ Lobby button (green) -->
-          <button id="djLobbyBtn" class="dj-lobby-btn">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-            </svg>
-            <span>DJ Lobby</span>
-          </button>
-          <!-- Playlist button (red) -->
-          <button id="playlistBtn" class="playlist-btn">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
-            </svg>
-            <span>Playlist</span>
-          </button>
-          <!-- Live/Offline badge (moved to right side) -->
+        <div class="fp-stream-info">
           <div class="live-badge" id="liveBadge">
             <span class="live-dot"></span>
-            <span id="liveStatusText">OFFLINE</span>
+            <span id="liveStatusText">LOADING...</span>
+          </div>
+          <span class="fp-stream-title" id="streamTitle">Fresh Wax Live</span>
+        </div>
+
+        <div class="fp-stats">
+          <div class="fp-stat">
+            <span class="fp-stat-icon">&#x1F441;</span>
+            <span id="viewerCount">0</span>
+          </div>
+          <div class="fp-stat fp-timer" id="durationStat">
+            <span class="fp-timer-label" id="durationLabel">DURATION</span>
+            <span class="fp-timer-value" id="streamDuration">0:00</span>
           </div>
         </div>
       </div>
 
-      <!-- Player Wrapper -->
-      <div class="player-wrapper">
+      <!-- Player Container -->
+      <div class="fp-player-container" id="playerContainer">
+        <!-- Relay Source Attribution -->
+        <div class="relay-attribution" id="relayAttribution">www.theundergroundlair.fr</div>
+
         <!-- Offline Overlay -->
-        <div id="offlineOverlay" class="offline-overlay">
-          <div class="offline-content">
-            <div class="offline-icon">OFFLINE</div>
-            <h2>No one is streaming right now</h2>
-            <p>The playlist will start in a moment</p>
+        <div id="offlineOverlay" class="offline-overlay is-loading">
+          <div class="offline-overlay-content">
+            <div class="offline-icon-large" id="offlineIconText">LOADING...</div>
+            <p class="offline-text" id="offlineMainText">Checking for active streams</p>
+            <p class="offline-subtext" id="offlineSubText">Please wait...</p>
           </div>
         </div>
 
-        <!-- Audio Player (BUTT mode - two turntables) -->
+        <!-- Initializing Overlay -->
+        <div id="initializingOverlay" class="initializing-overlay">
+          <div class="initializing-content">
+            <div class="initializing-spinner"></div>
+            <p>Connecting to stream...</p>
+          </div>
+        </div>
+
+        <!-- Audio Player (BUTT/Relay mode) -->
         <div id="audioPlayer" class="audio-player hidden">
-          <div class="fp-audio-placeholder">
-            <!-- Fresh Wax branding top right -->
-            <div class="fp-audio-placeholder-branding">
+          <div class="audio-player-content">
+            <div class="audio-branding">
               <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
             </div>
-            <div class="fp-audio-dj-info">
-              <div class="fp-audio-dj-name" id="audioDjName">DJ Name</div>
-              <div class="fp-audio-show-title" id="audioShowTitle">Live Session</div>
-              <div class="fp-audio-live-badge">
-                <span class="fp-live-pulse"></span>
-                AUDIO ONLY
+            <div class="audio-dj-info">
+              <div class="audio-dj-name" id="audioDjName">DJ Name</div>
+              <div class="audio-show-title" id="audioShowTitle">Live Session</div>
+              <div class="audio-live-badge" id="audioModeBadge">
+                <span class="live-pulse"></span>
+                <span id="audioModeText">AUDIO ONLY</span>
               </div>
             </div>
-            <div class="fp-turntables-row">
-              <div class="fp-vinyl-container fp-vinyl-left">
-                <div class="fp-vinyl-record">
-                  <div class="fp-vinyl-label">
-                    <img id="vinylDjAvatar" src="/place-holder.webp" alt="DJ" class="fp-vinyl-avatar" />
+            <div class="audio-turntables">
+              <div class="vinyl-container vinyl-left">
+                <div class="vinyl-record spinning">
+                  <div class="vinyl-label">
+                    <img id="vinylDjAvatar" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
                   </div>
                 </div>
-                <div class="fp-tonearm fp-tonearm-left"></div>
+                <div class="tonearm tonearm-left"></div>
               </div>
-              <div class="fp-audio-waveform">
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
-                <div class="fp-audio-bar"></div>
+              <div class="audio-waveform">
+                {Array(20).fill(0).map(() => <div class="audio-bar"></div>)}
               </div>
-              <div class="fp-vinyl-container fp-vinyl-right">
-                <div class="fp-vinyl-record">
-                  <div class="fp-vinyl-label fp-vinyl-label-right">
-                    <img id="vinylDjAvatar2" src="/place-holder.webp" alt="DJ" class="fp-vinyl-avatar" />
+              <div class="vinyl-container vinyl-right">
+                <div class="vinyl-record spinning">
+                  <div class="vinyl-label vinyl-label-right">
+                    <img id="vinylDjAvatar2" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
                   </div>
                 </div>
-                <div class="fp-tonearm fp-tonearm-right"></div>
+                <div class="tonearm tonearm-right"></div>
               </div>
             </div>
           </div>
           <audio id="audioElement" crossorigin="anonymous" preload="auto"></audio>
         </div>
 
-        <!-- Video Player -->
+        <!-- Video Player (HLS mode) -->
         <div id="videoPlayer" class="video-player hidden">
-          <video id="hlsVideoElement" class="hls-video" controls playsinline></video>
+          <video id="hlsVideoElement" class="hls-video" playsinline webkit-playsinline></video>
+          <!-- Playlist Player (overlay) -->
+          <div id="playlistPlayer" class="playlist-player hidden"></div>
         </div>
-
-        <!-- Playlist Player -->
-        <div id="playlistPlayer" class="playlist-player"></div>
       </div>
 
       <!-- Controls Bar -->
-      <div class="player-controls">
-        <button id="playPauseBtn" class="control-btn play-btn">
+      <div class="fp-controls">
+        <button id="playBtn" class="control-btn play-btn" disabled>
           <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
             <path d="M8 5v14l11-7z"/>
           </svg>
@@ -238,8 +181,18 @@ const pusherConfig = {
           </svg>
         </button>
 
+        <!-- LED Meters -->
+        <div class="led-meters" id="ledMeters">
+          <div class="led-meter led-meter-left" id="ledMeterLeft">
+            {Array(16).fill(0).map((_, i) => <div class="led-segment" data-level={i}></div>)}
+          </div>
+          <div class="led-meter led-meter-right" id="ledMeterRight">
+            {Array(16).fill(0).map((_, i) => <div class="led-segment" data-level={i}></div>)}
+          </div>
+        </div>
+
         <!-- Emoji Reactions -->
-        <div class="inline-reactions" id="reactionButtons">
+        <div class="reaction-buttons" id="reactionButtons">
           <button class="reaction-btn" data-emoji="heart" title="Love">&#x2764;&#xFE0F;</button>
           <button class="reaction-btn" data-emoji="fire" title="Fire">&#x1F525;</button>
           <button class="reaction-btn" data-emoji="explosion" title="Explosion">&#x1F4A5;</button>
@@ -247,10 +200,6 @@ const pusherConfig = {
           <button class="reaction-btn" data-emoji="bass" title="Bass">&#x1F50A;</button>
           <button class="reaction-btn" data-emoji="fist" title="Fist">&#x1F44A;</button>
           <button class="reaction-btn" data-emoji="rocket" title="Rocket">&#x1F680;</button>
-          <button id="animToggleBtn" class="reaction-btn anim-toggle-btn" title="Toggle animations">
-            <svg class="anim-on-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
-            <svg class="anim-off-icon hidden" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
-          </button>
         </div>
 
         <div class="volume-control">
@@ -259,13 +208,16 @@ const pusherConfig = {
           </svg>
           <input type="range" id="volumeSlider" min="0" max="100" value="80" class="volume-slider" />
         </div>
+
+        <button id="shoutoutBtn" class="shoutout-btn" title="Send a shoutout">
+          <span>&#x1F4E3;</span>
+        </button>
       </div>
 
       <!-- Shoutout Bar -->
-      <div class="shoutout-bar">
+      <div class="shoutout-bar" id="shoutoutBar">
         <div class="shoutout-left">
           <span class="shoutout-label">&#x1F4E3; SHOUT OUTS</span>
-          <button id="shoutoutBtn" class="shoutout-add-btn" title="Send a shoutout">+</button>
         </div>
         <div class="shoutout-marquee">
           <div class="shoutout-track" id="shoutoutTrack">
@@ -274,3057 +226,524 @@ const pusherConfig = {
         </div>
       </div>
 
-      <!-- Now Playing Bar / DJ Info Bar - matches main live page -->
-      <div class="now-playing-bar dj-info-bar" id="nowPlayingBar">
+      <!-- NOW PLAYING Bar -->
+      <div class="dj-info-bar" id="djInfoBar">
         <img id="djAvatar" src="/place-holder.webp" alt="" class="dj-avatar" />
         <div class="dj-info-center">
-          <span class="dj-info-label" id="npLabel">NOW PLAYING</span>
-          <span class="dj-info-title" id="npTrackTitle"></span>
-          <span class="dj-info-selector" id="controlsDjName">Waiting...</span>
+          <span class="dj-info-label" id="controlsLabel">NOW PLAYING</span>
+          <span class="dj-info-name" id="controlsDjName">--</span>
         </div>
         <div class="dj-info-right">
-          <div class="np-duration-box" id="bottomDurationBox">
-            <span class="np-duration-label" id="bottomDurationLabel">LEFT</span>
-            <span class="np-duration" id="bottomDuration">--:--</span>
+          <div class="dj-info-timer" id="countdownBox">
+            <span class="dj-info-timer-label" id="countdownLabel">LEFT</span>
+            <span class="dj-info-timer-value" id="countdownValue">--:--</span>
           </div>
           <span class="stream-genre" id="streamGenre">Jungle / D&B</span>
         </div>
       </div>
-    </div>
+    </main>
 
-    <!-- Multi-Chat Section -->
-    <aside class="chat-section multi-chat" id="chatSection">
-      <!-- Fresh Wax Chat Column -->
-      <div class="chat-column active" data-chat="freshwax">
-        <div class="chat-column-header freshwax-header">
-          <div class="chat-column-title">
-            <span class="chat-icon">&#x1F4AC;</span>
-            <span><span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></span>
-          </div>
-          <div class="chat-header-actions">
-            <button class="external-chat-btn twitch-toggle" id="toggleTwitch" data-toggle="twitch" title="Toggle Twitch Chat">
-              <svg class="twitch-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
-              </svg>
-            </button>
-            <button class="external-chat-btn youtube-toggle" id="toggleYoutube" data-toggle="youtube" title="Toggle YouTube Chat">
-              <svg class="youtube-icon" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div class="chat-column-body">
-          <div class="chat-messages" id="chatMessages">
-            <div class="chat-welcome">
-              <p>Welcome to <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span> Live!</p>
-              <p class="chat-hint">Type !help for commands</p>
-            </div>
-          </div>
-          <div class="chat-input-section" style="min-height: 70px; background: #222; border-top: 2px solid #dc2626;">
-            <div id="loginPrompt" class="login-prompt" style="padding: 1rem; font-size: 1rem;">
-              <p><a href="/login?redirect=/live/fullpage">Sign in</a> to chat</p>
-            </div>
-            <div id="chatForm" class="chat-form hidden">
-              <div id="replyIndicator" class="reply-indicator" style="display: none;">
-                <span>Replying to <strong id="replyToName"></strong></span>
-                <button type="button" id="cancelReply" class="cancel-reply">&times;</button>
-              </div>
-              <div class="chat-input-wrapper">
-                <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
-                <button type="button" id="emojiBtn" class="chat-tool-btn" title="Emojis">&#x1F60A;</button>
-                <button type="button" id="giphyBtn" class="chat-tool-btn" title="GIFs">GIF</button>
-                <button type="button" id="sendBtn" class="send-btn">
-                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                </button>
-              </div>
-            </div>
-            <!-- Emoji Picker -->
-            <div id="emojiPicker" class="emoji-picker" style="display: none;">
-              <div class="emoji-picker-header">
-                <div class="emoji-cats">
-                  <button class="emoji-cat active" data-category="music" title="Music">&#x1F3B5;</button>
-                  <button class="emoji-cat" data-category="reactions" title="Reactions">&#x1F525;</button>
-                  <button class="emoji-cat" data-category="faces" title="Faces">&#x1F60E;</button>
-                  <button class="emoji-cat" data-category="vibes" title="Vibes">&#x1F334;</button>
-                </div>
-                <button class="emoji-close" id="closeEmoji">&times;</button>
-              </div>
-              <div class="emoji-grid" id="emojiGridInline"></div>
-            </div>
-            <!-- GIF Picker -->
-            <div id="giphyPicker" class="giphy-picker" style="display: none;">
-              <div class="giphy-picker-header">
-                <input type="text" id="giphySearchInline" class="giphy-search" placeholder="Search GIFs..." />
-                <button class="giphy-close" id="closeGiphy">&times;</button>
-              </div>
-              <div class="giphy-cats">
-                <button class="giphy-cat active" data-category="trending">Trending</button>
-                <button class="giphy-cat" data-category="reactions">Reactions</button>
-                <button class="giphy-cat" data-category="music">Music</button>
-                <button class="giphy-cat" data-category="dance">Dance</button>
-                <button class="giphy-cat" data-category="party">Party</button>
-              </div>
-              <div class="giphy-grid" id="giphyGridInline">
-                <p class="giphy-loading">Loading GIFs...</p>
-              </div>
-              <div class="giphy-footer">Powered by GIPHY</div>
-            </div>
-          </div>
-        </div>
+    <!-- Chat Sidebar -->
+    <aside class="fp-sidebar">
+      <!-- Chat Tabs -->
+      <div class="fp-chat-tabs">
+        <button class="fp-chat-tab active" data-tab="freshwax">
+          <span class="brand-fresh">Fresh</span><span class="brand-wax">Wax</span>
+        </button>
+        <button class="fp-chat-tab" data-tab="twitch" id="twitchTab">
+          <svg class="twitch-icon" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
+          </svg>
+          <span>Twitch</span>
+        </button>
+        <button class="fp-chat-tab" data-tab="youtube" id="youtubeTab">
+          <svg class="youtube-icon" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+          <span>YouTube</span>
+        </button>
       </div>
 
-      <!-- Twitch Chat Column -->
-      <div class="chat-column" data-chat="twitch" id="twitchColumn">
-        <div class="chat-column-header twitch-header">
-          <div class="chat-column-title">
-            <svg class="twitch-icon" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
-            </svg>
-            <span>Twitch Chat</span>
-          </div>
-          <button class="chat-close-btn" id="closeTwitch" data-close="twitch" title="Close">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-            </svg>
-          </button>
-        </div>
-        <div class="chat-column-body">
-          <iframe id="twitchChatFrame" class="external-chat-frame" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      <!-- Fresh Wax Chat -->
+      <div class="fp-chat-panel active" data-panel="freshwax">
+        <LiveChat giphyApiKey={giphyApiKey} />
+      </div>
+
+      <!-- Twitch Chat -->
+      <div class="fp-chat-panel" data-panel="twitch">
+        <div class="external-chat-container" id="twitchChatContainer">
           <div class="external-chat-placeholder" id="twitchPlaceholder">
-            <svg class="placeholder-icon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+            <svg class="twitch-icon" viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
               <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/>
             </svg>
-            <p>Twitch chat appears when streaming</p>
+            <p>No Twitch stream connected</p>
+            <p class="hint">Twitch chat will appear when DJ connects their channel</p>
           </div>
+          <iframe id="twitchChatFrame" class="external-chat-frame hidden" allowfullscreen></iframe>
         </div>
       </div>
 
-      <!-- YouTube Chat Column -->
-      <div class="chat-column" data-chat="youtube" id="youtubeColumn">
-        <div class="chat-column-header youtube-header">
-          <div class="chat-column-title">
-            <svg class="youtube-icon" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-            </svg>
-            <span>YouTube Chat</span>
-          </div>
-          <button class="chat-close-btn" id="closeYoutube" data-close="youtube" title="Close">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-            </svg>
-          </button>
-        </div>
-        <div class="chat-column-body">
-          <iframe id="youtubeChatFrame" class="external-chat-frame" allow="autoplay" allowfullscreen></iframe>
+      <!-- YouTube Chat -->
+      <div class="fp-chat-panel" data-panel="youtube">
+        <div class="external-chat-container" id="youtubeChatContainer">
           <div class="external-chat-placeholder" id="youtubePlaceholder">
-            <svg class="placeholder-icon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+            <svg class="youtube-icon" viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
               <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
             </svg>
-            <p>YouTube chat appears when streaming</p>
+            <p>No YouTube stream connected</p>
+            <p class="hint">YouTube chat will appear when DJ connects their channel</p>
           </div>
+          <iframe id="youtubeChatFrame" class="external-chat-frame hidden" allowfullscreen></iframe>
         </div>
       </div>
     </aside>
-
   </div>
 
-<style is:global>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  html, body {
-    height: 100dvh;
+<style>
+  /* Fullpage-specific styles */
+  .fullpage-body {
     margin: 0;
     padding: 0;
-    min-width: 1600px; /* Fixed layout - prevents responsive shrinking */
-  }
-
-  body {
-    font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #0a0a0f 0%, #111118 50%, #0d0d12 100%);
+    background: #0a0a0a;
     color: #fff;
-    overflow-x: auto; /* Allow horizontal scroll on smaller screens */
-    overflow-y: hidden;
-    height: 100dvh;
-  }
-
-  .hidden { display: none !important; }
-
-  /* Fresh Wax Branding */
-  .brand-fresh { color: #fff; font-weight: 700; }
-  .brand-wax { color: #dc2626; font-weight: 700; }
-
-  /* Main Layout */
-  .fullpage-container {
-    display: grid;
-    grid-template-columns: 1fr 480px;
-    height: 100dvh;
-    max-height: 100dvh;
-    overflow: hidden;
-    transition: grid-template-columns 0.3s ease;
-  }
-
-  /* When 1 external chat is expanded (2 chat columns total) */
-  .fullpage-container.chat-expanded-1 {
-    grid-template-columns: 1fr 720px;
-  }
-
-  /* When 2 external chats are expanded (3 chat columns total) */
-  .fullpage-container.chat-expanded-2 {
-    grid-template-columns: 1fr 960px;
-  }
-
-  /* DISABLED: Responsive breakpoints - layout is now fixed at 1600px min-width
-  @media (max-width: 1800px) {
-    .fullpage-container.chat-expanded-1 { grid-template-columns: 1fr 640px; }
-    .fullpage-container.chat-expanded-2 { grid-template-columns: 1fr 840px; }
-  }
-
-  @media (max-width: 1600px) {
-    .fullpage-container.chat-expanded-1 { grid-template-columns: 1fr 560px; }
-    .fullpage-container.chat-expanded-2 { grid-template-columns: 1fr 720px; }
-  }
-
-  @media (max-width: 1400px) {
-    .fullpage-container { grid-template-columns: 1fr 400px; }
-    .fullpage-container.chat-expanded-1 { grid-template-columns: 1fr 520px; }
-    .fullpage-container.chat-expanded-2 { grid-template-columns: 1fr 660px; }
-  }
-
-  @media (max-width: 1200px) {
-    .fullpage-container { grid-template-columns: 1fr 360px; }
-    .fullpage-container.chat-expanded-1 { grid-template-columns: 1fr 480px; }
-    .fullpage-container.chat-expanded-2 { grid-template-columns: 1fr 600px; }
-  }
-
-  @media (max-width: 900px) {
-    .fullpage-container { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
-    .fullpage-container.chat-expanded-1,
-    .fullpage-container.chat-expanded-2 { grid-template-columns: 1fr; }
-  }
-  */
-
-  /* Player Section */
-  .player-section {
-    display: flex;
-    flex-direction: column;
-    background: linear-gradient(180deg, #111 0%, #0a0a0a 100%);
-    min-width: 0;
+    font-family: 'Inter', sans-serif;
     overflow: hidden;
     height: 100vh;
-    max-height: 100vh;
+  }
+
+  .fp-layout {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  .fp-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
   }
 
   /* Top Bar */
-  .top-bar {
+  .fp-top-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-shrink: 0;
-    padding: 0.4rem 0.75rem;
-    background: rgba(0,0,0,0.5);
-    border-bottom: 1px solid #222;
-    gap: 0.5rem;
-    flex-shrink: 0;
-  }
-
-  .back-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.8rem;
-    background: #222;
-    border-radius: 6px;
-    color: #fff;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: all 0.2s;
-    border: 1px solid #333;
-  }
-  .back-btn svg { width: 18px; height: 18px; }
-  .back-btn:hover { background: #dc2626; border-color: #dc2626; }
-
-  .stream-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .live-badge {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background: #333;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    color: #888;
-  }
-  .live-badge.is-live {
-    background: rgba(220, 38, 38, 0.2);
-    border: 1px solid #dc2626;
-    color: #dc2626;
-    animation: live-badge-glow 2s ease-in-out infinite;
-  }
-  .live-dot { width: 8px; height: 8px; background: #888; border-radius: 50%; }
-  .live-badge.is-live .live-dot { background: #dc2626; animation: pulse 1.5s ease-in-out infinite; }
-  .live-badge.is-playlist {
-    background: rgba(59, 130, 246, 0.2);
-    border: 1px solid #3b82f6;
-    color: #3b82f6;
-  }
-  .live-badge.is-playlist .live-dot { background: #3b82f6; animation: pulse 1.5s ease-in-out infinite; }
-
-  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
-  @keyframes live-badge-glow {
-    0%, 100% { box-shadow: 0 0 5px rgba(220, 38, 38, 0.3); }
-    50% { box-shadow: 0 0 15px rgba(220, 38, 38, 0.6), 0 0 25px rgba(220, 38, 38, 0.3); }
-  }
-
-  .stream-info h1 {
-    font-family: 'Inter', sans-serif;
-    font-size: 1.1rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .stream-stats { display: flex; align-items: center; gap: 0.5rem; }
-
-  .viewers-stat {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.5rem 0.75rem;
-    background: rgba(220, 38, 38, 0.1);
-    border: 1px solid rgba(220, 38, 38, 0.3);
-    border-radius: 6px;
-  }
-  .stat-icon { font-size: 1rem; }
-  .stat-value { font-weight: 700; font-size: 1.1rem; color: #dc2626; }
-  .stat-label { font-size: 0.75rem; color: #888; }
-
-  /* Duration stat in top bar */
-  .duration-stat {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid #333;
-    border-radius: 6px;
-  }
-  .duration-stat .np-duration-label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #888;
-    font-weight: 600;
-  }
-  .duration-stat .np-duration {
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: #dc2626;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .dj-lobby-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.8rem;
-    background: linear-gradient(135deg, #16a34a, #15803d);
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .dj-lobby-btn svg { width: 16px; height: 16px; }
-  .dj-lobby-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(22, 163, 74, 0.4); }
-
-  .playlist-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.8rem;
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .playlist-btn svg { width: 16px; height: 16px; }
-  .playlist-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4); }
-
-  /* Player Wrapper */
-  .player-wrapper {
-    flex: 1 1 0;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #000;
-    min-height: 0;
-    max-height: 100%;
-    overflow: hidden;
-  }
-
-  .offline-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #0a0a1a 0%, #1a1033 25%, #2d1b4e 50%, #1a1033 75%, #0a0a1a 100%);
-  }
-  .offline-content { text-align: center; }
-  .offline-icon { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; color: #666; letter-spacing: 0.25rem; margin-bottom: 1rem; }
-  .offline-content h2 { font-size: 1.25rem; color: #666; margin-bottom: 0.5rem; }
-  .offline-content p { font-size: 0.875rem; color: #555; }
-
-  /* Audio Player */
-  .audio-player {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0a 100%);
-  }
-  .audio-content { text-align: center; padding: 2rem; }
-  .audio-cover { width: 200px; height: 200px; margin: 0 auto 1.5rem; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.5); border: 3px solid #333; }
-  .audio-cover img { width: 100%; height: 100%; object-fit: cover; }
-  .audio-info { margin-bottom: 1rem; }
-  .audio-live-badge { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(220, 38, 38, 0.2); border: 1px solid #dc2626; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; color: #dc2626; letter-spacing: 1px; margin-bottom: 0.75rem; }
-  .live-pulse { width: 8px; height: 8px; background: #dc2626; border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
-  .audio-title { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: 1px; margin-bottom: 0.25rem; }
-  .audio-dj { font-size: 1rem; color: #888; }
-
-  .audio-bars { display: flex; align-items: flex-end; justify-content: center; gap: 4px; height: 50px; margin-top: 1rem; }
-  .audio-bar { width: 6px; background: linear-gradient(to top, #dc2626, #f87171); border-radius: 3px; animation: barPulse 0.8s ease-in-out infinite; }
-  .audio-bar:nth-child(1) { height: 20%; animation-delay: 0s; }
-  .audio-bar:nth-child(2) { height: 40%; animation-delay: 0.1s; }
-  .audio-bar:nth-child(3) { height: 60%; animation-delay: 0.15s; }
-  .audio-bar:nth-child(4) { height: 80%; animation-delay: 0.2s; }
-  .audio-bar:nth-child(5) { height: 100%; animation-delay: 0.25s; }
-  .audio-bar:nth-child(6) { height: 70%; animation-delay: 0.3s; }
-  .audio-bar:nth-child(7) { height: 90%; animation-delay: 0.35s; }
-  .audio-bar:nth-child(8) { height: 50%; animation-delay: 0.4s; }
-  .audio-bar:nth-child(9) { height: 80%; animation-delay: 0.45s; }
-  .audio-bar:nth-child(10) { height: 60%; animation-delay: 0.5s; }
-  .audio-bar:nth-child(11) { height: 40%; animation-delay: 0.55s; }
-  .audio-bar:nth-child(12) { height: 25%; animation-delay: 0.6s; }
-  @keyframes barPulse { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.4); } }
-
-  /* Video Player */
-  .video-player { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .hls-video { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; background: #000; }
-  .playlist-player { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 10; }
-  .playlist-player:empty { display: none; }
-  .playlist-player iframe { width: 100% !important; height: 100% !important; border: none; }
-
-  /* Controls Bar */
-  .player-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-shrink: 0;
-    padding: 0.5rem 1rem;
-    background: #111;
-    border-top: 1px solid #222;
-    border-bottom: 1px solid #222;
-    flex-shrink: 0;
-  }
-
-  .control-btn {
-    width: 56px;
-    height: 56px;
-    background: #dc2626;
-    border: none;
-    border-radius: 50%;
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    flex-shrink: 0;
-  }
-  .control-btn svg { width: 32px; height: 32px; }
-  .control-btn:hover { background: #b91c1c; transform: scale(1.05); }
-
-  .inline-reactions { display: flex; align-items: center; justify-content: center; gap: 0.4rem; flex: 1; }
-
-  .reaction-btn {
-    width: 48px;
-    height: 48px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    transition: all 0.2s;
-    color: #fff;
-  }
-  .reaction-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); transform: scale(1.1); }
-  .reaction-btn:active { transform: scale(0.95); }
-  .reaction-btn.liked { transform: scale(1.2); }
-  .reaction-btn.disabled { opacity: 0.3; filter: grayscale(100%); cursor: not-allowed; pointer-events: none; }
-
-  .anim-toggle-btn { background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); }
-  .anim-toggle-btn:hover { background: rgba(16, 185, 129, 0.2); }
-  .anim-toggle-btn.off { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); }
-  .anim-toggle-btn .anim-off-icon { display: none; }
-  .anim-toggle-btn .anim-on-icon { display: block; color: #10b981; }
-  .anim-toggle-btn.off .anim-off-icon { display: block; color: #ef4444; }
-  .anim-toggle-btn.off .anim-on-icon { display: none; }
-  .anim-toggle-btn svg { width: 22px; height: 22px; }
-
-  .volume-control { display: flex; align-items: center; gap: 0.5rem; }
-  .volume-icon { color: #888; width: 28px; height: 28px; }
-  .volume-slider { width: 120px; height: 8px; -webkit-appearance: none; -moz-appearance: none; appearance: none; background: #333; border-radius: 4px; cursor: pointer; }
-  .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: #dc2626; border-radius: 50%; cursor: pointer; }
-  .volume-slider::-moz-range-thumb { width: 20px; height: 20px; background: #dc2626; border-radius: 50%; cursor: pointer; border: none; }
-  .volume-slider::-moz-range-track { background: #333; border-radius: 4px; height: 8px; }
-
-  /* Shoutout Bar */
-  .shoutout-bar { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1rem; background: linear-gradient(90deg, rgba(220, 38, 38, 0.1) 0%, transparent 50%); border-bottom: 1px solid #222; flex-shrink: 0; }
-  .shoutout-left { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
-  .shoutout-label { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 0.9rem; letter-spacing: 0.5px; color: #dc2626; }
-  .shoutout-add-btn { width: 32px; height: 32px; background: #dc2626; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 1.25rem; font-weight: 700; line-height: 1; transition: all 0.2s; }
-  .shoutout-add-btn:hover { background: #b91c1c; transform: scale(1.1); }
-  .shoutout-marquee { flex: 1; overflow: hidden; min-width: 0; position: relative; display: flex; align-items: center; justify-content: center; min-height: 28px; }
-  .shoutout-track { display: inline-block; white-space: nowrap; }
-  .shoutout-track.scrolling { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); animation: shoutout-scroll 20s linear forwards; }
-  .shoutout-item { color: #fff; font-size: 1rem; font-weight: 500; }
-  .shoutout-placeholder { color: #555; font-size: 0.9rem; font-style: italic; }
-  @keyframes shoutout-scroll { 0% { transform: translateY(-50%) translateX(0); } 100% { transform: translateY(-50%) translateX(calc(-100% - 100vw)); } }
-
-  /* DJ Info Bar - matches main live page */
-  .dj-info-bar {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
     padding: 0.75rem 1rem;
-    background: #0a0a0a;
-    border-top: 2px solid #333;
-    flex-shrink: 0;
-  }
-  .dj-info-bar .dj-avatar {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 3px solid #333;
-    flex-shrink: 0;
-  }
-  .dj-info-bar.is-live .dj-avatar { border-color: #dc2626; }
-  .dj-info-center {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex: 1;
-    min-width: 0;
-    text-align: center;
-  }
-  .dj-info-label {
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #3b82f6;
-    font-weight: 600;
-  }
-  .dj-info-bar.is-live .dj-info-label { color: #dc2626; }
-  .dj-info-name {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #888;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-  }
-  .dj-info-bar.is-live .dj-info-name { color: #fff; }
-  .dj-info-title {
-    font-size: 1.1rem;
-    color: #dc2626;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-    text-align: center;
-    font-weight: 600;
-  }
-  .dj-info-title:empty { display: none; }
-  .dj-info-bar.is-live .dj-info-title { color: #dc2626; }
-  .dj-info-selector {
-    font-size: 0.9rem;
-    color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-    text-align: center;
-  }
-  .dj-info-selector:empty { display: none; }
-  .dj-info-right {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-shrink: 0;
-  }
-  .np-duration-box {
-    display: none; /* Hidden by default, shown in playlist mode */
-    align-items: center;
-    gap: 0.5rem;
-    background: rgba(0, 0, 0, 0.4);
-    border: 1px solid #333;
-    border-radius: 6px;
-    padding: 0.4rem 0.6rem;
-  }
-  .np-duration {
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-    font-size: 1rem;
-    color: #dc2626;
-    font-variant-numeric: tabular-nums;
-    min-width: 45px;
-    text-align: center;
-  }
-  .np-duration-label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #888;
-    font-weight: 600;
-  }
-  .stream-genre {
-    font-size: 0.65rem;
-    color: #dc2626;
-    padding: 0.2rem 0.5rem;
-    background: rgba(220, 38, 38, 0.1);
-    border-radius: 4px;
-    white-space: nowrap;
-  }
-  .dj-info-bar.is-live .stream-genre {
-    background: rgba(220, 38, 38, 0.2);
-    color: #f87171;
-  }
-
-  /* Multi-Chat Section */
-  .chat-section { display: flex; flex-direction: column; background: #111; border-left: 2px solid #222; height: 100%; overflow: hidden; }
-  /* DISABLED: Responsive breakpoint - layout is now fixed
-  @media (max-width: 900px) { .chat-section { height: 900px; max-height: 900px; } }
-  */
-  .chat-section.multi-chat { display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr; gap: 0; overflow: hidden; height: 100%; }
-
-  /* When 1 external chat is expanded, show 2 columns */
-  .chat-expanded-1 .chat-section.multi-chat { grid-template-columns: 1fr 1fr; }
-
-  /* When 2 external chats are expanded, show 3 columns */
-  .chat-expanded-2 .chat-section.multi-chat { grid-template-columns: 1fr 1fr 1fr; }
-
-  .chat-column { display: flex; flex-direction: column; border-right: 1px solid #222; overflow: hidden; min-height: 0; height: 100%; }
-  .chat-column:last-child { border-right: none; }
-  .chat-column[data-chat="twitch"], .chat-column[data-chat="youtube"] { overflow: hidden; }
-
-  /* Hide Twitch and YouTube columns by default */
-  .chat-column[data-chat="twitch"],
-  .chat-column[data-chat="youtube"] { display: none; }
-
-  /* Show when expanded */
-  .chat-column[data-chat="twitch"].expanded,
-  .chat-column[data-chat="youtube"].expanded { display: flex; }
-
-  .chat-column-header { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0.5rem; background: #0a0a0a; border-bottom: 2px solid #222; min-height: 32px; flex-shrink: 0; }
-  .chat-column-header.freshwax-header { border-bottom-color: #dc262640; }
-  .chat-column-header.twitch-header { border-bottom-color: #9146ff40; }
-  .chat-column-header.youtube-header { border-bottom-color: #ff000040; }
-
-  .chat-header-actions { display: flex; align-items: center; gap: 0.25rem; }
-
-  .external-chat-btn {
-    width: 32px;
-    height: 32px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 4px;
-    color: #666;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-  }
-  .external-chat-btn:hover { background: rgba(255,255,255,0.1); }
-  .external-chat-btn.twitch-toggle { color: #9146ff; }
-  .external-chat-btn.twitch-toggle:hover { border-color: #9146ff40; }
-  .external-chat-btn.youtube-toggle { color: #ff0000; }
-  .external-chat-btn.youtube-toggle:hover { border-color: #ff000040; }
-  .external-chat-btn.active { background: rgba(255,255,255,0.1); }
-  .external-chat-btn.twitch-toggle.active { color: #9146ff; border-color: #9146ff; background: rgba(145,70,255,0.15); }
-  .external-chat-btn.youtube-toggle.active { color: #ff0000; border-color: #ff0000; background: rgba(255,0,0,0.15); }
-  .external-chat-btn svg { fill: currentColor; width: 16px; height: 16px; }
-
-  .chat-column-title { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; color: #fff; letter-spacing: 0.25px; }
-  .chat-icon { font-size: 1rem; }
-  .twitch-icon { fill: #9146ff; width: 16px; height: 16px; }
-  .youtube-icon { fill: #ff0000; width: 16px; height: 16px; }
-
-  .chat-expand-btn, .chat-close-btn { width: 24px; height: 24px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; color: #888; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-  .chat-expand-btn:hover, .chat-close-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-  .chat-expand-btn svg, .chat-close-btn svg { fill: currentColor; width: 12px; height: 12px; }
-  .chat-close-btn:hover { background: rgba(220,38,38,0.2); color: #dc2626; border-color: #dc262680; }
-
-  .chat-column-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    min-height: 0;
-    position: relative; /* Required for absolute positioned iframes */
-  }
-
-  /* Ensure Fresh Wax chat has proper internal layout */
-  .chat-column[data-chat="freshwax"] .chat-column-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    min-height: 0;
-  }
-
-  .chat-column[data-chat="freshwax"] .chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 0.35rem;
-    min-height: 0;
-  }
-
-  .chat-column[data-chat="freshwax"] .chat-input-section {
-    flex-shrink: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 400px;
     z-index: 100;
-    overflow: visible;
-    background: #111;
-    padding: 0.75rem;
-    min-height: 60px;
-    border-top: 2px solid #333;
   }
 
-  /* External Chat Frames */
-  .external-chat-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: none; background: #18181b; display: none; }
-  .external-chat-frame.loaded { display: block; }
-  #youtubeChatFrame { background: #0f0f0f; }
-
-  .external-chat-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #555; text-align: center; padding: 1rem; background: #111; }
-  .external-chat-placeholder.hidden { display: none; }
-  .placeholder-icon { opacity: 0.3; margin-bottom: 0.75rem; }
-  .twitch-placeholder-icon { fill: #9146ff; }
-  .youtube-placeholder-icon { fill: #ff0000; }
-  .external-chat-placeholder p { font-size: 0.7rem; line-height: 1.4; }
-
-  /* Chat Messages */
-  .chat-messages { overflow-y: auto; overflow-x: hidden; padding: 0.35rem; display: flex; flex-direction: column; gap: 0.35rem; min-height: 0; }
-  .chat-welcome { text-align: center; padding: 0.5rem 0.35rem; color: #9ca3af; }
-  .chat-welcome p { font-size: 0.6rem; margin-bottom: 0.125rem; }
-  .chat-hint { font-size: 0.65rem; color: #9ca3af; }
-
-  .chat-message { display: flex; flex-direction: row; align-items: flex-start; gap: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.02); border-radius: 8px; width: 100%; box-sizing: border-box; }
-  .chat-message-avatar { width: 36px; height: 36px; min-width: 36px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; overflow: hidden; color: #fff; font-weight: 600; position: relative; }
-  .chat-message-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .chat-message-avatar.is-pro { box-shadow: 0 0 0 2px #f59e0b; }
-  .chat-message-content { flex: 1; min-width: 0; overflow: hidden; text-align: left; display: flex; flex-direction: column; }
-  .chat-message-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; flex-wrap: nowrap; width: 100%; }
-  .chat-message-name { font-weight: 600; font-size: 0.9rem; color: #dc2626; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
-  .chat-message-time { font-size: 0.75rem; color: #666; white-space: nowrap; flex-shrink: 0; }
-  .chat-message-text { display: block; font-size: 1rem; color: #ddd; word-break: break-word; overflow-wrap: break-word; text-align: left; line-height: 1.4; }
-  .chat-message-gif { max-width: 150px; border-radius: 8px; margin-top: 0.25rem; }
-
-  /* Chat Input */
-  .chat-input-section { padding: 0.75rem; background: #111; border-top: 2px solid #333; position: relative; z-index: 10; flex-shrink: 0; min-height: 60px; overflow: visible; }
-  .login-prompt { text-align: center; padding: 0.75rem; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 0.9rem; color: #888; }
-  .login-prompt a { color: #dc2626; font-weight: 600; }
-  .chat-form { display: flex; flex-direction: column; gap: 0.5rem; }
-  .chat-tools { display: flex; gap: 0.35rem; }
-  .tool-btn { padding: 0.4rem 0.6rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #888; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
-  .tool-btn:hover { background: #333; color: #fff; }
-  .chat-input-wrapper { display: flex; gap: 0.5rem; }
-  .chat-input-wrapper input { flex: 1; padding: 0.6rem 0.75rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 0.9rem; min-width: 0; }
-  .chat-input-wrapper input:focus { outline: none; border-color: #dc2626; }
-  .chat-input-wrapper button { width: 36px; height: 36px; background: #dc2626; border: none; border-radius: 6px; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
-  .chat-input-wrapper button:hover { background: #b91c1c; }
-  .chat-input-wrapper button svg { width: 16px; height: 16px; }
-
-  /* Emoji & Giphy Pickers */
-  .emoji-picker, .giphy-picker { position: absolute; bottom: calc(100% + 8px); left: 0; right: 0; width: 100%; background: #1a1a1a; border: 2px solid #444; border-radius: 12px; box-shadow: 0 -8px 32px rgba(0,0,0,0.8); z-index: 1000; display: flex; flex-direction: column; }
-  .emoji-picker-header, .giphy-picker-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; border-bottom: 1px solid #333; gap: 0.5rem; flex-shrink: 0; }
-  .emoji-cats { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-  .emoji-cat { padding: 0.5rem 0.75rem; background: #222; border: none; border-radius: 6px; font-size: 1.25rem; color: #888; cursor: pointer; transition: all 0.2s; }
-  .emoji-cat.active { background: #dc2626; color: #fff; }
-  .emoji-close, .giphy-close { background: #333; border: none; color: #888; font-size: 1.5rem; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-  .emoji-close:hover, .giphy-close:hover { background: #dc2626; color: #fff; }
-  .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.5rem; padding: 0.75rem; min-height: 200px; max-height: 400px; overflow-y: auto; background: #222; flex: 1; }
-  .emoji-grid button { padding: 0.5rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; border-radius: 6px; }
-  .emoji-grid button:hover { background: rgba(220, 38, 38, 0.2); }
-  #giphySearch, input.giphy-search { flex: 1; padding: 0.6rem 0.75rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 0.9rem; }
-  .giphy-cats { display: flex; gap: 0.5rem; padding: 0.75rem; flex-wrap: wrap; border-bottom: 1px solid #333; }
-  .giphy-cat { padding: 0.5rem 0.75rem; background: #222; border: none; border-radius: 6px; font-size: 0.85rem; color: #888; cursor: pointer; transition: all 0.2s; }
-  .giphy-cat.active { background: #dc2626; color: #fff; }
-  .giphy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; padding: 0.75rem; min-height: 250px; max-height: 450px; overflow-y: auto; }
-  .giphy-grid img { width: 100%; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; }
-  .giphy-grid img:hover { opacity: 0.8; transform: scale(1.02); }
-  .giphy-hint, .giphy-loading { grid-column: 1 / -1; text-align: center; color: #888; font-size: 0.9rem; padding: 1.5rem; }
-  .giphy-footer { padding: 0.5rem; text-align: center; font-size: 0.75rem; color: #666; border-top: 1px solid #333; }
-
-  /* Expanded Chat Modal */
-  .expanded-chat-modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
-  .expanded-chat-modal.hidden { display: none; }
-  .expanded-chat-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.85); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
-  .expanded-chat-content { position: relative; width: 90%; max-width: 600px; height: 80vh; background: #111; border: 2px solid #333; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
-  .expanded-chat-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; background: #0a0a0a; border-bottom: 2px solid #333; }
-  .expanded-chat-title { font-weight: 700; font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
-  .expanded-chat-title.twitch { color: #9146ff; }
-  .expanded-chat-title.youtube { color: #ff0000; }
-  .expanded-chat-title.freshwax { color: #dc2626; }
-  .expanded-chat-close { width: 36px; height: 36px; background: #333; border: none; border-radius: 50%; color: #fff; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-  .expanded-chat-close:hover { background: #dc2626; }
-  .expanded-chat-body { flex: 1; overflow: hidden; }
-  .expanded-chat-body iframe { width: 100%; height: 100%; border: none; }
-
-  /* Expanded Fresh Wax Chat */
-  .expanded-freshwax-chat { display: flex; flex-direction: column; height: 100%; }
-  .expanded-chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
-  .expanded-chat-messages .chat-message { display: flex; flex-direction: row; align-items: flex-start; gap: 0.75rem; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 10px; }
-  .expanded-chat-messages .chat-message-avatar { width: 36px; height: 36px; min-width: 36px; border-radius: 50%; background: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 600; color: #fff; flex-shrink: 0; }
-  .expanded-chat-messages .chat-message-avatar.is-pro { box-shadow: 0 0 0 2px #f59e0b; }
-  .expanded-chat-messages .chat-message-content { flex: 1; min-width: 0; }
-  .expanded-chat-messages .chat-message-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem; }
-  .expanded-chat-messages .chat-message-name { font-weight: 600; font-size: 0.875rem; color: #dc2626; }
-  .expanded-chat-messages .chat-message-time { font-size: 0.75rem; color: #666; }
-  .expanded-chat-messages .chat-message-text { font-size: 0.9375rem; color: #e5e5e5; line-height: 1.5; word-break: break-word; }
-  .expanded-chat-input { display: flex; gap: 0.75rem; padding: 1rem; background: #0a0a0a; border-top: 1px solid #333; }
-  .expanded-chat-input input { flex: 1; background: #1a1a1a; border: 1px solid #333; border-radius: 10px; padding: 0.875rem 1rem; color: #fff; font-size: 0.9375rem; outline: none; }
-  .expanded-chat-input input:focus { border-color: #dc2626; }
-  .expanded-chat-input button { background: #dc2626; border: none; border-radius: 10px; padding: 0.875rem 1.25rem; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
-  .expanded-chat-input button:hover { background: #b91c1c; }
-
-  /* Shoutout Modal */
-  .modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
-  .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.8); }
-  .modal-content { position: relative; background: #1a1a1a; border: 2px solid #333; border-radius: 20px; padding: 2rem; max-width: 480px; width: 90%; }
-  .modal-close { position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; background: #333; border: none; border-radius: 50%; color: #fff; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  .modal-close:hover { background: #dc2626; }
-
-  /* Picker Modal Styles */
-  .picker-modal-content { max-width: 600px; padding: 0; overflow: hidden; }
-  .picker-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: #111; border-bottom: 1px solid #333; }
-  .picker-modal-header h3 { margin: 0; font-size: 1.125rem; font-weight: 600; }
-  .picker-modal-header .modal-close { position: static; width: 32px; height: 32px; font-size: 1.5rem; }
-  .picker-modal-content .emoji-categories { display: flex; gap: 0.5rem; padding: 1rem; border-bottom: 1px solid #333; flex-wrap: wrap; }
-  .picker-modal-content .emoji-cat { padding: 0.5rem 1rem; background: #222; border: none; border-radius: 6px; font-size: 0.875rem; color: #888; cursor: pointer; transition: all 0.2s; }
-  .picker-modal-content .emoji-cat:hover { background: #333; color: #fff; }
-  .picker-modal-content .emoji-cat.active { background: #dc2626; color: #fff; }
-  .picker-modal-content .emoji-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 0.35rem; padding: 1.25rem; max-height: 450px; overflow-y: auto; }
-  .picker-modal-content .emoji-grid button { padding: 0.6rem; background: none; border: none; font-size: 1.75rem; cursor: pointer; border-radius: 6px; transition: background 0.2s; }
-  .picker-modal-content .emoji-grid button:hover { background: rgba(220, 38, 38, 0.2); }
-  .picker-modal-content .giphy-search { padding: 1rem; border-bottom: 1px solid #333; }
-  .picker-modal-content .giphy-search input { width: 100%; padding: 0.75rem 1rem; background: #222; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 1rem; }
-  .picker-modal-content .giphy-search input:focus { outline: none; border-color: #dc2626; }
-  .picker-modal-content .giphy-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; padding: 1.25rem; max-height: 450px; overflow-y: auto; }
-  .picker-modal-content .giphy-grid img { width: 100%; border-radius: 6px; cursor: pointer; transition: opacity 0.2s; }
-  .picker-modal-content .giphy-grid img:hover { opacity: 0.8; }
-  .picker-modal-content .giphy-hint { grid-column: 1 / -1; text-align: center; color: #666; font-size: 1rem; padding: 2.5rem 0; }
-
-  .shoutout-modal-content h2 { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; margin-bottom: 0.5rem; }
-  .shoutout-hint { font-size: 0.875rem; color: #888; margin-bottom: 1rem; }
-  .shoutout-input-wrapper { position: relative; margin-bottom: 1rem; }
-  .shoutout-input-wrapper input { width: 100%; padding: 1rem 3.5rem 1rem 1rem; background: #222; border: 2px solid #333; border-radius: 10px; color: #fff; font-size: 1rem; }
-  .shoutout-input-wrapper input:focus { outline: none; border-color: #dc2626; }
-  .shoutout-char-count { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); font-size: 0.875rem; color: #666; }
-  .shoutout-emoji-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; justify-content: center; flex-wrap: wrap; }
-  .shoutout-emoji { width: 44px; height: 44px; background: #222; border: 2px solid #333; border-radius: 8px; font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-  .shoutout-emoji:hover { background: #333; border-color: #dc2626; }
-  .send-shoutout-btn { width: 100%; padding: 1rem; background: #dc2626; border: none; border-radius: 10px; color: #fff; font-weight: 700; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s; }
-  .send-shoutout-btn:disabled { background: #333; cursor: not-allowed; }
-  .send-shoutout-btn:not(:disabled):hover { background: #b91c1c; }
-  .shoutout-cost { font-size: 0.75rem; background: rgba(255,255,255,0.2); padding: 0.25rem 0.5rem; border-radius: 4px; }
-
-  /* DISABLED: Responsive breakpoint - layout is now fixed
-  @media (max-width: 768px) {
-    .stream-stats { gap: 1rem; }
-    .inline-reactions { gap: 0.125rem; }
-    .reaction-btn { width: 36px; height: 36px; font-size: 1rem; }
-    .volume-slider { width: 60px; }
-    .now-playing-right { display: none; }
-  }
-  */
-
-  /* Login Toast */
-  .login-toast {
-    position: fixed;
-    top: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 9999;
-    animation: slideDown 0.3s ease;
-  }
-  @keyframes slideDown {
-    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-  }
-  .login-toast-content {
+  .fp-back-btn {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 10px;
-    padding: 0.75rem 1rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-  }
-  .login-toast-content span {
-    color: #ccc;
-    font-size: 0.875rem;
-  }
-  .login-toast-btn {
-    background: #dc2626;
+    gap: 0.5rem;
     color: #fff;
-    padding: 0.4rem 0.8rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
     text-decoration: none;
+    padding: 0.5rem 1rem;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
     transition: background 0.2s;
   }
-  .login-toast-btn:hover {
-    background: #b91c1c;
-  }
-  .login-toast-close {
-    background: none;
-    border: none;
-    color: #666;
-    font-size: 1.25rem;
-    cursor: pointer;
-    padding: 0 0.25rem;
-    line-height: 1;
-  }
-  .login-toast-close:hover {
-    color: #dc2626;
-  }
+  .fp-back-btn:hover { background: rgba(255,255,255,0.2); }
 
-  /* Fullpage Audio Placeholder (BUTT mode - two turntables) */
-  .fp-audio-placeholder {
+  .fp-stream-info {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 2rem;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
-    padding: 2rem;
-    position: relative;
+    gap: 1rem;
   }
 
-  .fp-audio-placeholder-branding {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.75rem;
-    letter-spacing: 2px;
+  .fp-stream-title {
+    font-size: 1.25rem;
+    font-weight: 600;
   }
 
-  .fp-audio-placeholder-branding .brand-fresh {
-    color: #fff;
+  .fp-stats {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
   }
 
-  .fp-audio-placeholder-branding .brand-wax {
-    color: #dc2626;
-  }
-
-  .fp-audio-dj-info {
-    text-align: center;
-  }
-
-  .fp-audio-dj-name {
-    font-family: 'Inter', sans-serif;
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: 2px;
-    margin-bottom: 0.5rem;
-    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
-  }
-
-  .fp-audio-show-title {
-    font-size: 1.1rem;
-    color: #888;
-    margin-bottom: 0.75rem;
-  }
-
-  .fp-audio-live-badge {
-    display: inline-flex;
+  .fp-stat {
+    display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(22, 163, 74, 0.2);
-    border: 1px solid #16a34a;
-    padding: 0.4rem 0.8rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #16a34a;
+    font-size: 0.9rem;
+    color: #ccc;
+  }
+
+  .fp-stat-icon { font-size: 1.1rem; }
+
+  .fp-timer {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+  }
+
+  .fp-timer-label {
+    font-size: 0.65rem;
+    color: #888;
+    text-transform: uppercase;
     letter-spacing: 1px;
   }
 
-  .fp-live-pulse {
-    width: 8px;
-    height: 8px;
-    background: #16a34a;
-    border-radius: 50%;
-    animation: fpPulse 1.5s ease-in-out infinite;
+  .fp-timer-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: #dc2626;
   }
 
-  @keyframes fpPulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.8); }
-  }
-
-  .fp-turntables-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 2rem;
-  }
-
-  .fp-vinyl-container {
+  /* Player Container */
+  .fp-player-container {
+    flex: 1;
     position: relative;
-    width: 220px;
-    height: 220px;
-    flex-shrink: 0;
-  }
-
-  .fp-vinyl-record {
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    background:
-      radial-gradient(circle at center, transparent 28%, #111 29%, #111 31%, transparent 32%),
-      radial-gradient(circle at center, transparent 38%, #222 39%, #222 41%, transparent 42%),
-      radial-gradient(circle at center, transparent 58%, #1a1a1a 59%, #1a1a1a 61%, transparent 62%),
-      radial-gradient(circle at center, transparent 78%, #222 79%, #222 81%, transparent 82%),
-      radial-gradient(circle at center, transparent 88%, #333 89%, #333 91%, transparent 92%),
-      linear-gradient(135deg, #111 0%, #000 100%);
-    box-shadow:
-      0 0 0 3px #333,
-      0 0 40px rgba(0,0,0,0.8),
-      inset 0 0 70px rgba(0,0,0,0.5);
-    animation: fpSpin 3s linear infinite;
-  }
-
-  .fp-vinyl-record-reverse {
-    animation: fpSpinReverse 3s linear infinite;
-  }
-
-  @keyframes fpSpin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-  @keyframes fpSpinReverse {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(-360deg); }
-  }
-
-  .fp-vinyl-label {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-    box-shadow: inset 0 2px 12px rgba(0,0,0,0.3);
+    background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .fp-player-container .video-player,
+  .fp-player-container .audio-player {
+    width: 100%;
+    height: 100%;
+  }
+
+  .fp-player-container .hls-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  /* Relay Attribution - hidden by default, shown by JS for relay streams */
+  .relay-attribution {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 50;
+    opacity: 0.8;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    display: none;
+  }
+
+  /* Controls */
+  .fp-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: #111;
+    border-top: 1px solid #222;
+  }
+
+  .fp-controls .play-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #dc2626;
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .fp-controls .play-btn:hover { transform: scale(1.05); }
+  .fp-controls .play-btn:disabled { background: #444; cursor: not-allowed; }
+  .fp-controls .play-btn.playing { background: #16a34a; }
+
+  .fp-controls .led-meters {
+    display: flex;
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  .fp-controls .led-meter {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 2px;
+    height: 40px;
+  }
+
+  .fp-controls .led-segment {
+    width: 8px;
+    height: 2px;
+    background: #333;
+    border-radius: 1px;
+  }
+  .fp-controls .led-segment.active[data-level="0"],
+  .fp-controls .led-segment.active[data-level="1"],
+  .fp-controls .led-segment.active[data-level="2"],
+  .fp-controls .led-segment.active[data-level="3"],
+  .fp-controls .led-segment.active[data-level="4"],
+  .fp-controls .led-segment.active[data-level="5"],
+  .fp-controls .led-segment.active[data-level="6"],
+  .fp-controls .led-segment.active[data-level="7"],
+  .fp-controls .led-segment.active[data-level="8"],
+  .fp-controls .led-segment.active[data-level="9"] {
+    background: #22c55e;
+  }
+  .fp-controls .led-segment.active[data-level="10"],
+  .fp-controls .led-segment.active[data-level="11"],
+  .fp-controls .led-segment.active[data-level="12"] {
+    background: #eab308;
+  }
+  .fp-controls .led-segment.active[data-level="13"],
+  .fp-controls .led-segment.active[data-level="14"],
+  .fp-controls .led-segment.active[data-level="15"] {
+    background: #dc2626;
+  }
+
+  .fp-controls .reaction-buttons {
+    display: flex;
+    gap: 0.25rem;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .fp-controls .reaction-btn {
+    background: transparent;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .fp-controls .reaction-btn:hover {
+    background: rgba(255,255,255,0.1);
+    transform: scale(1.1);
+  }
+  .fp-controls .reaction-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .fp-controls .volume-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .fp-controls .volume-icon { color: #888; }
+
+  .fp-controls .volume-slider {
+    width: 100px;
+    height: 4px;
+    -webkit-appearance: none;
+    background: #333;
+    border-radius: 2px;
+    outline: none;
+  }
+  .fp-controls .volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #dc2626;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .fp-controls .shoutout-btn {
+    background: transparent;
+    border: 1px solid #dc2626;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    color: #dc2626;
+    cursor: pointer;
+    font-size: 1.25rem;
+    transition: all 0.2s;
+  }
+  .fp-controls .shoutout-btn:hover {
+    background: #dc2626;
+    color: white;
+  }
+
+  /* Sidebar */
+  .fp-sidebar {
+    width: 400px;
+    background: #111;
+    border-left: 1px solid #222;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .fp-chat-tabs {
+    display: flex;
+    background: #0a0a0a;
+    border-bottom: 1px solid #222;
+  }
+
+  .fp-chat-tab {
+    flex: 1;
+    padding: 0.75rem;
+    background: transparent;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+  }
+  .fp-chat-tab:hover { color: #999; }
+  .fp-chat-tab.active {
+    color: #fff;
+    border-bottom-color: #dc2626;
+  }
+  .fp-chat-tab .brand-fresh { color: #fff; }
+  .fp-chat-tab .brand-wax { color: #dc2626; }
+  .fp-chat-tab.active .brand-fresh { color: #fff; }
+  .fp-chat-tab.active .brand-wax { color: #dc2626; }
+  .fp-chat-tab .twitch-icon { color: #9146ff; }
+  .fp-chat-tab .youtube-icon { color: #ff0000; }
+
+  .fp-chat-panel {
+    flex: 1;
+    display: none;
+    flex-direction: column;
     overflow: hidden;
   }
+  .fp-chat-panel.active { display: flex; }
 
-  .fp-vinyl-label-right {
-    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  }
-
-  .fp-vinyl-label::after {
-    content: '';
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    background: #111;
-    border-radius: 50%;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
-  }
-
-  .fp-vinyl-avatar {
-    width: 54px;
-    height: 54px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid rgba(255,255,255,0.2);
-  }
-
-  .fp-tonearm-left {
-    position: absolute;
-    top: -12px;
-    right: -25px;
-    width: 110px;
-    height: 8px;
-    background: linear-gradient(90deg, #666 0%, #444 50%, #333 100%);
-    border-radius: 4px;
-    transform-origin: right center;
-    transform: rotate(-25deg);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-  }
-
-  .fp-tonearm-left::before {
-    content: '';
-    position: absolute;
-    right: -8px;
-    top: -4px;
-    width: 16px;
-    height: 16px;
-    background: #555;
-    border-radius: 50%;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-  }
-
-  .fp-tonearm-left::after {
-    content: '';
-    position: absolute;
-    left: -6px;
-    top: 1px;
-    width: 12px;
-    height: 6px;
-    background: #888;
-    border-radius: 2px;
-  }
-
-  .fp-tonearm-right {
-    position: absolute;
-    top: -12px;
-    left: -25px;
-    width: 110px;
-    height: 8px;
-    background: linear-gradient(270deg, #666 0%, #444 50%, #333 100%);
-    border-radius: 4px;
-    transform-origin: left center;
-    transform: rotate(25deg);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-  }
-
-  .fp-tonearm-right::before {
-    content: '';
-    position: absolute;
-    left: -8px;
-    top: -4px;
-    width: 16px;
-    height: 16px;
-    background: #555;
-    border-radius: 50%;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-  }
-
-  .fp-tonearm-right::after {
-    content: '';
-    position: absolute;
-    right: -6px;
-    top: 1px;
-    width: 12px;
-    height: 6px;
-    background: #888;
-    border-radius: 2px;
-  }
-
-  .fp-audio-waveform {
+  .external-chat-container {
+    flex: 1;
     display: flex;
+    flex-direction: column;
+  }
+
+  .external-chat-placeholder {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    height: 140px;
-    padding: 0 1rem;
+    color: #666;
+    text-align: center;
+    padding: 2rem;
   }
+  .external-chat-placeholder svg { opacity: 0.3; margin-bottom: 1rem; }
+  .external-chat-placeholder .hint { font-size: 0.85rem; margin-top: 0.5rem; color: #444; }
 
-  .fp-audio-bar {
-    width: 5px;
-    background: linear-gradient(to top, #16a34a, #4ade80);
-    border-radius: 3px;
-    animation: fpBarPulse 0.8s ease-in-out infinite;
+  .external-chat-frame {
+    flex: 1;
+    border: none;
+    width: 100%;
   }
+  .external-chat-frame.hidden { display: none; }
 
-  .fp-audio-bar:nth-child(1) { height: 20%; animation-delay: 0s; }
-  .fp-audio-bar:nth-child(2) { height: 35%; animation-delay: 0.04s; }
-  .fp-audio-bar:nth-child(3) { height: 50%; animation-delay: 0.08s; }
-  .fp-audio-bar:nth-child(4) { height: 65%; animation-delay: 0.12s; }
-  .fp-audio-bar:nth-child(5) { height: 80%; animation-delay: 0.16s; }
-  .fp-audio-bar:nth-child(6) { height: 95%; animation-delay: 0.2s; }
-  .fp-audio-bar:nth-child(7) { height: 100%; animation-delay: 0.24s; }
-  .fp-audio-bar:nth-child(8) { height: 90%; animation-delay: 0.28s; }
-  .fp-audio-bar:nth-child(9) { height: 75%; animation-delay: 0.32s; }
-  .fp-audio-bar:nth-child(10) { height: 85%; animation-delay: 0.36s; }
-  .fp-audio-bar:nth-child(11) { height: 85%; animation-delay: 0.4s; }
-  .fp-audio-bar:nth-child(12) { height: 75%; animation-delay: 0.44s; }
-  .fp-audio-bar:nth-child(13) { height: 90%; animation-delay: 0.48s; }
-  .fp-audio-bar:nth-child(14) { height: 100%; animation-delay: 0.52s; }
-  .fp-audio-bar:nth-child(15) { height: 95%; animation-delay: 0.56s; }
-  .fp-audio-bar:nth-child(16) { height: 80%; animation-delay: 0.6s; }
-  .fp-audio-bar:nth-child(17) { height: 65%; animation-delay: 0.64s; }
-  .fp-audio-bar:nth-child(18) { height: 50%; animation-delay: 0.68s; }
-  .fp-audio-bar:nth-child(19) { height: 35%; animation-delay: 0.72s; }
-  .fp-audio-bar:nth-child(20) { height: 20%; animation-delay: 0.76s; }
-
-  @keyframes fpBarPulse {
-    0%, 100% { transform: scaleY(1); }
-    50% { transform: scaleY(0.4); }
-  }
-
-  /* Mobile responsive for fullpage turntables */
-  @media (max-width: 768px) {
-    .fp-turntables-row {
-      gap: 0.75rem;
-    }
-    .fp-vinyl-container {
-      width: 100px;
-      height: 100px;
-    }
-    .fp-vinyl-record {
-      width: 100px;
-      height: 100px;
-    }
-    .fp-vinyl-label {
-      width: 35px;
-      height: 35px;
-    }
-    .fp-vinyl-avatar {
-      width: 26px;
-      height: 26px;
-    }
-    .fp-tonearm-left, .fp-tonearm-right {
-      width: 50px;
-      height: 5px;
-      top: -6px;
-    }
-    .fp-tonearm-left { right: -12px; }
-    .fp-tonearm-right { left: -12px; }
-    .fp-audio-waveform {
-      height: 80px;
-      gap: 2px;
-    }
-    .fp-audio-bar {
-      width: 3px;
-    }
-    .fp-audio-dj-name {
-      font-size: 1.5rem;
-    }
-    .fp-audio-show-title {
-      font-size: 0.85rem;
-    }
+  /* Responsive */
+  @media (max-width: 900px) {
+    .fp-layout { flex-direction: column; }
+    .fp-sidebar { width: 100%; height: 300px; border-left: none; border-top: 1px solid #222; }
+    .fp-top-bar { right: 0; }
   }
 </style>
 
-<script define:vars={{ giphyApiKey }}>
-  const GIPHY_API_KEY = giphyApiKey;
-  const FRESHWAX_TWITCH_CHANNEL = 'freshwaxuk';
-  const FRESHWAX_YOUTUBE_CHANNEL = 'freshwaxlive';
-
-  // State
-  let currentUser = null;
-  let currentStream = null;
-  let userInfo = null;
-  let animationsEnabled = true;
-  let hlsPlayer = null;
-  let isVideoPlaying = false;
-  let currentHlsUrl = null;
-  let streamStartTime = null;
-  let durationInterval = null;
-  let currentTwitchChannel = null;
-  let currentYoutubeVideoId = null;
-
-  // Generate unique session ID for reaction deduplication
-  if (!sessionStorage.getItem('fullpageSessionId')) {
-    sessionStorage.setItem('fullpageSessionId', `fp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-  }
-  window.reactionSessionId = sessionStorage.getItem('fullpageSessionId');
-
-  // Emoji categories for picker
-  const emojiCategories = {
-    music: ['\u{1F3B5}', '\u{1F3B6}', '\u{1F3A7}', '\u{1F3A4}', '\u{1F3B9}', '\u{1F941}', '\u{1F3B8}', '\u{1F3BA}', '\u{1F3B7}', '\u{1F3BB}', '\u{1FA98}', '\u{1F3BC}', '\u{1F4FB}', '\u{1F4BF}', '\u{1F4C0}', '\u{1F50A}'],
-    reactions: ['\u{1F525}', '\u{1F4A5}', '\u2B50', '\u2728', '\u{1F4AB}', '\u{1F31F}', '\u26A1', '\u{1F4AF}', '\u{1F680}', '\u{1F4AA}', '\u{1F44A}', '\u{1F64C}', '\u{1F44F}', '\u{1F919}', '\u{1F918}', '\u{1F446}'],
-    faces: ['\u{1F600}', '\u{1F601}', '\u{1F602}', '\u{1F923}', '\u{1F60D}', '\u{1F973}', '\u{1F929}', '\u{1F60E}', '\u{1F97A}', '\u{1F62D}', '\u{1F480}', '\u{1FAE0}', '\u{1F92F}', '\u{1F608}', '\u{1F47B}', '\u{1F916}'],
-    vibes: ['\u2764\uFE0F', '\u{1F496}', '\u{1F497}', '\u{1F493}', '\u{1F495}', '\u{1F49C}', '\u{1F499}', '\u{1F49A}', '\u{1F49B}', '\u{1F9E1}', '\u{1F5A4}', '\u{1F90D}', '\u{1F49D}', '\u{1F498}', '\u{1F49E}', '\u2763\uFE0F']
-  };
-
-  const emojiReactionSets = {
-    heart: ['\u2764\uFE0F', '\u{1F496}', '\u{1F497}', '\u{1F493}', '\u{1F495}'],
-    fire: ['\u{1F525}', '\u{1F525}', '\u{1F525}', '\u{1F525}', '\u{1F525}'],
-    explosion: ['\u{1F4A5}', '\u{1F4A5}', '\u{1F4A5}', '\u{1F4A5}', '\u{1F4A5}'],
-    star: ['\u2B50', '\u{1F31F}', '\u2728', '\u2B50', '\u{1F31F}'],
-    bass: ['\u{1F50A}', '\u{1F50A}', '\u{1F509}', '\u{1F50A}', '\u{1F3B5}'],
-    fist: ['\u{1F44A}', '\u{1F44A}', '\u{1F44A}', '\u{1F44A}', '\u{1F44A}'],
-    rocket: ['\u{1F680}', '\u{1F680}', '\u{1F680}', '\u{1F680}', '\u{1F680}']
-  };
-
-  // Initialize Firebase Auth
-  async function initAuth() {
-    try {
-      const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
-      const { getAuth, onAuthStateChanged, browserLocalPersistence, setPersistence } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-
-      // Reuse existing app if already initialized
-      let app;
-      if (getApps().length > 0) {
-        app = getApp();
-        console.log('[Auth] Reusing existing Firebase app');
-      } else {
-        app = initializeApp({
-          apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-          authDomain: "freshwax-store.firebaseapp.com",
-          projectId: "freshwax-store"
-        });
-        console.log('[Auth] Initialized new Firebase app');
-      }
-
-      const auth = getAuth(app);
-      window.firebaseAuth = auth;
-
-      // Try to set persistence (may fail if storage is blocked)
-      try {
-        await setPersistence(auth, browserLocalPersistence);
-      } catch (persistError) {
-        console.warn('[Auth] Could not set persistence:', persistError.message);
-      }
-
-      // Check current user immediately (in case already logged in)
-      if (auth.currentUser) {
-        console.log('[Auth] User already logged in:', auth.currentUser.email);
-        currentUser = auth.currentUser;
-        updateChatUI();
-        await checkUserType(auth.currentUser.uid);
-      }
-
-      onAuthStateChanged(auth, async (user) => {
-        console.log('[Auth] State changed:', user ? user.email : 'signed out');
-        currentUser = user;
-        updateChatUI();
-        if (user) await checkUserType(user.uid);
-      });
-
-      // If no user after a short delay, try server-side session check
-      setTimeout(async () => {
-        if (!currentUser) {
-          console.log('[Auth] No Firebase user, checking server session...');
-          await checkServerSession();
-        }
-      }, 1500);
-    } catch (e) {
-      console.error('[Auth] Error:', e);
-      // Fallback to server session check
-      await checkServerSession();
-    }
-  }
-
-  // Check server-side session as fallback when Firebase auth is blocked
-  async function checkServerSession() {
-    try {
-      const response = await fetch('/api/auth/session', { credentials: 'include' });
-      const result = await response.json();
-      if (result.success && result.user) {
-        console.log('[Auth] Server session found:', result.user.email);
-        currentUser = {
-          uid: result.user.uid,
-          email: result.user.email,
-          displayName: result.user.displayName
-        };
-        updateChatUI();
-        await checkUserType(result.user.uid);
-      }
-    } catch (e) {
-      console.log('[Auth] No server session available');
-    }
-  }
-
-  async function checkUserType(userId) {
-    try {
-      const response = await fetch(`/api/get-user-type?uid=${userId}`);
-      const result = await response.json();
-      if (result.success) {
-        userInfo = {
-          isDj: result.roles?.dj === true || result.roles?.artist === true,
-          isAdmin: result.isAdmin || false,
-          isApproved: result.isApproved || false,
-          displayName: result.displayName || null
-        };
-        if ((userInfo.isDj && userInfo.isApproved) || userInfo.isAdmin) {
-          document.getElementById('djLobbyBtn')?.classList.remove('hidden');
-        }
-      }
-    } catch (e) {
-      console.log('[User] Could not check type');
-    }
-  }
-
-  function updateChatUI() {
-    const loginPrompt = document.getElementById('loginPrompt');
-    const chatForm = document.getElementById('chatForm');
-
-    if (currentUser) {
-      loginPrompt?.classList.add('hidden');
-      chatForm?.classList.remove('hidden');
-    } else {
-      loginPrompt?.classList.remove('hidden');
-      chatForm?.classList.add('hidden');
-    }
-  }
-
-  // Duration Timer
-  function formatDuration(seconds) {
-    if (seconds < 0) seconds = 0;
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    if (hrs > 0) {
-      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  function updateDurationDisplay() {
-    if (!streamStartTime) return;
-    const elapsed = Math.floor((Date.now() - streamStartTime) / 1000);
-    const npDurationEl = document.getElementById('npDuration');
-    if (npDurationEl) npDurationEl.textContent = formatDuration(elapsed);
-  }
-
-  function startDurationTimer(startedAt) {
-    if (durationInterval) clearInterval(durationInterval);
-    streamStartTime = startedAt ? new Date(startedAt).getTime() : Date.now();
-    // Show "DURATION" label for live streams (shows elapsed time)
-    const npDurationLabel = document.getElementById('npDurationLabel');
-    if (npDurationLabel) npDurationLabel.textContent = 'DURATION';
-    updateDurationDisplay();
-    durationInterval = setInterval(updateDurationDisplay, 1000);
-  }
-
-  function stopDurationTimer() {
-    if (durationInterval) {
-      clearInterval(durationInterval);
-      durationInterval = null;
-    }
-    streamStartTime = null;
-    const npDurationEl = document.getElementById('npDuration');
-    if (npDurationEl) npDurationEl.textContent = '--:--';
-    const npDurationLabel = document.getElementById('npDurationLabel');
-    if (npDurationLabel) npDurationLabel.textContent = 'DURATION';
-  }
-
-  // HLS Player Setup
-  function setupHlsPlayer(stream) {
-    const videoElement = document.getElementById('hlsVideoElement');
-    const hlsUrl = stream?.hlsUrl || stream?.videoStreamUrl || stream?.streamUrl;
-
-    if (!videoElement || !hlsUrl) return;
-    if (currentHlsUrl === hlsUrl && hlsPlayer) return;
-
-    console.log('[HLS] Setting up player for:', hlsUrl);
-    currentHlsUrl = hlsUrl;
-
-    if (hlsPlayer) {
-      hlsPlayer.destroy();
-      hlsPlayer = null;
-    }
-
-    const nativeHlsSupport = videoElement.canPlayType('application/vnd.apple.mpegurl');
-
-    if (nativeHlsSupport === 'probably') {
-      videoElement.src = hlsUrl;
-      attemptAutoplay(videoElement);
-    } else if (window.Hls && Hls.isSupported()) {
-      hlsPlayer = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 90,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60
-      });
-
-      hlsPlayer.loadSource(hlsUrl);
-      hlsPlayer.attachMedia(videoElement);
-
-      hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-        attemptAutoplay(videoElement);
-      });
-
-      hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
-        console.error('[HLS] Error:', data.type, data.details);
-        if (data.fatal) {
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            setTimeout(() => hlsPlayer?.loadSource(hlsUrl), 3000);
-          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            hlsPlayer.recoverMediaError();
-          }
-        }
-      });
-    }
-
-    videoElement.addEventListener('play', () => {
-      isVideoPlaying = true;
-      document.getElementById('playIcon')?.classList.add('hidden');
-      document.getElementById('pauseIcon')?.classList.remove('hidden');
-    });
-
-    videoElement.addEventListener('pause', () => {
-      isVideoPlaying = false;
-      document.getElementById('playIcon')?.classList.remove('hidden');
-      document.getElementById('pauseIcon')?.classList.add('hidden');
-    });
-  }
-
-  async function attemptAutoplay(videoElement) {
-    try {
-      videoElement.muted = false;
-      await videoElement.play();
-      isVideoPlaying = true;
-      document.getElementById('playIcon')?.classList.add('hidden');
-      document.getElementById('pauseIcon')?.classList.remove('hidden');
-    } catch (err) {
-      console.log('[HLS] Autoplay blocked');
-      document.getElementById('playIcon')?.classList.remove('hidden');
-      document.getElementById('pauseIcon')?.classList.add('hidden');
-    }
-  }
-
-  // Load Stream Status
-  async function loadStreamStatus() {
-    console.log('[Stream] Fetching status...');
-    try {
-      const response = await fetch(`/api/livestream/status?_t=${Date.now()}`);
-      const result = await response.json();
-      console.log('[Stream] Status result:', result.isLive ? 'LIVE' : 'OFFLINE', result.streams?.length || 0, 'streams');
-
-      if (result.isLive && result.streams && result.streams.length > 0) {
-        const stream = result.streams[0];
-        currentStream = stream;
-        window.currentStreamId = stream.slotId || stream.id;
-        window.isLiveStreamActive = true;
-
-        if (!durationInterval) {
-          startDurationTimer(stream.startedAt);
-        }
-
-        // Update UI
-        console.log('[Stream] Updating UI for live stream:', stream.title, 'by', stream.djName);
-        document.getElementById('liveBadge')?.classList.add('is-live');
-        document.getElementById('nowPlayingBar')?.classList.add('is-live');
-        const liveStatusEl = document.getElementById('liveStatusText');
-        if (liveStatusEl) liveStatusEl.textContent = 'LIVE';
-        const streamTitleEl = document.getElementById('streamTitle');
-        if (streamTitleEl) streamTitleEl.textContent = stream.title || 'Live Stream';
-        const djNameEl = document.getElementById('controlsDjName');
-        if (djNameEl) djNameEl.textContent = stream.djName || 'DJ';
-        const genreEl = document.getElementById('streamGenre');
-        if (genreEl) genreEl.textContent = stream.genre || 'Jungle / D&B';
-        const viewerEl = document.getElementById('viewerCount');
-        if (viewerEl) viewerEl.textContent = stream.currentViewers || 0;
-        const audioTitleEl = document.getElementById('audioTitle');
-        if (audioTitleEl) audioTitleEl.textContent = stream.title || 'Live Stream';
-        const audioDjEl = document.getElementById('audioDjName');
-        if (audioDjEl) audioDjEl.textContent = stream.djName || 'DJ';
-        const audioShowTitleEl = document.getElementById('audioShowTitle');
-        if (audioShowTitleEl) audioShowTitleEl.textContent = stream.title || 'Live Session';
-
-        // Update vinyl avatars and DJ avatar
-        console.log('[Stream] Setting DJ avatar:', stream.djAvatar);
-        const vinylAvatar1 = document.getElementById('vinylDjAvatar');
-        const vinylAvatar2 = document.getElementById('vinylDjAvatar2');
-        const djAvatarEl = document.getElementById('djAvatar');
-        const streamCoverEl = document.getElementById('streamCover');
-
-        if (stream.djAvatar) {
-          if (vinylAvatar1) {
-            vinylAvatar1.src = stream.djAvatar;
-            console.log('[Stream] Set vinylDjAvatar to:', stream.djAvatar);
-          }
-          if (vinylAvatar2) {
-            vinylAvatar2.src = stream.djAvatar;
-            console.log('[Stream] Set vinylDjAvatar2 to:', stream.djAvatar);
-          }
-          if (djAvatarEl) {
-            djAvatarEl.src = stream.djAvatar;
-            console.log('[Stream] Set djAvatar to:', stream.djAvatar);
-          }
-          if (streamCoverEl) {
-            streamCoverEl.src = stream.djAvatar;
-          }
-        } else {
-          console.log('[Stream] No djAvatar in stream data');
-        }
-
-        document.getElementById('offlineOverlay')?.classList.add('hidden');
-
-        // Check if this is placeholder mode (no actual video stream)
-        const isPlaceholderMode = stream.broadcastMode === 'placeholder' || stream.broadcastMode === 'audio';
-
-        // Only try HLS if not in placeholder mode and we have a valid HLS URL
-        const isVideoStream = !isPlaceholderMode && (
-          stream.hlsUrl ||
-          stream.streamSource === 'red5' ||
-          (stream.streamType !== 'audio' && !stream.audioStreamUrl?.includes('8000'))
-        );
-
-        if (isVideoStream && stream.hlsUrl) {
-          document.getElementById('videoPlayer')?.classList.remove('hidden');
-          document.getElementById('audioPlayer')?.classList.add('hidden');
-          setupHlsPlayer(stream);
-        } else {
-          // Show audio player for placeholder/audio modes
-          document.getElementById('audioPlayer')?.classList.remove('hidden');
-          document.getElementById('videoPlayer')?.classList.add('hidden');
-
-          // Set up audio - use relay source if available, otherwise Icecast
-          const audioElement = document.getElementById('audioElement');
-          let audioUrl = 'https://icecast.freshwax.co.uk/live';
-
-          // Check for relay source
-          if (stream.isRelay && stream.relaySource?.url) {
-            audioUrl = stream.relaySource.url;
-            console.log('[Audio] Using relay source:', stream.relaySource.stationName);
-          } else if (stream.audioStreamUrl) {
-            audioUrl = stream.audioStreamUrl;
-          }
-
-          window.currentIcecastUrl = audioUrl;
-
-          if (audioElement) {
-            audioElement.src = audioUrl;
-            audioElement.load();
-            console.log('[Audio] Stream loaded:', audioUrl);
-
-            // Try autoplay (muted first for browser policy)
-            try {
-              audioElement.muted = true;
-              await audioElement.play();
-              console.log('[Audio] Muted autoplay successful');
-              audioElement.muted = false;
-              console.log('[Audio] Unmuted, volume:', audioElement.volume);
-
-              // Update play button state
-              const playIcon = document.getElementById('playIcon');
-              const pauseIcon = document.getElementById('pauseIcon');
-              const playBtn = document.getElementById('playPauseBtn');
-              playIcon?.classList.add('hidden');
-              pauseIcon?.classList.remove('hidden');
-              playBtn?.classList.add('playing');
-            } catch (err) {
-              console.log('[Audio] Autoplay blocked, user must click play:', err.message);
-            }
-          }
-        }
-
-        setupExternalChats(stream);
-        registerAsListener();
-        startHeartbeat();
-      } else {
-        // OFFLINE - try to start playlist auto-play
-        console.log('[Stream] No live stream, checking playlist...');
-        stopDurationTimer();
-        window.isLiveStreamActive = false;
-
-        document.getElementById('liveBadge')?.classList.remove('is-live');
-        document.getElementById('nowPlayingBar')?.classList.remove('is-live');
-        const liveStatusEl = document.getElementById('liveStatusText');
-        if (liveStatusEl) liveStatusEl.textContent = 'OFFLINE';
-
-        // Check if playlist manager is available and try auto-play
-        const playlistManager = window.playlistManager;
-        if (playlistManager) {
-          console.log('[Stream] Playlist manager found, attempting auto-play...');
-
-          // Show playlist player container
-          const playlistPlayer = document.getElementById('playlistPlayer');
-          const offlineOverlay = document.getElementById('offlineOverlay');
-
-          if (playlistManager.queue?.length > 0 || playlistManager.isPlaying) {
-            // Already has items or playing - show playlist
-            if (offlineOverlay) offlineOverlay.classList.add('hidden');
-            if (playlistPlayer) playlistPlayer.classList.remove('hidden');
-
-            const djNameEl = document.getElementById('controlsDjName');
-            if (djNameEl) djNameEl.textContent = 'Auto-Play';
-            const genreEl = document.getElementById('streamGenre');
-            if (genreEl) genreEl.textContent = 'Playlist';
-          } else {
-            // Try to start auto-play from history
-            const started = await playlistManager.startAutoPlay?.();
-            if (started) {
-              console.log('[Stream] Auto-play started from history');
-              if (offlineOverlay) offlineOverlay.classList.add('hidden');
-              if (playlistPlayer) playlistPlayer.classList.remove('hidden');
-
-              const djNameEl = document.getElementById('controlsDjName');
-              if (djNameEl) djNameEl.textContent = 'Auto-Play';
-              const genreEl = document.getElementById('streamGenre');
-              if (genreEl) genreEl.textContent = 'Playlist';
-            } else {
-              // No history to auto-play
-              const djNameEl = document.getElementById('controlsDjName');
-              if (djNameEl) djNameEl.textContent = '--';
-              const genreEl = document.getElementById('streamGenre');
-              if (genreEl) genreEl.textContent = 'Offline';
-            }
-          }
-        } else {
-          // No playlist manager yet - show waiting state
-          const djNameEl = document.getElementById('controlsDjName');
-          if (djNameEl) djNameEl.textContent = '--';
-          const genreEl = document.getElementById('streamGenre');
-          if (genreEl) genreEl.textContent = 'Offline';
-        }
-
-        setupExternalChats(null);
-      }
-    } catch (e) {
-      console.error('[Stream] Error loading:', e);
-    }
-  }
-
-  // External Chats (Twitch & YouTube)
-  function setupExternalChats(stream) {
-    const host = window.location.hostname;
-    const twitchFrame = document.getElementById('twitchChatFrame');
-    const twitchPlaceholder = document.getElementById('twitchChatPlaceholder');
-    const youtubeFrame = document.getElementById('youtubeChatFrame');
-    const youtubePlaceholder = document.getElementById('youtubeChatPlaceholder');
-
-    if (stream) {
-      // Twitch - need multiple parent domains for embed to work
-      const twitchChannel = stream.twitchChannel || stream.twitchUsername || FRESHWAX_TWITCH_CHANNEL;
-      currentTwitchChannel = twitchChannel.trim().toLowerCase();
-      // Include all possible parent domains
-      const parentDomains = ['freshwax.co.uk', 'www.freshwax.co.uk', 'freshwax.pages.dev', host].filter((v, i, a) => a.indexOf(v) === i);
-      const parentParams = parentDomains.map(d => `parent=${d}`).join('&');
-      const twitchChatUrl = `https://www.twitch.tv/embed/${currentTwitchChannel}/chat?${parentParams}&darkpopout`;
-      console.log('[Twitch] Embed URL:', twitchChatUrl);
-      if (twitchFrame) {
-        twitchFrame.src = twitchChatUrl;
-        twitchPlaceholder?.classList.add('hidden');
-      }
-
-      // YouTube
-      const youtubeVideoId = stream?.youtubeLiveId || stream?.youtubeIntegration?.videoId;
-      console.log('[YouTube] Setting up chat, videoId:', youtubeVideoId, 'stream.youtubeLiveId:', stream?.youtubeLiveId);
-      if (youtubeVideoId) {
-        currentYoutubeVideoId = youtubeVideoId;
-        if (youtubeFrame) {
-          youtubeFrame.src = `https://www.youtube.com/live_chat?v=${currentYoutubeVideoId}&embed_domain=${host}`;
-          youtubePlaceholder?.classList.add('hidden');
-        }
-      } else {
-        if (youtubePlaceholder) {
-          youtubePlaceholder.innerHTML = `
-            <svg class="placeholder-icon youtube-placeholder-icon" viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-            </svg>
-            <p>YouTube chat</p>
-            <a href="https://www.youtube.com/@${FRESHWAX_YOUTUBE_CHANNEL}/live" target="_blank" style="color: #ff0000; font-size: 0.65rem; margin-top: 0.5rem;">Watch on YouTube</a>
-          `;
-        }
-      }
-    } else {
-      currentTwitchChannel = null;
-      currentYoutubeVideoId = null;
-      if (twitchFrame) twitchFrame.src = '';
-      if (youtubeFrame) youtubeFrame.src = '';
-      twitchPlaceholder?.classList.remove('hidden');
-      youtubePlaceholder?.classList.remove('hidden');
-    }
-  }
-
-  // Listener Registration - supports both logged in and anonymous viewers
-  function getOrCreateSessionId() {
-    let sessionId = sessionStorage.getItem('viewerSessionId');
-    if (!sessionId) {
-      sessionId = 'anon_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-      sessionStorage.setItem('viewerSessionId', sessionId);
-    }
-    return sessionId;
-  }
-
-  async function registerAsListener() {
-    if (!currentStream?.id) return;
-
-    // Support anonymous viewers with session ID
-    const userId = currentUser?.uid || getOrCreateSessionId();
-    const userName = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Viewer';
-    const avatarUrl = currentUser?.photoURL || null;
-
-    try {
-      const resp = await fetch('/api/livestream/listeners', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'join',
-          streamId: currentStream.id,
-          userId,
-          userName,
-          avatarUrl
-        })
-      });
-      const data = await resp.json();
-      // Update viewer count from response
-      if (data.activeViewers !== undefined) {
-        const viewerEl = document.getElementById('viewerCount');
-        if (viewerEl) viewerEl.textContent = data.activeViewers;
-      }
-    } catch (e) { console.log('[Listener] Could not register'); }
-  }
-
-  // Setup Pusher presence channel for automatic viewer tracking
-  // This replaces Firebase heartbeat polling with Pusher's built-in presence
-  let presenceChannel = null;
-
-  async function setupPresenceChannel(streamId) {
-    if (!streamId || presenceChannel) return;
-
-    const config = window.PUSHER_CONFIG;
-    if (!config?.key) {
-      console.log('[Presence] No Pusher config');
-      return;
-    }
-
-    // Wait for Pusher to be loaded
-    if (!window.Pusher) {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
-    }
-
-    const userId = currentUser?.uid || getOrCreateSessionId();
-    const userName = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'Viewer';
-    const userAvatar = currentUser?.photoURL || '';
-
-    // Create presence-enabled Pusher instance
-    const presencePusher = new window.Pusher(config.key, {
-      cluster: config.cluster || 'eu',
-      forceTLS: true,
-      authEndpoint: '/api/pusher/auth',
-      auth: {
-        headers: {
-          'x-user-id': userId,
-          'x-user-name': userName,
-          'x-user-avatar': userAvatar
-        }
-      }
-    });
-
-    const presenceChannelName = `presence-stream-${streamId}`;
-    presenceChannel = presencePusher.subscribe(presenceChannelName);
-    window.presenceChannel = presenceChannel;
-
-    // Update viewer count from presence members
-    function updateViewerCount() {
-      const count = presenceChannel.members?.count || 0;
-      const viewerEl = document.getElementById('viewerCount');
-      if (viewerEl) viewerEl.textContent = count;
-      console.log('[Presence] Viewer count:', count);
-    }
-
-    presenceChannel.bind('pusher:subscription_succeeded', (members) => {
-      console.log('[Presence] Subscribed, members:', members.count);
-      updateViewerCount();
-    });
-
-    presenceChannel.bind('pusher:member_added', (member) => {
-      console.log('[Presence] Member joined:', member.info?.name);
-      updateViewerCount();
-    });
-
-    presenceChannel.bind('pusher:member_removed', (member) => {
-      console.log('[Presence] Member left:', member.info?.name);
-      updateViewerCount();
-    });
-
-    console.log('[Presence] Subscribed to:', presenceChannelName);
-  }
-
-  // Heartbeat interval
-  let heartbeatInterval = null;
-
-  // Start heartbeat - register and keep viewer count accurate
-  function startHeartbeat() {
-    if (!currentStream?.id) return;
-
-    // Setup presence channel for real-time updates
-    setupPresenceChannel(currentStream.id);
-
-    // Also register via listeners endpoint (triggers Pusher broadcast)
-    registerAsListener();
-
-    // Send heartbeat every 60 seconds
-    heartbeatInterval = setInterval(async () => {
-      if (!currentStream?.id) return;
-      const userId = currentUser?.uid || getOrCreateSessionId();
-      try {
-        const resp = await fetch('/api/livestream/listeners', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'heartbeat',
-            streamId: currentStream.id,
-            userId,
-            userName: currentUser?.displayName || 'Viewer'
-          })
-        });
-        const data = await resp.json();
-        if (data.activeViewers !== undefined) {
-          const viewerEl = document.getElementById('viewerCount');
-          if (viewerEl) viewerEl.textContent = data.activeViewers;
-        }
-      } catch (e) { /* silent */ }
-    }, 60000);
-  }
-
-  // Leave stream when closing page
-  window.addEventListener('beforeunload', () => {
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
-    }
-    if (!currentStream?.id) return;
-    const userId = currentUser?.uid || getOrCreateSessionId();
-    navigator.sendBeacon('/api/livestream/listeners', JSON.stringify({
-      action: 'leave',
-      streamId: currentStream.id,
-      userId
-    }));
-  });
-
-  // Floating Emoji Animation
-  function createFloatingEmoji(startX, startY, emojiList) {
-    // Only show emojis on live pages (ViewTransitions keeps scripts alive across pages)
-    const path = window.location.pathname;
-    if (!path.startsWith('/live') && !path.includes('/account/dj-lobby')) {
-      return;
-    }
-
-    if (!animationsEnabled) return;
-
-    const emoji = document.createElement('div');
-    const emojis = emojiList || ['\u2764\uFE0F'];
-    emoji.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-
-    const spreadX = (Math.random() - 0.5) * 60;
-    const wiggleAmount = 20 + Math.random() * 30;
-    const duration = 2000 + Math.random() * 1000;
-    const fontSize = 28 + Math.floor(Math.random() * 20);
-    const posX = startX + spreadX;
-    const posY = startY;
-
-    Object.assign(emoji.style, {
-      position: 'fixed',
-      left: posX + 'px',
-      top: posY + 'px',
-      fontSize: fontSize + 'px',
-      lineHeight: '1',
-      pointerEvents: 'none',
-      zIndex: '99999',
-      opacity: '1',
-      transform: 'scale(0)',
-      margin: '0',
-      padding: '0'
-    });
-
-    document.body.appendChild(emoji);
-
-    const startTime = performance.now();
-
-    function animate(time) {
-      const elapsed = time - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      const moveY = easeOut * 350;
-      const wiggle = Math.sin(progress * Math.PI * 4) * wiggleAmount * (1 - progress);
-
-      let scale = 1;
-      if (progress < 0.1) scale = progress * 12;
-      else if (progress < 0.2) scale = 1.2 - (progress - 0.1) * 2;
-      else scale = 1 - (progress - 0.2) * 0.3;
-
-      const opacity = progress > 0.6 ? 1 - (progress - 0.6) / 0.4 : 1;
-
-      emoji.style.left = (posX + wiggle) + 'px';
-      emoji.style.top = (posY - moveY) + 'px';
-      emoji.style.opacity = String(opacity);
-      emoji.style.transform = 'scale(' + scale + ')';
-
-      if (progress < 1) requestAnimationFrame(animate);
-      else emoji.remove();
-    }
-
-    requestAnimationFrame(animate);
-  }
-
-  function triggerReactionBurst(emojiList) {
-    // Only show emojis on live pages (ViewTransitions keeps scripts alive across pages)
-    const path = window.location.pathname;
-    if (!path.startsWith('/live') && !path.includes('/account/dj-lobby')) {
-      return;
-    }
-
-    // Scatter effect - emojis appear at random positions across the screen
-    const numEmojis = 1;
-    for (let i = 0; i < numEmojis; i++) {
-      setTimeout(() => {
-        // Random x position across screen width (with padding)
-        const x = 100 + Math.random() * (window.innerWidth - 200);
-        // Random y position in lower half of screen
-        const y = window.innerHeight * 0.4 + Math.random() * (window.innerHeight * 0.5);
-        createFloatingEmoji(x, y, emojiList);
-      }, i * 100);
-    }
-  }
-
-  // Expose globally for Pusher broadcasts
-  window.triggerReactionBurst = triggerReactionBurst;
-  window.createFloatingEmoji = createFloatingEmoji;
-
-  // Chat Functions
-  async function sendChatMessage() {
-    const chatInput = document.getElementById('chatInput');
-    const message = chatInput?.value.trim();
-
-    console.log('[Chat] Send attempt:', { message, hasUser: !!currentUser, hasStream: !!currentStream, windowStreamId: window.currentStreamId });
-
-    if (!message) {
-      console.log('[Chat] No message to send');
-      return;
-    }
-
-    if (!currentUser) {
-      console.log('[Chat] Not logged in');
-      alert('Please sign in to chat');
-      return;
-    }
-
-    // Use playlist-global as fallback for offline/playlist mode
-    const streamId = currentStream?.slotId || currentStream?.id || window.currentStreamId || 'playlist-global';
-    console.log('[Chat] Using streamId:', streamId);
-
-    chatInput.value = '';
-
-    try {
-      const response = await fetch('/api/livestream/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          streamId: streamId,
-          userId: currentUser.uid,
-          userName: userInfo?.displayName || currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-          message: message,
-          type: 'text'
-        })
-      });
-      console.log('[Chat] Send response:', response.ok);
-    } catch (e) {
-      console.error('[Chat] Send error:', e);
-    }
-  }
-
-  // Override global renderChatMessages from live-stream.js - MUST be defined before chat polling starts
-  window.fullpageRenderChatMessages = function(messages) {
-    const chatMessages = document.getElementById('chatMessages');
-    if (!chatMessages || !messages.length) return;
-
-    // Sort by timestamp/createdAt ascending (oldest first at top)
-    messages.sort((a, b) => {
-      // Try Firestore timestamp format first
-      let aTime = a.timestamp?._seconds || a.timestamp?.seconds || 0;
-      let bTime = b.timestamp?._seconds || b.timestamp?.seconds || 0;
-
-      // Fall back to createdAt ISO string
-      if (!aTime && a.createdAt) aTime = new Date(a.createdAt).getTime() / 1000;
-      if (!bTime && b.createdAt) bTime = new Date(b.createdAt).getTime() / 1000;
-
-      return aTime - bTime;
-    });
-
-    chatMessages.innerHTML = messages.map(msg => {
-      let time = '';
-      if (msg.timestamp) {
-        const ts = msg.timestamp._seconds || msg.timestamp.seconds;
-        if (ts) {
-          time = new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
-      } else if (msg.createdAt) {
-        // Handle ISO string format from API
-        time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      }
-
-      let content = '';
-      if ((msg.type === 'giphy' || msg.type === 'gif') && msg.giphyUrl) {
-        content = `<img src="${msg.giphyUrl}" class="chat-message-gif" alt="GIF" loading="lazy" />`;
-      } else {
-        content = `<div class="chat-message-text">${escapeHtml(msg.message || '')}</div>`;
-      }
-
-      // Check for user avatar (userAvatar or profilePhoto from API)
-      const avatarUrl = msg.userAvatar || msg.profilePhoto || msg.photoURL;
-      const avatarHtml = avatarUrl
-        ? `<img src="${avatarUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />`
-        : (msg.userName || 'U')[0].toUpperCase();
-
-      // Plus member crown badge
-      const crownBadge = msg.isPro ? '<svg viewBox="0 0 24 24" fill="#f59e0b" width="12" height="12" style="margin-left: 3px; vertical-align: middle;"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>' : '';
-
-      return `
-        <div class="chat-message">
-          <div class="chat-message-avatar${msg.isPro ? ' is-pro' : ''}">${avatarHtml}</div>
-          <div class="chat-message-content">
-            <div class="chat-message-header">
-              <span class="chat-message-name" style="display: inline-flex; align-items: center;">${escapeHtml(msg.userName || 'User')}${crownBadge}</span>
-              <span class="chat-message-time">${time}</span>
-            </div>
-            ${content}
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    // Also update expanded chat if open
-    const expandedMessages = document.getElementById('expandedChatMessages');
-    if (expandedMessages) {
-      expandedMessages.innerHTML = chatMessages.innerHTML;
-      expandedMessages.scrollTop = expandedMessages.scrollHeight;
-    }
-
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-  };
-
-  // Chat messages via Pusher (no polling - saves ~24k Firebase reads/hour)
-  let chatMessages = []; // Store messages for deduplication
-  let chatSubscribed = false;
-
-  // Append a single message to the chat (used for Pusher real-time updates)
-  function appendChatMessage(msg) {
-    const chatMessagesEl = document.getElementById('chatMessages');
-    if (!chatMessagesEl) return;
-
-    // Check for duplicate (by id or timestamp+user)
-    const msgId = msg.id || `${msg.createdAt}-${msg.userId}`;
-    if (chatMessages.some(m => (m.id || `${m.createdAt}-${m.userId}`) === msgId)) {
-      return; // Skip duplicate
-    }
-    chatMessages.push(msg);
-
-    // Format time
-    let time = '';
-    if (msg.timestamp) {
-      const ts = msg.timestamp._seconds || msg.timestamp.seconds;
-      if (ts) {
-        time = new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      }
-    } else if (msg.createdAt) {
-      time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-
-    // Format content
-    let content = '';
-    if ((msg.type === 'giphy' || msg.type === 'gif') && msg.giphyUrl) {
-      content = `<img src="${msg.giphyUrl}" class="chat-message-gif" alt="GIF" loading="lazy" />`;
-    } else {
-      content = `<div class="chat-message-text">${escapeHtml(msg.message || '')}</div>`;
-    }
-
-    // Avatar
-    const avatarUrl = msg.userAvatar || msg.profilePhoto || msg.photoURL;
-    const avatarHtml = avatarUrl
-      ? `<img src="${avatarUrl}" alt="" style="width: 100%; height: 100%; object-fit: cover;" />`
-      : (msg.userName || 'U')[0].toUpperCase();
-
-    // Plus member crown badge
-    const crownBadge = msg.isPro ? '<svg viewBox="0 0 24 24" fill="#f59e0b" width="12" height="12" style="margin-left: 3px; vertical-align: middle;"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>' : '';
-
-    const messageHtml = `
-      <div class="chat-message">
-        <div class="chat-message-avatar${msg.isPro ? ' is-pro' : ''}">${avatarHtml}</div>
-        <div class="chat-message-content">
-          <div class="chat-message-header">
-            <span class="chat-message-name" style="display: inline-flex; align-items: center;">${escapeHtml(msg.userName || 'User')}${crownBadge}</span>
-            <span class="chat-message-time">${time}</span>
-          </div>
-          ${content}
-        </div>
-      </div>
-    `;
-
-    chatMessagesEl.insertAdjacentHTML('beforeend', messageHtml);
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-
-    // Update expanded chat if open
-    const expandedMessages = document.getElementById('expandedChatMessages');
-    if (expandedMessages) {
-      expandedMessages.insertAdjacentHTML('beforeend', messageHtml);
-      expandedMessages.scrollTop = expandedMessages.scrollHeight;
-    }
-  }
-
-  async function subscribeToChatMessages() {
-    if (chatSubscribed) return; // Already subscribed
-
-    const streamId = currentStream?.slotId || currentStream?.id || 'playlist-global';
-    console.log('[Chat] Subscribing to Pusher chat for stream:', streamId);
-
-    // Initial fetch only - get existing messages once
-    try {
-      const response = await fetch(`/api/livestream/chat?streamId=${streamId}&limit=50`);
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.messages) {
-          chatMessages = result.messages; // Store for deduplication
-          window.fullpageRenderChatMessages(result.messages);
-        }
-      }
-    } catch (e) {
-      console.log('[Chat] Initial fetch error:', e.message);
-    }
-
-    // Subscribe to Pusher for real-time messages (no polling!)
-    const config = window.PUSHER_CONFIG;
-    if (!config?.key) {
-      console.log('[Chat] Pusher config not ready, will retry...');
-      setTimeout(() => subscribeToChatMessages(), 1000);
-      return;
-    }
-
-    // Ensure Pusher is loaded
-    if (!window.Pusher) {
-      try {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      } catch (e) {
-        console.error('[Chat] Failed to load Pusher:', e);
-        return;
-      }
-    }
-
-    // Create or reuse Pusher instance
-    if (!window.fullpagePusher) {
-      window.fullpagePusher = new window.Pusher(config.key, {
-        cluster: config.cluster,
-        forceTLS: true
-      });
-    }
-
-    const channelName = `stream-${streamId}`;
-    let chatChannel = window.fullpagePusher.channel(channelName);
-
-    if (!chatChannel) {
-      chatChannel = window.fullpagePusher.subscribe(channelName);
-    }
-
-    // Listen for new messages via Pusher
-    chatChannel.bind('new-message', (data) => {
-      console.log('[Chat] Received message via Pusher:', data);
-      appendChatMessage(data);
-    });
-
-    chatSubscribed = true;
-    console.log('[Chat] Subscribed to Pusher channel:', channelName);
-  }
-
-  function stopChatPolling() {
-    // No polling to stop - Pusher handles it
-    chatSubscribed = false;
-  }
-
-  // Subscribe to Pusher for reactions from other users
-  let reactionChannel = null;
-
-  async function subscribeToReactions() {
-    const config = window.PUSHER_CONFIG;
-    if (!config?.key) {
-      console.log('[Reactions] Pusher config not ready');
-      return;
-    }
-
-    // Load Pusher if not loaded
-    if (!window.Pusher) {
-      try {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      } catch (e) {
-        console.error('[Reactions] Failed to load Pusher:', e);
-        return;
-      }
-    }
-
-    // Create or reuse Pusher instance
-    if (!window.fullpagePusher) {
-      window.fullpagePusher = new window.Pusher(config.key, {
-        cluster: config.cluster,
-        forceTLS: true
-      });
-    }
-
-    // Get stream ID for reactions
-    const streamId = currentStream?.slotId || currentStream?.id || 'playlist-global';
-    const channelName = `stream-${streamId}`;
-
-    // Unsubscribe from previous channel
-    if (reactionChannel) {
-      reactionChannel.unbind_all();
-      window.fullpagePusher.unsubscribe(reactionChannel.name);
-    }
-
-    // Subscribe to reaction channel
-    reactionChannel = window.fullpagePusher.subscribe(channelName);
-
-    reactionChannel.bind('reaction', (data) => {
-      console.log('[Reactions] Received from Pusher:', data);
-
-      // Skip if animations disabled or this is our own reaction
-      if (!window.emojiAnimationsEnabled) return;
-      if (data.sessionId === window.reactionSessionId) return;
-      if (data.userId === currentUser?.uid) return;
-
-      // Trigger floating emoji animation
-      const emojiList = data.emoji?.split(',') || ['❤️'];
-      triggerReactionBurst(emojiList);
-    });
-
-    // Listen for shoutouts from other viewers
-    reactionChannel.bind('shoutout', (data) => {
-      console.log('[Shoutout] Received from Pusher:', data);
-      if (typeof window.handleIncomingShoutout === 'function') {
-        window.handleIncomingShoutout(data);
-      }
-    });
-
-    // Listen for like count updates from all reactions
-    reactionChannel.bind('like-update', (data) => {
-      console.log('[Reactions] Like count update from Pusher:', data);
-      if (data.totalLikes !== undefined) {
-        const likeCountEl = document.getElementById('likeCount');
-        if (likeCountEl) likeCountEl.textContent = data.totalLikes;
-      }
-    });
-
-    // Listen for viewer count updates in real-time
-    reactionChannel.bind('viewer-update', (data) => {
-      console.log('[Viewers] Count update from Pusher:', data);
-      if (data.count !== undefined) {
-        const viewerEl = document.getElementById('viewerCount');
-        if (viewerEl) viewerEl.textContent = data.count;
-      }
-    });
-
-    console.log('[Reactions] Subscribed to channel:', channelName);
-
-    // Enable emoji animations by default when subscribed
-    window.emojiAnimationsEnabled = true;
-  }
-
-  // Subscribe to live-status channel for DJ stream start/end
-  function setupLiveStatusListener() {
-    const config = window.PUSHER_CONFIG;
-    if (!config?.key || !window.fullpagePusher) {
-      console.log('[LiveStatus] Pusher not ready, retrying...');
-      setTimeout(setupLiveStatusListener, 2000);
-      return;
-    }
-
-    const liveStatusChannel = window.fullpagePusher.subscribe('live-status');
-
-    liveStatusChannel.bind('stream-started', (data) => {
-      console.log('[LiveStatus] DJ went live:', data.djName);
-      // Stop playlist completely when DJ goes live
-      const playlistManager = window.playlistManager;
-      if (playlistManager) {
-        console.log('[Playlist] Stopping for live stream');
-        playlistManager.wasPausedForStream = playlistManager.isPlaying;
-        playlistManager.pause?.();
-        playlistManager.clearQueue?.();
-        // Hide playlist player, show video player
-        const embedPlayer = document.getElementById('embedPlayer');
-        if (embedPlayer) embedPlayer.classList.add('hidden');
-        const videoPlayer = document.getElementById('videoPlayer');
-        if (videoPlayer) videoPlayer.classList.remove('hidden');
-        window.isLiveStreamActive = true;
-      }
-      // Trigger live-stream.js to fetch stream and load HLS player
-      if (typeof window.checkLiveStatus === 'function') {
-        window.checkLiveStatus();
-      }
-    });
-
-    liveStatusChannel.bind('stream-ended', (data) => {
-      console.log('[LiveStatus] Stream ended:', data.djName);
-      // Resume playlist after 10 second delay
-      setTimeout(() => {
-        const playlistManager = window.playlistManager;
-        if (playlistManager?.wasPausedForStream) {
-          console.log('[Playlist] Resuming after stream ended (10s delay)');
-          playlistManager.wasPausedForStream = false;
-          playlistManager.play?.();
-        }
-      }, 10000);
-    });
-
-    console.log('[LiveStatus] Subscribed to live-status channel');
-  }
-
-  // Setup live status listener after Pusher is ready
-  setTimeout(setupLiveStatusListener, 2000);
-
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  // Emoji Picker - uses emojiGridInline (not emojiGrid which is in the modal)
-  function renderEmojis(category) {
-    console.log('[Emoji] renderEmojis called with category:', category);
-    const emojiGrid = document.getElementById('emojiGridInline');
-    console.log('[Emoji] Grid found:', !!emojiGrid);
-    if (!emojiGrid) return;
-
-    emojiGrid.innerHTML = '';
-
-    const emojis = emojiCategories?.[category] || emojiCategories?.music || [];
-    console.log('[Emoji] Rendering', emojis.length, 'emojis for category:', category);
-
-    if (emojis.length === 0) {
-      emojiGrid.innerHTML = '<p style="color: #888; text-align: center; padding: 1rem;">No emojis found</p>';
-      return;
-    }
-
-    emojis.forEach(emoji => {
-      const btn = document.createElement('button');
-      btn.textContent = emoji;
-      btn.addEventListener('click', () => {
-        const chatInput = document.getElementById('chatInput');
-        if (chatInput) chatInput.value += emoji;
-        document.getElementById('emojiPicker')?.style.setProperty('display', 'none');
-        chatInput?.focus();
-      });
-      emojiGrid.appendChild(btn);
-    });
-    console.log('[Emoji] Grid children count:', emojiGrid.children.length);
-  }
-
-  // Giphy Search - uses giphyGridInline (not giphyGrid which is in the modal)
-  let giphySearchTimeout = null;
-
-  async function searchGiphy(query) {
-    const giphyGrid = document.getElementById('giphyGridInline');
-    if (!GIPHY_API_KEY || !giphyGrid) return;
-
-    giphyGrid.innerHTML = '<p class="giphy-hint">Loading...</p>';
-
-    try {
-      const url = query.trim()
-        ? `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=18&rating=pg-13`
-        : `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=18&rating=pg-13`;
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.data && data.data.length > 0) {
-        giphyGrid.innerHTML = data.data.map(gif =>
-          `<img src="${gif.images.fixed_height_small.url}" alt="${gif.title}" data-url="${gif.images.fixed_height.url}" data-id="${gif.id}" />`
-        ).join('');
-
-        giphyGrid.querySelectorAll('img').forEach(img => {
-          img.addEventListener('click', () => sendGif(img.dataset.url, img.dataset.id));
-        });
-      } else {
-        giphyGrid.innerHTML = '<p class="giphy-hint">No GIFs found</p>';
-      }
-    } catch (error) {
-      console.error('[Giphy] Error:', error);
-      giphyGrid.innerHTML = '<p class="giphy-hint">Failed to load GIFs</p>';
-    }
-  }
-
-  async function sendGif(giphyUrl, giphyId) {
-    document.getElementById('giphyPicker')?.style.setProperty('display', 'none');
-
-    if (!currentUser) {
-      alert('Please sign in to send GIFs');
-      return;
-    }
-
-    // Use playlist-global fallback for offline/playlist mode (same as other chat functions)
-    const streamId = currentStream?.slotId || currentStream?.id || window.currentStreamId || 'playlist-global';
-
-    try {
-      console.log('[GIF] Sending to stream:', streamId, 'URL:', giphyUrl);
-      const response = await fetch('/api/livestream/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          streamId: streamId,
-          userId: currentUser.uid,
-          userName: userInfo?.displayName || currentUser.displayName || 'User',
-          message: '[GIF]',
-          type: 'giphy',
-          giphyUrl,
-          giphyId
-        })
-      });
-      console.log('[GIF] Send response:', response.ok, response.status);
-    } catch (e) {
-      console.error('[GIF] Send error:', e);
-    }
-  }
-
-  // Expanded Chat Modal
-  function openExpandedChat(chatType) {
-    const host = window.location.hostname;
-    const modal = document.getElementById('expandedChatModal');
-    const title = document.getElementById('expandedChatTitle');
-    const body = document.getElementById('expandedChatBody');
-
-    let titleText = '';
-    let content = '';
-    let titleClass = '';
-
-    // Include all possible parent domains for Twitch
-    const parentDomains = ['freshwax.co.uk', 'www.freshwax.co.uk', 'freshwax.pages.dev', host].filter((v, i, a) => a.indexOf(v) === i);
-    const parentParams = parentDomains.map(d => `parent=${d}`).join('&');
-
-    switch(chatType) {
-      case 'freshwax':
-        titleText = 'Fresh Wax Chat';
-        titleClass = 'freshwax';
-        // Clone the Fresh Wax chat messages into expanded view
-        const originalMessages = document.getElementById('chatMessages');
-        if (originalMessages) {
-          content = `
-            <div class="expanded-freshwax-chat">
-              <div class="expanded-chat-messages" id="expandedChatMessages">
-                ${originalMessages.innerHTML}
-              </div>
-              <div class="expanded-chat-input">
-                <input type="text" id="expandedChatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
-                <button id="expandedSendBtn">
-                  <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                </button>
-              </div>
-            </div>`;
-        } else {
-          content = '<div style="padding: 2rem; text-align: center; color: #888;"><p>Chat unavailable</p></div>';
-        }
-        break;
-      case 'twitch':
-        titleText = 'Twitch Chat';
-        titleClass = 'twitch';
-        if (currentTwitchChannel) {
-          content = `<iframe src="https://www.twitch.tv/embed/${currentTwitchChannel}/chat?${parentParams}&darkpopout" style="width:100%;height:100%;border:none;" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-        } else {
-          content = '<div style="padding: 2rem; text-align: center; color: #888;">Twitch chat unavailable</div>';
-        }
-        break;
-      case 'youtube':
-        titleText = 'YouTube Chat';
-        titleClass = 'youtube';
-        if (currentYoutubeVideoId) {
-          content = `<iframe src="https://www.youtube.com/live_chat?v=${currentYoutubeVideoId}&embed_domain=${host}" style="width:100%;height:100%;border:none;"></iframe>`;
-        } else {
-          content = `<div style="padding: 2rem; text-align: center; color: #888;"><p>YouTube chat requires an active live stream</p><a href="https://www.youtube.com/@${FRESHWAX_YOUTUBE_CHANNEL}/live" target="_blank" style="color: #ff0000; display: inline-block; margin-top: 1rem;">Watch on YouTube</a></div>`;
-        }
-        break;
-    }
-
-    if (title) {
-      title.textContent = titleText;
-      title.className = 'expanded-chat-title ' + titleClass;
-    }
-    if (body) body.innerHTML = content;
-    modal?.classList.remove('hidden');
-
-    // Setup expanded Fresh Wax chat send functionality
-    if (chatType === 'freshwax') {
-      const expandedInput = document.getElementById('expandedChatInput');
-      const expandedSendBtn = document.getElementById('expandedSendBtn');
-
-      const sendExpandedMessage = async () => {
-        if (!expandedInput || !currentUser || !currentStream) return;
-        const message = expandedInput.value.trim();
-        if (!message) return;
-
-        try {
-          await fetch('/api/livestream/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              streamId: currentStream.id,
-              userId: currentUser.uid,
-              userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-              message,
-              type: 'text'
-            })
-          });
-          expandedInput.value = '';
-        } catch (error) {
-          console.error('[Chat] Error sending message:', error);
-        }
-      };
-
-      expandedSendBtn?.addEventListener('click', sendExpandedMessage);
-      expandedInput?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendExpandedMessage();
-      });
-
-      // Scroll to bottom
-      const expandedMessages = document.getElementById('expandedChatMessages');
-      if (expandedMessages) expandedMessages.scrollTop = expandedMessages.scrollHeight;
-    }
-  }
-
-  function closeExpandedChatModal() {
-    const modal = document.getElementById('expandedChatModal');
-    const body = document.getElementById('expandedChatBody');
-    modal?.classList.add('hidden');
-    if (body) body.innerHTML = '';
-  }
-
-  // Shoutout Functions
-  const shoutoutQueue = [];
-  let isShoutoutPlaying = false;
-
-  function playNextShoutout() {
-    if (isShoutoutPlaying || shoutoutQueue.length === 0) return;
-
-    isShoutoutPlaying = true;
-    const shoutout = shoutoutQueue.shift();
-    const track = document.getElementById('shoutoutTrack');
-
-    if (track) {
-      track.innerHTML = `<span class="shoutout-item">\u{1F4E3} ${shoutout.name}: ${shoutout.message}</span>`;
-      track.classList.remove('scrolling');
-      void track.offsetWidth;
-      track.classList.add('scrolling');
-
-      setTimeout(() => {
-        isShoutoutPlaying = false;
-        if (shoutoutQueue.length > 0) {
-          playNextShoutout();
-        } else {
-          track.classList.remove('scrolling');
-          track.innerHTML = '<span class="shoutout-placeholder">\u{1F389} Send a shoutout to appear here!</span>';
-        }
-      }, 20000);
-    }
-  }
-
-  window.handleIncomingShoutout = function(data) {
-    shoutoutQueue.push({ name: data.name, message: data.message });
-    playNextShoutout();
-  };
-
-  window.handleIncomingEmoji = function(data) {
-    if (window.triggerReactionBurst && data.emoji) {
-      const emojis = data.emoji.split(',');
-      window.triggerReactionBurst(emojis);
-    }
-  };
-
-  async function sendShoutout() {
-    const input = document.getElementById('shoutoutInput');
-    const message = input?.value.trim();
-    if (!message || !currentUser) return;
-
-    const userName = currentUser.displayName || currentUser.email?.split('@')[0] || 'Anonymous';
-    // Use playlist-global for playlist mode to match Pusher subscription
-    const streamId = currentStream?.slotId || currentStream?.id || 'playlist-global';
-
-    try {
-      await fetch('/api/livestream/react', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'shoutout',
-          streamId: streamId,
-          userId: currentUser.uid,
-          userName: userName,
-          message: message
-        })
-      });
-
-      // Add to local queue
-      shoutoutQueue.push({ name: userName, message: message });
-      playNextShoutout();
-    } catch (e) {
-      console.error('[Shoutout] Error:', e);
-    }
-
-    // Close modal
-    document.getElementById('shoutoutModal')?.classList.add('hidden');
-    input.value = '';
-    document.getElementById('shoutoutCharCount').textContent = '0';
-    document.getElementById('sendShoutoutBtn').disabled = true;
-  }
-
-  // Initialize everything
-  let streamPollInterval = null;
-  let pageInitialized = false;
-
-  function initPage() {
-    // Prevent duplicate initialization
-    if (pageInitialized) {
-      console.log('[Fullpage] Already initialized, skipping duplicate init');
-      return;
-    }
-    pageInitialized = true;
-    console.log('[Fullpage] Initializing page...');
-
-    // Auth (async, runs in background)
-    initAuth().then(() => console.log('[Fullpage] Auth init complete')).catch(e => console.error('[Fullpage] Auth init error:', e));
-
-    // Load stream status immediately
-    console.log('[Fullpage] Loading stream status...');
-    loadStreamStatus().then(() => {
-      console.log('[Fullpage] Stream status loaded');
-
-      // Subscribe to chat AFTER stream status is loaded (so currentStream is set)
-      subscribeToChatMessages();
-
-      // Subscribe to Pusher for reactions
-      setTimeout(() => subscribeToReactions(), 500);
-
-      // Retry playlist check after a delay if not live (playlist manager may not be ready yet)
-      if (!window.isLiveStreamActive) {
-        setTimeout(() => {
-          if (window.playlistManager && !window.isLiveStreamActive) {
-            console.log('[Fullpage] Retrying playlist auto-play...');
-            loadStreamStatus();
-          }
-        }, 3000);
-      }
-    }).catch(e => console.error('[Fullpage] Stream load error:', e));
-
-    // Clear any existing poll interval and create new one
-    if (streamPollInterval) clearInterval(streamPollInterval);
-    streamPollInterval = setInterval(loadStreamStatus, 30000);
-
-    // Listen for playlist updates from PlaylistModal
-    window.addEventListener('playlistUpdate', (e) => {
-      const { queue, isPlaying, currentIndex } = e.detail;
-      const playlistPlayer = document.getElementById('playlistPlayer');
-      const offlineOverlay = document.getElementById('offlineOverlay');
-      const audioPlayer = document.getElementById('audioPlayer');
-      const videoPlayer = document.getElementById('videoPlayer');
-
-      if (isPlaying && queue && queue.length > 0) {
-        // Playlist is playing - show it
-        console.log('[Playlist] Update received - playing:', queue[currentIndex || 0]?.title);
-
-        if (offlineOverlay) offlineOverlay.classList.add('hidden');
-        if (audioPlayer) audioPlayer.classList.add('hidden');
-        if (playlistPlayer) playlistPlayer.classList.remove('hidden');
-        if (videoPlayer) videoPlayer.classList.remove('hidden');
-
-        // Enable emoji animations and update play button state
-        window.emojiAnimationsEnabled = true;
-        window.isPlaylistPlaying = true;
-        const playBtn = document.getElementById('playPauseBtn');
-        const playIcon = document.getElementById('playIcon');
-        const pauseIcon = document.getElementById('pauseIcon');
-        playBtn?.classList.add('playing');
-        playIcon?.classList.add('hidden');
-        pauseIcon?.classList.remove('hidden');
-
-        // Update now playing info
-        const currentTrack = queue[currentIndex || 0];
-        const selectorEl = document.getElementById('controlsDjName');
-        if (selectorEl) selectorEl.textContent = currentTrack?.addedByName || 'Auto-Play';
-        const trackTitleEl = document.getElementById('npTrackTitle');
-        if (trackTitleEl) trackTitleEl.textContent = currentTrack?.title || '';
-        const genreEl = document.getElementById('streamGenre');
-        if (genreEl) genreEl.style.display = 'none';
-        // Show "LEFT" label for playlist countdown
-        const npDurationLabel = document.getElementById('npDurationLabel');
-        if (npDurationLabel) npDurationLabel.textContent = 'LEFT';
-
-        // Update live badge to show playlist mode (blue)
-        const liveBadge = document.getElementById('liveBadge');
-        if (liveBadge) {
-          liveBadge.classList.remove('is-live');
-          liveBadge.classList.add('is-playlist');
-        }
-        const liveStatusEl = document.getElementById('liveStatusText');
-        if (liveStatusEl) liveStatusEl.textContent = 'PLAYLIST';
-
-        // Show bottom duration box
-        const bottomDurationBox = document.getElementById('bottomDurationBox');
-        if (bottomDurationBox) bottomDurationBox.style.display = 'flex';
-      } else if (!window.isLiveStreamActive) {
-        // Not playing and no live stream - show offline
-        if (offlineOverlay) offlineOverlay.classList.remove('hidden');
-        if (playlistPlayer) playlistPlayer.classList.add('hidden');
-
-        const liveBadge = document.getElementById('liveBadge');
-        if (liveBadge) {
-          liveBadge.classList.remove('is-live', 'is-playlist');
-        }
-        const liveStatusEl = document.getElementById('liveStatusText');
-        if (liveStatusEl) liveStatusEl.textContent = 'OFFLINE';
-        // Hide bottom duration box when offline
-        const bottomDurationBox = document.getElementById('bottomDurationBox');
-        if (bottomDurationBox) bottomDurationBox.style.display = 'none';
-        const genreEl = document.getElementById('streamGenre');
-        if (genreEl) {
-          genreEl.style.display = '';
-          genreEl.textContent = 'Offline';
-        }
-        const trackTitleEl = document.getElementById('npTrackTitle');
-        if (trackTitleEl) trackTitleEl.textContent = '';
-      }
-    });
-
-    // Play/Pause button - handles live stream, audio, and playlist modes
-    document.getElementById('playPauseBtn')?.addEventListener('click', async () => {
-      const audio = document.getElementById('audioElement');
-      const video = document.getElementById('hlsVideoElement');
-      const playIcon = document.getElementById('playIcon');
-      const pauseIcon = document.getElementById('pauseIcon');
-      const playBtn = document.getElementById('playPauseBtn');
-
-      // Check if audio player is visible (placeholder/audio mode)
-      const audioPlayerVisible = !document.getElementById('audioPlayer')?.classList.contains('hidden');
-      // Check if playlist is active (no live stream)
-      const playlistPlayer = document.getElementById('playlistPlayer');
-      const playlistVisible = playlistPlayer && !playlistPlayer.classList.contains('hidden');
-
-      if (playlistVisible && window.playlistManager) {
-        // Handle Playlist mode
-        const pm = window.playlistManager;
-        const isCurrentlyPlaying = window.isPlaylistPlaying || playBtn?.classList.contains('playing');
-
-        try {
-          if (isCurrentlyPlaying) {
-            await pm.pause();
-            window.isPlaylistPlaying = false;
-            playIcon?.classList.remove('hidden');
-            pauseIcon?.classList.add('hidden');
-            playBtn?.classList.remove('playing');
-            window.emojiAnimationsEnabled = false;
-            console.log('[Fullpage] Playlist paused');
-          } else {
-            await pm.resume();
-            window.isPlaylistPlaying = true;
-            playIcon?.classList.add('hidden');
-            pauseIcon?.classList.remove('hidden');
-            playBtn?.classList.add('playing');
-            window.emojiAnimationsEnabled = true;
-            console.log('[Fullpage] Playlist resumed');
-          }
-        } catch (e) {
-          console.error('[Fullpage] Playlist toggle error:', e);
-        }
-      } else if (audioPlayerVisible && audio) {
-        // Handle Icecast audio stream
-        if (audio.paused) {
-          try {
-            console.log('[Audio] Attempting to play:', audio.src);
-            await audio.play();
-            playIcon?.classList.add('hidden');
-            pauseIcon?.classList.remove('hidden');
-            window.emojiAnimationsEnabled = true;
-            console.log('[Audio] Playing Icecast stream successfully');
-          } catch (e) {
-            console.error('[Audio] Play failed:', e.message);
-            // Try reloading the stream
-            audio.src = 'https://icecast.freshwax.co.uk/live';
-            audio.load();
-            try {
-              await audio.play();
-              playIcon?.classList.add('hidden');
-              pauseIcon?.classList.remove('hidden');
-              window.emojiAnimationsEnabled = true;
-            } catch (e2) {
-              console.error('[Audio] Retry failed:', e2.message);
-              alert('Unable to play audio stream. Please try again.');
-            }
-          }
-        } else {
-          audio.pause();
-          playIcon?.classList.remove('hidden');
-          pauseIcon?.classList.add('hidden');
-          window.emojiAnimationsEnabled = false;
-        }
-      } else if (video && !video.classList.contains('hidden')) {
-        // Handle HLS video
-        if (video.paused) {
-          try {
-            video.muted = false;
-            await video.play();
-            playIcon?.classList.add('hidden');
-            pauseIcon?.classList.remove('hidden');
-            window.emojiAnimationsEnabled = true;
-          } catch (e) {
-            console.error('[Video] Play failed:', e);
-          }
-        } else {
-          video.pause();
-          playIcon?.classList.remove('hidden');
-          pauseIcon?.classList.add('hidden');
-          window.emojiAnimationsEnabled = false;
-        }
-      }
-    });
-
-    // Volume slider - controls HLS, audio, and playlist
-    document.getElementById('volumeSlider')?.addEventListener('input', (e) => {
-      const volume = e.target.value / 100;
-      const audio = document.getElementById('audioElement');
-      const video = document.getElementById('hlsVideoElement');
-      if (audio) audio.volume = volume;
-      if (video) video.volume = volume;
-      // Update playlist volume (0-100 scale)
-      if (window.playlistManager) {
-        window.playlistManager.setVolume(parseInt(e.target.value));
-      }
-    });
-
-    // Reaction buttons
-    document.querySelectorAll('.reaction-btn[data-emoji]').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!currentUser) {
-          alert('Please sign in to react to the stream');
-          return;
-        }
-
-        const emojiType = btn.dataset.emoji;
-        const emojiList = emojiReactionSets[emojiType] || ['\u2764\uFE0F'];
-
-        triggerReactionBurst(emojiList);
-        btn.classList.add('liked');
-        setTimeout(() => btn.classList.remove('liked'), 300);
-
-        // Send reaction to API - use playlist-global for playlist mode
-        const streamId = currentStream?.id || 'playlist-global';
-        try {
-          await fetch('/api/livestream/react', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'emoji',
-              emoji: emojiList.join(','),
-              streamId: streamId,
-              userId: currentUser.uid,
-              userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-              sessionId: window.reactionSessionId
-            })
-          });
-        } catch (e) { console.log('[Reaction] Sent locally'); }
+<script>
+  // Fullpage initialization
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('[Fullpage] Initializing...');
+
+    // Chat tab switching
+    const chatTabs = document.querySelectorAll('.fp-chat-tab');
+    const chatPanels = document.querySelectorAll('.fp-chat-panel');
+
+    chatTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const targetTab = tab.dataset.tab;
+
+        chatTabs.forEach(t => t.classList.remove('active'));
+        chatPanels.forEach(p => p.classList.remove('active'));
+
+        tab.classList.add('active');
+        document.querySelector(`.fp-chat-panel[data-panel="${targetTab}"]`)?.classList.add('active');
+
+        // Load external chat iframe if needed
+        if (targetTab === 'twitch') loadTwitchChat();
+        if (targetTab === 'youtube') loadYoutubeChat();
       });
     });
 
-    // Animation toggle
-    document.getElementById('animToggleBtn')?.addEventListener('click', () => {
-      animationsEnabled = !animationsEnabled;
-      document.getElementById('animToggleBtn')?.classList.toggle('off', !animationsEnabled);
-    });
+    // Load Twitch chat
+    function loadTwitchChat() {
+      const stream = window.liveStreamState?.currentStream;
+      if (!stream?.twitchChannel) return;
+
+      const frame = document.getElementById('twitchChatFrame');
+      const placeholder = document.getElementById('twitchPlaceholder');
+      if (!frame || frame.src) return;
+
+      const host = window.location.hostname;
+      const parents = ['freshwax.co.uk', 'www.freshwax.co.uk', 'freshwax.pages.dev', host]
+        .filter((v, i, a) => a.indexOf(v) === i)
+        .map(d => `parent=${d}`).join('&');
+
+      frame.src = `https://www.twitch.tv/embed/${stream.twitchChannel}/chat?${parents}&darkpopout`;
+      frame.classList.remove('hidden');
+      placeholder?.classList.add('hidden');
+    }
+
+    // Load YouTube chat
+    function loadYoutubeChat() {
+      const stream = window.liveStreamState?.currentStream;
+      if (!stream?.youtubeLiveId) return;
+
+      const frame = document.getElementById('youtubeChatFrame');
+      const placeholder = document.getElementById('youtubePlaceholder');
+      if (!frame || frame.src) return;
+
+      const host = window.location.hostname;
+      frame.src = `https://www.youtube.com/live_chat?v=${stream.youtubeLiveId}&embed_domain=${host}`;
+      frame.classList.remove('hidden');
+      placeholder?.classList.add('hidden');
+    }
+
+    // Update external chat tabs visibility based on stream
+    function updateExternalChatTabs() {
+      const stream = window.liveStreamState?.currentStream;
+      const twitchTab = document.getElementById('twitchTab');
+      const youtubeTab = document.getElementById('youtubeTab');
+
+      if (twitchTab) {
+        twitchTab.style.opacity = stream?.twitchChannel ? '1' : '0.3';
+      }
+      if (youtubeTab) {
+        youtubeTab.style.opacity = stream?.youtubeLiveId ? '1' : '0.3';
+      }
+    }
+
+    // Listen for stream updates
+    const checkStreamInterval = setInterval(() => {
+      if (window.liveStreamState?.currentStream) {
+        updateExternalChatTabs();
+      }
+    }, 2000);
 
     // Shoutout modal
-    document.getElementById('shoutoutBtn')?.addEventListener('click', () => {
-      if (!currentUser) {
-        alert('Please sign in to send a shoutout');
-        return;
-      }
-      document.getElementById('shoutoutModal')?.classList.remove('hidden');
+    const shoutoutBtn = document.getElementById('shoutoutBtn');
+    const shoutoutModal = document.getElementById('shoutoutModal');
+
+    shoutoutBtn?.addEventListener('click', () => {
+      shoutoutModal?.classList.remove('hidden');
     });
 
-    // Playlist button - navigate to playlist page if logged in
-    document.getElementById('playlistBtn')?.addEventListener('click', () => {
-      if (!currentUser) {
-        showLoginMessage('playlist');
-        return;
-      }
-      window.location.href = '/live#playlist';
-    });
-
-    // DJ Lobby button - navigate to DJ Lobby if logged in
-    document.getElementById('djLobbyBtn')?.addEventListener('click', () => {
-      if (!currentUser) {
-        showLoginMessage('DJ Lobby');
-        return;
-      }
-      window.location.href = '/account/dj-lobby';
-    });
-
-    // Show login message for protected features
-    function showLoginMessage(feature) {
-      const msg = document.createElement('div');
-      msg.className = 'login-toast';
-      msg.innerHTML = `
-        <div class="login-toast-content">
-          <span>Sign in to access ${feature}</span>
-          <a href="/login" class="login-toast-btn">Sign In</a>
-          <button class="login-toast-close">&times;</button>
-        </div>
-      `;
-      document.body.appendChild(msg);
-
-      // Auto-remove after 5 seconds
-      setTimeout(() => msg.remove(), 5000);
-
-      // Close button
-      msg.querySelector('.login-toast-close')?.addEventListener('click', () => msg.remove());
-    }
-
-    // Close modal buttons
+    // Close modal handlers
     document.querySelectorAll('[data-close-modal]').forEach(el => {
       el.addEventListener('click', () => {
-        document.getElementById('shoutoutModal')?.classList.add('hidden');
+        shoutoutModal?.classList.add('hidden');
       });
     });
 
-    // Shoutout input
+    // Shoutout character count
     const shoutoutInput = document.getElementById('shoutoutInput');
     const shoutoutCharCount = document.getElementById('shoutoutCharCount');
     const sendShoutoutBtn = document.getElementById('sendShoutoutBtn');
@@ -3335,272 +754,58 @@ const pusherConfig = {
       if (sendShoutoutBtn) sendShoutoutBtn.disabled = len === 0;
     });
 
+    // Shoutout emoji buttons
     document.querySelectorAll('.shoutout-emoji').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (shoutoutInput && shoutoutInput.value.length < 30) {
-          shoutoutInput.value += btn.textContent;
-          shoutoutInput.dispatchEvent(new Event('input'));
+        if (shoutoutInput) {
+          const emoji = btn.textContent;
+          if (shoutoutInput.value.length + emoji.length <= 30) {
+            shoutoutInput.value += emoji;
+            shoutoutInput.dispatchEvent(new Event('input'));
+          }
         }
       });
     });
 
-    sendShoutoutBtn?.addEventListener('click', sendShoutout);
+    // Send shoutout
+    sendShoutoutBtn?.addEventListener('click', async () => {
+      const text = shoutoutInput?.value?.trim();
+      if (!text) return;
 
-    // Chat input
-    document.getElementById('sendBtn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      sendChatMessage();
-    });
+      const user = window.liveStreamState?.currentUser;
+      if (!user) {
+        alert('Please sign in to send shoutouts');
+        return;
+      }
 
-    document.getElementById('chatInput')?.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        sendChatMessage();
+      try {
+        const streamId = window.currentStreamId || 'playlist-global';
+        await fetch('/api/livestream/shoutout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            streamId,
+            userId: user.uid,
+            userName: user.displayName || 'Anonymous',
+            text
+          })
+        });
+
+        if (shoutoutInput) shoutoutInput.value = '';
+        if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
+        if (sendShoutoutBtn) sendShoutoutBtn.disabled = true;
+        shoutoutModal?.classList.add('hidden');
+      } catch (e) {
+        console.error('Shoutout error:', e);
       }
     });
 
-    // Emoji picker
-    const emojiBtn = document.getElementById('emojiBtn');
-    console.log('[Emoji] Button found:', !!emojiBtn);
-    emojiBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log('[Emoji] Button clicked');
-      const picker = document.getElementById('emojiPicker');
-      const giphyPicker = document.getElementById('giphyPicker');
-      console.log('[Emoji] Picker found:', !!picker, 'Current display:', picker?.style.display);
-      if (!picker) return;
-      giphyPicker?.style.setProperty('display', 'none');
-      const isHidden = picker.style.display === 'none' || picker.style.display === '';
-      // Force flex layout on picker
-      picker.style.cssText = isHidden
-        ? 'display: flex; flex-direction: column; position: absolute; bottom: calc(100% + 8px); left: 0; right: 0; background: #1a1a1a; border: 2px solid #444; border-radius: 12px; box-shadow: 0 -8px 32px rgba(0,0,0,0.8); z-index: 1000;'
-        : 'display: none;';
-      console.log('[Emoji] Set display to:', picker.style.display);
-      if (isHidden) renderEmojis('music');
-    });
-
-    // Close emoji picker
-    document.getElementById('closeEmoji')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const picker = document.getElementById('emojiPicker');
-      if (picker) picker.style.display = 'none';
-    });
-
-    document.querySelectorAll('#emojiPicker .emoji-cat').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('#emojiPicker .emoji-cat').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        renderEmojis(btn.dataset.category);
-      });
-    });
-
-    // Giphy picker
-    const giphyBtn = document.getElementById('giphyBtn');
-    console.log('[Giphy] Button found:', !!giphyBtn);
-    giphyBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log('[Giphy] Button clicked');
-      const picker = document.getElementById('giphyPicker');
-      const emojiPicker = document.getElementById('emojiPicker');
-      console.log('[Giphy] Picker found:', !!picker, 'Current display:', picker?.style.display);
-      if (!picker) return;
-      emojiPicker?.style.setProperty('display', 'none');
-      const isHidden = picker.style.display === 'none' || picker.style.display === '';
-      picker.style.display = isHidden ? 'block' : 'none';
-      console.log('[Giphy] Set display to:', picker.style.display);
-      if (isHidden) searchGiphy('');
-    });
-
-    // Close giphy picker
-    document.getElementById('closeGiphy')?.addEventListener('click', () => {
-      document.getElementById('giphyPicker')?.style.setProperty('display', 'none');
-    });
-
-    document.getElementById('giphySearchInline')?.addEventListener('input', (e) => {
-      clearTimeout(giphySearchTimeout);
-      giphySearchTimeout = setTimeout(() => searchGiphy(e.target.value), 500);
-    });
-
-    // Giphy category buttons
-    document.querySelectorAll('#giphyPicker .giphy-cat').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('#giphyPicker .giphy-cat').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const category = btn.dataset.category;
-        if (category === 'trending') {
-          searchGiphy('');
-        } else {
-          searchGiphy(category);
-        }
-      });
-    });
-
-    // Expand chat buttons (for Fresh Wax modal expand)
-    document.querySelectorAll('.chat-expand-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const target = btn.dataset.target;
-        if (target) openExpandedChat(target);
-      });
-    });
-
-    // Toggle external chat buttons (Twitch/YouTube inline expansion)
-    document.querySelectorAll('.external-chat-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const target = btn.dataset.toggle;
-        if (target) toggleExternalChat(target);
-      });
-    });
-
-    // Close external chat buttons
-    document.querySelectorAll('.chat-close-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const target = btn.dataset.close;
-        if (target) closeExternalChat(target);
-      });
-    });
-
-    // Close expanded chat
-    document.querySelectorAll('[data-close-expanded]').forEach(el => {
-      el.addEventListener('click', closeExpandedChatModal);
-    });
-  }
-
-  // Toggle external chat (Twitch/YouTube) inline
-  function toggleExternalChat(chatType) {
-    const container = document.querySelector('.fullpage-container');
-    const column = document.querySelector(`.chat-column[data-chat="${chatType}"]`);
-    const toggleBtn = document.querySelector(`.external-chat-btn[data-toggle="${chatType}"]`);
-
-    if (!column || !container) return;
-
-    // Check if already expanded
-    const isExpanded = column.classList.contains('expanded');
-
-    if (isExpanded) {
-      // Close this chat
-      closeExternalChat(chatType);
-    } else {
-      // Expand this chat (allow both to be open)
-      column.classList.add('expanded');
-      toggleBtn?.classList.add('active');
-
-      // Update container class based on how many external chats are expanded
-      updateChatExpandedClass();
-
-      // Load iframe if not already loaded
-      loadExternalChatIframe(chatType);
-    }
-  }
-
-  // Update the container class based on number of expanded external chats
-  function updateChatExpandedClass() {
-    const container = document.querySelector('.fullpage-container');
-    if (!container) return;
-
-    const twitchExpanded = document.querySelector('.chat-column[data-chat="twitch"].expanded');
-    const youtubeExpanded = document.querySelector('.chat-column[data-chat="youtube"].expanded');
-    const expandedCount = (twitchExpanded ? 1 : 0) + (youtubeExpanded ? 1 : 0);
-
-    // Remove all expanded classes first
-    container.classList.remove('chat-expanded-1', 'chat-expanded-2');
-
-    // Add appropriate class
-    if (expandedCount === 1) {
-      container.classList.add('chat-expanded-1');
-    } else if (expandedCount === 2) {
-      container.classList.add('chat-expanded-2');
-    }
-  }
-
-  // Close external chat
-  function closeExternalChat(chatType) {
-    const column = document.querySelector(`.chat-column[data-chat="${chatType}"]`);
-    const toggleBtn = document.querySelector(`.external-chat-btn[data-toggle="${chatType}"]`);
-
-    if (column) {
-      column.classList.remove('expanded');
-    }
-    if (toggleBtn) {
-      toggleBtn.classList.remove('active');
-    }
-
-    // Update container class based on remaining expanded chats
-    updateChatExpandedClass();
-  }
-
-  // Load external chat iframe
-  function loadExternalChatIframe(chatType) {
-    const host = window.location.hostname;
-    const parentDomains = ['freshwax.co.uk', 'www.freshwax.co.uk', 'freshwax.pages.dev', host].filter((v, i, a) => a.indexOf(v) === i);
-    const parentParams = parentDomains.map(d => `parent=${d}`).join('&');
-
-    if (chatType === 'twitch') {
-      const frame = document.getElementById('twitchChatFrame');
-      const placeholder = document.getElementById('twitchChatPlaceholder');
-      if (frame && currentTwitchChannel) {
-        frame.src = `https://www.twitch.tv/embed/${currentTwitchChannel}/chat?${parentParams}&darkpopout`;
-        frame.classList.add('loaded');
-        placeholder?.classList.add('hidden');
-      }
-    } else if (chatType === 'youtube') {
-      const frame = document.getElementById('youtubeChatFrame');
-      const placeholder = document.getElementById('youtubeChatPlaceholder');
-      if (frame && currentYoutubeVideoId) {
-        frame.src = `https://www.youtube.com/live_chat?v=${currentYoutubeVideoId}&embed_domain=${host}`;
-        frame.classList.add('loaded');
-        placeholder?.classList.add('hidden');
-      }
-    }
-  }
-
-  // Initialize on first load
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('[Fullpage] DOMContentLoaded fired');
-      initPage();
-    });
-  } else {
-    console.log('[Fullpage] Document already ready, initializing immediately');
-    initPage();
-  }
-
-  // Handle back-forward cache (bfcache) - page restored from cache
-  window.addEventListener('pageshow', (event) => {
-    if (event.persisted) {
-      console.log('[Fullpage] Page restored from bfcache, reinitializing...');
-      pageInitialized = false;
-      initPage();
-    }
-  });
-
-  // Re-initialize on View Transitions (astro:after-swap fires ONLY on navigation, not initial load)
-  document.addEventListener('astro:after-swap', () => {
-    console.log('[Fullpage] View Transition swap detected');
-    pageInitialized = false;
-    initPage();
-  });
-
-  // Cleanup on page unload
-  window.addEventListener('beforeunload', () => {
-    if (streamPollInterval) clearInterval(streamPollInterval);
-    stopChatPolling();
-    stopDurationTimer();
-    if (currentUser && currentStream?.id) {
-      navigator.sendBeacon('/api/livestream/listeners', JSON.stringify({
-        action: 'leave',
-        streamId: currentStream.id,
-        userId: currentUser.uid
-      }));
-    }
+    console.log('[Fullpage] Initialized');
   });
 </script>
 
-<!-- Playlist Modal for auto-play when offline -->
-<PlaylistModal />
+<!-- Main live stream manager - handles everything -->
+<script type="module" src="/live-stream.js?v=20260103-fullpage"></script>
 
-<!-- Live stream manager (handles playlist auto-play) -->
-<script type="module" src="/live-stream.js?v=20251226-fullpage6"></script>
 </body>
 </html>

@@ -119,6 +119,7 @@ function getPusherConfig() {
 
 // Persistent autoplay: Remember when user has interacted with player
 const AUTOPLAY_KEY = 'freshwax_autoplay';
+const LIVE_PLAYING_KEY = 'freshwax_live_playing';
 function shouldAutoplay() {
   // Use localStorage for persistence across browser sessions
   // User has previously clicked play, so try with sound
@@ -126,6 +127,17 @@ function shouldAutoplay() {
 }
 function rememberAutoplay() {
   localStorage.setItem(AUTOPLAY_KEY, 'true');
+}
+// Track live stream playing state (sessionStorage - persists during tab session)
+function setLiveStreamPlaying(isPlaying) {
+  if (isPlaying) {
+    sessionStorage.setItem(LIVE_PLAYING_KEY, 'true');
+  } else {
+    sessionStorage.removeItem(LIVE_PLAYING_KEY);
+  }
+}
+function wasLiveStreamPlaying() {
+  return sessionStorage.getItem(LIVE_PLAYING_KEY) === 'true';
 }
 
 // ==========================================
@@ -689,6 +701,7 @@ function setupPlaylistPlayButton() {
     if (videoElement && !videoElement.classList.contains('hidden') && window.isLiveStreamActive) {
       if (videoElement.paused) {
         rememberAutoplay();
+        setLiveStreamPlaying(true); // Track playing state for persistence
         initGlobalAudioAnalyzer(videoElement);
         if (globalAudioContext?.state === 'suspended') {
           globalAudioContext.resume();
@@ -702,6 +715,7 @@ function setupPlaylistPlayButton() {
         }
       } else {
         videoElement.pause();
+        setLiveStreamPlaying(false); // Clear playing state
         // State updated by 'pause' event listener
       }
       return;
@@ -711,6 +725,7 @@ function setupPlaylistPlayButton() {
     if (audioElement && window.isLiveStreamActive) {
       if (audioElement.paused) {
         rememberAutoplay();
+        setLiveStreamPlaying(true); // Track playing state for persistence
         initGlobalAudioAnalyzer(audioElement);
         if (globalAudioContext?.state === 'suspended') {
           globalAudioContext.resume();
@@ -728,6 +743,7 @@ function setupPlaylistPlayButton() {
         }
       } else {
         audioElement.pause();
+        setLiveStreamPlaying(false); // Clear playing state
         playIcon?.classList.remove('hidden');
         pauseIcon?.classList.add('hidden');
         playBtn.classList.remove('playing');
@@ -1107,6 +1123,8 @@ async function setupLiveStatusPusher() {
 
     liveStatusChannel.bind('stream-ended', (data) => {
       console.log('[LiveStatus] Stream ended via Pusher:', data.djName);
+      // Clear live stream playing state since stream ended
+      setLiveStreamPlaying(false);
       // Trigger the 30-second delay countdown
       wasLiveStreamActive = true;
       streamEndedAt = Date.now();
@@ -1288,6 +1306,8 @@ function setChatEnabled(enabled) {
 // Show offline state
 function showOfflineState(scheduled) {
   window.isLiveStreamActive = false;
+  // Clear live stream playing state since we're offline
+  setLiveStreamPlaying(false);
 
   // Hide initializing overlay since there's no live stream
   const initOverlay = document.getElementById('initializingOverlay');
@@ -1384,6 +1404,19 @@ function showLiveStream(stream) {
   window.currentStreamId = stream.id;
   window.firebaseAuth = auth;
 
+  // Update TODAY'S LINEUP if relay stream (it may not be in slots API)
+  if (stream.isRelay && typeof window.renderTodaySchedule === 'function') {
+    console.log('[Relay] Calling renderTodaySchedule for relay stream');
+    window.renderTodaySchedule();
+  }
+
+  // Show/hide relay attribution based on stream type
+  const relayAttribution = document.getElementById('relayAttribution');
+  if (relayAttribution) {
+    relayAttribution.style.display = stream.isRelay ? 'block' : 'none';
+    console.log('[Relay] Attribution visibility:', stream.isRelay ? 'shown' : 'hidden');
+  }
+
   // Register view (increments totalViews counter)
   registerStreamView(stream.id);
 
@@ -1436,24 +1469,34 @@ function showLiveStream(stream) {
   if (djInfoBar) djInfoBar.classList.add('is-live');
 
   // Update stream info (main page and fullscreen mode)
+  // For relay streams, show the title (now playing track) instead of DJ name
+  const displayName = stream.isRelay ? (stream.title || 'Relay Stream') : stream.djName;
   const elements = {
-    djName: stream.djName,
-    controlsDjName: stream.djName || 'DJ', // Bottom bar DJ name
+    djName: displayName,
+    controlsDjName: displayName || 'DJ', // Bottom bar DJ name
     streamGenre: stream.genre || 'Jungle / D&B',
     viewerCount: stream.totalViews || stream.currentViewers || 0,
     likeCount: stream.totalLikes || 0,
     avgRating: (stream.averageRating || 0).toFixed(1),
     streamDescription: stream.description || 'No description',
-    audioDjName: stream.djName || 'DJ',
-    audioShowTitle: stream.title || 'Live on Fresh Wax',
+    audioDjName: displayName || 'DJ',
+    audioShowTitle: stream.isRelay ? `Relayed from ${stream.relaySource?.stationName || 'External Station'}` : (stream.title || 'Live on Fresh Wax'),
     // Fullscreen mode elements
     fsStreamTitle: stream.title || 'Live Stream',
-    fsDjName: stream.djName || 'DJ'
+    fsDjName: displayName || 'DJ',
+    fsAudioDjName: displayName || 'DJ'
   };
 
   Object.entries(elements).forEach(([id, value]) => {
     const el = document.getElementById(id);
-    if (el) el.textContent = value;
+    if (el) {
+      // For relay streams, show certain elements in red
+      if (stream.isRelay && (id === 'controlsDjName' || id === 'djName' || id === 'audioDjName' || id === 'fsDjName' || id === 'fsAudioDjName')) {
+        el.innerHTML = `<span style="color: #ef4444;">${value}</span>`;
+      } else {
+        el.textContent = value;
+      }
+    }
   });
 
   // Set stream title with proper HTML styling (LIVE white, SESSION red)
@@ -1467,20 +1510,43 @@ function showLiveStream(stream) {
     }
   }
 
+  // Update audio badge for relay streams
+  const audioBadgeText = document.getElementById('audioBadgeText');
+  const fsAudioBadgeText = document.getElementById('fsAudioBadgeText');
+  console.log('[Stream] Relay check:', { isRelay: stream.isRelay, audioBadgeText: !!audioBadgeText, fsAudioBadgeText: !!fsAudioBadgeText });
+  if (stream.isRelay) {
+    console.log('[Stream] Setting badge to RELAY');
+    if (audioBadgeText) audioBadgeText.textContent = 'RELAY';
+    if (fsAudioBadgeText) fsAudioBadgeText.textContent = 'RELAY';
+  } else {
+    console.log('[Stream] Setting badge to AUDIO ONLY');
+    if (audioBadgeText) audioBadgeText.textContent = 'AUDIO ONLY';
+    if (fsAudioBadgeText) fsAudioBadgeText.textContent = 'AUDIO ONLY';
+  }
+
   // Update images (main page)
   const djAvatar = document.getElementById('djAvatar');
   const streamCover = document.getElementById('streamCover');
   const vinylDjAvatar = document.getElementById('vinylDjAvatar');
   const vinylDjAvatar2 = document.getElementById('vinylDjAvatar2');
 
-  if (stream.djAvatar && djAvatar) djAvatar.src = stream.djAvatar;
+  // Use placeholder for relay streams, DJ avatar for other streams
+  const avatarImage = stream.isRelay ? '/place-holder.webp' : stream.djAvatar;
+  if (avatarImage && djAvatar) djAvatar.src = avatarImage;
   if (stream.coverImage && streamCover) streamCover.src = stream.coverImage;
-  if (stream.djAvatar && vinylDjAvatar) vinylDjAvatar.src = stream.djAvatar;
-  if (stream.djAvatar && vinylDjAvatar2) vinylDjAvatar2.src = stream.djAvatar;
+  // Use placeholder for relay streams on vinyl turntables too
+  const vinylImage = stream.isRelay ? '/place-holder.webp' : stream.djAvatar;
+  if (vinylImage && vinylDjAvatar) vinylDjAvatar.src = vinylImage;
+  if (vinylImage && vinylDjAvatar2) vinylDjAvatar2.src = vinylImage;
 
-  // Update fullscreen mode images
+  // Update fullscreen mode images - use placeholder for relay streams
   const fsDjAvatar = document.getElementById('fsDjAvatar');
-  if (stream.djAvatar && fsDjAvatar) fsDjAvatar.src = stream.djAvatar;
+  const fsVinylDjAvatar = document.getElementById('fsVinylDjAvatar');
+  const fsVinylDjAvatar2 = document.getElementById('fsVinylDjAvatar2');
+  const fsAvatarImage = stream.isRelay ? '/place-holder.webp' : (stream.djAvatar || '/place-holder.webp');
+  if (fsDjAvatar) fsDjAvatar.src = fsAvatarImage;
+  if (fsVinylDjAvatar) fsVinylDjAvatar.src = fsAvatarImage;
+  if (fsVinylDjAvatar2) fsVinylDjAvatar2.src = fsAvatarImage;
   
   // Setup player based on stream type/source
   // Placeholder mode = audio only (BUTT/Icecast), skip HLS
@@ -1681,25 +1747,40 @@ function setupHlsPlayer(stream) {
 
       hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
         console.log('[HLS] Manifest parsed, attempting autoplay');
-        // Try muted autoplay first (faster, less likely to be blocked), then unmute
+        // Check if user was previously playing
         const attemptAutoplay = async () => {
+          const wasPlaying = wasLiveStreamPlaying();
+          console.log('[HLS] Attempting autoplay... wasPlaying:', wasPlaying);
+
           try {
-            // First try muted (guaranteed to work)
-            videoElement.muted = true;
-            await videoElement.play();
-            isPlaying = true;
+            // If user was previously playing, try unmuted first
+            if (wasPlaying && shouldAutoplay()) {
+              console.log('[HLS] User was playing before, trying unmuted autoplay');
+              videoElement.muted = false;
+              await videoElement.play();
+              console.log('[HLS] Unmuted autoplay successful!');
+              isPlaying = true;
+              setLiveStreamPlaying(true);
+            } else {
+              // First try muted (guaranteed to work)
+              videoElement.muted = true;
+              await videoElement.play();
+              isPlaying = true;
+              console.log('[HLS] Muted autoplay successful');
+
+              // Now try to unmute (user may have interacted before)
+              try {
+                videoElement.muted = false;
+                console.log('[HLS] Unmuted successfully');
+                setLiveStreamPlaying(true);
+              } catch (unmuteErr) {
+                console.log('[HLS] Could not unmute, user interaction required');
+              }
+            }
+
             document.getElementById('playIcon')?.classList.add('hidden');
             document.getElementById('pauseIcon')?.classList.remove('hidden');
             document.getElementById('playBtn')?.classList.add('playing');
-            console.log('[HLS] Muted autoplay successful');
-
-            // Now try to unmute (user may have interacted before)
-            try {
-              videoElement.muted = false;
-              console.log('[HLS] Unmuted successfully');
-            } catch (unmuteErr) {
-              console.log('[HLS] Could not unmute, user interaction required');
-            }
 
             rememberAutoplay();
             // Initialize audio analyzer for LED meters
@@ -2432,22 +2513,36 @@ function setupAudioPlayer(stream) {
     audio.onstalled = () => console.log('[Audio] stalled event - download stalled');
     audio.onwaiting = () => console.log('[Audio] waiting event - buffering');
 
-    // Try autoplay (muted first for browser policy, then unmute)
+    // Try autoplay - check if user was previously playing (resume with sound)
     const attemptAutoplay = async () => {
-      console.log('[Audio] Attempting autoplay...');
-      try {
-        audio.muted = true;
-        console.log('[Audio] Audio muted, calling play()...');
-        await audio.play();
-        console.log('[Audio] Muted autoplay successful, readyState:', audio.readyState);
-        isPlaying = true;
+      const wasPlaying = wasLiveStreamPlaying();
+      console.log('[Audio] Attempting autoplay... wasPlaying:', wasPlaying);
 
-        // Try to unmute
-        try {
+      try {
+        // If user was previously playing, try unmuted first
+        if (wasPlaying && shouldAutoplay()) {
+          console.log('[Audio] User was playing before, trying unmuted autoplay');
           audio.muted = false;
-          console.log('[Audio] Unmuted successfully, volume:', audio.volume);
-        } catch (e) {
-          console.log('[Audio] Could not unmute - user interaction required');
+          await audio.play();
+          console.log('[Audio] Unmuted autoplay successful!');
+          isPlaying = true;
+          setLiveStreamPlaying(true);
+        } else {
+          // Try muted first for browser policy
+          audio.muted = true;
+          console.log('[Audio] Audio muted, calling play()...');
+          await audio.play();
+          console.log('[Audio] Muted autoplay successful, readyState:', audio.readyState);
+          isPlaying = true;
+
+          // Try to unmute
+          try {
+            audio.muted = false;
+            console.log('[Audio] Unmuted successfully, volume:', audio.volume);
+            setLiveStreamPlaying(true); // Track as playing
+          } catch (e) {
+            console.log('[Audio] Could not unmute - user interaction required');
+          }
         }
 
         // Hide initializing overlay early since audio is playing

@@ -388,13 +388,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      const slotStart = new Date(startTime);
-      const slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000);
+      let slotStart = new Date(startTime);
+      let slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000);
 
-      if (slotStart.getTime() < now.getTime()) {
+      // Allow booking up to 2 minutes in the past (for instant booking tolerance)
+      const toleranceMs = 2 * 60 * 1000;
+      if (slotStart.getTime() < now.getTime() - toleranceMs) {
         return new Response(JSON.stringify({ success: false, error: 'Cannot book in the past' }), {
           status: 400, headers: { 'Content-Type': 'application/json' }
         });
+      }
+
+      // If start time is in the past (but within tolerance), adjust to now
+      if (slotStart.getTime() < now.getTime()) {
+        slotStart = new Date(now.getTime());
+        slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000);
       }
 
       // Check subscription limits for streaming
@@ -1069,9 +1077,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
-      // Verify the relay URL is from an approved station
-      const approvedStation = APPROVED_RELAY_STATIONS.find(s => s.streamUrl === relayUrl);
+      // Verify the relay URL is from an approved station (check both streamUrl and httpsStreamUrl)
+      const approvedStation = APPROVED_RELAY_STATIONS.find(s =>
+        s.streamUrl === relayUrl || s.httpsStreamUrl === relayUrl
+      );
       if (!approvedStation) {
+        console.log('[livestream/slots] Relay URL not approved:', relayUrl, 'Approved:', APPROVED_RELAY_STATIONS.map(s => ({ stream: s.streamUrl, https: s.httpsStreamUrl })));
         return new Response(JSON.stringify({
           success: false,
           error: 'Relay URL is not from an approved station'

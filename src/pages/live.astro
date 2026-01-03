@@ -119,7 +119,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
             <div class="fs-audio-show-title">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
             <div class="fs-audio-live-badge">
               <span class="fs-live-pulse"></span>
-              AUDIO ONLY
+              <span id="fsAudioBadgeText">AUDIO ONLY</span>
             </div>
           </div>
           <div class="fs-turntables-row">
@@ -319,6 +319,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         </div>
         
         <div class="player-container" id="playerContainer">
+          <!-- Relay Source Attribution -->
+          <div class="relay-attribution" id="relayAttribution">www.theundergroundlair.fr</div>
 
           <!-- Offline Overlay - shown by default, hidden when stream is active -->
           <div id="offlineOverlay" class="offline-overlay is-loading">
@@ -393,7 +395,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
                 <div class="audio-show-title" id="audioShowTitle">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
                 <div class="audio-live-badge">
                   <span class="live-pulse"></span>
-                  AUDIO ONLY
+                  <span id="audioBadgeText">AUDIO ONLY</span>
                 </div>
               </div>
 
@@ -1762,13 +1764,16 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         // Sync DJ info to fullscreen audio placeholder
         const mainDjName = document.getElementById('audioDjName');
         const mainDjAvatar = document.getElementById('vinylDjAvatar');
+        const mainAudioBadge = document.getElementById('audioBadgeText');
         const fsAudioDjName = document.getElementById('fsAudioDjName');
         const fsVinylAvatar = document.getElementById('fsVinylDjAvatar');
         const fsVinylAvatar2 = document.getElementById('fsVinylDjAvatar2');
+        const fsAudioBadge = document.getElementById('fsAudioBadgeText');
 
-        if (fsAudioDjName && mainDjName) fsAudioDjName.textContent = mainDjName.textContent;
+        if (fsAudioDjName && mainDjName) fsAudioDjName.innerHTML = mainDjName.innerHTML;
         if (fsVinylAvatar && mainDjAvatar) fsVinylAvatar.src = mainDjAvatar.src;
         if (fsVinylAvatar2 && mainDjAvatar) fsVinylAvatar2.src = mainDjAvatar.src;
+        if (fsAudioBadge && mainAudioBadge) fsAudioBadge.textContent = mainAudioBadge.textContent;
       } else {
         fsAudioPlaceholder?.classList.add('hidden');
         fsVideo?.classList.remove('hidden');
@@ -1786,7 +1791,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 
     if (fsTitle && mainTitle) fsTitle.textContent = mainTitle.textContent;
     if (fsAvatar && mainAvatar) fsAvatar.src = mainAvatar.src;
-    if (fsName && mainName) fsName.textContent = mainName.textContent;
+    if (fsName && mainName) fsName.innerHTML = mainName.innerHTML;
   }
   
   document.getElementById('exitFullscreen')?.addEventListener('click', closeFullscreen);
@@ -4015,7 +4020,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     const today = now.toISOString().split('T')[0];
 
     // Filter to today's slots that are current or future (not completed/cancelled shows)
-    const todaySlots = allSlots.filter(s => {
+    let todaySlots = allSlots.filter(s => {
       if (!s.startTime.startsWith(today)) return false;
       if (s.status === 'cancelled' || s.status === 'completed') return false;
 
@@ -4026,10 +4031,25 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       // Show if live, scheduled, in_lobby, or queued
       return ['live', 'scheduled', 'in_lobby', 'queued'].includes(s.status);
     });
-    
+
+    // Include current live relay stream if not already in slots list
+    // Check both scheduleCache and live-stream.js global state for relay streams
+    const currentLive = scheduleCache?.currentLive || window.liveStreamState?.currentStream;
+    if (currentLive && currentLive.isRelay && !todaySlots.find(s => s.id === currentLive.id || s.id === currentLive.slotId)) {
+      todaySlots.unshift({
+        id: currentLive.id || currentLive.slotId,
+        djName: currentLive.djName,
+        title: currentLive.title,
+        startTime: currentLive.startTime || currentLive.startedAt,
+        endTime: currentLive.endTime,
+        status: 'live',
+        isRelay: true
+      });
+    }
+
     // Sort by start time
     todaySlots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-    
+
     if (todaySlots.length === 0) {
       list.innerHTML = '<p class="empty-message">No upcoming shows today</p>';
       return;
@@ -4038,6 +4058,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     list.innerHTML = todaySlots.map(slot => {
       const isMySlot = currentUser && slot.djId === currentUser.uid;
       const isLive = slot.status === 'live';
+      const isRelay = slot.isRelay === true;
       const durationMins = Math.round((new Date(slot.endTime) - new Date(slot.startTime)) / 60000);
 
       // Format duration nicely: "1 hour", "2 hours", "1.5 hours", or "30 mins"
@@ -4060,13 +4081,17 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       else if (slot.status === 'scheduled') statusText = 'Scheduled';
       else if (slot.status === 'live') statusText = 'LIVE';
 
-      return `<div class="schedule-item${isMySlot ? ' my-slot' : ''}${isLive ? ' live' : ''}">
+      // For relay streams, show title as main name (not DJ name)
+      const displayName = isRelay ? (slot.title || 'Relay Stream') : slot.djName;
+      const showTitle = !isRelay && slot.title && slot.title !== slot.djName;
+
+      return `<div class="schedule-item${isMySlot ? ' my-slot' : ''}${isLive ? ' live' : ''}${isRelay ? ' relay' : ''}">
         ${isLive ? '<span class="live-headphone-icon">🎧</span>' : ''}
         <div class="schedule-dj-info">
           <div class="schedule-dj-header">
-            <h4>${slot.djName}</h4>
+            <h4>${displayName}</h4>
           </div>
-          ${slot.title && slot.title !== slot.djName ? `<span class="schedule-title">${slot.title}</span>` : ''}
+          ${showTitle ? `<span class="schedule-title">${slot.title}</span>` : ''}
           <div class="schedule-times">
             <span class="schedule-time-range">${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}</span>
           </div>
@@ -4075,7 +4100,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       </div>`;
     }).join('');
   }
-  
+
+  // Expose for live-stream.js to call when relay stream detected
+  window.renderTodaySchedule = renderTodaySchedule;
+
   function updateLiveQueueBar(currentLive, upcoming) {
     const liveStatusCard = document.getElementById('liveStatusCard');
     const liveIndicator = document.getElementById('liveIndicator');
@@ -4134,13 +4162,15 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 
       // Use logged-in user's avatar if they are the DJ streaming (same source as header)
       // Otherwise fall back to the avatar stored in the slot data
+      // For relay streams, always use placeholder
       const isCurrentUserDj = currentUser?.uid && currentLive.djId === currentUser.uid;
-      const avatarToUse = isCurrentUserDj && userInfo?.avatar
-        ? userInfo.avatar
-        : (currentLive.djAvatar || '/place-holder.webp');
+      const avatarToUse = currentLive.isRelay
+        ? '/place-holder.webp'
+        : (isCurrentUserDj && userInfo?.avatar ? userInfo.avatar : (currentLive.djAvatar || '/place-holder.webp'));
 
       if (liveDjAvatarCard) liveDjAvatarCard.src = avatarToUse;
-      if (liveDjNameCard) liveDjNameCard.textContent = currentLive.djName;
+      // For relay streams, show title instead of DJ name
+      if (liveDjNameCard) liveDjNameCard.textContent = currentLive.isRelay ? (currentLive.title || 'Relay Stream') : currentLive.djName;
       if (liveDjEndsCard) liveDjEndsCard.textContent = `Ends ${formatTime(currentLive.endTime)}`;
 
       streamInfoBar?.classList.add('is-live');
@@ -4159,7 +4189,14 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       const controlsDjName = document.getElementById('controlsDjName');
       const controlsSetTitle = document.getElementById('controlsSetTitle');
       const djInfoBar = document.querySelector('.dj-info-bar');
-      if (controlsDjName) controlsDjName.textContent = currentLive.djName || 'DJ';
+      // For relay streams, show title (now playing) instead of DJ name, in red
+      if (controlsDjName) {
+        if (currentLive.isRelay && currentLive.title) {
+          controlsDjName.innerHTML = `<span style="color: #ef4444;">${currentLive.title}</span>`;
+        } else {
+          controlsDjName.textContent = currentLive.djName || 'DJ';
+        }
+      }
       if (controlsSetTitle) controlsSetTitle.textContent = currentLive.title || 'Live Set';
       if (djInfoBar) djInfoBar.classList.add('is-live');
 
@@ -5164,7 +5201,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       currentPlaylistTrack = null;
       if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
       if (npTrackTitle) npTrackTitle.textContent = '';
-      if (controlsDjName) controlsDjName.textContent = '--';
+      // Don't overwrite controlsDjName if live stream is active (preserves relay red text)
+      if (controlsDjName && !window.isLiveStreamActive) controlsDjName.textContent = '--';
       if (bottomDurationBox) bottomDurationBox.style.display = 'none';
       if (streamGenre) streamGenre.style.display = '';
     }
@@ -5198,7 +5236,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   });
 </script>
 
-<script type="module" src="/live-stream.js?v=20251230-audio-autoplay"></script>
+<script type="module" src="/live-stream.js?v=20260103-relay-fix7"></script>
 
 <script>
   // Auto-hide header on live page

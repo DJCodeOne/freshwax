@@ -135,8 +135,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       endTime: slot.endTime,
       duration: slot.duration,
       // Always use stored hlsUrl if available (updated by DJ lobby on mode change)
-      // Fall back to buildHlsUrl only if no stored URL
-      hlsUrl: slot.hlsUrl || (slot.streamKey ? buildHlsUrl(slot.streamKey) : null),
+      // Fall back to buildHlsUrl only if no stored URL AND not a relay stream (relay is audio-only)
+      hlsUrl: slot.hlsUrl || (!slot.isRelay && slot.streamKey ? buildHlsUrl(slot.streamKey) : null),
       broadcastMode: slot.broadcastMode || 'video',
       // streamKey intentionally omitted - security risk
       streamSource: slot.isRelay ? 'relay' : 'red5',
