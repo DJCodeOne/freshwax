@@ -1797,9 +1797,6 @@ export class PlaylistManager {
   private async handlePlaybackError(error: string): Promise<void> {
     console.error('[PlaylistManager] Playback error:', error);
 
-    // Increment consecutive error counter
-    this.consecutiveErrors++;
-
     // Check if container exists - if not, stop trying
     const container = document.getElementById(this.containerId);
     if (!container) {
@@ -1807,6 +1804,36 @@ export class PlaylistManager {
       this.consecutiveErrors = 0;
       return;
     }
+
+    // Parse structured error info (from enhanced YouTube error handling)
+    let errorInfo: { type?: string; code?: number; message?: string } = {};
+    try {
+      errorInfo = JSON.parse(error);
+    } catch {
+      // Legacy error format - just a string
+      errorInfo = { type: 'error', message: error };
+    }
+
+    const currentItem = this.playlist.queue[this.playlist.currentIndex];
+
+    // Handle blocked/unavailable videos specially
+    if (errorInfo.type === 'blocked' && currentItem) {
+      console.log('[PlaylistManager] Blocked video detected:', currentItem.title || currentItem.url);
+      console.log('[PlaylistManager] Error code:', errorInfo.code, '- removing from history and skipping');
+
+      // Mark video as blocked in server history (removes it so it won't be auto-played again)
+      await this.markVideoAsBlocked(currentItem.url, currentItem.embedId);
+
+      // Don't increment consecutive errors for blocked videos - this is expected
+      // Just skip to next track
+      this.clearTrackTimer();
+      this.stopCountdown();
+      await this.handleTrackEnded();
+      return;
+    }
+
+    // Regular error handling for non-blocked errors
+    this.consecutiveErrors++;
 
     // Prevent infinite loops - max 3 consecutive errors
     if (this.consecutiveErrors >= 3) {
@@ -1822,6 +1849,33 @@ export class PlaylistManager {
     } else {
       this.playlist.isPlaying = false;
       this.renderUI();
+    }
+  }
+
+  /**
+   * Mark a video as blocked/unavailable - removes it from server history
+   * so it won't be auto-played again
+   */
+  private async markVideoAsBlocked(url: string, embedId?: string): Promise<void> {
+    try {
+      const response = await fetch('/api/playlist/history', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          embedId,
+          reason: 'blocked'
+        })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        console.log('[PlaylistManager] Blocked video removed from history:', url);
+      } else {
+        console.warn('[PlaylistManager] Failed to remove blocked video from history:', result.error);
+      }
+    } catch (error) {
+      console.error('[PlaylistManager] Error marking video as blocked:', error);
     }
   }
 
@@ -1842,6 +1896,21 @@ export class PlaylistManager {
     // Reset error counter on successful state changes
     if (state === 'playing') {
       this.consecutiveErrors = 0;
+      this.playlist.isPlaying = true;
+      // Update UI and enable emojis when video plays (including from player controls)
+      this.renderUI();
+      // Dispatch event for live-stream.js to sync button and enable emojis
+      window.dispatchEvent(new CustomEvent('playlistStateChange', {
+        detail: { state: 'playing', isPlaying: true }
+      }));
+    } else if (state === 'paused') {
+      this.playlist.isPlaying = false;
+      // Update UI when video pauses (including from player controls)
+      this.renderUI();
+      // Dispatch event for live-stream.js to sync button and disable emojis
+      window.dispatchEvent(new CustomEvent('playlistStateChange', {
+        detail: { state: 'paused', isPlaying: false }
+      }));
     }
   }
 

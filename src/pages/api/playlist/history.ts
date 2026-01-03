@@ -179,3 +179,101 @@ export async function POST({ request, locals }: APIContext) {
     });
   }
 }
+
+// DELETE - Remove blocked/unavailable video from history
+// This prevents the video from being auto-played again
+export async function DELETE({ request, locals }: APIContext) {
+  try {
+    initEnv(locals);
+    const body = await request.json();
+    const { url, embedId, reason } = body;
+
+    if (!url) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Missing URL'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log(`[PlaylistHistory] Removing blocked video: ${url} (reason: ${reason})`);
+
+    // Track if we removed from any chunk
+    let removedFromAny = false;
+    let totalRemoved = 0;
+
+    // Read main document first
+    const mainDoc = await getDocument('liveSettings', HISTORY_DOC);
+
+    if (mainDoc && mainDoc.items) {
+      const totalChunks = mainDoc.totalChunks || 1;
+
+      // Process main document (chunk 0)
+      const originalLength = mainDoc.items.length;
+      const filteredItems = mainDoc.items.filter((item: HistoryItem) =>
+        item.url !== url && (embedId ? item.embedId !== embedId : true)
+      );
+
+      if (filteredItems.length < originalLength) {
+        removedFromAny = true;
+        totalRemoved += originalLength - filteredItems.length;
+
+        // Save updated main document
+        await setDocument('liveSettings', HISTORY_DOC, {
+          items: filteredItems,
+          totalChunks: totalChunks,
+          lastUpdated: new Date().toISOString()
+        });
+        console.log(`[PlaylistHistory] Removed ${originalLength - filteredItems.length} item(s) from main chunk`);
+      }
+
+      // Process additional chunks
+      for (let i = 1; i < Math.min(totalChunks, MAX_CHUNKS); i++) {
+        try {
+          const chunkDoc = await getDocument('liveSettings', `${HISTORY_DOC}_${i}`);
+          if (chunkDoc && chunkDoc.items) {
+            const chunkOriginalLength = chunkDoc.items.length;
+            const chunkFiltered = chunkDoc.items.filter((item: HistoryItem) =>
+              item.url !== url && (embedId ? item.embedId !== embedId : true)
+            );
+
+            if (chunkFiltered.length < chunkOriginalLength) {
+              removedFromAny = true;
+              totalRemoved += chunkOriginalLength - chunkFiltered.length;
+
+              await setDocument('liveSettings', `${HISTORY_DOC}_${i}`, {
+                items: chunkFiltered,
+                lastUpdated: new Date().toISOString()
+              });
+              console.log(`[PlaylistHistory] Removed ${chunkOriginalLength - chunkFiltered.length} item(s) from chunk ${i}`);
+            }
+          }
+        } catch (chunkError) {
+          console.warn(`[PlaylistHistory] Could not process chunk ${i}:`, chunkError);
+        }
+      }
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      removed: removedFromAny,
+      count: totalRemoved,
+      message: removedFromAny
+        ? `Removed ${totalRemoved} blocked video(s) from history`
+        : 'Video not found in history'
+    }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error: any) {
+    console.error('[PlaylistHistory] DELETE error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}

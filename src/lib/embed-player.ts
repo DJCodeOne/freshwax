@@ -142,6 +142,11 @@ export class EmbedPlayerManager {
             this.callbacks.onEnded?.();
           }
           // @ts-ignore
+          if (event.data === YT.PlayerState.PAUSED) {
+            console.log('[EmbedPlayerManager] YouTube player paused');
+            this.callbacks.onStateChange?.('paused');
+          }
+          // @ts-ignore
           if (event.data === YT.PlayerState.PLAYING) {
             // Execute pending seek when video first starts playing
             if (this.pendingSeekPosition && !this.hasInitialSeekExecuted) {
@@ -169,7 +174,26 @@ export class EmbedPlayerManager {
           }
         },
         onError: (event: any) => {
-          this.callbacks.onError?.('YouTube player error: ' + event.data);
+          // YouTube error codes:
+          // 2: Invalid video ID
+          // 5: HTML5 player error
+          // 100: Video not found (removed/private)
+          // 101: Video owner doesn't allow embedding
+          // 150: Same as 101 (embedding not allowed)
+          const errorCode = event.data;
+          const blockedCodes = [100, 101, 150];
+          const isBlocked = blockedCodes.includes(errorCode);
+
+          console.log('[EmbedPlayerManager] YouTube error code:', errorCode, 'isBlocked:', isBlocked);
+
+          // Pass structured error info for blocked video handling
+          this.callbacks.onError?.(JSON.stringify({
+            type: isBlocked ? 'blocked' : 'error',
+            code: errorCode,
+            message: isBlocked
+              ? 'Video unavailable or blocked'
+              : `YouTube player error: ${errorCode}`
+          }));
         }
       }
     });
@@ -219,6 +243,11 @@ export class EmbedPlayerManager {
         }
       }
       this.callbacks.onStateChange?.('playing');
+    });
+
+    this.vimeoPlayer.on('pause', () => {
+      console.log('[EmbedPlayerManager] Vimeo player paused');
+      this.callbacks.onStateChange?.('paused');
     });
 
     this.callbacks.onReady?.();
@@ -272,6 +301,11 @@ export class EmbedPlayerManager {
         this.soundcloudWidget?.seekTo(seekPos * 1000); // SoundCloud uses ms
       }
       this.callbacks.onStateChange?.('playing');
+    });
+
+    this.soundcloudWidget.bind(SC.Widget.Events.PAUSE, () => {
+      console.log('[EmbedPlayerManager] SoundCloud player paused');
+      this.callbacks.onStateChange?.('paused');
     });
   }
 
@@ -366,6 +400,11 @@ export class EmbedPlayerManager {
           this.directVideo.currentTime = seekPos;
         }
         this.callbacks.onStateChange?.('playing');
+      });
+
+      this.directVideo.addEventListener('pause', () => {
+        console.log('[EmbedPlayerManager] Direct video paused');
+        this.callbacks.onStateChange?.('paused');
       });
     }
   }
