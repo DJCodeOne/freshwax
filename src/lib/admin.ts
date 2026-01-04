@@ -4,6 +4,28 @@ import { getDocument } from './firebase-rest';
 import { ApiErrors } from './api-utils';
 import type { APIContext } from 'astro';
 
+/**
+ * Timing-safe string comparison to prevent timing attacks
+ * Uses constant-time comparison regardless of where strings differ
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    // Compare against itself to maintain constant time even for length mismatch
+    const dummy = a;
+    let result = 0;
+    for (let i = 0; i < dummy.length; i++) {
+      result |= dummy.charCodeAt(i) ^ dummy.charCodeAt(i);
+    }
+    return false;
+  }
+
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 // Admin configuration - loaded from environment variables
 // Fallback to defaults only in development
 let adminConfig: { uids: string[]; emails: string[] } | null = null;
@@ -51,11 +73,11 @@ export function getAdminKey(locals: any): string {
   return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 }
 
-// Verify admin key
+// Verify admin key with timing-safe comparison
 export function verifyAdminKey(key: string, locals: any): boolean {
   const expectedKey = getAdminKey(locals);
-  if (!expectedKey) return false;
-  return key === expectedKey;
+  if (!expectedKey || !key) return false;
+  return timingSafeEqual(key, expectedKey);
 }
 
 /**
@@ -70,23 +92,23 @@ export function requireAdminAuth(request: Request, locals: any, bodyData?: any):
     return ApiErrors.serverError('Admin key not configured');
   }
 
-  // Check body (for POST requests)
-  if (bodyData?.adminKey === expectedKey) {
+  // Check body (for POST requests) - timing-safe comparison
+  if (bodyData?.adminKey && timingSafeEqual(bodyData.adminKey, expectedKey)) {
     return null; // Auth successful
   }
 
-  // Check Authorization header (preferred method)
+  // Check Authorization header (preferred method) - timing-safe comparison
   const authHeader = request.headers.get('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
-    if (token === expectedKey) {
+    if (timingSafeEqual(token, expectedKey)) {
       return null; // Auth successful
     }
   }
 
-  // Check X-Admin-Key header (alternative for GET requests)
+  // Check X-Admin-Key header (alternative for GET requests) - timing-safe comparison
   const adminKeyHeader = request.headers.get('X-Admin-Key');
-  if (adminKeyHeader === expectedKey) {
+  if (adminKeyHeader && timingSafeEqual(adminKeyHeader, expectedKey)) {
     return null; // Auth successful
   }
 

@@ -95,64 +95,67 @@ export const GET: APIRoute = async ({ request, locals }) => {
         skipCache: true
       });
 
-      // Enrich requests with user data and mix stats
-      const requests = await Promise.all(snapshot.map(async (data: any) => {
-        const userId = data.userId;
+      // Collect unique user IDs for batch fetching
+      const userIds = [...new Set(snapshot.map((r: any) => r.userId).filter(Boolean))];
 
-        // Get user profile for name/email
+      // Batch fetch all user data in parallel (not N+1!)
+      const [usersData, artistsData, mixesData] = await Promise.all([
+        // Fetch all users at once
+        Promise.all(userIds.map(id => getDocument('users', id).catch(() => null))),
+        // Fetch all artists at once
+        Promise.all(userIds.map(id => getDocument('artists', id).catch(() => null))),
+        // Fetch all mixes - single query with cache
+        queryCollection('dj-mixes', { limit: 500, cacheTime: 60000 }).catch(() => [])
+      ]);
+
+      // Build lookup maps for O(1) access
+      const usersMap = new Map<string, any>();
+      const artistsMap = new Map<string, any>();
+      userIds.forEach((id, i) => {
+        if (usersData[i]) usersMap.set(id, usersData[i]);
+        if (artistsData[i]) artistsMap.set(id, artistsData[i]);
+      });
+
+      // Build mix stats map
+      const mixStatsMap = new Map<string, { count: number; bestLikes: number }>();
+      (mixesData as any[]).forEach((mix: any) => {
+        const uid = mix.userId || mix.user_id || mix.uploaderId;
+        if (!uid) return;
+        const stats = mixStatsMap.get(uid) || { count: 0, bestLikes: 0 };
+        stats.count++;
+        const likes = mix.likeCount || mix.likes || 0;
+        if (likes > stats.bestLikes) stats.bestLikes = likes;
+        mixStatsMap.set(uid, stats);
+      });
+
+      // Map requests with enriched data (no async, all data is in maps)
+      const requests = snapshot.map((data: any) => {
+        const userId = data.userId;
+        const userDoc = usersMap.get(userId);
+        const artistDoc = artistsMap.get(userId);
+        const mixStats = mixStatsMap.get(userId) || { count: 0, bestLikes: 0 };
+
         let djName = data.userName || 'Unknown DJ';
         let email = data.userEmail || '';
 
-        try {
-          // Try to get more details from users collection
-          const userDoc = await getDocument('users', userId);
-          if (userDoc) {
-            djName = userDoc.displayName || userDoc.name || djName;
-            email = userDoc.email || email;
-          }
-
-          // Also check artists collection
-          if (!email || djName === 'Unknown DJ') {
-            const artistDoc = await getDocument('artists', userId);
-            if (artistDoc) {
-              djName = artistDoc.name || artistDoc.djName || djName;
-              email = artistDoc.email || email;
-            }
-          }
-        } catch (e) {
-          // Ignore errors fetching user data
+        if (userDoc) {
+          djName = userDoc.displayName || userDoc.name || djName;
+          email = userDoc.email || email;
         }
-
-        // Get mix stats
-        let mixCount = 0;
-        let bestMixLikes = 0;
-
-        try {
-          const mixesSnapshot = await queryCollection('dj-mixes', {
-            filters: [
-              { field: 'userId', op: 'EQUAL', value: userId }
-            ],
-            skipCache: true
-          });
-
-          mixCount = mixesSnapshot.length;
-          mixesSnapshot.forEach((mixData: any) => {
-            const likes = mixData.likeCount || mixData.likes || 0;
-            if (likes > bestMixLikes) bestMixLikes = likes;
-          });
-        } catch (e) {
-          // Ignore errors fetching mix data
+        if (artistDoc && (!email || djName === 'Unknown DJ')) {
+          djName = artistDoc.name || artistDoc.djName || djName;
+          email = artistDoc.email || email;
         }
 
         return {
           ...data,
           djName,
           email,
-          mixCount,
-          bestMixLikes,
-          requestedAt: data.createdAt // Alias for consistency
+          mixCount: mixStats.count,
+          bestMixLikes: mixStats.bestLikes,
+          requestedAt: data.createdAt
         };
-      }));
+      });
 
       return new Response(JSON.stringify({
         success: true,

@@ -35,12 +35,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
   const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
 
-  console.log('[create-order] Firebase config:', {
-    hasProjectId: !!projectId,
-    hasApiKey: !!apiKey,
-    projectId: projectId || 'MISSING'
-  });
-
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: projectId,
     FIREBASE_API_KEY: apiKey,
@@ -48,11 +42,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const orderData = await request.json();
-    console.log('[create-order] Order data received:', JSON.stringify(orderData).substring(0, 500));
 
     // Extract idToken for authenticated Firebase writes
     const idToken = orderData.idToken;
-    console.log('[create-order] Has idToken:', !!idToken);
 
     log.info('[create-order] Processing order:', orderData.customer?.email);
 
@@ -288,10 +280,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     // Save to Firebase (with idToken for authenticated write)
-    console.log('[create-order] Saving order to Firebase:', orderNumber);
-    console.log('[create-order] Order items count:', order.items?.length);
     const orderRef = await addDocument('orders', order, idToken);
-    console.log('[create-order] ✓ Order saved successfully:', orderRef.id);
 
     log.info('[create-order] ✓ Order created:', orderNumber, orderRef.id);
 

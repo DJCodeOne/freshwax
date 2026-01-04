@@ -7,11 +7,8 @@ import { initKVCache, kvGet, kvSet } from '../../lib/kv-cache';
 
 export const prerender = false;
 
+// Production-safe logging - only errors in production
 const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
 
 // Cache config for DJ mixes (5 min)
 const MIXES_CACHE = { prefix: 'mixes', ttl: 300 };
@@ -31,8 +28,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const limit = limitParam ? parseInt(limitParam) : 50;
   const skipCache = url.searchParams.get('fresh') === '1';
 
-  log.info('[get-dj-mixes] Fetching mixes, userId:', userId, 'limit:', limit);
-
   try {
     let mixes: any[] = [];
 
@@ -41,7 +36,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (!userId && !skipCache) {
       const cached = await kvGet(cacheKey, MIXES_CACHE);
       if (cached) {
-        log.info('[get-dj-mixes] KV cache hit for public listing');
         return new Response(JSON.stringify(cached), {
           status: 200,
           headers: {
@@ -54,25 +48,23 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // If userId provided, filter by userId
     if (userId) {
-      // OPTIMIZED: Query all possible userId fields in PARALLEL (saves 2 sequential reads)
-      const [mixesByUserId, mixesByUserId2, mixesByUploaderId] = await Promise.all([
-        queryCollection('dj-mixes', { filters: [{ field: 'userId', op: 'EQUAL', value: userId }], limit: 100 }),
-        queryCollection('dj-mixes', { filters: [{ field: 'user_id', op: 'EQUAL', value: userId }], limit: 100 }),
-        queryCollection('dj-mixes', { filters: [{ field: 'uploaderId', op: 'EQUAL', value: userId }], limit: 100 })
-      ]);
-
-      // Merge results and dedupe by id
-      const allMixes = [...mixesByUserId, ...mixesByUserId2, ...mixesByUploaderId];
-      const seenIds = new Set<string>();
-      mixes = allMixes.filter(mix => {
-        if (seenIds.has(mix.id)) return false;
-        seenIds.add(mix.id);
-        return true;
+      // OPTIMIZED: Single query with in-memory filtering (1 read instead of 3-6)
+      // This is more efficient because:
+      // 1. One query with cache vs 3+ uncacheable filtered queries
+      // 2. Firestore REST API doesn't support OR queries, so we filter client-side
+      const allMixes = await queryCollection('dj-mixes', {
+        limit: 500,
+        cacheTime: 120000 // 2 min cache - shared across all user lookups
       });
 
-      log.info('[get-dj-mixes] Found', mixes.length, 'mixes by userId fields (parallel query)');
+      // Filter by any userId field variation (handles schema inconsistency)
+      mixes = allMixes.filter((mix: any) =>
+        mix.userId === userId ||
+        mix.user_id === userId ||
+        mix.uploaderId === userId
+      );
 
-      // If still no results, try to match by user's displayName
+      // If no results by userId, try matching by displayName
       if (mixes.length === 0) {
         try {
           const { getDocument } = await import('../../lib/firebase-rest');
@@ -91,28 +83,15 @@ export const GET: APIRoute = async ({ request, locals }) => {
                              artistProfile?.name;
 
           if (displayName) {
-            log.info('[get-dj-mixes] Trying to match by displayName:', displayName);
-
-            // OPTIMIZED: Query all displayName fields in PARALLEL
-            const [byDjName, byDjName2, byDisplayName] = await Promise.all([
-              queryCollection('dj-mixes', { filters: [{ field: 'djName', op: 'EQUAL', value: displayName }], limit: 100 }),
-              queryCollection('dj-mixes', { filters: [{ field: 'dj_name', op: 'EQUAL', value: displayName }], limit: 100 }),
-              queryCollection('dj-mixes', { filters: [{ field: 'displayName', op: 'EQUAL', value: displayName }], limit: 100 })
-            ]);
-
-            // Merge and dedupe
-            const allDjMixes = [...byDjName, ...byDjName2, ...byDisplayName];
-            const seenDjIds = new Set<string>();
-            mixes = allDjMixes.filter(mix => {
-              if (seenDjIds.has(mix.id)) return false;
-              seenDjIds.add(mix.id);
-              return true;
+            // Filter cached mixes by displayName variations
+            const displayNameLower = displayName.toLowerCase();
+            mixes = allMixes.filter((mix: any) => {
+              const djName = (mix.djName || mix.dj_name || mix.displayName || '').toLowerCase();
+              return djName === displayNameLower;
             });
-
-            log.info('[get-dj-mixes] Found', mixes.length, 'mixes by displayName match (parallel query)');
           }
         } catch (e) {
-          console.error('[get-dj-mixes] Error matching by displayName:', e);
+          // Silently fail - no mixes found for this user
         }
       }
     } else {
@@ -162,8 +141,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
     // Apply limit
     const limitedMixes = limit > 0 ? normalizedMixes.slice(0, limit) : normalizedMixes;
-    
-    log.info('[get-dj-mixes] Loaded', mixes.length, 'mixes, returning', limitedMixes.length);
 
     const result = {
       success: true,
@@ -187,7 +164,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
     
   } catch (error) {
-    log.error('[get-dj-mixes] Error:', error);
+    // Only log errors in development
+    if (isDev) console.error('[get-dj-mixes] Error:', error);
     return new Response(JSON.stringify({ 
       success: false,
       error: 'Failed to fetch DJ mixes',

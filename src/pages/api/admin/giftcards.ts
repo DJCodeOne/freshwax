@@ -65,10 +65,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const type = url.searchParams.get('type') || 'all';
 
     if (type === 'analytics') {
-      // Get analytics data with limits to prevent runaway
+      // Get analytics data with 5-min cache for dashboard (not real-time)
       const [giftCards, userCredits] = await Promise.all([
-        queryCollection('giftCards', { skipCache: true, limit: 1000 }),
-        queryCollection('userCredits', { skipCache: true, limit: 500 })
+        queryCollection('giftCards', { cacheTime: 300000, limit: 1000 }),
+        queryCollection('userCredits', { cacheTime: 300000, limit: 500 })
       ]);
 
       let totalIssued = 0;

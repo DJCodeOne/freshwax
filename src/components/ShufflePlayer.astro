@@ -887,7 +887,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
         this.els.queueList.innerHTML = upcoming.map(function(track, i) {
           var actualIndex = self.currentIndex + 1 + i;
           return '<div class="queue-item" data-index="' + actualIndex + '">' +
-            '<img src="' + (track.artwork || '/place-holder.webp') + '" alt="" onerror="this.src=\'/place-holder.webp\'">' +
+            '<img src="' + (track.artwork || '/place-holder.webp') + '" alt="" loading="lazy" onerror="this.src=\'/place-holder.webp\'">' +
             '<div class="queue-item-info">' +
             '<p class="queue-item-title">' + self.escapeHtml(track.title) + '</p>' +
             '<p class="queue-item-artist">' + self.escapeHtml(track.artist) + '</p>' +

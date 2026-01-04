@@ -515,7 +515,7 @@ const firebaseConfig = {
       html += '<div style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee;">Releases</div>';
       releases.forEach(r => {
         html += `<a href="/item/${r.id}" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
-          <img src="${r.artwork_url || '/place-holder.webp'}" alt="" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" onerror="this.src='/place-holder.webp'" />
+          <img src="${r.artwork_url || '/place-holder.webp'}" alt="" loading="lazy" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" onerror="this.src='/place-holder.webp'" />
           <div>
             <div style="font-weight: 500; font-size: 0.875rem;">${r.title}</div>
             <div style="font-size: 0.75rem; color: #666;">${r.artist_name}</div>
@@ -528,7 +528,7 @@ const firebaseConfig = {
       html += '<div style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">DJ Mixes</div>';
       mixes.forEach(m => {
         html += `<a href="/dj-mix/${m.id}" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
-          <img src="${m.artwork_url || '/place-holder.webp'}" alt="" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" onerror="this.src='/place-holder.webp'" />
+          <img src="${m.artwork_url || '/place-holder.webp'}" alt="" loading="lazy" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" onerror="this.src='/place-holder.webp'" />
           <div>
             <div style="font-weight: 500; font-size: 0.875rem;">${m.title}</div>
             <div style="font-size: 0.75rem; color: #666;">${m.artist_name}</div>
