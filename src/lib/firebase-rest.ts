@@ -682,6 +682,53 @@ export async function setDocument(
   return { success: true, id: docId };
 }
 
+// Create document only if it doesn't exist (returns false if already exists)
+export async function createDocumentIfNotExists(
+  collection: string,
+  docId: string,
+  data: Record<string, any>
+): Promise<{ success: boolean; exists: boolean }> {
+  const projectId = getEnvVar('FIREBASE_PROJECT_ID') || PROJECT_ID;
+  const apiKey = getEnvVar('FIREBASE_API_KEY') || getEnvVar('PUBLIC_FIREBASE_API_KEY') || FIREBASE_API_KEY_FALLBACK;
+
+  if (!projectId || !apiKey) {
+    throw new Error('Firebase configuration missing - ensure initFirebaseEnv() is called');
+  }
+
+  // Use currentDocument.exists=false to only create if doesn't exist
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?currentDocument.exists=false&key=${apiKey}`;
+
+  const fields: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    fields[key] = toFirestoreValue(value);
+  }
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    // Check if it's a "document already exists" error
+    if (response.status === 400 && errorText.includes('ALREADY_EXISTS')) {
+      return { success: false, exists: true };
+    }
+    // Also check for precondition failed (409) which Firebase may return
+    if (response.status === 409 || errorText.includes('FAILED_PRECONDITION')) {
+      return { success: false, exists: true };
+    }
+    log.error('createDocumentIfNotExists error:', response.status, errorText);
+    throw new Error(`Failed to create document: ${response.status}`);
+  }
+
+  // Invalidate cache for this document
+  cache.delete(`doc:${collection}:${docId}`);
+
+  return { success: true, exists: false };
+}
+
 export async function updateDocument(
   collection: string,
   docId: string,

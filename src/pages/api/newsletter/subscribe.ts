@@ -1,7 +1,12 @@
 // src/pages/api/newsletter/subscribe.ts
 // Newsletter subscription endpoint - saves to Firebase and sends welcome email via Resend
 import type { APIRoute } from 'astro';
-import { queryCollection, addDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, createDocumentIfNotExists, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+
+// Create a safe document ID from email (Firebase doc IDs can't contain / or .)
+function emailToDocId(email: string): string {
+  return email.toLowerCase().trim().replace(/[.@]/g, '_');
+}
 import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -52,19 +57,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    const subscriberId = emailToDocId(normalizedEmail);
 
-    // Check if already subscribed
-    const existingSubscribers = await queryCollection('subscribers', {
-      filters: [{ field: 'email', op: 'EQUAL', value: normalizedEmail }],
-      limit: 1
-    });
+    // Try to check if already subscribed (may fail due to security rules)
+    let existingDoc = null;
+    try {
+      existingDoc = await getDocument('subscribers', subscriberId);
+    } catch (e) {
+      // Security rules may block read - continue to try creating
+      console.log('[Newsletter] Could not check existing subscriber, will try to create');
+    }
 
-    if (existingSubscribers.length > 0) {
-      const existingDoc = existingSubscribers[0];
-
+    if (existingDoc) {
       // If unsubscribed, resubscribe them
       if (existingDoc.status === 'unsubscribed') {
-        await updateDocument('subscribers', existingDoc.id, {
+        await updateDocument('subscribers', subscriberId, {
           status: 'active',
           resubscribedAt: new Date(),
           updatedAt: new Date()
@@ -88,7 +95,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Create new subscriber
+    // Create new subscriber with deterministic ID (fails if already exists)
     const subscriberData = {
       email: normalizedEmail,
       status: 'active',
@@ -100,7 +107,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       lastEmailSentAt: null
     };
 
-    const result = await addDocument('subscribers', subscriberData);
+    const createResult = await createDocumentIfNotExists('subscribers', subscriberId, subscriberData);
+
+    if (!createResult.success && createResult.exists) {
+      // Document already exists - user is already subscribed
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'You are already subscribed!'
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     // Send welcome email via Resend
     try {
@@ -164,7 +182,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: true,
       message: 'Successfully subscribed! Check your inbox for a welcome email.',
-      subscriberId: result.id
+      subscriberId: subscriberId
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

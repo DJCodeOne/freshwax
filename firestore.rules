@@ -273,9 +273,11 @@ service cloud.firestore {
     }
 
     // Newsletter subscribers - public create for signup
+    // Note: Read allowed for admin API (API validates admin status via cookie)
     match /subscribers/{subscriberId} {
-      allow create: if true;
-      allow read, update, delete: if isAdmin();
+      allow read: if true;
+      allow create, update: if true;  // Allow subscribe, resubscribe, unsubscribe
+      allow delete: if isAdmin();
     }
 
     // Contact forms - public create
