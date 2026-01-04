@@ -108,6 +108,12 @@ export async function GET({ request, locals }: APIContext) {
     initEnv(locals);
     const doc = await getDocument('liveSettings', GLOBAL_PLAYLIST_DOC);
 
+    const headers = {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Pragma': 'no-cache'
+    };
+
     if (!doc) {
       // Return empty playlist
       return new Response(JSON.stringify({
@@ -119,9 +125,7 @@ export async function GET({ request, locals }: APIContext) {
           lastUpdated: new Date().toISOString(),
           trackStartedAt: null
         }
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }), { headers });
     }
 
     return new Response(JSON.stringify({
@@ -133,9 +137,7 @@ export async function GET({ request, locals }: APIContext) {
         lastUpdated: doc.lastUpdated || new Date().toISOString(),
         trackStartedAt: doc.trackStartedAt || null
       }
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    }), { headers });
   } catch (error: any) {
     console.error('[GlobalPlaylist] GET error:', error);
     return new Response(JSON.stringify({
@@ -426,10 +428,30 @@ export async function PUT({ request, locals }: APIContext) {
 
       switch (action) {
         case 'next':
+          // Skip current track - remove it and play next user track or autoplay
           if (playlist.queue.length > 0) {
-            playlist.currentIndex = (playlist.currentIndex + 1) % playlist.queue.length;
-            // Reset track start time for new track
+            playlist.queue.shift(); // Remove current track
+          }
+
+          if (playlist.queue.length > 0) {
+            // Play next user-added track
+            playlist.isPlaying = true;
             playlist.trackStartedAt = now;
+            playlist.currentIndex = 0;
+            console.log('[GlobalPlaylist] Next: playing user track', playlist.queue[0]?.title);
+          } else {
+            // Queue empty - pick random track for autoplay
+            const nextRandomTrack = await pickRandomFromServerHistory();
+            if (nextRandomTrack) {
+              playlist.queue.push(nextRandomTrack);
+              playlist.isPlaying = true;
+              playlist.trackStartedAt = now;
+              playlist.currentIndex = 0;
+              console.log('[GlobalPlaylist] Next: autoplay picked', nextRandomTrack.title || nextRandomTrack.url);
+            } else {
+              playlist.isPlaying = false;
+              playlist.trackStartedAt = null;
+            }
           }
           break;
         case 'play':
@@ -479,13 +501,19 @@ export async function PUT({ request, locals }: APIContext) {
             });
           }
 
-          // Remove the finished track (always index 0 for queue-style playlist)
+          // Remove only the finished track (first in queue)
+          // User-added tracks should play next - autoplay only when queue is empty
           if (playlist.queue.length > 0) {
-            playlist.queue.shift(); // Remove first item
+            playlist.queue.shift(); // Remove first item (the one that just ended)
           }
 
-          // If queue is now empty, pick a random track from history
-          if (playlist.queue.length === 0) {
+          // If queue still has items (user-added tracks), play them
+          if (playlist.queue.length > 0) {
+            playlist.isPlaying = true;
+            playlist.trackStartedAt = now;
+            console.log('[GlobalPlaylist] Playing next user track:', playlist.queue[0]?.title || playlist.queue[0]?.url);
+          } else {
+            // Queue is empty - pick a random track for autoplay
             const randomTrack = await pickRandomFromServerHistory();
             if (randomTrack) {
               playlist.queue.push(randomTrack);
@@ -498,9 +526,6 @@ export async function PUT({ request, locals }: APIContext) {
               playlist.trackStartedAt = null;
               console.log('[GlobalPlaylist] No tracks for auto-play, stopping');
             }
-          } else {
-            // Queue has more items, continue with next
-            playlist.trackStartedAt = now;
           }
           playlist.currentIndex = 0; // Always play from front of queue
           playlist.reactionCount = 0; // Reset reactions for new track
@@ -513,6 +538,40 @@ export async function PUT({ request, locals }: APIContext) {
           const { emoji, sessionId } = body;
           if (emoji) {
             await broadcastEmojiReaction(emoji, sessionId, (locals as any)?.runtime?.env);
+          }
+          break;
+
+        case 'startAutoPlay':
+          // Server picks autoplay track - ensures ALL clients play the SAME track
+          // This is called when queue is empty and clients want to start autoplay
+
+          // RACE PROTECTION: If a track was started within last 10 seconds, don't pick new one
+          // This prevents multiple clients from racing to pick different tracks
+          const recentlyStarted = playlist.trackStartedAt &&
+            (Date.now() - new Date(playlist.trackStartedAt).getTime()) < 10000;
+
+          if (playlist.queue.length === 0 && !recentlyStarted) {
+            const autoTrack = await pickRandomFromServerHistory();
+            if (autoTrack) {
+              playlist.queue.push(autoTrack);
+              playlist.isPlaying = true;
+              playlist.trackStartedAt = now;
+              playlist.currentIndex = 0;
+              playlist.reactionCount = 0;
+              console.log('[GlobalPlaylist] startAutoPlay: picked', autoTrack.title || autoTrack.url);
+            } else {
+              console.log('[GlobalPlaylist] startAutoPlay: no tracks available');
+            }
+          } else if (playlist.queue.length > 0) {
+            // Queue already has items - just ensure it's playing
+            playlist.isPlaying = true;
+            if (!playlist.trackStartedAt) {
+              playlist.trackStartedAt = now;
+            }
+            console.log('[GlobalPlaylist] startAutoPlay: queue has items, resuming');
+          } else {
+            // Recently started - just return current state, don't change anything
+            console.log('[GlobalPlaylist] startAutoPlay: race protection - track just started, returning current state');
           }
           break;
       }
@@ -606,56 +665,72 @@ async function addToRecentlyPlayed(track: any): Promise<void> {
 
 // Pick a random track from server-side history for auto-play
 // This ensures ALL clients get the SAME track (server is source of truth)
-async function pickRandomFromServerHistory(): Promise<PlaylistItem | null> {
+// Local playlist server URL (H: drive MP3s via Cloudflare tunnel)
+const LOCAL_PLAYLIST_SERVER = 'https://playlist.freshwax.co.uk';
+
+// Fallback thumbnail for audio files without thumbnails
+const AUDIO_THUMBNAIL_FALLBACK = '/place-holder.webp';
+
+async function pickRandomFromLocalServer(): Promise<PlaylistItem | null> {
   try {
-    // Try multiple history shards (playlistHistory_1, playlistHistory_2, etc.)
-    const allItems: any[] = [];
+    console.log('[GlobalPlaylist] Trying local playlist server...');
+    const response = await fetch(`${LOCAL_PLAYLIST_SERVER}/list`, {
+      signal: AbortSignal.timeout(5000)
+    });
 
-    // Check main history doc first
-    const mainHistory = await getDocument('liveSettings', 'playlistHistory');
-    if (mainHistory?.items?.length > 0) {
-      allItems.push(...mainHistory.items);
-    }
-
-    // Check sharded history docs (for large history)
-    for (let i = 1; i <= 10; i++) {
-      try {
-        const shardDoc = await getDocument('liveSettings', `playlistHistory_${i}`);
-        if (shardDoc?.items?.length > 0) {
-          allItems.push(...shardDoc.items);
-        }
-      } catch {
-        break; // No more shards
-      }
-    }
-
-    if (allItems.length === 0) {
-      console.log('[GlobalPlaylist] No tracks in history for auto-play');
+    if (!response.ok) {
+      console.log('[GlobalPlaylist] Local server returned', response.status);
       return null;
     }
 
-    console.log('[GlobalPlaylist] History has', allItems.length, 'tracks for auto-play');
+    const data = await response.json();
+    if (!data.files || data.files.length === 0) {
+      console.log('[GlobalPlaylist] Local server has no files');
+      return null;
+    }
 
-    // Pick a random track
-    const randomIndex = Math.floor(Math.random() * allItems.length);
-    const selected = allItems[randomIndex];
+    console.log('[GlobalPlaylist] Local server has', data.files.length, 'MP3 files');
 
-    // Convert to PlaylistItem format
+    // Pick a random track (prefer ones with thumbnails)
+    const filesWithThumbs = data.files.filter((f: any) => f.thumbnail);
+    const filesToPickFrom = filesWithThumbs.length > 0 ? filesWithThumbs : data.files;
+    const randomIndex = Math.floor(Math.random() * filesToPickFrom.length);
+    const selected = filesToPickFrom[randomIndex];
+    const url = `${LOCAL_PLAYLIST_SERVER}${selected.url}`;
+
+    // Use track's own thumbnail if available, otherwise fallback
+    const thumbnail = selected.thumbnail
+      ? `${LOCAL_PLAYLIST_SERVER}${selected.thumbnail}`
+      : AUDIO_THUMBNAIL_FALLBACK;
+
+    console.log('[GlobalPlaylist] Selected local MP3:', selected.name, 'thumb:', !!selected.thumbnail);
+
     return {
       id: `auto_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`,
-      url: selected.url,
-      platform: selected.platform || 'youtube',
-      embedId: selected.embedId,
-      title: selected.title,
-      thumbnail: selected.thumbnail,
+      url: url,
+      platform: 'direct',
+      title: selected.name,
+      thumbnail: thumbnail,
+      duration: selected.duration || undefined,
       addedBy: 'system',
-      addedByName: 'Auto-Play',
+      addedByName: selected.uploader || 'Auto-Play',
       addedAt: new Date().toISOString()
     };
   } catch (error) {
-    console.error('[GlobalPlaylist] Error picking random track:', error);
+    console.log('[GlobalPlaylist] Local server error:', error);
     return null;
   }
+}
+
+async function pickRandomFromServerHistory(): Promise<PlaylistItem | null> {
+  // ONLY use local playlist server (H: drive MP3s) - no YouTube fallback
+  const localTrack = await pickRandomFromLocalServer();
+  if (localTrack) {
+    return localTrack;
+  }
+
+  console.log('[GlobalPlaylist] Local playlist server unavailable - no autoplay');
+  return null;
 }
 
 // Broadcast emoji reaction to all viewers via Pusher
