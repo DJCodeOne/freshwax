@@ -1448,10 +1448,14 @@ Artist - Track Title
         console.log(`Quick Drop: Large file detected (${fileSizeMB.toFixed(1)}MB), using direct R2 upload`);
         quickDropStatus.textContent = 'Preparing upload...';
 
-        // Step 1: Get presigned URL
+        // Step 1: Get presigned URL (requires auth)
+        const authToken = await user.getIdToken();
         const presignResponse = await fetch('/api/mix/presign-upload', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
           body: JSON.stringify({
             fileName: quickDropFile.name,
             contentType: quickDropFile.type || 'audio/mpeg',
@@ -1761,9 +1765,14 @@ Artist - Track Title
           presignBody.artworkContentType = selectedArtworkFile.type;
         }
 
+        // Get auth token for presigned URL request
+        const authToken = await user.getIdToken();
         const presignResponse = await fetch('/api/mix/presign-upload', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
           body: JSON.stringify(presignBody)
         });
 

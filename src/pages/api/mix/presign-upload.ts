@@ -4,6 +4,8 @@
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -18,6 +20,29 @@ function getR2Config(env: any) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`mix-presign:${clientId}`, RateLimiters.upload);
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfter!);
+  }
+
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
+  // Require authenticated user (all registered users can upload mixes)
+  const { userId, error: authError } = await verifyRequestUser(request);
+  if (authError || !userId) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: authError || 'Authentication required'
+    }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+
   try {
     const { fileName, contentType, fileSize, mixId, artworkFileName, artworkContentType } = await request.json();
 

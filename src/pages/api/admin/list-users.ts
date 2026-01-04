@@ -3,7 +3,9 @@
 // Uses Firebase REST API to bypass Firestore rules
 
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -42,54 +44,29 @@ interface UserData {
   source: string;
 }
 
-// Hardcoded admin UIDs for verification
-const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
-const ADMIN_EMAILS = ['freshwaxonline@gmail.com', 'davidhagon@gmail.com'];
-
-async function isAdmin(uid: string): Promise<boolean> {
-  if (ADMIN_UIDS.includes(uid)) return true;
-
-  // Check admins collection
-  const adminDoc = await getDocument('admins', uid);
-  if (adminDoc) return true;
-
-  // Check if user has admin role
-  const userDoc = await getDocument('users', uid);
-  if (userDoc?.isAdmin || userDoc?.roles?.admin) return true;
-
-  return false;
-}
-
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`list-users:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
   try {
-    // Get admin UID from header or query param
-    const url = new URL(request.url);
-    const adminUid = request.headers.get('x-admin-uid') || url.searchParams.get('uid');
+    // SECURITY: Require admin authentication via admin key (not spoofable UID)
+    // For GET requests, check X-Admin-Key header
+    const authError = requireAdminAuth(request, locals);
+    if (authError) return authError;
 
-    // Pagination params
+    // Pagination params - SECURITY: No UID from query params (appears in logs)
+    const url = new URL(request.url);
     const page = parseInt(url.searchParams.get('page') || '1', 10);
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 100);
     const search = url.searchParams.get('search')?.toLowerCase() || '';
     const roleFilter = url.searchParams.get('role') || 'all'; // all, customer, dj, artist, merch
-
-    if (!adminUid) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Admin UID required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    // Verify admin status
-    const authorized = await isAdmin(adminUid);
-    if (!authorized) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized - admin access required'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-    }
 
     // Load users collection as SOURCE OF TRUTH + orders for stats
     const usersMap = new Map<string, UserData>();

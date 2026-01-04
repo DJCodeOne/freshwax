@@ -4,6 +4,9 @@
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getAdminKey } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -54,8 +57,38 @@ function sanitizeFilename(str: string): string {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`presigned-upload:${clientId}`, RateLimiters.upload);
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfter!);
+  }
+
+  const env = (locals as any).runtime?.env;
+
+  // Initialize Firebase for Cloudflare runtime
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
+  // Check for admin key first (for admin upload page)
+  const adminKey = getAdminKey(request);
+  const expectedAdminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
+  const isAdmin = adminKey && expectedAdminKey && adminKey === expectedAdminKey;
+
+  // If not admin, require authenticated user
+  if (!isAdmin) {
+    const { userId, error: authError } = await verifyRequestUser(request);
+    if (authError || !userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: authError || 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+  }
+
   try {
-    const env = (locals as any).runtime?.env;
     const r2Config = getR2Config(env);
 
     if (!r2Config.accountId || !r2Config.accessKeyId || !r2Config.secretAccessKey) {

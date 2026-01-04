@@ -3,9 +3,20 @@
 
 import type { APIRoute } from 'astro';
 import { saGetDocument, saSetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
+import { requireAdminAuth } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
+
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`fix-release-urls:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfter!);
+  }
 
   // Get service account credentials from environment (individual vars or full JSON)
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
@@ -34,7 +45,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const { releaseId, oldPrefix, newPrefix, createNew, releaseData, collection, docId, updateData } = await request.json();
+    const body = await request.json();
+    const { releaseId, oldPrefix, newPrefix, createNew, releaseData, collection, docId, updateData } = body;
+
+    // SECURITY: Require admin authentication
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
 
     // Generic document update mode (for any collection)
     if (collection && docId && updateData) {

@@ -95,7 +95,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Cache is OK here since Pusher handles real-time updates
     const liveSlots = await queryCollection('livestreamSlots', {
       filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-      limit: 5
+      limit: 5,
+      cacheTime: 30000 // 30 second cache - Pusher handles real-time updates
     });
 
     // Convert slots to stream format for the player
@@ -137,8 +138,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (liveStreams.length === 0) {
       const legacyStreams = await queryCollection('livestreams', {
         filters: [{ field: 'isLive', op: 'EQUAL', value: true }],
-        limit: 5
-        // Removed skipCache: true - use cached data to reduce Firebase reads
+        limit: 5,
+        cacheTime: 30000 // 30 second cache
       });
       liveStreams = legacyStreams;
     }
@@ -150,8 +151,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Check scheduled slots
       const scheduledSlots = await queryCollection('livestreamSlots', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'scheduled' }],
-        limit: 10
-        // Removed skipCache: true - use cached data to reduce Firebase reads
+        limit: 10,
+        cacheTime: 300000 // 5 minute cache - scheduled streams don't change often
       });
 
       const scheduled = scheduledSlots

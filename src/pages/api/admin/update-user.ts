@@ -4,6 +4,8 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -16,50 +18,25 @@ function initFirebase(locals: any) {
   });
 }
 
-// Hardcoded admin UIDs for verification
-const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
-
-async function isAdmin(uid: string): Promise<boolean> {
-  if (ADMIN_UIDS.includes(uid)) return true;
-
-  // Check admins collection
-  const adminDoc = await getDocument('admins', uid);
-  if (adminDoc) return true;
-
-  // Check if user has admin role
-  const userDoc = await getDocument('users', uid);
-  if (userDoc?.isAdmin || userDoc?.roles?.admin) return true;
-
-  return false;
-}
-
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`update-user:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
   try {
-    // Get admin UID from header
-    const adminUid = request.headers.get('x-admin-uid');
-
-    if (!adminUid) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Admin UID required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    // Verify admin status
-    const authorized = await isAdmin(adminUid);
-    if (!authorized) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized - admin access required'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-    }
-
     // Parse request body
     const body = await request.json();
     const { userId, sourceCollection, updates } = body;
+
+    // SECURITY: Require admin authentication via admin key (not spoofable UID)
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
 
     if (!userId || !updates) {
       return new Response(JSON.stringify({

@@ -2,14 +2,34 @@
 // Admin endpoint to extend a user's Plus subscription
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`extend-subscription:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfter!);
+  }
+
   try {
     const body = await request.json();
     const { userId, days, reason } = body;
+
+    // SECURITY: Require admin authentication
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
 
     if (!userId || !days) {
       return new Response(JSON.stringify({

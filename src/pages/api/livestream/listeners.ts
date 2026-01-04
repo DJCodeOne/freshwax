@@ -3,17 +3,47 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { initKVCache, kvGet, kvSet } from '../../../lib/kv-cache';
 
 export const prerender = false;
 
-// Helper to initialize Firebase
+// In-memory cache for viewer counts (reduces KV reads too)
+const viewerCountCache = new Map<string, { count: number; timestamp: number }>();
+const VIEWER_CACHE_TTL = 30000; // 30 seconds
+
+// Helper to initialize Firebase and KV
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+  initKVCache(env);
   return env;
+}
+
+// Get cached viewer count (memory -> KV -> fresh query)
+async function getCachedViewerCount(streamId: string): Promise<number | null> {
+  // Check memory cache first
+  const memCached = viewerCountCache.get(streamId);
+  if (memCached && Date.now() - memCached.timestamp < VIEWER_CACHE_TTL) {
+    return memCached.count;
+  }
+
+  // Check KV cache
+  const kvCached = await kvGet<{ count: number }>(`viewers:${streamId}`, { prefix: 'listeners' });
+  if (kvCached) {
+    viewerCountCache.set(streamId, { count: kvCached.count, timestamp: Date.now() });
+    return kvCached.count;
+  }
+
+  return null;
+}
+
+// Update viewer count in cache
+async function setCachedViewerCount(streamId: string, count: number): Promise<void> {
+  viewerCountCache.set(streamId, { count, timestamp: Date.now() });
+  await kvSet(`viewers:${streamId}`, { count }, { prefix: 'listeners', ttl: 30 });
 }
 
 // Pusher helper
@@ -45,7 +75,7 @@ async function triggerPusher(channel: string, event: string, data: any, env: any
   }
 }
 
-// Count active viewers and broadcast via Pusher
+// Count active viewers and broadcast via Pusher (called on join/leave only)
 async function countAndBroadcastViewers(streamId: string, env: any): Promise<number> {
   try {
     const twoMinutesAgo = Date.now() - (2 * 60 * 1000);
@@ -55,11 +85,15 @@ async function countAndBroadcastViewers(streamId: string, env: any): Promise<num
       filters: [
         { field: 'streamId', op: 'EQUAL', value: streamId }
       ],
-      limit: 200
+      limit: 200,
+      cacheTime: 15000 // 15 second cache on the query itself
     });
 
     // Count only recent/active listeners
     const activeCount = results.filter(data => (data.lastSeen || 0) > twoMinutesAgo).length;
+
+    // Update the viewer count cache (used by heartbeats to avoid Firebase queries)
+    await setCachedViewerCount(streamId, activeCount);
 
     // Broadcast to Pusher on the stream's reaction channel
     const channel = `stream-${streamId}`;
@@ -233,8 +267,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
         lastSeen: Date.now()
       });
 
-      // Count active viewers and broadcast via Pusher (every 30s heartbeat keeps count fresh)
-      const activeCount = await countAndBroadcastViewers(streamId, env);
+      // OPTIMIZATION: Use cached viewer count for heartbeats (saves ~20k Firebase reads/day)
+      // Only join/leave actions do fresh counts - heartbeats use cached value
+      let activeCount = await getCachedViewerCount(streamId);
+
+      if (activeCount === null) {
+        // Cache miss - do a fresh count (this is rare, only on cache expiry)
+        activeCount = await countAndBroadcastViewers(streamId, env);
+      } else {
+        // Broadcast cached count via Pusher (keeps UI updated without Firebase query)
+        const channel = `stream-${streamId}`;
+        await triggerPusher(channel, 'viewer-update', {
+          count: activeCount,
+          streamId,
+          timestamp: Date.now()
+        }, env);
+      }
 
       return new Response(JSON.stringify({
         success: true,

@@ -1,6 +1,10 @@
 ---
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 export const prerender = false;
+
+// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 <AdminLayout title="Upload Release" activeNav="releases">
 <div class="card"><div class="card-body">
@@ -69,6 +73,9 @@ export const prerender = false;
 </div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script define:vars={{ adminKey }}>
+  window.ADMIN_KEY = adminKey;
+</script>
 <script is:inline>
 // Elements
 const dropZone = document.getElementById("dropZone");
@@ -412,7 +419,10 @@ uploadBtn.onclick = async () => {
 
     const presignRes = await fetch("/api/releases/presigned-upload", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Key": window.ADMIN_KEY
+      },
       body: JSON.stringify({ artistName, releaseName, files })
     });
 
@@ -516,7 +526,10 @@ manualBtn.onclick = async () => {
 
     const presignRes = await fetch("/api/releases/presigned-upload", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Key": window.ADMIN_KEY
+      },
       body: JSON.stringify({ artistName, releaseName, files })
     });
 

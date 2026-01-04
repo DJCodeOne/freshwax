@@ -2,35 +2,25 @@
 // Sends approval confirmation email to artists/partners
 
 import type { APIRoute } from 'astro';
-import { getDocument } from '../../../lib/firebase-rest';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { requireAdminAuth } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
-// Hardcoded admin UIDs for verification
-const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
-
-async function isAdmin(uid: string): Promise<boolean> {
-  if (ADMIN_UIDS.includes(uid)) return true;
-  const adminDoc = await getDocument('admins', uid);
-  if (adminDoc) return true;
-  const userDoc = await getDocument('users', uid);
-  if (userDoc?.isAdmin || userDoc?.roles?.admin) return true;
-  return false;
-}
-
 export const POST: APIRoute = async ({ request, locals }) => {
-  try {
-    const body = await parseJsonBody<{ email?: string; name?: string; type?: string }>(request);
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`send-approval-email:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfter!);
+  }
 
-    // Check admin authentication via x-admin-uid header
-    const adminUid = request.headers.get('x-admin-uid');
-    if (!adminUid || !(await isAdmin(adminUid))) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized - admin access required'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-    }
+  try {
+    const body = await request.json().catch(() => ({})) as { email?: string; name?: string; type?: string; adminKey?: string };
+
+    // SECURITY: Require admin authentication via admin key (not spoofable UID)
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
 
     const { email, name, type } = body || {};
 
