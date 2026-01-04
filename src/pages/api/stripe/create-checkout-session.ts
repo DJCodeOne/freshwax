@@ -3,9 +3,73 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { addDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
+
+// Validate item prices server-side to prevent manipulation
+async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any[], hasPriceMismatch: boolean }> {
+  const validatedItems: any[] = [];
+  let hasPriceMismatch = false;
+
+  for (const item of items) {
+    let serverPrice = item.price;
+    const itemType = item.type || 'digital';
+
+    try {
+      if (itemType === 'merch' && item.productId) {
+        // Look up merch price
+        const product = await getDocument('merch', item.productId);
+        if (product) {
+          // Check if there's a sale price
+          serverPrice = product.salePrice || product.retailPrice || product.price || item.price;
+        }
+      } else if (itemType === 'vinyl' || itemType === 'digital' || itemType === 'track' || itemType === 'release') {
+        // Look up release price
+        const releaseId = item.releaseId || item.productId || item.id;
+        if (releaseId) {
+          const release = await getDocument('releases', releaseId);
+          if (release) {
+            if (itemType === 'vinyl') {
+              serverPrice = release.vinylPrice || release.price || item.price;
+            } else if (itemType === 'track' && item.trackId) {
+              // Single track - find track price
+              const track = (release.tracks || []).find((t: any) =>
+                t.id === item.trackId || t.trackId === item.trackId
+              );
+              serverPrice = track?.price || release.trackPrice || 0.99;
+            } else {
+              // Full release
+              serverPrice = release.price || release.digitalPrice || item.price;
+            }
+          }
+        }
+      }
+
+      // Check for price mismatch (allow small rounding differences)
+      if (Math.abs(serverPrice - item.price) > 0.02) {
+        console.warn('[Stripe] Price mismatch for', item.name, '- Client:', item.price, 'Server:', serverPrice);
+        hasPriceMismatch = true;
+      }
+
+      // Always use server price
+      validatedItems.push({
+        ...item,
+        price: serverPrice,
+        originalClientPrice: item.price // Keep for audit
+      });
+    } catch (err) {
+      console.error('[Stripe] Error validating price for', item.name, err);
+      // On error, use client price but flag it
+      validatedItems.push({
+        ...item,
+        priceValidationFailed: true
+      });
+    }
+  }
+
+  return { validatedItems, hasPriceMismatch };
+}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit
@@ -44,9 +108,39 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Build line items for Stripe
+    // Initialize Firebase for price validation
+    initFirebaseEnv(env || {
+      FIREBASE_PROJECT_ID: import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
+      FIREBASE_API_KEY: import.meta.env.FIREBASE_API_KEY
+    });
+
+    // SECURITY: Validate prices server-side to prevent manipulation
+    console.log('[Stripe] Validating prices server-side...');
+    const { validatedItems, hasPriceMismatch } = await validateAndGetPrices(orderData.items);
+
+    if (hasPriceMismatch) {
+      console.warn('[Stripe] SECURITY: Price manipulation detected');
+      // Continue with server prices - don't reveal that we caught it
+    }
+
+    // Recalculate totals with validated prices
+    const validatedSubtotal = validatedItems.reduce((sum: number, item: any) =>
+      sum + (item.price * (item.quantity || 1)), 0);
+    const hasPhysicalItems = validatedItems.some((item: any) =>
+      item.type === 'vinyl' || item.type === 'merch'
+    );
+    const validatedShipping = hasPhysicalItems ? (validatedSubtotal >= 50 ? 0 : 4.99) : 0;
+    const freshWaxFee = validatedSubtotal * 0.01;
+    const baseAmount = validatedSubtotal + validatedShipping + freshWaxFee;
+    const stripeFee = ((baseAmount * 0.014) + 0.20) / 0.986;
+    const validatedServiceFees = freshWaxFee + stripeFee;
+    const validatedTotal = validatedSubtotal + validatedShipping + validatedServiceFees;
+
+    console.log('[Stripe] Validated totals - Subtotal:', validatedSubtotal, 'Total:', validatedTotal);
+
+    // Build line items for Stripe using VALIDATED prices
     const lineItems: string[][] = [];
-    orderData.items.forEach((item: any, index: number) => {
+    validatedItems.forEach((item: any, index: number) => {
       lineItems.push(
         [`line_items[${index}][price_data][currency]`, 'gbp'],
         [`line_items[${index}][price_data][unit_amount]`, String(Math.round(item.price * 100))], // Stripe uses cents
@@ -61,12 +155,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     });
 
-    // Add service fees as a separate line item
-    if (orderData.totals?.serviceFees > 0) {
-      const feeIndex = orderData.items.length;
+    // Add service fees as a separate line item (using validated amount)
+    if (validatedServiceFees > 0) {
+      const feeIndex = validatedItems.length;
       lineItems.push(
         [`line_items[${feeIndex}][price_data][currency]`, 'gbp'],
-        [`line_items[${feeIndex}][price_data][unit_amount]`, String(Math.round(orderData.totals.serviceFees * 100))],
+        [`line_items[${feeIndex}][price_data][unit_amount]`, String(Math.round(validatedServiceFees * 100))],
         [`line_items[${feeIndex}][price_data][product_data][name]`, 'Service Fee'],
         [`line_items[${feeIndex}][price_data][product_data][description]`, 'Processing and platform fees'],
         [`line_items[${feeIndex}][quantity]`, '1']
@@ -75,30 +169,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Prepare metadata - store order data for webhook
     // Stripe metadata has 500 char limit per value, so we'll compress
+    // IMPORTANT: Use validated values, not client-submitted values
     const metadata = {
       customer_email: orderData.customer.email,
       customer_firstName: orderData.customer.firstName,
       customer_lastName: orderData.customer.lastName,
       customer_phone: orderData.customer.phone || '',
       customer_userId: orderData.customer.userId || '',
-      hasPhysicalItems: String(orderData.hasPhysicalItems),
-      subtotal: String(orderData.totals.subtotal),
-      shipping: String(orderData.totals.shipping),
-      serviceFees: String(orderData.totals.serviceFees || 0),
-      total: String(orderData.totals.total),
+      hasPhysicalItems: String(hasPhysicalItems),
+      subtotal: String(validatedSubtotal),
+      shipping: String(validatedShipping),
+      serviceFees: String(validatedServiceFees),
+      total: String(validatedTotal),
       // Items will be stored as compressed JSON
-      items_count: String(orderData.items.length)
+      items_count: String(validatedItems.length)
     };
 
-    // Store items data (compressed)
-    const compressedItems = orderData.items.map((item: any) => ({
+    // Store items data (compressed) - using VALIDATED prices
+    const compressedItems = validatedItems.map((item: any) => ({
       id: item.id,
       productId: item.productId,
       releaseId: item.releaseId,
       trackId: item.trackId,
       name: item.name,
       type: item.type,
-      price: item.price,
+      price: item.price, // This is now the validated server price
       quantity: item.quantity,
       size: item.size,
       color: item.color,
@@ -117,19 +212,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Items too large for metadata - store in Firestore pendingCheckouts collection
       console.log('[Stripe] Items JSON too large (' + itemsJson.length + ' chars), storing in Firestore');
 
-      // Initialize Firebase
-      initFirebaseEnv(env || {
-        FIREBASE_PROJECT_ID: import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-        FIREBASE_API_KEY: import.meta.env.FIREBASE_API_KEY
-      });
+      // Firebase already initialized above for price validation
 
       try {
+        // Store VALIDATED data in pending checkout
         const pendingCheckout = {
-          items: compressedItems,
+          items: compressedItems, // Using validated items with server prices
           customer: orderData.customer,
           shipping: orderData.shipping || null,
-          totals: orderData.totals,
-          hasPhysicalItems: orderData.hasPhysicalItems,
+          totals: {
+            subtotal: validatedSubtotal,
+            shipping: validatedShipping,
+            freshWaxFee: freshWaxFee,
+            stripeFee: stripeFee,
+            serviceFees: validatedServiceFees,
+            total: validatedTotal
+          },
+          hasPhysicalItems: hasPhysicalItems,
           createdAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hour expiry
         };
@@ -160,9 +259,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       bodyParams.append(`metadata[${key}]`, value as string);
     });
 
-    // Add shipping options if physical items
-    if (orderData.hasPhysicalItems) {
-      if (orderData.totals.shipping === 0) {
+    // Add shipping options if physical items (using validated values)
+    if (hasPhysicalItems) {
+      if (validatedShipping === 0) {
         bodyParams.append('shipping_options[0][shipping_rate_data][type]', 'fixed_amount');
         bodyParams.append('shipping_options[0][shipping_rate_data][fixed_amount][amount]', '0');
         bodyParams.append('shipping_options[0][shipping_rate_data][fixed_amount][currency]', 'gbp');
@@ -173,7 +272,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         bodyParams.append('shipping_options[0][shipping_rate_data][delivery_estimate][maximum][value]', '7');
       } else {
         bodyParams.append('shipping_options[0][shipping_rate_data][type]', 'fixed_amount');
-        bodyParams.append('shipping_options[0][shipping_rate_data][fixed_amount][amount]', String(Math.round(orderData.totals.shipping * 100)));
+        bodyParams.append('shipping_options[0][shipping_rate_data][fixed_amount][amount]', String(Math.round(validatedShipping * 100)));
         bodyParams.append('shipping_options[0][shipping_rate_data][fixed_amount][currency]', 'gbp');
         bodyParams.append('shipping_options[0][shipping_rate_data][display_name]', 'Standard Shipping');
         bodyParams.append('shipping_options[0][shipping_rate_data][delivery_estimate][minimum][unit]', 'business_day');

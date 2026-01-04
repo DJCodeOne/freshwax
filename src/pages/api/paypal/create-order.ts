@@ -3,9 +3,65 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { addDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
+
+// Validate item prices server-side to prevent manipulation
+async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any[], hasPriceMismatch: boolean }> {
+  const validatedItems: any[] = [];
+  let hasPriceMismatch = false;
+
+  for (const item of items) {
+    let serverPrice = item.price;
+    const itemType = item.type || 'digital';
+
+    try {
+      if (itemType === 'merch' && item.productId) {
+        const product = await getDocument('merch', item.productId);
+        if (product) {
+          serverPrice = product.salePrice || product.retailPrice || product.price || item.price;
+        }
+      } else if (itemType === 'vinyl' || itemType === 'digital' || itemType === 'track' || itemType === 'release') {
+        const releaseId = item.releaseId || item.productId || item.id;
+        if (releaseId) {
+          const release = await getDocument('releases', releaseId);
+          if (release) {
+            if (itemType === 'vinyl') {
+              serverPrice = release.vinylPrice || release.price || item.price;
+            } else if (itemType === 'track' && item.trackId) {
+              const track = (release.tracks || []).find((t: any) =>
+                t.id === item.trackId || t.trackId === item.trackId
+              );
+              serverPrice = track?.price || release.trackPrice || 0.99;
+            } else {
+              serverPrice = release.price || release.digitalPrice || item.price;
+            }
+          }
+        }
+      }
+
+      if (Math.abs(serverPrice - item.price) > 0.02) {
+        console.warn('[PayPal] Price mismatch for', item.name, '- Client:', item.price, 'Server:', serverPrice);
+        hasPriceMismatch = true;
+      }
+
+      validatedItems.push({
+        ...item,
+        price: serverPrice,
+        originalClientPrice: item.price
+      });
+    } catch (err) {
+      console.error('[PayPal] Error validating price for', item.name, err);
+      validatedItems.push({
+        ...item,
+        priceValidationFailed: true
+      });
+    }
+  }
+
+  return { validatedItems, hasPriceMismatch };
+}
 
 // Get PayPal API base URL based on mode
 function getPayPalBaseUrl(mode: string): string {
@@ -87,28 +143,46 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // SECURITY: Validate prices server-side to prevent manipulation
+    console.log('[PayPal] Validating prices server-side...');
+    const { validatedItems, hasPriceMismatch } = await validateAndGetPrices(orderData.items);
+
+    if (hasPriceMismatch) {
+      console.warn('[PayPal] SECURITY: Price manipulation detected');
+      // Continue with server prices - don't reveal that we caught it
+    }
+
+    // Recalculate totals with validated prices
+    const itemTotal = validatedItems.reduce((sum: number, item: any) =>
+      sum + (item.price * (item.quantity || 1)), 0);
+    const hasPhysicalItems = validatedItems.some((item: any) =>
+      item.type === 'vinyl' || item.type === 'merch'
+    );
+    const shipping = hasPhysicalItems ? (itemTotal >= 50 ? 0 : 4.99) : 0;
+    const freshWaxFee = itemTotal * 0.01;
+    const baseAmount = itemTotal + shipping + freshWaxFee;
+    const stripeFee = ((baseAmount * 0.014) + 0.20) / 0.986;
+    const serviceFees = freshWaxFee + stripeFee;
+    const validatedTotal = itemTotal + shipping + serviceFees;
+
+    console.log('[PayPal] Validated totals - Subtotal:', itemTotal, 'Total:', validatedTotal);
+
     // Get access token
     const accessToken = await getPayPalAccessToken(paypalClientId, paypalSecret, paypalMode);
     const baseUrl = getPayPalBaseUrl(paypalMode);
 
-    // Build PayPal order items
-    const paypalItems = orderData.items.map((item: any) => ({
+    // Build PayPal order items using VALIDATED prices
+    const paypalItems = validatedItems.map((item: any) => ({
       name: item.name.substring(0, 127), // PayPal name limit
       unit_amount: {
         currency_code: 'GBP',
-        value: item.price.toFixed(2)
+        value: item.price.toFixed(2) // This is now the validated server price
       },
       quantity: String(item.quantity || 1),
       category: item.type === 'merch' || item.type === 'vinyl' ? 'PHYSICAL_GOODS' : 'DIGITAL_GOODS'
     }));
 
-    // Calculate totals
-    const itemTotal = orderData.items.reduce((sum: number, item: any) =>
-      sum + (item.price * (item.quantity || 1)), 0);
-    const shipping = orderData.totals?.shipping || 0;
-    const serviceFees = orderData.totals?.serviceFees || 0;
-
-    // Build PayPal order request
+    // Build PayPal order request using VALIDATED totals
     const paypalOrder: any = {
       intent: 'CAPTURE',
       purchase_units: [{
@@ -117,15 +191,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         custom_id: JSON.stringify({
           customer: orderData.customer,
           shipping: orderData.shipping,
-          hasPhysicalItems: orderData.hasPhysicalItems,
-          items: orderData.items.map((item: any) => ({
+          hasPhysicalItems: hasPhysicalItems,
+          items: validatedItems.map((item: any) => ({
             id: item.id,
             productId: item.productId,
             releaseId: item.releaseId,
             trackId: item.trackId,
             name: item.name,
             type: item.type,
-            price: item.price,
+            price: item.price, // Validated server price
             quantity: item.quantity,
             size: item.size,
             color: item.color
@@ -133,7 +207,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }).substring(0, 255), // PayPal custom_id limit - we'll store full data server-side
         amount: {
           currency_code: 'GBP',
-          value: orderData.totals.total.toFixed(2),
+          value: validatedTotal.toFixed(2), // Use validated total
           breakdown: {
             item_total: {
               currency_code: 'GBP',
@@ -160,8 +234,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     };
 
-    // Add shipping address if physical items
-    if (orderData.hasPhysicalItems && orderData.shipping) {
+    // Add shipping address if physical items (using validated check)
+    if (hasPhysicalItems && orderData.shipping) {
       paypalOrder.purchase_units[0].shipping = {
         name: {
           full_name: `${orderData.customer.firstName} ${orderData.customer.lastName}`
@@ -205,21 +279,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const paypalResult = await createResponse.json();
     console.log('[PayPal] Order created:', paypalResult.id);
 
-    // Store order data in Firebase for secure retrieval during capture
+    // Store VALIDATED order data in Firebase for secure retrieval during capture
     // This prevents client-side tampering with order data
     try {
       const pendingOrder = {
         paypalOrderId: paypalResult.id,
         customer: orderData.customer,
         shipping: orderData.shipping || null,
-        items: orderData.items.map((item: any) => ({
+        // Use VALIDATED items with server-verified prices
+        items: validatedItems.map((item: any) => ({
           id: item.id,
           productId: item.productId,
           releaseId: item.releaseId,
           trackId: item.trackId,
           name: item.name,
           type: item.type,
-          price: item.price,
+          price: item.price, // This is now the validated server price
           quantity: item.quantity || 1,
           size: item.size,
           color: item.color,
@@ -228,8 +303,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
           artist: item.artist,
           artistId: item.artistId // For Stripe Connect payouts
         })),
-        totals: orderData.totals,
-        hasPhysicalItems: orderData.hasPhysicalItems,
+        // Use VALIDATED totals
+        totals: {
+          subtotal: itemTotal,
+          shipping: shipping,
+          freshWaxFee: freshWaxFee,
+          stripeFee: stripeFee,
+          serviceFees: serviceFees,
+          total: validatedTotal
+        },
+        hasPhysicalItems: hasPhysicalItems,
         createdAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() // 2 hour expiry
       };

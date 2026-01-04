@@ -95,8 +95,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.log('[Stripe Webhook]   - Signature exists:', !!signature);
     console.log('[Stripe Webhook]   - Signature preview:', signature ? signature.substring(0, 50) + '...' : 'none');
 
-    // Verify signature if webhook secret is configured
-    if (webhookSecret && signature) {
+    // SECURITY: Signature verification is REQUIRED in production
+    // Only skip in development if explicitly configured
+    const isDevelopment = import.meta.env.DEV;
+
+    if (!signature) {
+      console.error('[Stripe Webhook] ❌ Missing signature header - REJECTING REQUEST');
+      return new Response(JSON.stringify({ error: 'Missing signature' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (webhookSecret) {
       console.log('[Stripe Webhook] Verifying signature...');
       const isValid = await verifyStripeSignature(payload, signature, webhookSecret);
       if (!isValid) {
@@ -107,8 +118,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
       console.log('[Stripe Webhook] ✓ Signature verified successfully');
+    } else if (!isDevelopment) {
+      // In production, REQUIRE webhook secret
+      console.error('[Stripe Webhook] ❌ SECURITY: Webhook secret not configured in production - REJECTING');
+      return new Response(JSON.stringify({ error: 'Webhook not configured' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     } else {
-      console.log('[Stripe Webhook] ⚠️ Skipping signature verification (webhookSecret:', !!webhookSecret, ', signature:', !!signature, ')');
+      console.log('[Stripe Webhook] ⚠️ DEV MODE: Skipping signature verification');
     }
 
     const event = JSON.parse(payload);

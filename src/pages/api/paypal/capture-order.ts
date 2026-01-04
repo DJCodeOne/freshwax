@@ -171,8 +171,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const expectedTotal = parseFloat(orderData.totals?.total?.toFixed(2) || '0');
     if (!usedServerData && Math.abs(capturedAmount - expectedTotal) > 0.01) {
       console.error('[PayPal] SECURITY: Amount mismatch! Captured:', capturedAmount, 'Expected:', expectedTotal);
-      // Still create the order but flag it for review
-      console.log('[PayPal] Creating order with amount discrepancy flag');
+      // BLOCK the order - this is a security concern
+      // PayPal already captured the money, so we need to handle refund separately
+      // But we should NOT create an order with manipulated data
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Order validation failed. Payment captured but order could not be created. Please contact support.',
+        refundRequired: true,
+        captureId: captureId
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Create order in Firebase using shared utility
