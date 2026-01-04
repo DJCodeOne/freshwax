@@ -19,9 +19,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // For security, require a system key for direct API calls
     // This allows registration flow to create cards programmatically
-    const validSystemKey = import.meta.env.GIFTCARD_SYSTEM_KEY || 'freshwax-gc-2024';
+    const validSystemKey = env?.GIFTCARD_SYSTEM_KEY || import.meta.env.GIFTCARD_SYSTEM_KEY;
 
-    if (systemKey !== validSystemKey) {
+    // SECURITY: No fallback key - must be configured in environment
+    if (!validSystemKey) {
+      console.error('[giftcards/generate] GIFTCARD_SYSTEM_KEY not configured');
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Gift card system not configured'
+      }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Use timing-safe comparison to prevent timing attacks
+    const keyMatch = validSystemKey.length === (systemKey || '').length &&
+      validSystemKey.split('').every((char, i) => char === (systemKey || '')[i]);
+
+    if (!systemKey || !keyMatch) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Unauthorized'

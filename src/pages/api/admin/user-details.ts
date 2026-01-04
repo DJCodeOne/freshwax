@@ -2,11 +2,37 @@
 // Get detailed user information for admin panel
 
 import type { APIRoute } from 'astro';
-import { getDocument } from '../../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
+  // Initialize Firebase and admin config for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+  initAdminEnv({
+    ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+    ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+  });
+
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`user-details:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfter!);
+  }
+
+  // SECURITY: Require admin authentication
+  const authError = requireAdminAuth(request, locals);
+  if (authError) {
+    return authError;
+  }
+
   try {
     const userId = url.searchParams.get('userId');
 

@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { checkRateLimit as checkGlobalRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { isAdmin, initAdminEnv } from '../../../lib/admin';
 
 // Simple MD5 implementation for Cloudflare Workers (same as presence.ts)
 // Converts string to UTF-8 bytes first to handle unicode/emojis properly
@@ -387,17 +388,20 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+  initAdminEnv({
+    ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+    ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+  });
 
   try {
     const url = new URL(request.url);
     const messageId = url.searchParams.get('messageId');
     const userId = url.searchParams.get('userId');
-    const isAdmin = url.searchParams.get('isAdmin') === 'true';
 
-    if (!messageId) {
+    if (!messageId || !userId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Message ID required'
+        error: 'Message ID and User ID required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -411,8 +415,12 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Check authorization
-    if (!isAdmin && messageData?.odamiMa !== userId) {
+    // SECURITY: Check authorization server-side (not from client param)
+    // User can delete their own message OR admin can delete any message
+    const userIsAdmin = await isAdmin(userId);
+    const isOwner = messageData?.odamiMa === userId;
+
+    if (!userIsAdmin && !isOwner) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Not authorized to delete this message'

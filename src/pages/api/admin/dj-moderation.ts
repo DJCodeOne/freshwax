@@ -26,6 +26,20 @@ function initFirebase(locals: any) {
 // GET: List banned and on-hold DJs
 export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+
+  // SECURITY: Require admin authentication for listing moderation data
+  const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({
+    ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+    ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+  });
+
+  const authError = requireAdminAuth(request, locals);
+  if (authError) {
+    return authError;
+  }
+
   const url = new URL(request.url);
   const action = url.searchParams.get('action');
 

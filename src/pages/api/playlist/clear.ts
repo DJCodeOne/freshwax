@@ -1,8 +1,7 @@
 // src/pages/api/playlist/clear.ts
 // Clear user's playlist queue
 import type { APIRoute } from 'astro';
-import { setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { setDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import type { UserPlaylist } from '../../../lib/types';
 
 export const prerender = false;
@@ -15,19 +14,18 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const body = await parseJsonBody<{ userId: string }>(request);
+    // SECURITY: Get userId from verified token, not request body
+    const { userId, error: authError } = await verifyRequestUser(request);
 
-    if (!body?.userId) {
+    if (authError || !userId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'User ID required'
+        error: 'Authentication required'
       }), {
-        status: 400,
+        status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    const { userId } = body;
 
     // Create empty playlist
     const emptyPlaylist: UserPlaylist = {

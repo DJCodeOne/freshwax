@@ -20,6 +20,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
+  // SECURITY: Require admin authentication for viewing reports
+  const { requireAdminAuth, initAdminEnv } = await import('../../lib/admin');
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({
+    ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+    ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+  });
+
+  const authError = requireAdminAuth(request, locals);
+  if (authError) {
+    return authError;
+  }
+
   try {
     const url = new URL(request.url);
     const status = url.searchParams.get('status') || 'pending';
@@ -148,6 +161,19 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
+  // SECURITY: Require admin authentication for updating reports
+  const { requireAdminAuth, initAdminEnv } = await import('../../lib/admin');
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({
+    ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+    ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+  });
+
+  const authError = requireAdminAuth(request, locals);
+  if (authError) {
+    return authError;
+  }
+
   try {
     const data = await request.json();
     const { reportId, status, resolution, adminNotes, adminId } = data;
@@ -174,6 +200,19 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 export const DELETE: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
+
+  // SECURITY: Require admin authentication for deleting reports
+  const { requireAdminAuth, initAdminEnv } = await import('../../lib/admin');
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({
+    ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+    ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+  });
+
+  const authError = requireAdminAuth(request, locals);
+  if (authError) {
+    return authError;
+  }
 
   try {
     const url = new URL(request.url);

@@ -4,7 +4,7 @@
 // The Firestore documents will be deleted, but auth user may need manual cleanup
 
 import type { APIRoute } from 'astro';
-import { deleteDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { deleteDocument, queryCollection, initFirebaseEnv, verifyUserToken } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
@@ -37,18 +37,40 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { userId } = body;
-    
+    const { userId, idToken } = body;
+
     if (!userId) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'userId is required' 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'userId is required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
+    // SECURITY: Verify the user is deleting their OWN account via Firebase ID token
+    if (!idToken) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const tokenUserId = await verifyUserToken(idToken);
+    if (!tokenUserId || tokenUserId !== userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only delete your own account'
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     log.info('[delete-account] Deleting account for user:', userId);
 
     // Delete customer document

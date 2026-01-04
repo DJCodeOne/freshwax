@@ -26,13 +26,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const { releaseId, comment, userName, userId, gifUrl, avatarUrl } = await request.json();
+    // SECURITY: Get userId from verified token, not request body
+    const { verifyRequestUser } = await import('../../lib/firebase-rest');
+    const { userId, error: authError } = await verifyRequestUser(request);
 
-    log.info('[add-comment] Received:', releaseId, userName, userId, 'hasGif:', !!gifUrl, 'hasAvatar:', !!avatarUrl);
-
-    if (!userId) {
+    if (authError || !userId) {
       return new Response(JSON.stringify({ success: false, error: 'You must be logged in to comment' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
+
+    const { releaseId, comment, userName, gifUrl, avatarUrl } = await request.json();
+
+    log.info('[add-comment] Received:', releaseId, userName, userId, 'hasGif:', !!gifUrl, 'hasAvatar:', !!avatarUrl);
 
     // Allow GIF-only comments (no text required if GIF present)
     if (!releaseId || (!comment?.trim() && !gifUrl) || !userName?.trim()) {

@@ -1,7 +1,7 @@
 // src/pages/api/playlist/update.ts
 // Update playlist state (currentIndex, isPlaying, etc.)
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { parseJsonBody } from '../../../lib/api-utils';
 import type { UserPlaylist } from '../../../lib/types';
 
@@ -15,23 +15,26 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const body = await parseJsonBody<{
-      userId: string;
-      currentIndex?: number;
-      isPlaying?: boolean;
-    }>(request);
+    // SECURITY: Get userId from verified token, not request body
+    const { userId, error: authError } = await verifyRequestUser(request);
 
-    if (!body?.userId) {
+    if (authError || !userId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'User ID required'
+        error: 'Authentication required'
       }), {
-        status: 400,
+        status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const { userId, currentIndex, isPlaying } = body;
+    // Get update params from body (safe since userId comes from token)
+    const body = await parseJsonBody<{
+      currentIndex?: number;
+      isPlaying?: boolean;
+    }>(request);
+
+    const { currentIndex, isPlaying } = body || {};
 
     // Get current playlist to validate
     const existingPlaylist = await getDocument('userPlaylists', userId) as UserPlaylist | null;

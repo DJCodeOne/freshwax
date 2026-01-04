@@ -95,14 +95,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
+    // SECURITY: Get userId from verified token, not request body
+    const { verifyRequestUser } = await import('../../lib/firebase-rest');
+    const { userId, error: authError } = await verifyRequestUser(request);
 
-    const body = await request.json();
-    const { userId, releaseId, action } = body;
-
-    if (!userId || !releaseId) {
+    if (authError || !userId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'User ID and Release ID required'
+        error: 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const body = await request.json();
+    const { releaseId, action } = body;
+
+    if (!releaseId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Release ID required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }

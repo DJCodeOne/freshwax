@@ -1,7 +1,7 @@
 // src/pages/api/playlist/remove.ts
 // Remove item from user's playlist
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { parseJsonBody } from '../../../lib/api-utils';
 import type { UserPlaylist } from '../../../lib/types';
 
@@ -15,19 +15,32 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const body = await parseJsonBody<{ userId: string; itemId: string }>(request);
+    // SECURITY: Get userId from verified token, not request body
+    const { userId, error: authError } = await verifyRequestUser(request);
 
-    if (!body?.userId || !body?.itemId) {
+    if (authError || !userId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'User ID and Item ID required'
+        error: 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Get itemId from body (safe since we verify userId from token)
+    const body = await parseJsonBody<{ itemId: string }>(request);
+    const itemId = body?.itemId;
+
+    if (!itemId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Item ID required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    const { userId, itemId } = body;
 
     // Get current playlist
     const existingPlaylist = await getDocument('userPlaylists', userId) as UserPlaylist | null;

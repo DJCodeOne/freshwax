@@ -91,19 +91,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
 
   try {
-    const { mixId, comment, userName, userId, gifUrl, avatarUrl } = await request.json();
+    // SECURITY: Get userId from verified token, not request body
+    const { verifyRequestUser } = await import('../../lib/firebase-rest');
+    const { userId, error: authError } = await verifyRequestUser(request);
 
-    log.info('[add-mix-comment] Received request:', { mixId, userName, userId, hasGif: !!gifUrl, hasAvatar: !!avatarUrl });
-
-    if (!userId) {
-      return new Response(JSON.stringify({ 
+    if (authError || !userId) {
+      return new Response(JSON.stringify({
         success: false,
-        error: 'You must be logged in to comment' 
+        error: 'You must be logged in to comment'
       }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { mixId, comment, userName, gifUrl, avatarUrl } = await request.json();
+
+    log.info('[add-mix-comment] Received request:', { mixId, userName, userId, hasGif: !!gifUrl, hasAvatar: !!avatarUrl });
 
     if (!mixId || (!comment?.trim() && !gifUrl) || !userName?.trim()) {
       return new Response(JSON.stringify({ 

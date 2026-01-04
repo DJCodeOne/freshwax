@@ -23,15 +23,16 @@ export async function POST({ request, locals }: APIContext) {
   try {
     initEnv(locals);
 
-    const body = await request.json();
-    const { userId } = body;
+    // SECURITY: Get userId from verified token, not request body
+    const { verifyRequestUser } = await import('../../../lib/firebase-rest');
+    const { userId, error: authError } = await verifyRequestUser(request);
 
-    if (!userId) {
+    if (authError || !userId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Missing userId'
+        error: 'Authentication required'
       }), {
-        status: 400,
+        status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }

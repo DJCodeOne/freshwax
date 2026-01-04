@@ -128,16 +128,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
+    // SECURITY: Get userId from verified token, not request body
+    const { verifyRequestUser } = await import('../../lib/firebase-rest');
+    const { userId, error: authError } = await verifyRequestUser(request);
+
+    if (authError || !userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const body = await request.json();
-    const { userId, artistName, artistId, action } = body;
+    const { artistName, artistId, action } = body;
 
     // Use artistName as the primary identifier, fall back to artistId
     const artistIdentifier = artistName || artistId;
 
-    if (!userId || !artistIdentifier) {
+    if (!artistIdentifier) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'User ID and Artist name/ID required'
+        error: 'Artist name/ID required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }

@@ -19,31 +19,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const body = await request.json();
-    const { releaseId, rating, userId } = body;
+    // SECURITY: Get userId from verified token, not request body
+    const { verifyRequestUser } = await import('../../lib/firebase-rest');
+    const { userId, error: authError } = await verifyRequestUser(request);
 
-    log.info('[rate-release] Received:', releaseId, 'rating:', rating, 'user:', userId);
-
-    // Validate rating first
-    if (!releaseId || !rating || rating < 1 || rating > 5) {
-      log.info('[rate-release] Invalid rating:', releaseId, rating);
-      return new Response(JSON.stringify({ 
+    if (authError || !userId) {
+      return new Response(JSON.stringify({
         success: false,
-        error: 'Invalid rating (must be 1-5)' 
+        error: 'You must be logged in to rate releases'
       }), {
-        status: 400,
+        status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Check userId after other validations
-    if (!userId) {
-      log.info('[rate-release] No userId provided');
-      return new Response(JSON.stringify({ 
+    const body = await request.json();
+    const { releaseId, rating } = body;
+
+    log.info('[rate-release] Received:', releaseId, 'rating:', rating, 'user:', userId);
+
+    // Validate rating
+    if (!releaseId || !rating || rating < 1 || rating > 5) {
+      log.info('[rate-release] Invalid rating:', releaseId, rating);
+      return new Response(JSON.stringify({
         success: false,
-        error: 'You must be logged in to rate releases' 
+        error: 'Invalid rating (must be 1-5)'
       }), {
-        status: 401,
+        status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }

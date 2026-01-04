@@ -60,6 +60,20 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
 // GET: Fetch gift cards, user balances, and analytics
 export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+
+  // SECURITY: Require admin authentication for viewing gift cards data
+  const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({
+    ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+    ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+  });
+
+  const authError = requireAdminAuth(request, locals);
+  if (authError) {
+    return authError;
+  }
+
   try {
     const url = new URL(request.url);
     const type = url.searchParams.get('type') || 'all';
