@@ -2440,13 +2440,31 @@
         return;
       }
 
-      // If we've waited long enough, initialize as anonymous
+      // If we've waited long enough, initialize as anonymous but keep checking
       if (attempts >= maxAttempts) {
         console.log('[PlaylistModal] Auth timeout after 3s, initializing as anonymous');
         currentUserId = null;
         isAuthenticated = false;
         updateAuthUI();
         initPlaylist();
+
+        // Keep checking for late auth updates (every 500ms for 10 more seconds)
+        let lateChecks = 0;
+        const lateAuthCheck = setInterval(() => {
+          lateChecks++;
+          const userInfo = (window as any).currentUserInfo;
+          if (userInfo && userInfo.loggedIn === true && userInfo.id && !isAuthenticated) {
+            console.log('[PlaylistModal] Late auth detected after', (3000 + lateChecks * 500), 'ms:', userInfo);
+            currentUserId = userInfo.id;
+            isAuthenticated = true;
+            updateAuthUI();
+            saveAuthState();
+            clearInterval(lateAuthCheck);
+          }
+          if (lateChecks >= 20) { // Stop after 10 more seconds
+            clearInterval(lateAuthCheck);
+          }
+        }, 500);
         return;
       }
 
@@ -2993,6 +3011,7 @@
     isStopped = !isPlaying;
 
     // Update personal playlist (pass count of user's tracks in queue)
+    console.log('[PlaylistModal] Received personalPlaylist:', personalPlaylist ? personalPlaylist.length : 'undefined');
     renderPersonalPlaylist(personalPlaylist || [], userTracksInQueue || 0);
 
     // Update recently played tracks (use Pusher data if available)

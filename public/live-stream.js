@@ -671,7 +671,8 @@ function setupPlaylistPlayButton() {
     // Priority 1: Handle Playlist mode (when no live stream)
     if (playlistVisible && window.playlistManager && !window.isLiveStreamActive) {
       const pm = window.playlistManager;
-      const isCurrentlyPlaying = window.isPlaylistPlaying || playBtn.classList.contains('playing');
+      // Check ACTUAL player state, not just the flag (flag can be wrong if autoplay was blocked)
+      const isCurrentlyPlaying = pm.isActuallyPlaying || false;
 
       try {
         if (isCurrentlyPlaying) {
@@ -756,7 +757,8 @@ function setupPlaylistPlayButton() {
     // Fallback: If playlist manager exists but player wasn't visible, try to start it
     if (window.playlistManager && !window.isLiveStreamActive) {
       const pm = window.playlistManager;
-      const isCurrentlyPlaying = window.isPlaylistPlaying || playBtn.classList.contains('playing');
+      // Check ACTUAL player state, not just the flag (flag can be wrong if autoplay was blocked)
+      const isCurrentlyPlaying = pm.isActuallyPlaying || false;
 
       console.log('[PlayBtn] Fallback: trying playlist, isPlaying:', isCurrentlyPlaying);
 

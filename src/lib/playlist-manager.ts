@@ -2334,6 +2334,13 @@ export class PlaylistManager {
   }
 
   /**
+   * Check if audio is actually playing (not paused/blocked by browser)
+   */
+  get isActuallyPlaying(): boolean {
+    return this.player.isActuallyPlaying();
+  }
+
+  /**
    * Set volume (0-100)
    */
   setVolume(volume: number): void {

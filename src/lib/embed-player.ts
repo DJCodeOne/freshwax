@@ -316,8 +316,18 @@ export class EmbedPlayerManager {
     const container = document.getElementById(this.containerId);
     if (!container) throw new Error('Container not found');
 
+    // Clean up old directVideo to prevent stale error listeners
+    if (this.directVideo) {
+      this.directVideo.pause();
+      this.directVideo.src = '';
+      this.directVideo.load(); // Reset the element
+      this.directVideo = null;
+    }
+
     // Check if it's HLS (.m3u8)
     const isHLS = item.url.includes('.m3u8');
+    // Check if it's audio-only (MP3, etc)
+    const isAudio = /\.(mp3|wav|flac|aac|m4a)(\?.*)?$/i.test(item.url);
 
     if (isHLS) {
       // Use HLS.js for HLS streams - no controls
@@ -364,6 +374,38 @@ export class EmbedPlayerManager {
         this.callbacks.onError?.('HLS playback not supported');
         return;
       }
+    } else if (isAudio) {
+      // Audio files (MP3, WAV, etc) - use audio element with thumbnail or visual placeholder
+      const thumbnail = item.thumbnail || '/place-holder.webp';
+      container.innerHTML = `
+        <div id="audio-container" style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); overflow: hidden;">
+          <img id="audio-thumbnail" src="${thumbnail}" alt="${item.title || 'Audio Track'}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.7; filter: blur(3px) brightness(0.6);" onerror="this.style.display='none'" />
+          <div style="position: relative; z-index: 1; text-align: center; padding: 1rem;">
+            <img src="${thumbnail}" alt="" style="width: 150px; height: 150px; border-radius: 8px; object-fit: cover; box-shadow: 0 8px 32px rgba(0,0,0,0.4); margin-bottom: 1rem;" onerror="this.outerHTML='<div id=\\'audio-visualizer\\' style=\\'font-size: 4rem; animation: pulse 1.5s ease-in-out infinite;\\'>🎵</div>'" />
+            <div id="audio-title" style="color: #fff; font-size: 1rem; font-weight: 600; text-shadow: 0 2px 8px rgba(0,0,0,0.8); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title || 'Audio Track'}</div>
+            <div style="color: rgba(255,255,255,0.7); font-size: 0.75rem; margin-top: 0.25rem;">Auto-Play</div>
+          </div>
+          <audio id="direct-audio" autoplay style="display: none;"></audio>
+        </div>
+        <style>
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+          }
+        </style>
+      `;
+      const audio = document.getElementById('direct-audio') as HTMLAudioElement;
+      // Use the same property name for consistency
+      this.directVideo = audio as any;
+
+      audio.src = item.url;
+      audio.play().catch((err: any) => {
+        if (err?.name !== 'AbortError') {
+          console.error('[Direct] Audio autoplay failed:', err);
+        }
+      });
+
+      this.callbacks.onReady?.();
     } else {
       // Regular video formats (mp4, webm, ogg) - no controls
       container.innerHTML = '<video id="direct-video" autoplay style="width: 100%; height: 100%; pointer-events: none;"></video>';
@@ -386,12 +428,25 @@ export class EmbedPlayerManager {
         this.callbacks.onEnded?.();
       });
 
-      this.directVideo.addEventListener('error', () => {
-        this.callbacks.onError?.('Video playback error');
+      this.directVideo.addEventListener('error', (e) => {
+        const target = e.target as HTMLMediaElement;
+        const mediaError = target?.error;
+
+        // Ignore errors for empty src (happens during cleanup)
+        if (!target?.src || target.src === '' || target.src === window.location.href) {
+          console.log('[EmbedPlayerManager] Ignoring error for empty/cleared src');
+          return;
+        }
+
+        const errorDetails = mediaError
+          ? `Media playback error (code ${mediaError.code}): ${mediaError.message}`
+          : 'Media playback error (unknown)';
+        console.error('[EmbedPlayerManager] Direct media error:', errorDetails);
+        this.callbacks.onError?.(errorDetails);
       });
 
       this.directVideo.addEventListener('play', () => {
-        // Execute pending seek when video first starts playing
+        // Execute pending seek when media first starts playing
         if (this.pendingSeekPosition && !this.hasInitialSeekExecuted && this.directVideo) {
           this.hasInitialSeekExecuted = true;
           const seekPos = this.pendingSeekPosition;
@@ -403,7 +458,7 @@ export class EmbedPlayerManager {
       });
 
       this.directVideo.addEventListener('pause', () => {
-        console.log('[EmbedPlayerManager] Direct video paused');
+        console.log('[EmbedPlayerManager] Direct media paused');
         this.callbacks.onStateChange?.('paused');
       });
     }
@@ -560,6 +615,26 @@ export class EmbedPlayerManager {
       console.error('[EmbedPlayerManager] GetDuration error:', error);
     }
     return 0;
+  }
+
+  /**
+   * Check if media is actually playing (not paused/blocked)
+   */
+  isActuallyPlaying(): boolean {
+    try {
+      if (this.currentPlatform === 'youtube' && this.youtubePlayer && this.youtubePlayerReady) {
+        // YouTube player states: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 video cued
+        const state = this.youtubePlayer.getPlayerState?.();
+        return state === 1; // 1 = playing
+      } else if (this.currentPlatform === 'direct' && this.directVideo) {
+        return !this.directVideo.paused && this.directVideo.readyState >= 2;
+      }
+      // For Vimeo and SoundCloud, we'd need async calls - return false as fallback
+      return false;
+    } catch (error) {
+      console.error('[EmbedPlayerManager] isActuallyPlaying error:', error);
+      return false;
+    }
   }
 
   /**
