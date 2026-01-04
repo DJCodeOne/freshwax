@@ -1,8 +1,9 @@
 // src/pages/api/get-orders.ts
 // Fetch orders for a customer - uses Firebase REST API
 // Optimized: Uses batch fetch for releases to avoid N+1 queries
+// SECURITY: Requires authentication - user can only view their own orders
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocumentsBatch } from '../../lib/firebase-rest';
+import { queryCollection, getDocumentsBatch, verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -12,18 +13,29 @@ const log = {
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ url }) => {
-  const userId = url.searchParams.get('userId');
+export const GET: APIRoute = async ({ request, url, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
 
-  if (!userId) {
+  // SECURITY: Verify the requesting user's identity
+  const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+
+  if (authError || !verifiedUserId) {
     return new Response(JSON.stringify({
       success: false,
-      error: 'userId is required'
+      error: authError || 'Authentication required'
     }), {
-      status: 400,
+      status: 401,
       headers: { 'Content-Type': 'application/json' }
     });
   }
+
+  // User can only fetch their own orders
+  const userId = verifiedUserId;
 
   try {
     log.info('[get-orders] Fetching orders for user:', userId);

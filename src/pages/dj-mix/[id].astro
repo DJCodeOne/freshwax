@@ -142,7 +142,19 @@ const formattedDate = mix ? new Date(upload_date).toLocaleDateString('en-GB', {
 }) : '';
 ---
 
-<Layout title={mix ? `${title} - ${dj_name} | Fresh Wax` : 'Mix Not Found | Fresh Wax'}>
+<Layout
+  title={mix ? `${title} - ${dj_name} | Fresh Wax` : 'Mix Not Found | Fresh Wax'}
+  description={mix ? `${title} by ${dj_name}${genre ? ` - ${genre}` : ''}${formattedDuration ? ` (${formattedDuration})` : ''}. Listen now on Fresh Wax.` : 'Mix not found'}
+  image={artwork_url !== '/place-holder.webp' ? artwork_url : undefined}
+  type="music.album"
+  audio={mix ? {
+    duration: durationSeconds ? `PT${Math.floor(durationSeconds / 3600)}H${Math.floor((durationSeconds % 3600) / 60)}M${Math.floor(durationSeconds % 60)}S` : 'PT1H',
+    artist: dj_name,
+    uploadDate: upload_date,
+    thumbnailUrl: artwork_url !== '/place-holder.webp' ? artwork_url : undefined,
+    genre: genre ? [genre] : undefined
+  } : undefined}
+>
   <Header />
   
   {!mix ? (

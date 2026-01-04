@@ -887,3 +887,76 @@ export async function addDocument(
 
 // Export cache TTL config for external use
 export { CACHE_TTL };
+
+// ==========================================
+// USER TOKEN VERIFICATION
+// ==========================================
+
+/**
+ * Verify a Firebase ID token and return the user ID
+ * Uses Firebase Auth REST API to validate the token
+ * @param idToken - The Firebase ID token from the client
+ * @returns The user ID if valid, null if invalid
+ */
+export async function verifyUserToken(idToken: string): Promise<string | null> {
+  if (!idToken) return null;
+
+  const apiKey = getEnvVar('FIREBASE_API_KEY');
+  if (!apiKey) {
+    log.error('verifyUserToken: No API key available');
+    return null;
+  }
+
+  try {
+    // Use Firebase Auth REST API to get user data from token
+    const response = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      }
+    );
+
+    if (!response.ok) {
+      log.warn('verifyUserToken: Token verification failed', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const user = data.users?.[0];
+
+    if (!user?.localId) {
+      log.warn('verifyUserToken: No user found in response');
+      return null;
+    }
+
+    return user.localId;
+  } catch (error) {
+    log.error('verifyUserToken error:', error);
+    return null;
+  }
+}
+
+/**
+ * Extract and verify user from request headers
+ * Expects Authorization: Bearer <idToken> header
+ * @param request - The incoming request
+ * @returns Object with userId if verified, error message if not
+ */
+export async function verifyRequestUser(request: Request): Promise<{ userId: string | null; error?: string }> {
+  const authHeader = request.headers.get('Authorization');
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { userId: null, error: 'Missing or invalid Authorization header' };
+  }
+
+  const idToken = authHeader.slice(7); // Remove 'Bearer ' prefix
+  const userId = await verifyUserToken(idToken);
+
+  if (!userId) {
+    return { userId: null, error: 'Invalid or expired token' };
+  }
+
+  return { userId };
+}

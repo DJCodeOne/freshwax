@@ -10,6 +10,14 @@ import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase
 let pusher = null;
 let chatChannel = null;
 
+// Escape HTML to prevent XSS attacks
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // Normalize HLS URLs to use the correct base URL (handles old trycloudflare URLs)
 function normalizeHlsUrl(url) {
   if (!url) return url;
@@ -1546,7 +1554,7 @@ function showLiveStream(stream) {
   if (streamTitleEl) {
     if (stream.isRelay && stream.relaySource?.stationName) {
       // Show relay attribution
-      streamTitleEl.innerHTML = `<span class="title-live">RELAY</span> <span class="title-relay-from">from ${stream.relaySource.stationName}</span>`;
+      streamTitleEl.innerHTML = `<span class="title-live">RELAY</span> <span class="title-relay-from">from ${escapeHtml(stream.relaySource.stationName)}</span>`;
     } else {
       streamTitleEl.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
     }

@@ -1,10 +1,11 @@
 // src/pages/api/delete-mix.ts
 // Deletes DJ mix from Firebase and R2 storage
 
+// SECURITY: Requires authentication - user can only delete their own mixes
 import '../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Workers
 import type { APIRoute } from 'astro';
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { getDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, deleteDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
@@ -60,22 +61,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const s3Client = createS3Client(R2_CONFIG);
 
   try {
-    const { mixId, folderPath, userId } = await request.json();
+    // SECURITY: Verify the requesting user's identity
+    const { userId, error: authError } = await verifyRequestUser(request);
+
+    if (authError || !userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: authError || 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { mixId, folderPath } = await request.json();
 
     if (!mixId) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Mix ID is required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    if (!userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User ID is required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -181,6 +185,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 // Support DELETE method with query params
+// SECURITY: Requires Authorization header with Bearer token
 export const DELETE: APIRoute = async ({ request, url, locals }) => {
   const mixId = url.searchParams.get('id');
 
@@ -195,9 +200,13 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
   }
 
   // Create a mock request with JSON body for the POST handler
+  // Pass through the Authorization header for authentication
   const mockRequest = new Request(request.url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': request.headers.get('Authorization') || ''
+    },
     body: JSON.stringify({ mixId })
   });
 
@@ -206,6 +215,7 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
 };
 
 // Support GET method for simple browser/fetch calls
+// SECURITY: Requires Authorization header with Bearer token
 export const GET: APIRoute = async (context) => {
   return DELETE(context);
 };

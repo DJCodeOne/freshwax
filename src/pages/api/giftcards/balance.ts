@@ -1,18 +1,28 @@
 // src/pages/api/giftcards/balance.ts
 // Get user's credit balance and transaction history - uses Firebase REST API
+// SECURITY: Requires authentication - user can only view their own balance
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument , initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 
-export const GET: APIRoute = async ({ request }) => {
+export const prerender = false;
+
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   try {
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
+    // SECURITY: Verify the requesting user's identity
+    const { userId, error: authError } = await verifyRequestUser(request);
 
-    if (!userId) {
+    if (authError || !userId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'User ID is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        error: authError || 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Get user credit document
@@ -54,12 +64,30 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST to apply credit to an order
-export const POST: APIRoute = async ({ request }) => {
-  try {
-    const data = await request.json();
-    const { userId, amount, orderId, orderNumber } = data;
+// SECURITY: Requires authentication - user can only use their own credit
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
 
-    if (!userId || !amount || amount <= 0) {
+  try {
+    // SECURITY: Verify the requesting user's identity
+    const { userId, error: authError } = await verifyRequestUser(request);
+
+    if (authError || !userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: authError || 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const data = await request.json();
+    const { amount, orderId, orderNumber } = data;
+
+    if (!amount || amount <= 0) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Invalid request'

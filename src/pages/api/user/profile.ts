@@ -1,7 +1,8 @@
 // src/pages/api/user/profile.ts
 // Get user profile data including approved relay info
+// SECURITY: Requires authentication - user can only view their own profile
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -17,18 +18,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
 
   try {
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
+    // SECURITY: Verify the requesting user's identity
+    const { userId, error: authError } = await verifyRequestUser(request);
 
-    if (!userId) {
+    if (authError || !userId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'userId required'
+        error: authError || 'Authentication required'
       }), {
-        status: 400,
+        status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    // User can only fetch their own profile
 
     // Fetch user data
     const userData = await getDocument('users', userId);
