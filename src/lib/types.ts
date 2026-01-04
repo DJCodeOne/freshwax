@@ -51,6 +51,8 @@ export interface PendingRole {
   reason?: string;
 }
 
+export type StripeConnectStatus = 'not_started' | 'onboarding' | 'active' | 'restricted' | 'disabled';
+
 export interface Artist extends Timestamps {
   id: string;
   userId: string;
@@ -69,6 +71,20 @@ export interface Artist extends Timestamps {
   adminNotes?: string;
   revokedAt?: string;
   revokedBy?: string;
+
+  // Stripe Connect fields
+  stripeConnectId?: string;              // Stripe account ID (acct_xxx)
+  stripeConnectStatus?: StripeConnectStatus;
+  stripeChargesEnabled?: boolean;
+  stripePayoutsEnabled?: boolean;
+  stripeDetailsSubmitted?: boolean;
+  stripeConnectedAt?: string;
+  stripeLastUpdated?: string;
+
+  // Earnings tracking
+  totalEarnings?: number;                // Lifetime earnings in GBP
+  pendingBalance?: number;               // Amount pending payout
+  lastPayoutAt?: string;
 }
 
 export interface SocialLinks {
@@ -576,3 +592,58 @@ export interface ApiError {
 }
 
 export type ApiResponse<T = unknown> = ApiSuccess<T> | ApiError;
+
+// ============================================
+// STRIPE CONNECT PAYOUTS
+// ============================================
+
+export type PayoutStatus = 'pending' | 'completed' | 'failed' | 'reversed';
+
+export interface Payout extends Timestamps {
+  id: string;
+  artistId: string;
+  artistName: string;
+  artistEmail: string;
+  stripeConnectId: string;
+  stripeTransferId: string;           // tr_xxx
+
+  // Order reference
+  orderId: string;
+  orderNumber: string;
+
+  // Amount
+  amount: number;                     // Amount in GBP
+  currency: string;
+
+  // Status
+  status: PayoutStatus;
+  failureReason?: string;
+  completedAt?: string;
+  reversedAt?: string;
+  reversedAmount?: number;
+}
+
+export type PendingPayoutStatus = 'awaiting_connect' | 'retry_pending' | 'processing' | 'resolved';
+
+export interface PendingPayout extends Timestamps {
+  id: string;
+  artistId: string;
+  artistName: string;
+  artistEmail: string;
+
+  // Order reference
+  orderId: string;
+  orderNumber: string;
+
+  // Amount
+  amount: number;                     // Amount in GBP
+  currency: string;
+
+  // Status
+  status: PendingPayoutStatus;
+  failureReason?: string;
+  originalPayoutId?: string;          // If this is a retry from failed payout
+  notificationSent?: boolean;
+  resolvedAt?: string;
+  resolvedPayoutId?: string;          // Link to successful payout when resolved
+}

@@ -212,12 +212,13 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                     🚀 Pre-order • Releases in {daysUntilRelease} {daysUntilRelease === 1 ? 'day' : 'days'}
                   </div>
                 )}
-                <button 
+                <button
                   data-release-id={id}
                   data-product-type="digital"
                   data-price={digitalPrice}
                   data-title={releaseName}
                   data-artist={artistName}
+                  data-artist-id={artistId}
                   data-artwork={coverArtUrl}
                   data-is-preorder={isPreOrder ? 'true' : 'false'}
                   class={`add-to-cart px-4 py-3.5 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-all font-black text-base uppercase w-full ${
@@ -242,13 +243,14 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                   )}
                 </button>
                 
-                <button 
+                <button
                   data-release-id={id}
                   data-product-type="vinyl"
                   data-price={vinylPrice || 0}
                   data-digital-price={digitalPrice}
                   data-title={releaseName}
                   data-artist={artistName}
+                  data-artist-id={artistId}
                   data-artwork={coverArtUrl}
                   data-includes-digital="true"
                   data-is-preorder={isPreOrder ? 'true' : 'false'}
@@ -495,13 +497,14 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                     </div>
                   </div>
                   
-                  <button 
+                  <button
                     class="buy-track flex-shrink-0 font-black text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 active:from-green-800 active:to-green-900 transition-all px-4 md:px-8 py-2.5 border-2 border-white shadow-lg uppercase text-sm md:text-base"
                     data-track-id={track.id}
                     data-track-title={track.title}
                     data-track-price={actualTrackPrice}
                     data-release-id={id}
                     data-artist={artistName}
+                    data-artist-id={artistId}
                     data-artwork={coverArtUrl}
                     title="Buy this track"
                   >

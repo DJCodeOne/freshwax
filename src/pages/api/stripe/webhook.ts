@@ -2,8 +2,9 @@
 // Handles Stripe webhook events for product checkouts
 
 import type { APIRoute } from 'astro';
+import Stripe from 'stripe';
 import { createOrder } from '../../../lib/order-utils';
-import { initFirebaseEnv, getDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
+import { initFirebaseEnv, getDocument, queryCollection, deleteDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -409,6 +410,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.log('[Stripe Webhook] ✅ ORDER CREATED SUCCESSFULLY');
       console.log('[Stripe Webhook] Order Number:', result.orderNumber);
       console.log('[Stripe Webhook] Order ID:', result.orderId);
+
+      // Process artist payments via Stripe Connect
+      if (result.orderId && stripeSecretKey) {
+        console.log('[Stripe Webhook] 💰 Processing artist payments...');
+        await processArtistPayments({
+          orderId: result.orderId,
+          orderNumber: result.orderNumber || '',
+          items,
+          stripeSecretKey,
+          env
+        });
+      }
+
       console.log('[Stripe Webhook] ========== WEBHOOK COMPLETE ==========');
     }
 
@@ -578,4 +592,187 @@ function getCountryName(code: string): string {
     'AU': 'Australia'
   };
   return countryMap[code] || code;
+}
+
+// Process artist payments via Stripe Connect
+async function processArtistPayments(params: {
+  orderId: string;
+  orderNumber: string;
+  items: any[];
+  stripeSecretKey: string;
+  env: any;
+}) {
+  const { orderId, orderNumber, items, stripeSecretKey, env } = params;
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+
+  try {
+    // Group items by artist (using releaseId to look up artist)
+    const artistPayments: Record<string, {
+      artistId: string;
+      artistName: string;
+      artistEmail: string;
+      stripeConnectId: string | null;
+      amount: number;
+      items: string[];
+    }> = {};
+
+    // Cache for release lookups
+    const releaseCache: Record<string, any> = {};
+
+    for (const item of items) {
+      // Skip non-digital items (merch, etc.) - they go to suppliers, not artists
+      if (item.type === 'merch' || item.type === 'vinyl') continue;
+
+      // Get release data to find artist
+      const releaseId = item.releaseId || item.id;
+      if (!releaseId) continue;
+
+      let release = releaseCache[releaseId];
+      if (!release) {
+        release = await getDocument('releases', releaseId);
+        if (release) {
+          releaseCache[releaseId] = release;
+        }
+      }
+
+      if (!release) continue;
+
+      // Get artist data
+      const artistId = release.artistId || release.userId;
+      if (!artistId) continue;
+
+      // Look up artist document for stripeConnectId
+      let artist = null;
+      try {
+        artist = await getDocument('artists', artistId);
+      } catch (e) {
+        console.log('[Stripe Webhook] Could not find artist:', artistId);
+      }
+
+      // Calculate artist share (100% of item price - fees are added on top for customer)
+      const itemTotal = (item.price || 0) * (item.quantity || 1);
+
+      // Group by artist
+      if (!artistPayments[artistId]) {
+        artistPayments[artistId] = {
+          artistId,
+          artistName: artist?.artistName || release.artistName || release.artist || 'Unknown Artist',
+          artistEmail: artist?.email || release.artistEmail || '',
+          stripeConnectId: artist?.stripeConnectId || null,
+          amount: 0,
+          items: []
+        };
+      }
+
+      artistPayments[artistId].amount += itemTotal;
+      artistPayments[artistId].items.push(item.name || item.title || 'Item');
+    }
+
+    console.log('[Stripe Webhook] Artist payments to process:', Object.keys(artistPayments).length);
+
+    // Process each artist payment
+    for (const artistId of Object.keys(artistPayments)) {
+      const payment = artistPayments[artistId];
+
+      if (payment.amount <= 0) continue;
+
+      console.log('[Stripe Webhook] Processing payment for', payment.artistName, ':', payment.amount, 'GBP');
+
+      if (payment.stripeConnectId) {
+        // Create transfer to connected account
+        try {
+          const transfer = await stripe.transfers.create({
+            amount: Math.round(payment.amount * 100), // Convert to pence
+            currency: 'gbp',
+            destination: payment.stripeConnectId,
+            transfer_group: orderId,
+            metadata: {
+              orderId,
+              orderNumber,
+              artistId: payment.artistId,
+              artistName: payment.artistName,
+              platform: 'freshwax'
+            }
+          });
+
+          // Record successful payout
+          await addDocument('payouts', {
+            artistId: payment.artistId,
+            artistName: payment.artistName,
+            artistEmail: payment.artistEmail,
+            stripeConnectId: payment.stripeConnectId,
+            stripeTransferId: transfer.id,
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'completed',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString()
+          });
+
+          // Update artist's total earnings
+          const artist = await getDocument('artists', payment.artistId);
+          if (artist) {
+            await updateDocument('artists', payment.artistId, {
+              totalEarnings: (artist.totalEarnings || 0) + payment.amount,
+              lastPayoutAt: new Date().toISOString()
+            });
+          }
+
+          console.log('[Stripe Webhook] ✓ Transfer created:', transfer.id, 'for', payment.artistName);
+
+        } catch (transferError: any) {
+          console.error('[Stripe Webhook] Transfer failed for', payment.artistName, ':', transferError.message);
+
+          // Store as pending for retry
+          await addDocument('pendingPayouts', {
+            artistId: payment.artistId,
+            artistName: payment.artistName,
+            artistEmail: payment.artistEmail,
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'retry_pending',
+            failureReason: transferError.message,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } else {
+        // Artist not connected - store as pending
+        console.log('[Stripe Webhook] Artist', payment.artistName, 'not connected - storing pending payout');
+
+        await addDocument('pendingPayouts', {
+          artistId: payment.artistId,
+          artistName: payment.artistName,
+          artistEmail: payment.artistEmail,
+          orderId,
+          orderNumber,
+          amount: payment.amount,
+          currency: 'gbp',
+          status: 'awaiting_connect',
+          notificationSent: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+
+        // Update artist's pending balance
+        const artist = await getDocument('artists', payment.artistId);
+        if (artist) {
+          await updateDocument('artists', payment.artistId, {
+            pendingBalance: (artist.pendingBalance || 0) + payment.amount
+          });
+        }
+
+        // TODO: Send email notification about pending earnings
+      }
+    }
+
+  } catch (error: any) {
+    console.error('[Stripe Webhook] Error processing artist payments:', error.message);
+    // Don't throw - order was created, payments can be retried
+  }
 }

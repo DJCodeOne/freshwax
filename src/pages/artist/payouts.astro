@@ -1,0 +1,645 @@
+---
+// /src/pages/artist/payouts.astro
+// Artist Payouts Dashboard - View earnings and payout history
+
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { getDocument, queryCollection } from '../../lib/firebase-rest';
+
+const partnerId = Astro.cookies.get('partnerId')?.value || '';
+let partner: any = null;
+let payouts: any[] = [];
+let pendingPayouts: any[] = [];
+let summary = {
+  totalEarnings: 0,
+  pendingBalance: 0,
+  thisMonthEarnings: 0,
+  stripeConnected: false
+};
+
+if (partnerId) {
+  try {
+    const partnerDoc = await getDocument('artists', partnerId);
+    if (partnerDoc) {
+      partner = { id: partnerId, ...partnerDoc };
+
+      // Fetch payouts
+      payouts = await queryCollection('payouts', {
+        filters: [{ field: 'artistId', op: 'EQUAL', value: partnerId }],
+        orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
+        limit: 50
+      });
+
+      // Fetch pending payouts
+      pendingPayouts = await queryCollection('pendingPayouts', {
+        filters: [
+          { field: 'artistId', op: 'EQUAL', value: partnerId },
+          { field: 'status', op: 'IN', value: ['awaiting_connect', 'retry_pending', 'processing'] }
+        ],
+        orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }]
+      });
+
+      // Calculate summary
+      summary.totalEarnings = partner.totalEarnings || 0;
+      summary.pendingBalance = pendingPayouts.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      summary.stripeConnected = !!partner.stripeConnectId && partner.stripeConnectStatus === 'active';
+
+      // This month earnings
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      summary.thisMonthEarnings = payouts
+        .filter((p: any) => new Date(p.createdAt) >= monthStart && p.status === 'completed')
+        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+    }
+  } catch (e) {
+    console.error('Error fetching payout data:', e);
+  }
+}
+
+const isLoggedIn = !!partner;
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return 'Unknown';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(price || 0);
+};
+
+const getStatusClass = (status: string) => {
+  const s = (status || 'pending').toLowerCase();
+  if (s === 'completed') return 'completed';
+  if (s === 'processing') return 'processing';
+  if (s === 'failed' || s === 'retry_pending') return 'failed';
+  if (s === 'awaiting_connect') return 'awaiting';
+  return 'pending';
+};
+
+const getStatusLabel = (status: string) => {
+  const s = (status || 'pending').toLowerCase();
+  if (s === 'completed') return 'Completed';
+  if (s === 'processing') return 'Processing';
+  if (s === 'failed') return 'Failed';
+  if (s === 'retry_pending') return 'Retry Pending';
+  if (s === 'awaiting_connect') return 'Awaiting Setup';
+  return 'Pending';
+};
+
+export const prerender = false;
+---
+
+<Layout title="Payouts">
+  <Header />
+
+  <main class="payouts-main">
+    <div class="container">
+      {!isLoggedIn ? (
+        <div class="login-prompt">
+          <p>Please log in to view your payouts.</p>
+          <a href="/login" class="login-btn">Sign In</a>
+        </div>
+      ) : (
+        <>
+          <!-- Page Header -->
+          <div class="page-header">
+            <div class="header-left">
+              <a href="/artist/dashboard" class="back-link">← Dashboard</a>
+              <h1>Payouts</h1>
+              <p>Track your earnings and payout history</p>
+            </div>
+          </div>
+
+          <!-- Stripe Connect Status -->
+          {!summary.stripeConnected && (
+            <div class="connect-banner">
+              <div class="banner-icon">🏦</div>
+              <div class="banner-content">
+                <h3>Complete Your Payment Setup</h3>
+                <p>Connect your bank account via Stripe to receive automatic payouts when customers buy your music.</p>
+                {summary.pendingBalance > 0 && (
+                  <p class="pending-amount">You have {formatPrice(summary.pendingBalance)} waiting to be paid out!</p>
+                )}
+              </div>
+              <a href="/artist/account#stripe-connect-section" class="setup-btn">Set Up Payments</a>
+            </div>
+          )}
+
+          <!-- Summary Cards -->
+          <div class="summary-grid">
+            <div class="summary-card total">
+              <div class="card-icon">💰</div>
+              <div class="card-content">
+                <div class="card-value">{formatPrice(summary.totalEarnings)}</div>
+                <div class="card-label">Total Earnings</div>
+              </div>
+            </div>
+
+            <div class="summary-card month">
+              <div class="card-icon">📅</div>
+              <div class="card-content">
+                <div class="card-value">{formatPrice(summary.thisMonthEarnings)}</div>
+                <div class="card-label">This Month</div>
+              </div>
+            </div>
+
+            <div class="summary-card pending">
+              <div class="card-icon">⏳</div>
+              <div class="card-content">
+                <div class="card-value">{formatPrice(summary.pendingBalance)}</div>
+                <div class="card-label">Pending</div>
+              </div>
+            </div>
+
+            <div class="summary-card status">
+              <div class="card-icon">{summary.stripeConnected ? '✓' : '⚠️'}</div>
+              <div class="card-content">
+                <div class="card-value">{summary.stripeConnected ? 'Active' : 'Setup Required'}</div>
+                <div class="card-label">Stripe Status</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pending Payouts -->
+          {pendingPayouts.length > 0 && (
+            <section class="payouts-section">
+              <h2>Pending Payouts</h2>
+              <p class="section-desc">
+                {summary.stripeConnected
+                  ? 'These payouts are being processed and will arrive in your bank account soon.'
+                  : 'Complete your Stripe setup to receive these payouts.'}
+              </p>
+
+              <div class="payouts-table-wrap">
+                <table class="payouts-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Order</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingPayouts.map(payout => (
+                      <tr>
+                        <td>{formatDate(payout.createdAt)}</td>
+                        <td class="order-num">#{(payout.orderNumber || payout.orderId || '').slice(-8).toUpperCase()}</td>
+                        <td class="amount">{formatPrice(payout.amount)}</td>
+                        <td>
+                          <span class={`status-pill ${getStatusClass(payout.status)}`}>
+                            {getStatusLabel(payout.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          <!-- Payout History -->
+          <section class="payouts-section">
+            <h2>Payout History</h2>
+
+            {payouts.length === 0 ? (
+              <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <h3>No payouts yet</h3>
+                <p>When customers purchase your music, your payouts will appear here.</p>
+              </div>
+            ) : (
+              <div class="payouts-table-wrap">
+                <table class="payouts-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Order</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payouts.map(payout => (
+                      <tr>
+                        <td>{formatDate(payout.createdAt)}</td>
+                        <td class="order-num">#{(payout.orderNumber || payout.orderId || '').slice(-8).toUpperCase()}</td>
+                        <td class="amount">{formatPrice(payout.amount)}</td>
+                        <td>
+                          <span class={`status-pill ${getStatusClass(payout.status)}`}>
+                            {getStatusLabel(payout.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <!-- Info Section -->
+          <section class="info-section">
+            <h3>How Payouts Work</h3>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-icon">1️⃣</div>
+                <div class="info-content">
+                  <h4>Customer Purchases</h4>
+                  <p>When a customer buys your music, the payment is processed through Stripe.</p>
+                </div>
+              </div>
+              <div class="info-item">
+                <div class="info-icon">2️⃣</div>
+                <div class="info-content">
+                  <h4>Automatic Transfer</h4>
+                  <p>99% of the sale is automatically transferred to your connected bank account.</p>
+                </div>
+              </div>
+              <div class="info-item">
+                <div class="info-icon">3️⃣</div>
+                <div class="info-content">
+                  <h4>Bank Payout</h4>
+                  <p>Stripe deposits funds to your bank within 2-3 business days.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .payouts-main {
+    min-height: calc(100vh - 200px);
+    background: linear-gradient(to bottom, #000000, #111827);
+    padding: 2rem 0;
+  }
+
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  /* Page Header */
+  .page-header {
+    margin-bottom: 2rem;
+  }
+
+  .header-left h1 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 2.5rem;
+    color: #fff;
+    margin: 0.5rem 0 0.25rem;
+  }
+
+  .header-left p {
+    color: #9ca3af;
+    font-size: 1.0625rem;
+  }
+
+  .back-link {
+    color: #9ca3af;
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 500;
+  }
+
+  .back-link:hover {
+    color: #fff;
+  }
+
+  /* Login Prompt */
+  .login-prompt {
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 16px;
+    padding: 4rem 2rem;
+    text-align: center;
+    color: #9ca3af;
+  }
+
+  .login-btn {
+    display: inline-block;
+    background: #000;
+    color: #fff;
+    padding: 0.875rem 2rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    margin-top: 1rem;
+  }
+
+  /* Connect Banner */
+  .connect-banner {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(79, 70, 229, 0.1));
+    border: 2px solid #6366f1;
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .banner-icon {
+    font-size: 2.5rem;
+    flex-shrink: 0;
+  }
+
+  .banner-content {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .banner-content h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.5rem;
+  }
+
+  .banner-content p {
+    color: #9ca3af;
+    font-size: 0.9375rem;
+    margin: 0;
+  }
+
+  .banner-content .pending-amount {
+    color: #fbbf24;
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+
+  .setup-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #fff;
+    padding: 0.875rem 1.5rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .setup-btn:hover {
+    background: linear-gradient(135deg, #818cf8, #6366f1);
+  }
+
+  /* Summary Grid */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .summary-card {
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .summary-card.total {
+    border-color: #22c55e;
+    background: linear-gradient(to bottom, rgba(22, 163, 74, 0.1), #111827);
+  }
+
+  .summary-card.month {
+    border-color: #3b82f6;
+    background: linear-gradient(to bottom, rgba(59, 130, 246, 0.1), #111827);
+  }
+
+  .summary-card.pending {
+    border-color: #f59e0b;
+    background: linear-gradient(to bottom, rgba(245, 158, 11, 0.1), #111827);
+  }
+
+  .summary-card.status {
+    border-color: #6366f1;
+    background: linear-gradient(to bottom, rgba(99, 102, 241, 0.1), #111827);
+  }
+
+  .card-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+  }
+
+  .card-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .card-label {
+    font-size: 0.875rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  /* Sections */
+  .payouts-section {
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 16px;
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .payouts-section h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.5rem;
+  }
+
+  .section-desc {
+    color: #9ca3af;
+    font-size: 0.9375rem;
+    margin: 0 0 1.5rem;
+  }
+
+  /* Table */
+  .payouts-table-wrap {
+    overflow-x: auto;
+  }
+
+  .payouts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+  }
+
+  .payouts-table th {
+    text-align: left;
+    padding: 0.875rem 1rem;
+    background: linear-gradient(to bottom, #000000, #111827);
+    font-weight: 700;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #9ca3af;
+    border-bottom: 2px solid #374151;
+  }
+
+  .payouts-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #374151;
+    color: #e5e7eb;
+  }
+
+  .order-num {
+    font-family: monospace;
+    color: #9ca3af;
+  }
+
+  .amount {
+    font-weight: 700;
+    color: #22c55e;
+  }
+
+  .status-pill {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .status-pill.completed {
+    background: rgba(22, 163, 74, 0.2);
+    color: #22c55e;
+  }
+
+  .status-pill.processing {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+
+  .status-pill.failed {
+    background: rgba(220, 38, 38, 0.2);
+    color: #f87171;
+  }
+
+  .status-pill.awaiting {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+  }
+
+  .status-pill.pending {
+    background: rgba(156, 163, 175, 0.2);
+    color: #9ca3af;
+  }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+  }
+
+  .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.5rem;
+  }
+
+  .empty-state p {
+    color: #9ca3af;
+    font-size: 0.9375rem;
+    margin: 0;
+  }
+
+  /* Info Section */
+  .info-section {
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 16px;
+    padding: 1.75rem;
+  }
+
+  .info-section h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 1.5rem;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .info-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .info-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .info-content h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.25rem;
+  }
+
+  .info-content p {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .connect-banner {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .setup-btn {
+      width: 100%;
+      text-align: center;
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .payouts-table {
+      font-size: 0.8125rem;
+    }
+
+    .payouts-table th,
+    .payouts-table td {
+      padding: 0.75rem 0.5rem;
+    }
+  }
+</style>

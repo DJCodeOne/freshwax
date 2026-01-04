@@ -97,6 +97,7 @@ function addItemToCart(item) {
       name: item.name,
       title: item.title,
       artist: item.artist,
+      artistId: item.artistId || null, // For Stripe Connect payouts
       price: item.price,
       image: item.image,
       artwork: item.image,
@@ -1174,10 +1175,11 @@ document.addEventListener('click', (e) => {
   const price = parseFloat(button.getAttribute('data-price') || '0');
   const title = button.getAttribute('data-title');
   const artist = button.getAttribute('data-artist');
+  const artistId = button.getAttribute('data-artist-id');
   const artwork = button.getAttribute('data-artwork');
-  
-  console.log('[Cart] Item data:', { releaseId, productType, price, title, artist, artwork });
-  
+
+  console.log('[Cart] Item data:', { releaseId, productType, price, title, artist, artistId, artwork });
+
   // Use local cart functions
   const added = addItemToCart({
     id: releaseId,
@@ -1185,6 +1187,7 @@ document.addEventListener('click', (e) => {
     name: artist + ' - ' + title,
     title: title,
     artist: artist,
+    artistId: artistId,
     price: price,
     image: artwork
   });
@@ -1221,20 +1224,21 @@ document.addEventListener('click', (e) => {
   const trackPrice = parseFloat(button.getAttribute('data-track-price') || '0');
   const releaseId = button.getAttribute('data-release-id');
   const artist = button.getAttribute('data-artist');
+  const artistId = button.getAttribute('data-artist-id');
   const artwork = button.getAttribute('data-artwork');
-  
+
   // Check if full release already in cart
   if (hasFullReleaseInCart(releaseId)) {
     alert('You already have the full release in your cart!');
     return;
   }
-  
+
   // Check if track already in cart
   if (hasTrackInCart(releaseId, trackId)) {
     alert('This track is already in your cart!');
     return;
   }
-  
+
   const added = addItemToCart({
     id: releaseId,
     trackId: trackId,
@@ -1242,6 +1246,7 @@ document.addEventListener('click', (e) => {
     name: artist + ' - ' + trackTitle,
     title: trackTitle,
     artist: artist,
+    artistId: artistId,
     price: trackPrice,
     image: artwork
   });

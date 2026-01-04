@@ -65,7 +65,11 @@ service cloud.firestore {
                       request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['isArtist', 'isMerchSupplier', 'revokedAt', 'revokedBy', 'updatedAt',
                                   'artistName', 'name', 'displayName', 'email', 'phone', 'approved', 'suspended', 'adminNotes',
-                                  'deleted', 'deletedAt', 'deletedBy']);
+                                  'deleted', 'deletedAt', 'deletedBy',
+                                  // Stripe Connect fields (updated by API)
+                                  'stripeConnectId', 'stripeConnectStatus', 'stripeChargesEnabled', 'stripePayoutsEnabled',
+                                  'stripeDetailsSubmitted', 'stripeConnectedAt', 'stripeLastUpdated',
+                                  'totalEarnings', 'pendingBalance', 'lastPayoutAt']);
       allow delete: if isAdmin();
     }
 
@@ -429,6 +433,37 @@ service cloud.firestore {
       // Allow writes from authenticated owner OR REST API with items array
       allow create, update: if isOwner(userId) || request.resource.data.items != null;
       allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // ============================================
+    // STRIPE CONNECT PAYOUTS
+    // ============================================
+
+    // Payouts collection - tracks completed transfers to artists
+    match /payouts/{payoutId} {
+      // Artists can read their own payouts, admins can read all
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.artistId == request.auth.uid);
+      // Only API can create payouts (webhook creates them after successful transfer)
+      allow create: if request.resource.data.artistId != null && request.resource.data.orderId != null;
+      // Allow status updates from webhook
+      allow update: if isAdmin() ||
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status', 'completedAt', 'failureReason', 'reversedAt', 'reversedAmount',
+                                  'stripeTransferId', 'updatedAt']);
+      allow delete: if isAdmin();
+    }
+
+    // Pending Payouts - tracks earnings for artists without Stripe Connect
+    match /pendingPayouts/{pendingId} {
+      // Artists can read their own pending payouts, admins can read all
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.artistId == request.auth.uid);
+      // Only API can create pending payouts (webhook creates them when artist not connected)
+      allow create: if request.resource.data.artistId != null && request.resource.data.orderId != null;
+      // Allow status updates when artist connects or transfer retries
+      allow update: if isAdmin() ||
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status', 'stripeConnectId', 'processedAt', 'payoutId', 'updatedAt']);
+      allow delete: if isAdmin();
     }
 
     // Default deny

@@ -213,6 +213,81 @@ export const prerender = false;
             </div>
           </section>
 
+          <!-- Stripe Connect Section -->
+          <section class="account-section stripe-section" id="stripe-connect-section">
+            <div class="section-header">
+              <h2>🏦 Payment Setup</h2>
+            </div>
+
+            <div class="stripe-connect-content">
+              {partner.stripeConnectStatus === 'active' ? (
+                <!-- Connected State -->
+                <div class="stripe-status connected">
+                  <div class="status-icon">✓</div>
+                  <div class="status-info">
+                    <h3>Stripe Connected</h3>
+                    <p>Your account is set up to receive automatic payouts when customers purchase your music.</p>
+                    <div class="stripe-badges">
+                      <span class="stripe-badge active">Charges Enabled</span>
+                      <span class="stripe-badge active">Payouts Enabled</span>
+                    </div>
+                  </div>
+                  <div class="status-actions">
+                    <a href="https://dashboard.stripe.com/express" target="_blank" rel="noopener noreferrer" class="stripe-dashboard-btn">
+                      Open Stripe Dashboard →
+                    </a>
+                  </div>
+                </div>
+              ) : partner.stripeConnectStatus === 'onboarding' || partner.stripeConnectStatus === 'restricted' ? (
+                <!-- Incomplete Onboarding -->
+                <div class="stripe-status incomplete">
+                  <div class="status-icon">⏳</div>
+                  <div class="status-info">
+                    <h3>Setup Incomplete</h3>
+                    <p>Your Stripe account setup isn't complete. Please continue to finish receiving payments.</p>
+                    {partner.stripeConnectStatus === 'restricted' && (
+                      <p class="warning-text">Your account has restrictions. Click continue to resolve them.</p>
+                    )}
+                  </div>
+                  <div class="status-actions">
+                    <button class="stripe-continue-btn" id="stripe-continue-btn">
+                      Continue Setup →
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <!-- Not Started -->
+                <div class="stripe-status not-started">
+                  <div class="status-icon">💳</div>
+                  <div class="status-info">
+                    <h3>Get Paid Automatically</h3>
+                    <p>Connect your bank account via Stripe to receive instant payouts when customers buy your music. You keep 99% of every sale!</p>
+                    <ul class="stripe-benefits">
+                      <li>✓ Instant payouts to your bank</li>
+                      <li>✓ Secure payment processing</li>
+                      <li>✓ View earnings in Stripe Dashboard</li>
+                    </ul>
+                  </div>
+                  <div class="status-actions">
+                    <button class="stripe-connect-btn" id="stripe-connect-btn">
+                      Connect with Stripe
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {partner.pendingBalance > 0 && partner.stripeConnectStatus !== 'active' && (
+              <div class="pending-earnings-notice">
+                <span class="notice-icon">💰</span>
+                <div class="notice-content">
+                  <strong>You have {formatPrice(partner.pendingBalance)} in pending earnings!</strong>
+                  <p>Complete your Stripe setup to receive your payouts.</p>
+                </div>
+              </div>
+            )}
+          </section>
+
           <!-- Sales Overview -->
           <section class="account-section">
             <div class="section-header">
@@ -1002,7 +1077,199 @@ export const prerender = false;
     background: #ccc;
     cursor: not-allowed;
   }
-  
+
+  /* Stripe Connect Section */
+  .stripe-section {
+    background: linear-gradient(to bottom, #1e293b, #0f172a);
+    border-color: #6366f1;
+  }
+
+  .stripe-connect-content {
+    padding: 0.5rem 0;
+  }
+
+  .stripe-status {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .stripe-status .status-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    flex-shrink: 0;
+  }
+
+  .stripe-status.connected .status-icon {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+  }
+
+  .stripe-status.incomplete .status-icon {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+  }
+
+  .stripe-status.not-started .status-icon {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #fff;
+  }
+
+  .stripe-status .status-info {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .stripe-status .status-info h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.5rem;
+  }
+
+  .stripe-status .status-info p {
+    color: #9ca3af;
+    font-size: 0.9375rem;
+    margin: 0 0 0.75rem;
+    line-height: 1.5;
+  }
+
+  .stripe-status .warning-text {
+    color: #fbbf24;
+    font-size: 0.875rem;
+  }
+
+  .stripe-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+  }
+
+  .stripe-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .stripe-badge.active {
+    background: rgba(22, 163, 74, 0.2);
+    color: #22c55e;
+    border: 1px solid #22c55e;
+  }
+
+  .stripe-benefits {
+    list-style: none;
+    padding: 0;
+    margin: 0.75rem 0 0;
+  }
+
+  .stripe-benefits li {
+    color: #e5e7eb;
+    font-size: 0.9375rem;
+    padding: 0.25rem 0;
+  }
+
+  .status-actions {
+    flex-shrink: 0;
+  }
+
+  .stripe-connect-btn,
+  .stripe-continue-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+
+  .stripe-connect-btn {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #fff;
+  }
+
+  .stripe-connect-btn:hover {
+    background: linear-gradient(135deg, #818cf8, #6366f1);
+    transform: translateY(-1px);
+  }
+
+  .stripe-continue-btn {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+  }
+
+  .stripe-continue-btn:hover {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    transform: translateY(-1px);
+  }
+
+  .stripe-connect-btn:disabled,
+  .stripe-continue-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .stripe-dashboard-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(to bottom, #374151, #1f2937);
+    border: 2px solid #4b5563;
+    color: #fff;
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: all 0.2s;
+  }
+
+  .stripe-dashboard-btn:hover {
+    background: linear-gradient(to bottom, #4b5563, #374151);
+    border-color: #6b7280;
+  }
+
+  .pending-earnings-notice {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1));
+    border: 2px solid #f59e0b;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-top: 1.5rem;
+  }
+
+  .pending-earnings-notice .notice-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+  }
+
+  .pending-earnings-notice .notice-content strong {
+    color: #fbbf24;
+    font-size: 1.0625rem;
+  }
+
+  .pending-earnings-notice .notice-content p {
+    margin: 0.25rem 0 0;
+    color: #9ca3af;
+    font-size: 0.875rem;
+  }
+
   /* Print Styles */
   @media print {
     @page {
@@ -1269,6 +1536,92 @@ export const prerender = false;
     saveBtn.disabled = false;
   });
   
+  // Stripe Connect - Start onboarding
+  const stripeConnectBtn = document.getElementById('stripe-connect-btn');
+  stripeConnectBtn?.addEventListener('click', async () => {
+    stripeConnectBtn.textContent = 'Creating account...';
+    stripeConnectBtn.disabled = true;
+
+    try {
+      const response = await fetch('/api/stripe/connect/create-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.onboardingUrl) {
+        window.location.href = result.onboardingUrl;
+      } else {
+        alert(result.error || 'Failed to create Stripe account');
+        stripeConnectBtn.textContent = 'Connect with Stripe';
+        stripeConnectBtn.disabled = false;
+      }
+    } catch (e) {
+      console.error('Stripe Connect error:', e);
+      alert('Failed to connect with Stripe. Please try again.');
+      stripeConnectBtn.textContent = 'Connect with Stripe';
+      stripeConnectBtn.disabled = false;
+    }
+  });
+
+  // Stripe Connect - Continue onboarding
+  const stripeContinueBtn = document.getElementById('stripe-continue-btn');
+  stripeContinueBtn?.addEventListener('click', async () => {
+    stripeContinueBtn.textContent = 'Loading...';
+    stripeContinueBtn.disabled = true;
+
+    try {
+      const response = await fetch('/api/stripe/connect/refresh-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.onboardingUrl) {
+        window.location.href = result.onboardingUrl;
+      } else {
+        alert(result.error || 'Failed to generate onboarding link');
+        stripeContinueBtn.textContent = 'Continue Setup →';
+        stripeContinueBtn.disabled = false;
+      }
+    } catch (e) {
+      console.error('Stripe Continue error:', e);
+      alert('Failed to continue setup. Please try again.');
+      stripeContinueBtn.textContent = 'Continue Setup →';
+      stripeContinueBtn.disabled = false;
+    }
+  });
+
+  // Check for Stripe return URL params
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('stripe_connected') === 'true') {
+    // Clear the URL param
+    history.replaceState({}, document.title, window.location.pathname);
+    // Show success message
+    const section = document.getElementById('stripe-connect-section');
+    if (section) {
+      const notice = document.createElement('div');
+      notice.className = 'pending-earnings-notice';
+      notice.style.borderColor = '#22c55e';
+      notice.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1))';
+      notice.innerHTML = `
+        <span class="notice-icon">✓</span>
+        <div class="notice-content">
+          <strong style="color: #22c55e;">Stripe setup complete!</strong>
+          <p>Your account is now ready to receive payments.</p>
+        </div>
+      `;
+      section.appendChild(notice);
+      setTimeout(() => notice.remove(), 5000);
+    }
+  } else if (urlParams.get('stripe_refresh') === 'true') {
+    // Clear the URL param and auto-click continue
+    history.replaceState({}, document.title, window.location.pathname);
+    stripeContinueBtn?.click();
+  }
+
   // Download Data
   const downloadBtn = document.getElementById('download-data');
   
