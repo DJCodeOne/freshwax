@@ -1,40 +1,17 @@
 // src/pages/api/livestream/status.ts
 // Check if any stream is currently live - uses Firebase REST API
+// Uses Cloudflare KV for caching to reduce Firebase reads
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument } from '../../../lib/firebase-rest';
 import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
+import { initKVCache, kvGet, kvSet, CACHE_CONFIG } from '../../../lib/kv-cache';
 
-// Server-side cache
-interface CacheEntry {
-  data: any;
-  timestamp: number;
-}
-
-const statusCache = new Map<string, CacheEntry>();
+// Cache TTLs in seconds
 const CACHE_TTL = {
-  LIVE_STATUS: 30 * 1000,      // Increased from 10s to 30s
-  SPECIFIC_STREAM: 30 * 1000,  // Increased from 15s to 30s
-  OFFLINE_STATUS: 60 * 1000,   // Increased from 30s to 60s
+  LIVE_STATUS: 60,      // 60s - Pusher handles real-time, polling is backup
+  SPECIFIC_STREAM: 60,  // 60s
+  OFFLINE_STATUS: 120,  // 2 min when offline - no urgency
 };
-
-function getCached(key: string): any | null {
-  const entry = statusCache.get(key);
-  const ttl = key.startsWith('stream:') ? CACHE_TTL.SPECIFIC_STREAM :
-              key === 'status:offline' ? CACHE_TTL.OFFLINE_STATUS : CACHE_TTL.LIVE_STATUS;
-  if (entry && Date.now() - entry.timestamp < ttl) {
-    return entry.data;
-  }
-  if (entry) statusCache.delete(key);
-  return null;
-}
-
-function setCache(key: string, data: any): void {
-  statusCache.set(key, { data, timestamp: Date.now() });
-  if (statusCache.size > 20) {
-    const oldest = statusCache.keys().next().value;
-    if (oldest) statusCache.delete(oldest);
-  }
-}
 
 function jsonResponse(data: any, status: number, maxAge: number = 10): Response {
   return new Response(JSON.stringify(data), {
@@ -53,6 +30,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     RED5_HLS_URL: env?.RED5_HLS_URL || import.meta.env.RED5_HLS_URL,
   });
 
+  // Initialize KV cache
+  initKVCache(env);
+
   try {
     const url = new URL(request.url);
     const streamId = url.searchParams.get('streamId');
@@ -63,9 +43,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       const cacheKey = `stream:${streamId}`;
 
       if (!skipCache) {
-        const cached = getCached(cacheKey);
+        const cached = await kvGet(cacheKey, { prefix: 'status', ttl: CACHE_TTL.SPECIFIC_STREAM });
         if (cached) {
-          return jsonResponse(cached, cached.success ? 200 : 404, 15);
+          console.log('[status] KV cache hit for stream:', streamId);
+          return jsonResponse(cached, (cached as any).success ? 200 : 404, 15);
         }
       }
 
@@ -79,7 +60,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
       if (!streamDoc) {
         const result = { success: false, error: 'Stream not found' };
-        setCache(cacheKey, result);
+        kvSet(cacheKey, result, { prefix: 'status', ttl: CACHE_TTL.SPECIFIC_STREAM });
         return jsonResponse(result, 404, 15);
       }
 
@@ -90,31 +71,31 @@ export const GET: APIRoute = async ({ request, locals }) => {
         success: true,
         stream: safeStreamDoc
       };
-      setCache(cacheKey, result);
+      kvSet(cacheKey, result, { prefix: 'status', ttl: CACHE_TTL.SPECIFIC_STREAM });
       return jsonResponse(result, 200, 15);
     }
 
     // General live status check
-    const statusCacheKey = 'status:general';
+    const statusCacheKey = 'general';
 
-    // Skip cache if _t parameter is present (cache buster from clients)
-    const hasCacheBuster = url.searchParams.has('_t');
-    const shouldSkipCache = skipCache || hasCacheBuster;
+    // IGNORE _t cache buster - we want server-side caching to reduce Firebase reads
+    // The _t parameter is only to bypass Cloudflare edge cache, not our server cache
+    const shouldSkipCache = skipCache;
 
     if (!shouldSkipCache) {
-      const cached = getCached(statusCacheKey);
+      const cached = await kvGet(statusCacheKey, { prefix: 'status', ttl: CACHE_TTL.LIVE_STATUS });
       if (cached) {
-        const maxAge = cached.isLive ? 10 : 30;
+        console.log('[status] KV cache hit for general status');
+        const maxAge = (cached as any).isLive ? 10 : 30;
         return jsonResponse(cached, 200, maxAge);
       }
     }
 
     // Check livestreamSlots for slots with status='live' (new slot-based system)
-    // CRITICAL: skipCache=true here - live status must always be fresh to detect stream ends
+    // Cache is OK here since Pusher handles real-time updates
     const liveSlots = await queryCollection('livestreamSlots', {
       filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-      limit: 5,
-      skipCache: true
+      limit: 5
     });
 
     // Convert slots to stream format for the player
@@ -192,8 +173,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         scheduled
       };
 
-      statusCache.set('status:offline', { data: result, timestamp: Date.now() });
-      setCache(statusCacheKey, result);
+      // Cache offline status for longer (2 min)
+      kvSet(statusCacheKey, result, { prefix: 'status', ttl: CACHE_TTL.OFFLINE_STATUS });
 
       return jsonResponse(result, 200, 30);
     }
@@ -212,7 +193,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       primaryStream: streams[0]
     };
 
-    setCache(statusCacheKey, result);
+    // Cache live status for 1 min
+    kvSet(statusCacheKey, result, { prefix: 'status', ttl: CACHE_TTL.LIVE_STATUS });
 
     return jsonResponse(result, 200, 10);
 

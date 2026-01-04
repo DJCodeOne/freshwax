@@ -1,7 +1,9 @@
 // src/pages/api/get-merch.ts
 // Uses Firebase REST API - works on Cloudflare Pages
+// Uses KV caching to reduce Firebase reads
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument } from '../../lib/firebase-rest';
+import { initKVCache, kvGet, kvSet, CACHE_CONFIG } from '../../lib/kv-cache';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -11,36 +13,60 @@ const log = {
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+  initKVCache(env);
+
   const url = new URL(request.url);
   const merchId = url.searchParams.get('id');
   const limitParam = url.searchParams.get('limit');
   const publishedParam = url.searchParams.get('published');
   const limit = limitParam ? parseInt(limitParam) : 50;
-  
+  const skipCache = url.searchParams.get('fresh') === '1';
+
   try {
     if (merchId) {
       log.info('[get-merch] Fetching merch item:', merchId);
-      
+
+      // Check KV cache for single item
+      const itemCacheKey = `item:${merchId}`;
+      if (!skipCache) {
+        const cached = await kvGet(itemCacheKey, CACHE_CONFIG.MERCH);
+        if (cached) {
+          log.info('[get-merch] KV cache hit for item:', merchId);
+          return new Response(JSON.stringify(cached), {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Cache-Control': 'public, max-age=300, s-maxage=300'
+            }
+          });
+        }
+      }
+
       const item = await getDocument('merch', merchId);
-      
+
       if (!item) {
-        return new Response(JSON.stringify({ 
+        return new Response(JSON.stringify({
           success: false,
-          error: 'Merch item not found' 
+          error: 'Merch item not found'
         }), {
           status: 404,
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
-      return new Response(JSON.stringify({ 
+
+      const result = {
         success: true,
         item,
         source: 'firebase-rest'
-      }), {
+      };
+
+      kvSet(itemCacheKey, result, CACHE_CONFIG.MERCH);
+
+      return new Response(JSON.stringify(result), {
         status: 200,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'public, max-age=300, s-maxage=300'
         }
@@ -48,9 +74,25 @@ export const GET: APIRoute = async ({ request }) => {
     }
     
     log.info('[get-merch] Fetching up to', limit, 'items, published:', publishedParam);
-    
+
+    // Check KV cache for list
+    const listCacheKey = `list:${limit}:${publishedParam || 'default'}`;
+    if (!skipCache) {
+      const cached = await kvGet(listCacheKey, CACHE_CONFIG.MERCH);
+      if (cached) {
+        log.info('[get-merch] KV cache hit for list');
+        return new Response(JSON.stringify(cached), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=300, s-maxage=300'
+          }
+        });
+      }
+    }
+
     let items: any[] = [];
-    
+
     // If published=all, get all items without filtering
     if (publishedParam === 'all') {
       // queryCollection without filters returns all documents
@@ -135,17 +177,22 @@ export const GET: APIRoute = async ({ request }) => {
     };
     
     log.info('[get-merch] Returning', limitedItems.length, 'items');
-    
-    return new Response(JSON.stringify({ 
+
+    const result = {
       success: true,
       items: limitedItems,
       products: limitedItems, // Alias for manage.astro compatibility
       total: limitedItems.length,
       stats,
       source: 'firebase-rest'
-    }), {
+    };
+
+    // Cache in KV for 5 minutes
+    kvSet(listCacheKey, result, CACHE_CONFIG.MERCH);
+
+    return new Response(JSON.stringify(result), {
       status: 200,
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'public, max-age=300, s-maxage=300'
       }

@@ -315,7 +315,7 @@ async function init() {
   setupLiveStatusPusher();
 
   // Polling is now a FALLBACK only - Pusher handles real-time updates
-  // Poll every 2 minutes when Pusher connected, every 20s if not (saves ~90% Firebase reads)
+  // Poll every 2 minutes when Pusher connected, every 60s if not (saves Firebase reads)
   if (liveStatusPollInterval) clearInterval(liveStatusPollInterval);
   liveStatusPollInterval = setInterval(async () => {
     // Only poll frequently if Pusher isn't connected
@@ -323,7 +323,7 @@ async function init() {
     if (!pusherConnected) {
       await checkLiveStatus();
     }
-  }, 20000);
+  }, 60000); // Increased from 20s to 60s
 
   // Slow fallback poll every 2 minutes even when Pusher is connected (safety net)
   setInterval(async () => {
@@ -752,6 +752,46 @@ function setupPlaylistPlayButton() {
       }
       return;
     }
+
+    // Fallback: If playlist manager exists but player wasn't visible, try to start it
+    if (window.playlistManager && !window.isLiveStreamActive) {
+      const pm = window.playlistManager;
+      const isCurrentlyPlaying = window.isPlaylistPlaying || playBtn.classList.contains('playing');
+
+      console.log('[PlayBtn] Fallback: trying playlist, isPlaying:', isCurrentlyPlaying);
+
+      try {
+        if (isCurrentlyPlaying) {
+          await pm.pause();
+          window.isPlaylistPlaying = false;
+          playIcon?.classList.remove('hidden');
+          pauseIcon?.classList.add('hidden');
+          playBtn.classList.remove('playing');
+          pausePlaylistWave();
+          console.log('[PlayBtn] Playlist paused (fallback)');
+        } else {
+          // Try to resume or start autoplay
+          if (pm.queue?.length > 0) {
+            await pm.resume();
+          } else {
+            await pm.startAutoPlay?.();
+          }
+          window.isPlaylistPlaying = true;
+          playIcon?.classList.add('hidden');
+          pauseIcon?.classList.remove('hidden');
+          playBtn.classList.add('playing');
+          showPlaylistWave();
+          // Make playlist player visible
+          if (playlistPlayer) playlistPlayer.classList.remove('hidden');
+          console.log('[PlayBtn] Playlist started (fallback)');
+        }
+      } catch (error) {
+        console.error('[PlayBtn] Fallback playlist error:', error);
+      }
+      return;
+    }
+
+    console.log('[PlayBtn] No action taken - no matching mode');
   };
 
   console.log('[PlayBtn] Unified handler set up');
@@ -2824,8 +2864,8 @@ async function setupChat(streamId) {
       const emojiList = emoji.split(',');
       console.log('[Reaction] Displaying emojis:', emojiList);
 
-      // Create burst of emojis in random positions
-      const numEmojis = 4 + Math.floor(Math.random() * 4);
+      // Create burst of emojis in random positions (max 5)
+      const numEmojis = Math.min(5, 3 + Math.floor(Math.random() * 3));
       console.log('[Reaction] Creating', numEmojis, 'floating emojis');
       for (let i = 0; i < numEmojis; i++) {
         setTimeout(() => {
@@ -3579,7 +3619,8 @@ function createFloatingEmojiFromBroadcast(emojiList) {
   }
 
   console.log('[Reaction] createFloatingEmojiFromBroadcast called with:', emojiList);
-  const playerArea = document.querySelector('.video-player') || document.querySelector('.player-wrapper') || document.querySelector('.player-column');
+  // Find visible player area - prioritize player-column (main container), then specific players
+  const playerArea = document.querySelector('.player-column') || document.querySelector('.player-wrapper') || document.querySelector('.video-player:not(.hidden)') || document.querySelector('.audio-player:not(.hidden)');
   let x, y;
 
   if (playerArea) {
@@ -3755,13 +3796,7 @@ document.addEventListener('click', (e) => {
 let isInitialized = false;
 
 async function safeInit() {
-  // Skip entirely on fullscreen page - it has its own implementation
-  if (window.location.pathname.includes('/live/fullpage')) {
-    console.log('[LiveStream] On fullscreen page, skipping init');
-    return;
-  }
-
-  // Check if we're on the live page
+  // Check if we're on the live page (includes /live and /live/fullpage)
   if (!window.location.pathname.startsWith('/live')) {
     console.log('[LiveStream] Not on live page, skipping init');
     return;
