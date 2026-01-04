@@ -552,3 +552,323 @@
     .modal-info h2 { font-size: 1.5rem; }
     .current-price { font-size: 1.5rem; }
   }
+
+/* Gift Card Button in Hero */
+.gift-card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+.gift-card-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+}
+.gift-card-btn svg {
+  stroke: currentColor;
+}
+
+/* Gift Card Modal */
+.gc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+}
+.gc-modal-overlay.hidden {
+  display: none;
+}
+.gc-modal-box {
+  background: #1a1a1a;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  border: 1px solid #333;
+}
+.gc-modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.5rem;
+  cursor: pointer;
+  z-index: 10;
+}
+.gc-modal-close:hover {
+  color: #fff;
+}
+.gc-modal-content {
+  padding: 2rem;
+}
+.gc-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.gc-icon {
+  margin-bottom: 1rem;
+}
+.gc-header h2 {
+  font-size: 1.75rem;
+  margin: 0 0 0.5rem;
+  color: #fff;
+}
+.gc-header .red {
+  color: #dc2626;
+}
+.gc-subtitle {
+  color: #888;
+  margin: 0;
+}
+.gc-redeem-section, .gc-buy-section {
+  background: #111;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.gc-redeem-section h3, .gc-buy-section h3 {
+  font-size: 1rem;
+  margin: 0 0 1rem;
+  color: #fff;
+}
+.gc-login-prompt {
+  background: #222;
+  padding: 1rem;
+  border-radius: 6px;
+  text-align: center;
+}
+.gc-login-prompt p {
+  margin: 0;
+  color: #888;
+}
+.gc-login-prompt a {
+  color: #dc2626;
+  text-decoration: underline;
+}
+.gc-redeem-form, .gc-code-input-wrapper {
+  display: flex;
+  gap: 0.5rem;
+}
+.gc-code-input-wrapper input {
+  flex: 1;
+  padding: 0.75rem;
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff;
+  font-family: monospace;
+  text-transform: uppercase;
+}
+.gc-code-input-wrapper button {
+  padding: 0.75rem 1.25rem;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.gc-code-input-wrapper button:hover {
+  background: #b91c1c;
+}
+.gc-error-message {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
+  display: none;
+}
+.gc-success-message {
+  color: #22c55e;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
+  display: none;
+}
+.gc-balance-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #222;
+  border-radius: 6px;
+}
+.gc-balance-label {
+  color: #888;
+}
+.gc-balance-amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #22c55e;
+}
+.gc-amount-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.gc-amount-btn {
+  padding: 0.75rem;
+  background: #222;
+  border: 2px solid #333;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.gc-amount-btn:hover {
+  border-color: #dc2626;
+}
+.gc-amount-btn.active {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+.gc-custom-amount {
+  margin-bottom: 1rem;
+}
+.gc-custom-amount.hidden {
+  display: none;
+}
+.gc-custom-amount input {
+  width: 100%;
+  padding: 0.75rem;
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff;
+}
+.gc-selected-amount {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: #222;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+.gc-selected-amount span:last-child {
+  font-weight: 700;
+  color: #dc2626;
+  font-size: 1.25rem;
+}
+.gc-recipient-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.gc-toggle-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #222;
+  border: 2px solid #333;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.gc-toggle-option:has(input:checked) {
+  border-color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+.gc-toggle-option input {
+  display: none;
+}
+.gc-gift-fields, .gc-self-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.gc-gift-fields.hidden, .gc-self-fields.hidden {
+  display: none;
+}
+.gc-gift-fields input, .gc-gift-fields textarea {
+  width: 100%;
+  padding: 0.75rem;
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff;
+  resize: vertical;
+}
+.gc-self-note {
+  color: #888;
+  margin: 0;
+  padding: 0.75rem;
+  background: #222;
+  border-radius: 6px;
+}
+.gc-self-note strong {
+  color: #fff;
+}
+.gc-purchase-actions {
+  margin-top: 1rem;
+}
+.gc-purchase-actions.hidden {
+  display: none;
+}
+.gc-purchase-btn {
+  width: 100%;
+  padding: 1rem;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.gc-purchase-btn:disabled {
+  background: #444;
+  cursor: not-allowed;
+}
+.gc-purchase-btn:not(:disabled):hover {
+  background: #b91c1c;
+}
+.gc-btn-loading.hidden {
+  display: none;
+}
+.gc-success-box {
+  text-align: center;
+  padding: 1.5rem;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid #22c55e;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+.gc-success-box.hidden {
+  display: none;
+}
+.gc-success-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+.gc-success-box h4 {
+  margin: 0 0 0.5rem;
+  color: #22c55e;
+}
+.gc-success-box p {
+  margin: 0;
+  color: #888;
+}

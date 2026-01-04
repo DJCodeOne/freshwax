@@ -449,7 +449,6 @@ const adminUids = getAdminUids();
     import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const activeSection = document.body.dataset.activeSection || '';
-    console.log('[ProDashboard] Script loaded, activeSection:', activeSection);
 
     const firebaseConfig = window.FIREBASE_CONFIG || {
       apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
@@ -570,9 +569,7 @@ const adminUids = getAdminUids();
     const ADMIN_UIDS = window.ADMIN_UIDS || [];
 
     // Auth state listener
-    console.log('[ProDashboard] Setting up auth listener...');
     onAuthStateChanged(auth, async (user) => {
-      console.log('[ProDashboard] Auth state changed:', user ? user.uid : 'no user');
       if (!user) {
         // Not logged in, redirect to login
         window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
@@ -582,12 +579,9 @@ const adminUids = getAdminUids();
       try {
         let roles = {};
         const isAdmin = ADMIN_UIDS.includes(user.uid);
-        console.log('[ProDashboard] User UID:', user.uid, 'isAdmin:', isAdmin);
 
         // Try to get user document from users collection
-        console.log('[ProDashboard] Fetching user doc...');
         const userDoc = await getDoc(doc(db, 'users', user.uid));
-        console.log('[ProDashboard] User doc exists:', userDoc.exists());
 
         if (userDoc.exists()) {
           roles = userDoc.data().roles || {};
@@ -595,9 +589,7 @@ const adminUids = getAdminUids();
 
         // If no roles found, try artists collection
         if (!roles.artist && !roles.merchSeller && !roles.vinylSeller) {
-          console.log('[ProDashboard] No roles in users doc, trying artists collection...');
           const artistDoc = await getDoc(doc(db, 'artists', user.uid));
-          console.log('[ProDashboard] Artist doc exists:', artistDoc.exists());
           if (artistDoc.exists()) {
             const artistData = artistDoc.data();
             roles = {
@@ -610,22 +602,17 @@ const adminUids = getAdminUids();
 
         // Admin override - give full access
         if (isAdmin && !roles.artist && !roles.merchSeller && !roles.vinylSeller) {
-          console.log('[ProDashboard] Admin override applied');
           roles = { artist: true, merchSeller: true, vinylSeller: true };
         }
 
-        console.log('[ProDashboard] Final roles:', roles);
-
         // Check if user has any pro roles
         if (!roles.artist && !roles.merchSeller && !roles.vinylSeller) {
-          console.log('[ProDashboard] No roles, showing access denied');
           loadingState.style.display = 'none';
           accessDenied.style.display = 'flex';
           return;
         }
 
         // User has access, show dashboard
-        console.log('[ProDashboard] User has access, showing dashboard');
         buildNavigation(roles);
         showUserInfo(user, roles);
 

@@ -20,8 +20,11 @@ const VIMEO_REGEX = /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/([^\/]*)\/video
 // SoundCloud: soundcloud.com/artist/track
 const SOUNDCLOUD_REGEX = /soundcloud\.com\/([a-zA-Z0-9-_]+\/[a-zA-Z0-9-_]+)/;
 
-// Direct: .mp4, .webm, .ogg, .m3u8, .mpd
-const DIRECT_REGEX = /\.(mp4|webm|ogg|m3u8|mpd)(\?.*)?$/i;
+// Direct video: .mp4, .webm, .ogg, .m3u8, .mpd
+const DIRECT_VIDEO_REGEX = /\.(mp4|webm|ogg|m3u8|mpd)(\?.*)?$/i;
+
+// Direct audio: .mp3, .wav, .flac, .aac, .m4a
+const DIRECT_AUDIO_REGEX = /\.(mp3|wav|flac|aac|m4a)(\?.*)?$/i;
 
 /**
  * Parse a media URL and detect the platform
@@ -72,8 +75,18 @@ export function parseMediaUrl(url: string): ParsedUrl {
   }
 
   // Try Direct video URL
-  const directMatch = trimmedUrl.match(DIRECT_REGEX);
-  if (directMatch) {
+  const directVideoMatch = trimmedUrl.match(DIRECT_VIDEO_REGEX);
+  if (directVideoMatch) {
+    return {
+      platform: 'direct',
+      url: trimmedUrl,
+      isValid: true
+    };
+  }
+
+  // Try Direct audio URL (MP3, etc)
+  const directAudioMatch = trimmedUrl.match(DIRECT_AUDIO_REGEX);
+  if (directAudioMatch) {
     return {
       platform: 'direct',
       url: trimmedUrl,
@@ -88,7 +101,7 @@ export function parseMediaUrl(url: string): ParsedUrl {
       platform: 'direct',
       url: trimmedUrl,
       isValid: false,
-      error: 'Unsupported media format. Please use YouTube, Vimeo, SoundCloud, or direct video links (.mp4, .webm, .m3u8)'
+      error: 'Unsupported media format. Please use YouTube, SoundCloud, or direct media links (.mp3, .mp4, .webm, .m3u8)'
     };
   } catch {
     return {

@@ -53,22 +53,19 @@ Write-Host "Estimated time remaining: ~$estimatedHours hours" -ForegroundColor C
 Write-Host "(This will vary based on video length and connection speed)"
 Write-Host ""
 
-# Confirm
-$confirm = Read-Host "Start download? (y/n)"
-if ($confirm -ne 'y') {
-    Write-Host "Cancelled."
-    exit 0
-}
+# Auto-start (no prompt for unattended operation)
+Write-Host "Starting in 3 seconds... (Ctrl+C to cancel)" -ForegroundColor Yellow
+Start-Sleep -Seconds 3
 
 # Start timestamp
 $startTime = Get-Date
 Add-Content -Path $LogFile -Value "=== Download session started: $startTime ==="
 
 Write-Host ""
-Write-Host "Downloading... Press Ctrl+C to pause (progress is saved)" -ForegroundColor Yellow
+Write-Host "Downloading with AUTO-RESUME... Press Ctrl+C to stop" -ForegroundColor Yellow
 Write-Host ""
 
-# Run yt-dlp
+# yt-dlp arguments
 $ytdlpArgs = @(
     "--batch-file", $UrlsFile,
     "--download-archive", $ArchiveFile,
@@ -88,7 +85,65 @@ $ytdlpArgs = @(
     "--console-title"
 )
 
-& $ytdlpPath @ytdlpArgs 2>&1 | Tee-Object -FilePath $LogFile -Append
+# Auto-resume loop
+$maxConsecutiveFailures = 5
+$consecutiveFailures = 0
+$pauseBetweenRetries = 30  # seconds
+
+do {
+    # Get current progress
+    $currentDownloaded = 0
+    if (Test-Path $ArchiveFile) {
+        $currentDownloaded = (Get-Content $ArchiveFile | Measure-Object -Line).Lines
+    }
+    $remaining = $totalCount - $currentDownloaded
+
+    Write-Host ""
+    Write-Host "--- Progress: $currentDownloaded / $totalCount ($remaining remaining) ---" -ForegroundColor Cyan
+    Write-Host ""
+
+    # Run yt-dlp
+    & $ytdlpPath @ytdlpArgs 2>&1 | Tee-Object -FilePath $LogFile -Append
+    $exitCode = $LASTEXITCODE
+
+    # Check new progress
+    $newDownloaded = 0
+    if (Test-Path $ArchiveFile) {
+        $newDownloaded = (Get-Content $ArchiveFile | Measure-Object -Line).Lines
+    }
+    $newRemaining = $totalCount - $newDownloaded
+
+    # Did we make progress?
+    if ($newDownloaded -gt $currentDownloaded) {
+        $consecutiveFailures = 0
+        Write-Host ""
+        Write-Host "[AUTO-RESUME] Downloaded $($newDownloaded - $currentDownloaded) more files" -ForegroundColor Green
+    } else {
+        $consecutiveFailures++
+        Write-Host ""
+        Write-Host "[AUTO-RESUME] No progress made (failure $consecutiveFailures/$maxConsecutiveFailures)" -ForegroundColor Yellow
+    }
+
+    # Check if done
+    if ($newRemaining -le 0) {
+        Write-Host ""
+        Write-Host "[AUTO-RESUME] All downloads complete!" -ForegroundColor Green
+        break
+    }
+
+    # Check if too many failures
+    if ($consecutiveFailures -ge $maxConsecutiveFailures) {
+        Write-Host ""
+        Write-Host "[AUTO-RESUME] Too many consecutive failures, stopping" -ForegroundColor Red
+        Add-Content -Path $LogFile -Value "=== Stopped after $maxConsecutiveFailures consecutive failures ==="
+        break
+    }
+
+    # Pause and retry
+    Write-Host "[AUTO-RESUME] Waiting $pauseBetweenRetries seconds before resuming..." -ForegroundColor Cyan
+    Start-Sleep -Seconds $pauseBetweenRetries
+
+} while ($true)
 
 # End timestamp
 $endTime = Get-Date
