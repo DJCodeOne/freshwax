@@ -143,7 +143,7 @@ const formattedDate = mix ? new Date(upload_date).toLocaleDateString('en-GB', {
 ---
 
 <Layout
-  title={mix ? `${title} - ${dj_name} | Fresh Wax` : 'Mix Not Found | Fresh Wax'}
+  title={mix ? `${title} - ${dj_name}` : 'Mix Not Found'}
   description={mix ? `${title} by ${dj_name}${genre ? ` - ${genre}` : ''}${formattedDuration ? ` (${formattedDuration})` : ''}. Listen now on Fresh Wax.` : 'Mix not found'}
   image={artwork_url !== '/place-holder.webp' ? artwork_url : undefined}
   type="music.album"
