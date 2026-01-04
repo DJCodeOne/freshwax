@@ -4,32 +4,22 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, initFirebaseEnv, clearCache } from '../../../lib/firebase-rest';
+import { isAdmin, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
-// Helper to initialize Firebase
-function initFirebase(locals: any) {
+// Helper to initialize Firebase and admin config
+function initServices(locals: any) {
   const env = locals?.runtime?.env || {};
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
     FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
-}
-
-// Hardcoded admin UIDs for verification
-const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
-
-async function isAdmin(uid: string): Promise<boolean> {
-  if (ADMIN_UIDS.includes(uid)) return true;
-  const adminDoc = await getDocument('admins', uid);
-  if (adminDoc) return true;
-  const userDoc = await getDocument('users', uid);
-  if (userDoc?.isAdmin || userDoc?.roles?.admin) return true;
-  return false;
+  initAdminEnv({ ADMIN_UIDS: env.ADMIN_UIDS, ADMIN_EMAILS: env.ADMIN_EMAILS });
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
+  initServices(locals);
 
   try {
     const body = await request.json();

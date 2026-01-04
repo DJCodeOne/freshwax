@@ -3,6 +3,7 @@
 // Only accessible to users with approved Artist or Merch Seller roles
 // Shows sections based on approved roles
 import '../styles/global.css';
+import { getAdminUids } from '../lib/admin';
 
 interface Props {
   title: string;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 const { title, activeSection } = Astro.props;
+const adminUids = getAdminUids();
 ---
 <html lang="en">
 <head>
@@ -438,6 +440,9 @@ const { title, activeSection } = Astro.props;
     }
   </style>
 
+  <script is:inline define:vars={{ adminUids }}>
+    window.ADMIN_UIDS = adminUids;
+  </script>
   <script type="module" is:inline>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
@@ -561,8 +566,8 @@ const { title, activeSection } = Astro.props;
       userRoles.innerHTML = badges;
     }
 
-    // Admin UIDs that always get full access
-    const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
+    // Admin UIDs from server (injected via define:vars)
+    const ADMIN_UIDS = window.ADMIN_UIDS || [];
 
     // Auth state listener
     console.log('[ProDashboard] Setting up auth listener...');

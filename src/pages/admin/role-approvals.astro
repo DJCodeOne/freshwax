@@ -2,6 +2,8 @@
 // Admin Role Approvals
 // Approve or deny Artist, Merch Seller, Vinyl Seller, and DJ Bypass requests
 import '../../styles/global.css';
+import { getAdminUids } from '../../lib/admin';
+const adminUids = getAdminUids();
 ---
 <html lang="en">
 <head>
@@ -289,6 +291,9 @@ import '../../styles/global.css';
     }
   </style>
 
+  <script is:inline define:vars={{ adminUids }}>
+    window.ADMIN_UIDS = adminUids;
+  </script>
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
@@ -306,8 +311,8 @@ import '../../styles/global.css';
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Admin UIDs check
-    const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
+    // Admin UIDs from server (injected via define:vars)
+    const ADMIN_UIDS = window.ADMIN_UIDS || [];
 
     const tabs = document.querySelectorAll('.tab');
     const tabContents = document.querySelectorAll('.tab-content');

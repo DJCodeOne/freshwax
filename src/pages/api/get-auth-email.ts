@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { ADMIN_UIDS } from '../../lib/admin';
+import { getAdminUids } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
@@ -46,8 +46,9 @@ export const GET: APIRoute = async ({ request, cookies }) => {
   const authenticatedUid = adminId || firebaseUid || customerId;
 
   // Security: Only allow fetching own data, or admin fetching any data
-  const isAdmin = adminId ? ADMIN_UIDS.includes(adminId) :
-                  firebaseUid ? ADMIN_UIDS.includes(firebaseUid) : false;
+  const adminUids = getAdminUids();
+  const isAdmin = adminId ? adminUids.includes(adminId) :
+                  firebaseUid ? adminUids.includes(firebaseUid) : false;
   const isOwnData = authenticatedUid === uid;
 
   if (!isAdmin && !isOwnData) {

@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, clearCache } from '../../lib/firebase-rest';
 import { normalizeRelease } from '../../lib/releases';
-import { isAdmin as checkIsAdmin, ADMIN_UIDS } from '../../lib/admin';
+import { isAdmin as checkIsAdmin, getAdminUids, initAdminEnv } from '../../lib/admin';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -21,8 +21,9 @@ export const GET: APIRoute = async ({ request, cookies }) => {
   // Check admin status from authenticated cookie (not query params - that's insecure)
   const adminId = cookies.get('adminId')?.value;
   const firebaseUid = cookies.get('firebaseUid')?.value;
-  const isAdminUser = adminId ? ADMIN_UIDS.includes(adminId) :
-                      firebaseUid ? ADMIN_UIDS.includes(firebaseUid) : false;
+  const adminUids = getAdminUids();
+  const isAdminUser = adminId ? adminUids.includes(adminId) :
+                      firebaseUid ? adminUids.includes(firebaseUid) : false;
 
   if (!releaseId) {
     return new Response(JSON.stringify({

@@ -2,20 +2,24 @@
 // Migrate existing pendingRoles from users collection to pendingRoleRequests collection
 import type { APIRoute } from 'astro';
 import { queryCollection, setDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getAdminUids, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
 // SECURITY: No fallback - ADMIN_KEY must be set in environment
 const ADMIN_KEY = import.meta.env.ADMIN_KEY;
-const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize admin config from runtime env
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+
   try {
     const body = await request.json();
     const { adminKey, adminUid } = body;
 
     // Verify admin access
-    if (adminKey !== ADMIN_KEY && !ADMIN_UIDS.includes(adminUid)) {
+    if (adminKey !== ADMIN_KEY && !getAdminUids().includes(adminUid)) {
       const adminDoc = adminUid ? await getDocument('admins', adminUid) : null;
       if (!adminDoc) {
         return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {

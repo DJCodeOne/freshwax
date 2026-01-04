@@ -3,8 +3,10 @@
 // Partner Management - Artists and Merch Suppliers only
 // Customers and DJs are managed in User Management
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getAdminUids } from '../../../lib/admin';
 
 export const prerender = false;
+const adminUids = getAdminUids();
 ---
 
 <AdminLayout title="Partner Management" activeNav="partners">
@@ -342,6 +344,9 @@ export const prerender = false;
   }
 </style>
 
+<script is:inline define:vars={{ adminUids }}>
+  window.ADMIN_UIDS = adminUids;
+</script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
@@ -384,10 +389,10 @@ export const prerender = false;
   // Check if user is admin
   async function checkIsAdmin(uid) {
     try {
-      // Hardcoded admin UIDs (same as API)
-      const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
+      // Admin UIDs from server (injected via define:vars)
+      const ADMIN_UIDS = window.ADMIN_UIDS || [];
       if (ADMIN_UIDS.includes(uid)) {
-        console.log('[Admin Check] Admin by hardcoded UID');
+        console.log('[Admin Check] Admin by env UID');
         return true;
       }
       

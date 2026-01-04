@@ -2,6 +2,8 @@
 // /src/pages/admin/artists/pending.astro
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../../lib/firebase-rest';
+import { getAdminUids } from '../../../lib/admin';
+const adminUids = getAdminUids();
 
 const allUsers = await queryCollection('users', { skipCache: true, limit: 500 });
 
@@ -51,12 +53,12 @@ export const prerender = false;
           </tr>
         ))}</tbody></table></div></div>
   )}
-  <Fragment slot="scripts"><script type="module">
+  <Fragment slot="scripts"><script is:inline define:vars={{ adminUids }}>window.ADMIN_UIDS=adminUids;</script><script type="module">
     import{initializeApp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import{getAuth,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
     import{getFirestore,doc,updateDoc,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     const app=initializeApp({apiKey:'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',authDomain:"freshwax-store.firebaseapp.com",projectId:"freshwax-store"});
-    const auth=getAuth(app),db=getFirestore(app),ADMINS=['Y3TGc171cHSWTqZDRSniyu7Jxc33','8WmxYeCp4PSym5iWHahgizokn5F2'];
+    const auth=getAuth(app),db=getFirestore(app),ADMINS=window.ADMIN_UIDS||[];
     onAuthStateChanged(auth,u=>{if(!u||!ADMINS.includes(u.uid))window.location.href='/admin/login';});
     const tbl=document.getElementById('tbl');
     document.querySelectorAll('.filter-tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.filter-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');const f=t.dataset.filter;tbl?.querySelectorAll('tr').forEach(r=>{const rl=JSON.parse(r.dataset.roles||'{}');r.style.display=(f==='all'||(f==='artist'&&rl.artist)||(f==='merch'&&rl.merch))?'':'none';});});

@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { addDocument, getDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { BOT_USER, BOT_ANNOUNCEMENTS } from '../../../lib/chatbot';
+import { getAdminUids, initAdminEnv } from '../../../lib/admin';
 
 // Helper to initialize Firebase and return env
 function initFirebase(locals: any) {
@@ -13,6 +14,7 @@ function initFirebase(locals: any) {
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   return env;
 }
 
@@ -209,11 +211,6 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
   }
 }
 
-// Hardcoded admin UIDs (same as other admin endpoints)
-const ADMIN_UIDS = [
-  'Y3TGc171cHSWTqZDRSniyu7Jxc33',  // freshwaxonline@gmail.com
-  '8WmxYeCp4PSym5iWHahgizokn5F2'   // davidhagon@gmail.com
-];
 
 // Send bot message to a stream
 async function sendBotMessage(streamId: string, message: string, env: any): Promise<{ success: boolean; messageId?: string }> {
@@ -253,7 +250,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Verify admin (optional - can be called internally too)
     // For scheduled tasks, adminId might be 'system'
-    if (adminId && adminId !== 'system' && !ADMIN_UIDS.includes(adminId)) {
+    if (adminId && adminId !== 'system' && !getAdminUids().includes(adminId)) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Unauthorized'

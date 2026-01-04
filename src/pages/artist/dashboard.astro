@@ -8,6 +8,7 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
+import { getAdminUids } from '../../lib/admin';
 
 // Check for partnerId cookie first, then fall back to userId or customerId
 let partnerId = Astro.cookies.get('partnerId')?.value || '';
@@ -26,9 +27,8 @@ console.log('[Partner Dashboard] Cookies - partnerId:', Astro.cookies.get('partn
             'userId:', Astro.cookies.get('userId')?.value || 'none',
             'customerId:', Astro.cookies.get('customerId')?.value || 'none');
 
-// Admin UIDs that always get full access
-const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
-const isAdminUser = ADMIN_UIDS.includes(partnerId);
+// Admin UIDs from environment
+const isAdminUser = getAdminUids().includes(partnerId);
 
 let partner = null;
 let stats = {

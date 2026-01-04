@@ -2,16 +2,18 @@
 // Returns user type info - uses Firebase REST API
 import type { APIRoute } from 'astro';
 import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getAdminUids, getAdminEmails, initAdminEnv } from '../../lib/admin';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase for Cloudflare runtime
+  // Initialize Firebase and admin config for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   const url = new URL(request.url);
   const uid = url.searchParams.get('uid');
@@ -48,9 +50,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     let partnerDisplayName = '';
     let avatarUrl = '';
 
-    // Hardcoded admin UIDs
-    const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
-    if (ADMIN_UIDS.includes(uid)) {
+    // Check admin UIDs from environment
+    if (getAdminUids().includes(uid)) {
       isAdmin = true;
     }
 
@@ -142,8 +143,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Check for admin email - include authEmail from Firebase Auth as fallback
     let userEmail = userDoc?.email || customerDoc?.email || artistDoc?.email || authEmail || '';
-    const ADMIN_EMAILS = ['freshwaxonline@gmail.com', 'davidhagon@gmail.com'];
-    if (userEmail && ADMIN_EMAILS.includes(userEmail.toLowerCase())) {
+    if (userEmail && getAdminEmails().includes(userEmail.toLowerCase())) {
       isAdmin = true;
     }
 
