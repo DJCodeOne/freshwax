@@ -225,7 +225,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           color: item.color,
           image: item.image,
           artwork: item.artwork,
-          artist: item.artist
+          artist: item.artist,
+          artistId: item.artistId // For Stripe Connect payouts
         })),
         totals: orderData.totals,
         hasPhysicalItems: orderData.hasPhysicalItems,

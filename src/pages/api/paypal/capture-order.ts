@@ -2,9 +2,10 @@
 // Captures a PayPal order after customer approval and creates the order in Firebase
 
 import type { APIRoute } from 'astro';
+import Stripe from 'stripe';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createOrder } from '../../../lib/order-utils';
-import { initFirebaseEnv, getDocument, deleteDocument } from '../../../lib/firebase-rest';
+import { initFirebaseEnv, getDocument, deleteDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -202,6 +203,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     console.log('[PayPal] Order created:', result.orderNumber);
 
+    // Process artist payments via Stripe Connect (same as Stripe webhook)
+    const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
+    if (stripeSecretKey && result.orderId) {
+      try {
+        await processArtistPayments({
+          orderId: result.orderId,
+          orderNumber: result.orderNumber || '',
+          items: orderData.items,
+          stripeSecretKey,
+          env
+        });
+      } catch (paymentErr) {
+        console.error('[PayPal] Artist payment processing error:', paymentErr);
+        // Don't fail the order, just log the error
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       orderId: result.orderId,
@@ -225,3 +243,164 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 };
+
+// Process artist payments via Stripe Connect
+async function processArtistPayments(params: {
+  orderId: string;
+  orderNumber: string;
+  items: any[];
+  stripeSecretKey: string;
+  env: any;
+}) {
+  const { orderId, orderNumber, items, stripeSecretKey } = params;
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+
+  try {
+    // Group items by artist
+    const artistPayments: Record<string, {
+      artistId: string;
+      artistName: string;
+      artistEmail: string;
+      stripeConnectId: string | null;
+      amount: number;
+      items: string[];
+    }> = {};
+
+    const releaseCache: Record<string, any> = {};
+
+    for (const item of items) {
+      // Skip merch items - they go to suppliers
+      if (item.type === 'merch') continue;
+
+      const releaseId = item.releaseId || item.id;
+      if (!releaseId) continue;
+
+      let release = releaseCache[releaseId];
+      if (!release) {
+        release = await getDocument('releases', releaseId);
+        if (release) releaseCache[releaseId] = release;
+      }
+
+      if (!release) continue;
+
+      const artistId = item.artistId || release.artistId || release.userId;
+      if (!artistId) continue;
+
+      let artist = null;
+      try {
+        artist = await getDocument('artists', artistId);
+      } catch (e) {
+        console.log('[PayPal] Could not find artist:', artistId);
+      }
+
+      const itemTotal = (item.price || 0) * (item.quantity || 1);
+
+      if (!artistPayments[artistId]) {
+        artistPayments[artistId] = {
+          artistId,
+          artistName: artist?.artistName || release.artistName || release.artist || 'Unknown Artist',
+          artistEmail: artist?.email || release.artistEmail || '',
+          stripeConnectId: artist?.stripeConnectId || null,
+          amount: 0,
+          items: []
+        };
+      }
+
+      artistPayments[artistId].amount += itemTotal;
+      artistPayments[artistId].items.push(item.name || item.title || 'Item');
+    }
+
+    console.log('[PayPal] Artist payments to process:', Object.keys(artistPayments).length);
+
+    for (const artistId of Object.keys(artistPayments)) {
+      const payment = artistPayments[artistId];
+      if (payment.amount <= 0) continue;
+
+      console.log('[PayPal] Processing payment for', payment.artistName, ':', payment.amount, 'GBP');
+
+      if (payment.stripeConnectId) {
+        try {
+          const transfer = await stripe.transfers.create({
+            amount: Math.round(payment.amount * 100),
+            currency: 'gbp',
+            destination: payment.stripeConnectId,
+            transfer_group: orderId,
+            metadata: {
+              orderId,
+              orderNumber,
+              artistId: payment.artistId,
+              artistName: payment.artistName,
+              platform: 'freshwax',
+              paymentMethod: 'paypal'
+            }
+          });
+
+          await addDocument('payouts', {
+            artistId: payment.artistId,
+            artistName: payment.artistName,
+            artistEmail: payment.artistEmail,
+            stripeConnectId: payment.stripeConnectId,
+            stripeTransferId: transfer.id,
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'completed',
+            paymentMethod: 'paypal',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString()
+          });
+
+          const artist = await getDocument('artists', payment.artistId);
+          if (artist) {
+            await updateDocument('artists', payment.artistId, {
+              totalEarnings: (artist.totalEarnings || 0) + payment.amount,
+              lastPayoutAt: new Date().toISOString()
+            });
+          }
+
+          console.log('[PayPal] ✓ Transfer created:', transfer.id);
+
+        } catch (transferError: any) {
+          console.error('[PayPal] Transfer failed:', transferError.message);
+
+          await addDocument('pendingPayouts', {
+            artistId: payment.artistId,
+            artistName: payment.artistName,
+            artistEmail: payment.artistEmail,
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'retry_pending',
+            failureReason: transferError.message,
+            paymentMethod: 'paypal',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } else {
+        console.log('[PayPal] Artist', payment.artistName, 'not connected - storing pending');
+
+        await addDocument('pendingPayouts', {
+          artistId: payment.artistId,
+          artistName: payment.artistName,
+          artistEmail: payment.artistEmail,
+          orderId,
+          orderNumber,
+          amount: payment.amount,
+          currency: 'gbp',
+          status: 'awaiting_connect',
+          notificationSent: false,
+          paymentMethod: 'paypal',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[PayPal] processArtistPayments error:', error);
+    throw error;
+  }
+}
