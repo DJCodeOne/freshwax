@@ -36,14 +36,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Get raw body for signature verification
     const rawBody = await request.text();
-    
-    // Verify webhook signature (if configured)
-    const signature = request.headers.get('x-red5-signature') || 
+
+    // Verify webhook signature - REQUIRED in production
+    const signature = request.headers.get('x-red5-signature') ||
                       request.headers.get('x-webhook-signature') || '';
-    
-    if (RED5_CONFIG.security.webhookSecret !== 'webhook-secret-change-in-production') {
-      // Only verify if a real secret is configured
-      if (signature && !verifyWebhookSignature(rawBody, signature)) {
+
+    const webhookSecret = RED5_CONFIG.security.webhookSecret;
+    const isProduction = !import.meta.env.DEV;
+
+    // Reject if no proper secret configured in production
+    if (isProduction && (!webhookSecret || webhookSecret === 'webhook-secret-change-in-production')) {
+      console.error('[red5-webhook] CRITICAL: No webhook secret configured in production');
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Webhook security not configured'
+      }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Always verify signature when secret is properly configured
+    if (webhookSecret && webhookSecret !== 'webhook-secret-change-in-production') {
+      if (!signature) {
+        console.error('[red5-webhook] Missing webhook signature');
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Missing webhook signature'
+        }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      if (!verifyWebhookSignature(rawBody, signature)) {
         console.error('[red5-webhook] Invalid signature');
         return new Response(JSON.stringify({
           success: false,

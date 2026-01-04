@@ -1,16 +1,8 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, queryCollection, addDocument, setDocument, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { isAdmin, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
-
-const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
-
-// Helper to check if user is admin
-async function isAdmin(uid: string): Promise<boolean> {
-  if (ADMIN_UIDS.includes(uid)) return true;
-  const adminDoc = await getDocument('admins', uid);
-  return !!adminDoc;
-}
 
 export const GET: APIRoute = async ({ request, url }) => {
   const action = url.searchParams.get('action');

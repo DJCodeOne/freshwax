@@ -5,14 +5,9 @@
 import type { APIContext } from 'astro';
 import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { getEffectiveTier, SUBSCRIPTION_TIERS, getTodayDate } from '../../../lib/subscription';
+import { getAdminUids, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
-
-// Admin UIDs who can use commands without limits
-const ADMIN_UIDS = [
-  'Y3TGc171cHSWTqZDRSniyu7Jxc33',
-  '8WmxYeCp4PSym5iWHahgizokn5F2'
-];
 
 // Commands that have daily limits (1 per day)
 const LIMITED_COMMANDS = ['ping', 'vibe', 'quote', 'hype', 'shoutout'];
@@ -95,6 +90,7 @@ function initEnv(locals: any) {
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || env?.PUBLIC_FIREBASE_PROJECT_ID || 'freshwax-store',
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || env?.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
   });
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 }
 
 function getRandomItem<T>(array: T[]): T {
@@ -119,7 +115,7 @@ export async function POST({ request, locals }: APIContext) {
     }
 
     // Check if user has Plus or is admin
-    const isAdmin = ADMIN_UIDS.includes(userId);
+    const isAdmin = getAdminUids().includes(userId);
     let isPlus = isAdmin;
     let userDoc: any = null;
 

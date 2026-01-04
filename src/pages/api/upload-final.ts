@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getDocument, setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 import AdmZip from 'adm-zip';
 
 //============================================================================
@@ -83,6 +83,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
     FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
 
+  // SECURITY: Require authentication - either admin key or user token with ownership verification
+  const adminKey = request.headers.get('x-admin-key');
+  const expectedAdminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
+  const isAdmin = adminKey && expectedAdminKey && adminKey === expectedAdminKey;
+
+  let uploaderUserId: string | null = null;
+
+  if (!isAdmin) {
+    // Verify user token
+    const { userId, error } = await verifyRequestUser(request);
+    if (error || !userId) {
+      return new Response(JSON.stringify({
+        error: 'Authentication required',
+        details: error || 'Invalid or missing authorization'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    uploaderUserId = userId;
+  }
+
   // Initialize R2/S3 client for Cloudflare runtime
   const R2_CONFIG = getR2Config(env);
   const s3Client = createS3Client(R2_CONFIG);
@@ -99,6 +121,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // SECURITY: For non-admin users, verify they own this release
+    if (uploaderUserId && !isAdmin) {
+      const existingRelease = await getDocument('releases', releaseId);
+      if (existingRelease) {
+        // Check if user is the submitter or artist
+        const isOwner = existingRelease.submittedBy === uploaderUserId ||
+                        existingRelease.artistId === uploaderUserId;
+
+        if (!isOwner) {
+          return new Response(JSON.stringify({
+            error: 'Not authorized to upload to this release'
+          }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      }
     }
 
     log.info(`[upload-final] Processing release: ${releaseId} (${(packageFile.size / 1024 / 1024).toFixed(2)} MB)`);

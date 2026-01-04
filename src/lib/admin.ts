@@ -4,9 +4,46 @@ import { getDocument } from './firebase-rest';
 import { ApiErrors } from './api-utils';
 import type { APIContext } from 'astro';
 
-// Hardcoded admin UIDs for verification
-export const ADMIN_UIDS = ['Y3TGc171cHSWTqZDRSniyu7Jxc33', '8WmxYeCp4PSym5iWHahgizokn5F2'];
-export const ADMIN_EMAILS = ['freshwaxonline@gmail.com', 'davidhagon@gmail.com'];
+// Admin configuration - loaded from environment variables
+// Fallback to defaults only in development
+let adminConfig: { uids: string[]; emails: string[] } | null = null;
+
+function getAdminConfig(): { uids: string[]; emails: string[] } {
+  if (adminConfig) return adminConfig;
+
+  // Get from environment variables (comma-separated lists)
+  const envUids = import.meta.env.ADMIN_UIDS || process.env.ADMIN_UIDS || '';
+  const envEmails = import.meta.env.ADMIN_EMAILS || process.env.ADMIN_EMAILS || '';
+
+  // Parse comma-separated values
+  const uids = envUids.split(',').map((s: string) => s.trim()).filter(Boolean);
+  const emails = envEmails.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+
+  adminConfig = { uids, emails };
+  return adminConfig;
+}
+
+// Initialize admin config with runtime env (for Cloudflare Workers)
+export function initAdminEnv(env?: { ADMIN_UIDS?: string; ADMIN_EMAILS?: string }): void {
+  if (env?.ADMIN_UIDS || env?.ADMIN_EMAILS) {
+    const uids = (env.ADMIN_UIDS || '').split(',').map(s => s.trim()).filter(Boolean);
+    const emails = (env.ADMIN_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    adminConfig = { uids, emails };
+  }
+}
+
+// Export getters instead of hardcoded constants
+export function getAdminUids(): string[] {
+  return getAdminConfig().uids;
+}
+
+export function getAdminEmails(): string[] {
+  return getAdminConfig().emails;
+}
+
+// Backward compatibility - deprecated, use getAdminUids() instead
+export const ADMIN_UIDS: string[] = [];
+export const ADMIN_EMAILS: string[] = [];
 
 // Get admin key from environment
 export function getAdminKey(locals: any): string {
@@ -58,7 +95,7 @@ export function requireAdminAuth(request: Request, locals: any, bodyData?: any):
 
 // Check if user is admin by UID
 export async function isAdmin(uid: string): Promise<boolean> {
-  if (ADMIN_UIDS.includes(uid)) return true;
+  if (getAdminUids().includes(uid)) return true;
 
   try {
     // Check admins collection
@@ -77,7 +114,7 @@ export async function isAdmin(uid: string): Promise<boolean> {
 
 // Check if email is admin
 export function isAdminEmail(email: string): boolean {
-  return ADMIN_EMAILS.includes(email.toLowerCase());
+  return getAdminEmails().includes(email.toLowerCase());
 }
 
 // Standardized API response helpers

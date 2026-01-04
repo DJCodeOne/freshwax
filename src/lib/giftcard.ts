@@ -2,21 +2,41 @@
 // Gift Card System - Generate, validate, and redeem gift cards
 
 /**
- * Generate a unique gift card code
+ * Get cryptographically secure random bytes
+ * Works in both Node.js and browser environments
+ */
+function getSecureRandomBytes(length: number): Uint8Array {
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    // Browser or modern Node.js
+    const bytes = new Uint8Array(length);
+    crypto.getRandomValues(bytes);
+    return bytes;
+  }
+  // Fallback should never happen in production, but included for safety
+  throw new Error('No secure random source available');
+}
+
+/**
+ * Generate a unique gift card code using cryptographically secure random
  * Format: FWGC-XXXX-XXXX-XXXX (16 chars total)
  */
 export function generateGiftCardCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude confusing chars (0,O,1,I)
   const segments: string[] = [];
-  
+
+  // Get enough random bytes for all 12 characters
+  const randomBytes = getSecureRandomBytes(12);
+
   for (let s = 0; s < 3; s++) {
     let segment = '';
     for (let i = 0; i < 4; i++) {
-      segment += chars[Math.floor(Math.random() * chars.length)];
+      const byteIndex = s * 4 + i;
+      // Use modulo to map byte value to character index
+      segment += chars[randomBytes[byteIndex] % chars.length];
     }
     segments.push(segment);
   }
-  
+
   return `FWGC-${segments.join('-')}`;
 }
 

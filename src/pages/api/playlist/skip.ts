@@ -4,14 +4,9 @@
 import type { APIContext } from 'astro';
 import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { getEffectiveTier, canSkipTrack, SUBSCRIPTION_TIERS, getTodayDate } from '../../../lib/subscription';
+import { getAdminUids, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
-
-// Admin UIDs who can skip without limits
-const ADMIN_UIDS = [
-  'Y3TGc171cHSWTqZDRSniyu7Jxc33',  // freshwaxonline@gmail.com
-  '8WmxYeCp4PSym5iWHahgizokn5F2'   // davidhagon@gmail.com
-];
 
 function initEnv(locals: any) {
   const env = (locals as any).runtime?.env;
@@ -19,6 +14,8 @@ function initEnv(locals: any) {
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || env?.PUBLIC_FIREBASE_PROJECT_ID || 'freshwax-store',
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || env?.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
   });
+  // Initialize admin config from runtime env
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 }
 
 // POST - Request to skip a track
@@ -40,7 +37,7 @@ export async function POST({ request, locals }: APIContext) {
     }
 
     // Admins can always skip
-    if (ADMIN_UIDS.includes(userId)) {
+    if (getAdminUids().includes(userId)) {
       return new Response(JSON.stringify({
         success: true,
         allowed: true,
@@ -150,7 +147,7 @@ export async function GET({ request, locals }: APIContext) {
     }
 
     // Admins have unlimited skips
-    if (ADMIN_UIDS.includes(userId)) {
+    if (getAdminUids().includes(userId)) {
       return new Response(JSON.stringify({
         success: true,
         canSkip: true,

@@ -1,10 +1,21 @@
 // src/pages/api/auth/session.ts
-// Simple session check - returns user info if session cookie exists
+// Verify user session via Firebase ID token
+// Accepts Authorization: Bearer <idToken> header
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { verifyRequestUser, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
-export const GET: APIRoute = async ({ cookies, request }) => {
+export const prerender = false;
+
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   // Rate limit: auth attempts - 10 per 15 minutes
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`auth-session:${clientId}`, RateLimiters.auth);
@@ -13,32 +24,45 @@ export const GET: APIRoute = async ({ cookies, request }) => {
   }
 
   try {
-    // Check for Firebase session cookie (if using Firebase Admin SDK sessions)
-    const sessionCookie = cookies.get('__session')?.value || cookies.get('session')?.value;
+    // Verify the Firebase ID token from Authorization header
+    const { userId, error } = await verifyRequestUser(request);
 
-    if (!sessionCookie) {
+    if (error || !userId) {
       return new Response(JSON.stringify({
         success: false,
-        message: 'No session found'
+        authenticated: false,
+        message: error || 'No valid session'
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // For now, we can't verify the session without Firebase Admin SDK
-    // This is a placeholder - would need admin SDK to verify
+    // Fetch user profile from Firestore
+    const userDoc = await getDocument('users', userId);
+
     return new Response(JSON.stringify({
-      success: false,
-      message: 'Session verification not implemented'
+      success: true,
+      authenticated: true,
+      userId,
+      user: userDoc ? {
+        displayName: userDoc.displayName || null,
+        email: userDoc.email || null,
+        role: userDoc.role || 'user',
+        isArtist: userDoc.isArtist || false,
+        isPro: userDoc.isPro || false,
+      } : null
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
+
   } catch (error: any) {
+    console.error('[auth/session] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      authenticated: false,
+      error: 'Session verification failed'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
