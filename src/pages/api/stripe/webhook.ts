@@ -620,8 +620,9 @@ async function processArtistPayments(params: {
     const releaseCache: Record<string, any> = {};
 
     for (const item of items) {
-      // Skip non-digital items (merch, etc.) - they go to suppliers, not artists
-      if (item.type === 'merch' || item.type === 'vinyl') continue;
+      // Skip merch items - they go to suppliers, not artists
+      // Vinyl and digital sales go to artists
+      if (item.type === 'merch') continue;
 
       // Get release data to find artist
       const releaseId = item.releaseId || item.id;
@@ -637,8 +638,8 @@ async function processArtistPayments(params: {
 
       if (!release) continue;
 
-      // Get artist data
-      const artistId = release.artistId || release.userId;
+      // Get artist data - prefer artistId from cart item, fallback to release
+      const artistId = item.artistId || release.artistId || release.userId;
       if (!artistId) continue;
 
       // Look up artist document for stripeConnectId

@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { queryCollection, updateDocument, initFirebaseEnv } from '../../../../lib/firebase-rest';
+import { queryCollection, updateDocument, addDocument, getDocument, initFirebaseEnv } from '../../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -23,6 +23,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[Connect Webhook] Stripe secret key not configured');
     return new Response('Stripe not configured', { status: 500 });
   }
+
+  // Store key for use in processPendingPayouts
+  (globalThis as any).__stripeSecretKey = stripeSecretKey;
 
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
@@ -141,18 +144,89 @@ async function processPendingPayouts(artistId: string, stripeConnectId: string) 
 
   console.log('[Connect Webhook] Processing', pendingPayouts.length, 'pending payouts for artist:', artistId);
 
-  // Note: Actual transfer creation should be done carefully
-  // For now, mark them as ready for processing
-  for (const pending of pendingPayouts) {
-    await updateDocument('pendingPayouts', pending.id, {
-      status: 'processing',
-      stripeConnectId,
-      updatedAt: new Date().toISOString()
-    });
+  // Get Stripe key from env (stored in module scope during webhook handling)
+  const stripeSecretKey = (globalThis as any).__stripeSecretKey;
+  if (!stripeSecretKey) {
+    console.error('[Connect Webhook] No Stripe key available for processing pending payouts');
+    return;
   }
 
-  // TODO: Create actual transfers for pending payouts
-  // This could be done here or via a separate job
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+
+  // Process each pending payout
+  for (const pending of pendingPayouts) {
+    try {
+      // Mark as processing
+      await updateDocument('pendingPayouts', pending.id, {
+        status: 'processing',
+        stripeConnectId,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Create transfer
+      const transfer = await stripe.transfers.create({
+        amount: Math.round((pending.amount || 0) * 100), // Convert to pence
+        currency: pending.currency || 'gbp',
+        destination: stripeConnectId,
+        transfer_group: pending.orderId,
+        metadata: {
+          pendingPayoutId: pending.id,
+          orderId: pending.orderId,
+          orderNumber: pending.orderNumber,
+          artistId: artistId,
+          artistName: pending.artistName,
+          platform: 'freshwax'
+        }
+      });
+
+      // Create payout record
+      await addDocument('payouts', {
+        artistId: artistId,
+        artistName: pending.artistName,
+        artistEmail: pending.artistEmail || '',
+        stripeConnectId: stripeConnectId,
+        stripeTransferId: transfer.id,
+        orderId: pending.orderId,
+        orderNumber: pending.orderNumber,
+        amount: pending.amount,
+        currency: pending.currency || 'gbp',
+        status: 'completed',
+        fromPendingPayout: pending.id,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString()
+      });
+
+      // Update artist's total earnings
+      const artist = await getDocument('artists', artistId);
+      if (artist) {
+        await updateDocument('artists', artistId, {
+          totalEarnings: (artist.totalEarnings || 0) + (pending.amount || 0),
+          lastPayoutAt: new Date().toISOString()
+        });
+      }
+
+      // Mark pending payout as completed
+      await updateDocument('pendingPayouts', pending.id, {
+        status: 'completed',
+        stripeTransferId: transfer.id,
+        completedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+      console.log('[Connect Webhook] ✓ Pending payout processed:', pending.id, 'Transfer:', transfer.id);
+
+    } catch (transferError: any) {
+      console.error('[Connect Webhook] Failed to process pending payout:', pending.id, transferError.message);
+
+      // Mark as failed for retry
+      await updateDocument('pendingPayouts', pending.id, {
+        status: 'retry_pending',
+        failureReason: transferError.message,
+        updatedAt: new Date().toISOString()
+      });
+    }
+  }
 }
 
 // Handle transfer created
