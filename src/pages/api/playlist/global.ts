@@ -475,11 +475,24 @@ export async function PUT({ request, locals }: APIContext) {
           const { trackId, finishedTrackTitle } = body;
           const currentTrack = playlist.queue[0];
 
-          // If trackId provided and doesn't match current track, already handled by another client
+          // RACE PROTECTION 1: If trackId provided and doesn't match current track, already handled
           if (trackId && currentTrack && currentTrack.id !== trackId) {
             console.log('[GlobalPlaylist] trackEnded ignored - track already changed');
-            // Return current playlist with alreadyHandled flag - client should NOT start playback
-            // (Pusher will handle sync for this client)
+            return new Response(JSON.stringify({
+              success: true,
+              alreadyHandled: true,
+              playlist
+            }), {
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+
+          // RACE PROTECTION 2: If a new track was started within last 5 seconds, don't pick another
+          // This catches cases where multiple clients read old state before any wrote
+          const trackJustStarted = playlist.trackStartedAt &&
+            (Date.now() - new Date(playlist.trackStartedAt).getTime()) < 5000;
+          if (trackJustStarted && playlist.queue.length > 0) {
+            console.log('[GlobalPlaylist] trackEnded ignored - new track just started (race protection)');
             return new Response(JSON.stringify({
               success: true,
               alreadyHandled: true,

@@ -1846,11 +1846,27 @@ export class PlaylistManager {
     this.clearTrackTimer();
     this.stopCountdown();
 
+    // Capture the track ID before delay to detect if Pusher updates during wait
+    const trackIdBeforeDelay = this.playlist.queue[this.playlist.currentIndex]?.id;
+
+    // RACE PREVENTION: Add random delay (0-800ms) to stagger requests from multiple clients
+    // This gives the first client time to complete and broadcast via Pusher
+    const delay = Math.floor(Math.random() * 800);
+    console.log('[PlaylistManager] Waiting', delay, 'ms before sending trackEnded (race prevention)');
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    // Check if Pusher already updated us with a new track during the delay
     const finishedItem = this.playlist.queue[this.playlist.currentIndex];
     if (!finishedItem) {
       console.log('[PlaylistManager] No item to remove - queue empty or index out of bounds');
       console.log('[PlaylistManager] Queue:', this.playlist.queue);
       console.log('[PlaylistManager] Index:', this.playlist.currentIndex);
+      return;
+    }
+
+    // If the track changed during the delay, Pusher already synced us - don't send redundant request
+    if (finishedItem.id !== trackIdBeforeDelay) {
+      console.log('[PlaylistManager] Track changed during delay (Pusher synced), skipping trackEnded');
       return;
     }
 
