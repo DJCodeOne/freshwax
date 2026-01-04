@@ -1849,9 +1849,9 @@ export class PlaylistManager {
     // Capture the track ID before delay to detect if Pusher updates during wait
     const trackIdBeforeDelay = this.playlist.queue[this.playlist.currentIndex]?.id;
 
-    // RACE PREVENTION: Add random delay (0-800ms) to stagger requests from multiple clients
+    // RACE PREVENTION: Add small random delay (0-300ms) to stagger requests from multiple clients
     // This gives the first client time to complete and broadcast via Pusher
-    const delay = Math.floor(Math.random() * 800);
+    const delay = Math.floor(Math.random() * 300);
     console.log('[PlaylistManager] Waiting', delay, 'ms before sending trackEnded (race prevention)');
     await new Promise(resolve => setTimeout(resolve, delay));
 
