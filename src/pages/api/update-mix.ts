@@ -12,7 +12,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   });
 
   try {
-    const { mixId, title, description, tracklist, artworkUrl, userId: userIdFromBody } = await request.json();
+    const { mixId, title, description, tracklist, artworkUrl } = await request.json();
 
     if (!mixId) {
       return new Response(JSON.stringify({
@@ -24,13 +24,13 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       });
     }
 
-    // Get user ID from cookies or request body
+    // Get user ID from cookies only - never trust request body for auth
     const partnerId = cookies.get('partnerId')?.value || '';
     const customerId = cookies.get('customerId')?.value || '';
     const firebaseUid = cookies.get('firebaseUid')?.value || '';
-    const currentUserId = partnerId || customerId || firebaseUid || userIdFromBody;
+    const currentUserId = partnerId || customerId || firebaseUid;
 
-    console.log('[update-mix] Auth check:', { partnerId, customerId, firebaseUid, userIdFromBody, currentUserId });
+    console.log('[update-mix] Auth check:', { partnerId, customerId, firebaseUid, currentUserId });
 
     if (!currentUserId) {
       return new Response(JSON.stringify({

@@ -1,7 +1,7 @@
 // src/pages/api/playlist/add.ts
-// Add URL to user's playlist
+// Add URL to user's playlist - requires authentication
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { parseMediaUrl, sanitizeUrl } from '../../../lib/url-parser';
 import { parseJsonBody } from '../../../lib/api-utils';
 import type { UserPlaylist, PlaylistItem, MediaPlatform } from '../../../lib/types';
@@ -57,19 +57,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const body = await parseJsonBody<{ userId: string; url: string }>(request);
-
-    if (!body?.userId || !body?.url) {
+    // Verify authentication
+    const { userId: authenticatedUserId, error: authError } = await verifyRequestUser(request);
+    if (!authenticatedUserId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'User ID and URL required'
+        error: authError || 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const body = await parseJsonBody<{ url: string }>(request);
+
+    if (!body?.url) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'URL required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const { userId, url } = body;
+    // Use authenticated user's ID - ignore any userId in body
+    const userId = authenticatedUserId;
+    const { url } = body;
 
     // Sanitize and parse URL
     const sanitizedUrl = sanitizeUrl(url);

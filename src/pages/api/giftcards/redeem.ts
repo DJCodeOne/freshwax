@@ -2,10 +2,18 @@
 // Redeem a gift card code and add to user's credit balance
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, queryCollection, arrayUnion, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, queryCollection, arrayUnion, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { isValidCodeFormat, isExpired, formatGBP } from '../../../lib/giftcard';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: destructive operation - 3 per hour (prevent brute force)
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`giftcard-redeem:${clientId}`, RateLimiters.destructive);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -14,21 +22,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
+    // Verify authentication - get userId from token, not request body
+    const { userId, error: authError } = await verifyRequestUser(request);
+    if (!userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: authError || 'You must be logged in to redeem a gift card'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const data = await request.json();
-    const { code, userId } = data;
+    const { code } = data;
 
     if (!code) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Gift card code is required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    if (!userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You must be logged in to redeem a gift card'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
     const normalizedCode = code.toUpperCase().trim();

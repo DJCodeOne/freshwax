@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, incrementField, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -11,6 +12,13 @@ const log = {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute (prevent like spam)
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`track-mix-like:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({

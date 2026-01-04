@@ -1,7 +1,7 @@
 // src/pages/api/playlist/get.ts
-// Get user's playlist
+// Get user's playlist - requires authentication
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import type { UserPlaylist } from '../../../lib/types';
 
 export const prerender = false;
@@ -14,18 +14,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
-
-    if (!userId) {
+    // Verify authentication
+    const { userId: authenticatedUserId, error: authError } = await verifyRequestUser(request);
+    if (!authenticatedUserId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'User ID required'
+        error: authError || 'Authentication required'
       }), {
-        status: 400,
+        status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    // Use authenticated user's ID - ignore any userId in query params
+    const userId = authenticatedUserId;
 
     // Get playlist from Firestore
     const playlist = await getDocument('userPlaylists', userId) as UserPlaylist | null;
