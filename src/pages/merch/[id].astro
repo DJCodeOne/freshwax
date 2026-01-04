@@ -52,7 +52,7 @@ try {
 export const prerender = false;
 ---
 
-<Layout title={product ? `${product.name} - Fresh Wax` : 'Product Not Found'}>
+<Layout title={product ? product.name : 'Product Not Found'}>
   <Header />
   
   <main class="preview-page">

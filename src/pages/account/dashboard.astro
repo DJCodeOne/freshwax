@@ -8,7 +8,7 @@ import '../../styles/dashboard.css';
 export const prerender = false;
 ---
 
-<Layout title="My Account - Fresh Wax" noindex={true}>
+<Layout title="My Account" noindex={true}>
   <Header />
   
   <main class="dashboard-main">
@@ -612,7 +612,7 @@ export const prerender = false;
   import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
   const firebaseConfig = {
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_FIREBASE_API_KEY) || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store",
     storageBucket: "freshwax-store.firebasestorage.app",

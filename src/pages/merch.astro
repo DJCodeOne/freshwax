@@ -109,7 +109,7 @@ const onSaleCount = products.filter(p => p.onSale).length;
 const productsJson = JSON.stringify(products);
 ---
 
-<Layout title="Merch Store - Fresh Wax">
+<Layout title="Merch Store">
   <Header />
 
   <main class="merch-page">
@@ -118,6 +118,12 @@ const productsJson = JSON.stringify(products);
       <div class="hero-container">
         <h1 class="hero-title">MERCH <span class="red">STORE</span></h1>
         <p class="hero-subtitle">Sound Systems, Crews, Labels, DJs & More</p>
+        <button id="openGiftCardModal" class="gift-card-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+            <path d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+          </svg>
+          Gift Cards
+        </button>
       </div>
     </section>
 
@@ -301,6 +307,129 @@ const productsJson = JSON.stringify(products);
           </button>
           
           <a id="viewDetailsLink" href="" class="view-details-link">View Larger with Zoom →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gift Card Modal -->
+  <div id="giftCardModal" class="gc-modal-overlay hidden">
+    <div class="gc-modal-box">
+      <button class="gc-modal-close">&times;</button>
+
+      <div class="gc-modal-content">
+        <!-- Header -->
+        <div class="gc-header">
+          <div class="gc-icon">
+            <svg viewBox="0 0 64 64" width="60" height="60">
+              <rect x="8" y="28" width="48" height="32" rx="4" fill="#dc2626"/>
+              <rect x="28" y="28" width="8" height="32" fill="#b91c1c"/>
+              <rect x="8" y="28" width="48" height="8" fill="#ef4444"/>
+              <rect x="4" y="16" width="56" height="16" rx="4" fill="#fbbf24"/>
+              <rect x="28" y="16" width="8" height="16" fill="#f59e0b"/>
+              <path d="M32 16 C32 8, 20 4, 16 12 C14 16, 20 16, 28 16" fill="#dc2626"/>
+              <path d="M32 16 C32 8, 44 4, 48 12 C50 16, 44 16, 36 16" fill="#dc2626"/>
+            </svg>
+          </div>
+          <h2>GIFT <span class="red">CARDS</span></h2>
+          <p class="gc-subtitle">Give the gift of underground music</p>
+        </div>
+
+        <!-- Redeem Section -->
+        <div class="gc-redeem-section">
+          <h3>Have a Gift Card?</h3>
+          <div id="gcRedeemContainer">
+            <div id="gcLoginPrompt" class="gc-login-prompt">
+              <p>Please <a href="/login">sign in</a> or <a href="/register">create an account</a> to redeem.</p>
+            </div>
+
+            <form id="gcRedeemForm" class="gc-redeem-form hidden">
+              <div class="gc-code-input-wrapper">
+                <input
+                  type="text"
+                  id="gcGiftCardCode"
+                  placeholder="FWGC-XXXX-XXXX-XXXX"
+                  maxlength="19"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+                <button type="submit" id="gcRedeemBtn">Redeem</button>
+              </div>
+              <p id="gcRedeemError" class="gc-error-message"></p>
+              <p id="gcRedeemSuccess" class="gc-success-message"></p>
+            </form>
+          </div>
+
+          <div id="gcBalanceDisplay" class="gc-balance-display hidden">
+            <span class="gc-balance-label">Your Credit:</span>
+            <span class="gc-balance-amount" id="gcCreditBalance">£0.00</span>
+          </div>
+        </div>
+
+        <!-- Buy Section -->
+        <div class="gc-buy-section">
+          <h3>Buy a Gift Card</h3>
+
+          <div class="gc-amount-selector">
+            <button type="button" class="gc-amount-btn" data-amount="5">£5</button>
+            <button type="button" class="gc-amount-btn" data-amount="10">£10</button>
+            <button type="button" class="gc-amount-btn" data-amount="20">£20</button>
+            <button type="button" class="gc-amount-btn" data-amount="50">£50</button>
+            <button type="button" class="gc-amount-btn" data-amount="75">£75</button>
+            <button type="button" class="gc-amount-btn" data-amount="custom">Custom</button>
+          </div>
+
+          <div id="gcCustomAmountWrapper" class="gc-custom-amount hidden">
+            <input type="number" id="gcCustomAmount" min="5" max="500" placeholder="£5 - £500" />
+          </div>
+
+          <div class="gc-selected-amount">
+            <span>Gift Card Value:</span>
+            <span id="gcSelectedAmount">£0</span>
+          </div>
+
+          <!-- Recipient -->
+          <div class="gc-recipient-section">
+            <div class="gc-recipient-toggle">
+              <label class="gc-toggle-option">
+                <input type="radio" name="gcRecipientType" value="gift" checked />
+                <span>🎁 Send as Gift</span>
+              </label>
+              <label class="gc-toggle-option">
+                <input type="radio" name="gcRecipientType" value="self" />
+                <span>👤 For Myself</span>
+              </label>
+            </div>
+
+            <div id="gcGiftFields" class="gc-gift-fields">
+              <input type="text" id="gcRecipientName" placeholder="Recipient's Name" maxlength="50" />
+              <input type="email" id="gcRecipientEmail" placeholder="Recipient's Email *" required />
+              <textarea id="gcGiftMessage" placeholder="Personal message (optional)" maxlength="500" rows="2"></textarea>
+            </div>
+
+            <div id="gcSelfFields" class="gc-self-fields hidden">
+              <p class="gc-self-note">Gift card will be sent to: <strong id="gcSelfEmail">-</strong></p>
+            </div>
+          </div>
+
+          <div id="gcPurchaseLoginPrompt" class="gc-login-prompt">
+            <p>Please <a href="/login">sign in</a> to purchase a gift card.</p>
+          </div>
+
+          <div id="gcPurchaseActions" class="gc-purchase-actions hidden">
+            <button id="gcPurchaseBtn" class="gc-purchase-btn" disabled>
+              <span class="gc-btn-text">Select an amount</span>
+              <span class="gc-btn-loading hidden">Processing...</span>
+            </button>
+          </div>
+
+          <p id="gcPurchaseError" class="gc-error-message"></p>
+
+          <div id="gcPurchaseSuccess" class="gc-success-box hidden">
+            <div class="gc-success-icon">✅</div>
+            <h4>Gift Card Sent!</h4>
+            <p id="gcSuccessMessage"></p>
+          </div>
         </div>
       </div>
     </div>
@@ -654,5 +783,251 @@ const productsJson = JSON.stringify(products);
 
   document.addEventListener('DOMContentLoaded', init);
   document.addEventListener('astro:page-load', init);
+</script>
+
+<script type="module">
+  // Gift Card Modal Functionality
+  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store",
+  };
+
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  let gcCurrentUser = null;
+  let gcSelectedAmount = 0;
+
+  // Modal open/close
+  const gcModal = document.getElementById('giftCardModal');
+  const gcOpenBtn = document.getElementById('openGiftCardModal');
+  const gcCloseBtn = document.querySelector('.gc-modal-close');
+
+  gcOpenBtn?.addEventListener('click', () => {
+    gcModal?.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  });
+
+  gcCloseBtn?.addEventListener('click', closeGcModal);
+  gcModal?.addEventListener('click', (e) => {
+    if (e.target === gcModal) closeGcModal();
+  });
+
+  function closeGcModal() {
+    gcModal?.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  // Format code input
+  const gcCodeInput = document.getElementById('gcGiftCardCode');
+  gcCodeInput?.addEventListener('input', (e) => {
+    let value = e.target.value.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g, '');
+    if (value.length > 4) {
+      const prefix = value.substring(0, 4);
+      const rest = value.substring(4);
+      const chunks = rest.match(/.{1,4}/g) || [];
+      value = prefix + '-' + chunks.join('-');
+    }
+    e.target.value = value;
+  });
+
+  // Redeem form
+  const gcRedeemForm = document.getElementById('gcRedeemForm');
+  gcRedeemForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!gcCurrentUser) return;
+
+    const code = document.getElementById('gcGiftCardCode').value.trim();
+    const errorEl = document.getElementById('gcRedeemError');
+    const successEl = document.getElementById('gcRedeemSuccess');
+    const btn = document.getElementById('gcRedeemBtn');
+
+    errorEl.style.display = 'none';
+    successEl.style.display = 'none';
+    btn.disabled = true;
+
+    try {
+      const response = await fetch('/api/giftcards/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, userId: gcCurrentUser.uid })
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        successEl.textContent = result.message;
+        successEl.style.display = 'block';
+        document.getElementById('gcGiftCardCode').value = '';
+        document.getElementById('gcCreditBalance').textContent = `£${result.newBalance.toFixed(2)}`;
+      } else {
+        errorEl.textContent = result.error || 'Failed to redeem';
+        errorEl.style.display = 'block';
+      }
+    } catch (err) {
+      errorEl.textContent = 'Something went wrong';
+      errorEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Amount selection
+  document.querySelector('.gc-amount-selector')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.gc-amount-btn');
+    if (!btn) return;
+
+    document.querySelectorAll('.gc-amount-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const amount = btn.dataset.amount;
+    if (amount === 'custom') {
+      document.getElementById('gcCustomAmountWrapper')?.classList.remove('hidden');
+      const customVal = parseInt(document.getElementById('gcCustomAmount')?.value) || 0;
+      updateGcAmount(customVal >= 5 ? customVal : 0);
+    } else {
+      document.getElementById('gcCustomAmountWrapper')?.classList.add('hidden');
+      updateGcAmount(parseInt(amount));
+    }
+  });
+
+  document.getElementById('gcCustomAmount')?.addEventListener('input', (e) => {
+    let value = parseInt(e.target.value) || 0;
+    if (value > 500) { value = 500; e.target.value = 500; }
+    updateGcAmount(value >= 5 ? value : 0);
+  });
+
+  function updateGcAmount(amount) {
+    gcSelectedAmount = amount;
+    document.getElementById('gcSelectedAmount').textContent = `£${amount}`;
+    const btn = document.getElementById('gcPurchaseBtn');
+    const btnText = btn?.querySelector('.gc-btn-text');
+    if (amount > 0) {
+      btnText.textContent = `Purchase Gift Card - £${amount}`;
+      btn.disabled = false;
+    } else {
+      btnText.textContent = 'Select an amount';
+      btn.disabled = true;
+    }
+  }
+
+  // Recipient toggle
+  document.querySelectorAll('input[name="gcRecipientType"]').forEach(input => {
+    input.addEventListener('change', () => {
+      if (input.value === 'gift') {
+        document.getElementById('gcGiftFields')?.classList.remove('hidden');
+        document.getElementById('gcSelfFields')?.classList.add('hidden');
+      } else {
+        document.getElementById('gcGiftFields')?.classList.add('hidden');
+        document.getElementById('gcSelfFields')?.classList.remove('hidden');
+        if (gcCurrentUser) {
+          document.getElementById('gcSelfEmail').textContent = gcCurrentUser.email || '-';
+        }
+      }
+    });
+  });
+
+  // Purchase
+  document.getElementById('gcPurchaseBtn')?.addEventListener('click', async () => {
+    if (!gcCurrentUser || gcSelectedAmount < 5) return;
+
+    const errorEl = document.getElementById('gcPurchaseError');
+    const successEl = document.getElementById('gcPurchaseSuccess');
+    const btn = document.getElementById('gcPurchaseBtn');
+    const btnText = btn.querySelector('.gc-btn-text');
+    const btnLoading = btn.querySelector('.gc-btn-loading');
+
+    const recipientType = document.querySelector('input[name="gcRecipientType"]:checked')?.value || 'gift';
+    const recipientName = document.getElementById('gcRecipientName')?.value.trim() || '';
+    const recipientEmail = document.getElementById('gcRecipientEmail')?.value.trim() || '';
+    const message = document.getElementById('gcGiftMessage')?.value.trim() || '';
+
+    if (recipientType === 'gift' && !recipientEmail) {
+      errorEl.textContent = 'Please enter recipient email';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    errorEl.style.display = 'none';
+    btn.disabled = true;
+    btnText.classList.add('hidden');
+    btnLoading.classList.remove('hidden');
+
+    try {
+      const response = await fetch('/api/giftcards/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: gcSelectedAmount,
+          buyerUserId: gcCurrentUser.uid,
+          buyerEmail: gcCurrentUser.email,
+          buyerName: gcCurrentUser.displayName || '',
+          recipientType,
+          recipientName: recipientType === 'self' ? (gcCurrentUser.displayName || '') : recipientName,
+          recipientEmail: recipientType === 'gift' ? recipientEmail : gcCurrentUser.email,
+          message
+        })
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        document.querySelector('.gc-recipient-section')?.classList.add('hidden');
+        document.getElementById('gcPurchaseActions')?.classList.add('hidden');
+        successEl.classList.remove('hidden');
+        document.getElementById('gcSuccessMessage').textContent =
+          recipientType === 'gift'
+            ? `Gift card sent to ${recipientEmail}!`
+            : `Gift card code sent to ${gcCurrentUser.email}!`;
+      } else {
+        errorEl.textContent = result.error || 'Purchase failed';
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+      }
+    } catch (err) {
+      errorEl.textContent = 'Something went wrong';
+      errorEl.style.display = 'block';
+      btn.disabled = false;
+      btnText.classList.remove('hidden');
+      btnLoading.classList.add('hidden');
+    }
+  });
+
+  // Load balance
+  async function loadGcBalance(userId) {
+    try {
+      const response = await fetch(`/api/giftcards/balance?userId=${userId}`);
+      const result = await response.json();
+      if (result.success) {
+        document.getElementById('gcCreditBalance').textContent = `£${result.balance.toFixed(2)}`;
+        document.getElementById('gcBalanceDisplay')?.classList.remove('hidden');
+      }
+    } catch (e) {}
+  }
+
+  // Auth state
+  function updateGcAuthUI(user) {
+    gcCurrentUser = user;
+    if (user) {
+      document.getElementById('gcLoginPrompt')?.classList.add('hidden');
+      document.getElementById('gcRedeemForm')?.classList.remove('hidden');
+      document.getElementById('gcPurchaseLoginPrompt')?.classList.add('hidden');
+      document.getElementById('gcPurchaseActions')?.classList.remove('hidden');
+      document.getElementById('gcSelfEmail').textContent = user.email || '-';
+      loadGcBalance(user.uid);
+    } else {
+      document.getElementById('gcLoginPrompt')?.classList.remove('hidden');
+      document.getElementById('gcRedeemForm')?.classList.add('hidden');
+      document.getElementById('gcPurchaseLoginPrompt')?.classList.remove('hidden');
+      document.getElementById('gcPurchaseActions')?.classList.add('hidden');
+      document.getElementById('gcBalanceDisplay')?.classList.add('hidden');
+    }
+  }
+
+  onAuthStateChanged(auth, updateGcAuthUI);
 </script>
 

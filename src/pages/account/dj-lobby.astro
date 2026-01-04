@@ -2110,19 +2110,21 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
   });
 
+  // === RELAY FIX: canPlay must be boolean, not truthy string ===
+
   // Relay Sources Modal - Hardcoded approved stations (no Firebase reads)
   const APPROVED_RELAY_STATIONS = [
     {
       id: 'underground-lair',
       name: 'The Underground Lair',
-      streamUrl: 'https://stream.rcast.net/2745',
+      streamUrl: 'http://95.217.34.48:8340/stream3',
+      httpsStreamUrl: 'https://relay.freshwax.co.uk/underground-lair',
       websiteUrl: 'https://www.theundergroundlair.fr',
       logoUrl: '/place-holder.webp',
       genre: 'Jungle / D&B / Breakcore',
       description: 'Underground Music Webradio',
-      checkUrl: 'https://meta.rcast.net/2745'
-    }
-    // Add more approved stations here
+      checkUrl: 'https://cressida.shoutca.st:2199/rpc/theundergroundlair/streaminfo.get'
+    },
   ];
 
   let relaySources = [];
@@ -2130,23 +2132,40 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
   async function loadRelaySources() {
     // Use hardcoded stations instead of Firebase to save reads
-    relaySources = APPROVED_RELAY_STATIONS.map(s => ({ ...s, isCurrentlyLive: false }));
+    relaySources = APPROVED_RELAY_STATIONS.map(s => {
+      // Determine if we have an HTTPS playback URL
+      const hasHttpsUrl = !!(s.httpsStreamUrl || s.streamUrl.startsWith('https://'));
+      const playbackUrl = s.httpsStreamUrl || (s.streamUrl.startsWith('https://') ? s.streamUrl : null);
+      console.log(`[Relay] Station ${s.id}: canPlay=${hasHttpsUrl}, playbackUrl=${playbackUrl}`);
+      return {
+        ...s,
+        isCurrentlyLive: false,
+        canPlay: hasHttpsUrl,
+        playbackUrl: playbackUrl
+      };
+    });
 
-    // Check live status for each station
+    // Check live status for each station via proxy (avoids CORS/CSP issues)
     for (const source of relaySources) {
-      if (source.checkUrl) {
-        try {
-          const response = await fetch(source.checkUrl, { signal: AbortSignal.timeout(5000) });
-          if (response.ok) {
-            const text = await response.text();
-            const nowPlaying = text.trim();
-            source.isCurrentlyLive = nowPlaying && nowPlaying !== 'Unknown - Track';
-            source.nowPlaying = source.isCurrentlyLive ? nowPlaying : '';
+      try {
+        const response = await fetch(`/api/relay-status?station=${source.id}`, {
+          signal: AbortSignal.timeout(8000)
+        });
+        if (response.ok) {
+          const result = await response.json();
+          source.isCurrentlyLive = result.isLive || false;
+          // Clean up "Unknown - " prefix from now playing
+          let nowPlaying = result.nowPlaying || '';
+          if (nowPlaying.toLowerCase().startsWith('unknown - ')) {
+            nowPlaying = nowPlaying.substring(10).trim();
           }
-        } catch {
-          // Station offline or unreachable
-          source.isCurrentlyLive = false;
+          source.nowPlaying = nowPlaying;
+          source.listeners = result.listeners || 0;
+          console.log('[Relay] Status:', source.name, source.isCurrentlyLive ? 'LIVE' : 'offline', source.nowPlaying, 'canPlay:', source.canPlay);
         }
+      } catch (err) {
+        console.warn('[Relay] Check failed for', source.name, err.message);
+        source.isCurrentlyLive = false;
       }
     }
 
@@ -2163,17 +2182,21 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
 
     container.innerHTML = relaySources.map(source => `
-      <div class="relay-source-item ${selectedRelaySource?.id === source.id ? 'selected' : ''}"
+      <div class="relay-source-item ${selectedRelaySource?.id === source.id ? 'selected' : ''} ${!source.canPlay ? 'no-playback' : ''}"
            data-id="${source.id}"
-           data-url="${source.streamUrl}"
-           data-name="${source.name}">
+           data-url="${source.playbackUrl || ''}"
+           data-name="${source.name}"
+           data-now-playing="${source.nowPlaying || ''}"
+           data-listeners="${source.listeners || 0}"
+           data-can-play="${source.canPlay}">
         <img src="${source.logoUrl || '/place-holder.webp'}" alt="${source.name}" class="relay-source-logo" />
         <div class="relay-source-info">
           <div class="relay-source-name">${source.name}</div>
-          <div class="relay-source-genre">${source.genre || 'Various'}</div>
+          <div class="relay-source-genre">${source.isCurrentlyLive && source.nowPlaying ? source.nowPlaying : (source.genre || 'Various')}</div>
+          ${!source.canPlay ? '<div class="relay-source-warning" style="color:#f59e0b;font-size:0.65rem;">Needs HTTPS relay</div>' : ''}
         </div>
         <span class="relay-source-status ${source.isCurrentlyLive ? 'live' : 'offline'}">
-          ${source.isCurrentlyLive ? 'Live' : 'Offline'}
+          ${source.isCurrentlyLive ? `Live (${source.listeners || 0})` : 'Offline'}
         </span>
       </div>
     `).join('');
@@ -2181,13 +2204,22 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Add click handlers
     container.querySelectorAll('.relay-source-item').forEach(item => {
       item.addEventListener('click', () => {
+        const canPlay = item.dataset.canPlay === 'true';
+        if (!canPlay) {
+          alert('This station requires an HTTPS relay to be configured. The stream is HTTP-only and cannot be played on HTTPS pages.');
+          return;
+        }
         container.querySelectorAll('.relay-source-item').forEach(i => i.classList.remove('selected'));
         item.classList.add('selected');
         selectedRelaySource = {
           id: item.dataset.id,
           url: item.dataset.url,
-          name: item.dataset.name
+          name: item.dataset.name,
+          nowPlaying: item.dataset.nowPlaying || '',
+          listeners: parseInt(item.dataset.listeners) || 0
         };
+        // Update preview immediately when station selected
+        updateRelayPreview();
       });
     });
   }
@@ -2307,9 +2339,14 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     const relayDot = document.getElementById('relayDot');
     const previewRelayDot = document.getElementById('previewRelayDot');
 
-    // Set DJ name from user info
-    if (djNameEl && userInfo?.name) {
-      djNameEl.textContent = userInfo.name;
+    // In relay mode: show the now playing track in green instead of DJ name
+    if (djNameEl) {
+      if (selectedRelaySource?.nowPlaying) {
+        djNameEl.innerHTML = `<span style="color: #ef4444;">${selectedRelaySource.nowPlaying}</span>`;
+      } else if (userInfo?.name) {
+        djNameEl.textContent = userInfo.name;
+        djNameEl.style.color = ''; // Reset to default
+      }
     }
 
     // Set station name or custom title if selected
@@ -2331,8 +2368,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       previewRelayDot?.classList.add('disconnected');
     }
 
-    // Set avatar (use userInfo.avatar like BUTT preview does)
-    const avatarUrl = userInfo?.avatar || currentUser?.photoURL || '/place-holder.webp';
+    // In relay mode, use placeholder for turntable centers
+    // This visually distinguishes relay streams from direct DJ streams
+    const avatarUrl = '/place-holder.webp';
     if (vinylAvatar1) vinylAvatar1.src = avatarUrl;
     if (vinylAvatar2) vinylAvatar2.src = avatarUrl;
   }
@@ -2379,15 +2417,19 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
 
     container.innerHTML = relaySources.map(source => `
-      <div class="relay-station-card ${selectedRelaySource?.id === source.id ? 'selected' : ''}"
+      <div class="relay-station-card ${selectedRelaySource?.id === source.id ? 'selected' : ''} ${!source.canPlay ? 'no-playback' : ''}"
            data-id="${source.id}"
-           data-url="${source.streamUrl}"
-           data-name="${source.name}">
+           data-url="${source.playbackUrl || ''}"
+           data-name="${source.name}"
+           data-nowplaying="${source.nowPlaying || ''}"
+           data-live="${source.isCurrentlyLive ? 'true' : 'false'}"
+           data-can-play="${source.canPlay}">
         <img src="${source.logoUrl || '/place-holder.webp'}" alt="${source.name}" class="relay-station-logo" />
         <div class="relay-station-info">
           <div class="relay-station-name">${source.name}</div>
           <div class="relay-station-genre">${source.genre || 'Various'}</div>
-          ${source.nowPlaying ? `<div class="relay-station-genre" style="color:#22c55e;font-size:0.7rem;">Now: ${source.nowPlaying.substring(0, 30)}${source.nowPlaying.length > 30 ? '...' : ''}</div>` : ''}
+          ${source.nowPlaying ? `<div class="relay-station-genre" style="color:#ef4444;font-size:0.7rem;">Now: ${source.nowPlaying.substring(0, 30)}${source.nowPlaying.length > 30 ? '...' : ''}</div>` : ''}
+          ${!source.canPlay ? '<div style="color:#f59e0b;font-size:0.6rem;">Needs HTTPS relay</div>' : ''}
         </div>
         <span class="relay-station-badge ${source.isCurrentlyLive ? 'live' : 'offline'}">
           ${source.isCurrentlyLive ? 'LIVE' : 'OFFLINE'}
@@ -2398,18 +2440,48 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Add click handlers
     container.querySelectorAll('.relay-station-card').forEach(card => {
       card.addEventListener('click', () => {
+        const canPlay = card.dataset.canPlay === 'true';
+        if (!canPlay) {
+          alert('This station requires an HTTPS relay to be configured. The stream is HTTP-only and cannot be played on HTTPS pages.');
+          return;
+        }
         container.querySelectorAll('.relay-station-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
         selectedRelaySource = {
           id: card.dataset.id,
           url: card.dataset.url,
-          name: card.dataset.name
+          name: card.dataset.name,
+          nowPlaying: card.dataset.nowplaying || '',
+          isLive: card.dataset.live === 'true'
         };
-        log('[Relay] Selected station:', selectedRelaySource.name);
-        // Update the relay preview in left panel
+        log('[Relay] Selected station:', selectedRelaySource.name, 'Live:', selectedRelaySource.isLive, 'Now playing:', selectedRelaySource.nowPlaying);
+        // Update the relay preview in left panel immediately
         updateRelayPreview();
-        // Start playing the relay audio preview
+        // Start playing the relay audio preview (URL is already HTTPS)
         startRelayAudioPreview(selectedRelaySource.url);
+        // Show broadcast audio panel so DJ can check levels before going live
+        document.getElementById('broadcastAudioPanel')?.classList.remove('hidden');
+        // Set up relay audio analysers for meters
+        const relayAudio = document.getElementById('relayAudio');
+        if (relayAudio && !icecastAudioContext) {
+          // Wait for audio to start playing before setting up analysers
+          relayAudio.addEventListener('playing', () => {
+            if (!icecastAudioContext) {
+              setupIcecastAnalysers(relayAudio);
+              currentPreviewSource = 'relay';
+              updateAudioSourceIndicator('relay');
+              // Initialize and start broadcast meters
+              initBroadcastMeters();
+              // Start preview meter animation
+              if (window.startPreviewMeterAnimation) window.startPreviewMeterAnimation();
+            }
+          }, { once: true });
+        } else if (icecastAudioContext) {
+          // Analysers already set up, just update indicator and start meters
+          currentPreviewSource = 'relay';
+          updateAudioSourceIndicator('relay');
+          initBroadcastMeters();
+        }
       });
     });
   }
@@ -3217,7 +3289,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     const indicator = document.getElementById('audioSourceIndicator');
     const sourceName = indicator?.querySelector('.source-name');
     if (indicator && sourceName) {
-      if (source === 'butt') {
+      if (source === 'relay') {
+        indicator.classList.add('butt'); // Use same style as BUTT (red dot)
+        sourceName.textContent = 'RELAY';
+      } else if (source === 'butt') {
         indicator.classList.add('butt');
         sourceName.textContent = 'BUTT';
       } else {
@@ -4113,8 +4188,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
     // Source toggle button - only works in OBS mode, switches between preview and live
     document.getElementById('audioSourceToggle')?.addEventListener('click', () => {
-      // If BUTT mode is active, don't toggle - there's only one Icecast source
-      if (currentPreviewSource === 'butt') {
+      // If BUTT or RELAY mode is active, don't toggle - there's only one stream source
+      if (currentPreviewSource === 'butt' || currentPreviewSource === 'relay') {
         return;
       }
       broadcastAudioSource = broadcastAudioSource === 'preview' ? 'live' : 'preview';
@@ -4210,7 +4285,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     let analyserL, analyserR;
     let kWeightedL = null, kWeightedR = null;
 
-    if (currentPreviewSource === 'butt' && icecastAnalyserL && icecastAnalyserR) {
+    if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && icecastAnalyserL && icecastAnalyserR) {
       // BUTT tab selected - use Icecast audio
       analyserL = icecastAnalyserL;
       analyserR = icecastAnalyserR;
@@ -4843,7 +4918,12 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           const liveVinylAvatar = document.getElementById('liveVinylAvatar');
           const liveVinylAvatar2 = document.getElementById('liveVinylAvatar2');
 
-          if (lobbyLiveDjName) lobbyLiveDjName.textContent = currentStream.djName || 'DJ';
+          // For relay streams, show now playing track (stored in title) in red; otherwise show DJ name
+          if (currentStream.isRelay && currentStream.title) {
+            if (lobbyLiveDjName) lobbyLiveDjName.innerHTML = `<span style="color: #ef4444;">${currentStream.title}</span>`;
+          } else {
+            if (lobbyLiveDjName) lobbyLiveDjName.textContent = currentStream.djName || 'DJ';
+          }
 
           // Update show title and badge for relay streams
           if (currentStream.isRelay && currentStream.relaySource?.stationName) {
@@ -4854,10 +4934,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
             if (lobbyLiveBadgeText) lobbyLiveBadgeText.textContent = 'AUDIO ONLY';
           }
 
-          // Set DJ avatar on vinyl labels
-          const djAvatar = currentStream.djAvatar || '/place-holder.webp';
-          if (liveVinylAvatar) liveVinylAvatar.src = djAvatar;
-          if (liveVinylAvatar2) liveVinylAvatar2.src = djAvatar;
+          // Set vinyl label images - use placeholder for relay, DJ avatar for other streams
+          const vinylImage = currentStream.isRelay ? '/place-holder.webp' : (currentStream.djAvatar || '/place-holder.webp');
+          if (liveVinylAvatar) liveVinylAvatar.src = vinylImage;
+          if (liveVinylAvatar2) liveVinylAvatar2.src = vinylImage;
 
           // Setup audio stream with auto-play
           const audioEl = document.getElementById('audioElement');
@@ -5586,27 +5666,46 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   }
   
   function showKeyNotAvailable() {
-    // Called when user has no booked slot - show message to book a slot
+    // Called when user has no booked slot
     const slotTimeDisplay = document.getElementById('slotTimeDisplay');
     const countdownEl = document.getElementById('countdownToSlot');
     const streamKeyEl = document.getElementById('myStreamKey');
     const setReadyBtn = document.getElementById('setReadyBtn');
 
-    if (slotTimeDisplay) slotTimeDisplay.textContent = 'No slot booked';
-    if (countdownEl) countdownEl.textContent = 'Book a slot to go live';
+    // If no DJ is currently live, allow instant booking via I'm Ready button
+    if (!currentStream) {
+      if (slotTimeDisplay) slotTimeDisplay.textContent = 'No slot booked';
+      if (countdownEl) countdownEl.textContent = 'Press I\'m Ready to go live now';
 
-    // Show "no slot" message instead of generating a key
-    if (streamKeyEl) {
-      streamKeyEl.classList.remove('key-loading');
-      streamKeyEl.classList.add('key-unavailable');
-      streamKeyEl.innerHTML = '<span class="key-no-slot">Book a slot first</span>';
-    }
+      if (streamKeyEl) {
+        streamKeyEl.classList.remove('key-loading');
+        streamKeyEl.classList.add('key-unavailable');
+        streamKeyEl.innerHTML = '<span class="key-no-slot">Will auto-book when ready</span>';
+      }
 
-    // Disable the Ready button when no slot
-    if (setReadyBtn) {
-      setReadyBtn.disabled = true;
-      setReadyBtn.classList.remove('glow');
-      setReadyBtn.title = 'You need to book a slot first';
+      // Enable the Ready button - it will auto-book a slot
+      if (setReadyBtn) {
+        setReadyBtn.disabled = false;
+        setReadyBtn.classList.add('glow');
+        setReadyBtn.title = 'Click to auto-book a slot and go live';
+      }
+    } else {
+      // DJ is live - need to book or wait
+      if (slotTimeDisplay) slotTimeDisplay.textContent = 'No slot booked';
+      if (countdownEl) countdownEl.textContent = 'Book a slot to go live';
+
+      if (streamKeyEl) {
+        streamKeyEl.classList.remove('key-loading');
+        streamKeyEl.classList.add('key-unavailable');
+        streamKeyEl.innerHTML = '<span class="key-no-slot">Book a slot first</span>';
+      }
+
+      // Disable the Ready button when no slot and DJ is live
+      if (setReadyBtn) {
+        setReadyBtn.disabled = true;
+        setReadyBtn.classList.remove('glow');
+        setReadyBtn.title = 'You need to book a slot first';
+      }
     }
   }
 
@@ -5654,27 +5753,56 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         // Start checking for OBS preview stream
         startObsPreviewCheck();
       }
-    } else {
-      // No booked slot - show message instead of generating a key
-      if (slotTimeDisplay) slotTimeDisplay.textContent = 'No slot booked';
-      if (countdownEl) countdownEl.textContent = 'Book a slot to go live';
 
-      if (streamKeyEl) {
-        streamKeyEl.classList.remove('key-loading');
-        streamKeyEl.classList.add('key-unavailable');
-        streamKeyEl.innerHTML = '<span class="key-no-slot">Book a slot first</span>';
-      }
-
-      // Disable the Ready button when no slot
+      // Enable the Ready button when slot is booked
       const setReadyBtn = document.getElementById('setReadyBtn');
-      if (setReadyBtn) {
-        setReadyBtn.disabled = true;
-        setReadyBtn.classList.remove('glow');
-        setReadyBtn.title = 'You need to book a slot first';
+      if (setReadyBtn && !setReadyBtn.classList.contains('is-ready-state') && !setReadyBtn.classList.contains('is-ready')) {
+        setReadyBtn.disabled = false;
+        setReadyBtn.classList.add('glow');
+        setReadyBtn.title = '';
+      }
+    } else {
+      // No booked slot - check if DJ is live to decide on auto-book
+      const setReadyBtn = document.getElementById('setReadyBtn');
+
+      if (!currentStream) {
+        // No DJ live - allow instant booking via I'm Ready
+        if (slotTimeDisplay) slotTimeDisplay.textContent = 'No slot booked';
+        if (countdownEl) countdownEl.textContent = 'Press I\'m Ready to go live now';
+
+        if (streamKeyEl) {
+          streamKeyEl.classList.remove('key-loading');
+          streamKeyEl.classList.add('key-unavailable');
+          streamKeyEl.innerHTML = '<span class="key-no-slot">Will auto-book when ready</span>';
+        }
+
+        // Enable the Ready button - it will auto-book a slot
+        if (setReadyBtn && !setReadyBtn.classList.contains('is-ready-state') && !setReadyBtn.classList.contains('is-ready')) {
+          setReadyBtn.disabled = false;
+          setReadyBtn.classList.add('glow');
+          setReadyBtn.title = 'Click to auto-book a slot and go live';
+        }
+      } else {
+        // DJ is live - need to book or wait
+        if (slotTimeDisplay) slotTimeDisplay.textContent = 'No slot booked';
+        if (countdownEl) countdownEl.textContent = 'Book a slot to go live';
+
+        if (streamKeyEl) {
+          streamKeyEl.classList.remove('key-loading');
+          streamKeyEl.classList.add('key-unavailable');
+          streamKeyEl.innerHTML = '<span class="key-no-slot">Book a slot first</span>';
+        }
+
+        // Disable the Ready button when no slot and DJ is live
+        if (setReadyBtn) {
+          setReadyBtn.disabled = true;
+          setReadyBtn.classList.remove('glow');
+          setReadyBtn.title = 'You need to book a slot first';
+        }
       }
     }
   }
-  
+
   async function fetchStreamKey() {
     try {
       const token = await currentUser.getIdToken();
@@ -6158,13 +6286,18 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Get title and genre from inline fields
     let title, genre;
 
-    title = document.getElementById('inlineStreamTitle')?.value?.trim() || 'Live Session';
-    genre = document.getElementById('inlineStreamGenre')?.value || 'Jungle / D&B';
-
     // Check for relay mode using the mode toggle
     const isRelayMode = currentStreamMode === 'relay';
     const userRelayUrl = isRelayMode && selectedRelaySource ? selectedRelaySource.url : null;
     const relaySourceName = selectedRelaySource?.name || 'External Source';
+
+    // For relay mode, use now playing as title; for direct mode, use input field
+    if (isRelayMode && selectedRelaySource?.nowPlaying) {
+      title = selectedRelaySource.nowPlaying;
+    } else {
+      title = document.getElementById('inlineStreamTitle')?.value?.trim() || 'Live Session';
+    }
+    genre = document.getElementById('inlineStreamGenre')?.value || 'Jungle / D&B';
 
     // For Direct mode, check stream key
     if (!isRelayMode && !currentStreamKey) {
@@ -6916,7 +7049,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     function animateObsMeters() {
       // Use Icecast analysers when BUTT mode is active, otherwise OBS
       let analyserL, analyserR;
-      if (currentPreviewSource === 'butt' && icecastAnalyserL && icecastAnalyserR) {
+      if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && icecastAnalyserL && icecastAnalyserR) {
         analyserL = icecastAnalyserL;
         analyserR = icecastAnalyserR;
       } else if (obsAnalyserL && obsAnalyserR) {
@@ -6934,7 +7067,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     function animateLiveMeters() {
       // Use Icecast analysers when in BUTT mode, otherwise use HLS live analysers
       let analyserL, analyserR;
-      if (currentPreviewSource === 'butt' && icecastAnalyserL && icecastAnalyserR) {
+      if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && icecastAnalyserL && icecastAnalyserR) {
         analyserL = icecastAnalyserL;
         analyserR = icecastAnalyserR;
       } else {
@@ -7096,6 +7229,73 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       btnText.textContent = '⏳ Preparing...';
 
       try {
+        // For relay mode, skip auto-booking - relay uses start_relay action directly
+        const isRelayModeNow = currentStreamMode === 'relay' && selectedRelaySource;
+
+        // AUTO-BOOK: If no slot booked AND no DJ is currently live AND not relay mode, auto-book a slot
+        if (!mySlot && !currentStream && !isRelayModeNow) {
+          console.log('[DJ Lobby] No slot booked and no DJ live - auto-booking slot');
+          btnText.textContent = '⏳ Booking slot...';
+
+          const token = await currentUser.getIdToken();
+          const now = new Date();
+          // Round to nearest minute
+          now.setSeconds(0, 0);
+
+          const bookResponse = await fetch('/api/livestream/slots', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              action: 'book',
+              djId: currentUser.uid,
+              djName: userInfo?.name || currentUser.displayName || 'DJ',
+              djAvatar: userInfo?.avatar || currentUser.photoURL || '/place-holder.webp',
+              startTime: now.toISOString(),
+              duration: 60, // Default 1 hour slot
+              title: 'Live Session',
+              genre: '',
+              description: ''
+            })
+          });
+
+          const bookResult = await bookResponse.json();
+
+          if (!bookResult.success) {
+            throw new Error(bookResult.error || 'Failed to auto-book slot');
+          }
+
+          // Update mySlot with the new booking
+          mySlot = bookResult.slot;
+          currentStreamKey = mySlot.streamKey;
+          console.log('[DJ Lobby] Auto-booked slot:', mySlot.id);
+
+          // Update the stream key display
+          const streamKeyEl = document.getElementById('myStreamKey');
+          if (streamKeyEl) {
+            streamKeyEl.classList.remove('key-loading', 'key-unavailable');
+            streamKeyEl.classList.add('key-reveal');
+            streamKeyEl.innerHTML = `<span class="key-text">${mySlot.streamKey}</span>`;
+          }
+
+          // Update slot time display
+          const slotTimeDisplay = document.getElementById('slotTimeDisplay');
+          const countdownEl = document.getElementById('countdownToSlot');
+          if (slotTimeDisplay) {
+            const slotStart = new Date(mySlot.startTime);
+            const slotEnd = new Date(mySlot.endTime);
+            slotTimeDisplay.textContent = `Your slot: ${slotStart.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${slotEnd.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+          }
+          if (countdownEl) {
+            countdownEl.textContent = 'Your slot is NOW!';
+            countdownEl.classList.add('slot-now');
+          }
+
+          btnText.textContent = '⏳ Preparing...';
+        }
+
         // Set ready status (but don't go live yet)
         await fetch('/api/dj-lobby/presence', {
           method: 'POST',
@@ -7704,21 +7904,20 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       return;
     }
 
-    // Check if relay source is online by fetching metadata
+    // Check if relay source is online via server-side API (avoids CORS issues)
     let isRelayLive = false;
-    const relayStation = relaySources.find(s => s.id === selectedRelaySource.id);
-    if (relayStation?.checkUrl) {
-      try {
-        const response = await fetch(relayStation.checkUrl, { signal: AbortSignal.timeout(5000) });
-        if (response.ok) {
-          const text = await response.text();
-          isRelayLive = text.trim() && text.trim() !== 'Unknown - Track';
-        }
-      } catch {
-        isRelayLive = false;
+    try {
+      const response = await fetch(`/api/relay-status?station=${selectedRelaySource.id}`, {
+        signal: AbortSignal.timeout(8000)
+      });
+      if (response.ok) {
+        const result = await response.json();
+        isRelayLive = result.isLive || false;
+        console.log('[Relay] Live check:', selectedRelaySource.name, isRelayLive ? 'LIVE' : 'offline');
       }
-    } else {
-      // No check URL, assume it's available
+    } catch (err) {
+      console.warn('[Relay] Live check failed:', err.message);
+      // If check fails, assume it might be live (let user try)
       isRelayLive = true;
     }
 

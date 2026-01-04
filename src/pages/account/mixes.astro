@@ -8,7 +8,7 @@ import Footer from '../../components/Footer.astro';
 export const prerender = false;
 ---
 
-<Layout title="My DJ Mixes - Fresh Wax">
+<Layout title="My DJ Mixes">
   <Header />
   
   <main class="mixes-main">
@@ -371,7 +371,7 @@ export const prerender = false;
         }
         
         try {
-          const response = await fetch(`/api/delete-mix?id=${encodeURIComponent(mixId)}`, {
+          const response = await fetch(`/api/delete-mix?id=${encodeURIComponent(mixId)}&userId=${encodeURIComponent(currentUserId)}`, {
             method: 'DELETE'
           });
           const data = await response.json();
