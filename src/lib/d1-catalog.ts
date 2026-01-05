@@ -412,3 +412,253 @@ export async function d1UpsertMerch(db: D1Database, id: string, doc: any): Promi
     return false;
   }
 }
+
+// =============================================
+// COMMENTS
+// =============================================
+
+export interface D1Comment {
+  id: string;
+  item_id: string;
+  item_type: 'release' | 'mix';
+  user_id: string;
+  user_name: string;
+  avatar_url: string | null;
+  comment: string | null;
+  gif_url: string | null;
+  approved: number;
+  created_at: string;
+}
+
+// Get comments for an item (release or mix)
+export async function d1GetComments(db: D1Database, itemId: string, itemType: 'release' | 'mix'): Promise<any[]> {
+  try {
+    const { results } = await db.prepare(
+      `SELECT * FROM comments WHERE item_id = ? AND item_type = ? ORDER BY created_at DESC`
+    ).bind(itemId, itemType).all();
+
+    return (results || []).map((row: any) => ({
+      id: row.id,
+      userId: row.user_id,
+      userName: row.user_name,
+      avatarUrl: row.avatar_url,
+      comment: row.comment || '',
+      gifUrl: row.gif_url,
+      timestamp: row.created_at,
+      createdAt: row.created_at,
+      approved: row.approved === 1
+    }));
+  } catch (e) {
+    console.error('[D1] Error getting comments:', e);
+    return [];
+  }
+}
+
+// Add a comment
+export async function d1AddComment(db: D1Database, comment: {
+  id: string;
+  itemId: string;
+  itemType: 'release' | 'mix';
+  userId: string;
+  userName: string;
+  avatarUrl?: string;
+  comment?: string;
+  gifUrl?: string;
+}): Promise<boolean> {
+  try {
+    await db.prepare(`
+      INSERT INTO comments (id, item_id, item_type, user_id, user_name, avatar_url, comment, gif_url, approved, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+    `).bind(
+      comment.id,
+      comment.itemId,
+      comment.itemType,
+      comment.userId,
+      comment.userName,
+      comment.avatarUrl || null,
+      comment.comment || null,
+      comment.gifUrl || null,
+      new Date().toISOString()
+    ).run();
+
+    console.log('[D1] Added comment:', comment.id);
+    return true;
+  } catch (e) {
+    console.error('[D1] Error adding comment:', e);
+    return false;
+  }
+}
+
+// Get comment count for an item
+export async function d1GetCommentCount(db: D1Database, itemId: string, itemType: 'release' | 'mix'): Promise<number> {
+  try {
+    const result = await db.prepare(
+      `SELECT COUNT(*) as count FROM comments WHERE item_id = ? AND item_type = ?`
+    ).bind(itemId, itemType).first();
+
+    return (result as any)?.count || 0;
+  } catch (e) {
+    console.error('[D1] Error getting comment count:', e);
+    return 0;
+  }
+}
+
+// =============================================
+// RATINGS
+// =============================================
+
+export interface D1Rating {
+  release_id: string;
+  average: number;
+  count: number;
+  five_star_count: number;
+  last_rated_at: string | null;
+  updated_at: string;
+}
+
+// Get ratings for a release
+export async function d1GetRatings(db: D1Database, releaseId: string): Promise<{ average: number; count: number; fiveStarCount: number } | null> {
+  try {
+    const row = await db.prepare(
+      `SELECT average, count, five_star_count FROM ratings WHERE release_id = ?`
+    ).bind(releaseId).first();
+
+    if (!row) return null;
+
+    return {
+      average: (row as any).average || 0,
+      count: (row as any).count || 0,
+      fiveStarCount: (row as any).five_star_count || 0
+    };
+  } catch (e) {
+    console.error('[D1] Error getting ratings:', e);
+    return null;
+  }
+}
+
+// Get user's rating for a release
+export async function d1GetUserRating(db: D1Database, releaseId: string, userId: string): Promise<number | null> {
+  try {
+    const row = await db.prepare(
+      `SELECT rating FROM user_ratings WHERE release_id = ? AND user_id = ?`
+    ).bind(releaseId, userId).first();
+
+    return row ? (row as any).rating : null;
+  } catch (e) {
+    console.error('[D1] Error getting user rating:', e);
+    return null;
+  }
+}
+
+// Upsert a user rating and recalculate aggregate
+export async function d1UpsertRating(db: D1Database, releaseId: string, userId: string, rating: number): Promise<{ average: number; count: number; fiveStarCount: number } | null> {
+  try {
+    const now = new Date().toISOString();
+    const id = `${releaseId}_${userId}`;
+
+    // Check if user has existing rating
+    const existingRow = await db.prepare(
+      `SELECT rating FROM user_ratings WHERE release_id = ? AND user_id = ?`
+    ).bind(releaseId, userId).first();
+
+    const existingRating = existingRow ? (existingRow as any).rating : null;
+
+    // Upsert user rating
+    await db.prepare(`
+      INSERT INTO user_ratings (id, release_id, user_id, rating, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        rating = excluded.rating,
+        updated_at = excluded.updated_at
+    `).bind(id, releaseId, userId, rating, now, now).run();
+
+    // Get current aggregate ratings
+    const currentRatings = await db.prepare(
+      `SELECT average, count, five_star_count FROM ratings WHERE release_id = ?`
+    ).bind(releaseId).first();
+
+    let newAverage: number;
+    let newCount: number;
+    let newFiveStarCount: number;
+
+    if (existingRating !== null) {
+      // Update existing - recalculate
+      const currentAvg = (currentRatings as any)?.average || 0;
+      const currentCount = (currentRatings as any)?.count || 0;
+      const currentFive = (currentRatings as any)?.five_star_count || 0;
+
+      const totalRating = (currentAvg * currentCount) - existingRating + rating;
+      newAverage = currentCount > 0 ? totalRating / currentCount : rating;
+      newCount = currentCount;
+      newFiveStarCount = currentFive - (existingRating === 5 ? 1 : 0) + (rating === 5 ? 1 : 0);
+    } else {
+      // New rating
+      const currentAvg = (currentRatings as any)?.average || 0;
+      const currentCount = (currentRatings as any)?.count || 0;
+      const currentFive = (currentRatings as any)?.five_star_count || 0;
+
+      const totalRating = currentAvg * currentCount + rating;
+      newCount = currentCount + 1;
+      newAverage = totalRating / newCount;
+      newFiveStarCount = currentFive + (rating === 5 ? 1 : 0);
+    }
+
+    newAverage = parseFloat(newAverage.toFixed(2));
+
+    // Upsert aggregate ratings
+    await db.prepare(`
+      INSERT INTO ratings (release_id, average, count, five_star_count, last_rated_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(release_id) DO UPDATE SET
+        average = excluded.average,
+        count = excluded.count,
+        five_star_count = excluded.five_star_count,
+        last_rated_at = excluded.last_rated_at,
+        updated_at = excluded.updated_at
+    `).bind(releaseId, newAverage, newCount, newFiveStarCount, now, now).run();
+
+    console.log('[D1] Upserted rating:', releaseId, userId, rating);
+
+    return { average: newAverage, count: newCount, fiveStarCount: newFiveStarCount };
+  } catch (e) {
+    console.error('[D1] Error upserting rating:', e);
+    return null;
+  }
+}
+
+// Bulk upsert ratings (for migration)
+export async function d1BulkUpsertRatings(db: D1Database, releaseId: string, ratingsData: { average: number; count: number; fiveStarCount: number; userRatings?: Record<string, number> }): Promise<boolean> {
+  try {
+    const now = new Date().toISOString();
+
+    // Upsert aggregate ratings
+    await db.prepare(`
+      INSERT INTO ratings (release_id, average, count, five_star_count, last_rated_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(release_id) DO UPDATE SET
+        average = excluded.average,
+        count = excluded.count,
+        five_star_count = excluded.five_star_count,
+        updated_at = excluded.updated_at
+    `).bind(releaseId, ratingsData.average, ratingsData.count, ratingsData.fiveStarCount, now, now).run();
+
+    // Upsert individual user ratings if provided
+    if (ratingsData.userRatings) {
+      for (const [userId, rating] of Object.entries(ratingsData.userRatings)) {
+        const id = `${releaseId}_${userId}`;
+        await db.prepare(`
+          INSERT INTO user_ratings (id, release_id, user_id, rating, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET
+            rating = excluded.rating,
+            updated_at = excluded.updated_at
+        `).bind(id, releaseId, userId, rating, now, now).run();
+      }
+    }
+
+    return true;
+  } catch (e) {
+    console.error('[D1] Error bulk upserting ratings:', e);
+    return false;
+  }
+}

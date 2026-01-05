@@ -1,9 +1,11 @@
 // src/pages/api/add-mix-comment.ts
 // Stores comments as array within the dj-mix document (matching releases pattern)
+// Dual-write: Firebase + D1
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
 import { containsProfanity } from '../../lib/validation';
+import { d1AddComment } from '../../lib/d1-catalog';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -87,6 +89,9 @@ function validateContent(text: string): { valid: boolean; error?: string } {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+  const db = env?.DB;
+
   // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
@@ -208,6 +213,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
       commentCount: mixData.comments.length,
       updatedAt: new Date().toISOString()
     });
+
+    // Dual-write to D1 (non-blocking)
+    if (db) {
+      try {
+        await d1AddComment(db, {
+          id: newComment.id,
+          itemId: mixId,
+          itemType: 'mix',
+          userId: newComment.userId,
+          userName: newComment.userName,
+          avatarUrl: newComment.avatarUrl || undefined,
+          comment: newComment.comment,
+          gifUrl: newComment.gifUrl || undefined
+        });
+        log.info('[add-mix-comment] Also written to D1');
+      } catch (d1Error) {
+        log.error('[add-mix-comment] D1 dual-write failed (non-critical):', d1Error);
+      }
+    }
 
     // Invalidate cache for this mix so fresh data is served
     clearCache(`doc:dj-mixes:${mixId}`);

@@ -1,8 +1,10 @@
 // src/pages/api/add-comment.ts
 // Add comments to releases with optional GIF support
+// Dual-write: Firebase + D1
 import type { APIRoute } from 'astro';
 import { getDocument, arrayUnion, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { d1AddComment } from '../../lib/d1-catalog';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -18,8 +20,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
+  const db = env?.DB;
+
+  // Initialize Firebase for Cloudflare runtime
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
@@ -72,6 +76,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await updateDocument('releases', releaseId, {
       updatedAt: new Date().toISOString()
     });
+
+    // Dual-write to D1 (non-blocking)
+    if (db) {
+      try {
+        await d1AddComment(db, {
+          id: newComment.id,
+          itemId: releaseId,
+          itemType: 'release',
+          userId: newComment.userId,
+          userName: newComment.userName,
+          avatarUrl: newComment.avatarUrl || undefined,
+          comment: newComment.comment,
+          gifUrl: newComment.gifUrl || undefined
+        });
+        log.info('[add-comment] Also written to D1');
+      } catch (d1Error) {
+        log.error('[add-comment] D1 dual-write failed (non-critical):', d1Error);
+      }
+    }
 
     // Invalidate cache for this release so fresh data is served
     clearCache(`releases:${releaseId}`);

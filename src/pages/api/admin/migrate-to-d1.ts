@@ -4,7 +4,7 @@
 
 import type { APIContext } from 'astro';
 import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
-import { d1UpsertRelease, d1UpsertMix, d1UpsertMerch } from '../../../lib/d1-catalog';
+import { d1UpsertRelease, d1UpsertMix, d1UpsertMerch, d1AddComment, d1BulkUpsertRatings } from '../../../lib/d1-catalog';
 
 export const prerender = false;
 
@@ -49,7 +49,9 @@ export async function POST({ request, locals }: APIContext) {
     const results = {
       releases: { total: 0, migrated: 0, errors: 0 },
       mixes: { total: 0, migrated: 0, errors: 0 },
-      merch: { total: 0, migrated: 0, errors: 0 }
+      merch: { total: 0, migrated: 0, errors: 0 },
+      comments: { total: 0, migrated: 0, errors: 0 },
+      ratings: { total: 0, migrated: 0, errors: 0 }
     };
 
     // --- Migrate Releases ---
@@ -124,8 +126,87 @@ export async function POST({ request, locals }: APIContext) {
       console.error('[Migration] Error fetching merch:', e);
     }
 
-    const totalMigrated = results.releases.migrated + results.mixes.migrated + results.merch.migrated;
-    const totalErrors = results.releases.errors + results.mixes.errors + results.merch.errors;
+    // --- Migrate Comments from Releases ---
+    console.log('[Migration] Starting release comments migration...');
+    try {
+      const releases = await queryCollection('releases', { limit: 500 });
+
+      for (const release of releases) {
+        // Migrate comments from this release
+        const comments = release.comments || [];
+        for (const comment of comments) {
+          results.comments.total++;
+          try {
+            await d1AddComment(db, {
+              id: comment.id || `comment_${release.id}_${Date.now()}`,
+              itemId: release.id,
+              itemType: 'release',
+              userId: comment.userId || 'unknown',
+              userName: comment.userName || 'Anonymous',
+              avatarUrl: comment.avatarUrl,
+              comment: comment.comment || '',
+              gifUrl: comment.gifUrl
+            });
+            results.comments.migrated++;
+          } catch (e) {
+            console.error('[Migration] Error migrating comment:', comment.id, e);
+            results.comments.errors++;
+          }
+        }
+
+        // Migrate ratings from this release
+        const ratings = release.ratings;
+        if (ratings && ratings.userRatings && Object.keys(ratings.userRatings).length > 0) {
+          results.ratings.total++;
+          try {
+            await d1BulkUpsertRatings(db, release.id, ratings);
+            results.ratings.migrated++;
+          } catch (e) {
+            console.error('[Migration] Error migrating ratings for:', release.id, e);
+            results.ratings.errors++;
+          }
+        }
+      }
+      console.log('[Migration] Release comments done:', results.comments);
+      console.log('[Migration] Ratings done:', results.ratings);
+    } catch (e) {
+      console.error('[Migration] Error processing release comments/ratings:', e);
+    }
+
+    // --- Migrate Comments from DJ Mixes ---
+    console.log('[Migration] Starting mix comments migration...');
+    try {
+      const mixes = await queryCollection('dj-mixes', { limit: 500 });
+
+      for (const mix of mixes) {
+        const comments = mix.comments || [];
+        for (const comment of comments) {
+          results.comments.total++;
+          try {
+            await d1AddComment(db, {
+              id: comment.id || `comment_${mix.id}_${Date.now()}`,
+              itemId: mix.id,
+              itemType: 'mix',
+              userId: comment.userId || 'unknown',
+              userName: comment.userName || 'Anonymous',
+              avatarUrl: comment.avatarUrl,
+              comment: comment.comment || '',
+              gifUrl: comment.gifUrl
+            });
+            results.comments.migrated++;
+          } catch (e) {
+            console.error('[Migration] Error migrating mix comment:', comment.id, e);
+            results.comments.errors++;
+          }
+        }
+      }
+      console.log('[Migration] Mix comments done');
+    } catch (e) {
+      console.error('[Migration] Error processing mix comments:', e);
+    }
+
+    const totalMigrated = results.releases.migrated + results.mixes.migrated + results.merch.migrated + results.comments.migrated + results.ratings.migrated;
+    const totalErrors = results.releases.errors + results.mixes.errors + results.merch.errors + results.comments.errors + results.ratings.errors;
 
     return new Response(JSON.stringify({
       success: true,
@@ -163,10 +244,13 @@ export async function GET({ locals }: APIContext) {
       });
     }
 
-    const [releases, mixes, merch] = await Promise.all([
+    const [releases, mixes, merch, comments, ratings, userRatings] = await Promise.all([
       db.prepare('SELECT COUNT(*) as count FROM releases_v2').first(),
       db.prepare('SELECT COUNT(*) as count FROM dj_mixes').first(),
-      db.prepare('SELECT COUNT(*) as count FROM merch').first()
+      db.prepare('SELECT COUNT(*) as count FROM merch').first(),
+      db.prepare('SELECT COUNT(*) as count FROM comments').first(),
+      db.prepare('SELECT COUNT(*) as count FROM ratings').first(),
+      db.prepare('SELECT COUNT(*) as count FROM user_ratings').first()
     ]);
 
     return new Response(JSON.stringify({
@@ -174,7 +258,10 @@ export async function GET({ locals }: APIContext) {
       d1_counts: {
         releases: releases?.count || 0,
         dj_mixes: mixes?.count || 0,
-        merch: merch?.count || 0
+        merch: merch?.count || 0,
+        comments: comments?.count || 0,
+        ratings: ratings?.count || 0,
+        user_ratings: userRatings?.count || 0
       }
     }), {
       headers: { 'Content-Type': 'application/json' }

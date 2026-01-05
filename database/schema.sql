@@ -138,3 +138,54 @@ CREATE TABLE IF NOT EXISTS merch (
 
 CREATE INDEX IF NOT EXISTS idx_merch_published ON merch(published);
 CREATE INDEX IF NOT EXISTS idx_merch_type ON merch(type);
+
+-- =============================================
+-- COMMENTS (for releases and mixes)
+-- =============================================
+CREATE TABLE IF NOT EXISTS comments (
+  id TEXT PRIMARY KEY,
+  -- Foreign key - can be release or mix
+  item_id TEXT NOT NULL,
+  item_type TEXT NOT NULL,  -- 'release' or 'mix'
+  -- Comment data
+  user_id TEXT NOT NULL,
+  user_name TEXT NOT NULL,
+  avatar_url TEXT,
+  comment TEXT,
+  gif_url TEXT,
+  approved INTEGER DEFAULT 1,
+  -- Timestamps
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_comments_item ON comments(item_id, item_type);
+CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_comments_date ON comments(created_at DESC);
+
+-- =============================================
+-- RATINGS (aggregate per release)
+-- =============================================
+CREATE TABLE IF NOT EXISTS ratings (
+  release_id TEXT PRIMARY KEY,
+  average REAL DEFAULT 0,
+  count INTEGER DEFAULT 0,
+  five_star_count INTEGER DEFAULT 0,
+  last_rated_at TEXT,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =============================================
+-- USER RATINGS (individual user ratings)
+-- =============================================
+CREATE TABLE IF NOT EXISTS user_ratings (
+  id TEXT PRIMARY KEY,  -- release_id + '_' + user_id
+  release_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  rating INTEGER NOT NULL,  -- 1-5
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_ratings_release ON user_ratings(release_id);
+CREATE INDEX IF NOT EXISTS idx_user_ratings_user ON user_ratings(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_ratings_unique ON user_ratings(release_id, user_id);
