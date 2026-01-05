@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { queryCollection, updateDocument, addDocument, getDocument, initFirebaseEnv } from '../../../../lib/firebase-rest';
 import { sendPayoutCompletedEmail } from '../../../../lib/payout-emails';
+import { logConnectEvent } from '../../../../lib/webhook-logger';
 
 export const prerender = false;
 
@@ -12,6 +13,8 @@ export const prerender = false;
 const MAX_PENDING_PAYOUTS = 50; // Max pending payouts to process at once
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const startTime = Date.now();
+
   // Initialize Firebase
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -68,14 +71,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
     switch (event.type) {
       case 'account.updated':
         await handleAccountUpdated(event.data.object as Stripe.Account, stripeSecretKey, env);
+        logConnectEvent(event.type, event.id, true, {
+          message: `Account updated: ${(event.data.object as Stripe.Account).id}`,
+          metadata: { accountId: (event.data.object as Stripe.Account).id },
+          processingTimeMs: Date.now() - startTime
+        }).catch(() => {});
         break;
 
       case 'transfer.created':
         await handleTransferCreated(event.data.object as Stripe.Transfer);
+        logConnectEvent(event.type, event.id, true, {
+          message: `Transfer created: ${(event.data.object as Stripe.Transfer).id}`,
+          metadata: { transferId: (event.data.object as Stripe.Transfer).id },
+          processingTimeMs: Date.now() - startTime
+        }).catch(() => {});
         break;
 
       case 'transfer.reversed':
         await handleTransferReversed(event.data.object as Stripe.Transfer);
+        logConnectEvent(event.type, event.id, true, {
+          message: `Transfer reversed: ${(event.data.object as Stripe.Transfer).id}`,
+          metadata: { transferId: (event.data.object as Stripe.Transfer).id },
+          processingTimeMs: Date.now() - startTime
+        }).catch(() => {});
         break;
 
       default:
@@ -89,6 +107,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: any) {
     console.error('[Connect Webhook] Error:', error);
+
+    logConnectEvent('connect_webhook_error', 'unknown', false, {
+      message: 'Connect webhook processing error',
+      error: error.message
+    }).catch(() => {});
+
     return new Response(`Webhook error: ${error.message}`, { status: 500 });
   }
 };

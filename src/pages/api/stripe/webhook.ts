@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { createOrder } from '../../../lib/order-utils';
 import { initFirebaseEnv, getDocument, queryCollection, deleteDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
+import { logStripeEvent } from '../../../lib/webhook-logger';
 
 export const prerender = false;
 
@@ -507,6 +508,7 @@ async function sendRefundNotificationEmail(
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const startTime = Date.now();
   console.log('[Stripe Webhook] ========== WEBHOOK REQUEST RECEIVED ==========');
   console.log('[Stripe Webhook] Timestamp:', new Date().toISOString());
 
@@ -661,14 +663,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   })
                 });
                 console.log('[Stripe Webhook] ✓ Welcome email sent to:', email);
+
+                // Log successful subscription
+                logStripeEvent(event.type, event.id, true, {
+                  message: `Plus subscription activated for ${userId}`,
+                  metadata: { userId, plusId },
+                  processingTimeMs: Date.now() - startTime
+                }).catch(() => {});
               } catch (emailError) {
                 console.error('[Stripe Webhook] Failed to send welcome email:', emailError);
               }
             } else {
               console.error('[Stripe Webhook] Failed to update user subscription');
+              logStripeEvent(event.type, event.id, false, {
+                message: 'Failed to update user subscription',
+                error: 'Firestore update failed'
+              }).catch(() => {});
             }
           } catch (updateError) {
             console.error('[Stripe Webhook] Error updating subscription:', updateError);
+            logStripeEvent(event.type, event.id, false, {
+              message: 'Error updating subscription',
+              error: updateError instanceof Error ? updateError.message : 'Unknown error'
+            }).catch(() => {});
           }
         }
 
@@ -865,6 +882,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (!result.success) {
         console.error('[Stripe Webhook] ❌ ORDER CREATION FAILED');
         console.error('[Stripe Webhook] Error:', result.error);
+
+        logStripeEvent(event.type, event.id, false, {
+          message: 'Order creation failed',
+          error: result.error || 'Unknown error',
+          processingTimeMs: Date.now() - startTime
+        }).catch(() => {});
+
         return new Response(JSON.stringify({
           error: result.error || 'Failed to create order'
         }), {
@@ -890,6 +914,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       console.log('[Stripe Webhook] ========== WEBHOOK COMPLETE ==========');
+
+      // Log successful order
+      logStripeEvent(event.type, event.id, true, {
+        message: `Order ${result.orderNumber} created successfully`,
+        metadata: { orderId: result.orderId, orderNumber: result.orderNumber, amount: session.amount_total / 100 },
+        processingTimeMs: Date.now() - startTime
+      }).catch(() => {}); // Don't let logging failures affect response
     }
 
     // Handle payment_intent.succeeded (backup for session complete)
@@ -1040,6 +1071,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.log('[Stripe Webhook] Reason:', dispute.reason);
 
       await handleDisputeCreated(dispute, stripeSecretKey);
+
+      logStripeEvent(event.type, event.id, true, {
+        message: `Dispute created: ${dispute.reason}`,
+        metadata: { disputeId: dispute.id, chargeId: dispute.charge, amount: dispute.amount / 100 },
+        processingTimeMs: Date.now() - startTime
+      }).catch(() => {});
     }
 
     // Handle dispute closed - track outcome
@@ -1050,6 +1087,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.log('[Stripe Webhook] Status:', dispute.status);
 
       await handleDisputeClosed(dispute, stripeSecretKey);
+
+      logStripeEvent(event.type, event.id, true, {
+        message: `Dispute closed: ${dispute.status}`,
+        metadata: { disputeId: dispute.id, status: dispute.status },
+        processingTimeMs: Date.now() - startTime
+      }).catch(() => {});
     }
 
     // Handle refund - reverse artist transfers proportionally
@@ -1061,6 +1104,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.log('[Stripe Webhook] Total amount:', charge.amount / 100, charge.currency?.toUpperCase());
 
       await handleRefund(charge, stripeSecretKey, env);
+
+      logStripeEvent(event.type, event.id, true, {
+        message: `Refund processed: £${(charge.amount_refunded / 100).toFixed(2)}`,
+        metadata: { chargeId: charge.id, amountRefunded: charge.amount_refunded / 100 },
+        processingTimeMs: Date.now() - startTime
+      }).catch(() => {});
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -1071,6 +1120,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[Stripe Webhook] Error:', errorMessage);
+
+    // Log error
+    logStripeEvent('webhook_error', 'unknown', false, {
+      message: 'Webhook processing error',
+      error: errorMessage
+    }).catch(() => {});
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
