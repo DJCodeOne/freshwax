@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
 import { saDeleteDocument, saUpdateDocument } from '../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { requireAdminAuth } from '../../lib/admin';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -33,6 +34,10 @@ function getServiceAccountKey(env: any): string | null {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication required
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   // Rate limit: destructive operations - 3 per hour
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`delete-release:${clientId}`, RateLimiters.destructive);

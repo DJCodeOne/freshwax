@@ -718,10 +718,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
+      // Clear the stream key so the cancelled DJ can't use it
+      // and a new key will be generated if another DJ books this slot
       await updateDocument('livestreamSlots', slotId, {
         status: 'cancelled',
         cancelledAt: nowISO,
-        updatedAt: nowISO
+        updatedAt: nowISO,
+        streamKey: null,  // Invalidate the key
+        keyGeneratedAt: null,
+        previousDjId: slot.djId,  // Track who cancelled for audit
+        previousStreamKey: slot.streamKey  // Keep for audit log
       }, idToken);
 
       invalidateCache();
@@ -883,9 +889,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // GENERATE KEY for Go Live modal (creates temporary key, no booking yet)
+    // GENERATE KEY for Go Live - requires a booked slot
     if (action === 'generate_key') {
-      const { djId, djName } = data;
+      const { djId, djName, slotId } = data;
 
       if (!djId || !djName) {
         return new Response(JSON.stringify({ success: false, error: 'DJ ID and name required' }), {
@@ -893,7 +899,53 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      // Check if anyone is currently live
+      // If slotId is provided, verify the slot belongs to this DJ and generate key for it
+      if (slotId) {
+        const slot = await getDocument('livestreamSlots', slotId);
+        if (!slot) {
+          return new Response(JSON.stringify({ success: false, error: 'Slot not found' }), {
+            status: 404, headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        if (slot.djId !== djId) {
+          return new Response(JSON.stringify({ success: false, error: 'This slot belongs to another DJ' }), {
+            status: 403, headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        // If slot already has a key, return it
+        if (slot.streamKey) {
+          return new Response(JSON.stringify({
+            success: true,
+            streamKey: slot.streamKey,
+            serverUrl: 'rtmp://rtmp.freshwax.co.uk/live',
+            validUntil: slot.endTime,
+            slotId
+          }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        // Generate new key for this slot
+        const slotStart = new Date(slot.startTime);
+        const slotEnd = new Date(slot.endTime);
+        const streamKey = generateStreamKey(djId, slotId, slotStart, slotEnd);
+
+        // Save the key to the slot document
+        await updateDocument('livestreamSlots', slotId, {
+          streamKey,
+          keyGeneratedAt: now.toISOString()
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          streamKey,
+          serverUrl: 'rtmp://rtmp.freshwax.co.uk/live',
+          validUntil: slot.endTime,
+          slotId
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      // No slotId - check if anyone is currently live (for auto-book scenario)
       const liveSlots = await queryCollection('livestreamSlots', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
         limit: 1,
@@ -907,7 +959,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
-      // Generate stream key valid until top of next hour
+      // Generate stream key valid until top of next hour (temporary key for auto-book)
       const endTime = new Date(now);
       endTime.setMinutes(0, 0, 0);
       endTime.setHours(endTime.getHours() + 1);

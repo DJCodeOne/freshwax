@@ -2,10 +2,18 @@
 // Start, stop, and update live streams
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { generateStreamKey, buildRtmpUrl, buildHlsUrl, RED5_CONFIG } from '../../../lib/red5';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: stream management - 30 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`livestream-manage:${clientId}`, RateLimiters.write);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -14,14 +22,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
+    // SECURITY: Verify user identity - djId must match authenticated user
+    const { userId: authenticatedUserId, error: authError } = await verifyRequestUser(request);
+
+    if (authError || !authenticatedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const data = await request.json();
     const { action, djId, streamId, ...streamData } = data;
-    
+
     if (!djId) {
       return new Response(JSON.stringify({
         success: false,
         error: 'DJ ID is required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // SECURITY: Verify the authenticated user matches the claimed djId
+    if (authenticatedUserId !== djId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only manage your own streams'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
     
     const now = new Date();

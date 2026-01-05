@@ -40,7 +40,11 @@ let stats = {
   totalOrders: 0,
   vinylListings: 0,
   vinylSold: 0,
-  vinylOrders: 0
+  vinylOrders: 0,
+  // Earnings stats
+  totalEarnings: 0,
+  pendingBalance: 0,
+  stripeConnected: false
 };
 
 if (partnerId) {
@@ -52,6 +56,11 @@ if (partnerId) {
     if (partnerDoc) {
       partner = { id: partnerId, ...partnerDoc };
       console.log('[Partner Dashboard] Found in artists:', partner.artistName);
+
+      // Fetch earnings stats
+      stats.totalEarnings = partnerDoc.totalEarnings || 0;
+      stats.pendingBalance = partnerDoc.pendingBalance || 0;
+      stats.stripeConnected = !!partnerDoc.stripeConnectId && partnerDoc.stripeConnectStatus === 'active';
     } else {
       // Fallback: check users collection for partner info
       const userData = await getDocument('users', partnerId);
@@ -328,6 +337,55 @@ export const prerender = false;
             </div>
           )}
         </div>
+
+        <!-- EARNINGS SECTION -->
+        {isApproved && (
+          <section class="dashboard-section earnings-section">
+            <div class="section-header">
+              <div class="section-title-wrap">
+                <span class="section-icon">💰</span>
+                <h2>Earnings</h2>
+              </div>
+              <p class="section-desc">Track your music sales and payouts</p>
+            </div>
+
+            <div class="earnings-grid">
+              <div class="earnings-card total">
+                <div class="earnings-icon">💷</div>
+                <div class="earnings-value">{new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(stats.totalEarnings)}</div>
+                <div class="earnings-label">Total Earnings</div>
+              </div>
+
+              {stats.pendingBalance > 0 && (
+                <div class="earnings-card pending">
+                  <div class="earnings-icon">⏳</div>
+                  <div class="earnings-value">{new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(stats.pendingBalance)}</div>
+                  <div class="earnings-label">Pending Payout</div>
+                </div>
+              )}
+
+              <a href="/artist/payouts" class="earnings-card action">
+                <div class="earnings-icon">📊</div>
+                <div class="earnings-text">
+                  <span class="action-title">View Payouts</span>
+                  <span class="action-desc">See payout history</span>
+                </div>
+                <span class="card-arrow">→</span>
+              </a>
+
+              {!stats.stripeConnected && (
+                <a href="/artist/account#stripe-connect-section" class="earnings-card connect">
+                  <div class="earnings-icon">🏦</div>
+                  <div class="earnings-text">
+                    <span class="action-title">Set Up Payments</span>
+                    <span class="action-desc">Connect Stripe to get paid</span>
+                  </div>
+                  <span class="card-arrow">→</span>
+                </a>
+              )}
+            </div>
+          </section>
+        )}
 
         <!-- MUSIC RELEASES SECTION (Requires Approval) -->
         {showReleaseSection && (
@@ -808,7 +866,122 @@ export const prerender = false;
   .lock-icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
   .restricted-message h3 { font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff; }
   .restricted-message p { font-size: 0.9375rem; color: #9ca3af; max-width: 300px; margin: 0 auto; }
-  
+
+  /* Earnings Section */
+  .earnings-section {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-color: #6366f1;
+  }
+
+  .earnings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .earnings-card {
+    background: linear-gradient(to bottom, #374151, #1f2937);
+    border: 2px solid #4b5563;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: all 0.2s;
+  }
+
+  .earnings-card.total {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border-color: #22c55e;
+  }
+
+  .earnings-card.pending {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    border-color: #f59e0b;
+  }
+
+  .earnings-card.action,
+  .earnings-card.connect {
+    flex-direction: row;
+    text-align: left;
+    gap: 1rem;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .earnings-card.action:hover,
+  .earnings-card.connect:hover {
+    background: linear-gradient(to bottom, #4b5563, #374151);
+    border-color: #6b7280;
+    transform: translateY(-2px);
+  }
+
+  .earnings-card.connect {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    border-color: #6366f1;
+  }
+
+  .earnings-card.connect:hover {
+    background: linear-gradient(135deg, #818cf8, #6366f1);
+  }
+
+  .earnings-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .earnings-card.action .earnings-icon,
+  .earnings-card.connect .earnings-icon {
+    margin-bottom: 0;
+    font-size: 1.75rem;
+  }
+
+  .earnings-value {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 1.75rem;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .earnings-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.8);
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+  }
+
+  .earnings-text {
+    flex: 1;
+  }
+
+  .action-title {
+    display: block;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #fff;
+  }
+
+  .action-desc {
+    display: block;
+    font-size: 0.8125rem;
+    color: #9ca3af;
+    margin-top: 0.125rem;
+  }
+
+  .earnings-card .card-arrow {
+    font-size: 1.25rem;
+    color: #9ca3af;
+    transition: transform 0.2s;
+  }
+
+  .earnings-card:hover .card-arrow {
+    transform: translateX(4px);
+    color: #fff;
+  }
+
   .section-header { margin-bottom: 1.5rem; }
   
   .section-title-wrap {

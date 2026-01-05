@@ -1,5 +1,8 @@
 ---
 // src/pages/about.astro
+// Static page - prerender for performance
+export const prerender = true;
+
 import InfoPageLayout from '../layouts/InfoPageLayout.astro';
 
 const faqs = [

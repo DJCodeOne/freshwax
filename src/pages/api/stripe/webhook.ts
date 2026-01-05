@@ -582,6 +582,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Optionally, we could immediately downgrade or send a cancellation email here
     }
 
+    // Handle dispute created - reverse transfers to recover funds from artists
+    if (event.type === 'charge.dispute.created') {
+      const dispute = event.data.object;
+      console.log('[Stripe Webhook] ========== DISPUTE CREATED ==========');
+      console.log('[Stripe Webhook] Dispute ID:', dispute.id);
+      console.log('[Stripe Webhook] Charge ID:', dispute.charge);
+      console.log('[Stripe Webhook] Amount:', dispute.amount / 100, dispute.currency?.toUpperCase());
+      console.log('[Stripe Webhook] Reason:', dispute.reason);
+
+      await handleDisputeCreated(dispute, stripeSecretKey);
+    }
+
+    // Handle dispute closed - track outcome
+    if (event.type === 'charge.dispute.closed') {
+      const dispute = event.data.object;
+      console.log('[Stripe Webhook] ========== DISPUTE CLOSED ==========');
+      console.log('[Stripe Webhook] Dispute ID:', dispute.id);
+      console.log('[Stripe Webhook] Status:', dispute.status);
+
+      await handleDisputeClosed(dispute);
+    }
+
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -793,5 +815,204 @@ async function processArtistPayments(params: {
   } catch (error: any) {
     console.error('[Stripe Webhook] Error processing artist payments:', error.message);
     // Don't throw - order was created, payments can be retried
+  }
+}
+
+// Handle dispute created - reverse transfers to recover funds from artists
+async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+
+  try {
+    const chargeId = typeof dispute.charge === 'string' ? dispute.charge : dispute.charge?.id;
+    const disputeAmount = dispute.amount / 100; // Convert from cents to GBP
+
+    console.log('[Stripe Webhook] Processing dispute for charge:', chargeId);
+
+    // Get the charge to find the payment intent and transfer group
+    const charge = await stripe.charges.retrieve(chargeId, {
+      expand: ['transfer_group', 'payment_intent']
+    });
+
+    const paymentIntentId = typeof charge.payment_intent === 'string'
+      ? charge.payment_intent
+      : charge.payment_intent?.id;
+
+    // Find the order by payment intent
+    let order = null;
+    if (paymentIntentId) {
+      const orders = await queryCollection('orders', {
+        filters: [{ field: 'paymentIntentId', op: 'EQUAL', value: paymentIntentId }],
+        limit: 1
+      });
+      order = orders[0];
+    }
+
+    // Find related transfers by transfer_group (orderId)
+    const transferGroup = charge.transfer_group || order?.id;
+    let transfersReversed: any[] = [];
+    let totalRecovered = 0;
+
+    if (transferGroup) {
+      // List all transfers in this transfer group
+      const transfers = await stripe.transfers.list({
+        transfer_group: transferGroup,
+        limit: 100
+      });
+
+      console.log('[Stripe Webhook] Found', transfers.data.length, 'transfers to potentially reverse');
+
+      // Reverse each transfer to recover funds
+      for (const transfer of transfers.data) {
+        // Skip if already fully reversed
+        if (transfer.reversed) {
+          console.log('[Stripe Webhook] Transfer already reversed:', transfer.id);
+          continue;
+        }
+
+        try {
+          // Reverse the transfer
+          const reversal = await stripe.transfers.createReversal(transfer.id, {
+            description: `Dispute ${dispute.id} - ${dispute.reason}`,
+            metadata: {
+              disputeId: dispute.id,
+              reason: dispute.reason,
+              chargeId: chargeId
+            }
+          });
+
+          const reversedAmount = reversal.amount / 100;
+          totalRecovered += reversedAmount;
+
+          transfersReversed.push({
+            transferId: transfer.id,
+            reversalId: reversal.id,
+            amount: reversedAmount,
+            artistId: transfer.metadata?.artistId,
+            artistName: transfer.metadata?.artistName
+          });
+
+          console.log('[Stripe Webhook] ✓ Reversed transfer:', transfer.id, 'Amount:', reversedAmount);
+
+          // Update the payout record
+          const payouts = await queryCollection('payouts', {
+            filters: [{ field: 'stripeTransferId', op: 'EQUAL', value: transfer.id }],
+            limit: 1
+          });
+
+          if (payouts.length > 0) {
+            await updateDocument('payouts', payouts[0].id, {
+              status: 'reversed',
+              reversedAt: new Date().toISOString(),
+              reversedAmount: reversedAmount,
+              reversalReason: `Dispute: ${dispute.reason}`,
+              disputeId: dispute.id,
+              updatedAt: new Date().toISOString()
+            });
+          }
+
+          // Update artist's total earnings
+          const artistId = transfer.metadata?.artistId;
+          if (artistId) {
+            const artist = await getDocument('artists', artistId);
+            if (artist) {
+              await updateDocument('artists', artistId, {
+                totalEarnings: Math.max(0, (artist.totalEarnings || 0) - reversedAmount),
+                updatedAt: new Date().toISOString()
+              });
+            }
+          }
+
+        } catch (reversalError: any) {
+          console.error('[Stripe Webhook] Failed to reverse transfer:', transfer.id, reversalError.message);
+        }
+      }
+    }
+
+    // Create dispute record in Firestore
+    await addDocument('disputes', {
+      stripeDisputeId: dispute.id,
+      stripeChargeId: chargeId,
+      stripePaymentIntentId: paymentIntentId || null,
+      orderId: order?.id || transferGroup || null,
+      orderNumber: order?.orderNumber || null,
+      amount: disputeAmount,
+      currency: dispute.currency || 'gbp',
+      reason: dispute.reason,
+      status: 'open',
+      evidenceDueBy: dispute.evidence_details?.due_by
+        ? new Date(dispute.evidence_details.due_by * 1000).toISOString()
+        : null,
+      transfersReversed: transfersReversed,
+      amountRecovered: totalRecovered,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    console.log('[Stripe Webhook] ✓ Dispute recorded. Recovered:', totalRecovered, 'GBP from', transfersReversed.length, 'transfers');
+
+  } catch (error: any) {
+    console.error('[Stripe Webhook] Error handling dispute:', error.message);
+    // Still record the dispute even if transfer reversal failed
+    await addDocument('disputes', {
+      stripeDisputeId: dispute.id,
+      stripeChargeId: typeof dispute.charge === 'string' ? dispute.charge : dispute.charge?.id,
+      amount: dispute.amount / 100,
+      currency: dispute.currency || 'gbp',
+      reason: dispute.reason,
+      status: 'open',
+      error: error.message,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+  }
+}
+
+// Handle dispute closed - update status and track outcome
+async function handleDisputeClosed(dispute: any) {
+  try {
+    // Find the dispute record
+    const disputes = await queryCollection('disputes', {
+      filters: [{ field: 'stripeDisputeId', op: 'EQUAL', value: dispute.id }],
+      limit: 1
+    });
+
+    if (disputes.length === 0) {
+      console.log('[Stripe Webhook] Dispute record not found:', dispute.id);
+      return;
+    }
+
+    const disputeRecord = disputes[0];
+    const outcome = dispute.status === 'won' ? 'won' : 'lost';
+
+    // Calculate net impact
+    let netImpact = 0;
+    if (outcome === 'lost') {
+      // We lost - platform absorbs the loss minus any recovered amount
+      netImpact = disputeRecord.amount - (disputeRecord.amountRecovered || 0);
+    } else {
+      // We won - if we reversed transfers, we should re-transfer to artists
+      // For now, just track that we won
+      netImpact = 0;
+    }
+
+    await updateDocument('disputes', disputeRecord.id, {
+      status: outcome === 'won' ? 'won' : 'lost',
+      outcome: outcome,
+      resolvedAt: new Date().toISOString(),
+      netImpact: netImpact,
+      updatedAt: new Date().toISOString()
+    });
+
+    console.log('[Stripe Webhook] ✓ Dispute', dispute.id, 'closed with outcome:', outcome, 'Net impact:', netImpact, 'GBP');
+
+    // If we won the dispute and had reversed transfers, we could re-transfer to artists
+    // This is optional and depends on business policy
+    if (outcome === 'won' && disputeRecord.transfersReversed?.length > 0) {
+      console.log('[Stripe Webhook] Dispute won - consider re-transferring to artists');
+      // TODO: Implement re-transfer logic if desired
+    }
+
+  } catch (error: any) {
+    console.error('[Stripe Webhook] Error handling dispute closure:', error.message);
   }
 }

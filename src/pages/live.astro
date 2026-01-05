@@ -3043,8 +3043,22 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     }
   }
 
-  // Setup live status listener after page load
-  setTimeout(setupLiveStatusListener, 1000);
+  // Setup live status listener after Pusher loads
+  async function waitForPusherAndSetup() {
+    const maxWait = 10000; // 10 seconds max
+    const startTime = Date.now();
+
+    while (!window.Pusher && Date.now() - startTime < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    if (window.Pusher) {
+      setupLiveStatusListener();
+    } else {
+      console.warn('[LiveStatus] Pusher not available after waiting');
+    }
+  }
+  setTimeout(waitForPusherAndSetup, 500);
   
   async function checkUserStatus(userId) {
     try {
@@ -4187,7 +4201,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       // For relay streams, show title (now playing) instead of DJ name, in red
       if (controlsDjName) {
         if (currentLive.isRelay && currentLive.title) {
-          controlsDjName.innerHTML = `<span style="color: #ef4444;">${currentLive.title}</span>`;
+          const relayTitle = currentLive.title.length > 50 ? currentLive.title.substring(0, 50) + '...' : currentLive.title;
+          controlsDjName.innerHTML = `<span style="color: #ef4444;">${relayTitle}</span>`;
         } else {
           controlsDjName.textContent = currentLive.djName || 'DJ';
         }
@@ -5175,7 +5190,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       // Update label and show track title only - keep it simple
       if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
       if (controlsDjName && currentPlaylistTrack) {
-        controlsDjName.textContent = currentPlaylistTrack.title || '';
+        const title = currentPlaylistTrack.title || '';
+        controlsDjName.textContent = title.length > 50 ? title.substring(0, 50) + '...' : title;
       }
       if (npTrackTitle) npTrackTitle.textContent = '';
 
@@ -5231,7 +5247,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   });
 </script>
 
-<script type="module" src="/live-stream.js?v=20260104-playbtn-fix"></script>
+<script type="module" src="/live-stream.js?v=20260105-skip-auth"></script>
 
 <script>
   // Auto-hide header on live page

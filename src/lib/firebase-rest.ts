@@ -49,7 +49,7 @@ const cache = new Map<string, CacheEntry>();
 const CACHE_TTL = {
   // Static/rarely changing data - 10 minutes
   RELEASES_LIST: 10 * 60 * 1000,
-  RELEASE_DETAIL: 30 * 1000,  // 30 seconds for individual releases (comments/ratings change)
+  RELEASE_DETAIL: 3 * 60 * 1000,  // 3 minutes for individual releases (balance freshness vs quota)
   DJ_MIXES_LIST: 2 * 60 * 1000, // 2 minutes (reduced for faster updates)
   MERCH_LIST: 10 * 60 * 1000,
 

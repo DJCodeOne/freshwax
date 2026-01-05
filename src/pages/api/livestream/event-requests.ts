@@ -15,7 +15,7 @@ function initFirebase(locals: any) {
 }
 
 // GET: List event requests (for admin) or user's own requests
-export const GET: APIRoute = async ({ url, locals }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
   initFirebase(locals);
 
   try {
@@ -26,6 +26,19 @@ export const GET: APIRoute = async ({ url, locals }) => {
     let requests: any[];
 
     if (adminView) {
+      // SECURITY: Require admin authentication for viewing all requests
+      const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
+      const env = (locals as any)?.runtime?.env;
+      initAdminEnv({
+        ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+        ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+      });
+
+      const authError = requireAdminAuth(request, locals);
+      if (authError) {
+        return authError;
+      }
+
       // Admin sees all requests, optionally filtered by status
       if (status && status !== 'all') {
         requests = await queryCollection('event-requests', {
@@ -88,6 +101,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
           error: 'Missing required fields: userId, eventName, eventDate, hoursRequested'
         }), {
           status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // SECURITY: Verify the requesting user owns this userId
+      const authHeader = request.headers.get('Authorization');
+      const idToken = authHeader?.replace('Bearer ', '') || undefined;
+      const { verifyUserToken } = await import('../../../lib/firebase-rest');
+
+      if (!idToken) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Authentication required'
+        }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      const tokenUserId = await verifyUserToken(idToken);
+      if (!tokenUserId || tokenUserId !== userId) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'You can only create event requests for yourself'
+        }), {
+          status: 403,
           headers: { 'Content-Type': 'application/json' }
         });
       }
@@ -163,6 +201,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Approve request (admin action)
     if (action === 'approve') {
+      // SECURITY: Require admin authentication for approving requests
+      const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
+      const env = (locals as any)?.runtime?.env;
+      initAdminEnv({
+        ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+        ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+      });
+
+      const authError = requireAdminAuth(request, locals);
+      if (authError) {
+        return authError;
+      }
+
       const { requestId, adminId } = body;
 
       if (!requestId) {
@@ -197,6 +248,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Reject request (admin action)
     if (action === 'reject') {
+      // SECURITY: Require admin authentication for rejecting requests
+      const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
+      const env = (locals as any)?.runtime?.env;
+      initAdminEnv({
+        ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+        ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+      });
+
+      const authError = requireAdminAuth(request, locals);
+      if (authError) {
+        return authError;
+      }
+
       const { requestId, adminId, reason } = body;
 
       if (!requestId) {

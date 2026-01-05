@@ -14,7 +14,10 @@ function initFirebase(locals: any) {
   });
 }
 
-export const GET: APIRoute = async ({ cookies, locals }) => {
+// Max subscribers returned per request to prevent memory issues
+const MAX_SUBSCRIBERS_PER_PAGE = 500;
+
+export const GET: APIRoute = async ({ request, cookies, locals }) => {
   initFirebase(locals);
   try {
     // Check admin auth
@@ -29,8 +32,14 @@ export const GET: APIRoute = async ({ cookies, locals }) => {
       });
     }
 
+    // Get pagination params
+    const url = new URL(request.url);
+    const limitParam = url.searchParams.get('limit');
+    const limit = Math.min(parseInt(limitParam || '500'), MAX_SUBSCRIBERS_PER_PAGE);
+
     const allSubscribers = await queryCollection('subscribers', {
-      orderBy: { field: 'subscribedAt', direction: 'DESCENDING' }
+      orderBy: { field: 'subscribedAt', direction: 'DESCENDING' },
+      limit
     });
 
     const subscribers = allSubscribers.map(doc => {

@@ -1014,9 +1014,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                   </div>
                 </div>
                 <div class="cred-box-compact">
-                  <label>Password</label>
+                  <label>Password <span style="font-size: 0.7em; opacity: 0.7;">(your stream key)</span></label>
                   <div class="cred-value-compact">
-                    <code id="icecastPassword">freshwax-source-2024</code>
+                    <code id="icecastPassword" class="stream-key-placeholder">Book a slot first</code>
                     <button class="copy-btn-sm" data-copy="icecastPassword">Copy</button>
                   </div>
                 </div>
@@ -1523,6 +1523,20 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   const urlParams = new URLSearchParams(window.location.search);
   console.log('[Test Mode] URL params:', window.location.search);
   let currentStreamKey = urlParams.get('testPreview') || null;
+
+  // Helper function to update BUTT password when stream key changes
+  function updateButtPassword(streamKey) {
+    const icecastPasswordEl = document.getElementById('icecastPassword');
+    if (icecastPasswordEl) {
+      if (streamKey) {
+        icecastPasswordEl.textContent = streamKey;
+        icecastPasswordEl.classList.remove('stream-key-placeholder');
+      } else {
+        icecastPasswordEl.textContent = 'Book a slot first';
+        icecastPasswordEl.classList.add('stream-key-placeholder');
+      }
+    }
+  }
   const forcePreview = urlParams.has('forcePreview');
   // Allow overriding HLS base URL for testing (e.g., ?hlsBase=https://tunnel.trycloudflare.com)
   const testHlsBase = urlParams.get('hlsBase');
@@ -5743,15 +5757,20 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       // If slot has a stream key, use it
       if (mySlot.streamKey) {
         currentStreamKey = mySlot.streamKey;
+        updateButtPassword(currentStreamKey); // Update BUTT password field
         // Only animate if not already displayed
         if (!streamKeyDisplayed && streamKeyEl) {
-          streamKeyEl.classList.remove('key-loading');
+          streamKeyEl.classList.remove('key-loading', 'key-unavailable');
           streamKeyEl.classList.add('key-reveal');
           streamKeyEl.innerHTML = `<span class="key-text">${mySlot.streamKey}</span>`;
           streamKeyDisplayed = true;
         }
         // Start checking for OBS preview stream
         startObsPreviewCheck();
+      } else {
+        // Slot exists but no key yet - generate one
+        log('[checkStreamKeyAvailability] Slot found but no key, generating...');
+        loadStreamKeyForGoLive();
       }
 
       // Enable the Ready button when slot is booked
@@ -5822,6 +5841,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         }
         mySlot.streamKey = result.streamKey;
         currentStreamKey = result.streamKey;
+        updateButtPassword(result.streamKey); // Update BUTT password field
       }
     } catch (e) {
       console.error('Fetch key error:', e);
@@ -6149,6 +6169,43 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   async function loadStreamKeyForGoLive() {
     const inlineKeyEl = document.getElementById('myStreamKey');
 
+    // FIRST: Check if user has a booked slot - no slot means no key
+    if (!mySlot) {
+      log('[GoLive] No booked slot - showing placeholder');
+      if (inlineKeyEl) {
+        inlineKeyEl.classList.remove('key-loading');
+        inlineKeyEl.classList.add('key-unavailable');
+        // Different message based on whether someone is live
+        if (currentStream) {
+          inlineKeyEl.innerHTML = '<span class="key-no-slot">Book a slot first</span>';
+        } else {
+          inlineKeyEl.innerHTML = '<span class="key-no-slot">Press I\'m Ready to go live</span>';
+        }
+      }
+      return;
+    }
+
+    // If the booked slot already has a stream key, use it
+    if (mySlot.streamKey) {
+      log('[GoLive] Using stream key from booked slot:', mySlot.id);
+      currentStreamKey = mySlot.streamKey;
+      updateButtPassword(mySlot.streamKey); // Update BUTT password field
+      if (inlineKeyEl && !streamKeyDisplayed) {
+        // Show spawning animation first
+        inlineKeyEl.classList.add('key-loading');
+        inlineKeyEl.classList.remove('key-reveal', 'key-unavailable');
+        inlineKeyEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
+        // Wait 5 seconds for animation before revealing
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        inlineKeyEl.classList.remove('key-loading');
+        inlineKeyEl.classList.add('key-reveal');
+        inlineKeyEl.innerHTML = `<span class="key-text">${mySlot.streamKey}</span>`;
+        streamKeyDisplayed = true;
+      }
+      startObsPreviewCheck();
+      return;
+    }
+
     // If key is already displayed, don't re-animate but ensure preview check is running
     if (streamKeyDisplayed && currentStreamKey) {
       log('[GoLive] Stream key already displayed, skipping animation');
@@ -6156,65 +6213,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       return;
     }
 
-    // Check if we already have a valid stream key in memory
-    if (currentStreamKey && streamKeyValidUntil) {
-      const validUntil = new Date(streamKeyValidUntil);
-      const now = new Date();
-      // If key is still valid (with 2 min buffer), reuse it
-      if (validUntil.getTime() - now.getTime() > 2 * 60 * 1000) {
-        log('[GoLive] Reusing existing stream key, valid until:', streamKeyValidUntil);
-        if (inlineKeyEl && !streamKeyDisplayed) {
-          // Show spawning animation first
-          inlineKeyEl.classList.add('key-loading');
-          inlineKeyEl.classList.remove('key-reveal');
-          inlineKeyEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
-          // Wait 5 seconds for animation before revealing
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          inlineKeyEl.classList.remove('key-loading');
-          inlineKeyEl.classList.add('key-reveal');
-          inlineKeyEl.innerHTML = `<span class="key-text">${currentStreamKey}</span>`;
-          streamKeyDisplayed = true;
-        }
-        startObsPreviewCheck();
-        return;
-      }
-    }
-
-    // Check localStorage for a saved key (survives page refresh)
-    const savedKey = localStorage.getItem('freshwax_stream_key');
-    const savedValidUntil = localStorage.getItem('freshwax_stream_key_valid_until');
-    if (savedKey && savedValidUntil) {
-      const validUntil = new Date(savedValidUntil);
-      const now = new Date();
-      // If saved key is still valid (with 2 min buffer), use it
-      if (validUntil.getTime() - now.getTime() > 2 * 60 * 1000) {
-        log('[GoLive] Using saved stream key from localStorage, valid until:', savedValidUntil);
-        currentStreamKey = savedKey;
-        streamKeyValidUntil = savedValidUntil;
-        if (inlineKeyEl && !streamKeyDisplayed) {
-          // Show spawning animation first
-          inlineKeyEl.classList.add('key-loading');
-          inlineKeyEl.classList.remove('key-reveal');
-          inlineKeyEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
-          // Wait 5 seconds for animation before revealing
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          inlineKeyEl.classList.remove('key-loading');
-          inlineKeyEl.classList.add('key-reveal');
-          inlineKeyEl.innerHTML = `<span class="key-text">${savedKey}</span>`;
-          streamKeyDisplayed = true;
-        }
-        startObsPreviewCheck();
-        return;
-      } else {
-        // Clear expired key
-        localStorage.removeItem('freshwax_stream_key');
-        localStorage.removeItem('freshwax_stream_key_valid_until');
-      }
-    }
-
+    // Show spawning animation - we have a slot but need to generate a key
     if (inlineKeyEl) {
       inlineKeyEl.classList.add('key-loading');
-      inlineKeyEl.classList.remove('key-reveal');
+      inlineKeyEl.classList.remove('key-reveal', 'key-unavailable');
       inlineKeyEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
     }
 
@@ -6223,9 +6225,23 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     const animationStart = Date.now();
 
     try {
+      log('[GoLive] Step 1: Getting ID token...');
+      if (!currentUser) {
+        throw new Error('No authenticated user');
+      }
       const token = await currentUser.getIdToken();
+      log('[GoLive] Step 2: Got token, preparing request...');
 
-      // Request a new stream key for go-live
+      if (!userInfo || !userInfo.name) {
+        throw new Error('User info not loaded yet');
+      }
+      log('[GoLive] Step 3: User info ready, name:', userInfo.name);
+
+      // Request a new stream key for the booked slot
+      log('[GoLive] Step 4: Making API request for slot:', mySlot.id);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
       const response = await fetch('/api/livestream/slots', {
         method: 'POST',
         headers: {
@@ -6235,11 +6251,16 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         body: JSON.stringify({
           action: 'generate_key',
           djId: currentUser.uid,
-          djName: userInfo.name
-        })
+          djName: userInfo.name,
+          slotId: mySlot.id  // Pass the slot ID so key is tied to this booking
+        }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
+      log('[GoLive] Step 5: Got response, status:', response.status);
 
       const result = await response.json();
+      log('[GoLive] Step 6: Parsed response:', result.success ? 'success' : result.error);
 
       // Wait for minimum animation time before revealing
       const elapsed = Date.now() - animationStart;
@@ -6250,10 +6271,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       if (result.success && result.streamKey) {
         currentStreamKey = result.streamKey;
         streamKeyValidUntil = result.validUntil;
+        updateButtPassword(result.streamKey); // Update BUTT password field
 
-        // Save to localStorage so it survives page refresh
-        localStorage.setItem('freshwax_stream_key', result.streamKey);
-        localStorage.setItem('freshwax_stream_key_valid_until', result.validUntil);
+        // Update mySlot with the new key
+        mySlot.streamKey = result.streamKey;
 
         if (inlineKeyEl) {
           inlineKeyEl.classList.remove('key-loading');
@@ -6261,7 +6282,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           inlineKeyEl.innerHTML = `<span class="key-text">${result.streamKey}</span>`;
           streamKeyDisplayed = true; // Mark as displayed to prevent re-animation
         }
-        log('[GoLive] New stream key generated and saved, valid until:', result.validUntil);
+        log('[GoLive] New stream key generated for slot:', mySlot.id, 'valid until:', result.validUntil);
         // Start checking for OBS preview stream
         startObsPreviewCheck();
       } else {
@@ -6274,10 +6295,20 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       }
     } catch (error) {
       console.error('[GoLive] Error loading stream key:', error);
+      log('[GoLive] ERROR at stream key generation:', error.message || error.name);
       if (inlineKeyEl) {
         inlineKeyEl.classList.remove('key-loading');
         inlineKeyEl.classList.remove('key-reveal');
-        inlineKeyEl.textContent = 'Error - try again';
+        // Show more helpful error message
+        let errorMsg = 'Error - click to retry';
+        if (error.name === 'AbortError') {
+          errorMsg = 'Timeout - click to retry';
+        } else if (error.message?.includes('User info')) {
+          errorMsg = 'Please wait...';
+        } else if (error.message?.includes('authenticated')) {
+          errorMsg = 'Please log in again';
+        }
+        inlineKeyEl.innerHTML = `<span style="color: #ff6b6b; cursor: pointer;" onclick="loadStreamKeyForGoLive()">${errorMsg}</span>`;
       }
     }
   }
@@ -7270,6 +7301,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           // Update mySlot with the new booking
           mySlot = bookResult.slot;
           currentStreamKey = mySlot.streamKey;
+          updateButtPassword(mySlot.streamKey); // Update BUTT password field
           console.log('[DJ Lobby] Auto-booked slot:', mySlot.id);
 
           // Update the stream key display

@@ -86,6 +86,10 @@ export async function POST({ request, locals }: APIContext) {
   try {
     initEnv(locals);
 
+    // SECURITY: Verify the requesting user owns this playlist
+    const authHeader = request.headers.get('Authorization');
+    const idToken = authHeader?.replace('Bearer ', '') || undefined;
+
     const body = await request.json();
     const { userId, items } = body;
 
@@ -95,6 +99,28 @@ export async function POST({ request, locals }: APIContext) {
         error: 'Missing userId'
       }), {
         status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Verify user token matches userId
+    const { verifyUserToken } = await import('../../../lib/firebase-rest');
+    if (!idToken) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    const tokenUserId = await verifyUserToken(idToken);
+    if (!tokenUserId || tokenUserId !== userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only save your own playlist'
+      }), {
+        status: 403,
         headers: { 'Content-Type': 'application/json' }
       });
     }

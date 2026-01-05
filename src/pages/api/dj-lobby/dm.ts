@@ -330,6 +330,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // SECURITY: Verify the requesting user owns this senderId
+    const authHeader = request.headers.get('Authorization');
+    const idToken = authHeader?.replace('Bearer ', '') || undefined;
+    const { verifyUserToken } = await import('../../../lib/firebase-rest');
+
+    if (!idToken) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+    const tokenUserId = await verifyUserToken(idToken);
+    if (!tokenUserId || tokenUserId !== senderId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only send DMs as yourself'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const cleanText = text.trim().substring(0, 500);
     const now = new Date();
     const channelId = getDmChannelId(senderId, receiverId);
@@ -416,6 +435,25 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
         success: false,
         error: 'User ID and target ID required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // SECURITY: Verify the requesting user owns this userId
+    const authHeader = request.headers.get('Authorization');
+    const idToken = authHeader?.replace('Bearer ', '') || undefined;
+    const { verifyUserToken } = await import('../../../lib/firebase-rest');
+
+    if (!idToken) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+    const tokenUserId = await verifyUserToken(idToken);
+    if (!tokenUserId || tokenUserId !== userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only delete your own conversations'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
     const channelId = getDmChannelId(userId, targetId);

@@ -10,6 +10,18 @@ export const prerender = false;
 // Max 500 subscribers per newsletter send (prevent massive sends)
 const MAX_SUBSCRIBERS_PER_SEND = 500;
 
+// HTML escape function to prevent XSS/injection
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char]);
+}
+
 export const POST: APIRoute = async ({ request, cookies, locals }) => {
   const clientId = getClientId(request);
 
@@ -240,9 +252,13 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
 };
 
 function generateNewsletterHTML(subject: string, content: string, email: string): string {
-  // Convert markdown-style content to HTML
-  let htmlContent = content
-    // Headers
+  // Escape subject to prevent HTML injection
+  const safeSubject = escapeHtml(subject);
+
+  // Escape content first, then apply markdown-style formatting
+  // This prevents HTML injection while allowing safe markdown formatting
+  let htmlContent = escapeHtml(content)
+    // Headers (on escaped content)
     .replace(/^### (.*$)/gm, '<h3 style="color: #fff; margin: 25px 0 15px;">$1</h3>')
     .replace(/^## (.*$)/gm, '<h2 style="color: #fff; margin: 30px 0 15px; font-size: 20px;">$1</h2>')
     .replace(/^# (.*$)/gm, '<h1 style="color: #fff; margin: 30px 0 20px; font-size: 24px;">$1</h1>')
@@ -250,8 +266,8 @@ function generateNewsletterHTML(subject: string, content: string, email: string)
     .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #fff;">$1</strong>')
     // Italic
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color: #dc2626; text-decoration: underline;">$1</a>')
+    // Links - validate URLs to prevent javascript: injection
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" style="color: #dc2626; text-decoration: underline;">$1</a>')
     // Line breaks
     .replace(/\n\n/g, '</p><p style="color: #ccc; line-height: 1.7; margin-bottom: 15px;">')
     .replace(/\n/g, '<br>');
@@ -275,7 +291,7 @@ function generateNewsletterHTML(subject: string, content: string, email: string)
         </div>
 
         <div style="background: #1a1a1a; border-radius: 12px; padding: 30px; color: #fff;">
-          <h1 style="margin: 0 0 25px; font-size: 26px; color: #fff; border-bottom: 2px solid #dc2626; padding-bottom: 15px;">${subject}</h1>
+          <h1 style="margin: 0 0 25px; font-size: 26px; color: #fff; border-bottom: 2px solid #dc2626; padding-bottom: 15px;">${safeSubject}</h1>
 
           ${htmlContent}
 

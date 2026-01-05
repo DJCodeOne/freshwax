@@ -371,8 +371,13 @@ export const prerender = false;
         }
         
         try {
-          const response = await fetch(`/api/delete-mix?id=${encodeURIComponent(mixId)}&userId=${encodeURIComponent(currentUserId)}`, {
-            method: 'DELETE'
+          // Get current user's ID token for authentication
+          const user = auth.currentUser;
+          const idToken = user ? await user.getIdToken() : null;
+
+          const response = await fetch(`/api/delete-mix?id=${encodeURIComponent(mixId)}`, {
+            method: 'DELETE',
+            headers: idToken ? { 'Authorization': `Bearer ${idToken}` } : {}
           });
           const data = await response.json();
           
@@ -677,10 +682,17 @@ export const prerender = false;
     }
 
     try {
+      // Get current user's ID token for authentication
+      const user = auth.currentUser;
+      const idToken = user ? await user.getIdToken() : null;
+
       const response = await fetch('/api/delete-mix', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mixId, userId: currentUserId })
+        headers: {
+          'Content-Type': 'application/json',
+          ...(idToken && { 'Authorization': `Bearer ${idToken}` })
+        },
+        body: JSON.stringify({ mixId })
       });
 
       const data = await response.json();

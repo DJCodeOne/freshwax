@@ -6,6 +6,8 @@ import type { APIRoute } from 'astro';
 import { AwsClient } from 'aws4fetch';
 import { saSetDocument } from '../../lib/firebase-service-account';
 import { createLogger, errorResponse, successResponse, getEnv, ApiErrors } from '../../lib/api-utils';
+import { requireAdminAuth } from '../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import type { Track } from '../../lib/types';
 
 const log = createLogger('process-release');
@@ -50,6 +52,17 @@ function createReleaseFolderName(artistName: string, releaseName: string): strin
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication required
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
+  // Rate limit: write operations - 30 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`process-release:${clientId}`, RateLimiters.write);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = getEnv(locals);
 
   // Get service account key for Firestore writes

@@ -652,9 +652,20 @@ export const prerender = false;
   // Fetch orders via API
   async function fetchOrders(userId) {
     try {
-      const response = await fetch(`/api/get-orders?userId=${encodeURIComponent(userId)}`);
+      // Get auth token for secure API call
+      const idToken = currentUser ? await currentUser.getIdToken() : null;
+      if (!idToken) {
+        console.error('[Dashboard] No auth token available');
+        return [];
+      }
+
+      const response = await fetch(`/api/get-orders?userId=${encodeURIComponent(userId)}`, {
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
       const data = await response.json();
-      
+
       if (data.success) {
         return data.orders || [];
       } else {
@@ -2491,7 +2502,18 @@ export const prerender = false;
   
   async function loadCreditBalance(userId) {
     try {
-      const response = await fetch(`/api/giftcards/balance?userId=${userId}`);
+      // Get auth token for secure API call
+      const idToken = currentUser ? await currentUser.getIdToken() : null;
+      if (!idToken) {
+        console.error('[Dashboard] No auth token for credit balance');
+        return;
+      }
+
+      const response = await fetch(`/api/giftcards/balance?userId=${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
       const result = await response.json();
       
       if (result.success) {

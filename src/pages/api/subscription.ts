@@ -169,6 +169,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // SECURITY: Verify the requesting user owns this userId
+    const { verifyUserToken } = await import('../../lib/firebase-rest');
+    if (!idToken) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        status: 401, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    const tokenUserId = await verifyUserToken(idToken);
+    if (!tokenUserId || tokenUserId !== userId) {
+      return new Response(JSON.stringify({ success: false, error: 'You can only modify your own subscription data' }), {
+        status: 403, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Action: Record a mix upload
     if (action === 'recordMixUpload') {
       const usageDoc = await getDocument('userUsage', userId) || {

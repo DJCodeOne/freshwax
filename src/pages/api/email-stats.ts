@@ -10,6 +10,7 @@ const log = {
 };
 
 const DAILY_LIMIT = 100;
+const MAX_SKIPPED_TO_CLEAR = 500; // Limit on how many old emails to clear at once
 
 // GET: Check today's email stats
 export const GET: APIRoute = async ({ url, locals }) => {
@@ -157,12 +158,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (action === 'clear-skipped') {
-      // Clear all skipped emails older than 7 days
+      // Clear skipped emails older than 7 days (with limit to prevent runaway)
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 7);
 
       const oldEmails = await queryCollection('skipped-emails', {
         filters: [{ field: 'skippedAt', op: 'LESS_THAN', value: cutoff.toISOString() }],
+        limit: MAX_SKIPPED_TO_CLEAR,
         skipCache: true
       });
 

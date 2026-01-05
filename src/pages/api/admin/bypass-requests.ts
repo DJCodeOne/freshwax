@@ -406,9 +406,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// DELETE - Remove a bypass request
+// DELETE - Remove a bypass request (admin only)
 export const DELETE: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+
+  // SECURITY: Require admin authentication for deleting bypass requests
+  const { initAdminEnv } = await import('../../../lib/admin');
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({
+    ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+    ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+  });
+
+  const authError = requireAdminAuth(request, locals);
+  if (authError) {
+    return authError;
+  }
+
   try {
     const url = new URL(request.url);
     const requestId = url.searchParams.get('id');

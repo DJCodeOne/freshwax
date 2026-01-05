@@ -647,3 +647,41 @@ export interface PendingPayout extends Timestamps {
   resolvedAt?: string;
   resolvedPayoutId?: string;          // Link to successful payout when resolved
 }
+
+// ============================================
+// DISPUTES
+// ============================================
+
+export type DisputeStatus = 'open' | 'won' | 'lost' | 'closed';
+
+export interface Dispute extends Timestamps {
+  id: string;
+  stripeDisputeId: string;            // dp_xxx
+  stripeChargeId: string;             // ch_xxx
+  stripePaymentIntentId?: string;     // pi_xxx
+
+  // Order reference
+  orderId?: string;
+  orderNumber?: string;
+
+  // Artist info (if transfer was reversed)
+  artistId?: string;
+  artistName?: string;
+  transferId?: string;                // tr_xxx - the transfer that was reversed
+  transferReversalId?: string;        // trr_xxx
+
+  // Amounts
+  amount: number;                     // Disputed amount in GBP
+  currency: string;
+  amountRecovered?: number;           // Amount recovered from artist
+
+  // Dispute details
+  reason: string;                     // e.g., 'fraudulent', 'product_not_received'
+  status: DisputeStatus;
+  evidenceDueBy?: string;
+
+  // Resolution
+  resolvedAt?: string;
+  outcome?: 'won' | 'lost';
+  netImpact?: number;                 // Final financial impact to platform
+}

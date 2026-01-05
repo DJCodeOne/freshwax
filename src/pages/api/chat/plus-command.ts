@@ -114,6 +114,31 @@ export async function POST({ request, locals }: APIContext) {
       });
     }
 
+    // SECURITY: Verify the requesting user owns this userId
+    const authHeader = request.headers.get('Authorization');
+    const idToken = authHeader?.replace('Bearer ', '') || undefined;
+    const { verifyUserToken } = await import('../../../lib/firebase-rest');
+
+    if (!idToken) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    const tokenUserId = await verifyUserToken(idToken);
+    if (!tokenUserId || tokenUserId !== userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only use commands as yourself'
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Check if user has Plus or is admin
     const isAdmin = getAdminUids().includes(userId);
     let isPlus = isAdmin;

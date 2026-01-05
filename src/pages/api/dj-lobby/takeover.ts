@@ -111,7 +111,14 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST: Create/respond to takeover request
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   try {
     const data = await request.json();
     const { action, requesterId, requesterName, requesterAvatar, targetDjId, targetDjName } = data;
@@ -121,6 +128,25 @@ export const POST: APIRoute = async ({ request }) => {
         success: false,
         error: 'Requester ID required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // SECURITY: Verify the requesting user owns this requesterId
+    const authHeader = request.headers.get('Authorization');
+    const idToken = authHeader?.replace('Bearer ', '') || undefined;
+    const { verifyUserToken } = await import('../../../lib/firebase-rest');
+
+    if (!idToken) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+    const tokenUserId = await verifyUserToken(idToken);
+    if (!tokenUserId || tokenUserId !== requesterId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only create takeover requests as yourself'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
     const now = new Date().toISOString();

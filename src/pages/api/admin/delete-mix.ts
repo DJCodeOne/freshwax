@@ -17,6 +17,9 @@ const log = {
   error: (...args: any[]) => console.error(...args),
 };
 
+// Safety limit
+const MAX_R2_FILES_TO_DELETE = 100; // Max files to delete from R2 in one operation
+
 // Get R2 configuration from Cloudflare runtime env
 function getR2Config(env: any) {
   return {
@@ -95,11 +98,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('[admin/delete-mix] R2 folder:', r2FolderPath);
 
-    // Delete files from R2
+    // Delete files from R2 (with safety limit)
     try {
       const listCommand = new ListObjectsV2Command({
         Bucket: R2_CONFIG.bucketName,
         Prefix: r2FolderPath,
+        MaxKeys: MAX_R2_FILES_TO_DELETE,
       });
 
       const listedObjects = await s3Client.send(listCommand);
@@ -107,7 +111,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (listedObjects.Contents && listedObjects.Contents.length > 0) {
         log.info('[admin/delete-mix] Found', listedObjects.Contents.length, 'files to delete');
 
-        for (const object of listedObjects.Contents) {
+        // Only delete up to MAX_R2_FILES_TO_DELETE
+        const filesToDelete = listedObjects.Contents.slice(0, MAX_R2_FILES_TO_DELETE);
+        for (const object of filesToDelete) {
           if (object.Key) {
             await s3Client.send(
               new DeleteObjectCommand({
@@ -117,7 +123,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
             );
           }
         }
-        log.info('[admin/delete-mix] R2 files deleted');
+        log.info('[admin/delete-mix] R2 files deleted:', filesToDelete.length);
+
+        if (listedObjects.IsTruncated) {
+          log.info('[admin/delete-mix] Warning: More files exist in folder, may need another deletion');
+        }
       }
     } catch (r2Error) {
       log.error('[admin/delete-mix] R2 deletion error:', r2Error);
@@ -147,8 +157,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to delete mix',
-      details: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+      details: error instanceof Error ? error.message : 'Unknown error'
+      // Stack trace logged server-side only for security
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

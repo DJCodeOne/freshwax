@@ -2,9 +2,9 @@
 // src/components/Header.astro
 // OPTIMIZED: Minimal API calls with aggressive caching + debounced search
 
-// Firebase config for client-side auth (with fallback)
+// Firebase config for client-side auth
 const firebaseConfig = {
-  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || '',
   authDomain: "freshwax-store.firebaseapp.com",
   projectId: "freshwax-store",
   storageBucket: "freshwax-store.firebasestorage.app",

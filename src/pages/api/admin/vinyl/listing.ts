@@ -1,7 +1,33 @@
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument } from '../../../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv } from '../../../../lib/firebase-rest';
+import { requireAdminAuth, initAdminEnv } from '../../../../lib/admin';
 
-export const GET: APIRoute = async ({ request }) => {
+export const prerender = false;
+
+// Helper to initialize Firebase
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
+
+export const GET: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
+
+  // SECURITY: Require admin authentication for viewing listing admin data
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({
+    ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+    ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+  });
+
+  const authError = requireAdminAuth(request, locals);
+  if (authError) {
+    return authError;
+  }
+
   const url = new URL(request.url);
   const listingId = url.searchParams.get('id');
 
@@ -35,7 +61,21 @@ export const GET: APIRoute = async ({ request }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  initFirebase(locals);
+
+  // SECURITY: Require admin authentication for listing management
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({
+    ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+    ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+  });
+
+  const authError = requireAdminAuth(request, locals);
+  if (authError) {
+    return authError;
+  }
+
   try {
     const body = await request.json();
     const { action, listingId } = body;

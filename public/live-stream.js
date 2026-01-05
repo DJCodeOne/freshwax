@@ -10,6 +10,26 @@ import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase
 let pusher = null;
 let chatChannel = null;
 
+// Load Pusher script eagerly so it's available for all components
+(async function loadPusherEagerly() {
+  if (window.Pusher) return; // Already loaded
+
+  try {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
+      script.onload = () => {
+        console.log('[Pusher] Script loaded eagerly');
+        resolve();
+      };
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  } catch (err) {
+    console.warn('[Pusher] Failed to load script:', err);
+  }
+})();
+
 // Escape HTML to prevent XSS attacks
 function escapeHtml(text) {
   if (!text) return '';
@@ -265,8 +285,7 @@ let globalMediaSource = null;
 let touchStartY = 0;
 let touchStartVolume = 0;
 
-// GIPHY API Key from page
-const GIPHY_API_KEY = window.GIPHY_API_KEY || '';
+// GIPHY - uses server-side proxy for security (no client-side API key)
 
 // Emoji categories for chat
 const EMOJI_CATEGORIES = {
@@ -596,6 +615,19 @@ function setupPlaylistListener() {
   // Listen for state changes from embedded player (when user clicks play/pause on the video itself)
   window.removeEventListener('playlistStateChange', handlePlaylistStateChange);
   window.addEventListener('playlistStateChange', handlePlaylistStateChange);
+
+  // IMPORTANT: Sync with current playlist state after listeners are set up
+  // This handles the race condition where PlaylistManager already dispatched events
+  setTimeout(() => {
+    console.log('[Playlist] Triggering initial sync after listener setup');
+    syncPlayButtonWithPlaylist();
+
+    // Also request a render from PlaylistManager if it exists (to re-dispatch event)
+    if (window.playlistManager && typeof window.playlistManager.renderUI === 'function') {
+      console.log('[Playlist] Requesting render from PlaylistManager');
+      window.playlistManager.renderUI();
+    }
+  }, 100);
 }
 
 // Handle state changes from the embedded player (YouTube play/pause controls)
@@ -1542,7 +1574,7 @@ function showLiveStream(stream) {
     if (el) {
       // For relay streams, show certain elements in red
       if (stream.isRelay && (id === 'controlsDjName' || id === 'djName' || id === 'audioDjName' || id === 'fsDjName' || id === 'fsAudioDjName')) {
-        el.innerHTML = `<span style="color: #ef4444;">${value}</span>`;
+        el.innerHTML = `<span style="color: #ef4444;">${escapeHtml(value)}</span>`;
       } else {
         el.textContent = value;
       }
@@ -3092,12 +3124,6 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
   }
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 function setupEmojiPicker() {
   // Skip on fullscreen page - it has its own emoji picker
   if (window.location.pathname.includes('/live/fullpage')) {
@@ -3191,8 +3217,7 @@ function setupGiphyPicker() {
     console.log('[GiphyPicker] Skipping on fullscreen page');
     return;
   }
-  console.log('[GiphyPicker] Setting up giphy picker...');
-  console.log('[GiphyPicker] GIPHY_API_KEY set:', !!GIPHY_API_KEY, GIPHY_API_KEY ? `(${GIPHY_API_KEY.length} chars)` : '');
+  console.log('[GiphyPicker] Setting up giphy picker (using server-side proxy)...');
   const giphyBtn = document.getElementById('giphyBtn');
   const giphyModal = document.getElementById('giphyModal');
   const giphySearch = document.getElementById('giphySearch');
@@ -3210,34 +3235,35 @@ function setupGiphyPicker() {
   let currentCategory = 'trending';
 
   async function searchGiphy(query, category = null) {
-    if (!GIPHY_API_KEY) {
-      if (giphyGrid) giphyGrid.innerHTML = '<p class="gif-loading">Giphy not configured</p>';
-      return;
-    }
-
     // Show loading state
     if (giphyGrid) giphyGrid.innerHTML = '<p class="gif-loading">Loading GIFs...</p>';
 
     try {
-      let endpoint;
+      // Use server-side proxy to keep API key secure
+      let proxyUrl;
       if (query) {
         // Search query takes priority
-        endpoint = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=32&rating=pg-13`;
+        proxyUrl = `/api/giphy/search?endpoint=search&q=${encodeURIComponent(query)}&limit=32`;
       } else if (category && category !== 'trending') {
         // Category search
-        endpoint = `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(category)}&limit=32&rating=pg-13`;
+        proxyUrl = `/api/giphy/search?endpoint=search&q=${encodeURIComponent(category)}&limit=32`;
       } else {
         // Default to trending
-        endpoint = `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=32&rating=pg-13`;
+        proxyUrl = `/api/giphy/search?endpoint=trending&limit=32`;
       }
 
-      const response = await fetch(endpoint);
+      const response = await fetch(proxyUrl);
       const data = await response.json();
 
-      if (data.data?.length > 0 && giphyGrid) {
-        giphyGrid.innerHTML = data.data.map(gif => `
-          <div class="giphy-item" data-url="${gif.images.fixed_height.url}" data-id="${gif.id}">
-            <img src="${gif.images.fixed_height_small.url}" alt="${gif.title}" loading="lazy" />
+      if (!data.success) {
+        if (giphyGrid) giphyGrid.innerHTML = '<p class="gif-loading">Giphy not configured</p>';
+        return;
+      }
+
+      if (data.gifs?.length > 0 && giphyGrid) {
+        giphyGrid.innerHTML = data.gifs.map(gif => `
+          <div class="giphy-item" data-url="${gif.url}" data-id="${gif.id}">
+            <img src="${gif.preview}" alt="${gif.title}" loading="lazy" />
           </div>
         `).join('');
 
@@ -3388,10 +3414,16 @@ function setupChatInput(streamId) {
       }
 
       try {
+        // Get ID token for authentication
+        const idToken = await currentUser.getIdToken();
+
         // Call skip API to check permission and track usage
         const skipResponse = await fetch('/api/playlist/skip', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
           body: JSON.stringify({ userId: currentUser.uid })
         });
         const skipResult = await skipResponse.json();

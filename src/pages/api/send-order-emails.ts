@@ -271,6 +271,14 @@ function buildOrderEmailHtml(orderId: string, orderNumber: string, order: any): 
                   <td style="color: #666; padding: 6px 0;">Shipping</td>
                   <td style="color: ${order.hasPhysicalItems && order.totals.shipping === 0 ? '#16a34a' : '#111'}; text-align: right; padding: 6px 0; font-weight: ${order.hasPhysicalItems && order.totals.shipping === 0 ? '600' : '400'};">${order.hasPhysicalItems ? (order.totals.shipping === 0 ? 'FREE' : '£' + order.totals.shipping.toFixed(2)) : 'Digital delivery'}</td>
                 </tr>
+                ${order.totals.stripeFee ? `<tr>
+                  <td style="color: #999; padding: 6px 0; font-size: 13px;">Processing Fee</td>
+                  <td style="color: #999; text-align: right; padding: 6px 0; font-size: 13px;">£${order.totals.stripeFee.toFixed(2)}</td>
+                </tr>` : ''}
+                ${order.totals.freshWaxFee ? `<tr>
+                  <td style="color: #999; padding: 6px 0; font-size: 13px;"><span style="color: #111;">Fresh</span> <span style="color: #dc2626;">Wax</span> Tax</td>
+                  <td style="color: #999; text-align: right; padding: 6px 0; font-size: 13px;">£${order.totals.freshWaxFee.toFixed(2)}</td>
+                </tr>` : ''}
                 <tr>
                   <td style="color: #111; font-weight: 700; font-size: 18px; padding: 16px 0 8px; border-top: 2px solid #111;">Total</td>
                   <td style="color: #dc2626; font-weight: 700; font-size: 18px; text-align: right; padding: 16px 0 8px; border-top: 2px solid #111;">£${order.totals.total.toFixed(2)}</td>

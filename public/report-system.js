@@ -4,6 +4,14 @@
 (function() {
   'use strict';
 
+  // XSS protection helper
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   // Category labels
   const CATEGORIES = {
     inappropriate_content: 'Inappropriate Content',
@@ -498,7 +506,7 @@
       btn.classList.add('report-btn-text-link');
       btn.textContent = options.text || 'Report';
     } else {
-      btn.innerHTML = `<span>🚩</span><span>${options.text || 'Report'}</span>`;
+      btn.innerHTML = `<span>🚩</span><span>${escapeHtml(options.text || 'Report')}</span>`;
     }
 
     btn.addEventListener('click', (e) => {

@@ -14,6 +14,7 @@ import { requireAdminAuth } from '../../lib/admin';
 // Image processing settings
 const IMAGE_SIZE = 800;
 const WEBP_QUALITY = 85;
+const MAX_IMAGES = 20; // Safety limit on number of images per product
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -164,6 +165,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return new Response(JSON.stringify({
         success: false,
         error: 'At least one product image is required'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Safety limit on image count to prevent runaway uploads
+    if (imageCount > MAX_IMAGES) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: `Maximum ${MAX_IMAGES} images allowed per product`
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 

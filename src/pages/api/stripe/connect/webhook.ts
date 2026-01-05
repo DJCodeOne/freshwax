@@ -7,6 +7,9 @@ import { queryCollection, updateDocument, addDocument, getDocument, initFirebase
 
 export const prerender = false;
 
+// Safety limits
+const MAX_PENDING_PAYOUTS = 50; // Max pending payouts to process at once
+
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase
   const env = (locals as any)?.runtime?.env;
@@ -137,7 +140,8 @@ async function processPendingPayouts(artistId: string, stripeConnectId: string) 
     filters: [
       { field: 'artistId', op: 'EQUAL', value: artistId },
       { field: 'status', op: 'EQUAL', value: 'awaiting_connect' }
-    ]
+    ],
+    limit: MAX_PENDING_PAYOUTS
   });
 
   if (pendingPayouts.length === 0) return;

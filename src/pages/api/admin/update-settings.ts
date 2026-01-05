@@ -54,11 +54,24 @@ const DEFAULT_SETTINGS = {
   }
 };
 
-// GET: Load settings
+// GET: Load settings (admin only)
 export const GET: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase env from Cloudflare runtime
   const env = (locals as any).runtime?.env;
   if (env) initFirebaseEnv(env);
+
+  // SECURITY: Require admin authentication for viewing all settings
+  // This prevents exposing system configuration to unauthorized users
+  const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
+  initAdminEnv({
+    ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+    ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+  });
+
+  const authError = requireAdminAuth(request, locals);
+  if (authError) {
+    return authError;
+  }
 
   try {
     const url = new URL(request.url);

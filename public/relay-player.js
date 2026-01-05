@@ -1,6 +1,14 @@
 // public/relay-player.js
 // Handles external radio relay playback and discovery
 
+// XSS protection helper
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // State
 let currentRelay = null;
 let relayAudioElement = null;
@@ -291,10 +299,10 @@ function showRelayPlayPrompt() {
 function showRelayError(message) {
   const container = document.getElementById('relayDiscovery');
   if (!container) return;
-  
+
   const error = document.createElement('div');
   error.className = 'relay-error';
-  error.innerHTML = `<span>⚠️</span> ${message}`;
+  error.innerHTML = `<span>⚠️</span> ${escapeHtml(message)}`;
   
   container.querySelector('.relay-error')?.remove();
   container.prepend(error);

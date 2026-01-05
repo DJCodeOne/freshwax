@@ -2,8 +2,14 @@
 // API to schedule and execute chat cleanup after DJ session ends
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
+
+// Safety limits
+const MAX_MESSAGES_PER_BATCH = 500; // Max messages to delete in one operation
+const MAX_PENDING_JOBS = 50; // Max pending cleanup jobs to process at once
 
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
@@ -16,6 +22,17 @@ function initFirebase(locals: any) {
 
 // POST - Schedule chat cleanup for a stream
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Admin authentication required
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
+  // Rate limit: chat cleanup operations - 20 per hour
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`chat-cleanup:${clientId}`, RateLimiters.adminDelete);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   initFirebase(locals);
   try {
     const data = await request.json();
@@ -95,15 +112,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // GET - Check and execute pending cleanups (call this periodically)
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Admin authentication required
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
+  // Rate limit: chat cleanup check - 60 per hour
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`chat-cleanup-check:${clientId}`, RateLimiters.read);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   initFirebase(locals);
   try {
     const url = new URL(request.url);
     const executeNow = url.searchParams.get('execute') === 'true';
-    
-    // Find pending cleanups that are past their scheduled time
+
+    // Find pending cleanups that are past their scheduled time (with limit)
     const now = new Date();
     const allPending = await queryCollection('chatCleanupSchedule', {
-      filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }]
+      filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }],
+      limit: MAX_PENDING_JOBS
     });
 
     const pending = allPending.filter((job: any) => {
@@ -164,20 +193,37 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// Delete all chat messages for a stream
+// Delete all chat messages for a stream (with safety limit)
 async function deleteStreamChat(streamId: string): Promise<number> {
-  // Get all chat messages for this stream
-  const chatMessages = await queryCollection('livestream-chat', {
-    filters: [{ field: 'streamId', op: 'EQUAL', value: streamId }]
-  });
+  let totalDeleted = 0;
+  let hasMore = true;
 
-  // Delete all messages (note: REST API doesn't support batch operations)
-  await Promise.all(chatMessages.map(msg =>
-    deleteDocument('livestream-chat', msg.id)
-  ));
+  // Delete in batches to prevent runaway operations
+  while (hasMore) {
+    const chatMessages = await queryCollection('livestream-chat', {
+      filters: [{ field: 'streamId', op: 'EQUAL', value: streamId }],
+      limit: MAX_MESSAGES_PER_BATCH
+    });
 
-  const deleted = chatMessages.length;
-  console.log(`[Chat Cleanup] Deleted ${deleted} messages for stream ${streamId}`);
+    if (chatMessages.length === 0) {
+      hasMore = false;
+      break;
+    }
 
-  return deleted;
+    // Delete batch (note: REST API doesn't support batch operations)
+    await Promise.all(chatMessages.map(msg =>
+      deleteDocument('livestream-chat', msg.id)
+    ));
+
+    totalDeleted += chatMessages.length;
+    console.log(`[Chat Cleanup] Deleted batch of ${chatMessages.length} messages for stream ${streamId}`);
+
+    // If we got less than the limit, we're done
+    if (chatMessages.length < MAX_MESSAGES_PER_BATCH) {
+      hasMore = false;
+    }
+  }
+
+  console.log(`[Chat Cleanup] Total deleted: ${totalDeleted} messages for stream ${streamId}`);
+  return totalDeleted;
 }

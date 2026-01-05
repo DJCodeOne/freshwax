@@ -2,6 +2,8 @@
 // Firebase-based release update API - uses service account for writes
 import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { saUpdateDocument } from '../../lib/firebase-service-account';
+import { requireAdminAuth } from '../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -32,6 +34,17 @@ function getServiceAccountKey(env: any): string | null {
 }
 
 export async function POST({ request, locals }: any) {
+  // Admin authentication required
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
+  // Rate limit: write operations - 30 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`update-release:${clientId}`, RateLimiters.write);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   log.info('[update-release] POST request received');
 
   try {

@@ -29,8 +29,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Validate admin key for non-welcome credits
-    if (!isWelcomeCredit && adminKey !== getAdminKey(locals)) {
+    // SECURITY: Always require admin key - no bypass allowed
+    // The isWelcomeCredit flag only affects transaction type labeling, not authorization
+    const validAdminKey = getAdminKey(locals);
+    if (!validAdminKey || adminKey !== validAdminKey) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Unauthorized'

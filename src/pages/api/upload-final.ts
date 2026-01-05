@@ -9,6 +9,10 @@ import AdmZip from 'adm-zip';
 
 const isDev = import.meta.env.DEV;
 
+// Safety limits
+const MAX_ZIP_SIZE = 500 * 1024 * 1024; // 500MB max ZIP size
+const MAX_FILES_IN_ZIP = 200; // Max files to process from ZIP
+
 // Production-ready logging - only outputs in development
 const log = {
   info: (...args: any[]) => isDev && console.log(...args),
@@ -123,6 +127,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // Safety limit on ZIP file size
+    if (packageFile.size > MAX_ZIP_SIZE) {
+      return new Response(JSON.stringify({
+        error: `ZIP file too large. Maximum size is ${MAX_ZIP_SIZE / 1024 / 1024}MB`
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // SECURITY: For non-admin users, verify they own this release
     if (uploaderUserId && !isAdmin) {
       const existingRelease = await getDocument('releases', releaseId);
@@ -149,7 +163,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     
     const zip = new AdmZip(buffer);
     const zipEntries = zip.getEntries();
-    
+
+    // Safety limit on number of files in ZIP
+    const fileCount = zipEntries.filter(e => !e.isDirectory).length;
+    if (fileCount > MAX_FILES_IN_ZIP) {
+      return new Response(JSON.stringify({
+        error: `Too many files in ZIP. Maximum is ${MAX_FILES_IN_ZIP} files`
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Log ZIP contents in dev only
     log.debug('[upload-final] ZIP contents:', zipEntries.filter(e => !e.isDirectory).map(e => e.entryName));
     

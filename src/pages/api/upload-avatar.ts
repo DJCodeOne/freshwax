@@ -77,6 +77,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // SECURITY: Verify the requesting user owns this userId
+    const { verifyUserToken } = await import('../../lib/firebase-rest');
+    if (!finalIdToken) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+    const tokenUserId = await verifyUserToken(finalIdToken);
+    if (!tokenUserId || tokenUserId !== userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only upload your own avatar'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!validTypes.includes(file.type)) {
@@ -217,6 +233,22 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
         success: false,
         error: 'Missing user ID'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // SECURITY: Verify the requesting user owns this userId
+    const { verifyUserToken } = await import('../../lib/firebase-rest');
+    if (!idToken) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+    const tokenUserId = await verifyUserToken(idToken);
+    if (!tokenUserId || tokenUserId !== userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only delete your own avatar'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Delete WebP avatar (and any old formats)

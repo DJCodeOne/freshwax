@@ -883,7 +883,9 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
     '<tr><td style="color: #6b7280; padding: 8px 0; font-size: 14px;">Subtotal</td><td style="color: #111; text-align: right; padding: 8px 0; font-size: 14px;">£' + order.totals.subtotal.toFixed(2) + '</td></tr>' +
     '<tr><td style="color: #6b7280; padding: 8px 0; font-size: 14px;">Shipping</td><td style="color: #111; text-align: right; padding: 8px 0; font-size: 14px;">' +
     (order.hasPhysicalItems ? (order.totals.shipping === 0 ? 'FREE' : '£' + order.totals.shipping.toFixed(2)) : 'Digital delivery') + '</td></tr>' +
-    (order.totals.serviceFees ? '<tr><td style="color: #9ca3af; padding: 8px 0; font-size: 13px;">Service Fee</td><td style="color: #9ca3af; text-align: right; padding: 8px 0; font-size: 13px;">£' + order.totals.serviceFees.toFixed(2) + '</td></tr>' : '') +
+    (order.totals.stripeFee ? '<tr><td style="color: #9ca3af; padding: 8px 0; font-size: 13px;">Processing Fee</td><td style="color: #9ca3af; text-align: right; padding: 8px 0; font-size: 13px;">£' + order.totals.stripeFee.toFixed(2) + '</td></tr>' : '') +
+    (order.totals.freshWaxFee ? '<tr><td style="color: #9ca3af; padding: 8px 0; font-size: 13px;"><span style="color: #111;">Fresh</span> <span style="color: #dc2626;">Wax</span> Tax</td><td style="color: #9ca3af; text-align: right; padding: 8px 0; font-size: 13px;">£' + order.totals.freshWaxFee.toFixed(2) + '</td></tr>' : '') +
+    (order.totals.serviceFees && !order.totals.stripeFee && !order.totals.freshWaxFee ? '<tr><td style="color: #9ca3af; padding: 8px 0; font-size: 13px;">Service Fee</td><td style="color: #9ca3af; text-align: right; padding: 8px 0; font-size: 13px;">£' + order.totals.serviceFees.toFixed(2) + '</td></tr>' : '') +
     '<tr><td colspan="2" style="border-top: 2px solid #dc2626; padding-top: 12px;"></td></tr>' +
     '<tr><td style="color: #111; font-weight: 700; font-size: 16px; padding: 4px 0;">Total</td>' +
     '<td style="color: #dc2626; font-weight: 700; font-size: 20px; text-align: right; padding: 4px 0;">£' + order.totals.total.toFixed(2) + '</td></tr>' +

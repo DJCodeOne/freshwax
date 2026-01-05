@@ -25,7 +25,8 @@ service cloud.firestore {
     }
 
     // Users collection (for role management)
-    // Note: Public read allowed for admin API (API validates admin status via uid param)
+    // Note: Public read required for admin REST API (API validates admin key server-side)
+    // Sensitive fields should not be stored here - use customers collection with proper masking
     match /users/{userId} {
       allow read: if true;
       // Allow create from authenticated user OR for bypass grants (REST API with key protection)
@@ -46,7 +47,8 @@ service cloud.firestore {
 
     // System collection (master lists, settings)
     match /system/{docId} {
-      allow read: if true;
+      // SECURITY: Only admin can read system config (includes sensitive keys)
+      allow read: if isAdmin();
       // Allow updating quickAccessKey usedBy array (for access code redemption)
       allow update: if isAdmin() ||
                       (docId == 'quickAccessKey' &&
@@ -75,7 +77,8 @@ service cloud.firestore {
 
     // Customers collection
     match /customers/{customerId} {
-      // Allow read for REST API (wishlist checks) - API validates userId
+      // Note: Public read required for admin REST API and wishlist checks
+      // API validates userId/adminKey server-side for sensitive operations
       allow read: if true;
       // Allow create from authenticated user OR REST API (for wishlist)
       allow create: if (isAuthenticated() && request.auth.uid == customerId) ||
@@ -97,7 +100,8 @@ service cloud.firestore {
     }
 
     // Orders collection
-    // Note: Public read allowed for admin API (API validates admin status via uid param)
+    // Note: Public read required for admin REST API (API validates admin key server-side)
+    // Order details protected by requiring authentication in API layer
     match /orders/{orderId} {
       allow read: if true;
       // Allow authenticated users OR test orders from API (API validates on server-side)

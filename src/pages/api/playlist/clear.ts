@@ -2,11 +2,19 @@
 // Clear user's playlist queue
 import type { APIRoute } from 'astro';
 import { setDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import type { UserPlaylist } from '../../../lib/types';
 
 export const prerender = false;
 
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  // Rate limit: playlist operations - 30 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`playlist-clear:${clientId}`, RateLimiters.write);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
