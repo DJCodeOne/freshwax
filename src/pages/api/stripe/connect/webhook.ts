@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { queryCollection, updateDocument, addDocument, getDocument, initFirebaseEnv } from '../../../../lib/firebase-rest';
+import { sendPayoutCompletedEmail } from '../../../../lib/payout-emails';
 
 export const prerender = false;
 
@@ -66,7 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     switch (event.type) {
       case 'account.updated':
-        await handleAccountUpdated(event.data.object as Stripe.Account, stripeSecretKey);
+        await handleAccountUpdated(event.data.object as Stripe.Account, stripeSecretKey, env);
         break;
 
       case 'transfer.created':
@@ -93,7 +94,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 // Handle account.updated - sync account status to Firestore
-async function handleAccountUpdated(account: Stripe.Account, stripeSecretKey: string) {
+async function handleAccountUpdated(account: Stripe.Account, stripeSecretKey: string, env: any) {
   const artistId = account.metadata?.artistId;
 
   if (!artistId) {
@@ -137,12 +138,12 @@ async function updateArtistConnectStatus(artistId: string, account: Stripe.Accou
   // If account became active, process any pending payouts
   if (status === 'active') {
     console.log('[Connect Webhook] Artist', artistId, 'is now active - processing pending payouts');
-    await processPendingPayouts(artistId, account.id, stripeSecretKey);
+    await processPendingPayouts(artistId, account.id, stripeSecretKey, env);
   }
 }
 
 // Process pending payouts when artist completes onboarding
-async function processPendingPayouts(artistId: string, stripeConnectId: string, stripeSecretKey: string) {
+async function processPendingPayouts(artistId: string, stripeConnectId: string, stripeSecretKey: string, env: any) {
   const pendingPayouts = await queryCollection('pendingPayouts', {
     filters: [
       { field: 'artistId', op: 'EQUAL', value: artistId },
@@ -219,6 +220,17 @@ async function processPendingPayouts(artistId: string, stripeConnectId: string, 
       });
 
       console.log('[Connect Webhook] ✓ Pending payout processed:', pending.id, 'Transfer:', transfer.id);
+
+      // Send payout completed email notification
+      if (pending.artistEmail) {
+        sendPayoutCompletedEmail(
+          pending.artistEmail,
+          pending.artistName,
+          pending.amount,
+          pending.orderNumber || pending.orderId?.slice(-6).toUpperCase(),
+          env
+        ).catch(err => console.error('[Connect Webhook] Failed to send payout email:', err));
+      }
 
     } catch (transferError: any) {
       console.error('[Connect Webhook] Failed to process pending payout:', pending.id, transferError.message);

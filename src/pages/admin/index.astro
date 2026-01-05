@@ -19,6 +19,10 @@ let merchData: any[] = [];
 let mixesData: any[] = [];
 let livestreamsData: any[] = [];
 let bypassRequestsData: any[] = [];
+let payoutsData: any[] = [];
+let pendingPayoutsData: any[] = [];
+let disputesData: any[] = [];
+let refundsData: any[] = [];
 
 try {
   const results = await Promise.allSettled([
@@ -28,7 +32,11 @@ try {
     queryCollection('merch', { limit: 500 }),
     queryCollection('dj-mixes', { limit: 500 }),
     queryCollection('livestreams', { limit: 10 }),
-    queryCollection('bypassRequests', { limit: 20 })
+    queryCollection('bypassRequests', { limit: 20 }),
+    queryCollection('payouts', { limit: 200 }),
+    queryCollection('pendingPayouts', { limit: 100 }),
+    queryCollection('disputes', { limit: 50 }),
+    queryCollection('refunds', { limit: 50 })
   ]);
 
   ordersData = results[0].status === 'fulfilled' ? results[0].value : [];
@@ -38,6 +46,10 @@ try {
   mixesData = results[4].status === 'fulfilled' ? results[4].value : [];
   livestreamsData = results[5].status === 'fulfilled' ? results[5].value : [];
   bypassRequestsData = results[6].status === 'fulfilled' ? results[6].value.filter((r: any) => r.status === 'pending') : [];
+  payoutsData = results[7].status === 'fulfilled' ? results[7].value : [];
+  pendingPayoutsData = results[8].status === 'fulfilled' ? results[8].value : [];
+  disputesData = results[9].status === 'fulfilled' ? results[9].value : [];
+  refundsData = results[10].status === 'fulfilled' ? results[10].value : [];
 } catch (error) {
   console.error('[Admin Dashboard] Error fetching data:', error);
 }
@@ -116,6 +128,57 @@ const bypassRequests = bypassRequestsData
 // Recent orders (last 5)
 const recentOrders = orders.slice(0, 5);
 
+// Platform earnings calculations
+const PLATFORM_FEE_RATE = 0.01; // 1% platform fee
+
+// Calculate total payouts to artists
+const totalArtistPayouts = payoutsData
+  .filter(p => p.status === 'completed')
+  .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+// Calculate pending payouts (awaiting artist onboarding)
+const totalPendingPayouts = pendingPayoutsData
+  .filter(p => p.status !== 'completed' && p.status !== 'cancelled')
+  .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+// Calculate refunds issued
+const totalRefunded = refundsData.reduce((sum, r) => sum + (r.amount || 0), 0);
+
+// Calculate disputes impact
+const openDisputes = disputesData.filter(d => d.status === 'warning_under_review' || d.status === 'warning_needs_response' || d.status === 'needs_response' || d.status === 'under_review');
+const disputesUnderReview = openDisputes.reduce((sum, d) => sum + (d.amount || 0), 0);
+const disputesLost = disputesData.filter(d => d.status === 'lost').reduce((sum, d) => sum + (d.amount || 0), 0);
+const disputesWon = disputesData.filter(d => d.status === 'won').reduce((sum, d) => sum + (d.amount || 0), 0);
+
+// Calculate gross revenue (all orders)
+const grossRevenue = ordersData.reduce((sum, o) => sum + (o.total || 0), 0);
+
+// Platform fees earned (1% of gross revenue minus refunds)
+const platformFeesEarned = (grossRevenue - totalRefunded) * PLATFORM_FEE_RATE;
+
+// Net to artists (after platform fees)
+const netToArtists = (grossRevenue - totalRefunded) * (1 - PLATFORM_FEE_RATE);
+
+// Month-over-month calculations
+const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+const lastMonthPayouts = payoutsData
+  .filter(p => {
+    if (!p.completedAt) return false;
+    const d = new Date(p.completedAt);
+    return d >= lastMonth && d <= endOfLastMonth;
+  })
+  .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+const thisMonthPayouts = payoutsData
+  .filter(p => {
+    if (!p.completedAt) return false;
+    const d = new Date(p.completedAt);
+    return d >= startOfMonth;
+  })
+  .reduce((sum, p) => sum + (p.amount || 0), 0);
+
 // Format helpers
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
@@ -148,6 +211,13 @@ if (lowStockMerch.length > 0) {
 }
 if (outOfStockMerch.length > 0) {
   alerts.push({ type: 'danger', icon: '🚫', text: `${outOfStockMerch.length} product${outOfStockMerch.length !== 1 ? 's' : ''} out of stock`, link: '/admin/inventory' });
+}
+if (openDisputes.length > 0) {
+  alerts.push({ type: 'danger', icon: '⚠️', text: `${openDisputes.length} dispute${openDisputes.length !== 1 ? 's' : ''} need attention`, link: '/admin/payments' });
+}
+if (totalPendingPayouts > 0) {
+  const pendingCount = pendingPayoutsData.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length;
+  alerts.push({ type: 'warning', icon: '💳', text: `${formatCurrency(totalPendingPayouts)} in pending payouts (${pendingCount} artists)`, link: '/admin/payments' });
 }
 
 export const prerender = false;
@@ -215,6 +285,89 @@ export const prerender = false;
       <div class="stat-label">Mix Plays</div>
       <div class="stat-value">{formatNumber(totalPlays)}</div>
       <div class="stat-detail">{publishedMixes.length} mixes</div>
+    </div>
+  </div>
+
+  <!-- Platform Earnings Section -->
+  <div class="card mb-4 earnings-card">
+    <div class="card-header">
+      <h2>💰 Platform Earnings</h2>
+      <a href="/admin/payments" class="btn btn-ghost btn-sm">View Payments →</a>
+    </div>
+    <div class="card-body">
+      <div class="earnings-grid">
+        <div class="earning-stat primary">
+          <div class="earning-icon">📊</div>
+          <div class="earning-info">
+            <span class="earning-label">Gross Revenue</span>
+            <span class="earning-value">{formatCurrency(grossRevenue)}</span>
+            <span class="earning-detail">{ordersData.length} total orders</span>
+          </div>
+        </div>
+
+        <div class="earning-stat success">
+          <div class="earning-icon">🏦</div>
+          <div class="earning-info">
+            <span class="earning-label">Platform Fees (1%)</span>
+            <span class="earning-value">{formatCurrency(platformFeesEarned)}</span>
+            <span class="earning-detail">Net after refunds</span>
+          </div>
+        </div>
+
+        <div class="earning-stat info">
+          <div class="earning-icon">🎤</div>
+          <div class="earning-info">
+            <span class="earning-label">Paid to Artists</span>
+            <span class="earning-value">{formatCurrency(totalArtistPayouts)}</span>
+            <span class="earning-detail">{payoutsData.filter(p => p.status === 'completed').length} payouts completed</span>
+          </div>
+        </div>
+
+        <div class="earning-stat warning">
+          <div class="earning-icon">⏳</div>
+          <div class="earning-info">
+            <span class="earning-label">Pending Payouts</span>
+            <span class="earning-value">{formatCurrency(totalPendingPayouts)}</span>
+            <span class="earning-detail">{pendingPayoutsData.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length} awaiting setup</span>
+          </div>
+        </div>
+
+        <div class="earning-stat danger">
+          <div class="earning-icon">↩️</div>
+          <div class="earning-info">
+            <span class="earning-label">Total Refunded</span>
+            <span class="earning-value">{formatCurrency(totalRefunded)}</span>
+            <span class="earning-detail">{refundsData.length} refunds issued</span>
+          </div>
+        </div>
+
+        <div class="earning-stat {openDisputes.length > 0 ? 'danger' : 'muted'}">
+          <div class="earning-icon">⚖️</div>
+          <div class="earning-info">
+            <span class="earning-label">Disputes</span>
+            <span class="earning-value">{formatCurrency(disputesUnderReview)}</span>
+            <span class="earning-detail">
+              {openDisputes.length} open • Won: {formatCurrency(disputesWon)} • Lost: {formatCurrency(disputesLost)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Month Comparison -->
+      <div class="month-comparison">
+        <div class="month-stat">
+          <span class="month-label">This Month Payouts</span>
+          <span class="month-value">{formatCurrency(thisMonthPayouts)}</span>
+        </div>
+        <div class="month-stat">
+          <span class="month-label">Last Month Payouts</span>
+          <span class="month-value">{formatCurrency(lastMonthPayouts)}</span>
+        </div>
+        <div class="month-stat">
+          <span class="month-label">This Month Revenue</span>
+          <span class="month-value">{formatCurrency(monthRevenue)}</span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -704,6 +857,98 @@ export const prerender = false;
 </AdminLayout>
 
 <style>
+  /* Platform Earnings Styles */
+  .earnings-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .earnings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .earning-stat {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+    border: 1px solid #374151;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .earning-stat:hover {
+    border-color: #4b5563;
+    transform: translateY(-2px);
+  }
+
+  .earning-stat.primary { border-left: 3px solid #3b82f6; }
+  .earning-stat.success { border-left: 3px solid #22c55e; }
+  .earning-stat.info { border-left: 3px solid #06b6d4; }
+  .earning-stat.warning { border-left: 3px solid #f59e0b; }
+  .earning-stat.danger { border-left: 3px solid #ef4444; }
+  .earning-stat.muted { border-left: 3px solid #6b7280; }
+
+  .earning-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .earning-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .earning-label {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .earning-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #f3f4f6;
+  }
+
+  .earning-detail {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+  }
+
+  .month-comparison {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #374151;
+    flex-wrap: wrap;
+  }
+
+  .month-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .month-label {
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  .month-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #e5e7eb;
+  }
+
   /* Server Control Panel Styles */
   .server-control-card .card-header {
     display: flex;

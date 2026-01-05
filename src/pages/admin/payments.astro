@@ -1,0 +1,693 @@
+---
+// /src/pages/admin/payments.astro
+// Fresh Wax Payments Admin - Disputes, Refunds, and Failed Payouts
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { queryCollection } from '../../lib/firebase-rest';
+
+// Fetch disputes
+const disputes = await queryCollection('disputes', {
+  orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+  limit: 50
+});
+
+// Fetch refunds
+const refunds = await queryCollection('refunds', {
+  orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+  limit: 50
+});
+
+// Fetch failed/pending payouts
+const pendingPayouts = await queryCollection('pendingPayouts', {
+  filters: [
+    { field: 'status', op: 'IN', value: ['retry_pending', 'awaiting_connect', 'processing'] }
+  ],
+  orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+  limit: 50
+});
+
+// Stats
+const openDisputes = disputes.filter(d => d.status === 'open' || d.status === 'needs_response').length;
+const wonDisputes = disputes.filter(d => d.outcome === 'won').length;
+const lostDisputes = disputes.filter(d => d.outcome === 'lost').length;
+const totalRefunded = refunds.reduce((sum, r) => sum + (r.amountRefunded || 0), 0);
+const pendingPayoutTotal = pendingPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+const stats = [
+  { label: 'Open Disputes', value: openDisputes, type: openDisputes > 0 ? 'danger' : 'default' },
+  { label: 'Won / Lost', value: `${wonDisputes} / ${lostDisputes}`, type: wonDisputes > lostDisputes ? 'success' : 'warning' },
+  { label: 'Total Refunded', value: `£${totalRefunded.toFixed(2)}`, type: 'info' },
+  { label: 'Pending Payouts', value: pendingPayouts.length, type: pendingPayouts.length > 0 ? 'warning' : 'default', detail: `£${pendingPayoutTotal.toFixed(2)}` },
+];
+
+// Format currency
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+};
+
+// Format date
+const formatDate = (date) => {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+// Get status badge class
+const getStatusClass = (status) => {
+  const s = (status || '').toLowerCase();
+  if (s === 'won' || s === 'completed') return 'success';
+  if (s === 'lost' || s === 'failed') return 'danger';
+  if (s === 'open' || s === 'needs_response' || s === 'processing') return 'warning';
+  if (s === 'awaiting_connect' || s === 'retry_pending') return 'pending';
+  return 'default';
+};
+
+export const prerender = false;
+---
+
+<AdminLayout title="Payments" activeNav="payments" showStats={true} stats={stats}>
+  <Fragment slot="actions">
+    <button class="btn btn-outline" onclick="window.location.reload()">
+      ↻ Refresh
+    </button>
+  </Fragment>
+
+  <!-- Tab Navigation -->
+  <div class="tabs">
+    <button class="tab active" data-tab="disputes">
+      ⚠️ Disputes ({disputes.length})
+    </button>
+    <button class="tab" data-tab="refunds">
+      💸 Refunds ({refunds.length})
+    </button>
+    <button class="tab" data-tab="pending">
+      ⏳ Pending Payouts ({pendingPayouts.length})
+    </button>
+  </div>
+
+  <!-- Disputes Tab -->
+  <div class="tab-content" id="disputes-tab">
+    <div class="card">
+      <div class="card-header">
+        <h2>Payment Disputes</h2>
+        <span class="text-muted">{disputes.length} disputes</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Order</th>
+              <th>Amount</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Recovered</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {disputes.length === 0 ? (
+              <tr>
+                <td colspan="7" class="text-center text-muted" style="padding: 3rem;">
+                  No disputes found - that's good news!
+                </td>
+              </tr>
+            ) : (
+              disputes.map(dispute => (
+                <tr>
+                  <td class="cell-secondary">{formatDate(dispute.createdAt)}</td>
+                  <td>
+                    <span class="cell-mono">#{(dispute.orderNumber || dispute.orderId || '').slice(-8).toUpperCase()}</span>
+                  </td>
+                  <td class="font-bold">{formatCurrency(dispute.amount)}</td>
+                  <td>
+                    <span class="badge badge-info">{dispute.reason || 'Unknown'}</span>
+                  </td>
+                  <td>
+                    <span class={`badge badge-${getStatusClass(dispute.status || dispute.outcome)}`}>
+                      {dispute.outcome || dispute.status || 'Open'}
+                    </span>
+                  </td>
+                  <td>
+                    {dispute.amountRecovered ? formatCurrency(dispute.amountRecovered) : '-'}
+                    {dispute.retransferCount > 0 && (
+                      <span class="text-muted" style="font-size: 0.75rem;"> ({dispute.retransferCount} re-transferred)</span>
+                    )}
+                  </td>
+                  <td class="text-right">
+                    <button
+                      class="btn btn-ghost btn-sm view-dispute-btn"
+                      data-dispute={JSON.stringify(dispute)}
+                      title="View Details"
+                    >
+                      👁️
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Refunds Tab -->
+  <div class="tab-content" id="refunds-tab" style="display: none;">
+    <div class="card">
+      <div class="card-header">
+        <h2>Refunds</h2>
+        <span class="text-muted">{refunds.length} refunds</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Order</th>
+              <th>Amount</th>
+              <th>Type</th>
+              <th>Transfers Reversed</th>
+              <th>Total Clawed Back</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {refunds.length === 0 ? (
+              <tr>
+                <td colspan="7" class="text-center text-muted" style="padding: 3rem;">
+                  No refunds processed yet
+                </td>
+              </tr>
+            ) : (
+              refunds.map(refund => (
+                <tr>
+                  <td class="cell-secondary">{formatDate(refund.createdAt)}</td>
+                  <td>
+                    <span class="cell-mono">#{(refund.orderNumber || refund.orderId || '').slice(-8).toUpperCase()}</span>
+                  </td>
+                  <td class="font-bold" style="color: #dc2626;">{formatCurrency(refund.amountRefunded)}</td>
+                  <td>
+                    <span class={`badge badge-${refund.isFullRefund ? 'danger' : 'warning'}`}>
+                      {refund.isFullRefund ? 'Full' : `${((refund.refundPercentage || 0) * 100).toFixed(0)}%`}
+                    </span>
+                  </td>
+                  <td>
+                    {refund.transfersReversed?.filter(t => !t.failed).length || 0} of {refund.transfersReversed?.length || 0}
+                  </td>
+                  <td>{formatCurrency(refund.totalReversed)}</td>
+                  <td class="text-right">
+                    <button
+                      class="btn btn-ghost btn-sm view-refund-btn"
+                      data-refund={JSON.stringify(refund)}
+                      title="View Details"
+                    >
+                      👁️
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending Payouts Tab -->
+  <div class="tab-content" id="pending-tab" style="display: none;">
+    <div class="card">
+      <div class="card-header">
+        <h2>Pending & Failed Payouts</h2>
+        <span class="text-muted">{pendingPayouts.length} payouts waiting</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Artist</th>
+              <th>Order</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Reason</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pendingPayouts.length === 0 ? (
+              <tr>
+                <td colspan="7" class="text-center text-muted" style="padding: 3rem;">
+                  No pending payouts - all artists are paid up!
+                </td>
+              </tr>
+            ) : (
+              pendingPayouts.map(payout => (
+                <tr data-id={payout.id}>
+                  <td class="cell-secondary">{formatDate(payout.createdAt)}</td>
+                  <td>
+                    <div class="item-info">
+                      <h4 style="font-size: 0.875rem;">{payout.artistName || 'Unknown Artist'}</h4>
+                      <p style="font-size: 0.75rem;">{payout.artistEmail || ''}</p>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="cell-mono">#{(payout.orderNumber || payout.orderId || '').slice(-8).toUpperCase()}</span>
+                  </td>
+                  <td class="font-bold">{formatCurrency(payout.amount)}</td>
+                  <td>
+                    <span class={`badge badge-${getStatusClass(payout.status)}`}>
+                      {payout.status === 'awaiting_connect' ? 'Awaiting Stripe' :
+                       payout.status === 'retry_pending' ? 'Retry Needed' :
+                       payout.status}
+                    </span>
+                  </td>
+                  <td class="cell-secondary" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">
+                    {payout.failureReason || payout.reason || '-'}
+                  </td>
+                  <td class="text-right">
+                    <div class="flex gap-1 justify-end">
+                      <button
+                        class="btn btn-ghost btn-sm view-payout-btn"
+                        data-payout={JSON.stringify(payout)}
+                        title="View Details"
+                      >
+                        👁️
+                      </button>
+                      {payout.status === 'retry_pending' && (
+                        <button
+                          class="btn btn-primary btn-sm retry-btn"
+                          data-id={payout.id}
+                          title="Retry Payout"
+                        >
+                          🔄
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dispute Details Modal -->
+  <div id="disputeModal" class="modal-overlay" slot="modals">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>Dispute Details</h2>
+        <button class="modal-close" onclick="closeModal('disputeModal')">&times;</button>
+      </div>
+      <div class="modal-body" id="disputeModalContent">
+        <!-- Populated by JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('disputeModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Refund Details Modal -->
+  <div id="refundModal" class="modal-overlay" slot="modals">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>Refund Details</h2>
+        <button class="modal-close" onclick="closeModal('refundModal')">&times;</button>
+      </div>
+      <div class="modal-body" id="refundModalContent">
+        <!-- Populated by JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('refundModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payout Details Modal -->
+  <div id="payoutModal" class="modal-overlay" slot="modals">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>Payout Details</h2>
+        <button class="modal-close" onclick="closeModal('payoutModal')">&times;</button>
+      </div>
+      <div class="modal-body" id="payoutModalContent">
+        <!-- Populated by JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('payoutModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <Fragment slot="scripts">
+    <script is:inline>
+      const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+      };
+
+      const formatDate = (date) => {
+        if (!date) return '-';
+        return new Date(date).toLocaleString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      };
+
+      // Tab switching
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+
+          tab.classList.add('active');
+          const tabId = tab.dataset.tab + '-tab';
+          document.getElementById(tabId).style.display = 'block';
+        });
+      });
+
+      // View dispute details
+      document.querySelectorAll('.view-dispute-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const dispute = JSON.parse(btn.dataset.dispute);
+          showDisputeDetails(dispute);
+        });
+      });
+
+      function showDisputeDetails(dispute) {
+        const content = document.getElementById('disputeModalContent');
+
+        const transfersHtml = (dispute.transfersReversed || []).map(t => `
+          <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: #f5f5f5; margin-bottom: 0.25rem;">
+            <span>${t.artistName || 'Unknown'}</span>
+            <span style="font-weight: 600;">${formatCurrency(t.amount)}</span>
+          </div>
+        `).join('') || '<div style="color: #888;">No transfers reversed</div>';
+
+        const retransfersHtml = (dispute.retransfersCreated || []).map(t => `
+          <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: #e8f5e9; margin-bottom: 0.25rem;">
+            <span>${t.artistName || 'Unknown'}</span>
+            <span style="font-weight: 600; color: #16a34a;">+${formatCurrency(t.amount)}</span>
+          </div>
+        `).join('') || '';
+
+        content.innerHTML = `
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Dispute ID</div>
+              <div style="font-family: monospace; font-size: 0.875rem;">${dispute.stripeDisputeId || dispute.id}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Status</div>
+              <div style="font-weight: 600;">${dispute.outcome || dispute.status || 'Open'}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Amount</div>
+              <div style="font-weight: 700; font-size: 1.25rem;">${formatCurrency(dispute.amount)}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Reason</div>
+              <div>${dispute.reason || 'Unknown'}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Created</div>
+              <div>${formatDate(dispute.createdAt)}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Resolved</div>
+              <div>${formatDate(dispute.resolvedAt) || 'Pending'}</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.5rem;">
+            <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.5rem;">Transfers Reversed (Clawed Back)</div>
+            ${transfersHtml}
+            ${dispute.amountRecovered ? `
+              <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: #000; color: #fff; margin-top: 0.5rem;">
+                <span>Total Recovered</span>
+                <span style="font-weight: 700;">${formatCurrency(dispute.amountRecovered)}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          ${retransfersHtml ? `
+            <div style="margin-bottom: 1.5rem;">
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.5rem;">Re-Transfers After Win</div>
+              ${retransfersHtml}
+            </div>
+          ` : ''}
+
+          ${dispute.netImpact !== undefined ? `
+            <div style="background: ${dispute.netImpact > 0 ? '#fee2e2' : '#e8f5e9'}; border: 1px solid ${dispute.netImpact > 0 ? '#fca5a5' : '#a5d6a7'}; padding: 1rem;">
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Net Platform Impact</div>
+              <div style="font-weight: 700; font-size: 1.25rem; color: ${dispute.netImpact > 0 ? '#dc2626' : '#16a34a'};">
+                ${dispute.netImpact > 0 ? '-' : ''}${formatCurrency(Math.abs(dispute.netImpact))}
+              </div>
+            </div>
+          ` : ''}
+        `;
+
+        openModal('disputeModal');
+      }
+
+      // View refund details
+      document.querySelectorAll('.view-refund-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const refund = JSON.parse(btn.dataset.refund);
+          showRefundDetails(refund);
+        });
+      });
+
+      function showRefundDetails(refund) {
+        const content = document.getElementById('refundModalContent');
+
+        const transfersHtml = (refund.transfersReversed || []).map(t => `
+          <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: ${t.failed ? '#fee2e2' : '#f5f5f5'}; margin-bottom: 0.25rem;">
+            <span>
+              ${t.artistName || 'Unknown'}
+              ${t.failed ? '<span style="color: #dc2626; font-size: 0.75rem;"> (Failed)</span>' : ''}
+            </span>
+            <span style="font-weight: 600; color: ${t.failed ? '#dc2626' : '#000'};">
+              ${t.failed ? 'Error' : formatCurrency(t.amount)}
+            </span>
+          </div>
+          ${t.error ? `<div style="font-size: 0.75rem; color: #dc2626; padding: 0 0.5rem 0.5rem;">${t.error}</div>` : ''}
+        `).join('') || '<div style="color: #888;">No transfers reversed</div>';
+
+        content.innerHTML = `
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Order</div>
+              <div style="font-family: monospace;">#${(refund.orderNumber || refund.orderId || '').slice(-8).toUpperCase()}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Type</div>
+              <div style="font-weight: 600;">${refund.isFullRefund ? 'Full Refund' : 'Partial Refund'}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Order Total</div>
+              <div>${formatCurrency(refund.totalAmount)}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Amount Refunded</div>
+              <div style="font-weight: 700; font-size: 1.25rem; color: #dc2626;">${formatCurrency(refund.amountRefunded)}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Refund %</div>
+              <div>${((refund.refundPercentage || 0) * 100).toFixed(1)}%</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Date</div>
+              <div>${formatDate(refund.createdAt)}</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.5rem;">
+            <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.5rem;">Artist Transfers Reversed</div>
+            ${transfersHtml}
+            <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: #000; color: #fff; margin-top: 0.5rem;">
+              <span>Total Clawed Back</span>
+              <span style="font-weight: 700;">${formatCurrency(refund.totalReversed)}</span>
+            </div>
+          </div>
+
+          ${refund.pendingPayoutsAffected > 0 ? `
+            <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 1rem;">
+              <div style="font-size: 0.875rem;">
+                <strong>${refund.pendingPayoutsAffected}</strong> pending payout(s) were also ${refund.isFullRefund ? 'cancelled' : 'reduced'}
+              </div>
+            </div>
+          ` : ''}
+        `;
+
+        openModal('refundModal');
+      }
+
+      // View payout details
+      document.querySelectorAll('.view-payout-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const payout = JSON.parse(btn.dataset.payout);
+          showPayoutDetails(payout);
+        });
+      });
+
+      function showPayoutDetails(payout) {
+        const content = document.getElementById('payoutModalContent');
+
+        content.innerHTML = `
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Artist</div>
+              <div style="font-weight: 600;">${payout.artistName || 'Unknown'}</div>
+              <div style="font-size: 0.875rem; color: #666;">${payout.artistEmail || ''}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Status</div>
+              <div style="font-weight: 600;">${payout.status}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Order</div>
+              <div style="font-family: monospace;">#${(payout.orderNumber || payout.orderId || '').slice(-8).toUpperCase()}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Amount</div>
+              <div style="font-weight: 700; font-size: 1.25rem;">${formatCurrency(payout.amount)}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Created</div>
+              <div>${formatDate(payout.createdAt)}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Artist ID</div>
+              <div style="font-size: 0.75rem; font-family: monospace;">${payout.artistId || '-'}</div>
+            </div>
+          </div>
+
+          ${payout.failureReason ? `
+            <div style="background: #fee2e2; border: 1px solid #fca5a5; padding: 1rem; margin-bottom: 1.5rem;">
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.25rem;">Failure Reason</div>
+              <div style="color: #dc2626;">${payout.failureReason}</div>
+            </div>
+          ` : ''}
+
+          ${payout.status === 'awaiting_connect' ? `
+            <div style="background: #fef3c7; border: 1px solid #fcd34d; padding: 1rem; margin-bottom: 1.5rem;">
+              <div style="font-size: 0.875rem;">
+                This artist hasn't completed Stripe Connect setup. Once they do, this payout will be processed automatically.
+              </div>
+              ${payout.notificationSent ? `
+                <div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem;">
+                  ✓ Notification email sent ${payout.notificationSentAt ? 'on ' + formatDate(payout.notificationSentAt) : ''}
+                </div>
+              ` : `
+                <div style="font-size: 0.75rem; color: #d97706; margin-top: 0.5rem;">
+                  ⚠️ Notification email not sent
+                </div>
+              `}
+            </div>
+          ` : ''}
+
+          ${payout.reason ? `
+            <div style="margin-bottom: 1.5rem;">
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.25rem;">Reason/Source</div>
+              <div>${payout.reason}</div>
+            </div>
+          ` : ''}
+
+          ${payout.status === 'retry_pending' ? `
+            <button class="btn btn-primary" style="width: 100%;" onclick="retryPayout('${payout.id}')">
+              🔄 Retry This Payout
+            </button>
+          ` : ''}
+        `;
+
+        openModal('payoutModal');
+      }
+
+      // Retry payout
+      document.querySelectorAll('.retry-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          retryPayout(btn.dataset.id);
+        });
+      });
+
+      async function retryPayout(payoutId) {
+        if (!confirm('Retry this payout? This will attempt to transfer funds to the artist.')) return;
+
+        try {
+          const response = await fetch('/api/admin/retry-payout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ payoutId })
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            showToast('Payout retry initiated');
+            setTimeout(() => location.reload(), 1500);
+          } else {
+            showToast(result.error || 'Failed to retry payout', 'error');
+          }
+        } catch (error) {
+          console.error(error);
+          showToast('Failed to retry payout', 'error');
+        }
+      }
+
+      window.retryPayout = retryPayout;
+    </script>
+  </Fragment>
+</AdminLayout>
+
+<style>
+  .tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e5e5e5;
+    padding-bottom: 0;
+  }
+
+  .tab {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9375rem;
+    transition: all 0.2s;
+  }
+
+  .tab:hover {
+    color: #000;
+  }
+
+  .tab.active {
+    color: #000;
+    border-bottom-color: #dc2626;
+  }
+
+  .item-info h4 {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .item-info p {
+    margin: 0;
+    color: #666;
+  }
+</style>

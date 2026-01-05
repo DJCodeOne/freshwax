@@ -57,6 +57,33 @@ if (partnerId) {
   }
 }
 
+// Calculate monthly earnings for the last 6 months
+const monthlyEarnings: { month: string; year: number; earnings: number; count: number }[] = [];
+const now = new Date();
+for (let i = 0; i < 6; i++) {
+  const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+  const monthStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+  const monthEnd = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59);
+
+  const monthPayouts = payouts.filter((p: any) => {
+    const payoutDate = new Date(p.createdAt);
+    return payoutDate >= monthStart && payoutDate <= monthEnd && p.status === 'completed';
+  });
+
+  const earnings = monthPayouts.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+
+  monthlyEarnings.push({
+    month: targetDate.toLocaleDateString('en-GB', { month: 'short' }),
+    year: targetDate.getFullYear(),
+    earnings: earnings,
+    count: monthPayouts.length
+  });
+}
+
+// Reverse so oldest is first (for the chart display)
+const chartData = monthlyEarnings.reverse();
+const maxEarning = Math.max(...chartData.map(d => d.earnings), 1); // At least 1 to avoid division by zero
+
 const isLoggedIn = !!partner;
 
 const formatDate = (dateStr: string) => {
@@ -161,6 +188,53 @@ export const prerender = false;
               </div>
             </div>
           </div>
+
+          <!-- Monthly Earnings Chart -->
+          {payouts.length > 0 && (
+            <section class="earnings-chart-section">
+              <h2>Earnings Overview</h2>
+              <p class="section-desc">Your earnings over the last 6 months</p>
+
+              <div class="chart-container">
+                {chartData.map((data, index) => {
+                  const heightPercent = maxEarning > 0 ? (data.earnings / maxEarning) * 100 : 0;
+                  const isCurrentMonth = index === chartData.length - 1;
+                  return (
+                    <div class="chart-bar-wrap">
+                      <div class="chart-value">{formatPrice(data.earnings)}</div>
+                      <div class="chart-bar-container">
+                        <div
+                          class={`chart-bar ${isCurrentMonth ? 'current' : ''} ${data.earnings === 0 ? 'empty' : ''}`}
+                          style={`height: ${Math.max(heightPercent, 2)}%;`}
+                        >
+                          {data.count > 0 && (
+                            <span class="bar-count">{data.count}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div class="chart-label">
+                        <span class="month-name">{data.month}</span>
+                        {(index === 0 || data.year !== chartData[index - 1]?.year) && (
+                          <span class="year-label">{data.year}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div class="chart-legend">
+                <span class="legend-item">
+                  <span class="legend-dot current"></span>
+                  Current month
+                </span>
+                <span class="legend-item">
+                  <span class="legend-dot"></span>
+                  Previous months
+                </span>
+              </div>
+            </section>
+          )}
 
           <!-- Pending Payouts -->
           {pendingPayouts.length > 0 && (
@@ -617,6 +691,138 @@ export const prerender = false;
     line-height: 1.5;
   }
 
+  /* Earnings Chart */
+  .earnings-chart-section {
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 16px;
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .earnings-chart-section h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.5rem;
+  }
+
+  .chart-container {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.75rem;
+    height: 200px;
+    padding: 1rem 0;
+    margin-top: 1rem;
+  }
+
+  .chart-bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    max-width: 100px;
+  }
+
+  .chart-value {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+  }
+
+  .chart-bar-container {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .chart-bar {
+    width: 100%;
+    max-width: 50px;
+    background: linear-gradient(to top, #3b82f6, #60a5fa);
+    border-radius: 6px 6px 0 0;
+    position: relative;
+    transition: all 0.3s ease;
+    min-height: 4px;
+  }
+
+  .chart-bar:hover {
+    filter: brightness(1.1);
+    transform: scaleX(1.05);
+  }
+
+  .chart-bar.current {
+    background: linear-gradient(to top, #22c55e, #4ade80);
+  }
+
+  .chart-bar.empty {
+    background: #374151;
+    opacity: 0.5;
+  }
+
+  .bar-count {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6875rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 700;
+  }
+
+  .chart-label {
+    margin-top: 0.75rem;
+    text-align: center;
+  }
+
+  .month-name {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #e5e7eb;
+  }
+
+  .year-label {
+    display: block;
+    font-size: 0.6875rem;
+    color: #6b7280;
+    margin-top: 0.125rem;
+  }
+
+  .chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #374151;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: #9ca3af;
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    background: linear-gradient(to top, #3b82f6, #60a5fa);
+  }
+
+  .legend-dot.current {
+    background: linear-gradient(to top, #22c55e, #4ade80);
+  }
+
   /* Responsive */
   @media (max-width: 768px) {
     .connect-banner {
@@ -640,6 +846,31 @@ export const prerender = false;
     .payouts-table th,
     .payouts-table td {
       padding: 0.75rem 0.5rem;
+    }
+
+    .chart-container {
+      height: 150px;
+      gap: 0.5rem;
+    }
+
+    .chart-value {
+      font-size: 0.625rem;
+    }
+
+    .chart-bar {
+      max-width: 35px;
+    }
+
+    .month-name {
+      font-size: 0.6875rem;
+    }
+
+    .chart-legend {
+      gap: 1rem;
+    }
+
+    .legend-item {
+      font-size: 0.75rem;
     }
   }
 </style>
