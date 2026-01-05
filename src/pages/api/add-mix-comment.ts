@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
 import { containsProfanity } from '../../lib/validation';
 import { d1AddComment } from '../../lib/d1-catalog';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -89,6 +90,13 @@ function validateContent(text: string): { valid: boolean; error?: string } {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: chat - 30 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`add-mix-comment:${clientId}`, RateLimiters.chat);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = (locals as any)?.runtime?.env;
   const db = env?.DB;
 

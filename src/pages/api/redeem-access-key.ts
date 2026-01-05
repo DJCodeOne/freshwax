@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
@@ -14,6 +15,13 @@ function initFirebase(locals: any) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: strict - 5 per minute (prevent brute force of access codes)
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`redeem-access-key:${clientId}`, RateLimiters.strict);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   initFirebase(locals);
 
   try {

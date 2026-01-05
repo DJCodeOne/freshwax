@@ -4,10 +4,18 @@
 import type { APIRoute } from 'astro';
 import { createOrder } from '../../lib/order-utils';
 import { initFirebaseEnv } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: strict - 5 per minute (prevent order abuse)
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`complete-free-order:${clientId}`, RateLimiters.strict);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     const env = (locals as any)?.runtime?.env;
 

@@ -2,8 +2,15 @@
 // Follow/unfollow artists API - uses Firebase REST API
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, updateDocument, queryCollection , initFirebaseEnv } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
+  // Rate limit: standard - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`follow-artist-get:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
   // Initialize Firebase from runtime env
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -120,6 +127,13 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`follow-artist-post:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase from runtime env
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
