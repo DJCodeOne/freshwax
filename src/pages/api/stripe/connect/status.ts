@@ -3,11 +3,19 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { getDocument, updateDocument, initFirebaseEnv } from '../../../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, cookies, locals }) => {
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`stripe-connect-status:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -27,10 +35,13 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {
-    // Get artist ID from cookies
+    // SECURITY: Verify user authentication via Firebase token
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+
+    // Fall back to cookies if no Authorization header (for browser requests)
     const partnerId = cookies.get('partnerId')?.value;
     const firebaseUid = cookies.get('firebaseUid')?.value;
-    const artistId = partnerId || firebaseUid;
+    const artistId = verifiedUserId || partnerId || firebaseUid;
 
     if (!artistId) {
       return new Response(JSON.stringify({
@@ -102,9 +113,9 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
         past_due: account.requirements.past_due || [],
         disabled_reason: account.requirements.disabled_reason
       } : null,
-      // Dashboard link for managing account
-      dashboardUrl: account.charges_enabled ?
-        `https://dashboard.stripe.com/connect/accounts/${artist.stripeConnectId}` : null
+      // Express dashboard login link (artist can manage their own account)
+      // Note: Use stripe.accounts.createLoginLink() if needed, but only for active accounts
+      canAccessDashboard: account.charges_enabled && account.payouts_enabled
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: any) {

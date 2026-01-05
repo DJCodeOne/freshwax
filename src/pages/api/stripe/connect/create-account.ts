@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { getDocument, updateDocument, initFirebaseEnv } from '../../../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
 
 export const prerender = false;
@@ -35,10 +35,13 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {
-    // Get artist ID from cookies
+    // SECURITY: Verify user authentication via Firebase token
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+
+    // Fall back to cookies if no Authorization header (for browser requests)
     const partnerId = cookies.get('partnerId')?.value;
     const firebaseUid = cookies.get('firebaseUid')?.value;
-    const artistId = partnerId || firebaseUid;
+    const artistId = verifiedUserId || partnerId || firebaseUid;
 
     if (!artistId) {
       return new Response(JSON.stringify({

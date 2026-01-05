@@ -27,9 +27,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response('Stripe not configured', { status: 500 });
   }
 
-  // Store key for use in processPendingPayouts
-  (globalThis as any).__stripeSecretKey = stripeSecretKey;
-
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {
@@ -37,22 +34,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const sig = request.headers.get('stripe-signature');
 
     if (!sig) {
-      return new Response('Missing signature', { status: 400 });
+      console.error('[Connect Webhook] Missing signature header - REJECTING');
+      return new Response('Missing signature', { status: 401 });
     }
 
     let event: Stripe.Event;
 
-    // Verify webhook signature if secret is configured
+    // SECURITY: Signature verification is REQUIRED
+    // Only skip in local development if explicitly configured
+    const isDevelopment = import.meta.env.DEV;
+
     if (webhookSecret) {
       try {
         event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+        console.log('[Connect Webhook] ✓ Signature verified');
       } catch (err: any) {
         console.error('[Connect Webhook] Signature verification failed:', err.message);
-        return new Response(`Webhook signature verification failed: ${err.message}`, { status: 400 });
+        return new Response(`Webhook signature verification failed: ${err.message}`, { status: 401 });
       }
+    } else if (!isDevelopment) {
+      // SECURITY: In production, REQUIRE webhook secret - reject without it
+      console.error('[Connect Webhook] SECURITY: Webhook secret not configured in production - REJECTING');
+      return new Response('Webhook not configured', { status: 500 });
     } else {
-      // In development, parse without verification
-      console.warn('[Connect Webhook] No webhook secret configured, skipping signature verification');
+      // Only in local dev - allow without verification
+      console.warn('[Connect Webhook] ⚠️ DEV MODE: Skipping signature verification');
       event = JSON.parse(body);
     }
 
@@ -60,7 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     switch (event.type) {
       case 'account.updated':
-        await handleAccountUpdated(event.data.object as Stripe.Account);
+        await handleAccountUpdated(event.data.object as Stripe.Account, stripeSecretKey);
         break;
 
       case 'transfer.created':
@@ -87,7 +93,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 // Handle account.updated - sync account status to Firestore
-async function handleAccountUpdated(account: Stripe.Account) {
+async function handleAccountUpdated(account: Stripe.Account, stripeSecretKey: string) {
   const artistId = account.metadata?.artistId;
 
   if (!artistId) {
@@ -103,13 +109,13 @@ async function handleAccountUpdated(account: Stripe.Account) {
     }
 
     const artist = artists[0];
-    await updateArtistConnectStatus(artist.id, account);
+    await updateArtistConnectStatus(artist.id, account, stripeSecretKey);
   } else {
-    await updateArtistConnectStatus(artistId, account);
+    await updateArtistConnectStatus(artistId, account, stripeSecretKey);
   }
 }
 
-async function updateArtistConnectStatus(artistId: string, account: Stripe.Account) {
+async function updateArtistConnectStatus(artistId: string, account: Stripe.Account, stripeSecretKey: string) {
   let status = 'onboarding';
   if (account.charges_enabled && account.payouts_enabled) {
     status = 'active';
@@ -130,12 +136,13 @@ async function updateArtistConnectStatus(artistId: string, account: Stripe.Accou
 
   // If account became active, process any pending payouts
   if (status === 'active') {
-    await processPendingPayouts(artistId, account.id);
+    console.log('[Connect Webhook] Artist', artistId, 'is now active - processing pending payouts');
+    await processPendingPayouts(artistId, account.id, stripeSecretKey);
   }
 }
 
 // Process pending payouts when artist completes onboarding
-async function processPendingPayouts(artistId: string, stripeConnectId: string) {
+async function processPendingPayouts(artistId: string, stripeConnectId: string, stripeSecretKey: string) {
   const pendingPayouts = await queryCollection('pendingPayouts', {
     filters: [
       { field: 'artistId', op: 'EQUAL', value: artistId },
@@ -147,13 +154,6 @@ async function processPendingPayouts(artistId: string, stripeConnectId: string) 
   if (pendingPayouts.length === 0) return;
 
   console.log('[Connect Webhook] Processing', pendingPayouts.length, 'pending payouts for artist:', artistId);
-
-  // Get Stripe key from env (stored in module scope during webhook handling)
-  const stripeSecretKey = (globalThis as any).__stripeSecretKey;
-  if (!stripeSecretKey) {
-    console.error('[Connect Webhook] No Stripe key available for processing pending payouts');
-    return;
-  }
 
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 

@@ -3,11 +3,19 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { getDocument, initFirebaseEnv } from '../../../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, cookies, locals }) => {
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`stripe-connect-refresh:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -27,10 +35,13 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {
-    // Get artist ID from cookies
+    // SECURITY: Verify user authentication via Firebase token
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+
+    // Fall back to cookies if no Authorization header (for browser requests)
     const partnerId = cookies.get('partnerId')?.value;
     const firebaseUid = cookies.get('firebaseUid')?.value;
-    const artistId = partnerId || firebaseUid;
+    const artistId = verifiedUserId || partnerId || firebaseUid;
 
     if (!artistId) {
       return new Response(JSON.stringify({
