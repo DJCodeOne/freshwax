@@ -11,7 +11,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-
+*.log
 
 # environment variables
 .env
@@ -24,3 +24,16 @@ pnpm-debug.log*
 .idea/
 
 temp/
+
+# Wrangler local state
+.wrangler/
+
+# Executables
+*.exe
+
+# Backup directories
+\#H\#/
+
+# Misc temp files
+nul
+C*/
