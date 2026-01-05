@@ -58,6 +58,142 @@ async function verifyStripeSignature(
   }
 }
 
+// Send email notification about pending earnings to artists without Stripe Connect
+async function sendPendingEarningsEmail(
+  artistEmail: string,
+  artistName: string,
+  amount: number,
+  env: any
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  try {
+    if (!artistEmail) {
+      console.log('[Stripe Webhook] No email address for artist, skipping notification');
+      return { success: false, error: 'No email address' };
+    }
+
+    const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
+
+    if (!RESEND_API_KEY) {
+      console.log('[Stripe Webhook] No Resend API key configured, skipping email');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const connectUrl = 'https://freshwax.co.uk/artist/account?setup=stripe';
+    const formattedAmount = `£${amount.toFixed(2)}`;
+
+    const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You've got earnings waiting!</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #141414; border-radius: 12px; overflow: hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 40px 40px 30px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
+                💰 You've Made a Sale!
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <p style="color: #ffffff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;">
+                Hey ${artistName || 'there'},
+              </p>
+
+              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 25px; line-height: 1.6;">
+                Great news! Someone just purchased your music on Fresh Wax. You've earned <strong style="color: #22c55e;">${formattedAmount}</strong> from this sale.
+              </p>
+
+              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 30px; line-height: 1.6;">
+                To receive your payment, you need to connect your Stripe account. It only takes a few minutes and allows us to pay you directly.
+              </p>
+
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding: 10px 0 30px;">
+                    <a href="${connectUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                      Connect Stripe & Get Paid →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="color: #737373; font-size: 14px; margin: 0 0 15px; line-height: 1.6;">
+                Your earnings are held securely and will be transferred as soon as you connect your account.
+              </p>
+
+              <p style="color: #a3a3a3; font-size: 14px; margin: 0; line-height: 1.6;">
+                If you have any questions, just reply to this email.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #0a0a0a; padding: 25px 40px; border-top: 1px solid #262626;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <p style="font-size: 13px; margin: 0;">
+                      <span style="color: #ffffff;">Fresh</span><span style="color: #dc2626;">Wax</span><span style="color: #ffffff;"> - Underground Music Platform</span>
+                    </p>
+                  </td>
+                  <td align="right">
+                    <a href="https://freshwax.co.uk" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `.trim();
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'Fresh Wax <noreply@freshwax.co.uk>',
+        to: artistEmail,
+        subject: `💰 You've made a sale on Fresh Wax! Connect Stripe to get paid`,
+        html: emailHtml
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error('[Stripe Webhook] Resend error:', result);
+      return { success: false, error: result.message || 'Failed to send email' };
+    }
+
+    console.log('[Stripe Webhook] Pending earnings email sent to:', artistEmail);
+    return { success: true, messageId: result.id };
+
+  } catch (error) {
+    console.error('[Stripe Webhook] Error sending pending earnings email:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 export const POST: APIRoute = async ({ request, locals }) => {
   console.log('[Stripe Webhook] ========== WEBHOOK REQUEST RECEIVED ==========');
   console.log('[Stripe Webhook] Timestamp:', new Date().toISOString());
@@ -786,7 +922,7 @@ async function processArtistPayments(params: {
         // Artist not connected - store as pending
         console.log('[Stripe Webhook] Artist', payment.artistName, 'not connected - storing pending payout');
 
-        await addDocument('pendingPayouts', {
+        const pendingPayoutResult = await addDocument('pendingPayouts', {
           artistId: payment.artistId,
           artistName: payment.artistName,
           artistEmail: payment.artistEmail,
@@ -808,7 +944,26 @@ async function processArtistPayments(params: {
           });
         }
 
-        // TODO: Send email notification about pending earnings
+        // Send email notification about pending earnings
+        if (payment.artistEmail) {
+          const emailResult = await sendPendingEarningsEmail(
+            payment.artistEmail,
+            payment.artistName,
+            payment.amount,
+            env
+          );
+
+          // Update pending payout with notification status
+          if (emailResult.success && pendingPayoutResult.id) {
+            await updateDocument('pendingPayouts', pendingPayoutResult.id, {
+              notificationSent: true,
+              notificationSentAt: new Date().toISOString()
+            });
+            console.log('[Stripe Webhook] ✓ Pending earnings email sent to', payment.artistEmail);
+          } else if (pendingPayoutResult.id) {
+            console.log('[Stripe Webhook] Email not sent:', emailResult.error);
+          }
+        }
       }
     }
 
