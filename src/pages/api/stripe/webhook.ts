@@ -737,7 +737,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.log('[Stripe Webhook] Dispute ID:', dispute.id);
       console.log('[Stripe Webhook] Status:', dispute.status);
 
-      await handleDisputeClosed(dispute);
+      await handleDisputeClosed(dispute, stripeSecretKey);
+    }
+
+    // Handle refund - reverse artist transfers proportionally
+    if (event.type === 'charge.refunded') {
+      const charge = event.data.object as any;
+      console.log('[Stripe Webhook] ========== REFUND PROCESSED ==========');
+      console.log('[Stripe Webhook] Charge ID:', charge.id);
+      console.log('[Stripe Webhook] Amount refunded:', charge.amount_refunded / 100, charge.currency?.toUpperCase());
+      console.log('[Stripe Webhook] Total amount:', charge.amount / 100, charge.currency?.toUpperCase());
+
+      await handleRefund(charge, stripeSecretKey);
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -1123,7 +1134,7 @@ async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
 }
 
 // Handle dispute closed - update status and track outcome
-async function handleDisputeClosed(dispute: any) {
+async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
   try {
     // Find the dispute record
     const disputes = await queryCollection('disputes', {
@@ -1141,13 +1152,122 @@ async function handleDisputeClosed(dispute: any) {
 
     // Calculate net impact
     let netImpact = 0;
+    let retransfersCreated: any[] = [];
+
     if (outcome === 'lost') {
       // We lost - platform absorbs the loss minus any recovered amount
       netImpact = disputeRecord.amount - (disputeRecord.amountRecovered || 0);
-    } else {
-      // We won - if we reversed transfers, we should re-transfer to artists
-      // For now, just track that we won
-      netImpact = 0;
+    } else if (outcome === 'won' && disputeRecord.transfersReversed?.length > 0) {
+      // We won - re-transfer to artists since they shouldn't lose money
+      console.log('[Stripe Webhook] Dispute won - re-transferring to artists');
+
+      const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+
+      for (const reversedTransfer of disputeRecord.transfersReversed) {
+        try {
+          // Get the artist's current Stripe Connect ID
+          const artist = await getDocument('artists', reversedTransfer.artistId);
+
+          if (!artist?.stripeConnectId || artist.stripeConnectStatus !== 'active') {
+            console.log('[Stripe Webhook] Artist', reversedTransfer.artistId, 'no longer has active Connect - storing as pending');
+
+            // Store as pending payout
+            await addDocument('pendingPayouts', {
+              artistId: reversedTransfer.artistId,
+              artistName: reversedTransfer.artistName,
+              artistEmail: artist?.email || '',
+              orderId: disputeRecord.orderId,
+              orderNumber: disputeRecord.orderNumber || '',
+              amount: reversedTransfer.amount,
+              currency: 'gbp',
+              status: 'awaiting_connect',
+              reason: 'dispute_won_retransfer',
+              originalTransferId: reversedTransfer.transferId,
+              disputeId: dispute.id,
+              notificationSent: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+            continue;
+          }
+
+          // Create new transfer
+          const transfer = await stripe.transfers.create({
+            amount: Math.round(reversedTransfer.amount * 100),
+            currency: 'gbp',
+            destination: artist.stripeConnectId,
+            transfer_group: disputeRecord.orderId,
+            metadata: {
+              orderId: disputeRecord.orderId,
+              orderNumber: disputeRecord.orderNumber || '',
+              artistId: reversedTransfer.artistId,
+              artistName: reversedTransfer.artistName,
+              reason: 'dispute_won_retransfer',
+              originalTransferId: reversedTransfer.transferId,
+              disputeId: dispute.id,
+              platform: 'freshwax'
+            }
+          });
+
+          retransfersCreated.push({
+            newTransferId: transfer.id,
+            originalTransferId: reversedTransfer.transferId,
+            amount: reversedTransfer.amount,
+            artistId: reversedTransfer.artistId,
+            artistName: reversedTransfer.artistName
+          });
+
+          // Create payout record
+          await addDocument('payouts', {
+            artistId: reversedTransfer.artistId,
+            artistName: reversedTransfer.artistName,
+            artistEmail: artist.email || '',
+            stripeConnectId: artist.stripeConnectId,
+            stripeTransferId: transfer.id,
+            orderId: disputeRecord.orderId,
+            orderNumber: disputeRecord.orderNumber || '',
+            amount: reversedTransfer.amount,
+            currency: 'gbp',
+            status: 'completed',
+            reason: 'dispute_won_retransfer',
+            originalTransferId: reversedTransfer.transferId,
+            disputeId: dispute.id,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString()
+          });
+
+          // Restore artist's earnings
+          await updateDocument('artists', reversedTransfer.artistId, {
+            totalEarnings: (artist.totalEarnings || 0) + reversedTransfer.amount,
+            updatedAt: new Date().toISOString()
+          });
+
+          console.log('[Stripe Webhook] ✓ Re-transferred', reversedTransfer.amount, 'GBP to', reversedTransfer.artistName);
+
+        } catch (retransferError: any) {
+          console.error('[Stripe Webhook] Failed to re-transfer to artist:', reversedTransfer.artistId, retransferError.message);
+
+          // Store as pending for retry
+          await addDocument('pendingPayouts', {
+            artistId: reversedTransfer.artistId,
+            artistName: reversedTransfer.artistName,
+            orderId: disputeRecord.orderId,
+            orderNumber: disputeRecord.orderNumber || '',
+            amount: reversedTransfer.amount,
+            currency: 'gbp',
+            status: 'retry_pending',
+            reason: 'dispute_won_retransfer',
+            originalTransferId: reversedTransfer.transferId,
+            disputeId: dispute.id,
+            failureReason: retransferError.message,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+
+      netImpact = 0; // We recovered the funds and paid artists
     }
 
     await updateDocument('disputes', disputeRecord.id, {
@@ -1155,19 +1275,290 @@ async function handleDisputeClosed(dispute: any) {
       outcome: outcome,
       resolvedAt: new Date().toISOString(),
       netImpact: netImpact,
+      retransfersCreated: retransfersCreated.length > 0 ? retransfersCreated : null,
+      retransferCount: retransfersCreated.length,
       updatedAt: new Date().toISOString()
     });
 
-    console.log('[Stripe Webhook] ✓ Dispute', dispute.id, 'closed with outcome:', outcome, 'Net impact:', netImpact, 'GBP');
-
-    // If we won the dispute and had reversed transfers, we could re-transfer to artists
-    // This is optional and depends on business policy
-    if (outcome === 'won' && disputeRecord.transfersReversed?.length > 0) {
-      console.log('[Stripe Webhook] Dispute won - consider re-transferring to artists');
-      // TODO: Implement re-transfer logic if desired
+    console.log('[Stripe Webhook] ✓ Dispute', dispute.id, 'closed with outcome:', outcome);
+    if (retransfersCreated.length > 0) {
+      console.log('[Stripe Webhook]   Re-transfers created:', retransfersCreated.length);
+    }
+    if (netImpact > 0) {
+      console.log('[Stripe Webhook]   Net platform loss:', netImpact, 'GBP');
     }
 
   } catch (error: any) {
     console.error('[Stripe Webhook] Error handling dispute closure:', error.message);
+  }
+}
+
+// Handle refund - reverse artist transfers proportionally
+async function handleRefund(charge: any, stripeSecretKey: string) {
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+
+  try {
+    const paymentIntentId = typeof charge.payment_intent === 'string'
+      ? charge.payment_intent
+      : charge.payment_intent?.id;
+
+    if (!paymentIntentId) {
+      console.log('[Stripe Webhook] No payment intent on charge, skipping refund handling');
+      return;
+    }
+
+    // Find the order by payment intent
+    const orders = await queryCollection('orders', {
+      filters: [{ field: 'paymentIntentId', op: 'EQUAL', value: paymentIntentId }],
+      limit: 1
+    });
+
+    if (orders.length === 0) {
+      console.log('[Stripe Webhook] No order found for payment intent:', paymentIntentId);
+      return;
+    }
+
+    const order = orders[0];
+    const orderId = order.id;
+
+    // Calculate refund percentage
+    const totalAmount = charge.amount / 100; // Total charge in GBP
+    const refundedAmount = charge.amount_refunded / 100; // Amount refunded in GBP
+    const refundPercentage = refundedAmount / totalAmount;
+    const isFullRefund = refundPercentage >= 0.99; // Allow for rounding
+
+    console.log('[Stripe Webhook] Order:', orderId);
+    console.log('[Stripe Webhook] Refund percentage:', (refundPercentage * 100).toFixed(1) + '%');
+    console.log('[Stripe Webhook] Full refund:', isFullRefund);
+
+    // Check if we've already processed refunds for this charge
+    const existingRefunds = await queryCollection('refunds', {
+      filters: [{ field: 'stripeChargeId', op: 'EQUAL', value: charge.id }],
+      limit: 1
+    });
+
+    // Calculate how much we've already refunded
+    let previouslyRefunded = 0;
+    if (existingRefunds.length > 0) {
+      previouslyRefunded = existingRefunds.reduce((sum: number, r: any) => sum + (r.amountRefunded || 0), 0);
+    }
+
+    // Calculate the new refund amount (incremental)
+    const newRefundAmount = refundedAmount - previouslyRefunded;
+
+    if (newRefundAmount <= 0) {
+      console.log('[Stripe Webhook] No new refund amount to process');
+      return;
+    }
+
+    const newRefundPercentage = newRefundAmount / totalAmount;
+
+    console.log('[Stripe Webhook] New refund amount:', newRefundAmount, 'GBP');
+
+    // Find all completed payouts for this order
+    const payouts = await queryCollection('payouts', {
+      filters: [
+        { field: 'orderId', op: 'EQUAL', value: orderId },
+        { field: 'status', op: 'EQUAL', value: 'completed' }
+      ],
+      limit: 50
+    });
+
+    if (payouts.length === 0) {
+      console.log('[Stripe Webhook] No completed payouts found for order:', orderId);
+
+      // Check for pending payouts and cancel them
+      const pendingPayouts = await queryCollection('pendingPayouts', {
+        filters: [
+          { field: 'orderId', op: 'EQUAL', value: orderId },
+          { field: 'status', op: 'IN', value: ['awaiting_connect', 'retry_pending'] }
+        ],
+        limit: 50
+      });
+
+      for (const pending of pendingPayouts) {
+        await updateDocument('pendingPayouts', pending.id, {
+          status: 'cancelled',
+          cancelledReason: 'order_refunded',
+          refundPercentage: refundPercentage,
+          updatedAt: new Date().toISOString()
+        });
+        console.log('[Stripe Webhook] Cancelled pending payout:', pending.id);
+      }
+
+      // Record the refund even without transfers to reverse
+      await addDocument('refunds', {
+        stripeChargeId: charge.id,
+        stripePaymentIntentId: paymentIntentId,
+        orderId: orderId,
+        orderNumber: order.orderNumber || '',
+        totalAmount: totalAmount,
+        amountRefunded: refundedAmount,
+        refundPercentage: refundPercentage,
+        isFullRefund: isFullRefund,
+        transfersReversed: [],
+        pendingPayoutsCancelled: pendingPayouts.length,
+        createdAt: new Date().toISOString()
+      });
+
+      return;
+    }
+
+    console.log('[Stripe Webhook] Found', payouts.length, 'payouts to process');
+
+    // Reverse transfers proportionally
+    let transfersReversed: any[] = [];
+    let totalReversed = 0;
+
+    for (const payout of payouts) {
+      if (!payout.stripeTransferId) continue;
+
+      // Calculate proportional reversal amount
+      const reversalAmount = Math.round(payout.amount * newRefundPercentage * 100) / 100;
+
+      if (reversalAmount <= 0) continue;
+
+      try {
+        // Get the transfer to check current state
+        const transfer = await stripe.transfers.retrieve(payout.stripeTransferId);
+
+        // Calculate how much can still be reversed
+        const alreadyReversed = (transfer.amount_reversed || 0) / 100;
+        const transferAmount = transfer.amount / 100;
+        const remainingReversible = transferAmount - alreadyReversed;
+
+        if (remainingReversible <= 0) {
+          console.log('[Stripe Webhook] Transfer already fully reversed:', payout.stripeTransferId);
+          continue;
+        }
+
+        // Don't reverse more than what's available
+        const actualReversalAmount = Math.min(reversalAmount, remainingReversible);
+        const reversalAmountCents = Math.round(actualReversalAmount * 100);
+
+        if (reversalAmountCents <= 0) continue;
+
+        // Create transfer reversal
+        const reversal = await stripe.transfers.createReversal(payout.stripeTransferId, {
+          amount: reversalAmountCents,
+          metadata: {
+            reason: 'customer_refund',
+            orderId: orderId,
+            chargeId: charge.id,
+            refundPercentage: (newRefundPercentage * 100).toFixed(1)
+          }
+        });
+
+        transfersReversed.push({
+          transferId: payout.stripeTransferId,
+          reversalId: reversal.id,
+          amount: actualReversalAmount,
+          artistId: payout.artistId,
+          artistName: payout.artistName
+        });
+
+        totalReversed += actualReversalAmount;
+
+        console.log('[Stripe Webhook] ✓ Reversed', actualReversalAmount, 'GBP from', payout.artistName);
+
+        // Update payout record
+        const currentReversed = payout.reversedAmount || 0;
+        const newTotalReversed = currentReversed + actualReversalAmount;
+        const isFullyReversed = newTotalReversed >= payout.amount * 0.99;
+
+        await updateDocument('payouts', payout.id, {
+          status: isFullyReversed ? 'reversed' : 'partially_reversed',
+          reversedAmount: newTotalReversed,
+          reversedAt: new Date().toISOString(),
+          reversalReason: 'customer_refund',
+          refundChargeId: charge.id,
+          updatedAt: new Date().toISOString()
+        });
+
+        // Update artist's total earnings
+        if (payout.artistId) {
+          const artist = await getDocument('artists', payout.artistId);
+          if (artist) {
+            await updateDocument('artists', payout.artistId, {
+              totalEarnings: Math.max(0, (artist.totalEarnings || 0) - actualReversalAmount),
+              updatedAt: new Date().toISOString()
+            });
+          }
+        }
+
+      } catch (reversalError: any) {
+        console.error('[Stripe Webhook] Failed to reverse transfer:', payout.stripeTransferId, reversalError.message);
+
+        // Record failed reversal for manual review
+        transfersReversed.push({
+          transferId: payout.stripeTransferId,
+          error: reversalError.message,
+          amount: reversalAmount,
+          artistId: payout.artistId,
+          artistName: payout.artistName,
+          failed: true
+        });
+      }
+    }
+
+    // Also cancel any pending payouts
+    const pendingPayouts = await queryCollection('pendingPayouts', {
+      filters: [
+        { field: 'orderId', op: 'EQUAL', value: orderId },
+        { field: 'status', op: 'IN', value: ['awaiting_connect', 'retry_pending'] }
+      ],
+      limit: 50
+    });
+
+    for (const pending of pendingPayouts) {
+      if (isFullRefund) {
+        // Full refund - cancel entirely
+        await updateDocument('pendingPayouts', pending.id, {
+          status: 'cancelled',
+          cancelledReason: 'order_refunded',
+          updatedAt: new Date().toISOString()
+        });
+      } else {
+        // Partial refund - reduce amount proportionally
+        const reducedAmount = pending.amount * (1 - newRefundPercentage);
+        await updateDocument('pendingPayouts', pending.id, {
+          amount: Math.round(reducedAmount * 100) / 100,
+          originalAmount: pending.amount,
+          reducedByRefund: true,
+          refundPercentage: newRefundPercentage,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
+
+    // Create refund record
+    await addDocument('refunds', {
+      stripeChargeId: charge.id,
+      stripePaymentIntentId: paymentIntentId,
+      orderId: orderId,
+      orderNumber: order.orderNumber || '',
+      totalAmount: totalAmount,
+      amountRefunded: refundedAmount,
+      newRefundAmount: newRefundAmount,
+      refundPercentage: refundPercentage,
+      isFullRefund: isFullRefund,
+      transfersReversed: transfersReversed,
+      totalReversed: totalReversed,
+      pendingPayoutsAffected: pendingPayouts.length,
+      createdAt: new Date().toISOString()
+    });
+
+    // Update order status
+    await updateDocument('orders', orderId, {
+      refundStatus: isFullRefund ? 'fully_refunded' : 'partially_refunded',
+      refundAmount: refundedAmount,
+      refundedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    console.log('[Stripe Webhook] ✓ Refund processed. Reversed', totalReversed, 'GBP from', transfersReversed.filter((t: any) => !t.failed).length, 'transfers');
+
+  } catch (error: any) {
+    console.error('[Stripe Webhook] Error handling refund:', error.message);
   }
 }
