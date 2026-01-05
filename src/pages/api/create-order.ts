@@ -622,10 +622,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const errorStack = error instanceof Error ? error.stack : '';
     console.error('[create-order] Error:', errorMessage);
     console.error('[create-order] Stack:', errorStack);
+    // SECURITY: Don't expose internal error details to client
     return new Response(JSON.stringify({
       success: false,
-      error: errorMessage,
-      details: errorStack?.split('\n').slice(0, 3).join(' -> ') || 'No stack trace'
+      error: 'Failed to create order. Please try again or contact support.'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
