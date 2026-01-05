@@ -8,6 +8,9 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { getLiveReleases } from '../lib/firebase-rest';
 
+// Get D1 binding from Cloudflare runtime
+const db = (Astro.locals as any).runtime?.env?.DB;
+
 // Calculate date range (last 7 days)
 const now = new Date();
 const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -26,7 +29,7 @@ function calculateScore(release: any): number {
   const rating = release.ratings?.average || release.overallRating?.average || 0;
   const ratingCount = release.ratings?.count || release.overallRating?.count || 0;
   const views = release.views || release.stats?.views || 0;
-  
+
   // Weighted score: sales most valuable, then ratings, views
   const score = (sales * 10) + (rating * ratingCount * 2) + (views * 0.1);
   return score;
@@ -37,8 +40,8 @@ let chartWeekStart = oneWeekAgo.toLocaleDateString('en-GB', { day: 'numeric', mo
 let chartWeekEnd = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
 try {
-  // Get all live releases via REST API
-  const allReleases = await getLiveReleases();
+  // Get all live releases - D1 first, Firebase fallback
+  const allReleases = await getLiveReleases(undefined, db);
 
   // Filter to releases from the last 7 days and calculate scores
   releases = allReleases

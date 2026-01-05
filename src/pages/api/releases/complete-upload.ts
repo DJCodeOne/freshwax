@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { setDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { d1UpsertRelease } from '../../../lib/d1-catalog';
 
 export const prerender = false;
 
@@ -119,8 +120,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     try {
+      // Write to Firebase first (primary)
       await setDocument('releases', releaseId, releaseDoc);
       log.info(`Release document created/updated: ${releaseId}`);
+
+      // Dual-write to D1 (secondary, non-blocking)
+      const db = env?.DB;
+      if (db) {
+        try {
+          await d1UpsertRelease(db, releaseId, releaseDoc);
+          log.info(`Release also written to D1: ${releaseId}`);
+        } catch (d1Error) {
+          // Log D1 error but don't fail the request
+          log.error('D1 dual-write failed (non-critical):', d1Error);
+        }
+      }
     } catch (setError: any) {
       log.error('Firebase setDocument failed:', setError);
       // Return more detailed error

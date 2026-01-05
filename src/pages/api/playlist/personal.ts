@@ -1,12 +1,10 @@
 // src/pages/api/playlist/personal.ts
-// Personal playlist API - save/load user's personal playlist to Firebase
+// Personal playlist API - save/load user's personal playlist to D1
 // Cloud sync is a Plus-only feature - Standard users only have local storage
 
 import type { APIContext } from 'astro';
-import { getDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { getEffectiveTier, SUBSCRIPTION_TIERS } from '../../../lib/subscription';
-
-const COLLECTION = 'userPlaylists';
 
 function initEnv(locals: any) {
   const env = (locals as any).runtime?.env;
@@ -16,7 +14,7 @@ function initEnv(locals: any) {
   });
 }
 
-// Check if user has Plus subscription
+// Check if user has Plus subscription (still uses Firebase for user data)
 async function isUserPlus(userId: string): Promise<boolean> {
   try {
     const userDoc = await getDocument('users', userId);
@@ -29,10 +27,12 @@ async function isUserPlus(userId: string): Promise<boolean> {
   }
 }
 
-// GET - Load user's personal playlist (Plus only - returns empty for Standard)
+// GET - Load user's personal playlist from D1 (Plus only - returns empty for Standard)
 export async function GET({ request, locals }: APIContext) {
   try {
     initEnv(locals);
+    const env = (locals as any).runtime?.env;
+    const db = env?.DB;
 
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
@@ -60,11 +60,35 @@ export async function GET({ request, locals }: APIContext) {
       });
     }
 
-    const doc = await getDocument(COLLECTION, userId);
+    // Load from D1
+    if (!db) {
+      console.error('[PersonalPlaylist] D1 database not available');
+      return new Response(JSON.stringify({
+        success: true,
+        playlist: [],
+        isPlus: true,
+        error: 'Database not available'
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const result = await db.prepare(
+      'SELECT playlist FROM user_playlists WHERE user_id = ?'
+    ).bind(userId).first();
+
+    let playlist: any[] = [];
+    if (result && result.playlist) {
+      try {
+        playlist = JSON.parse(result.playlist as string);
+      } catch (e) {
+        console.error('[PersonalPlaylist] Error parsing playlist JSON:', e);
+      }
+    }
 
     return new Response(JSON.stringify({
       success: true,
-      playlist: doc?.items || [],
+      playlist,
       isPlus: true
     }), {
       headers: { 'Content-Type': 'application/json' }
@@ -81,10 +105,12 @@ export async function GET({ request, locals }: APIContext) {
   }
 }
 
-// POST - Save user's personal playlist (Plus only)
+// POST - Save user's personal playlist to D1 (Plus only)
 export async function POST({ request, locals }: APIContext) {
   try {
     initEnv(locals);
+    const env = (locals as any).runtime?.env;
+    const db = env?.DB;
 
     // SECURITY: Verify the requesting user owns this playlist
     const authHeader = request.headers.get('Authorization');
@@ -159,11 +185,29 @@ export async function POST({ request, locals }: APIContext) {
       });
     }
 
-    // Save to Firebase
-    await setDocument(COLLECTION, userId, {
-      items,
-      updatedAt: new Date().toISOString()
-    });
+    // Save to D1
+    if (!db) {
+      console.error('[PersonalPlaylist] D1 database not available');
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Database not available'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const playlistJson = JSON.stringify(items);
+    const now = new Date().toISOString();
+
+    // Upsert: Insert or replace
+    await db.prepare(
+      `INSERT INTO user_playlists (user_id, playlist, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(user_id) DO UPDATE SET playlist = excluded.playlist, updated_at = excluded.updated_at`
+    ).bind(userId, playlistJson, now).run();
+
+    console.log('[PersonalPlaylist] Saved to D1 for user:', userId, 'items:', items.length);
 
     return new Response(JSON.stringify({
       success: true,

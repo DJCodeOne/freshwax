@@ -1,6 +1,6 @@
 ---
 // src/pages/dj-mixes.astro
-// Uses Firebase REST API for Cloudflare compatibility
+// Uses D1 first with Firebase REST API fallback
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
@@ -8,13 +8,16 @@ import Footer from '../components/Footer.astro';
 import { getLiveDJMixes, getSettings } from '../lib/firebase-rest';
 import '../styles/dj-mixes.css';
 
+// Get D1 binding from Cloudflare runtime
+const db = (Astro.locals as any).runtime?.env?.DB;
+
 // Fetch data via REST API
 let mixes: any[] = [];
 let showMixCharts = false;
 
 try {
-  // Get published mixes via REST API
-  mixes = await getLiveDJMixes(50);
+  // Get published mixes - D1 first, Firebase fallback
+  mixes = await getLiveDJMixes(50, db);
 
   // Get settings for mix chart visibility (30-min cache)
   const settings = await getSettings();

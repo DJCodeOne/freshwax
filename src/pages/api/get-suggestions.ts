@@ -13,7 +13,7 @@ const log = {
   error: (...args: any[]) => console.error('[get-suggestions]', ...args),
 };
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
   try {
     const url = new URL(request.url);
     const currentId = url.searchParams.get('currentId') || '';
@@ -21,11 +21,14 @@ export const GET: APIRoute = async ({ request }) => {
     const label = url.searchParams.get('label') || '';
     const genre = url.searchParams.get('genre') || '';
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '8'), 12);
-    
+
     log.info('Fetching suggestions for:', { currentId, artist, label, genre });
-    
+
+    // Get D1 binding for optimized reads
+    const db = (locals as any)?.runtime?.env?.DB;
+
     // Use cached releases - this is very efficient due to firebase-rest caching
-    const releases = await getLiveReleases(40); // Only fetch 40, not all
+    const releases = await getLiveReleases(40, db); // Only fetch 40, not all
     
     if (!releases || releases.length === 0) {
       return new Response(JSON.stringify({ 

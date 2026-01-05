@@ -1,6 +1,6 @@
 ---
 // src/pages/index.astro
-// SSR - fetches live data from Firebase REST API on each request
+// SSR - uses D1 first with Firebase REST API fallback
 
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
@@ -10,8 +10,11 @@ import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
 
 import { getLiveReleases } from '../lib/firebase-rest';
 
-// Get the 20 most recent published releases for homepage from Firebase REST API
-const featuredReleases = await getLiveReleases(20);
+// Get D1 binding from Cloudflare runtime
+const db = (Astro.locals as any).runtime?.env?.DB;
+
+// Get the 20 most recent published releases - D1 first, Firebase fallback
+const featuredReleases = await getLiveReleases(20, db);
 ---
 
 <Layout title="Home" description="Buy jungle and drum & bass music at Fresh Wax. Digital downloads, vinyl records, DJ mixes, and live streams from the UK underground scene.">

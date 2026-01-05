@@ -4,6 +4,7 @@ import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { saUpdateDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { d1UpsertRelease } from '../../lib/d1-catalog';
 
 export const prerender = false;
 
@@ -145,6 +146,22 @@ export async function POST({ request, locals }: any) {
     // Update in Firestore using service account auth
     await saUpdateDocument(serviceAccountKey, projectId, 'releases', id, cleanedData);
     log.info('[update-release] Updated in Firestore');
+
+    // Dual-write to D1 (secondary, non-blocking)
+    const db = env?.DB;
+    if (db) {
+      try {
+        // Get the full updated document for D1
+        const updatedDoc = await getDocument('releases', id);
+        if (updatedDoc) {
+          await d1UpsertRelease(db, id, updatedDoc);
+          log.info('[update-release] Also updated in D1');
+        }
+      } catch (d1Error) {
+        // Log D1 error but don't fail the request
+        log.error('[update-release] D1 dual-write failed (non-critical):', d1Error);
+      }
+    }
 
     // Also update the master list
     try {

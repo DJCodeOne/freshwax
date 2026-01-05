@@ -2,7 +2,7 @@
 // Enhanced Dynamic XML sitemap with audio/video extensions for music e-commerce
 // Optimized for Google Search Console and rich results
 
-import { queryCollection, getLiveReleases } from '../lib/firebase-rest';
+import { getLiveReleases, getLiveDJMixes, getLiveMerch } from '../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -77,32 +77,22 @@ function formatDuration(seconds: number): string {
   return duration;
 }
 
-export const GET = async () => {
+export const GET = async ({ locals }: { locals: any }) => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
-  
+
+  // Get D1 binding for optimized reads
+  const db = locals?.runtime?.env?.DB;
+
   let releases: any[] = [];
   let djMixes: any[] = [];
   let merchItems: any[] = [];
-  
+
   // Fetch all dynamic content in parallel for performance
   const [releasesResult, djMixesResult, merchResult] = await Promise.allSettled([
-    getLiveReleases(500),
-    queryCollection('dj-mixes', {
-      filters: [{ field: 'published', op: 'EQUAL', value: true }],
-      limit: 500,
-      cacheKey: 'sitemap-dj-mixes',
-      cacheTTL: 60 * 60 * 1000
-    }),
-    queryCollection('merch', {
-      filters: [
-        { field: 'published', op: 'EQUAL', value: true },
-        { field: 'status', op: 'EQUAL', value: 'active' }
-      ],
-      limit: 500,
-      cacheKey: 'sitemap-merch',
-      cacheTTL: 60 * 60 * 1000
-    })
+    getLiveReleases(500, db),
+    getLiveDJMixes(500, db),
+    getLiveMerch(500, db)
   ]);
   
   if (releasesResult.status === 'fulfilled') releases = releasesResult.value;

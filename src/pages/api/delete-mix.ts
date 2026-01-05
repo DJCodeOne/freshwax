@@ -7,6 +7,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getDocument, deleteDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { d1DeleteMix } from '../../lib/d1-catalog';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -157,9 +158,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Comments are stored as subcollection and would need separate handling
     // or migration to top-level collection with mixId reference
 
-    // Delete mix document
+    // Delete mix document from Firebase
     await deleteDocument('dj-mixes', mixId);
-    log.info('[delete-mix] Mix deleted');
+    log.info('[delete-mix] Mix deleted from Firebase');
+
+    // Also delete from D1 (secondary, non-blocking)
+    const db = env?.DB;
+    if (db) {
+      try {
+        await d1DeleteMix(db, mixId);
+        log.info('[delete-mix] Mix also deleted from D1');
+      } catch (d1Error) {
+        log.error('[delete-mix] D1 delete failed (non-critical):', d1Error);
+      }
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 

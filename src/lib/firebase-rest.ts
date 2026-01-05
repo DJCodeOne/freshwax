@@ -468,11 +468,43 @@ export async function getDocumentsBatch(
 // ==========================================
 
 // Get releases with extended cache for quota optimization
-export async function getLiveReleases(limit?: number): Promise<any[]> {
+// Now supports D1 as primary source with Firebase fallback
+export async function getLiveReleases(limit?: number, db?: any): Promise<any[]> {
   const cacheKey = `live-releases:${limit || 'all'}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
+  // Try D1 first if database is provided
+  if (db) {
+    try {
+      const query = limit
+        ? `SELECT data FROM releases_v2 WHERE published = 1 OR status = 'live' ORDER BY release_date DESC LIMIT ?`
+        : `SELECT data FROM releases_v2 WHERE published = 1 OR status = 'live' ORDER BY release_date DESC`;
+
+      const stmt = limit ? db.prepare(query).bind(limit) : db.prepare(query);
+      const { results } = await stmt.all();
+
+      if (results && results.length > 0) {
+        const releases = results.map((row: any) => {
+          try {
+            const doc = JSON.parse(row.data);
+            doc.id = doc.id || row.id;
+            return doc;
+          } catch (e) {
+            return null;
+          }
+        }).filter(Boolean);
+
+        log.info(`[firebase-rest] D1: ${releases.length} releases loaded`);
+        setCache(cacheKey, releases, CACHE_TTL.RELEASES_LIST);
+        return releases;
+      }
+    } catch (e) {
+      log.error('[firebase-rest] D1 releases error, falling back to Firebase:', e);
+    }
+  }
+
+  // Fallback to Firebase
   // Try 'status' field first
   let releases = await queryCollection('releases', {
     filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
@@ -480,7 +512,7 @@ export async function getLiveReleases(limit?: number): Promise<any[]> {
     cacheKey: `releases-status-live:${limit}`,
     cacheTTL: CACHE_TTL.RELEASES_LIST
   });
-  
+
   // If no results, try 'published' field
   if (releases.length === 0) {
     releases = await queryCollection('releases', {
@@ -490,24 +522,56 @@ export async function getLiveReleases(limit?: number): Promise<any[]> {
       cacheTTL: CACHE_TTL.RELEASES_LIST
     });
   }
-  
+
   // Sort by releaseDate client-side
   releases.sort((a, b) => {
     const dateA = new Date(a.releaseDate || 0).getTime();
     const dateB = new Date(b.releaseDate || 0).getTime();
     return dateB - dateA;
   });
-  
+
   setCache(cacheKey, releases, CACHE_TTL.RELEASES_LIST);
   return releases;
 }
 
 // Get DJ mixes with extended cache
-export async function getLiveDJMixes(limit?: number): Promise<any[]> {
+// Now supports D1 as primary source with Firebase fallback
+export async function getLiveDJMixes(limit?: number, db?: any): Promise<any[]> {
   const cacheKey = `live-mixes:${limit || 'all'}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
+  // Try D1 first if database is provided
+  if (db) {
+    try {
+      const query = limit
+        ? `SELECT data FROM dj_mixes WHERE published = 1 ORDER BY upload_date DESC LIMIT ?`
+        : `SELECT data FROM dj_mixes WHERE published = 1 ORDER BY upload_date DESC`;
+
+      const stmt = limit ? db.prepare(query).bind(limit) : db.prepare(query);
+      const { results } = await stmt.all();
+
+      if (results && results.length > 0) {
+        const mixes = results.map((row: any) => {
+          try {
+            const doc = JSON.parse(row.data);
+            doc.id = doc.id || row.id;
+            return doc;
+          } catch (e) {
+            return null;
+          }
+        }).filter(Boolean);
+
+        log.info(`[firebase-rest] D1: ${mixes.length} mixes loaded`);
+        setCache(cacheKey, mixes, CACHE_TTL.DJ_MIXES_LIST);
+        return mixes;
+      }
+    } catch (e) {
+      log.error('[firebase-rest] D1 mixes error, falling back to Firebase:', e);
+    }
+  }
+
+  // Fallback to Firebase
   const mixes = await queryCollection('dj-mixes', {
     filters: [{ field: 'published', op: 'EQUAL', value: true }],
     cacheTTL: CACHE_TTL.DJ_MIXES_LIST
@@ -524,6 +588,60 @@ export async function getLiveDJMixes(limit?: number): Promise<any[]> {
   const result = limit ? mixes.slice(0, limit) : mixes;
 
   setCache(cacheKey, result, CACHE_TTL.DJ_MIXES_LIST);
+  return result;
+}
+
+// Get published merch with D1 support
+export async function getLiveMerch(limit?: number, db?: any): Promise<any[]> {
+  const cacheKey = `live-merch:${limit || 'all'}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
+  // Try D1 first if database is provided
+  if (db) {
+    try {
+      const query = limit
+        ? `SELECT data FROM merch WHERE published = 1 ORDER BY created_at DESC LIMIT ?`
+        : `SELECT data FROM merch WHERE published = 1 ORDER BY created_at DESC`;
+
+      const stmt = limit ? db.prepare(query).bind(limit) : db.prepare(query);
+      const { results } = await stmt.all();
+
+      if (results && results.length > 0) {
+        const items = results.map((row: any) => {
+          try {
+            const doc = JSON.parse(row.data);
+            doc.id = doc.id || row.id;
+            return doc;
+          } catch (e) {
+            return null;
+          }
+        }).filter(Boolean);
+
+        log.info(`[firebase-rest] D1: ${items.length} merch items loaded`);
+        setCache(cacheKey, items, 10 * 60 * 1000);
+        return items;
+      }
+    } catch (e) {
+      log.error('[firebase-rest] D1 merch error, falling back to Firebase:', e);
+    }
+  }
+
+  // Fallback to Firebase
+  let merchData = await queryCollection('merch', {
+    cacheKey: 'merch-firebase',
+    cacheTTL: 10 * 60 * 1000
+  });
+
+  // Filter to only published/active items locally
+  merchData = merchData.filter(item => {
+    const isPublished = item.published !== false;
+    const isActive = !item.status || item.status === 'active';
+    return isPublished && isActive;
+  });
+
+  const result = limit ? merchData.slice(0, limit) : merchData;
+  setCache(cacheKey, result, 10 * 60 * 1000);
   return result;
 }
 

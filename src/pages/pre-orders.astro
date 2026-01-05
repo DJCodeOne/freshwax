@@ -8,6 +8,9 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { getLiveReleases } from '../lib/firebase-rest';
 
+// Get D1 binding from Cloudflare runtime
+const db = (Astro.locals as any).runtime?.env?.DB;
+
 // Helper to convert date value to Date object
 function toDate(value: any): Date | null {
   if (!value) return null;
@@ -21,8 +24,8 @@ const now = new Date();
 let preorders: any[] = [];
 
 try {
-  // Get all live releases via REST API
-  const allReleases = await getLiveReleases();
+  // Get all live releases - D1 first, Firebase fallback
+  const allReleases = await getLiveReleases(undefined, db);
 
   // Filter to releases with future release dates (pre-orders)
   preorders = allReleases

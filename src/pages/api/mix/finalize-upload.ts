@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, initFirebaseEnv, invalidateMixesCache } from '../../../lib/firebase-rest';
+import { d1UpsertMix } from '../../../lib/d1-catalog';
 
 export const prerender = false;
 
@@ -161,8 +162,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       ratings: { average: 0, count: 0 },
     };
 
+    // Write to Firebase first (primary)
     await setDocument('dj-mixes', mixId, mixData);
-    console.log(`[finalize-upload] Mix saved: ${mixId}`);
+    console.log(`[finalize-upload] Mix saved to Firebase: ${mixId}`);
+
+    // Dual-write to D1 (secondary, non-blocking)
+    const db = env?.DB;
+    if (db) {
+      try {
+        await d1UpsertMix(db, mixId, mixData);
+        console.log(`[finalize-upload] Mix also written to D1: ${mixId}`);
+      } catch (d1Error) {
+        // Log D1 error but don't fail the request
+        console.error('[finalize-upload] D1 dual-write failed (non-critical):', d1Error);
+      }
+    }
 
     // Clear cache so new mix appears immediately
     invalidateMixesCache();

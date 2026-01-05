@@ -33,3 +33,108 @@ CREATE TABLE tracks (
 CREATE INDEX idx_releases_status ON releases(status);
 CREATE INDEX idx_releases_date ON releases(release_date);
 CREATE INDEX idx_tracks_release ON tracks(release_id);
+
+-- User playlists table (migrated from Firebase)
+CREATE TABLE IF NOT EXISTS user_playlists (
+  user_id TEXT PRIMARY KEY,
+  playlist TEXT NOT NULL DEFAULT '[]',  -- JSON array of playlist items
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_playlists_updated ON user_playlists(updated_at);
+
+-- =============================================
+-- RELEASES (migrated from Firebase)
+-- Hybrid: indexed columns + full JSON document
+-- =============================================
+CREATE TABLE IF NOT EXISTS releases_v2 (
+  id TEXT PRIMARY KEY,
+  -- Key searchable/filterable fields
+  title TEXT NOT NULL,
+  artist_name TEXT NOT NULL,
+  genre TEXT DEFAULT 'Jungle & D&B',
+  release_date TEXT,
+  status TEXT DEFAULT 'pending',  -- pending, approved, published, rejected
+  published INTEGER DEFAULT 0,
+  -- Pricing
+  price_per_sale REAL DEFAULT 0,
+  track_price REAL DEFAULT 0,
+  vinyl_price REAL,
+  vinyl_stock INTEGER DEFAULT 0,
+  -- URLs (for quick access without parsing JSON)
+  cover_url TEXT,
+  thumb_url TEXT,
+  -- Stats
+  plays INTEGER DEFAULT 0,
+  downloads INTEGER DEFAULT 0,
+  views INTEGER DEFAULT 0,
+  likes INTEGER DEFAULT 0,
+  rating_avg REAL DEFAULT 0,
+  rating_count INTEGER DEFAULT 0,
+  -- Full document as JSON (contains all fields including tracks)
+  data TEXT NOT NULL,  -- Full JSON document
+  -- Timestamps
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_releases_status ON releases_v2(status);
+CREATE INDEX IF NOT EXISTS idx_releases_published ON releases_v2(published);
+CREATE INDEX IF NOT EXISTS idx_releases_date ON releases_v2(release_date DESC);
+CREATE INDEX IF NOT EXISTS idx_releases_artist ON releases_v2(artist_name);
+CREATE INDEX IF NOT EXISTS idx_releases_genre ON releases_v2(genre);
+
+-- =============================================
+-- DJ MIXES (migrated from Firebase)
+-- =============================================
+CREATE TABLE IF NOT EXISTS dj_mixes (
+  id TEXT PRIMARY KEY,
+  -- Key searchable fields
+  title TEXT NOT NULL,
+  dj_name TEXT NOT NULL,
+  user_id TEXT,
+  genre TEXT DEFAULT 'Jungle & D&B',
+  published INTEGER DEFAULT 1,
+  -- URLs
+  artwork_url TEXT,
+  audio_url TEXT,
+  -- Stats
+  plays INTEGER DEFAULT 0,
+  downloads INTEGER DEFAULT 0,
+  likes INTEGER DEFAULT 0,
+  duration_seconds INTEGER,
+  -- Full document
+  data TEXT NOT NULL,  -- Full JSON document
+  -- Timestamps
+  upload_date TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_mixes_published ON dj_mixes(published);
+CREATE INDEX IF NOT EXISTS idx_mixes_user ON dj_mixes(user_id);
+CREATE INDEX IF NOT EXISTS idx_mixes_dj ON dj_mixes(dj_name);
+CREATE INDEX IF NOT EXISTS idx_mixes_date ON dj_mixes(upload_date DESC);
+
+-- =============================================
+-- MERCH (migrated from Firebase)
+-- =============================================
+CREATE TABLE IF NOT EXISTS merch (
+  id TEXT PRIMARY KEY,
+  -- Key fields
+  name TEXT NOT NULL,
+  type TEXT,  -- tshirt, hoodie, etc.
+  price REAL NOT NULL,
+  stock INTEGER DEFAULT 0,
+  published INTEGER DEFAULT 1,
+  -- URLs
+  image_url TEXT,
+  -- Full document
+  data TEXT NOT NULL,  -- Full JSON document
+  -- Timestamps
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_merch_published ON merch(published);
+CREATE INDEX IF NOT EXISTS idx_merch_type ON merch(type);

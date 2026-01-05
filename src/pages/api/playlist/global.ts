@@ -726,7 +726,7 @@ async function pickRandomFromLocalServer(): Promise<PlaylistItem | null> {
       thumbnail: thumbnail,
       duration: selected.duration || undefined,
       addedBy: 'system',
-      addedByName: selected.uploader || 'Auto-Play',
+      addedByName: 'Auto-Play only',
       addedAt: new Date().toISOString()
     };
   } catch (error) {

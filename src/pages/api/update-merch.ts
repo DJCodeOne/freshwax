@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { requireAdminAuth } from '../../lib/admin';
+import { d1UpsertMerch } from '../../lib/d1-catalog';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -99,6 +100,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       await updateDocument('merch', productId, updates);
+
+      // Dual-write to D1 (secondary, non-blocking)
+      const db = env?.DB;
+      if (db) {
+        try {
+          const updatedProduct = await getDocument('merch', productId);
+          if (updatedProduct) {
+            await d1UpsertMerch(db, productId, updatedProduct);
+            log.info('[update-merch] Images also updated in D1');
+          }
+        } catch (d1Error) {
+          log.error('[update-merch] D1 dual-write failed (non-critical):', d1Error);
+        }
+      }
 
       log.info('[update-merch] Images updated for:', productId);
 
@@ -288,6 +303,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const updatedDoc = await getDocument('merch', productId);
     const updatedProduct = { id: productId, ...updatedDoc };
+
+    // Dual-write to D1 (secondary, non-blocking)
+    const db = env?.DB;
+    if (db && updatedDoc) {
+      try {
+        await d1UpsertMerch(db, productId, updatedDoc);
+        log.info('[update-merch] Also updated in D1');
+      } catch (d1Error) {
+        log.error('[update-merch] D1 dual-write failed (non-critical):', d1Error);
+      }
+    }
 
     log.info('[update-merch] Product updated:', productId);
 

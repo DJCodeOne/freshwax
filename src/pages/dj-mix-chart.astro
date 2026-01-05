@@ -8,13 +8,16 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { getLiveDJMixes } from '../lib/firebase-rest';
 
+// Get D1 binding from Cloudflare runtime
+const db = (Astro.locals as any).runtime?.env?.DB;
+
 // Rating calculation function
 function calculateRating(mix: any): number {
   const downloads = mix.downloads || 0;
   const likes = mix.likes || 0;
   const comments = mix.commentCount || mix.comments?.length || 0;
   const plays = mix.plays || 0;
-  
+
   // Weighted score: downloads most valuable, then likes, comments, plays
   const score = (downloads * 3) + (likes * 2) + (comments * 1) + (plays * 0.1);
   return score;
@@ -33,8 +36,8 @@ function scoreToStars(score: number): number {
 let mixes: any[] = [];
 
 try {
-  // Get all published mixes via REST API
-  const allMixes = await getLiveDJMixes();
+  // Get all published mixes - D1 first, Firebase fallback
+  const allMixes = await getLiveDJMixes(undefined, db);
 
   // Calculate ratings and add star ratings
   mixes = allMixes

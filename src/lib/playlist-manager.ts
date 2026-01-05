@@ -191,7 +191,7 @@ export class PlaylistManager {
     // Load global playlist from server
     await this.loadFromServer();
 
-    // Load personal playlist from Firebase if authenticated
+    // Load personal playlist from D1 if authenticated
     if (this.isAuthenticated && this.userId) {
       await this.loadPersonalPlaylistFromServer();
     }
@@ -1369,7 +1369,7 @@ export class PlaylistManager {
               thumbnail: selected.thumbnail,
               addedAt: new Date().toISOString(),
               addedBy: 'system',
-              addedByName: 'Auto-Play'
+              addedByName: 'Auto-Play only'
             };
           }
         }
@@ -1399,7 +1399,7 @@ export class PlaylistManager {
           thumbnail: selected.thumbnail,
           addedAt: new Date().toISOString(),
           addedBy: 'system',
-          addedByName: 'Auto-Play'
+          addedByName: 'Auto-Play only'
         };
       }
     } catch (error) {
@@ -1428,7 +1428,7 @@ export class PlaylistManager {
         thumbnail: selected.thumbnail,
         addedAt: new Date().toISOString(),
         addedBy: 'system',
-        addedByName: 'Auto-Play'
+        addedByName: 'Auto-Play only'
       };
     }
 
@@ -1504,7 +1504,7 @@ export class PlaylistManager {
         duration: selected.duration || undefined,
         addedAt: new Date().toISOString(),
         addedBy: 'system',
-        addedByName: selected.uploader || 'Auto-Play'
+        addedByName: 'Auto-Play only'
       };
     } catch (error) {
       console.warn('[PlaylistManager] Local playlist server error:', error);
@@ -1542,12 +1542,12 @@ export class PlaylistManager {
   }
 
   /**
-   * Load personal playlist from Firebase (called when user authenticates)
+   * Load personal playlist from D1 (called when user authenticates)
    * Cloud sync is Plus-only - Standard users only use localStorage
    */
   async loadPersonalPlaylistFromServer(): Promise<void> {
     if (!this.userId) {
-      console.log('[PlaylistManager] No userId, skipping Firebase playlist load');
+      console.log('[PlaylistManager] No userId, skipping D1 playlist load');
       return;
     }
 
@@ -1566,30 +1566,30 @@ export class PlaylistManager {
       (window as any).userHasCloudSync = true;
 
       if (result.success && Array.isArray(result.playlist)) {
-        // Merge with localStorage (Firebase takes priority for duplicates)
-        const firebaseItems = result.playlist;
+        // Merge with localStorage (D1 takes priority for duplicates)
+        const d1Items = result.playlist;
         const localItems = this.personalPlaylist;
 
-        // Create a map of existing URLs from Firebase
-        const firebaseUrls = new Set(firebaseItems.map((item: any) => item.url));
+        // Create a map of existing URLs from D1
+        const d1Urls = new Set(d1Items.map((item: any) => item.url));
 
-        // Add local items that aren't in Firebase
-        const mergedItems = [...firebaseItems];
+        // Add local items that aren't in D1
+        const mergedItems = [...d1Items];
         for (const localItem of localItems) {
-          if (!firebaseUrls.has(localItem.url)) {
+          if (!d1Urls.has(localItem.url)) {
             mergedItems.push(localItem);
           }
         }
 
         this.personalPlaylist = mergedItems;
-        console.log('[PlaylistManager] Loaded personal playlist from Firebase:', firebaseItems.length, 'items, merged total:', mergedItems.length);
+        console.log('[PlaylistManager] Loaded personal playlist from D1:', d1Items.length, 'items, merged total:', mergedItems.length);
 
-        // Save merged list back to both localStorage and Firebase
+        // Save merged list back to both localStorage and D1
         this.savePersonalPlaylist();
         this.savePersonalPlaylistToServer();
       }
     } catch (error) {
-      console.error('[PlaylistManager] Error loading personal playlist from Firebase:', error);
+      console.error('[PlaylistManager] Error loading personal playlist from D1:', error);
       // Keep using localStorage data
     }
   }
@@ -1611,7 +1611,7 @@ export class PlaylistManager {
   }
 
   /**
-   * Save personal playlist to Firebase (async, non-blocking)
+   * Save personal playlist to D1 (async, non-blocking)
    * Only saves for Plus users - Standard users use local storage only
    */
   private async savePersonalPlaylistToServer(): Promise<void> {
@@ -1619,14 +1619,27 @@ export class PlaylistManager {
 
     // Skip if user doesn't have cloud sync (not Plus)
     if ((window as any).userHasCloudSync === false) {
-      console.log('[PlaylistManager] Skipping Firebase save - user is not Plus');
+      console.log('[PlaylistManager] Skipping D1 save - user is not Plus');
       return;
     }
 
     try {
+      // Get Firebase auth token for authorization
+      const auth = (window as any).firebase?.auth?.();
+      const currentUser = auth?.currentUser;
+      const idToken = currentUser ? await currentUser.getIdToken() : null;
+
+      if (!idToken) {
+        console.warn('[PlaylistManager] No auth token, skipping cloud save');
+        return;
+      }
+
       const response = await fetch('/api/playlist/personal', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
         body: JSON.stringify({
           userId: this.userId,
           items: this.personalPlaylist
@@ -1643,10 +1656,10 @@ export class PlaylistManager {
       }
 
       if (result.success) {
-        console.log('[PlaylistManager] Personal playlist saved to Firebase (cloud sync)');
+        console.log('[PlaylistManager] Personal playlist saved to D1 (cloud sync)');
       }
     } catch (error) {
-      console.error('[PlaylistManager] Error saving personal playlist to Firebase:', error);
+      console.error('[PlaylistManager] Error saving personal playlist to D1:', error);
     }
   }
 
@@ -1709,7 +1722,7 @@ export class PlaylistManager {
 
       this.personalPlaylist.push(item);
       this.savePersonalPlaylist();
-      this.savePersonalPlaylistToServer(); // Save to Firebase for persistence
+      this.savePersonalPlaylistToServer(); // Save to D1 for persistence
       this.renderUI();
 
       console.log('[PlaylistManager] Added to personal playlist:', item.title || item.url);
@@ -1728,7 +1741,7 @@ export class PlaylistManager {
     if (index >= 0) {
       const removed = this.personalPlaylist.splice(index, 1)[0];
       this.savePersonalPlaylist();
-      this.savePersonalPlaylistToServer(); // Save to Firebase for persistence
+      this.savePersonalPlaylistToServer(); // Save to D1 for persistence
       this.renderUI();
       console.log('[PlaylistManager] Removed from personal playlist:', removed.title || removed.url);
     }
@@ -1775,7 +1788,7 @@ export class PlaylistManager {
   clearPersonalPlaylist(): void {
     this.personalPlaylist = [];
     this.savePersonalPlaylist();
-    this.savePersonalPlaylistToServer(); // Save to Firebase for persistence
+    this.savePersonalPlaylistToServer(); // Save to D1 for persistence
     this.renderUI();
     console.log('[PlaylistManager] Personal playlist cleared');
   }

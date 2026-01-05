@@ -7,6 +7,7 @@ import '../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { setDocument, updateDocument, getDocument, addDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { processImageToSquareWebP } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth } from '../../lib/admin';
@@ -386,9 +387,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('[upload-merch] Saving to Firebase');
 
+    // Write to Firebase first (primary)
     await setDocument('merch', productId, productData);
+    log.info('[upload-merch] Product saved to Firebase');
 
-    log.info('[upload-merch] Product saved');
+    // Dual-write to D1 (secondary, non-blocking)
+    const db = env?.DB;
+    if (db) {
+      try {
+        await d1UpsertMerch(db, productId, productData);
+        log.info('[upload-merch] Product also written to D1');
+      } catch (d1Error) {
+        // Log D1 error but don't fail the request
+        log.error('[upload-merch] D1 dual-write failed (non-critical):', d1Error);
+      }
+    }
 
     if (totalStock > 0) {
       const movementId = 'movement_' + timestamp;

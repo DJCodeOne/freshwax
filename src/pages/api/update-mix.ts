@@ -2,6 +2,7 @@
 // API endpoint to update mix description and backfill userId - uses Firebase REST API
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { d1UpsertMix } from '../../lib/d1-catalog';
 
 export const POST: APIRoute = async ({ request, cookies, locals }) => {
   // Initialize Firebase for Cloudflare runtime
@@ -147,6 +148,22 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // Dual-write to D1 (secondary, non-blocking)
+    const db = env?.DB;
+    if (db) {
+      try {
+        // Get the full updated document for D1
+        const updatedMix = await getDocument('dj-mixes', mixId);
+        if (updatedMix) {
+          await d1UpsertMix(db, mixId, updatedMix);
+          console.log('[update-mix] Also updated in D1');
+        }
+      } catch (d1Error) {
+        // Log D1 error but don't fail the request
+        console.error('[update-mix] D1 dual-write failed (non-critical):', d1Error);
+      }
     }
 
     return new Response(JSON.stringify({

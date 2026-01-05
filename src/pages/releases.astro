@@ -1,6 +1,6 @@
 ---
 // src/pages/releases.astro
-// OPTIMIZED: Uses Firebase REST API with local grouping
+// OPTIMIZED: Uses D1 first with Firebase REST API fallback
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
@@ -8,8 +8,11 @@ import ReleasePlate from '../components/ReleasePlate.astro';
 import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
 import { getLiveReleases } from '../lib/firebase-rest';
 
-// Fetch all live releases via REST API
-const allReleases = await getLiveReleases();
+// Get D1 binding from Cloudflare runtime
+const db = (Astro.locals as any).runtime?.env?.DB;
+
+// Fetch all live releases - D1 first, Firebase fallback
+const allReleases = await getLiveReleases(undefined, db);
 
 // Group releases by label locally
 const releasesByLabel: Record<string, any[]> = {};

@@ -6,31 +6,22 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
-import { queryCollection } from '../lib/firebase-rest';
+import { getLiveMerch } from '../lib/firebase-rest';
 import '../styles/merch.css';
 
 export const prerender = false;
 
-// Fetch merch using REST API (no Admin SDK)
+// Get D1 binding for optimized reads
+const db = (Astro.locals as any).runtime?.env?.DB;
+
+// Fetch merch using D1 first, Firebase fallback
 let products: any[] = [];
 let categories: Record<string, string> = {};
 let productTypes: Record<string, string> = {};
 
 try {
-  // Fetch all merch and filter locally (composite filters may not work without indexes)
-  let merchData = await queryCollection('merch', {
-    cacheKey: 'merch-all',
-    cacheTTL: 10 * 60 * 1000 // 10 min cache
-  });
+  const merchData = await getLiveMerch(undefined, db);
 
-  // Filter to only published/active items locally
-  merchData = merchData.filter(item => {
-    // Check for active/published items
-    const isPublished = item.published !== false;
-    const isActive = !item.status || item.status === 'active';
-    return isPublished && isActive;
-  });
-  
   products = merchData.map(doc => {
     // Build filter options
     if (doc.category && doc.categoryName) {
