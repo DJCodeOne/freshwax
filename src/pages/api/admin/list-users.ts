@@ -32,6 +32,7 @@ interface UserData {
     dj: boolean;
     artist: boolean;
     merch: boolean;
+    vinylSeller: boolean;
   };
   isAdmin: boolean;
   permissions: any;
@@ -98,7 +99,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
           customer: roles.customer !== false, // default true
           dj: roles.dj !== false, // default true (all users are DJs)
           artist: roles.artist === true,
-          merch: roles.merchSupplier === true || roles.merchSeller === true
+          merch: roles.merchSupplier === true || roles.merchSeller === true,
+          vinylSeller: roles.vinylSeller === true
         },
         isAdmin: doc.isAdmin === true || roles.admin === true,
         permissions: doc.permissions || { canBuy: true, canComment: true, canRate: true },
@@ -152,9 +154,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    // Filter OUT users with artist or merch roles - they belong in Partner Management
+    // Filter OUT users with partner roles - they belong in Partner Management
     // User Management is only for Customers and DJs (non-partner roles)
-    allUsers = allUsers.filter(u => !u.roles.artist && !u.roles.merch);
+    allUsers = allUsers.filter(u => !u.roles.artist && !u.roles.merch && !u.roles.vinylSeller);
 
     // Apply role filter
     if (roleFilter !== 'all') {

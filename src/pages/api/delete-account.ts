@@ -1,10 +1,9 @@
 // src/pages/api/delete-account.ts
-// Delete user account and associated data
-// Note: Firebase Auth user deletion requires Admin SDK which doesn't work on Cloudflare
-// The Firestore documents will be deleted, but auth user may need manual cleanup
+// Soft delete user account - marks as deleted but keeps data for potential recovery
+// User can contact support to restore or permanently delete
 
 import type { APIRoute } from 'astro';
-import { deleteDocument, queryCollection, initFirebaseEnv, verifyUserToken } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv, verifyUserToken } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
@@ -14,9 +13,6 @@ const log = {
 };
 
 export const prerender = false;
-
-// Max 10 orders to delete per account (prevent runaway)
-const MAX_ORDERS_TO_DELETE = 10;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -71,61 +67,80 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    log.info('[delete-account] Deleting account for user:', userId);
+    log.info('[delete-account] Soft deleting account for user:', userId);
 
-    // Delete customer document
+    const timestamp = new Date().toISOString();
+    const softDeleteData = {
+      deleted: true,
+      deletedAt: timestamp,
+      deletedBy: 'user', // User requested deletion
+      suspended: true,
+      updatedAt: timestamp
+    };
+
+    let anyUpdated = false;
+
+    // Soft delete customer document
     try {
-      await deleteDocument('customers', userId);
-      log.info('[delete-account] Deleted customers document');
-    } catch (e) {
-      log.info('[delete-account] No customers document to delete');
-    }
-
-    // Delete user document (if exists)
-    try {
-      await deleteDocument('users', userId);
-      log.info('[delete-account] Deleted users document');
-    } catch (e) {
-      log.info('[delete-account] No users document to delete');
-    }
-
-    // Delete orders associated with this user (with limit to prevent runaway)
-    try {
-      const orders = await queryCollection('orders', [
-        { field: 'customer.userId', operator: '==', value: userId }
-      ]);
-
-      if (orders && orders.length > 0) {
-        const ordersToDelete = orders.slice(0, MAX_ORDERS_TO_DELETE);
-        for (const order of ordersToDelete) {
-          await deleteDocument('orders', order.id);
-        }
-        log.info('[delete-account] Deleted', ordersToDelete.length, 'orders');
-        if (orders.length > MAX_ORDERS_TO_DELETE) {
-          log.info('[delete-account] Note:', orders.length - MAX_ORDERS_TO_DELETE, 'orders remain (hit limit)');
-        }
+      const customerDoc = await getDocument('customers', userId);
+      if (customerDoc) {
+        await updateDocument('customers', userId, softDeleteData);
+        log.info('[delete-account] Soft deleted customers document');
+        anyUpdated = true;
       }
     } catch (e) {
-      log.info('[delete-account] Error deleting orders:', e);
+      log.info('[delete-account] No customers document to update');
     }
-    
-    // Note: Firebase Auth user deletion requires Admin SDK
-    // On Cloudflare Workers, we can't use Admin SDK
-    // The auth user will need to be cleaned up separately or user can re-create account
-    log.info('[delete-account] Note: Auth user deletion skipped (requires Admin SDK)');
-    
-    return new Response(JSON.stringify({ 
+
+    // Soft delete user document
+    try {
+      const userDoc = await getDocument('users', userId);
+      if (userDoc) {
+        await updateDocument('users', userId, softDeleteData);
+        log.info('[delete-account] Soft deleted users document');
+        anyUpdated = true;
+      }
+    } catch (e) {
+      log.info('[delete-account] No users document to update');
+    }
+
+    // Soft delete artist document if exists
+    try {
+      const artistDoc = await getDocument('artists', userId);
+      if (artistDoc) {
+        await updateDocument('artists', userId, softDeleteData);
+        log.info('[delete-account] Soft deleted artists document');
+        anyUpdated = true;
+      }
+    } catch (e) {
+      log.info('[delete-account] No artists document to update');
+    }
+
+    if (!anyUpdated) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Account not found'
+      }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Note: Firebase Auth remains active but user won't be able to access anything
+    // due to suspended flag. Admin can restore or permanently delete later.
+
+    return new Response(JSON.stringify({
       success: true,
-      message: 'Account deleted successfully'
+      message: 'Account deleted successfully. Contact support if you need to restore it.'
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
     log.error('[delete-account] Error:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
+    return new Response(JSON.stringify({
+      success: false,
       error: error instanceof Error ? error.message : 'Failed to delete account'
     }), {
       status: 500,

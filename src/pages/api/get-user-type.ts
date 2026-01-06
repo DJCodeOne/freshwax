@@ -148,7 +148,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     const hasPartnerRole = isArtist || isDJ || isMerchSupplier || isVinylSeller;
-    const isPro = hasPartnerRole && isApproved;
+
+    // Check Plus subscription status from user document
+    let isPro = false;
+    if (userDoc?.subscription?.tier === 'pro') {
+      // Check if subscription is still active
+      const expiresAt = userDoc.subscription.expiresAt;
+      if (expiresAt) {
+        const expiryDate = typeof expiresAt === 'string' ? new Date(expiresAt) : expiresAt;
+        isPro = expiryDate > new Date();
+      }
+    }
 
     // Get referral code from user document (generated when upgrading to Pro)
     const referralCode = userDoc?.referralCode || null;

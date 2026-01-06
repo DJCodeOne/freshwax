@@ -973,6 +973,12 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
     });
 
     // ==================== GOOGLE SIGN-IN HANDLER ====================
+    // Helper: Normalize gmail.com/googlemail.com (they're the same Google account)
+    function normalizeGmailEmail(email) {
+      if (!email) return email;
+      return email.replace(/@googlemail\.com$/i, '@gmail.com');
+    }
+
     const googleBtn = document.getElementById('googleSignIn');
 
     googleBtn.addEventListener('click', async () => {
@@ -989,8 +995,12 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
 
+        // Normalize email (googlemail.com -> gmail.com)
+        const normalizedEmail = normalizeGmailEmail(user.email);
+        const isGooglemailVariant = user.email !== normalizedEmail;
+
         // Check if user already exists
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        let userDoc = await getDoc(doc(db, 'users', user.uid));
 
         if (userDoc.exists()) {
           // Existing user - redirect to dashboard
@@ -998,12 +1008,30 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
           return;
         }
 
-        // New user - create account
+        // If this is a googlemail.com variant, check if gmail.com account exists
+        if (isGooglemailVariant) {
+          const existingQuery = query(collection(db, 'users'), where('email', '==', normalizedEmail));
+          const existingDocs = await getDocs(existingQuery);
+
+          if (!existingDocs.empty) {
+            // Account exists with gmail.com - sign out and show error
+            await auth.signOut();
+            formError.innerHTML = `
+              <strong>Account already exists!</strong><br>
+              You have an existing account with <strong>${normalizedEmail}</strong>.<br>
+              Please <a href="/login">sign in</a> with email/password instead.
+            `;
+            formError.style.display = 'block';
+            return;
+          }
+        }
+
+        // New user - create account (use normalized email)
         const userData = {
           uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || user.email.split('@')[0],
-          displayNameLower: (user.displayName || user.email.split('@')[0]).toLowerCase(),
+          email: normalizedEmail,
+          displayName: user.displayName || normalizedEmail.split('@')[0],
+          displayNameLower: (user.displayName || normalizedEmail.split('@')[0]).toLowerCase(),
           photoURL: user.photoURL || null,
           provider: 'Google',
           createdAt: serverTimestamp(),
@@ -1020,10 +1048,10 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
 
         await setDoc(doc(db, 'users', user.uid), userData);
 
-        // Also create in customers collection
+        // Also create in customers collection (use normalized email)
         await setDoc(doc(db, 'customers', user.uid), {
           uid: user.uid,
-          email: user.email,
+          email: normalizedEmail,
           displayName: userData.displayName,
           displayNameLower: userData.displayNameLower,
           createdAt: serverTimestamp()

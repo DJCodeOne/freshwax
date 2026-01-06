@@ -79,12 +79,24 @@ const faqs = [
         <div class="notify-section">
           <h3>Get Notified</h3>
           <p>Sign up to our newsletter to be the first to know when sample packs are available.</p>
-          <a href="/newsletter" class="notify-btn">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            Subscribe to Newsletter
-          </a>
+          <form id="samples-newsletter-form" class="notify-form">
+            <div class="notify-input-group">
+              <input
+                type="email"
+                id="samples-newsletter-email"
+                placeholder="Enter your email"
+                required
+                class="notify-input"
+              />
+              <button type="submit" id="samples-newsletter-btn" class="notify-btn">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Subscribe
+              </button>
+            </div>
+            <p id="samples-newsletter-message" class="notify-message hidden"></p>
+          </form>
         </div>
       </div>
     </section>
@@ -283,28 +295,85 @@ const faqs = [
     font-size: 1rem;
   }
   
+  .notify-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .notify-input-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .notify-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.875rem 1rem;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+
+  .notify-input:focus {
+    outline: none;
+    border-color: #dc2626;
+  }
+
+  .notify-input::placeholder {
+    color: #666;
+  }
+
   .notify-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
     background: #dc2626;
     color: #fff;
-    padding: 1rem 2rem;
+    padding: 0.875rem 1.5rem;
     border-radius: 8px;
     font-weight: 700;
     font-size: 1rem;
-    text-decoration: none;
+    border: none;
+    cursor: pointer;
     transition: all 0.2s;
   }
-  
-  .notify-btn:hover {
+
+  .notify-btn:hover:not(:disabled) {
     background: #b91c1c;
     transform: translateY(-2px);
   }
-  
+
+  .notify-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
   .notify-btn svg {
     width: 1.25rem;
     height: 1.25rem;
+  }
+
+  .notify-message {
+    margin: 0;
+    font-size: 0.875rem;
+    text-align: center;
+  }
+
+  .notify-message.success {
+    color: #22c55e;
+  }
+
+  .notify-message.error {
+    color: #ef4444;
+  }
+
+  .hidden {
+    display: none;
   }
   
   /* Why Section */
@@ -439,3 +508,48 @@ const faqs = [
     }
   }
 </style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('samples-newsletter-form');
+    const emailInput = document.getElementById('samples-newsletter-email') as HTMLInputElement;
+    const btn = document.getElementById('samples-newsletter-btn') as HTMLButtonElement;
+    const message = document.getElementById('samples-newsletter-message') as HTMLParagraphElement;
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = emailInput?.value?.trim();
+      if (!email) return;
+
+      btn.disabled = true;
+      btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:1.25rem;height:1.25rem;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Subscribing...';
+      message.classList.add('hidden');
+
+      try {
+        const response = await fetch('/api/newsletter/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, source: 'samples-page' })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          message.textContent = data.message || 'Successfully subscribed!';
+          message.className = 'notify-message success';
+          form.reset();
+        } else {
+          message.textContent = data.error || 'Failed to subscribe. Please try again.';
+          message.className = 'notify-message error';
+        }
+      } catch (err) {
+        message.textContent = 'An error occurred. Please try again.';
+        message.className = 'notify-message error';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> Subscribe';
+      }
+    });
+  });
+</script>

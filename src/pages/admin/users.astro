@@ -5,6 +5,9 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import '../../styles/admin/users.css';
 export const prerender = false;
+
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 
 <AdminLayout title="User Management" activeNav="users">
@@ -206,8 +209,19 @@ export const prerender = false;
                     <span class="role-check">✓</span>
                   </div>
                 </label>
+                <label class="role-card-select">
+                  <input type="checkbox" id="editRoleVinylSeller" name="roles" value="vinylSeller">
+                  <div class="role-card-content">
+                    <span class="role-icon">📦</span>
+                    <div class="role-info">
+                      <strong>Vinyl Seller (Crates)</strong>
+                      <span>Can list vinyl records for sale</span>
+                    </div>
+                    <span class="role-check">✓</span>
+                  </div>
+                </label>
               </div>
-              <p class="form-hint mt-2 text-sm">Note: Users with Artist or Merch roles will also appear in Partner Management for approval settings.</p>
+              <p class="form-hint mt-2 text-sm">Note: Users with Artist, Merch, or Vinyl Seller roles will also appear in Partner Management for approval settings.</p>
             </div>
 
             <!-- Account Status -->
@@ -297,28 +311,32 @@ export const prerender = false;
     <div id="deleteModal" class="modal-overlay">
       <div class="modal">
         <div class="modal-header">
-          <h2>Delete User</h2>
+          <h2>Suspend User</h2>
           <button class="modal-close" onclick="closeModal('deleteModal')">×</button>
         </div>
         <div class="modal-body">
-          <p>Are you sure you want to delete <strong id="deleteUserName"></strong>?</p>
-          <p class="text-danger mt-1">⚠️ This action cannot be undone. The user will lose access to their account.</p>
+          <p>Suspend <strong id="deleteUserName"></strong>?</p>
+          <p class="text-sm mt-1" style="color: #666;">This will disable their login but keep their data. Can be restored later.</p>
+
           <div class="form-group mt-2">
             <label class="checkbox-label">
               <input type="checkbox" id="deleteConfirmCheck">
-              <span>I understand this will permanently delete this user</span>
+              <span>I confirm this action</span>
             </label>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancel</button>
-          <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled onclick="confirmDelete()">Delete User</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled onclick="confirmDelete()">Suspend User</button>
         </div>
       </div>
     </div>
   </Fragment>
 
   <Fragment slot="scripts">
+    <script define:vars={{ adminKey }}>
+      window.ADMIN_KEY = adminKey;
+    </script>
     <script type="module">
       import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
       import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -354,7 +372,7 @@ export const prerender = false;
       async function loadUsers() {
         try {
           const response = await fetch('/api/admin/list-users', {
-            headers: { 'x-admin-uid': currentAdminUid }
+            headers: { 'X-Admin-Key': window.ADMIN_KEY }
           });
 
           const data = await response.json();
@@ -395,7 +413,7 @@ export const prerender = false;
         const searchTerm = document.getElementById('searchInput').value.toLowerCase();
 
         let filtered = allUsers.filter(u => {
-          if (u.roles.artist || u.roles.merch) return false;
+          if (u.roles.artist || u.roles.merch || u.roles.vinylSeller) return false;
 
           const matchesSearch = !searchTerm ||
             u.displayName.toLowerCase().includes(searchTerm) ||
@@ -432,14 +450,14 @@ export const prerender = false;
           let statusBadge = '<span class="badge badge-secondary">Basic</span>';
           if (u.suspended) {
             statusBadge = '<span class="badge badge-danger">Suspended</span>';
-          } else if (u.approved && (u.roles.artist || u.roles.merch)) {
+          } else if (u.approved && (u.roles.artist || u.roles.merch || u.roles.vinylSeller)) {
             statusBadge = '<span class="badge badge-success">Pro Approved</span>';
-          } else if (u.roles.artist || u.roles.merch) {
+          } else if (u.roles.artist || u.roles.merch || u.roles.vinylSeller) {
             statusBadge = '<span class="badge badge-pending">Pending Approval</span>';
           }
 
           const dateStr = u.registeredAt ? u.registeredAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
-          const needsApproval = !u.approved && !u.suspended && (u.roles.artist || u.roles.merch);
+          const needsApproval = !u.approved && !u.suspended && (u.roles.artist || u.roles.merch || u.roles.vinylSeller);
           const orderCount = u.orderCount || 0;
           const totalSpent = u.totalSpent || 0;
 
@@ -525,6 +543,7 @@ export const prerender = false;
         document.getElementById('editRoleDJ').checked = true;
         document.getElementById('editRoleArtist').checked = user.roles?.artist || false;
         document.getElementById('editRoleMerch').checked = user.roles?.merch || false;
+        document.getElementById('editRoleVinylSeller').checked = user.roles?.vinylSeller || false;
 
         // Status
         if (user.suspended) {
@@ -584,6 +603,7 @@ export const prerender = false;
               dj: true,
               artist: document.getElementById('editRoleArtist').checked,
               merchSupplier: document.getElementById('editRoleMerch').checked,
+              vinylSeller: document.getElementById('editRoleVinylSeller').checked,
               admin: document.getElementById('editPermAdmin').checked
             },
             permissions: {
@@ -602,7 +622,7 @@ export const prerender = false;
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'x-admin-uid': currentAdminUid
+              'X-Admin-Key': window.ADMIN_KEY
             },
             body: JSON.stringify({
               userId: currentUserId,
@@ -619,7 +639,7 @@ export const prerender = false;
 
           closeModal('editModal');
 
-          const isBeingUpgraded = updates.roles.artist || updates.roles.merchSupplier;
+          const isBeingUpgraded = updates.roles.artist || updates.roles.merchSupplier || updates.roles.vinylSeller;
           if (isBeingUpgraded) {
             // Send approval confirmation email
             const emailType = updates.roles.artist && updates.roles.merchSupplier ? 'both' :
@@ -629,7 +649,7 @@ export const prerender = false;
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'x-admin-uid': currentAdminUid
+                  'X-Admin-Key': window.ADMIN_KEY
                 },
                 body: JSON.stringify({
                   email: updates.email,
@@ -674,7 +694,7 @@ export const prerender = false;
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'x-admin-uid': currentAdminUid
+              'X-Admin-Key': window.ADMIN_KEY
             },
             body: JSON.stringify({
               userId: currentUserId,
@@ -713,16 +733,15 @@ export const prerender = false;
 
         const deleteBtn = document.getElementById('confirmDeleteBtn');
         const originalText = deleteBtn.textContent;
-        deleteBtn.textContent = 'Deleting...';
+        deleteBtn.textContent = 'Suspending...';
         deleteBtn.disabled = true;
 
         try {
-          // Use server-side API to delete user
           const response = await fetch('/api/admin/delete-user', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'x-admin-uid': currentAdminUid
+              'X-Admin-Key': window.ADMIN_KEY
             },
             body: JSON.stringify({ userId: currentUserId })
           });
@@ -730,15 +749,15 @@ export const prerender = false;
           const result = await response.json();
 
           if (!result.success) {
-            throw new Error(result.error || 'Failed to delete user');
+            throw new Error(result.error || 'Failed to suspend user');
           }
 
           closeModal('deleteModal');
-          showToast('User deleted successfully', 'success');
+          showToast('User suspended successfully', 'success');
           await loadUsers();
 
         } catch (error) {
-          console.error('Delete error:', error);
+          console.error('Suspend error:', error);
           showToast('Error: ' + error.message, 'error');
         } finally {
           deleteBtn.textContent = originalText;
@@ -759,7 +778,7 @@ export const prerender = false;
           let status = 'Basic';
           if (u.suspended) status = 'Suspended';
           else if (u.approved) status = 'Approved';
-          else if (u.roles.artist || u.roles.merch) status = 'Pending';
+          else if (u.roles.artist || u.roles.merch || u.roles.vinylSeller) status = 'Pending';
 
           return [
             u.displayName,

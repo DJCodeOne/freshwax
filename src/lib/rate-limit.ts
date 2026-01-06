@@ -142,6 +142,12 @@ export const RateLimiters = {
     maxRequests: 20,
     windowMs: 60 * 60 * 1000,
     blockDurationMs: 10 * 60 * 1000  // 10 minute block if exceeded
+  },
+
+  // Admin read operations: 120 per minute (admin key protected)
+  admin: {
+    maxRequests: 120,
+    windowMs: 60 * 1000
   }
 };
 

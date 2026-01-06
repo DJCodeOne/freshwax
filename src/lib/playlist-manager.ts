@@ -1369,7 +1369,7 @@ export class PlaylistManager {
               thumbnail: selected.thumbnail,
               addedAt: new Date().toISOString(),
               addedBy: 'system',
-              addedByName: 'Auto-Play only'
+              addedByName: 'Auto-Play'
             };
           }
         }
@@ -1399,7 +1399,7 @@ export class PlaylistManager {
           thumbnail: selected.thumbnail,
           addedAt: new Date().toISOString(),
           addedBy: 'system',
-          addedByName: 'Auto-Play only'
+          addedByName: 'Auto-Play'
         };
       }
     } catch (error) {
@@ -1428,7 +1428,7 @@ export class PlaylistManager {
         thumbnail: selected.thumbnail,
         addedAt: new Date().toISOString(),
         addedBy: 'system',
-        addedByName: 'Auto-Play only'
+        addedByName: 'Auto-Play'
       };
     }
 
@@ -1504,7 +1504,7 @@ export class PlaylistManager {
         duration: selected.duration || undefined,
         addedAt: new Date().toISOString(),
         addedBy: 'system',
-        addedByName: 'Auto-Play only'
+        addedByName: 'Auto-Play'
       };
     } catch (error) {
       console.warn('[PlaylistManager] Local playlist server error:', error);
