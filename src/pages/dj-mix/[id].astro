@@ -725,6 +725,8 @@ Artist - Track Title
   <Footer />
 </Layout>
 
+<script is:inline src="/email-verify-check.js"></script>
+
 <style>
   /* Like button - no hover effects, stays gray */
   #like-btn[data-liked="true"] {
@@ -1451,12 +1453,18 @@ Artist - Track Title
   // Submit comment
   let selectedGifUrl = null;
   
-  submitCommentBtn?.addEventListener('click', function() {
+  submitCommentBtn?.addEventListener('click', async function() {
     // Check for either Firebase user or cached auth
     const userId = currentUser?.uid || cachedUserId;
     if (!userId) {
       alert('Please login to post a comment');
       return;
+    }
+
+    // Check email verification for new users
+    if (window.FreshWax?.checkEmailVerified) {
+      const verified = await window.FreshWax.checkEmailVerified('post comments');
+      if (!verified) return;
     }
 
     const userName = currentUserName || commentUsername?.value?.trim();

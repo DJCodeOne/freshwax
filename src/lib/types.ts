@@ -85,6 +85,12 @@ export interface Artist extends Timestamps {
   totalEarnings?: number;                // Lifetime earnings in GBP
   pendingBalance?: number;               // Amount pending payout
   lastPayoutAt?: string;
+
+  // Vinyl shipping defaults (artist sets these, can be overridden per-release)
+  vinylShippingUK?: number;              // Default UK shipping rate in GBP
+  vinylShippingEU?: number;              // Default EU shipping rate in GBP
+  vinylShippingIntl?: number;            // Default international shipping rate in GBP
+  vinylShipsFrom?: string;               // Artist's shipping location
 }
 
 export interface SocialLinks {
@@ -140,6 +146,12 @@ export interface Release extends Timestamps {
   vinylRelease?: boolean;
   vinylPrice?: number;
   vinylStock?: number;
+  vinylSold?: number;
+
+  // Per-release vinyl shipping (overrides artist defaults if set)
+  vinylShippingUK?: number;              // UK shipping rate in GBP
+  vinylShippingEU?: number;              // EU shipping rate in GBP
+  vinylShippingIntl?: number;            // International shipping rate in GBP
 
   // Status
   status: ReleaseStatus;
@@ -604,15 +616,21 @@ export interface Payout extends Timestamps {
   artistId: string;
   artistName: string;
   artistEmail: string;
-  stripeConnectId: string;
-  stripeTransferId: string;           // tr_xxx
+  stripeConnectId?: string;
+  stripeTransferId?: string;          // tr_xxx
+  paypalEmail?: string;
+  paypalBatchId?: string;
+  paypalPayoutItemId?: string;
+  payoutMethod?: 'stripe' | 'paypal';
 
   // Order reference
   orderId: string;
   orderNumber: string;
 
-  // Amount
-  amount: number;                     // Amount in GBP
+  // Amount (total = itemAmount + shippingAmount)
+  amount: number;                     // Total amount in GBP
+  itemAmount?: number;                // Amount for items only
+  shippingAmount?: number;            // Amount for vinyl shipping (goes to artist)
   currency: string;
 
   // Status
@@ -630,13 +648,17 @@ export interface PendingPayout extends Timestamps {
   artistId: string;
   artistName: string;
   artistEmail: string;
+  paypalEmail?: string;
+  payoutMethod?: 'stripe' | 'paypal';
 
   // Order reference
   orderId: string;
   orderNumber: string;
 
-  // Amount
-  amount: number;                     // Amount in GBP
+  // Amount (total = itemAmount + shippingAmount)
+  amount: number;                     // Total amount in GBP
+  itemAmount?: number;                // Amount for items only
+  shippingAmount?: number;            // Amount for vinyl shipping (goes to artist)
   currency: string;
 
   // Status

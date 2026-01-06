@@ -213,15 +213,32 @@ export const prerender = false;
             </div>
           </section>
 
-          <!-- Stripe Connect Section -->
+          <!-- Payment Setup Section -->
           <section class="account-section stripe-section" id="stripe-connect-section">
             <div class="section-header">
               <h2>🏦 Payment Setup</h2>
+              {(partner.stripeConnectStatus === 'active' || partner.paypalEmail) && (
+                <div class="payout-method-badge">
+                  Preferred: <strong>{partner.payoutMethod === 'paypal' ? 'PayPal' : 'Stripe'}</strong>
+                </div>
+              )}
             </div>
 
-            <div class="stripe-connect-content">
+            <!-- Payout Method Tabs -->
+            <div class="payout-tabs">
+              <button class="payout-tab active" data-tab="stripe">
+                <span class="tab-icon">💳</span> Stripe
+                {partner.stripeConnectStatus === 'active' && <span class="tab-check">✓</span>}
+              </button>
+              <button class="payout-tab" data-tab="paypal">
+                <span class="tab-icon">🅿️</span> PayPal
+                {partner.paypalEmail && <span class="tab-check">✓</span>}
+              </button>
+            </div>
+
+            <!-- Stripe Tab Content -->
+            <div class="payout-tab-content active" id="stripe-tab">
               {partner.stripeConnectStatus === 'active' ? (
-                <!-- Connected State -->
                 <div class="stripe-status connected">
                   <div class="status-icon">✓</div>
                   <div class="status-info">
@@ -234,12 +251,14 @@ export const prerender = false;
                   </div>
                   <div class="status-actions">
                     <a href="https://dashboard.stripe.com/express" target="_blank" rel="noopener noreferrer" class="stripe-dashboard-btn">
-                      Open Stripe Dashboard →
+                      Stripe Dashboard →
                     </a>
+                    {partner.payoutMethod !== 'stripe' && partner.paypalEmail && (
+                      <button class="set-preferred-btn" data-method="stripe">Set as Preferred</button>
+                    )}
                   </div>
                 </div>
               ) : partner.stripeConnectStatus === 'onboarding' || partner.stripeConnectStatus === 'restricted' ? (
-                <!-- Incomplete Onboarding -->
                 <div class="stripe-status incomplete">
                   <div class="status-icon">⏳</div>
                   <div class="status-info">
@@ -256,12 +275,11 @@ export const prerender = false;
                   </div>
                 </div>
               ) : (
-                <!-- Not Started -->
                 <div class="stripe-status not-started">
                   <div class="status-icon">💳</div>
                   <div class="status-info">
-                    <h3>Get Paid Automatically</h3>
-                    <p>Connect your bank account via Stripe to receive instant payouts when customers buy your music. You keep 99% of every sale!</p>
+                    <h3>Connect with Stripe</h3>
+                    <p>Link your bank account via Stripe to receive instant payouts. You keep 99% of every sale!</p>
                     <ul class="stripe-benefits">
                       <li>✓ Instant payouts to your bank</li>
                       <li>✓ Secure payment processing</li>
@@ -277,15 +295,139 @@ export const prerender = false;
               )}
             </div>
 
-            {partner.pendingBalance > 0 && partner.stripeConnectStatus !== 'active' && (
+            <!-- PayPal Tab Content -->
+            <div class="payout-tab-content" id="paypal-tab">
+              {partner.paypalEmail ? (
+                <div class="stripe-status connected">
+                  <div class="status-icon">✓</div>
+                  <div class="status-info">
+                    <h3>PayPal Connected</h3>
+                    <p>Payouts will be sent to: <strong>{partner.paypalEmail}</strong></p>
+                    <p class="small-text">Linked on {formatDate(partner.paypalLinkedAt)}</p>
+                  </div>
+                  <div class="status-actions">
+                    <button class="paypal-change-btn" id="paypal-change-btn">Change Email</button>
+                    {partner.payoutMethod !== 'paypal' && partner.stripeConnectStatus === 'active' && (
+                      <button class="set-preferred-btn" data-method="paypal">Set as Preferred</button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div class="stripe-status not-started paypal-setup">
+                  <div class="status-icon">🅿️</div>
+                  <div class="status-info">
+                    <h3>Link PayPal Account</h3>
+                    <p>Enter your PayPal email to receive payouts via PayPal instead of Stripe.</p>
+                    <div class="paypal-form">
+                      <input type="email" id="paypal-email-input" placeholder="your@paypal-email.com" />
+                      <button class="paypal-link-btn" id="paypal-link-btn">Link PayPal</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {partner.pendingBalance > 0 && !partner.stripeConnectStatus && !partner.paypalEmail && (
               <div class="pending-earnings-notice">
                 <span class="notice-icon">💰</span>
                 <div class="notice-content">
                   <strong>You have {formatPrice(partner.pendingBalance)} in pending earnings!</strong>
-                  <p>Complete your Stripe setup to receive your payouts.</p>
+                  <p>Set up Stripe or PayPal to receive your payouts.</p>
                 </div>
               </div>
             )}
+          </section>
+
+          <!-- Vinyl Shipping Settings -->
+          <section class="account-section" id="vinyl-shipping-section">
+            <div class="section-header">
+              <h2>📦 Vinyl Shipping Rates</h2>
+              <p class="section-subtitle">Set your default shipping rates for vinyl releases. You can override these per-release.</p>
+            </div>
+
+            <div class="shipping-settings-grid">
+              <div class="shipping-card">
+                <div class="shipping-region">
+                  <span class="region-flag">🇬🇧</span>
+                  <span class="region-name">UK</span>
+                </div>
+                <div class="shipping-input-group">
+                  <span class="currency">£</span>
+                  <input
+                    type="number"
+                    id="shipping-uk"
+                    class="shipping-input"
+                    value={partner.vinylShippingUK || ''}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              <div class="shipping-card">
+                <div class="shipping-region">
+                  <span class="region-flag">🇪🇺</span>
+                  <span class="region-name">Europe</span>
+                </div>
+                <div class="shipping-input-group">
+                  <span class="currency">£</span>
+                  <input
+                    type="number"
+                    id="shipping-eu"
+                    class="shipping-input"
+                    value={partner.vinylShippingEU || ''}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              <div class="shipping-card">
+                <div class="shipping-region">
+                  <span class="region-flag">🌍</span>
+                  <span class="region-name">International</span>
+                </div>
+                <div class="shipping-input-group">
+                  <span class="currency">£</span>
+                  <input
+                    type="number"
+                    id="shipping-intl"
+                    class="shipping-input"
+                    value={partner.vinylShippingIntl || ''}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="shipping-location">
+              <label for="ships-from">Ships From:</label>
+              <input
+                type="text"
+                id="ships-from"
+                class="ships-from-input"
+                value={partner.vinylShipsFrom || ''}
+                placeholder="e.g. London, UK"
+              />
+            </div>
+
+            <div class="shipping-actions">
+              <button id="save-shipping-btn" class="btn-primary">Save Shipping Rates</button>
+              <span id="shipping-save-status" class="save-status"></span>
+            </div>
+
+            <div class="shipping-info-box">
+              <span class="info-icon">ℹ️</span>
+              <div class="info-content">
+                <strong>How shipping works:</strong>
+                <p>When a customer buys vinyl from you, they pay your shipping rate based on their location. You receive 100% of the shipping fee along with the item price.</p>
+                <p>If a customer orders vinyl from multiple artists, they pay each artist's shipping separately (items ship from different locations).</p>
+              </div>
+            </div>
           </section>
 
           <!-- Sales Overview -->
@@ -1270,6 +1412,307 @@ export const prerender = false;
     font-size: 0.875rem;
   }
 
+  /* Vinyl Shipping Settings */
+  .section-subtitle {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+
+  .shipping-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .shipping-card {
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 1px solid #374151;
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+  }
+
+  .shipping-region {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .region-flag {
+    font-size: 1.5rem;
+  }
+
+  .region-name {
+    font-weight: 600;
+    color: #fff;
+    font-size: 1rem;
+  }
+
+  .shipping-input-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    background: #0f172a;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .shipping-input-group .currency {
+    color: #9ca3af;
+    font-weight: 600;
+  }
+
+  .shipping-input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.125rem;
+    font-weight: 600;
+    width: 80px;
+    text-align: center;
+    outline: none;
+  }
+
+  .shipping-input::placeholder {
+    color: #4b5563;
+  }
+
+  .shipping-location {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .shipping-location label {
+    color: #9ca3af;
+    font-weight: 500;
+  }
+
+  .ships-from-input {
+    flex: 1;
+    min-width: 200px;
+    background: #0f172a;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: #fff;
+    font-size: 0.95rem;
+  }
+
+  .ships-from-input:focus {
+    outline: none;
+    border-color: #dc2626;
+  }
+
+  .shipping-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .save-status {
+    color: #22c55e;
+    font-size: 0.875rem;
+  }
+
+  .save-status.error {
+    color: #ef4444;
+  }
+
+  .shipping-info-box {
+    display: flex;
+    gap: 1rem;
+    background: linear-gradient(to bottom, #1e3a5f, #0f172a);
+    border: 1px solid #1d4ed8;
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  .shipping-info-box .info-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .shipping-info-box .info-content strong {
+    color: #fff;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .shipping-info-box .info-content p {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    margin: 0 0 0.5rem;
+    line-height: 1.5;
+  }
+
+  .shipping-info-box .info-content p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Payout Method Badge */
+  .payout-method-badge {
+    background: linear-gradient(to bottom, #374151, #1f2937);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #9ca3af;
+    border: 1px solid #4b5563;
+  }
+
+  .payout-method-badge strong {
+    color: #22c55e;
+  }
+
+  /* Payout Tabs */
+  .payout-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #374151;
+    padding-bottom: 0;
+  }
+
+  .payout-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+  }
+
+  .payout-tab:hover {
+    color: #fff;
+  }
+
+  .payout-tab.active {
+    color: #fff;
+    border-bottom-color: #6366f1;
+  }
+
+  .payout-tab .tab-check {
+    background: #22c55e;
+    color: #fff;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .payout-tab-content {
+    display: none;
+  }
+
+  .payout-tab-content.active {
+    display: block;
+  }
+
+  /* PayPal Form */
+  .paypal-form {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .paypal-form input {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.875rem 1rem;
+    border: 2px solid #374151;
+    border-radius: 10px;
+    font-size: 1rem;
+    background: #1f2937;
+    color: #fff;
+  }
+
+  .paypal-form input:focus {
+    outline: none;
+    border-color: #6366f1;
+  }
+
+  .paypal-link-btn {
+    padding: 0.875rem 1.5rem;
+    background: linear-gradient(135deg, #0070ba, #003087);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .paypal-link-btn:hover {
+    background: linear-gradient(135deg, #003087, #001f5c);
+    transform: translateY(-1px);
+  }
+
+  .paypal-link-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .paypal-change-btn {
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(to bottom, #374151, #1f2937);
+    border: 2px solid #4b5563;
+    color: #fff;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .paypal-change-btn:hover {
+    background: linear-gradient(to bottom, #4b5563, #374151);
+  }
+
+  .set-preferred-btn {
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border: none;
+    color: #fff;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .set-preferred-btn:hover {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    transform: translateY(-1px);
+  }
+
+  .small-text {
+    font-size: 0.8125rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+  }
+
   /* Print Styles */
   @media print {
     @page {
@@ -1622,6 +2065,143 @@ export const prerender = false;
     stripeContinueBtn?.click();
   }
 
+  // Payout Method Tabs
+  const payoutTabs = document.querySelectorAll('.payout-tab');
+  payoutTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabName = tab.dataset.tab;
+
+      // Update tab active states
+      payoutTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+
+      // Update content visibility
+      document.querySelectorAll('.payout-tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(`${tabName}-tab`)?.classList.add('active');
+    });
+  });
+
+  // PayPal Link
+  const paypalLinkBtn = document.getElementById('paypal-link-btn');
+  const paypalEmailInput = document.getElementById('paypal-email-input');
+
+  paypalLinkBtn?.addEventListener('click', async () => {
+    const email = paypalEmailInput?.value?.trim();
+
+    if (!email || !email.includes('@')) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    paypalLinkBtn.textContent = 'Linking...';
+    paypalLinkBtn.disabled = true;
+
+    try {
+      const response = await fetch('/api/paypal/link-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entityType: 'artist',
+          entityId: partnerId,
+          paypalEmail: email
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        window.location.reload();
+      } else {
+        alert(result.error || 'Failed to link PayPal');
+        paypalLinkBtn.textContent = 'Link PayPal';
+        paypalLinkBtn.disabled = false;
+      }
+    } catch (e) {
+      console.error('PayPal link error:', e);
+      alert('Failed to link PayPal. Please try again.');
+      paypalLinkBtn.textContent = 'Link PayPal';
+      paypalLinkBtn.disabled = false;
+    }
+  });
+
+  // PayPal Change Email
+  const paypalChangeBtn = document.getElementById('paypal-change-btn');
+  paypalChangeBtn?.addEventListener('click', () => {
+    const newEmail = prompt('Enter your new PayPal email:');
+    if (!newEmail || !newEmail.includes('@')) {
+      if (newEmail !== null) alert('Please enter a valid email address');
+      return;
+    }
+
+    paypalChangeBtn.textContent = 'Updating...';
+    paypalChangeBtn.disabled = true;
+
+    fetch('/api/paypal/link-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        entityType: 'artist',
+        entityId: partnerId,
+        paypalEmail: newEmail
+      })
+    })
+    .then(res => res.json())
+    .then(result => {
+      if (result.success) {
+        window.location.reload();
+      } else {
+        alert(result.error || 'Failed to update PayPal');
+        paypalChangeBtn.textContent = 'Change Email';
+        paypalChangeBtn.disabled = false;
+      }
+    })
+    .catch(e => {
+      console.error('PayPal update error:', e);
+      alert('Failed to update. Please try again.');
+      paypalChangeBtn.textContent = 'Change Email';
+      paypalChangeBtn.disabled = false;
+    });
+  });
+
+  // Set Preferred Payout Method
+  const preferredBtns = document.querySelectorAll('.set-preferred-btn');
+  preferredBtns.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const method = btn.dataset.method;
+      btn.textContent = 'Setting...';
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('/api/paypal/set-payout-method', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entityType: 'artist',
+            entityId: partnerId,
+            payoutMethod: method
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          window.location.reload();
+        } else {
+          alert(result.error || 'Failed to set payout method');
+          btn.textContent = 'Set as Preferred';
+          btn.disabled = false;
+        }
+      } catch (e) {
+        console.error('Set payout method error:', e);
+        alert('Failed to update. Please try again.');
+        btn.textContent = 'Set as Preferred';
+        btn.disabled = false;
+      }
+    });
+  });
+
   // Download Data
   const downloadBtn = document.getElementById('download-data');
   
@@ -1657,5 +2237,57 @@ export const prerender = false;
     
     downloadBtn.textContent = 'Download';
     downloadBtn.disabled = false;
+  });
+
+  // Save Vinyl Shipping Settings
+  const saveShippingBtn = document.getElementById('save-shipping-btn');
+  const shippingStatus = document.getElementById('shipping-save-status');
+
+  saveShippingBtn?.addEventListener('click', async () => {
+    const ukInput = document.getElementById('shipping-uk') as HTMLInputElement;
+    const euInput = document.getElementById('shipping-eu') as HTMLInputElement;
+    const intlInput = document.getElementById('shipping-intl') as HTMLInputElement;
+    const shipsFromInput = document.getElementById('ships-from') as HTMLInputElement;
+
+    const vinylShippingUK = ukInput?.value ? parseFloat(ukInput.value) : null;
+    const vinylShippingEU = euInput?.value ? parseFloat(euInput.value) : null;
+    const vinylShippingIntl = intlInput?.value ? parseFloat(intlInput.value) : null;
+    const vinylShipsFrom = shipsFromInput?.value?.trim() || null;
+
+    saveShippingBtn.textContent = 'Saving...';
+    saveShippingBtn.disabled = true;
+    shippingStatus.textContent = '';
+    shippingStatus.className = 'save-status';
+
+    try {
+      const response = await fetch('/api/artist/update-shipping', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          artistId: partnerId,
+          vinylShippingUK,
+          vinylShippingEU,
+          vinylShippingIntl,
+          vinylShipsFrom
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        shippingStatus.textContent = '✓ Saved';
+        shippingStatus.className = 'save-status';
+      } else {
+        shippingStatus.textContent = result.error || 'Failed to save';
+        shippingStatus.className = 'save-status error';
+      }
+    } catch (e) {
+      console.error('Save shipping error:', e);
+      shippingStatus.textContent = 'Failed to save';
+      shippingStatus.className = 'save-status error';
+    }
+
+    saveShippingBtn.textContent = 'Save Shipping Rates';
+    saveShippingBtn.disabled = false;
   });
 </script>

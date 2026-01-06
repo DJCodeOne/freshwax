@@ -274,6 +274,23 @@ if (!release) {
                 <input type="date" name="expectedShippingDate" class="form-input" value={release.expectedShippingDate?.split('T')[0] || release.vinyl?.expectedShippingDate?.split('T')[0] || ''} />
               </div>
 
+              <div class="field-group-title">Shipping Rates (£) <span style="font-weight: 400; text-transform: none;">(Leave blank to use artist defaults)</span></div>
+
+              <div class="form-row-3">
+                <div class="form-group">
+                  <label class="form-label">UK Shipping</label>
+                  <input type="number" name="vinylShippingUK" class="form-input" step="0.01" min="0" value={release.vinylShippingUK ?? ''} placeholder="4.99" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">EU Shipping</label>
+                  <input type="number" name="vinylShippingEU" class="form-input" step="0.01" min="0" value={release.vinylShippingEU ?? ''} placeholder="9.99" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Intl Shipping</label>
+                  <input type="number" name="vinylShippingIntl" class="form-input" step="0.01" min="0" value={release.vinylShippingIntl ?? ''} placeholder="14.99" />
+                </div>
+              </div>
+
               <div class="form-group">
                 <label class="checkbox-group">
                   <input type="checkbox" name="hasLimitedEdition" id="hasLimitedEdition" checked={release.hasLimitedEdition || release.vinyl?.limitedEdition !== null || false} />
@@ -989,6 +1006,10 @@ if (!release) {
         vinylWeight: formData.get('vinylWeight') || '',
         pressingPlant: formData.get('pressingPlant') || '',
         expectedShippingDate: formData.get('expectedShippingDate') || '',
+        // Per-release vinyl shipping (overrides artist defaults if set)
+        vinylShippingUK: formData.get('vinylShippingUK') ? parseFloat(formData.get('vinylShippingUK')) : null,
+        vinylShippingEU: formData.get('vinylShippingEU') ? parseFloat(formData.get('vinylShippingEU')) : null,
+        vinylShippingIntl: formData.get('vinylShippingIntl') ? parseFloat(formData.get('vinylShippingIntl')) : null,
         hasLimitedEdition: formData.get('hasLimitedEdition') === 'on',
         limitedEditionType: formData.get('limitedEditionType') || '',
         limitedEditionDetails: formData.get('limitedEditionDetails') || '',

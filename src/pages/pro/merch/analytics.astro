@@ -47,9 +47,8 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
     <div class="charts-grid">
       <div class="chart-card">
         <h3>Sales Over Time</h3>
-        <div class="chart-placeholder" id="salesChart">
-          <p>Chart visualization would appear here</p>
-          <p class="sub">Showing daily sales for the selected period</p>
+        <div class="sales-chart" id="salesChart">
+          <div class="chart-loading">Loading chart data...</div>
         </div>
       </div>
       <div class="chart-card">
@@ -176,20 +175,87 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
       margin: 0 0 1rem;
     }
 
-    .chart-placeholder {
+    .sales-chart {
       height: 200px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 4px;
+      padding: 1rem 0;
+    }
+
+    .sales-chart .chart-loading {
+      width: 100%;
+      text-align: center;
+      color: var(--text-secondary, #a3a3a3);
+      align-self: center;
+    }
+
+    .chart-bar-wrapper {
+      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      background: var(--bg-tertiary, #1a1a1a);
-      border-radius: 6px;
-      color: var(--text-secondary, #a3a3a3);
+      gap: 4px;
+      max-width: 40px;
     }
 
-    .chart-placeholder .sub {
-      font-size: 0.8rem;
+    .chart-bar {
+      width: 100%;
+      min-height: 4px;
+      background: linear-gradient(to top, #3b82f6, #60a5fa);
+      border-radius: 3px 3px 0 0;
+      transition: height 0.3s ease;
+      position: relative;
+    }
+
+    .chart-bar:hover {
+      background: linear-gradient(to top, #2563eb, #3b82f6);
+    }
+
+    .chart-bar-tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f1f1f;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 10;
+    }
+
+    .chart-bar:hover .chart-bar-tooltip {
+      opacity: 1;
+    }
+
+    .chart-label {
+      font-size: 0.65rem;
       color: var(--text-muted, #666);
+      text-align: center;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      transform: rotate(180deg);
+      max-height: 50px;
+      overflow: hidden;
+    }
+
+    @media (max-width: 600px) {
+      .chart-label {
+        display: none;
+      }
+    }
+
+    .chart-empty {
+      width: 100%;
+      text-align: center;
+      color: var(--text-secondary, #a3a3a3);
+      align-self: center;
     }
 
     .top-list {
@@ -323,24 +389,34 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
           where('createdAt', '>=', Timestamp.fromDate(startDate)),
           orderBy('createdAt', 'desc')
         );
-        
+
         const snapshot = await getDocs(ordersQuery);
-        
+
         let totalRevenue = 0;
         let totalOrders = 0;
         let totalUnits = 0;
         const productSales = {};
         const recentSales = [];
+        const dailySales = {}; // For chart
 
         snapshot.forEach(doc => {
           const order = doc.data();
           totalOrders++;
           totalRevenue += order.total || 0;
-          
+
+          // Track daily sales for chart
+          const orderDate = order.createdAt?.toDate?.() || new Date();
+          const dateKey = orderDate.toISOString().split('T')[0];
+          if (!dailySales[dateKey]) {
+            dailySales[dateKey] = { revenue: 0, orders: 0 };
+          }
+          dailySales[dateKey].revenue += order.total || 0;
+          dailySales[dateKey].orders++;
+
           (order.items || []).forEach(item => {
             const qty = item.quantity || 1;
             totalUnits += qty;
-            
+
             // Track product sales
             if (!productSales[item.name]) {
               productSales[item.name] = { units: 0, revenue: 0 };
@@ -350,7 +426,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
             // Add to recent sales
             recentSales.push({
-              date: order.createdAt?.toDate?.() || new Date(),
+              date: orderDate,
               product: item.name,
               quantity: qty,
               revenue: (item.price || 0) * qty
@@ -362,9 +438,47 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
         document.getElementById('totalRevenue').textContent = '£' + totalRevenue.toFixed(2);
         document.getElementById('totalOrders').textContent = totalOrders;
         document.getElementById('totalUnits').textContent = totalUnits;
-        document.getElementById('avgOrder').textContent = totalOrders > 0 
-          ? '£' + (totalRevenue / totalOrders).toFixed(2) 
+        document.getElementById('avgOrder').textContent = totalOrders > 0
+          ? '£' + (totalRevenue / totalOrders).toFixed(2)
           : '£0.00';
+
+        // Build chart - show last N days based on period
+        const chartEl = document.getElementById('salesChart');
+        const chartDays = Math.min(currentPeriod, 30); // Max 30 bars
+        const chartData = [];
+
+        for (let i = chartDays - 1; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const dateKey = d.toISOString().split('T')[0];
+          const dayData = dailySales[dateKey] || { revenue: 0, orders: 0 };
+          chartData.push({
+            date: d,
+            label: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+            revenue: dayData.revenue,
+            orders: dayData.orders
+          });
+        }
+
+        const maxRevenue = Math.max(...chartData.map(d => d.revenue), 1);
+
+        if (totalOrders === 0) {
+          chartEl.innerHTML = '<div class="chart-empty">No sales data for this period</div>';
+        } else {
+          chartEl.innerHTML = chartData.map(day => {
+            const height = Math.max((day.revenue / maxRevenue) * 150, day.revenue > 0 ? 8 : 2);
+            return `
+              <div class="chart-bar-wrapper">
+                <div class="chart-bar" style="height: ${height}px;">
+                  <div class="chart-bar-tooltip">
+                    ${day.label}<br>£${day.revenue.toFixed(2)}<br>${day.orders} order${day.orders !== 1 ? 's' : ''}
+                  </div>
+                </div>
+                <span class="chart-label">${day.label}</span>
+              </div>
+            `;
+          }).join('');
+        }
 
         // Top products
         const topProducts = Object.entries(productSales)

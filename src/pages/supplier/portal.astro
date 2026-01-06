@@ -1,0 +1,833 @@
+---
+// src/pages/supplier/portal.astro
+// Supplier portal - accessed via unique access code
+
+import Layout from '../../layouts/Layout.astro';
+
+export const prerender = false;
+
+// Get access code from URL
+const url = new URL(Astro.request.url);
+const code = url.searchParams.get('code');
+const stripeConnected = url.searchParams.get('stripe_connected') === 'true';
+const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
+
+// Redirect if no code
+if (!code) {
+  return Astro.redirect('/');
+}
+---
+
+<Layout title="Supplier Portal | Fresh Wax">
+  <main class="supplier-portal">
+    <div class="container">
+      <div id="loading-state" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading supplier portal...</p>
+      </div>
+
+      <div id="error-state" class="error-state" style="display: none;">
+        <h1>Access Denied</h1>
+        <p id="error-message">Invalid access code</p>
+        <a href="/" class="btn">Back to Home</a>
+      </div>
+
+      <div id="portal-content" class="portal-content" style="display: none;">
+        <header class="portal-header">
+          <h1>Supplier Portal</h1>
+          <p class="supplier-name" id="supplier-name"></p>
+        </header>
+
+        {stripeConnected && (
+          <div class="success-banner">
+            <span>✓</span> Stripe Connect setup completed successfully!
+          </div>
+        )}
+
+        {stripeRefresh && (
+          <div class="warning-banner">
+            <span>⚠</span> Your Stripe session expired. Please continue setup below.
+          </div>
+        )}
+
+        <!-- Payment Setup Section -->
+        <section class="connect-section">
+          <h2>Payment Setup</h2>
+          <div class="payout-method-indicator" id="payout-method-indicator"></div>
+
+          <!-- Payout Method Tabs -->
+          <div class="payout-tabs">
+            <button class="payout-tab active" data-tab="stripe">
+              <span>💳</span> Stripe
+              <span class="tab-check" id="stripe-check" style="display:none">✓</span>
+            </button>
+            <button class="payout-tab" data-tab="paypal">
+              <span>🅿️</span> PayPal
+              <span class="tab-check" id="paypal-check" style="display:none">✓</span>
+            </button>
+          </div>
+
+          <!-- Stripe Tab -->
+          <div class="payout-tab-content active" id="stripe-tab">
+            <div id="connect-status" class="connect-status">
+              <div class="status-loading">Checking payment status...</div>
+            </div>
+          </div>
+
+          <!-- PayPal Tab -->
+          <div class="payout-tab-content" id="paypal-tab">
+            <div id="paypal-status" class="connect-status">
+              <div class="status-loading">Checking PayPal status...</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Earnings Summary -->
+        <section class="earnings-section">
+          <h2>Earnings</h2>
+          <div class="earnings-cards">
+            <div class="earnings-card">
+              <span class="label">Total Earned</span>
+              <span class="amount" id="total-earned">£0.00</span>
+            </div>
+            <div class="earnings-card">
+              <span class="label">This Month</span>
+              <span class="amount" id="this-month">£0.00</span>
+            </div>
+            <div class="earnings-card pending">
+              <span class="label">Pending</span>
+              <span class="amount" id="pending-amount">£0.00</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Recent Payouts -->
+        <section class="payouts-section">
+          <h2>Recent Payouts</h2>
+          <div id="payouts-list" class="payouts-list">
+            <p class="no-payouts">No payouts yet</p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script define:vars={{ code }}>
+  const accessCode = code;
+  let supplierData = {};
+
+  async function init() {
+    const loadingState = document.getElementById('loading-state');
+    const errorState = document.getElementById('error-state');
+    const errorMessage = document.getElementById('error-message');
+    const portalContent = document.getElementById('portal-content');
+
+    try {
+      // Check Connect status
+      const statusRes = await fetch(`/api/stripe/connect/supplier/status?code=${accessCode}`);
+      const statusData = await statusRes.json();
+
+      if (!statusRes.ok) {
+        throw new Error(statusData.error || 'Failed to load supplier data');
+      }
+
+      // Check PayPal status
+      const paypalRes = await fetch(`/api/paypal/link-account?entityType=supplier&accessCode=${accessCode}`);
+      const paypalData = await paypalRes.json();
+
+      // Get payouts
+      const payoutsRes = await fetch(`/api/stripe/connect/supplier/payouts?code=${accessCode}`);
+      const payoutsData = await payoutsRes.json();
+
+      // Store data
+      supplierData = { ...statusData, ...paypalData };
+
+      // Hide loading, show content
+      loadingState.style.display = 'none';
+      portalContent.style.display = 'block';
+
+      // Update Connect status
+      updateConnectStatus(statusData);
+
+      // Update PayPal status
+      updatePayPalStatus(paypalData);
+
+      // Update preferred method indicator
+      updateMethodIndicator(paypalData.payoutMethod, statusData.status === 'active', paypalData.paypalLinked);
+
+      // Show check marks on tabs
+      if (statusData.status === 'active') {
+        document.getElementById('stripe-check').style.display = 'inline';
+      }
+      if (paypalData.paypalLinked) {
+        document.getElementById('paypal-check').style.display = 'inline';
+      }
+
+      // Update earnings
+      if (payoutsData.success) {
+        document.getElementById('total-earned').textContent = `£${payoutsData.summary.totalPaid.toFixed(2)}`;
+        document.getElementById('this-month').textContent = `£${payoutsData.summary.thisMonthPaid.toFixed(2)}`;
+        document.getElementById('pending-amount').textContent = `£${payoutsData.summary.totalPending.toFixed(2)}`;
+
+        // Update payouts list
+        updatePayoutsList(payoutsData.payouts, payoutsData.pendingPayouts);
+      }
+
+    } catch (error) {
+      loadingState.style.display = 'none';
+      errorState.style.display = 'block';
+      errorMessage.textContent = error.message;
+    }
+  }
+
+  function updateMethodIndicator(method, stripeActive, paypalLinked) {
+    const indicator = document.getElementById('payout-method-indicator');
+    if (stripeActive || paypalLinked) {
+      const preferredMethod = method === 'paypal' ? 'PayPal' : 'Stripe';
+      indicator.innerHTML = `Preferred: <strong>${preferredMethod}</strong>`;
+      indicator.style.display = 'block';
+    }
+  }
+
+  function updatePayPalStatus(data) {
+    const statusEl = document.getElementById('paypal-status');
+
+    if (data.paypalLinked) {
+      statusEl.innerHTML = `
+        <div class="status-active">
+          <span class="status-icon">✓</span>
+          <div>
+            <strong>PayPal Connected</strong>
+            <p>Payouts will be sent to: <strong>${data.paypalEmail}</strong></p>
+          </div>
+          <div class="status-actions-col">
+            <button id="paypal-change-btn" class="btn btn-secondary">Change Email</button>
+            ${data.payoutMethod !== 'paypal' && supplierData.status === 'active' ?
+              '<button id="set-paypal-preferred" class="btn btn-primary">Set as Preferred</button>' : ''}
+          </div>
+        </div>
+      `;
+
+      document.getElementById('paypal-change-btn')?.addEventListener('click', changePayPalEmail);
+      document.getElementById('set-paypal-preferred')?.addEventListener('click', () => setPreferred('paypal'));
+    } else {
+      statusEl.innerHTML = `
+        <div class="status-incomplete">
+          <span class="status-icon">🅿️</span>
+          <div>
+            <strong>Link PayPal Account</strong>
+            <p>Enter your PayPal email to receive payouts via PayPal.</p>
+            <div class="paypal-form">
+              <input type="email" id="paypal-email-input" placeholder="your@paypal-email.com" />
+              <button id="paypal-link-btn" class="btn btn-primary">Link PayPal</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('paypal-link-btn')?.addEventListener('click', linkPayPal);
+    }
+  }
+
+  async function linkPayPal() {
+    const input = document.getElementById('paypal-email-input');
+    const btn = document.getElementById('paypal-link-btn');
+    const email = input?.value?.trim();
+
+    if (!email || !email.includes('@')) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    btn.textContent = 'Linking...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/paypal/link-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entityType: 'supplier', accessCode, paypalEmail: email })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        window.location.reload();
+      } else {
+        alert(data.error || 'Failed to link PayPal');
+        btn.textContent = 'Link PayPal';
+        btn.disabled = false;
+      }
+    } catch (e) {
+      alert('Failed to link PayPal');
+      btn.textContent = 'Link PayPal';
+      btn.disabled = false;
+    }
+  }
+
+  async function changePayPalEmail() {
+    const newEmail = prompt('Enter your new PayPal email:');
+    if (!newEmail || !newEmail.includes('@')) {
+      if (newEmail !== null) alert('Please enter a valid email');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/paypal/link-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entityType: 'supplier', accessCode, paypalEmail: newEmail })
+      });
+      const data = await res.json();
+      if (data.success) window.location.reload();
+      else alert(data.error || 'Failed to update');
+    } catch (e) {
+      alert('Failed to update');
+    }
+  }
+
+  async function setPreferred(method) {
+    try {
+      const res = await fetch('/api/paypal/set-payout-method', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entityType: 'supplier', accessCode, payoutMethod: method })
+      });
+      const data = await res.json();
+      if (data.success) window.location.reload();
+      else alert(data.error || 'Failed to set method');
+    } catch (e) {
+      alert('Failed to set method');
+    }
+  }
+
+  // Tab switching
+  document.querySelectorAll('.payout-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.payout-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.payout-tab-content').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(`${tab.dataset.tab}-tab`)?.classList.add('active');
+    });
+  });
+
+  function updateConnectStatus(data) {
+    const statusEl = document.getElementById('connect-status');
+
+    if (data.status === 'active') {
+      statusEl.innerHTML = `
+        <div class="status-active">
+          <span class="status-icon">✓</span>
+          <div>
+            <strong>Stripe Connected</strong>
+            <p>Payments will be sent to your connected account automatically.</p>
+          </div>
+          <a href="https://dashboard.stripe.com" target="_blank" class="btn btn-secondary">
+            Stripe Dashboard →
+          </a>
+        </div>
+      `;
+    } else if (data.status === 'onboarding' || data.status === 'not_started') {
+      statusEl.innerHTML = `
+        <div class="status-incomplete">
+          <span class="status-icon">⚠</span>
+          <div>
+            <strong>${data.status === 'onboarding' ? 'Setup Incomplete' : 'Not Connected'}</strong>
+            <p>${data.status === 'onboarding'
+              ? 'Complete your Stripe setup to receive payments.'
+              : 'Connect your Stripe account to receive automatic payments.'}</p>
+          </div>
+          <button id="connect-btn" class="btn btn-primary">
+            ${data.status === 'onboarding' ? 'Continue Setup' : 'Connect with Stripe'}
+          </button>
+        </div>
+      `;
+
+      document.getElementById('connect-btn').addEventListener('click', startConnect);
+    } else if (data.status === 'restricted') {
+      statusEl.innerHTML = `
+        <div class="status-restricted">
+          <span class="status-icon">⚠</span>
+          <div>
+            <strong>Action Required</strong>
+            <p>Stripe requires additional information: ${data.disabledReason || 'Please update your account'}</p>
+          </div>
+          <button id="update-btn" class="btn btn-warning">Update Account</button>
+        </div>
+      `;
+
+      document.getElementById('update-btn').addEventListener('click', startConnect);
+    }
+  }
+
+  async function startConnect() {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = 'Loading...';
+
+    try {
+      const res = await fetch('/api/stripe/connect/supplier/create-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessCode })
+      });
+
+      const data = await res.json();
+
+      if (data.onboardingUrl) {
+        window.location.href = data.onboardingUrl;
+      } else {
+        throw new Error(data.error || 'Failed to start Connect setup');
+      }
+    } catch (error) {
+      alert(error.message);
+      btn.disabled = false;
+      btn.textContent = 'Try Again';
+    }
+  }
+
+  function updatePayoutsList(payouts, pending) {
+    const listEl = document.getElementById('payouts-list');
+
+    if ((!payouts || payouts.length === 0) && (!pending || pending.length === 0)) {
+      return;
+    }
+
+    let html = '';
+
+    // Pending payouts first
+    if (pending && pending.length > 0) {
+      for (const p of pending) {
+        html += `
+          <div class="payout-item pending">
+            <div class="payout-info">
+              <span class="payout-order">Order #${p.orderNumber || p.orderId?.slice(-6).toUpperCase()}</span>
+              <span class="payout-date">${formatDate(p.createdAt)}</span>
+              <span class="payout-status pending">Pending</span>
+            </div>
+            <span class="payout-amount">£${p.amount.toFixed(2)}</span>
+          </div>
+        `;
+      }
+    }
+
+    // Completed payouts
+    if (payouts && payouts.length > 0) {
+      for (const p of payouts) {
+        html += `
+          <div class="payout-item ${p.status}">
+            <div class="payout-info">
+              <span class="payout-order">Order #${p.orderNumber || p.orderId?.slice(-6).toUpperCase()}</span>
+              <span class="payout-date">${formatDate(p.completedAt || p.createdAt)}</span>
+              <span class="payout-status ${p.status}">${p.status === 'completed' ? 'Paid' : p.status}</span>
+            </div>
+            <span class="payout-amount">£${p.amount.toFixed(2)}</span>
+          </div>
+        `;
+      }
+    }
+
+    listEl.innerHTML = html;
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+
+  init();
+</script>
+
+<style>
+  .supplier-portal {
+    min-height: 100vh;
+    padding: 40px 20px;
+    background: var(--bg-primary, #0a0a0a);
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .loading-state {
+    text-align: center;
+    padding: 60px 20px;
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #333;
+    border-top-color: #dc2626;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .error-state {
+    text-align: center;
+    padding: 60px 20px;
+  }
+
+  .error-state h1 {
+    color: #dc2626;
+    margin-bottom: 10px;
+  }
+
+  .portal-header {
+    margin-bottom: 30px;
+  }
+
+  .portal-header h1 {
+    font-size: 2rem;
+    margin-bottom: 5px;
+  }
+
+  .supplier-name {
+    color: #a3a3a3;
+  }
+
+  .success-banner, .warning-banner {
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .success-banner {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #22c55e;
+  }
+
+  .warning-banner {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+  }
+
+  section {
+    background: #141414;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+  }
+
+  section h2 {
+    font-size: 1.25rem;
+    margin-bottom: 20px;
+  }
+
+  .connect-status {
+    padding: 15px 0;
+  }
+
+  .status-active, .status-incomplete, .status-restricted {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+
+  .status-icon {
+    font-size: 1.5rem;
+  }
+
+  .status-active .status-icon {
+    color: #22c55e;
+  }
+
+  .status-incomplete .status-icon, .status-restricted .status-icon {
+    color: #f59e0b;
+  }
+
+  .status-active div, .status-incomplete div, .status-restricted div {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .status-active p, .status-incomplete p, .status-restricted p {
+    color: #a3a3a3;
+    font-size: 0.9rem;
+    margin-top: 5px;
+  }
+
+  .btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+
+  .btn-primary {
+    background: #dc2626;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #b91c1c;
+  }
+
+  .btn-secondary {
+    background: #262626;
+    color: white;
+  }
+
+  .btn-secondary:hover {
+    background: #333;
+  }
+
+  .btn-warning {
+    background: #f59e0b;
+    color: black;
+  }
+
+  .earnings-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+  }
+
+  .earnings-card {
+    background: #1f1f1f;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .earnings-card .label {
+    display: block;
+    color: #a3a3a3;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+
+  .earnings-card .amount {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #22c55e;
+  }
+
+  .earnings-card.pending .amount {
+    color: #f59e0b;
+  }
+
+  .payouts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .no-payouts {
+    color: #a3a3a3;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .payout-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #1f1f1f;
+    border-radius: 8px;
+  }
+
+  .payout-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .payout-order {
+    font-weight: 500;
+  }
+
+  .payout-date {
+    color: #a3a3a3;
+    font-size: 0.85rem;
+  }
+
+  .payout-status {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+
+  .payout-status.completed {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+  }
+
+  .payout-status.pending {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+  }
+
+  .payout-amount {
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  .payout-item.completed .payout-amount {
+    color: #22c55e;
+  }
+
+  .payout-item.pending .payout-amount {
+    color: #f59e0b;
+  }
+
+  /* Payout Method Tabs */
+  .payout-method-indicator {
+    display: none;
+    margin-bottom: 15px;
+    padding: 8px 12px;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 6px;
+    color: #22c55e;
+    font-size: 0.9rem;
+  }
+
+  .payout-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 15px;
+  }
+
+  .payout-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #1f1f1f;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #a3a3a3;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+
+  .payout-tab:hover {
+    background: #262626;
+    color: white;
+  }
+
+  .payout-tab.active {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: white;
+  }
+
+  .tab-check {
+    color: #22c55e;
+    font-weight: bold;
+  }
+
+  .payout-tab.active .tab-check {
+    color: white;
+  }
+
+  .payout-tab-content {
+    display: none;
+  }
+
+  .payout-tab-content.active {
+    display: block;
+  }
+
+  /* PayPal Form */
+  .paypal-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+  }
+
+  .paypal-form input {
+    flex: 1;
+    min-width: 200px;
+    padding: 10px 15px;
+    background: #1f1f1f;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.9rem;
+  }
+
+  .paypal-form input:focus {
+    outline: none;
+    border-color: #dc2626;
+  }
+
+  .status-actions-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  @media (max-width: 600px) {
+    .portal-header h1 {
+      font-size: 1.5rem;
+    }
+
+    section {
+      padding: 20px 15px;
+    }
+
+    .status-active, .status-incomplete, .status-restricted {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .payout-item {
+      flex-direction: column;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .payout-tabs {
+      flex-direction: column;
+    }
+
+    .payout-tab {
+      justify-content: center;
+    }
+
+    .paypal-form {
+      flex-direction: column;
+    }
+
+    .paypal-form input {
+      width: 100%;
+    }
+
+    .status-actions-col {
+      width: 100%;
+    }
+
+    .status-actions-col .btn {
+      width: 100%;
+    }
+  }
+</style>

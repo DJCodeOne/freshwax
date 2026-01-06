@@ -1105,6 +1105,86 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
+    // UPDATE SLOT - Update DJ name, title, genre for scheduled/live slots
+    // Useful for long events with multiple DJs taking turns
+    if (action === 'update_slot') {
+      const { slotId, djId, djName, title, genre, description } = data;
+
+      if (!slotId) {
+        return new Response(JSON.stringify({ success: false, error: 'Slot ID required' }), {
+          status: 400, headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      const slot = await getDocument('livestreamSlots', slotId);
+
+      if (!slot) {
+        return new Response(JSON.stringify({ success: false, error: 'Slot not found' }), {
+          status: 404, headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Only the slot owner can update it (check original booker)
+      if (slot.djId !== djId && !data.isAdmin) {
+        return new Response(JSON.stringify({ success: false, error: 'Not authorized to update this slot' }), {
+          status: 403, headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Only allow updates for scheduled or live slots
+      if (!['scheduled', 'in_lobby', 'live'].includes(slot.status)) {
+        return new Response(JSON.stringify({ success: false, error: 'Cannot update completed or cancelled slots' }), {
+          status: 400, headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Build update object with only provided fields
+      const updates: Record<string, any> = {
+        updatedAt: nowISO
+      };
+
+      if (djName && djName.trim()) {
+        updates.djName = djName.trim();
+        // Track DJ changes for long events
+        if (!slot.djHistory) {
+          updates.djHistory = [{ djName: slot.djName, changedAt: nowISO, changedFrom: slot.djName }];
+        } else {
+          updates.djHistory = [...slot.djHistory, { djName: djName.trim(), changedAt: nowISO, changedFrom: slot.djName }];
+        }
+      }
+
+      if (title && title.trim()) {
+        updates.title = title.trim();
+      }
+
+      if (genre !== undefined) {
+        updates.genre = genre.trim();
+      }
+
+      if (description !== undefined) {
+        updates.description = description.trim();
+      }
+
+      await updateDocument('livestreamSlots', slotId, updates, idToken);
+      invalidateCache();
+
+      // If the slot is live, broadcast the update for real-time UI updates
+      if (slot.status === 'live') {
+        await broadcastLiveStatus('stream-updated', {
+          slotId,
+          djName: updates.djName || slot.djName,
+          title: updates.title || slot.title,
+          genre: updates.genre || slot.genre
+        }, env);
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Slot updated successfully',
+        slot: { id: slotId, ...slot, ...updates }
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // START RELAY - Start a relay stream from an external source
     if (action === 'start_relay') {
       const { djId, djName, relayUrl, stationName, title, genre, twitchUsername, twitchStreamKey } = data;

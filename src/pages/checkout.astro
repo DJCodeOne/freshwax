@@ -700,6 +700,14 @@ export const prerender = false;
       },
 
       createOrder: async function(data, actions) {
+        // Check email verification for new users - must verify before purchasing
+        if (window.FreshWax?.checkEmailVerified) {
+          const verified = await window.FreshWax.checkEmailVerified('complete purchases');
+          if (!verified) {
+            throw new Error('Email verification required');
+          }
+        }
+
         const form = document.getElementById('checkoutForm');
         const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals();
 
@@ -829,6 +837,12 @@ export const prerender = false;
   
   async function handleSubmit(e) {
     e.preventDefault();
+
+    // Check email verification for new users - must verify before purchasing
+    if (window.FreshWax?.checkEmailVerified) {
+      const verified = await window.FreshWax.checkEmailVerified('complete purchases');
+      if (!verified) return;
+    }
 
     const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals();
 
@@ -1058,3 +1072,5 @@ export const prerender = false;
     renderCheckout();
   });
 </script>
+
+<script is:inline src="/email-verify-check.js"></script>

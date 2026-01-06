@@ -217,6 +217,7 @@ export function getTierBenefits(tier: SubscriptionTier): string[] {
       `${limits.streamHoursPerDay} hours live streaming per day`,
       'Can split into 2x1 hour slots',
       `${limits.playlistTrackLimit} tracks in playlist (local only)`,
+      'Book slots up to 1 week in advance',
       'Access to DJ Lobby',
       'Basic profile page',
     ];
@@ -232,6 +233,6 @@ export function getTierBenefits(tier: SubscriptionTier): string[] {
     `!skip command (${limits.skipsPerDay} per day)`,
     'Record live stream button',
     'Gold crown on chat avatar',
-    'Priority in DJ Lobby queue',
+    'Book slots up to 1 month in advance',
   ];
 }

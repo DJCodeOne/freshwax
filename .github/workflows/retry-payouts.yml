@@ -1,7 +1,7 @@
 # .github/workflows/retry-payouts.yml
-# Scheduled job to retry failed artist payouts
+# Scheduled jobs for payouts and stock alerts
 
-name: Retry Failed Payouts
+name: Scheduled Jobs
 
 on:
   schedule:
@@ -34,8 +34,47 @@ jobs:
             exit 1
           fi
 
-          # Parse results
           succeeded=$(echo "$body" | jq -r '.succeeded // 0')
           failed=$(echo "$body" | jq -r '.failed // 0')
 
           echo "::notice title=Payout Retry Results::Succeeded: $succeeded, Failed: $failed"
+
+      - name: Check stock alerts
+        run: |
+          response=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "https://freshwax.co.uk/api/cron/stock-alerts")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response code: $http_code"
+          echo "Response body: $body"
+
+          # Stock alerts are non-critical, don't fail workflow
+          if [ "$http_code" = "200" ]; then
+            lowStock=$(echo "$body" | jq -r '.lowStock // 0')
+            outOfStock=$(echo "$body" | jq -r '.outOfStock // 0')
+            echo "::notice title=Stock Status::Low: $lowStock, Out of Stock: $outOfStock"
+          fi
+
+      - name: Send restock notifications
+        run: |
+          response=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "https://freshwax.co.uk/api/cron/send-restock-notifications")
+
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "Response code: $http_code"
+          echo "Response body: $body"
+
+          if [ "$http_code" = "200" ]; then
+            notified=$(echo "$body" | jq -r '.notified // 0')
+            echo "::notice title=Restock Notifications::Sent: $notified"
+          fi

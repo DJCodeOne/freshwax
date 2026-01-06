@@ -6,6 +6,7 @@ import Stripe from 'stripe';
 import { createOrder } from '../../../lib/order-utils';
 import { initFirebaseEnv, getDocument, queryCollection, deleteDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
 import { logStripeEvent } from '../../../lib/webhook-logger';
+import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 
 export const prerender = false;
 
@@ -747,6 +748,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Parse items from metadata or retrieve from pending checkout
       let items: any[] = [];
 
+      // Track artist shipping breakdown for payouts (artist gets item price + their shipping fee)
+      let artistShippingBreakdown: Record<string, { artistId: string; artistName: string; amount: number }> | null = null;
+
       // First try items_json in metadata
       if (metadata.items_json) {
         try {
@@ -766,6 +770,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (pendingCheckout && pendingCheckout.items) {
             items = pendingCheckout.items;
             console.log('[Stripe Webhook] ✓ Retrieved', items.length, 'items from pending checkout');
+
+            // Get artist shipping breakdown for payouts (artist receives their shipping fee)
+            if (pendingCheckout.artistShippingBreakdown) {
+              artistShippingBreakdown = pendingCheckout.artistShippingBreakdown;
+              console.log('[Stripe Webhook] ✓ Retrieved artist shipping breakdown:', Object.keys(artistShippingBreakdown).length, 'artists');
+            }
 
             // Clean up pending checkout
             try {
@@ -905,6 +915,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (result.orderId && stripeSecretKey) {
         console.log('[Stripe Webhook] 💰 Processing artist payments...');
         await processArtistPayments({
+          orderId: result.orderId,
+          orderNumber: result.orderNumber || '',
+          items,
+          artistShippingBreakdown, // Include shipping fees for artists who ship vinyl
+          stripeSecretKey,
+          env
+        });
+
+        // Process supplier payments for merch items
+        console.log('[Stripe Webhook] 🏭 Processing supplier payments...');
+        await processSupplierPayments({
+          orderId: result.orderId,
+          orderNumber: result.orderNumber || '',
+          items,
+          stripeSecretKey,
+          env
+        });
+
+        // Process vinyl crate seller payments
+        console.log('[Stripe Webhook] 📦 Processing vinyl crate seller payments...');
+        await processVinylCrateSellerPayments({
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
           items,
@@ -1153,10 +1184,11 @@ async function processArtistPayments(params: {
   orderId: string;
   orderNumber: string;
   items: any[];
+  artistShippingBreakdown?: Record<string, { artistId: string; artistName: string; amount: number }> | null;
   stripeSecretKey: string;
   env: any;
 }) {
-  const { orderId, orderNumber, items, stripeSecretKey, env } = params;
+  const { orderId, orderNumber, items, artistShippingBreakdown, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {
@@ -1166,7 +1198,10 @@ async function processArtistPayments(params: {
       artistName: string;
       artistEmail: string;
       stripeConnectId: string | null;
+      paypalEmail?: string | null;
+      payoutMethod?: string | null;
       amount: number;
+      shippingAmount?: number;
       items: string[];
     }> = {};
 
@@ -1214,6 +1249,8 @@ async function processArtistPayments(params: {
           artistName: artist?.artistName || release.artistName || release.artist || 'Unknown Artist',
           artistEmail: artist?.email || release.artistEmail || '',
           stripeConnectId: artist?.stripeConnectId || null,
+          paypalEmail: artist?.paypalEmail || null,
+          payoutMethod: artist?.payoutMethod || null, // 'stripe' | 'paypal' | null
           amount: 0,
           items: []
         };
@@ -1223,9 +1260,23 @@ async function processArtistPayments(params: {
       artistPayments[artistId].items.push(item.name || item.title || 'Item');
     }
 
+    // Add shipping fees to artist payments (artists receive 100% of their vinyl shipping)
+    if (artistShippingBreakdown) {
+      for (const artistId of Object.keys(artistShippingBreakdown)) {
+        const shippingInfo = artistShippingBreakdown[artistId];
+        if (artistPayments[artistId] && shippingInfo.amount > 0) {
+          artistPayments[artistId].amount += shippingInfo.amount;
+          artistPayments[artistId].shippingAmount = shippingInfo.amount;
+          console.log('[Stripe Webhook] Added shipping fee for', shippingInfo.artistName, ':', shippingInfo.amount, 'GBP');
+        }
+      }
+    }
+
     console.log('[Stripe Webhook] Artist payments to process:', Object.keys(artistPayments).length);
 
     // Process each artist payment
+    const paypalConfig = getPayPalConfig(env);
+
     for (const artistId of Object.keys(artistPayments)) {
       const payment = artistPayments[artistId];
 
@@ -1233,13 +1284,101 @@ async function processArtistPayments(params: {
 
       console.log('[Stripe Webhook] Processing payment for', payment.artistName, ':', payment.amount, 'GBP');
 
-      if (payment.stripeConnectId) {
-        // Create transfer to connected account
+      // Check preferred payout method
+      const usePayPal = payment.payoutMethod === 'paypal' && payment.paypalEmail && paypalConfig;
+      const useStripe = payment.stripeConnectId && payment.payoutMethod !== 'paypal';
+
+      if (usePayPal) {
+        // PayPal payout
+        console.log('[Stripe Webhook] Using PayPal for', payment.artistName);
+        try {
+          const paypalResult = await createPayPalPayout(paypalConfig!, {
+            email: payment.paypalEmail!,
+            amount: payment.amount,
+            currency: 'GBP',
+            note: `Fresh Wax payout for order #${orderNumber}`,
+            reference: `${orderId}-${payment.artistId}`
+          });
+
+          if (paypalResult.success) {
+            // Record successful payout (itemAmount + shippingAmount = total amount)
+            const itemAmount = payment.amount - (payment.shippingAmount || 0);
+            await addDocument('payouts', {
+              artistId: payment.artistId,
+              artistName: payment.artistName,
+              artistEmail: payment.artistEmail,
+              paypalEmail: payment.paypalEmail,
+              paypalBatchId: paypalResult.batchId,
+              paypalPayoutItemId: paypalResult.payoutItemId,
+              payoutMethod: 'paypal',
+              orderId,
+              orderNumber,
+              amount: payment.amount,
+              itemAmount: itemAmount,
+              shippingAmount: payment.shippingAmount || 0,
+              currency: 'gbp',
+              status: 'completed',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              completedAt: new Date().toISOString()
+            });
+
+            // Update artist's total earnings
+            const artist = await getDocument('artists', payment.artistId);
+            if (artist) {
+              await updateDocument('artists', payment.artistId, {
+                totalEarnings: (artist.totalEarnings || 0) + payment.amount,
+                lastPayoutAt: new Date().toISOString()
+              });
+            }
+
+            console.log('[Stripe Webhook] ✓ PayPal payout created:', paypalResult.batchId, 'for', payment.artistName);
+
+            // Send payout completed email
+            if (payment.artistEmail) {
+              sendPayoutCompletedEmail(
+                payment.artistEmail,
+                payment.artistName,
+                payment.amount,
+                orderNumber,
+                env
+              ).catch(err => console.error('[Stripe Webhook] Failed to send payout email:', err));
+            }
+          } else {
+            throw new Error(paypalResult.error || 'PayPal payout failed');
+          }
+
+        } catch (paypalError: any) {
+          console.error('[Stripe Webhook] PayPal payout failed for', payment.artistName, ':', paypalError.message);
+
+          // Store as pending for retry
+          const itemAmountPending = payment.amount - (payment.shippingAmount || 0);
+          await addDocument('pendingPayouts', {
+            artistId: payment.artistId,
+            artistName: payment.artistName,
+            artistEmail: payment.artistEmail,
+            paypalEmail: payment.paypalEmail,
+            payoutMethod: 'paypal',
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            itemAmount: itemAmountPending,
+            shippingAmount: payment.shippingAmount || 0,
+            currency: 'gbp',
+            status: 'retry_pending',
+            failureReason: paypalError.message,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+
+      } else if (useStripe) {
+        // Stripe Connect transfer
         try {
           const transfer = await stripe.transfers.create({
             amount: Math.round(payment.amount * 100), // Convert to pence
             currency: 'gbp',
-            destination: payment.stripeConnectId,
+            destination: payment.stripeConnectId!,
             transfer_group: orderId,
             metadata: {
               orderId,
@@ -1250,16 +1389,20 @@ async function processArtistPayments(params: {
             }
           });
 
-          // Record successful payout
+          // Record successful payout (itemAmount + shippingAmount = total amount)
+          const stripeItemAmount = payment.amount - (payment.shippingAmount || 0);
           await addDocument('payouts', {
             artistId: payment.artistId,
             artistName: payment.artistName,
             artistEmail: payment.artistEmail,
             stripeConnectId: payment.stripeConnectId,
             stripeTransferId: transfer.id,
+            payoutMethod: 'stripe',
             orderId,
             orderNumber,
             amount: payment.amount,
+            itemAmount: stripeItemAmount,
+            shippingAmount: payment.shippingAmount || 0,
             currency: 'gbp',
             status: 'completed',
             createdAt: new Date().toISOString(),
@@ -1276,7 +1419,7 @@ async function processArtistPayments(params: {
             });
           }
 
-          console.log('[Stripe Webhook] ✓ Transfer created:', transfer.id, 'for', payment.artistName);
+          console.log('[Stripe Webhook] ✓ Stripe transfer created:', transfer.id, 'for', payment.artistName);
 
           // Send payout completed email notification
           if (payment.artistEmail) {
@@ -1290,9 +1433,10 @@ async function processArtistPayments(params: {
           }
 
         } catch (transferError: any) {
-          console.error('[Stripe Webhook] Transfer failed for', payment.artistName, ':', transferError.message);
+          console.error('[Stripe Webhook] Stripe transfer failed for', payment.artistName, ':', transferError.message);
 
           // Store as pending for retry
+          const stripeFailedItemAmount = payment.amount - (payment.shippingAmount || 0);
           await addDocument('pendingPayouts', {
             artistId: payment.artistId,
             artistName: payment.artistName,
@@ -1300,6 +1444,8 @@ async function processArtistPayments(params: {
             orderId,
             orderNumber,
             amount: payment.amount,
+            itemAmount: stripeFailedItemAmount,
+            shippingAmount: payment.shippingAmount || 0,
             currency: 'gbp',
             status: 'retry_pending',
             failureReason: transferError.message,
@@ -1311,6 +1457,7 @@ async function processArtistPayments(params: {
         // Artist not connected - store as pending
         console.log('[Stripe Webhook] Artist', payment.artistName, 'not connected - storing pending payout');
 
+        const pendingItemAmount = payment.amount - (payment.shippingAmount || 0);
         const pendingPayoutResult = await addDocument('pendingPayouts', {
           artistId: payment.artistId,
           artistName: payment.artistName,
@@ -1318,6 +1465,8 @@ async function processArtistPayments(params: {
           orderId,
           orderNumber,
           amount: payment.amount,
+          itemAmount: pendingItemAmount,
+          shippingAmount: payment.shippingAmount || 0,
           currency: 'gbp',
           status: 'awaiting_connect',
           notificationSent: false,
@@ -1358,6 +1507,564 @@ async function processArtistPayments(params: {
 
   } catch (error: any) {
     console.error('[Stripe Webhook] Error processing artist payments:', error.message);
+    // Don't throw - order was created, payments can be retried
+  }
+}
+
+// Process supplier payments for merch items via Stripe Connect
+async function processSupplierPayments(params: {
+  orderId: string;
+  orderNumber: string;
+  items: any[];
+  stripeSecretKey: string;
+  env: any;
+}) {
+  const { orderId, orderNumber, items, stripeSecretKey, env } = params;
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+
+  try {
+    // Filter to only merch items
+    const merchItems = items.filter(item => item.type === 'merch');
+
+    if (merchItems.length === 0) {
+      console.log('[Stripe Webhook] No merch items in order - skipping supplier payments');
+      return;
+    }
+
+    console.log('[Stripe Webhook] Processing', merchItems.length, 'merch items for supplier payments');
+
+    // Group items by supplier
+    const supplierPayments: Record<string, {
+      supplierId: string;
+      supplierName: string;
+      supplierEmail: string;
+      stripeConnectId: string | null;
+      amount: number;
+      items: string[];
+    }> = {};
+
+    // Cache for merch product lookups
+    const merchCache: Record<string, any> = {};
+
+    for (const item of merchItems) {
+      // Get merch product data to find supplier
+      const productId = item.productId || item.merchId || item.id;
+      if (!productId) continue;
+
+      let product = merchCache[productId];
+      if (!product) {
+        product = await getDocument('merch', productId);
+        if (product) {
+          merchCache[productId] = product;
+        }
+      }
+
+      if (!product) {
+        console.log('[Stripe Webhook] Merch product not found:', productId);
+        continue;
+      }
+
+      // Get supplier ID from product
+      const supplierId = product.supplierId;
+      if (!supplierId) {
+        console.log('[Stripe Webhook] No supplier ID on merch product:', productId);
+        continue;
+      }
+
+      // Look up supplier for Connect details
+      let supplier = null;
+      try {
+        supplier = await getDocument('merch-suppliers', supplierId);
+      } catch (e) {
+        console.log('[Stripe Webhook] Could not find supplier:', supplierId);
+      }
+
+      if (!supplier) continue;
+
+      // Calculate supplier share
+      // Supplier gets their cost price per item, platform keeps the margin
+      const supplierPrice = product.supplierCost || product.costPrice || (item.price * 0.7); // Default 70% to supplier
+      const itemTotal = supplierPrice * (item.quantity || 1);
+
+      // Group by supplier
+      if (!supplierPayments[supplierId]) {
+        supplierPayments[supplierId] = {
+          supplierId,
+          supplierName: supplier.name || 'Unknown Supplier',
+          supplierEmail: supplier.email || '',
+          stripeConnectId: supplier.stripeConnectId || null,
+          paypalEmail: supplier.paypalEmail || null,
+          payoutMethod: supplier.payoutMethod || null,
+          amount: 0,
+          items: []
+        };
+      }
+
+      supplierPayments[supplierId].amount += itemTotal;
+      supplierPayments[supplierId].items.push(item.name || item.title || 'Item');
+    }
+
+    console.log('[Stripe Webhook] Supplier payments to process:', Object.keys(supplierPayments).length);
+
+    // Process each supplier payment
+    const supplierPaypalConfig = getPayPalConfig(env);
+
+    for (const supplierId of Object.keys(supplierPayments)) {
+      const payment = supplierPayments[supplierId];
+
+      if (payment.amount <= 0) continue;
+
+      console.log('[Stripe Webhook] Processing payment for supplier', payment.supplierName, ':', payment.amount.toFixed(2), 'GBP');
+
+      // Check preferred payout method
+      const usePayPal = payment.payoutMethod === 'paypal' && payment.paypalEmail && supplierPaypalConfig;
+      const useStripe = payment.stripeConnectId && payment.payoutMethod !== 'paypal';
+
+      if (usePayPal) {
+        // PayPal payout for supplier
+        console.log('[Stripe Webhook] Using PayPal for supplier', payment.supplierName);
+        try {
+          const paypalResult = await createPayPalPayout(supplierPaypalConfig!, {
+            email: payment.paypalEmail!,
+            amount: payment.amount,
+            currency: 'GBP',
+            note: `Fresh Wax supplier payout for order #${orderNumber}`,
+            reference: `${orderId}-supplier-${payment.supplierId}`
+          });
+
+          if (paypalResult.success) {
+            await addDocument('supplierPayouts', {
+              supplierId: payment.supplierId,
+              supplierName: payment.supplierName,
+              supplierEmail: payment.supplierEmail,
+              paypalEmail: payment.paypalEmail,
+              paypalBatchId: paypalResult.batchId,
+              payoutMethod: 'paypal',
+              orderId,
+              orderNumber,
+              amount: payment.amount,
+              currency: 'gbp',
+              status: 'completed',
+              items: payment.items,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              completedAt: new Date().toISOString()
+            });
+
+            const supplier = await getDocument('merch-suppliers', payment.supplierId);
+            if (supplier) {
+              await updateDocument('merch-suppliers', payment.supplierId, {
+                totalEarnings: (supplier.totalEarnings || 0) + payment.amount,
+                lastPayoutAt: new Date().toISOString()
+              });
+            }
+
+            console.log('[Stripe Webhook] ✓ Supplier PayPal payout created:', paypalResult.batchId);
+          } else {
+            throw new Error(paypalResult.error || 'PayPal payout failed');
+          }
+
+        } catch (paypalError: any) {
+          console.error('[Stripe Webhook] Supplier PayPal payout failed:', paypalError.message);
+
+          await addDocument('pendingSupplierPayouts', {
+            supplierId: payment.supplierId,
+            supplierName: payment.supplierName,
+            supplierEmail: payment.supplierEmail,
+            paypalEmail: payment.paypalEmail,
+            payoutMethod: 'paypal',
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'retry_pending',
+            items: payment.items,
+            failureReason: paypalError.message,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+
+      } else if (useStripe) {
+        // Stripe transfer for supplier
+        try {
+          const transfer = await stripe.transfers.create({
+            amount: Math.round(payment.amount * 100), // Convert to pence
+            currency: 'gbp',
+            destination: payment.stripeConnectId!,
+            transfer_group: orderId,
+            metadata: {
+              orderId,
+              orderNumber,
+              supplierId: payment.supplierId,
+              supplierName: payment.supplierName,
+              type: 'supplier',
+              platform: 'freshwax'
+            }
+          });
+
+          // Record successful payout
+          await addDocument('supplierPayouts', {
+            supplierId: payment.supplierId,
+            supplierName: payment.supplierName,
+            supplierEmail: payment.supplierEmail,
+            stripeConnectId: payment.stripeConnectId,
+            stripeTransferId: transfer.id,
+            payoutMethod: 'stripe',
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'completed',
+            items: payment.items,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString()
+          });
+
+          // Update supplier's total earnings
+          const supplier = await getDocument('merch-suppliers', payment.supplierId);
+          if (supplier) {
+            await updateDocument('merch-suppliers', payment.supplierId, {
+              totalEarnings: (supplier.totalEarnings || 0) + payment.amount,
+              lastPayoutAt: new Date().toISOString()
+            });
+          }
+
+          console.log('[Stripe Webhook] ✓ Supplier Stripe transfer created:', transfer.id, 'for', payment.supplierName);
+
+        } catch (transferError: any) {
+          console.error('[Stripe Webhook] Supplier Stripe transfer failed for', payment.supplierName, ':', transferError.message);
+
+          // Store as pending for retry
+          await addDocument('pendingSupplierPayouts', {
+            supplierId: payment.supplierId,
+            supplierName: payment.supplierName,
+            supplierEmail: payment.supplierEmail,
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'retry_pending',
+            items: payment.items,
+            failureReason: transferError.message,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } else {
+        // Supplier not connected - store as pending
+        console.log('[Stripe Webhook] Supplier', payment.supplierName, 'not connected - storing pending payout');
+
+        await addDocument('pendingSupplierPayouts', {
+          supplierId: payment.supplierId,
+          supplierName: payment.supplierName,
+          supplierEmail: payment.supplierEmail,
+          orderId,
+          orderNumber,
+          amount: payment.amount,
+          currency: 'gbp',
+          status: 'awaiting_connect',
+          items: payment.items,
+          notificationSent: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+
+        // Update supplier's pending balance
+        const supplier = await getDocument('merch-suppliers', payment.supplierId);
+        if (supplier) {
+          await updateDocument('merch-suppliers', payment.supplierId, {
+            pendingBalance: (supplier.pendingBalance || 0) + payment.amount
+          });
+        }
+      }
+    }
+
+  } catch (error: any) {
+    console.error('[Stripe Webhook] Error processing supplier payments:', error.message);
+    // Don't throw - order was created, payments can be retried
+  }
+}
+
+// Process vinyl crate seller payments via Stripe Connect
+async function processVinylCrateSellerPayments(params: {
+  orderId: string;
+  orderNumber: string;
+  items: any[];
+  stripeSecretKey: string;
+  env: any;
+}) {
+  const { orderId, orderNumber, items, stripeSecretKey, env } = params;
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+
+  try {
+    // Filter to only vinyl crate items (type: 'crate' or 'vinyl-crate' or has crateListingId)
+    const crateItems = items.filter(item =>
+      item.type === 'crate' ||
+      item.type === 'vinyl-crate' ||
+      item.crateListingId ||
+      item.sellerId // Items with a seller are from crates
+    );
+
+    if (crateItems.length === 0) {
+      console.log('[Stripe Webhook] No vinyl crate items in order - skipping seller payments');
+      return;
+    }
+
+    console.log('[Stripe Webhook] Processing', crateItems.length, 'vinyl crate items for seller payments');
+
+    // Group items by seller
+    const sellerPayments: Record<string, {
+      sellerId: string;
+      sellerName: string;
+      sellerEmail: string;
+      stripeConnectId: string | null;
+      amount: number;
+      items: string[];
+    }> = {};
+
+    // Cache for crate listing lookups
+    const listingCache: Record<string, any> = {};
+
+    for (const item of crateItems) {
+      // Get the seller info
+      let sellerId = item.sellerId;
+      let listingId = item.crateListingId || item.listingId;
+
+      // If no sellerId, try to get from listing
+      if (!sellerId && listingId) {
+        let listing = listingCache[listingId];
+        if (!listing) {
+          listing = await getDocument('crateListings', listingId);
+          if (listing) {
+            listingCache[listingId] = listing;
+          }
+        }
+        if (listing) {
+          sellerId = listing.sellerId || listing.userId;
+        }
+      }
+
+      if (!sellerId) {
+        console.log('[Stripe Webhook] No seller ID for crate item:', item.name);
+        continue;
+      }
+
+      // Look up seller (user) for Connect details
+      let seller = null;
+      try {
+        seller = await getDocument('users', sellerId);
+      } catch (e) {
+        console.log('[Stripe Webhook] Could not find seller user:', sellerId);
+      }
+
+      if (!seller) continue;
+
+      // Calculate seller share
+      // Platform takes 15% commission on crate sales
+      const platformFeePercent = 0.15;
+      const itemPrice = item.price || 0;
+      const sellerShare = itemPrice * (1 - platformFeePercent);
+      const itemTotal = sellerShare * (item.quantity || 1);
+
+      // Group by seller
+      if (!sellerPayments[sellerId]) {
+        sellerPayments[sellerId] = {
+          sellerId,
+          sellerName: seller.displayName || seller.name || 'Seller',
+          sellerEmail: seller.email || '',
+          stripeConnectId: seller.stripeConnectId || null,
+          paypalEmail: seller.paypalEmail || null,
+          payoutMethod: seller.payoutMethod || null,
+          amount: 0,
+          items: []
+        };
+      }
+
+      sellerPayments[sellerId].amount += itemTotal;
+      sellerPayments[sellerId].items.push(item.name || item.title || 'Vinyl');
+    }
+
+    console.log('[Stripe Webhook] Vinyl crate seller payments to process:', Object.keys(sellerPayments).length);
+
+    // Process each seller payment
+    const sellerPaypalConfig = getPayPalConfig(env);
+
+    for (const sellerId of Object.keys(sellerPayments)) {
+      const payment = sellerPayments[sellerId];
+
+      if (payment.amount <= 0) continue;
+
+      console.log('[Stripe Webhook] Processing payment for seller', payment.sellerName, ':', payment.amount.toFixed(2), 'GBP');
+
+      // Check preferred payout method
+      const usePayPal = payment.payoutMethod === 'paypal' && payment.paypalEmail && sellerPaypalConfig;
+      const useStripe = payment.stripeConnectId && payment.payoutMethod !== 'paypal';
+
+      if (usePayPal) {
+        // PayPal payout for crate seller
+        console.log('[Stripe Webhook] Using PayPal for crate seller', payment.sellerName);
+        try {
+          const paypalResult = await createPayPalPayout(sellerPaypalConfig!, {
+            email: payment.paypalEmail!,
+            amount: payment.amount,
+            currency: 'GBP',
+            note: `Fresh Wax vinyl sale payout for order #${orderNumber}`,
+            reference: `${orderId}-seller-${payment.sellerId}`
+          });
+
+          if (paypalResult.success) {
+            await addDocument('crateSellerPayouts', {
+              sellerId: payment.sellerId,
+              sellerName: payment.sellerName,
+              sellerEmail: payment.sellerEmail,
+              paypalEmail: payment.paypalEmail,
+              paypalBatchId: paypalResult.batchId,
+              payoutMethod: 'paypal',
+              orderId,
+              orderNumber,
+              amount: payment.amount,
+              currency: 'gbp',
+              status: 'completed',
+              items: payment.items,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              completedAt: new Date().toISOString()
+            });
+
+            const sellerUser = await getDocument('users', payment.sellerId);
+            if (sellerUser) {
+              await updateDocument('users', payment.sellerId, {
+                crateEarnings: (sellerUser.crateEarnings || 0) + payment.amount,
+                lastCratePayoutAt: new Date().toISOString()
+              });
+            }
+
+            console.log('[Stripe Webhook] ✓ Crate seller PayPal payout created:', paypalResult.batchId);
+          } else {
+            throw new Error(paypalResult.error || 'PayPal payout failed');
+          }
+
+        } catch (paypalError: any) {
+          console.error('[Stripe Webhook] Crate seller PayPal payout failed:', paypalError.message);
+
+          await addDocument('pendingCrateSellerPayouts', {
+            sellerId: payment.sellerId,
+            sellerName: payment.sellerName,
+            sellerEmail: payment.sellerEmail,
+            paypalEmail: payment.paypalEmail,
+            payoutMethod: 'paypal',
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'retry_pending',
+            items: payment.items,
+            failureReason: paypalError.message,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+
+      } else if (useStripe) {
+        // Stripe transfer for crate seller
+        try {
+          const transfer = await stripe.transfers.create({
+            amount: Math.round(payment.amount * 100), // Convert to pence
+            currency: 'gbp',
+            destination: payment.stripeConnectId!,
+            transfer_group: orderId,
+            metadata: {
+              orderId,
+              orderNumber,
+              sellerId: payment.sellerId,
+              sellerName: payment.sellerName,
+              type: 'vinyl_crate_seller',
+              platform: 'freshwax'
+            }
+          });
+
+          // Record successful payout
+          await addDocument('crateSellerPayouts', {
+            sellerId: payment.sellerId,
+            sellerName: payment.sellerName,
+            sellerEmail: payment.sellerEmail,
+            stripeConnectId: payment.stripeConnectId,
+            stripeTransferId: transfer.id,
+            payoutMethod: 'stripe',
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'completed',
+            items: payment.items,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString()
+          });
+
+          // Update seller's total crate earnings
+          const sellerUser = await getDocument('users', payment.sellerId);
+          if (sellerUser) {
+            await updateDocument('users', payment.sellerId, {
+              crateEarnings: (sellerUser.crateEarnings || 0) + payment.amount,
+              lastCratePayoutAt: new Date().toISOString()
+            });
+          }
+
+          console.log('[Stripe Webhook] ✓ Crate seller transfer created:', transfer.id, 'for', payment.sellerName);
+
+        } catch (transferError: any) {
+          console.error('[Stripe Webhook] Crate seller transfer failed for', payment.sellerName, ':', transferError.message);
+
+          // Store as pending for retry
+          await addDocument('pendingCrateSellerPayouts', {
+            sellerId: payment.sellerId,
+            sellerName: payment.sellerName,
+            sellerEmail: payment.sellerEmail,
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'retry_pending',
+            items: payment.items,
+            failureReason: transferError.message,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } else {
+        // Seller not connected - store as pending
+        console.log('[Stripe Webhook] Crate seller', payment.sellerName, 'not connected - storing pending payout');
+
+        await addDocument('pendingCrateSellerPayouts', {
+          sellerId: payment.sellerId,
+          sellerName: payment.sellerName,
+          sellerEmail: payment.sellerEmail,
+          orderId,
+          orderNumber,
+          amount: payment.amount,
+          currency: 'gbp',
+          status: 'awaiting_connect',
+          items: payment.items,
+          notificationSent: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+
+        // Update seller's pending crate balance
+        const seller = await getDocument('users', payment.sellerId);
+        if (seller) {
+          await updateDocument('users', payment.sellerId, {
+            pendingCrateBalance: (seller.pendingCrateBalance || 0) + payment.amount
+          });
+        }
+      }
+    }
+
+  } catch (error: any) {
+    console.error('[Stripe Webhook] Error processing vinyl crate seller payments:', error.message);
     // Don't throw - order was created, payments can be retried
   }
 }

@@ -3403,6 +3403,12 @@ function setupChatInput(streamId) {
   async function sendMessage() {
     if (!currentUser || !input?.value.trim()) return;
 
+    // Check email verification for new users
+    if (window.FreshWax?.checkEmailVerified) {
+      const verified = await window.FreshWax.checkEmailVerified('send chat messages');
+      if (!verified) return;
+    }
+
     const message = input.value.trim();
     input.value = '';
 

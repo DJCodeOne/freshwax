@@ -7,6 +7,63 @@ import { addDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase
 
 export const prerender = false;
 
+// Validate stock availability before checkout
+async function validateStock(items: any[]): Promise<{ available: boolean, unavailableItems: string[] }> {
+  const unavailableItems: string[] = [];
+
+  for (const item of items) {
+    const quantity = item.quantity || 1;
+    const itemType = item.type || 'digital';
+
+    try {
+      if (itemType === 'merch' && item.productId) {
+        // Check merch stock
+        const product = await getDocument('merch', item.productId);
+        if (product) {
+          // Check variant stock if size/color specified
+          if (item.size || item.color) {
+            const variantKey = item.size && item.color
+              ? `${item.size.toLowerCase()}_${item.color.toLowerCase()}`
+              : item.size?.toLowerCase() || item.color?.toLowerCase() || 'default';
+
+            const variantStock = product.variantStock?.[variantKey]?.stock ?? product.stock ?? 0;
+            if (variantStock < quantity) {
+              unavailableItems.push(`${item.name} (${item.size || ''} ${item.color || ''}) - only ${variantStock} available`);
+            }
+          } else {
+            // Check total stock
+            const totalStock = product.totalStock ?? product.stock ?? 0;
+            if (totalStock < quantity) {
+              unavailableItems.push(`${item.name} - only ${totalStock} available`);
+            }
+          }
+        }
+      } else if (itemType === 'vinyl') {
+        // Check vinyl stock
+        const releaseId = item.releaseId || item.productId || item.id;
+        if (releaseId) {
+          const release = await getDocument('releases', releaseId);
+          if (release) {
+            const vinylStock = release.vinylStock ?? 0;
+            if (vinylStock < quantity) {
+              unavailableItems.push(`${item.name} (Vinyl) - only ${vinylStock} available`);
+            }
+          }
+        }
+      }
+      // Digital items have unlimited stock - no check needed
+    } catch (err) {
+      console.error('[Stripe] Error checking stock for', item.name, err);
+      // On error, allow checkout but log warning
+    }
+  }
+
+  return {
+    available: unavailableItems.length === 0,
+    unavailableItems
+  };
+}
+
 // Validate item prices server-side to prevent manipulation
 async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any[], hasPriceMismatch: boolean }> {
   const validatedItems: any[] = [];
@@ -32,6 +89,28 @@ async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any
           if (release) {
             if (itemType === 'vinyl') {
               serverPrice = release.vinylPrice || release.price || item.price;
+
+              // Also get shipping rates from release
+              item.vinylShippingUK = release.vinylShippingUK;
+              item.vinylShippingEU = release.vinylShippingEU;
+              item.vinylShippingIntl = release.vinylShippingIntl;
+
+              // Get artist defaults as fallback
+              const artistId = release.artistId || release.userId || item.artistId;
+              if (artistId) {
+                item.artistId = artistId;
+                try {
+                  const artist = await getDocument('artists', artistId);
+                  if (artist) {
+                    item.artistVinylShippingUK = artist.vinylShippingUK;
+                    item.artistVinylShippingEU = artist.vinylShippingEU;
+                    item.artistVinylShippingIntl = artist.vinylShippingIntl;
+                    item.artistName = artist.artistName || artist.name;
+                  }
+                } catch (e) {
+                  // Artist lookup failed, use defaults
+                }
+              }
             } else if (itemType === 'track' && item.trackId) {
               // Single track - find track price
               const track = (release.tracks || []).find((t: any) =>
@@ -114,6 +193,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       FIREBASE_API_KEY: import.meta.env.FIREBASE_API_KEY
     });
 
+    // SECURITY: Validate stock availability before allowing checkout
+    console.log('[Stripe] Validating stock availability...');
+    const stockCheck = await validateStock(orderData.items);
+    if (!stockCheck.available) {
+      console.warn('[Stripe] Stock validation failed:', stockCheck.unavailableItems);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Some items are no longer available',
+        unavailableItems: stockCheck.unavailableItems
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // SECURITY: Validate prices server-side to prevent manipulation
     console.log('[Stripe] Validating prices server-side...');
     const { validatedItems, hasPriceMismatch } = await validateAndGetPrices(orderData.items);
@@ -129,7 +220,58 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const hasPhysicalItems = validatedItems.some((item: any) =>
       item.type === 'vinyl' || item.type === 'merch'
     );
-    const validatedShipping = hasPhysicalItems ? (validatedSubtotal >= 50 ? 0 : 4.99) : 0;
+    const hasMerchItems = validatedItems.some((item: any) => item.type === 'merch');
+    const hasVinylItems = validatedItems.some((item: any) => item.type === 'vinyl');
+
+    // Determine customer's shipping region from their country
+    const customerCountry = orderData.shipping?.country || 'GB';
+    const isUK = customerCountry === 'GB' || customerCountry === 'United Kingdom' || customerCountry === 'UK';
+    const isEU = ['DE', 'FR', 'NL', 'BE', 'IE', 'ES', 'IT', 'AT', 'PL', 'PT', 'DK', 'SE', 'FI', 'CZ', 'GR', 'HU', 'RO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE', 'CY', 'MT', 'LU'].includes(customerCountry);
+
+    // Calculate shipping - vinyl shipping goes to artists, merch shipping stays with platform
+    let merchShipping = 0;
+    let vinylShippingTotal = 0;
+    const artistShippingBreakdown: Record<string, { artistId: string; artistName: string; amount: number }> = {};
+
+    // Merch shipping (platform default £4.99, free over £50 total)
+    if (hasMerchItems) {
+      merchShipping = validatedSubtotal >= 50 ? 0 : 4.99;
+    }
+
+    // Vinyl shipping (per-artist, based on release or artist defaults)
+    if (hasVinylItems) {
+      for (const item of validatedItems) {
+        if (item.type !== 'vinyl') continue;
+
+        const releaseId = item.releaseId || item.productId || item.id;
+        const artistId = item.artistId;
+
+        if (!artistId || !releaseId) continue;
+
+        // Get shipping rate for this item (already fetched during price validation)
+        // Determine rate based on customer region
+        let shippingRate = 0;
+        if (isUK) {
+          shippingRate = item.vinylShippingUK ?? item.artistVinylShippingUK ?? 4.99;
+        } else if (isEU) {
+          shippingRate = item.vinylShippingEU ?? item.artistVinylShippingEU ?? 9.99;
+        } else {
+          shippingRate = item.vinylShippingIntl ?? item.artistVinylShippingIntl ?? 14.99;
+        }
+
+        // Only charge shipping once per artist (not per item)
+        if (!artistShippingBreakdown[artistId]) {
+          artistShippingBreakdown[artistId] = {
+            artistId,
+            artistName: item.artist || item.artistName || 'Artist',
+            amount: shippingRate
+          };
+          vinylShippingTotal += shippingRate;
+        }
+      }
+    }
+
+    const validatedShipping = merchShipping + vinylShippingTotal;
     const freshWaxFee = validatedSubtotal * 0.01;
     const baseAmount = validatedSubtotal + validatedShipping + freshWaxFee;
     const stripeFee = ((baseAmount * 0.014) + 0.20) / 0.986;
@@ -223,12 +365,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
           totals: {
             subtotal: validatedSubtotal,
             shipping: validatedShipping,
+            merchShipping: merchShipping,
+            vinylShipping: vinylShippingTotal,
             freshWaxFee: freshWaxFee,
             stripeFee: stripeFee,
             serviceFees: validatedServiceFees,
             total: validatedTotal
           },
           hasPhysicalItems: hasPhysicalItems,
+          hasMerchItems: hasMerchItems,
+          hasVinylItems: hasVinylItems,
+          artistShippingBreakdown: Object.keys(artistShippingBreakdown).length > 0 ? artistShippingBreakdown : null,
           createdAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hour expiry
         };

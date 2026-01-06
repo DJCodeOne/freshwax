@@ -120,6 +120,12 @@
       alert('Please log in to send GIFs');
       return;
     }
+
+    // Check email verification for new users
+    if (window.FreshWax?.checkEmailVerified) {
+      const verified = await window.FreshWax.checkEmailVerified('send GIFs');
+      if (!verified) return;
+    }
     if (!streamId) {
       console.error('[GIF] No current stream');
       alert('No active stream');

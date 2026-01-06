@@ -1,16 +1,19 @@
 // src/pages/api/cron/retry-payouts.ts
 // Scheduled job to retry failed payouts
 // Designed to be called by Cloudflare Cron Trigger or manually
+// Supports artists, suppliers, and users (crate sellers)
+// Supports both Stripe Connect and PayPal payouts
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { queryCollection, updateDocument, addDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { sendPayoutCompletedEmail } from '../../../lib/payout-emails';
+import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 
 export const prerender = false;
 
 // Safety limits
-const MAX_RETRIES_PER_RUN = 10;
+const MAX_RETRIES_PER_RUN = 20; // Increased for multiple entity types
 const MAX_RETRY_AGE_DAYS = 30; // Don't retry payouts older than 30 days
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -58,12 +61,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
+  // Get PayPal config
+  const paypalConfig = getPayPalConfig(env);
+
   try {
     // Calculate cutoff date (don't retry very old payouts)
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - MAX_RETRY_AGE_DAYS);
 
-    // Query pending payouts that need retry
+    // Query pending payouts that need retry (all entity types)
     const pendingPayouts = await queryCollection('pendingPayouts', {
       filters: [
         { field: 'status', op: 'IN', value: ['retry_pending', 'awaiting_connect'] }
@@ -80,6 +86,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       succeeded: 0,
       failed: 0,
       skipped: 0,
+      stripePayouts: 0,
+      paypalPayouts: 0,
       details: [] as any[]
     };
 
@@ -100,24 +108,69 @@ export const POST: APIRoute = async ({ request, locals }) => {
         continue;
       }
 
-      // Get artist to check their Connect status
-      const artist = await getDocument('artists', pending.artistId);
+      // Determine entity type and get the entity
+      const entityType = pending.entityType || 'artist'; // Default to artist for backwards compatibility
+      let entity: any = null;
+      let collection: string;
+      let entityName: string;
+      let entityEmail: string;
 
-      if (!artist) {
-        console.log('[Retry Payouts] Artist not found for payout:', pending.id);
+      switch (entityType) {
+        case 'supplier':
+          collection = 'merch-suppliers';
+          entity = await getDocument('merch-suppliers', pending.supplierId || pending.entityId);
+          entityName = entity?.name || pending.supplierName || 'Supplier';
+          entityEmail = entity?.email || pending.supplierEmail || '';
+          break;
+
+        case 'user':
+        case 'crate_seller':
+          collection = 'users';
+          entity = await getDocument('users', pending.sellerId || pending.entityId);
+          entityName = entity?.displayName || entity?.name || pending.sellerName || 'Seller';
+          entityEmail = entity?.email || pending.sellerEmail || '';
+          break;
+
+        case 'artist':
+        default:
+          collection = 'artists';
+          entity = await getDocument('artists', pending.artistId || pending.entityId);
+          entityName = entity?.artistName || entity?.name || pending.artistName || 'Artist';
+          entityEmail = entity?.email || pending.artistEmail || '';
+          break;
+      }
+
+      if (!entity) {
+        console.log('[Retry Payouts] Entity not found for payout:', pending.id, 'type:', entityType);
         results.skipped++;
         continue;
       }
 
-      // Check if artist has completed Connect setup
-      if (!artist.stripeConnectId || artist.stripeConnectStatus !== 'active') {
-        // Still awaiting connect - skip this one
+      // Check if entity has a valid payout method
+      const hasStripe = entity.stripeConnectId && entity.stripeConnectStatus === 'active';
+      const hasPayPal = entity.paypalEmail && paypalConfig;
+      const preferredMethod = entity.payoutMethod || (hasStripe ? 'stripe' : 'paypal');
+
+      // Determine which method to use
+      let usePayPal = false;
+      let useStripe = false;
+
+      if (preferredMethod === 'paypal' && hasPayPal) {
+        usePayPal = true;
+      } else if (hasStripe) {
+        useStripe = true;
+      } else if (hasPayPal) {
+        usePayPal = true;
+      }
+
+      if (!useStripe && !usePayPal) {
+        // No payout method available yet
         if (pending.status === 'awaiting_connect') {
           results.skipped++;
           continue;
         }
 
-        // Was retry_pending but artist still not connected - update status
+        // Update status to awaiting connect
         await updateDocument('pendingPayouts', pending.id, {
           status: 'awaiting_connect',
           updatedAt: new Date().toISOString()
@@ -126,8 +179,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         continue;
       }
 
-      // Artist is connected - try to process the payout
-      console.log('[Retry Payouts] Retrying payout:', pending.id, 'for artist:', pending.artistName);
+      // Ready to process
+      console.log('[Retry Payouts] Retrying payout:', pending.id, 'for', entityType, ':', entityName, 'via', usePayPal ? 'PayPal' : 'Stripe');
       results.retried++;
 
       try {
@@ -138,30 +191,71 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: new Date().toISOString()
         });
 
-        // Create transfer
-        const transfer = await stripe.transfers.create({
-          amount: Math.round((pending.amount || 0) * 100),
-          currency: pending.currency || 'gbp',
-          destination: artist.stripeConnectId,
-          transfer_group: pending.orderId,
-          metadata: {
-            pendingPayoutId: pending.id,
-            orderId: pending.orderId,
-            orderNumber: pending.orderNumber || '',
-            artistId: pending.artistId,
-            artistName: pending.artistName,
-            cronRetry: 'true',
-            platform: 'freshwax'
+        let payoutResult: any = {};
+
+        if (usePayPal) {
+          // PayPal payout
+          const paypalResult = await createPayPalPayout(
+            {
+              email: entity.paypalEmail,
+              amount: pending.amount,
+              currency: (pending.currency || 'gbp').toUpperCase(),
+              note: `Fresh Wax payout for order ${pending.orderNumber || pending.orderId?.slice(-6).toUpperCase()}`
+            },
+            paypalConfig!
+          );
+
+          if (!paypalResult.success) {
+            throw new Error(paypalResult.error || 'PayPal payout failed');
           }
-        });
+
+          payoutResult = {
+            paypalBatchId: paypalResult.batchId,
+            paypalPayoutId: paypalResult.payoutItemId,
+            payoutMethod: 'paypal'
+          };
+          results.paypalPayouts++;
+
+        } else {
+          // Stripe transfer
+          const transfer = await stripe.transfers.create({
+            amount: Math.round((pending.amount || 0) * 100),
+            currency: pending.currency || 'gbp',
+            destination: entity.stripeConnectId,
+            transfer_group: pending.orderId,
+            metadata: {
+              pendingPayoutId: pending.id,
+              orderId: pending.orderId,
+              orderNumber: pending.orderNumber || '',
+              entityType,
+              entityId: pending.artistId || pending.supplierId || pending.sellerId || pending.entityId,
+              entityName,
+              cronRetry: 'true',
+              platform: 'freshwax'
+            }
+          });
+
+          payoutResult = {
+            stripeTransferId: transfer.id,
+            payoutMethod: 'stripe'
+          };
+          results.stripePayouts++;
+        }
+
+        // Determine which collection to use for payout records
+        const payoutCollection = entityType === 'supplier' ? 'supplierPayouts' :
+                                 entityType === 'user' || entityType === 'crate_seller' ? 'crateSellerPayouts' :
+                                 'payouts';
 
         // Create payout record
-        await addDocument('payouts', {
-          artistId: pending.artistId,
-          artistName: pending.artistName,
-          artistEmail: pending.artistEmail || artist.email || '',
-          stripeConnectId: artist.stripeConnectId,
-          stripeTransferId: transfer.id,
+        await addDocument(payoutCollection, {
+          ...(entityType === 'artist' ? { artistId: pending.artistId || pending.entityId, artistName: entityName, artistEmail: entityEmail } : {}),
+          ...(entityType === 'supplier' ? { supplierId: pending.supplierId || pending.entityId, supplierName: entityName, supplierEmail: entityEmail } : {}),
+          ...(entityType === 'user' || entityType === 'crate_seller' ? { sellerId: pending.sellerId || pending.entityId, sellerName: entityName, sellerEmail: entityEmail } : {}),
+          entityType,
+          stripeConnectId: entity.stripeConnectId || null,
+          paypalEmail: usePayPal ? entity.paypalEmail : null,
+          ...payoutResult,
           orderId: pending.orderId,
           orderNumber: pending.orderNumber || '',
           amount: pending.amount,
@@ -174,41 +268,43 @@ export const POST: APIRoute = async ({ request, locals }) => {
           completedAt: new Date().toISOString()
         });
 
-        // Update artist's total earnings
-        await updateDocument('artists', pending.artistId, {
-          totalEarnings: (artist.totalEarnings || 0) + (pending.amount || 0),
-          pendingBalance: Math.max(0, (artist.pendingBalance || 0) - (pending.amount || 0)),
+        // Update entity's total earnings
+        await updateDocument(collection, entity.id, {
+          totalEarnings: (entity.totalEarnings || 0) + (pending.amount || 0),
+          pendingBalance: Math.max(0, (entity.pendingBalance || 0) - (pending.amount || 0)),
           lastPayoutAt: new Date().toISOString()
         });
 
         // Mark pending payout as completed
         await updateDocument('pendingPayouts', pending.id, {
           status: 'completed',
-          stripeTransferId: transfer.id,
+          ...payoutResult,
           completedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
 
         // Send email notification
-        const artistEmail = pending.artistEmail || artist.email;
-        if (artistEmail) {
+        if (entityEmail) {
           sendPayoutCompletedEmail(
-            artistEmail,
-            pending.artistName,
+            entityEmail,
+            entityName,
             pending.amount,
             pending.orderNumber || pending.orderId?.slice(-6).toUpperCase(),
             env
           ).catch(err => console.error('[Retry Payouts] Failed to send email:', err));
         }
 
-        console.log('[Retry Payouts] ✓ Success:', pending.id, 'Transfer:', transfer.id);
+        const transactionId = payoutResult.stripeTransferId || payoutResult.paypalPayoutId || 'unknown';
+        console.log('[Retry Payouts] ✓ Success:', pending.id, 'via', payoutResult.payoutMethod, 'ID:', transactionId);
         results.succeeded++;
         results.details.push({
           payoutId: pending.id,
-          artistName: pending.artistName,
+          entityType,
+          entityName,
           amount: pending.amount,
           status: 'success',
-          transferId: transfer.id
+          method: payoutResult.payoutMethod,
+          transactionId
         });
 
       } catch (transferError: any) {
@@ -226,7 +322,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         results.failed++;
         results.details.push({
           payoutId: pending.id,
-          artistName: pending.artistName,
+          entityType,
+          entityName,
           amount: pending.amount,
           status: 'failed',
           error: transferError.message

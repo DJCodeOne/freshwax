@@ -1,11 +1,13 @@
 // src/pages/api/stripe/connect/webhook.ts
 // Handles Stripe Connect webhook events
+// Supports artists, suppliers, and users (crate sellers)
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { queryCollection, updateDocument, addDocument, getDocument, initFirebaseEnv } from '../../../../lib/firebase-rest';
 import { sendPayoutCompletedEmail } from '../../../../lib/payout-emails';
 import { logConnectEvent } from '../../../../lib/webhook-logger';
+import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../../lib/paypal-payouts';
 
 export const prerender = false;
 
@@ -118,29 +120,69 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 // Handle account.updated - sync account status to Firestore
+// Supports artists, suppliers, and users (crate sellers)
 async function handleAccountUpdated(account: Stripe.Account, stripeSecretKey: string, env: any) {
+  // Determine entity type from metadata
+  const entityType = account.metadata?.type || account.metadata?.entityType;
   const artistId = account.metadata?.artistId;
+  const supplierId = account.metadata?.supplierId;
+  const userId = account.metadata?.userId;
 
-  if (!artistId) {
-    // Try to find artist by stripeConnectId
-    const artists = await queryCollection('artists', {
-      filters: [{ field: 'stripeConnectId', op: 'EQUAL', value: account.id }],
-      limit: 1
-    });
-
-    if (artists.length === 0) {
-      console.log('[Connect Webhook] No artist found for account:', account.id);
-      return;
-    }
-
-    const artist = artists[0];
-    await updateArtistConnectStatus(artist.id, account, stripeSecretKey);
-  } else {
-    await updateArtistConnectStatus(artistId, account, stripeSecretKey);
+  // Route to appropriate handler based on metadata
+  if (entityType === 'supplier' || supplierId) {
+    await handleSupplierAccountUpdated(supplierId || account.metadata?.entityId, account, stripeSecretKey, env);
+    return;
   }
+
+  if (entityType === 'crate_seller' || entityType === 'user' || (userId && entityType !== 'artist')) {
+    await handleUserAccountUpdated(userId || account.metadata?.entityId, account, stripeSecretKey, env);
+    return;
+  }
+
+  // Default to artist handling (for backwards compatibility)
+  if (artistId) {
+    await updateArtistConnectStatus(artistId, account, stripeSecretKey, env);
+    return;
+  }
+
+  // No metadata - try to find entity by stripeConnectId
+  // Check artists first
+  const artists = await queryCollection('artists', {
+    filters: [{ field: 'stripeConnectId', op: 'EQUAL', value: account.id }],
+    limit: 1
+  });
+
+  if (artists.length > 0) {
+    await updateArtistConnectStatus(artists[0].id, account, stripeSecretKey, env);
+    return;
+  }
+
+  // Check suppliers
+  const suppliers = await queryCollection('merch-suppliers', {
+    filters: [{ field: 'stripeConnectId', op: 'EQUAL', value: account.id }],
+    limit: 1
+  });
+
+  if (suppliers.length > 0) {
+    await handleSupplierAccountUpdated(suppliers[0].id, account, stripeSecretKey, env);
+    return;
+  }
+
+  // Check users
+  const users = await queryCollection('users', {
+    filters: [{ field: 'stripeConnectId', op: 'EQUAL', value: account.id }],
+    limit: 1
+  });
+
+  if (users.length > 0) {
+    await handleUserAccountUpdated(users[0].id, account, stripeSecretKey, env);
+    return;
+  }
+
+  console.log('[Connect Webhook] No entity found for account:', account.id);
 }
 
-async function updateArtistConnectStatus(artistId: string, account: Stripe.Account, stripeSecretKey: string) {
+async function updateArtistConnectStatus(artistId: string, account: Stripe.Account, stripeSecretKey: string, env: any) {
   let status = 'onboarding';
   if (account.charges_enabled && account.payouts_enabled) {
     status = 'active';
@@ -162,28 +204,147 @@ async function updateArtistConnectStatus(artistId: string, account: Stripe.Accou
   // If account became active, process any pending payouts
   if (status === 'active') {
     console.log('[Connect Webhook] Artist', artistId, 'is now active - processing pending payouts');
-    await processPendingPayouts(artistId, account.id, stripeSecretKey, env);
+    await processPendingPayouts('artist', artistId, account.id, stripeSecretKey, env);
   }
 }
 
-// Process pending payouts when artist completes onboarding
-async function processPendingPayouts(artistId: string, stripeConnectId: string, stripeSecretKey: string, env: any) {
+// Handle supplier account update
+async function handleSupplierAccountUpdated(supplierId: string, account: Stripe.Account, stripeSecretKey: string, env: any) {
+  if (!supplierId) {
+    console.log('[Connect Webhook] No supplierId provided');
+    return;
+  }
+
+  let status = 'onboarding';
+  if (account.charges_enabled && account.payouts_enabled) {
+    status = 'active';
+  } else if (account.requirements?.disabled_reason) {
+    status = 'restricted';
+  }
+
+  await updateDocument('merch-suppliers', supplierId, {
+    stripeConnectStatus: status,
+    stripeChargesEnabled: account.charges_enabled,
+    stripePayoutsEnabled: account.payouts_enabled,
+    stripeDetailsSubmitted: account.details_submitted,
+    stripeLastUpdated: new Date().toISOString(),
+    ...(status === 'active' ? { stripeConnectedAt: new Date().toISOString() } : {})
+  });
+
+  console.log('[Connect Webhook] Updated supplier', supplierId, 'status:', status);
+
+  // If account became active, process any pending payouts
+  if (status === 'active') {
+    console.log('[Connect Webhook] Supplier', supplierId, 'is now active - processing pending payouts');
+    await processPendingPayouts('supplier', supplierId, account.id, stripeSecretKey, env);
+  }
+}
+
+// Handle user (crate seller) account update
+async function handleUserAccountUpdated(userId: string, account: Stripe.Account, stripeSecretKey: string, env: any) {
+  if (!userId) {
+    console.log('[Connect Webhook] No userId provided');
+    return;
+  }
+
+  let status = 'onboarding';
+  if (account.charges_enabled && account.payouts_enabled) {
+    status = 'active';
+  } else if (account.requirements?.disabled_reason) {
+    status = 'restricted';
+  }
+
+  await updateDocument('users', userId, {
+    stripeConnectStatus: status,
+    stripeChargesEnabled: account.charges_enabled,
+    stripePayoutsEnabled: account.payouts_enabled,
+    stripeDetailsSubmitted: account.details_submitted,
+    stripeLastUpdated: new Date().toISOString(),
+    ...(status === 'active' ? { stripeConnectedAt: new Date().toISOString() } : {})
+  });
+
+  console.log('[Connect Webhook] Updated user', userId, 'status:', status);
+
+  // If account became active, process any pending payouts
+  if (status === 'active') {
+    console.log('[Connect Webhook] User', userId, 'is now active - processing pending payouts');
+    await processPendingPayouts('user', userId, account.id, stripeSecretKey, env);
+  }
+}
+
+// Process pending payouts when entity completes onboarding
+// Supports artists, suppliers, and users (crate sellers)
+async function processPendingPayouts(entityType: 'artist' | 'supplier' | 'user', entityId: string, stripeConnectId: string, stripeSecretKey: string, env: any) {
+  // Determine field name for query
+  const idField = entityType === 'artist' ? 'artistId' :
+                  entityType === 'supplier' ? 'supplierId' :
+                  'sellerId';
+
+  // Also check for generic entityType/entityId fields
   const pendingPayouts = await queryCollection('pendingPayouts', {
     filters: [
-      { field: 'artistId', op: 'EQUAL', value: artistId },
+      { field: idField, op: 'EQUAL', value: entityId },
       { field: 'status', op: 'EQUAL', value: 'awaiting_connect' }
     ],
     limit: MAX_PENDING_PAYOUTS
   });
 
-  if (pendingPayouts.length === 0) return;
+  // Also get any with entityId field
+  const pendingByEntityId = await queryCollection('pendingPayouts', {
+    filters: [
+      { field: 'entityId', op: 'EQUAL', value: entityId },
+      { field: 'entityType', op: 'EQUAL', value: entityType },
+      { field: 'status', op: 'EQUAL', value: 'awaiting_connect' }
+    ],
+    limit: MAX_PENDING_PAYOUTS
+  });
 
-  console.log('[Connect Webhook] Processing', pendingPayouts.length, 'pending payouts for artist:', artistId);
+  // Merge and dedupe
+  const allPending = [...pendingPayouts];
+  for (const p of pendingByEntityId) {
+    if (!allPending.find(existing => existing.id === p.id)) {
+      allPending.push(p);
+    }
+  }
+
+  if (allPending.length === 0) return;
+
+  console.log('[Connect Webhook] Processing', allPending.length, 'pending payouts for', entityType, ':', entityId);
 
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
+  // Get entity for email and name
+  let entity: any = null;
+  let collection: string;
+
+  switch (entityType) {
+    case 'supplier':
+      collection = 'merch-suppliers';
+      entity = await getDocument('merch-suppliers', entityId);
+      break;
+    case 'user':
+      collection = 'users';
+      entity = await getDocument('users', entityId);
+      break;
+    case 'artist':
+    default:
+      collection = 'artists';
+      entity = await getDocument('artists', entityId);
+      break;
+  }
+
+  // Determine payout collection
+  const payoutCollection = entityType === 'supplier' ? 'supplierPayouts' :
+                           entityType === 'user' ? 'crateSellerPayouts' :
+                           'payouts';
+
   // Process each pending payout
-  for (const pending of pendingPayouts) {
+  for (const pending of allPending) {
+    const entityName = pending.artistName || pending.supplierName || pending.sellerName ||
+                       entity?.artistName || entity?.name || entity?.displayName || 'Entity';
+    const entityEmail = pending.artistEmail || pending.supplierEmail || pending.sellerEmail ||
+                        entity?.email || '';
+
     try {
       // Mark as processing
       await updateDocument('pendingPayouts', pending.id, {
@@ -202,19 +363,22 @@ async function processPendingPayouts(artistId: string, stripeConnectId: string, 
           pendingPayoutId: pending.id,
           orderId: pending.orderId,
           orderNumber: pending.orderNumber,
-          artistId: artistId,
-          artistName: pending.artistName,
+          entityType,
+          entityId,
+          entityName,
           platform: 'freshwax'
         }
       });
 
       // Create payout record
-      await addDocument('payouts', {
-        artistId: artistId,
-        artistName: pending.artistName,
-        artistEmail: pending.artistEmail || '',
+      await addDocument(payoutCollection, {
+        ...(entityType === 'artist' ? { artistId: entityId, artistName: entityName, artistEmail: entityEmail } : {}),
+        ...(entityType === 'supplier' ? { supplierId: entityId, supplierName: entityName, supplierEmail: entityEmail } : {}),
+        ...(entityType === 'user' ? { sellerId: entityId, sellerName: entityName, sellerEmail: entityEmail } : {}),
+        entityType,
         stripeConnectId: stripeConnectId,
         stripeTransferId: transfer.id,
+        payoutMethod: 'stripe',
         orderId: pending.orderId,
         orderNumber: pending.orderNumber,
         amount: pending.amount,
@@ -226,11 +390,11 @@ async function processPendingPayouts(artistId: string, stripeConnectId: string, 
         completedAt: new Date().toISOString()
       });
 
-      // Update artist's total earnings
-      const artist = await getDocument('artists', artistId);
-      if (artist) {
-        await updateDocument('artists', artistId, {
-          totalEarnings: (artist.totalEarnings || 0) + (pending.amount || 0),
+      // Update entity's total earnings
+      if (entity) {
+        await updateDocument(collection, entityId, {
+          totalEarnings: (entity.totalEarnings || 0) + (pending.amount || 0),
+          pendingBalance: Math.max(0, (entity.pendingBalance || 0) - (pending.amount || 0)),
           lastPayoutAt: new Date().toISOString()
         });
       }
@@ -239,6 +403,7 @@ async function processPendingPayouts(artistId: string, stripeConnectId: string, 
       await updateDocument('pendingPayouts', pending.id, {
         status: 'completed',
         stripeTransferId: transfer.id,
+        payoutMethod: 'stripe',
         completedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
@@ -246,10 +411,10 @@ async function processPendingPayouts(artistId: string, stripeConnectId: string, 
       console.log('[Connect Webhook] ✓ Pending payout processed:', pending.id, 'Transfer:', transfer.id);
 
       // Send payout completed email notification
-      if (pending.artistEmail) {
+      if (entityEmail) {
         sendPayoutCompletedEmail(
-          pending.artistEmail,
-          pending.artistName,
+          entityEmail,
+          entityName,
           pending.amount,
           pending.orderNumber || pending.orderId?.slice(-6).toUpperCase(),
           env

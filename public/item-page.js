@@ -562,7 +562,13 @@ async function initRatings() {
         window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
         return;
       }
-      
+
+      // Check email verification for new users
+      if (window.FreshWax?.checkEmailVerified) {
+        const verified = await window.FreshWax.checkEmailVerified('rate releases');
+        if (!verified) return;
+      }
+
       try {
         const response = await fetch('/api/rate-release', {
           method: 'POST',

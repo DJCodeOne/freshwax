@@ -11,12 +11,16 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.PUBLIC_FIREBASE_APP_ID
 };
+
+// reCAPTCHA site key (v3)
+const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
 ---
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Register | Fresh Wax</title>
+  <!-- reCAPTCHA v3 - loaded dynamically if site key is configured -->
 </head>
 <body>
   <main class="auth-container">
@@ -32,10 +36,31 @@ const firebaseConfig = {
         <p>Join the jungle & drum and bass community</p>
       </div>
 
+      <!-- Social Login Options -->
+      <div class="social-login">
+        <button type="button" id="googleSignIn" class="btn btn-social btn-google">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          <span>Continue with Google</span>
+        </button>
+      </div>
+
+      <div class="form-divider">
+        <span>or register with email</span>
+      </div>
+
       <form id="registerForm" class="auth-form">
         <div class="form-group">
           <label for="displayName">Display Name</label>
-          <input type="text" id="displayName" name="displayName" required placeholder="DJ name or artist name">
+          <div class="input-with-status">
+            <input type="text" id="displayName" name="displayName" required placeholder="DJ name or artist name" minlength="2" maxlength="30">
+            <span class="input-status" id="displayNameStatus"></span>
+          </div>
+          <small class="input-hint" id="displayNameHint"></small>
         </div>
 
         <div class="form-group">
@@ -58,6 +83,19 @@ const firebaseConfig = {
               </svg>
             </button>
           </div>
+          <div class="password-strength" id="passwordStrength">
+            <div class="strength-bar">
+              <div class="strength-fill" id="strengthFill"></div>
+            </div>
+            <span class="strength-text" id="strengthText"></span>
+          </div>
+          <ul class="password-requirements" id="passwordRequirements">
+            <li id="req-length"><span class="req-icon">○</span> At least 8 characters</li>
+            <li id="req-upper"><span class="req-icon">○</span> One uppercase letter</li>
+            <li id="req-lower"><span class="req-icon">○</span> One lowercase letter</li>
+            <li id="req-number"><span class="req-icon">○</span> One number</li>
+            <li id="req-special"><span class="req-icon">○</span> One special character</li>
+          </ul>
         </div>
 
         <div class="form-group password-field">
@@ -172,6 +210,12 @@ const firebaseConfig = {
 
         <div id="formError" class="form-error" style="display: none;"></div>
         <div id="formSuccess" class="form-success" style="display: none;"></div>
+
+        <p class="recaptcha-notice">
+          This site is protected by reCAPTCHA and the Google
+          <a href="https://policies.google.com/privacy" target="_blank">Privacy Policy</a> and
+          <a href="https://policies.google.com/terms" target="_blank">Terms of Service</a> apply.
+        </p>
       </form>
 
       <div class="auth-footer">
@@ -505,6 +549,195 @@ const firebaseConfig = {
     .auth-footer a:hover {
       text-decoration: underline;
     }
+
+    /* Social Login Buttons */
+    .social-login {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-social {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      width: 100%;
+      padding: 0.875rem 1rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid var(--border-color, #262626);
+    }
+
+    .btn-google {
+      background: #fff;
+      color: #333;
+    }
+
+    .btn-google:hover {
+      background: #f5f5f5;
+      border-color: #ccc;
+    }
+
+    .btn-social:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Display Name Check */
+    .input-with-status {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-with-status input {
+      width: 100%;
+      padding-right: 2.5rem;
+    }
+
+    .input-status {
+      position: absolute;
+      right: 0.75rem;
+      font-size: 1.25rem;
+    }
+
+    .input-status.checking {
+      color: #a3a3a3;
+      animation: pulse 1s infinite;
+    }
+
+    .input-status.available {
+      color: #22c55e;
+    }
+
+    .input-status.taken {
+      color: #ef4444;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .input-hint {
+      display: block;
+      margin-top: 0.375rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .input-hint.error {
+      color: #ef4444;
+    }
+
+    .input-hint.success {
+      color: #22c55e;
+    }
+
+    /* Password Strength Indicator */
+    .password-strength {
+      margin-top: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .strength-bar {
+      flex: 1;
+      height: 4px;
+      background: var(--bg-tertiary, #1a1a1a);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .strength-fill {
+      height: 100%;
+      width: 0;
+      transition: width 0.3s, background-color 0.3s;
+      border-radius: 2px;
+    }
+
+    .strength-fill.weak {
+      width: 25%;
+      background: #ef4444;
+    }
+
+    .strength-fill.fair {
+      width: 50%;
+      background: #f97316;
+    }
+
+    .strength-fill.good {
+      width: 75%;
+      background: #eab308;
+    }
+
+    .strength-fill.strong {
+      width: 100%;
+      background: #22c55e;
+    }
+
+    .strength-text {
+      font-size: 0.8rem;
+      font-weight: 500;
+      min-width: 50px;
+    }
+
+    .strength-text.weak { color: #ef4444; }
+    .strength-text.fair { color: #f97316; }
+    .strength-text.good { color: #eab308; }
+    .strength-text.strong { color: #22c55e; }
+
+    /* Password Requirements List */
+    .password-requirements {
+      list-style: none;
+      padding: 0;
+      margin: 0.5rem 0 0;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.25rem 1rem;
+    }
+
+    .password-requirements li {
+      font-size: 0.8rem;
+      color: var(--text-secondary, #666);
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .password-requirements li.met {
+      color: #22c55e;
+    }
+
+    .password-requirements li.met .req-icon {
+      color: #22c55e;
+    }
+
+    .req-icon {
+      font-size: 0.7rem;
+    }
+
+    /* reCAPTCHA badge positioning */
+    .grecaptcha-badge {
+      visibility: hidden;
+    }
+
+    .recaptcha-notice {
+      font-size: 0.75rem;
+      color: var(--text-secondary, #666);
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    .recaptcha-notice a {
+      color: var(--text-secondary, #888);
+    }
   </style>
 
   <script>
@@ -532,17 +765,272 @@ const firebaseConfig = {
     });
   </script>
 
-  <script type="module" define:vars={{ firebaseConfig }}>
+  <script type="module" define:vars={{ firebaseConfig, recaptchaSiteKey }}>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-    import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
-    import { getFirestore, doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+    import { getAuth, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, where, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Toggle conditional fields
+    // Initialize reCAPTCHA if site key is configured
+    let recaptchaReady = false;
+    if (recaptchaSiteKey) {
+      const script = document.createElement('script');
+      script.src = `https://www.google.com/recaptcha/api.js?render=${recaptchaSiteKey}`;
+      script.async = true;
+      script.onload = () => {
+        grecaptcha.ready(() => {
+          recaptchaReady = true;
+          console.log('[Register] reCAPTCHA ready');
+        });
+      };
+      document.head.appendChild(script);
+    }
+
+    // Get reCAPTCHA token
+    async function getRecaptchaToken(action) {
+      if (!recaptchaSiteKey || !recaptchaReady) return null;
+      try {
+        return await grecaptcha.execute(recaptchaSiteKey, { action });
+      } catch (err) {
+        console.error('[Register] reCAPTCHA error:', err);
+        return null;
+      }
+    }
+
+    // ==================== PASSWORD STRENGTH CHECKER ====================
+    const passwordInput = document.getElementById('password');
+    const strengthFill = document.getElementById('strengthFill');
+    const strengthText = document.getElementById('strengthText');
+    const reqLength = document.getElementById('req-length');
+    const reqUpper = document.getElementById('req-upper');
+    const reqLower = document.getElementById('req-lower');
+    const reqNumber = document.getElementById('req-number');
+    const reqSpecial = document.getElementById('req-special');
+
+    function checkPasswordStrength(password) {
+      const checks = {
+        length: password.length >= 8,
+        upper: /[A-Z]/.test(password),
+        lower: /[a-z]/.test(password),
+        number: /[0-9]/.test(password),
+        special: /[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/`~]/.test(password)
+      };
+
+      // Update requirement indicators
+      updateRequirement(reqLength, checks.length);
+      updateRequirement(reqUpper, checks.upper);
+      updateRequirement(reqLower, checks.lower);
+      updateRequirement(reqNumber, checks.number);
+      updateRequirement(reqSpecial, checks.special);
+
+      // Calculate strength score
+      const score = Object.values(checks).filter(Boolean).length;
+
+      // Update strength bar and text
+      strengthFill.className = 'strength-fill';
+      strengthText.className = 'strength-text';
+
+      if (password.length === 0) {
+        strengthText.textContent = '';
+        return;
+      }
+
+      if (score <= 2) {
+        strengthFill.classList.add('weak');
+        strengthText.classList.add('weak');
+        strengthText.textContent = 'Weak';
+      } else if (score === 3) {
+        strengthFill.classList.add('fair');
+        strengthText.classList.add('fair');
+        strengthText.textContent = 'Fair';
+      } else if (score === 4) {
+        strengthFill.classList.add('good');
+        strengthText.classList.add('good');
+        strengthText.textContent = 'Good';
+      } else {
+        strengthFill.classList.add('strong');
+        strengthText.classList.add('strong');
+        strengthText.textContent = 'Strong';
+      }
+
+      return checks;
+    }
+
+    function updateRequirement(element, met) {
+      if (met) {
+        element.classList.add('met');
+        element.querySelector('.req-icon').textContent = '✓';
+      } else {
+        element.classList.remove('met');
+        element.querySelector('.req-icon').textContent = '○';
+      }
+    }
+
+    passwordInput.addEventListener('input', () => {
+      checkPasswordStrength(passwordInput.value);
+    });
+
+    // ==================== DISPLAY NAME AVAILABILITY CHECK ====================
+    const displayNameInput = document.getElementById('displayName');
+    const displayNameStatus = document.getElementById('displayNameStatus');
+    const displayNameHint = document.getElementById('displayNameHint');
+    let nameCheckTimeout = null;
+    let lastCheckedName = '';
+
+    async function checkDisplayNameAvailability(name) {
+      if (name.length < 2) {
+        displayNameStatus.textContent = '';
+        displayNameStatus.className = 'input-status';
+        displayNameHint.textContent = '';
+        displayNameHint.className = 'input-hint';
+        return;
+      }
+
+      // Show checking status
+      displayNameStatus.textContent = '⟳';
+      displayNameStatus.className = 'input-status checking';
+      displayNameHint.textContent = 'Checking availability...';
+      displayNameHint.className = 'input-hint';
+
+      try {
+        // Query users collection for this display name (case-insensitive)
+        const normalizedName = name.toLowerCase();
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('displayNameLower', '==', normalizedName));
+        const snapshot = await getDocs(q);
+
+        // Also check customers collection
+        const customersRef = collection(db, 'customers');
+        const q2 = query(customersRef, where('displayNameLower', '==', normalizedName));
+        const snapshot2 = await getDocs(q2);
+
+        const isTaken = !snapshot.empty || !snapshot2.empty;
+
+        if (isTaken) {
+          displayNameStatus.textContent = '✗';
+          displayNameStatus.className = 'input-status taken';
+          displayNameHint.textContent = 'This name is already taken';
+          displayNameHint.className = 'input-hint error';
+        } else {
+          displayNameStatus.textContent = '✓';
+          displayNameStatus.className = 'input-status available';
+          displayNameHint.textContent = 'Name is available';
+          displayNameHint.className = 'input-hint success';
+        }
+      } catch (err) {
+        console.error('[Register] Name check error:', err);
+        displayNameStatus.textContent = '';
+        displayNameStatus.className = 'input-status';
+        displayNameHint.textContent = '';
+        displayNameHint.className = 'input-hint';
+      }
+    }
+
+    displayNameInput.addEventListener('input', () => {
+      const name = displayNameInput.value.trim();
+
+      // Clear previous timeout
+      if (nameCheckTimeout) clearTimeout(nameCheckTimeout);
+
+      // Don't check if same as last
+      if (name === lastCheckedName) return;
+
+      // Debounce the check
+      nameCheckTimeout = setTimeout(() => {
+        lastCheckedName = name;
+        checkDisplayNameAvailability(name);
+      }, 500);
+    });
+
+    // ==================== GOOGLE SIGN-IN HANDLER ====================
+    const googleBtn = document.getElementById('googleSignIn');
+
+    googleBtn.addEventListener('click', async () => {
+      formError.style.display = 'none';
+
+      try {
+        // Get reCAPTCHA token for social login
+        const recaptchaToken = await getRecaptchaToken('social_login');
+
+        const provider = new GoogleAuthProvider();
+        provider.addScope('email');
+        provider.addScope('profile');
+
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        // Check if user already exists
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+
+        if (userDoc.exists()) {
+          // Existing user - redirect to dashboard
+          window.location.href = '/account/dashboard';
+          return;
+        }
+
+        // New user - create account
+        const userData = {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName || user.email.split('@')[0],
+          displayNameLower: (user.displayName || user.email.split('@')[0]).toLowerCase(),
+          photoURL: user.photoURL || null,
+          provider: 'Google',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          roles: {
+            customer: true,
+            djEligible: false,
+            artist: false,
+            merchSeller: false,
+            vinylSeller: false
+          },
+          pendingRoles: {}
+        };
+
+        await setDoc(doc(db, 'users', user.uid), userData);
+
+        // Also create in customers collection
+        await setDoc(doc(db, 'customers', user.uid), {
+          uid: user.uid,
+          email: user.email,
+          displayName: userData.displayName,
+          displayNameLower: userData.displayNameLower,
+          createdAt: serverTimestamp()
+        });
+
+        // Social login users are considered verified
+        formSuccess.innerHTML = `
+          <strong>Welcome to Fresh Wax!</strong><br>
+          Your account has been created with Google.
+        `;
+        formSuccess.style.display = 'block';
+
+        setTimeout(() => {
+          window.location.href = '/account/dashboard';
+        }, 2000);
+
+      } catch (error) {
+        console.error('[Register] Google sign-in error:', error);
+
+        if (error.code === 'auth/popup-closed-by-user') {
+          return;
+        }
+
+        if (error.code === 'auth/account-exists-with-different-credential') {
+          formError.textContent = 'An account already exists with this email. Try signing in with email/password.';
+        } else {
+          formError.textContent = 'Google sign-in failed. Please try again.';
+        }
+        formError.style.display = 'block';
+      }
+    });
+
+    // ==================== TOGGLE CONDITIONAL FIELDS ====================
     const artistCheckbox = document.getElementById('requestArtist');
     const merchCheckbox = document.getElementById('requestMerchSeller');
     const vinylCheckbox = document.getElementById('requestVinylSeller');
@@ -562,7 +1050,7 @@ const firebaseConfig = {
       vinylDetails.style.display = vinylCheckbox.checked ? 'block' : 'none';
     });
 
-    // Form submission
+    // ==================== FORM SUBMISSION ====================
     const form = document.getElementById('registerForm');
     const submitBtn = document.getElementById('submitBtn');
     const btnText = submitBtn.querySelector('.btn-text');
@@ -572,7 +1060,7 @@ const firebaseConfig = {
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       // Reset messages
       formError.style.display = 'none';
       formSuccess.style.display = 'none';
@@ -587,13 +1075,28 @@ const firebaseConfig = {
       const requestVinylSeller = vinylCheckbox.checked;
 
       // Validation
+      if (displayName.length < 2) {
+        formError.textContent = 'Display name must be at least 2 characters';
+        formError.style.display = 'block';
+        return;
+      }
+
+      // Check if display name is taken
+      if (displayNameStatus.className.includes('taken')) {
+        formError.textContent = 'Please choose a different display name';
+        formError.style.display = 'block';
+        return;
+      }
+
       if (password !== confirmPassword) {
         formError.textContent = 'Passwords do not match';
         formError.style.display = 'block';
         return;
       }
 
-      if (password.length < 8) {
+      // Check password strength
+      const pwChecks = checkPasswordStrength(password);
+      if (!pwChecks.length) {
         formError.textContent = 'Password must be at least 8 characters';
         formError.style.display = 'block';
         return;
@@ -603,6 +1106,9 @@ const firebaseConfig = {
       submitBtn.disabled = true;
       btnText.style.display = 'none';
       btnLoading.style.display = 'inline';
+
+      // Get reCAPTCHA token
+      const recaptchaToken = await getRecaptchaToken('register');
 
       try {
         // Create user in Firebase Auth
@@ -617,6 +1123,8 @@ const firebaseConfig = {
           uid: user.uid,
           email: user.email,
           displayName: displayName,
+          displayNameLower: displayName.toLowerCase(),
+          provider: 'email',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           roles: {
@@ -671,6 +1179,7 @@ const firebaseConfig = {
           uid: user.uid,
           email: user.email,
           displayName: displayName,
+          displayNameLower: displayName.toLowerCase(),
           createdAt: serverTimestamp()
         });
 
@@ -724,22 +1233,30 @@ const firebaseConfig = {
           });
         }
 
-        // Show success message
-        let successMsg = 'Account created successfully!';
-        if (requestArtist || requestMerchSeller || requestVinylSeller) {
-          const roles = [];
-          if (requestArtist) roles.push('Artist');
-          if (requestMerchSeller) roles.push('Merch Seller');
-          if (requestVinylSeller) roles.push('Vinyl Seller');
-          successMsg += ` Your ${roles.join(' and ')} request${roles.length > 1 ? 's have' : ' has'} been sent for approval.`;
+        // Send email verification
+        try {
+          await sendEmailVerification(user, {
+            url: window.location.origin + '/login?verified=true',
+            handleCodeInApp: false
+          });
+          console.log('[Register] Verification email sent to:', user.email);
+        } catch (verifyError) {
+          console.error('[Register] Failed to send verification email:', verifyError);
+          // Continue anyway - they can resend from verify-email page
         }
-        formSuccess.textContent = successMsg;
+
+        // Show success message
+        formSuccess.innerHTML = `
+          <strong>Account created!</strong><br>
+          We've sent a verification email to <strong>${email}</strong>.<br>
+          Please check your inbox and click the link to verify your email.
+        `;
         formSuccess.style.display = 'block';
 
-        // Redirect after short delay
+        // Redirect to verify-email page
         setTimeout(() => {
-          window.location.href = '/account/dashboard';
-        }, 2000);
+          window.location.href = '/verify-email';
+        }, 3000);
 
       } catch (error) {
         console.error('Registration error:', error);

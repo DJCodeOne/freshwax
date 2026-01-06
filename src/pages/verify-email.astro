@@ -1,0 +1,377 @@
+---
+// src/pages/verify-email.astro
+// Email verification page - shown after registration and when unverified user tries to login
+export const prerender = false;
+
+const firebaseConfig = {
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+  authDomain: "freshwax-store.firebaseapp.com",
+  projectId: "freshwax-store"
+};
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email - Fresh Wax</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <a href="/" class="logo-link">
+        <div class="logo-wrapper">
+          <img src="/logo.webp" alt="Fresh Wax" width="120" height="40">
+        </div>
+      </a>
+
+      <div class="icon-wrapper">
+        <svg class="email-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      </div>
+
+      <h1>Check Your Email</h1>
+
+      <p class="description" id="description">
+        We've sent a verification link to your email address.<br>
+        Please click the link to verify your account.
+      </p>
+
+      <div class="user-email" id="userEmail"></div>
+
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="resendBtn">
+          <span class="btn-text">Resend Verification Email</span>
+          <span class="btn-loading" style="display: none;">Sending...</span>
+        </button>
+
+        <button type="button" class="btn btn-secondary" id="checkBtn">
+          I've Verified My Email
+        </button>
+      </div>
+
+      <div class="message success" id="successMessage" style="display: none;"></div>
+      <div class="message error" id="errorMessage" style="display: none;"></div>
+
+      <div class="help-text">
+        <p>Didn't receive the email? Check your spam folder.</p>
+        <p>Wrong email? <a href="/register">Register again</a> with a different address.</p>
+      </div>
+
+      <div class="footer-links">
+        <a href="/login">Back to Login</a>
+        <span class="separator">|</span>
+        <a href="/">Go to Homepage</a>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .card {
+      background: #141414;
+      border: 1px solid #262626;
+      border-radius: 16px;
+      padding: 2.5rem;
+      text-align: center;
+    }
+
+    .logo-link {
+      display: inline-block;
+      margin-bottom: 2rem;
+    }
+
+    .logo-wrapper {
+      background: #fff;
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      display: inline-block;
+    }
+
+    .logo-wrapper img {
+      display: block;
+      height: 60px;
+      width: auto;
+    }
+
+    .icon-wrapper {
+      margin-bottom: 1.5rem;
+    }
+
+    .email-icon {
+      width: 64px;
+      height: 64px;
+      color: #dc2626;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    .description {
+      color: #a3a3a3;
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .user-email {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      color: #22c55e;
+      font-weight: 500;
+      margin-bottom: 2rem;
+      display: none;
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn {
+      padding: 0.875rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: #dc2626;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #b91c1c;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: #fff;
+      border: 1px solid #333;
+    }
+
+    .btn-secondary:hover {
+      background: #1a1a1a;
+      border-color: #444;
+    }
+
+    .message {
+      padding: 0.875rem 1rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .message.success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #22c55e;
+    }
+
+    .message.error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+
+    .help-text {
+      color: #666;
+      font-size: 0.9rem;
+      line-height: 1.8;
+      margin-bottom: 1.5rem;
+    }
+
+    .help-text a {
+      color: #dc2626;
+    }
+
+    .help-text a:hover {
+      text-decoration: underline;
+    }
+
+    .footer-links {
+      padding-top: 1.5rem;
+      border-top: 1px solid #262626;
+      font-size: 0.95rem;
+    }
+
+    .footer-links a {
+      color: #a3a3a3;
+      text-decoration: none;
+    }
+
+    .footer-links a:hover {
+      color: #fff;
+    }
+
+    .separator {
+      color: #444;
+      margin: 0 0.75rem;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 1rem;
+      }
+
+      .card {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+
+  <script type="module" define:vars={{ firebaseConfig }}>
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged, sendEmailVerification, reload } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const resendBtn = document.getElementById('resendBtn');
+    const checkBtn = document.getElementById('checkBtn');
+    const successMessage = document.getElementById('successMessage');
+    const errorMessage = document.getElementById('errorMessage');
+    const userEmailEl = document.getElementById('userEmail');
+    const descriptionEl = document.getElementById('description');
+
+    let lastResendTime = 0;
+    const RESEND_COOLDOWN = 60000; // 1 minute
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        // Not logged in, redirect to login
+        window.location.href = '/login';
+        return;
+      }
+
+      // Show user's email
+      userEmailEl.textContent = user.email;
+      userEmailEl.style.display = 'block';
+
+      // Check if already verified
+      await reload(user);
+      if (user.emailVerified) {
+        successMessage.textContent = 'Your email is verified! Redirecting...';
+        successMessage.style.display = 'block';
+        setTimeout(() => {
+          window.location.href = '/account/dashboard';
+        }, 1500);
+        return;
+      }
+    });
+
+    // Resend verification email
+    resendBtn.addEventListener('click', async () => {
+      const now = Date.now();
+      if (now - lastResendTime < RESEND_COOLDOWN) {
+        const remaining = Math.ceil((RESEND_COOLDOWN - (now - lastResendTime)) / 1000);
+        errorMessage.textContent = `Please wait ${remaining} seconds before resending.`;
+        errorMessage.style.display = 'block';
+        return;
+      }
+
+      const user = auth.currentUser;
+      if (!user) {
+        window.location.href = '/login';
+        return;
+      }
+
+      resendBtn.disabled = true;
+      resendBtn.querySelector('.btn-text').style.display = 'none';
+      resendBtn.querySelector('.btn-loading').style.display = 'inline';
+      errorMessage.style.display = 'none';
+      successMessage.style.display = 'none';
+
+      try {
+        await sendEmailVerification(user, {
+          url: window.location.origin + '/login?verified=true',
+          handleCodeInApp: false
+        });
+
+        lastResendTime = Date.now();
+        successMessage.textContent = 'Verification email sent! Check your inbox.';
+        successMessage.style.display = 'block';
+      } catch (error) {
+        console.error('Resend error:', error);
+        if (error.code === 'auth/too-many-requests') {
+          errorMessage.textContent = 'Too many requests. Please try again later.';
+        } else {
+          errorMessage.textContent = 'Failed to send email. Please try again.';
+        }
+        errorMessage.style.display = 'block';
+      } finally {
+        resendBtn.disabled = false;
+        resendBtn.querySelector('.btn-text').style.display = 'inline';
+        resendBtn.querySelector('.btn-loading').style.display = 'none';
+      }
+    });
+
+    // Check verification status
+    checkBtn.addEventListener('click', async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        window.location.href = '/login';
+        return;
+      }
+
+      errorMessage.style.display = 'none';
+      successMessage.style.display = 'none';
+
+      try {
+        await reload(user);
+
+        if (user.emailVerified) {
+          successMessage.textContent = 'Email verified! Redirecting to your dashboard...';
+          successMessage.style.display = 'block';
+          setTimeout(() => {
+            window.location.href = '/account/dashboard';
+          }, 1500);
+        } else {
+          errorMessage.textContent = 'Email not yet verified. Please click the link in your email.';
+          errorMessage.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Check error:', error);
+        errorMessage.textContent = 'Failed to check status. Please try again.';
+        errorMessage.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -45,6 +45,9 @@ const {
   vinylRelease = false,
   vinylRecordCount = '',
   vinylPrice = 0,
+  vinylShippingUK = null,
+  vinylShippingEU = null,
+  vinylShippingIntl = null,
   overallRating = { average: 0, count: 0, total: 0 },
   comments = [],
   notes = '',
@@ -268,12 +271,29 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                     <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
                     <circle cx="12" cy="12" r="3" fill="currentColor"/>
                   </svg>
-                  {vinylRelease && vinylAvailable 
-                    ? (isPreOrder ? `Pre-order Vinyl + Digital - £${vinylPrice?.toFixed(2)}` : `Vinyl + Digital - £${vinylPrice?.toFixed(2)}`) 
+                  {vinylRelease && vinylAvailable
+                    ? (isPreOrder ? `Pre-order Vinyl + Digital - £${vinylPrice?.toFixed(2)}` : `Vinyl + Digital - £${vinylPrice?.toFixed(2)}`)
                     : 'Vinyl Unavailable'}
                 </button>
               </div>
-              
+
+              {/* Vinyl Shipping Info */}
+              {vinylRelease && vinylAvailable && (
+                <div class="mt-3 p-3 bg-gray-800/50 border border-gray-700 rounded text-xs text-gray-300">
+                  <div class="flex items-center gap-1.5 mb-1.5">
+                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                    <span class="font-semibold text-white uppercase tracking-wide">Vinyl Shipping</span>
+                  </div>
+                  <div class="flex flex-wrap gap-x-4 gap-y-1">
+                    <span>UK: £{(vinylShippingUK ?? 4.99).toFixed(2)}</span>
+                    <span>EU: £{(vinylShippingEU ?? 9.99).toFixed(2)}</span>
+                    <span>Intl: £{(vinylShippingIntl ?? 14.99).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
               {additionalArtwork && additionalArtwork.length > 0 && (
                 <div class="mt-4 md:mt-6">
                   <div class="text-white font-black text-sm md:text-base uppercase tracking-wide mb-2 md:mb-3 border-b-2 border-red-600 pb-2">Additional Artwork</div>
@@ -1363,7 +1383,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     }
   }
 
-  function handleSubmitComment() {
+  async function handleSubmitComment() {
     const { commentUsername, commentText, submitCommentBtn } = getCommentElements();
 
     // Use cachedUserId if currentUser isn't set yet (during View Transition)
@@ -1371,6 +1391,12 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       alert('Please login to post a comment');
       window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
       return;
+    }
+
+    // Check email verification for new users
+    if (window.FreshWax?.checkEmailVerified) {
+      const verified = await window.FreshWax.checkEmailVerified('post comments');
+      if (!verified) return;
     }
 
     const userName = currentUserName || commentUsername?.value?.trim();
@@ -1986,4 +2012,5 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   };
 </script>
 
+<script is:inline src="/email-verify-check.js"></script>
 <script type="module" src="/item-page.js?v=20251228b"></script>

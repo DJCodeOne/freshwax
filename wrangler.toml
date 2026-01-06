@@ -11,3 +11,6 @@ database_id = "909e1932-1e20-4081-a37e-32cf355dec8f"
 [[kv_namespaces]]
 binding = "CACHE"
 id = "349d1fd00f3d4de9811529cc96fd4d8b"
+
+[vars]
+PUBLIC_RECAPTCHA_SITE_KEY = "6LfojkEsAAAAAJ9A6y9ZIzO-ZaRqdsWCGfXjU-sm"

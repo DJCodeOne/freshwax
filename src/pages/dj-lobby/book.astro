@@ -130,6 +130,30 @@ Astro.response.headers.set('Pragma', 'no-cache');
         <div id="formMsg" class="form-msg hidden"></div>
       </section>
     </div>
+
+    <!-- Edit Slot Modal -->
+    <div id="editModal" class="edit-modal hidden">
+      <div class="edit-modal-content">
+        <h3>Edit Slot</h3>
+        <div class="form-group">
+          <label>DJ Name *</label>
+          <input type="text" id="editDjName" required maxlength="25" placeholder="Current DJ name">
+        </div>
+        <div class="form-group">
+          <label>Stream Title</label>
+          <input type="text" id="editTitle" maxlength="50" placeholder="Stream title">
+        </div>
+        <div class="form-group">
+          <label>Genre/Style</label>
+          <input type="text" id="editGenre" maxlength="30" placeholder="e.g. House, Techno">
+        </div>
+        <div class="edit-modal-actions">
+          <button type="button" class="close-btn" id="closeEditModal">Cancel</button>
+          <button type="button" class="save-btn" id="saveEditBtn">Save Changes</button>
+        </div>
+        <input type="hidden" id="editSlotId">
+      </div>
+    </div>
   </div>
 
   <style>
@@ -510,6 +534,25 @@ Astro.response.headers.set('Pragma', 'no-cache');
     .booking-title { font-weight: 600; }
     .booking-time { color: #dc2626; font-size: 0.7rem; }
 
+    .booking-actions {
+      display: flex;
+      gap: 0.35rem;
+    }
+
+    .edit-btn {
+      padding: 0.2rem 0.5rem;
+      background: transparent;
+      border: 1px solid #3b82f6;
+      border-radius: 3px;
+      color: #3b82f6;
+      font-size: 0.65rem;
+      cursor: pointer;
+    }
+
+    .edit-btn:hover {
+      background: rgba(59, 130, 246, 0.1);
+    }
+
     .cancel-btn {
       padding: 0.2rem 0.5rem;
       background: transparent;
@@ -517,6 +560,69 @@ Astro.response.headers.set('Pragma', 'no-cache');
       border-radius: 3px;
       color: #ef4444;
       font-size: 0.65rem;
+      cursor: pointer;
+    }
+
+    /* Edit Modal */
+    .edit-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .edit-modal-content {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 1.25rem;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .edit-modal h3 {
+      margin-bottom: 1rem;
+      font-size: 1rem;
+    }
+
+    .edit-modal .form-group {
+      margin-bottom: 0.75rem;
+    }
+
+    .edit-modal-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      margin-top: 1rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid #222;
+    }
+
+    .save-btn {
+      padding: 0.5rem 1rem;
+      background: #3b82f6;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .save-btn:hover {
+      background: #2563eb;
+    }
+
+    .close-btn {
+      padding: 0.5rem 1rem;
+      background: transparent;
+      border: 1px solid #444;
+      border-radius: 4px;
+      color: #888;
+      font-size: 0.8rem;
       cursor: pointer;
     }
 
@@ -649,6 +755,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
 
     let loadingGate, mainContent;
     let formInitialized = false;
+    let maxAdvanceDays = 7; // Standard: 1 week, Plus: 1 month (set after checking subscription)
 
     // Wait for auth state - always use onAuthStateChanged to ensure Firebase has synced
     async function waitForAuth() {
@@ -733,6 +840,14 @@ Astro.response.headers.set('Pragma', 'no-cache');
       if (userData.displayName) {
         localStorage.setItem('fw_displayName', userData.displayName);
       }
+
+      // Check subscription tier for booking limits
+      const subscription = userData.subscription || {};
+      const isPlus = subscription.tier === 'pro' &&
+        subscription.expiresAt &&
+        new Date(subscription.expiresAt) > new Date();
+      maxAdvanceDays = isPlus ? 30 : 7; // Plus: 1 month, Standard: 1 week
+      console.log('[Book] Subscription tier:', isPlus ? 'Plus' : 'Standard', '- max advance days:', maxAdvanceDays);
 
       // All registered users are DJs by default
       const isDJ = userData.roles?.dj === true || userDoc.exists();
@@ -832,6 +947,68 @@ Astro.response.headers.set('Pragma', 'no-cache');
       ['djName', 'streamTitle'].forEach(id => {
         document.getElementById(id).addEventListener('input', updateSubmitButton);
       });
+
+      // Edit modal handlers
+      document.getElementById('closeEditModal').addEventListener('click', () => {
+        document.getElementById('editModal').classList.add('hidden');
+      });
+
+      document.getElementById('editModal').addEventListener('click', (e) => {
+        if (e.target.id === 'editModal') {
+          document.getElementById('editModal').classList.add('hidden');
+        }
+      });
+
+      document.getElementById('saveEditBtn').addEventListener('click', async () => {
+        const slotId = document.getElementById('editSlotId').value;
+        const djName = document.getElementById('editDjName').value.trim();
+        const title = document.getElementById('editTitle').value.trim();
+        const genre = document.getElementById('editGenre').value.trim();
+
+        if (!djName) {
+          showMsg('DJ name is required', 'error');
+          return;
+        }
+
+        const saveBtn = document.getElementById('saveEditBtn');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        try {
+          const idToken = await currentUser.getIdToken();
+          const response = await fetch('/api/livestream/slots', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+              action: 'update_slot',
+              slotId,
+              djId: currentUser.uid,
+              djName,
+              title,
+              genre
+            })
+          });
+
+          const result = await response.json();
+          if (result.success) {
+            showMsg('Slot updated successfully', 'success');
+            document.getElementById('editModal').classList.add('hidden');
+            await loadMyBookings();
+            await loadDayBookings();
+          } else {
+            showMsg('Error: ' + result.error, 'error');
+          }
+        } catch (err) {
+          console.error('Edit error:', err);
+          showMsg('Error updating slot', 'error');
+        }
+
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      });
     }
 
     function updateDateDisplay() {
@@ -850,7 +1027,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       });
 
       document.getElementById('prevDay').disabled = currentDate.getTime() <= today.getTime();
-      const maxDate = new Date(today.getTime() + 7 * 86400000);
+      const maxDate = new Date(today.getTime() + maxAdvanceDays * 86400000);
       document.getElementById('nextDay').disabled = currentDate.getTime() >= maxDate.getTime();
     }
 
@@ -1168,10 +1345,13 @@ Astro.response.headers.set('Pragma', 'no-cache');
           html += `
             <div class="booking-item">
               <div class="booking-info">
-                <div class="booking-title">${slot.title}</div>
+                <div class="booking-title">${slot.djName} - ${slot.title}</div>
                 <div class="booking-time">${dateStr} • ${timeStr} (${durationHours}hr)</div>
               </div>
-              <button class="cancel-btn" data-id="${slot.id}">Cancel</button>
+              <div class="booking-actions">
+                <button class="edit-btn" data-id="${slot.id}" data-djname="${slot.djName}" data-title="${slot.title}" data-genre="${slot.genre || ''}">Edit</button>
+                <button class="cancel-btn" data-id="${slot.id}">Cancel</button>
+              </div>
             </div>
           `;
         });
@@ -1189,6 +1369,18 @@ Astro.response.headers.set('Pragma', 'no-cache');
         } else {
           keyPanel.classList.add('hidden');
         }
+
+        // Edit handlers - open modal
+        container.querySelectorAll('.edit-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const modal = document.getElementById('editModal');
+            document.getElementById('editSlotId').value = btn.dataset.id;
+            document.getElementById('editDjName').value = btn.dataset.djname || '';
+            document.getElementById('editTitle').value = btn.dataset.title || '';
+            document.getElementById('editGenre').value = btn.dataset.genre || '';
+            modal.classList.remove('hidden');
+          });
+        });
 
         // Cancel handlers - use API
         container.querySelectorAll('.cancel-btn').forEach(btn => {
