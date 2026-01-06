@@ -278,14 +278,14 @@
           </div>
         </div>
       </div>
-
-      <!-- Freshwax Footer -->
-      <div class="playlist-modal-footer">
-        <span class="footer-logo"><span class="footer-fresh">Fresh</span><span class="footer-wax">Wax</span></span>
-        <span class="footer-tagline">community playlist</span>
-      </div>
-
     </div>
+
+    <!-- Freshwax Footer -->
+    <div class="playlist-modal-footer">
+      <span class="footer-logo"><span class="footer-fresh">Fresh</span><span class="footer-wax">Wax</span></span>
+      <span class="footer-tagline">community playlist</span>
+    </div>
+
   </div>
 </div>
 
@@ -894,8 +894,10 @@
     justify-content: center;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
-    background: rgba(0, 0, 0, 0.3);
+    background: #0a0a12;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+    min-height: 44px;
   }
 
   .playlist-modal-footer .footer-logo {
@@ -3395,7 +3397,7 @@
           </div>
           <div class="playlist-grid-actions">
             ${isAuthenticated ? `
-              <button class="playlist-action-btn playlist-save-btn" data-url="${item.url}" data-title="${(item.title || '').replace(/"/g, '&quot;')}" title="Save to My Playlist">
+              <button class="playlist-action-btn playlist-save-btn" data-url="${item.url}" data-title="${(item.title || '').replace(/"/g, '&quot;')}" data-thumbnail="${(item.thumbnail || '').replace(/"/g, '&quot;')}" title="Save to My Playlist">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
                 </svg>
@@ -3437,14 +3439,17 @@
     // Add save to personal playlist button listeners
     queueDiv.querySelectorAll('.playlist-save-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
-        const url = (e.currentTarget as HTMLElement).dataset.url;
+        const el = e.currentTarget as HTMLElement;
+        const url = el.dataset.url;
+        const title = el.dataset.title;
+        const thumbnail = el.dataset.thumbnail;
         if (url && playlistManager) {
           const button = e.currentTarget as HTMLButtonElement;
           const originalHTML = button.innerHTML;
           button.disabled = true;
           button.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinning"><circle cx="12" cy="12" r="10"></circle></svg>';
 
-          const result = await playlistManager.addToPersonalPlaylist(url);
+          const result = await playlistManager.addToPersonalPlaylist(url, title, thumbnail);
 
           if (result.success) {
             button.innerHTML = '<svg viewBox="0 0 24 24" fill="#22c55e" stroke="#22c55e" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>';
@@ -3649,10 +3654,31 @@
 
     grid.querySelectorAll('.personal-delete-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const itemId = (e.currentTarget as HTMLElement).dataset.id;
-        if (itemId && playlistManager) {
+        const button = e.currentTarget as HTMLElement;
+        const itemId = button.dataset.id;
+        if (!itemId || !playlistManager) return;
+
+        // Check if already showing confirmation
+        if (button.classList.contains('confirming')) {
+          // Second click - confirm delete
           playlistManager.removeFromPersonalPlaylist(itemId);
+          return;
         }
+
+        // First click - show confirmation state
+        button.classList.add('confirming');
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        button.title = 'Click again to confirm';
+
+        // Reset after 3 seconds if not confirmed
+        setTimeout(() => {
+          if (button.classList.contains('confirming')) {
+            button.classList.remove('confirming');
+            button.innerHTML = originalHTML;
+            button.title = 'Remove from playlist';
+          }
+        }, 3000);
       });
     });
   }

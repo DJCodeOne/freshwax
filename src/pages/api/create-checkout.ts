@@ -1,13 +1,23 @@
 // src/pages/api/create-checkout.ts
 // Creates Stripe checkout session for Plus subscription upgrade
+// Supports unique referral codes (one-time use total)
 import type { APIRoute } from 'astro';
+import { queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const prerender = false;
+
+function initFirebase(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+  });
+}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const body = await request.json();
-    const { type, priceId, userId, email, successUrl, cancelUrl } = body;
+    const { type, priceId, userId, email, promoCode, successUrl, cancelUrl } = body;
 
     // Validate required fields
     if (!userId || !email) {
@@ -29,9 +39,59 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 503, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Validate referral code if provided
+    let validatedPromoCode: string | null = null;
+    let referralCardId: string | null = null;
+    let referredBy: string | null = null;
+
+    if (promoCode && priceId === 'plus_annual_promo') {
+      initFirebase(locals);
+      const normalizedCode = promoCode.toUpperCase().trim();
+
+      // Look up referral code in giftCards collection
+      const giftCards = await queryCollection('giftCards', {
+        filters: [
+          { field: 'code', op: 'EQUAL', value: normalizedCode },
+          { field: 'type', op: 'EQUAL', value: 'referral' }
+        ],
+        limit: 1
+      });
+
+      if (!giftCards || giftCards.length === 0) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Invalid referral code'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      const referralCard = giftCards[0];
+
+      // Check if code is still active
+      if (!referralCard.isActive || referralCard.redeemedBy) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'This referral code has already been used'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      // Prevent self-referral
+      if (referralCard.createdByUserId === userId) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'You cannot use your own referral code'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      validatedPromoCode = normalizedCode;
+      referralCardId = referralCard.id;
+      referredBy = referralCard.createdByUserId;
+      console.log(`[create-checkout] Valid referral code ${normalizedCode} for user ${userId}, referred by ${referredBy}`);
+    }
+
     // Map price IDs to actual Stripe price IDs
     const PRICE_MAP: Record<string, string> = {
       'plus_annual': env?.STRIPE_PLUS_ANNUAL_PRICE_ID || import.meta.env.STRIPE_PLUS_ANNUAL_PRICE_ID || '',
+      'plus_annual_promo': env?.STRIPE_PLUS_ANNUAL_PROMO_PRICE_ID || import.meta.env.STRIPE_PLUS_ANNUAL_PROMO_PRICE_ID || '',
     };
 
     const stripePriceId = PRICE_MAP[priceId];
@@ -40,6 +100,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
         success: false,
         error: 'Invalid price selected'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Build metadata - include referral info if used
+    const metadata: Record<string, string> = {
+      'metadata[userId]': userId,
+      'metadata[priceId]': priceId,
+      'metadata[type]': 'plus_subscription',
+    };
+    if (validatedPromoCode) {
+      metadata['metadata[promoCode]'] = validatedPromoCode;
+    }
+    if (referralCardId) {
+      metadata['metadata[referralCardId]'] = referralCardId;
+    }
+    if (referredBy) {
+      metadata['metadata[referredBy]'] = referredBy;
     }
 
     // Create Stripe checkout session
@@ -57,9 +133,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         'cancel_url': cancelUrl || `${new URL(request.url).origin}/account/dashboard`,
         'customer_email': email,
         'client_reference_id': userId,
-        'metadata[userId]': userId,
-        'metadata[priceId]': priceId,
-        'metadata[type]': 'plus_subscription',
+        ...metadata,
       }).toString()
     });
 

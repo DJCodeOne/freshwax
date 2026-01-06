@@ -1,22 +1,12 @@
 // src/pages/api/playlist/global.ts
 // Global playlist API - shared across all viewers
+// NOW USES CLOUDFLARE KV - NO MORE FIREBASE READS!
 
 import type { APIContext } from 'astro';
-import { getDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
-const GLOBAL_PLAYLIST_DOC = 'globalPlaylist';
-
-// Helper to init Firebase env from Cloudflare runtime
-// Note: PUBLIC_FIREBASE_API_KEY is safe to include - it's a client-side key
-const FALLBACK_API_KEY = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
-
-function initEnv(locals: any) {
-  const env = (locals as any).runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || env?.PUBLIC_FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || env?.PUBLIC_FIREBASE_API_KEY || FALLBACK_API_KEY,
-  });
-}
+// KV keys for playlist data
+const KV_PLAYLIST_KEY = 'global-playlist';
+const KV_HISTORY_KEY = 'playlist-history';
 const MAX_QUEUE_SIZE = 10;
 
 interface PlaylistItem {
@@ -40,103 +30,42 @@ interface GlobalPlaylist {
   reactionCount?: number; // Global reaction count, resets per track
 }
 
-// Convert Firestore document fields to JSON
-function firestoreToJson(doc: any): any {
-  if (!doc?.fields) return doc;
-
-  const result: any = {};
-  for (const [key, value] of Object.entries(doc.fields)) {
-    result[key] = parseFirestoreValue(value);
-  }
-  return result;
+// Helper to get KV binding
+function getKV(locals: any): any {
+  return (locals as any).runtime?.env?.CACHE;
 }
 
-function parseFirestoreValue(value: any): any {
-  if (value === null || value === undefined) return null;
-
-  if ('stringValue' in value) return value.stringValue;
-  if ('integerValue' in value) return parseInt(value.integerValue);
-  if ('doubleValue' in value) return value.doubleValue;
-  if ('booleanValue' in value) return value.booleanValue;
-  if ('timestampValue' in value) return value.timestampValue;
-  if ('nullValue' in value) return null;
-  if ('arrayValue' in value) {
-    return (value.arrayValue.values || []).map(parseFirestoreValue);
-  }
-  if ('mapValue' in value) {
-    const result: any = {};
-    for (const [k, v] of Object.entries(value.mapValue.fields || {})) {
-      result[k] = parseFirestoreValue(v);
-    }
-    return result;
-  }
-  return value;
-}
-
-// Convert JSON to Firestore format
-function jsonToFirestore(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return { nullValue: null };
-  }
-  if (typeof obj === 'string') {
-    return { stringValue: obj };
-  }
-  if (typeof obj === 'number') {
-    return Number.isInteger(obj)
-      ? { integerValue: obj.toString() }
-      : { doubleValue: obj };
-  }
-  if (typeof obj === 'boolean') {
-    return { booleanValue: obj };
-  }
-  if (Array.isArray(obj)) {
-    return { arrayValue: { values: obj.map(jsonToFirestore) } };
-  }
-  if (typeof obj === 'object') {
-    const fields: any = {};
-    for (const [key, value] of Object.entries(obj)) {
-      fields[key] = jsonToFirestore(value);
-    }
-    return { mapValue: { fields } };
-  }
-  return { stringValue: String(obj) };
-}
-
-// GET - Fetch global playlist
+// GET - Fetch global playlist from KV (NO FIREBASE!)
 export async function GET({ request, locals }: APIContext) {
   try {
-    initEnv(locals);
-    const doc = await getDocument('liveSettings', GLOBAL_PLAYLIST_DOC);
-
     const headers = {
       'Content-Type': 'application/json',
-      'Cache-Control': 'no-store, no-cache, must-revalidate',
-      'Pragma': 'no-cache'
+      'Cache-Control': 'public, max-age=5',
     };
 
-    if (!doc) {
-      // Return empty playlist
+    const kv = getKV(locals);
+    if (!kv) {
+      console.error('[GlobalPlaylist] KV not available');
       return new Response(JSON.stringify({
-        success: true,
-        playlist: {
-          queue: [],
-          currentIndex: 0,
-          isPlaying: false,
-          lastUpdated: new Date().toISOString(),
-          trackStartedAt: null
-        }
-      }), { headers });
+        success: false,
+        error: 'KV storage not available'
+      }), { status: 500, headers });
     }
+
+    // Get playlist from KV
+    const data = await kv.get(KV_PLAYLIST_KEY, 'json');
+
+    const playlist = data || {
+      queue: [],
+      currentIndex: 0,
+      isPlaying: false,
+      lastUpdated: new Date().toISOString(),
+      trackStartedAt: null
+    };
 
     return new Response(JSON.stringify({
       success: true,
-      playlist: {
-        queue: doc.queue || [],
-        currentIndex: doc.currentIndex || 0,
-        isPlaying: doc.isPlaying || false,
-        lastUpdated: doc.lastUpdated || new Date().toISOString(),
-        trackStartedAt: doc.trackStartedAt || null
-      }
+      playlist
     }), { headers });
   } catch (error: any) {
     console.error('[GlobalPlaylist] GET error:', error);
@@ -153,7 +82,14 @@ export async function GET({ request, locals }: APIContext) {
 // POST - Add item to playlist (requires auth)
 export async function POST({ request, locals }: APIContext) {
   try {
-    initEnv(locals);
+    const kv = getKV(locals);
+    if (!kv) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'KV storage not available'
+      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const body = await request.json();
     const { item, userId, userName } = body;
 
@@ -167,7 +103,7 @@ export async function POST({ request, locals }: APIContext) {
       });
     }
 
-    // Get current playlist
+    // Get current playlist from KV
     let playlist: GlobalPlaylist = {
       queue: [],
       currentIndex: 0,
@@ -176,15 +112,15 @@ export async function POST({ request, locals }: APIContext) {
       trackStartedAt: null
     };
 
-    const doc = await getDocument('liveSettings', GLOBAL_PLAYLIST_DOC);
-    if (doc) {
+    const data = await kv.get(KV_PLAYLIST_KEY, 'json');
+    if (data) {
       playlist = {
-        queue: doc.queue || [],
-        currentIndex: doc.currentIndex || 0,
-        isPlaying: doc.isPlaying || false,
-        lastUpdated: doc.lastUpdated || new Date().toISOString(),
-        trackStartedAt: doc.trackStartedAt || null,
-        reactionCount: doc.reactionCount || 0
+        queue: data.queue || [],
+        currentIndex: data.currentIndex || 0,
+        isPlaying: data.isPlaying || false,
+        lastUpdated: data.lastUpdated || new Date().toISOString(),
+        trackStartedAt: data.trackStartedAt || null,
+        reactionCount: data.reactionCount || 0
       };
     }
 
@@ -228,14 +164,15 @@ export async function POST({ request, locals }: APIContext) {
       playlist.trackStartedAt = new Date().toISOString();
     }
 
-    // Save to Firebase using the fields format
-    await setDocument('liveSettings', GLOBAL_PLAYLIST_DOC, {
+    // Save to KV
+    await kv.put(KV_PLAYLIST_KEY, JSON.stringify({
       queue: playlist.queue,
       currentIndex: playlist.currentIndex,
       isPlaying: playlist.isPlaying,
       lastUpdated: playlist.lastUpdated,
-      trackStartedAt: playlist.trackStartedAt || null
-    });
+      trackStartedAt: playlist.trackStartedAt || null,
+      reactionCount: playlist.reactionCount || 0
+    }));
 
     // Trigger Pusher broadcast
     await broadcastPlaylistUpdate(playlist, (locals as any)?.runtime?.env);
@@ -262,7 +199,14 @@ export async function POST({ request, locals }: APIContext) {
 // DELETE - Remove item from playlist
 export async function DELETE({ request, locals }: APIContext) {
   try {
-    initEnv(locals);
+    const kv = getKV(locals);
+    if (!kv) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'KV storage not available'
+      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const body = await request.json();
     const { itemId, userId } = body;
 
@@ -276,9 +220,9 @@ export async function DELETE({ request, locals }: APIContext) {
       });
     }
 
-    const doc = await getDocument('liveSettings', GLOBAL_PLAYLIST_DOC);
+    const data = await kv.get(KV_PLAYLIST_KEY, 'json');
 
-    if (!doc) {
+    if (!data) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Playlist not found'
@@ -289,11 +233,11 @@ export async function DELETE({ request, locals }: APIContext) {
     }
 
     let playlist: GlobalPlaylist = {
-      queue: doc.queue || [],
-      currentIndex: doc.currentIndex || 0,
-      isPlaying: doc.isPlaying || false,
-      lastUpdated: doc.lastUpdated || new Date().toISOString(),
-      trackStartedAt: doc.trackStartedAt || null
+      queue: data.queue || [],
+      currentIndex: data.currentIndex || 0,
+      isPlaying: data.isPlaying || false,
+      lastUpdated: data.lastUpdated || new Date().toISOString(),
+      trackStartedAt: data.trackStartedAt || null
     };
 
     // Find and remove item (only if user owns it or is admin)
@@ -342,15 +286,15 @@ export async function DELETE({ request, locals }: APIContext) {
 
     playlist.lastUpdated = new Date().toISOString();
 
-    // Save to Firebase
-    await setDocument('liveSettings', GLOBAL_PLAYLIST_DOC, {
+    // Save to KV
+    await kv.put(KV_PLAYLIST_KEY, JSON.stringify({
       queue: playlist.queue,
       currentIndex: playlist.currentIndex,
       isPlaying: playlist.isPlaying,
       lastUpdated: playlist.lastUpdated,
       trackStartedAt: playlist.trackStartedAt || null,
       reactionCount: playlist.reactionCount || 0
-    });
+    }));
 
     // Trigger Pusher broadcast
     await broadcastPlaylistUpdate(playlist, (locals as any)?.runtime?.env);
@@ -376,7 +320,17 @@ export async function DELETE({ request, locals }: APIContext) {
 // PUT - Update playlist state (next track, play/pause, sync)
 export async function PUT({ request, locals }: APIContext) {
   try {
-    initEnv(locals);
+    const kv = getKV(locals);
+    if (!kv) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'KV storage not available'
+      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Set KV cache for helper functions
+    setKVCache(kv);
+
     const body = await request.json();
     const { action, userId, playlist: syncPlaylist } = body;
 
@@ -402,27 +356,29 @@ export async function PUT({ request, locals }: APIContext) {
         trackStartedAt: syncPlaylist.trackStartedAt || null
       };
     } else {
-      // For other actions, load from Firestore first
-      const doc = await getDocument('liveSettings', GLOBAL_PLAYLIST_DOC);
+      // For other actions, load from KV first
+      const data = await kv.get(KV_PLAYLIST_KEY, 'json');
 
-      if (!doc) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Playlist not found'
-        }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+      if (!data) {
+        // Create empty playlist if none exists
+        playlist = {
+          queue: [],
+          currentIndex: 0,
+          isPlaying: false,
+          lastUpdated: new Date().toISOString(),
+          trackStartedAt: null,
+          reactionCount: 0
+        };
+      } else {
+        playlist = {
+          queue: data.queue || [],
+          currentIndex: data.currentIndex || 0,
+          isPlaying: data.isPlaying || false,
+          lastUpdated: data.lastUpdated || new Date().toISOString(),
+          trackStartedAt: data.trackStartedAt || null,
+          reactionCount: data.reactionCount || 0
+        };
       }
-
-      playlist = {
-        queue: doc.queue || [],
-        currentIndex: doc.currentIndex || 0,
-        isPlaying: doc.isPlaying || false,
-        lastUpdated: doc.lastUpdated || new Date().toISOString(),
-        trackStartedAt: doc.trackStartedAt || null,
-        reactionCount: doc.reactionCount || 0
-      };
 
       const now = new Date().toISOString();
 
@@ -592,15 +548,15 @@ export async function PUT({ request, locals }: APIContext) {
       playlist.lastUpdated = now;
     }
 
-    // Save to Firebase
-    await setDocument('liveSettings', GLOBAL_PLAYLIST_DOC, {
+    // Save to KV
+    await kv.put(KV_PLAYLIST_KEY, JSON.stringify({
       queue: playlist.queue,
       currentIndex: playlist.currentIndex,
       isPlaying: playlist.isPlaying,
       lastUpdated: playlist.lastUpdated,
       trackStartedAt: playlist.trackStartedAt || null,
       reactionCount: playlist.reactionCount || 0
-    });
+    }));
 
     // Trigger Pusher broadcast
     await broadcastPlaylistUpdate(playlist, (locals as any)?.runtime?.env);
@@ -623,12 +579,20 @@ export async function PUT({ request, locals }: APIContext) {
   }
 }
 
-// Fetch recently played from history (top 10 items)
+// Cache for KV binding (set during request handling for helper functions)
+let kvCache: any = null;
+
+function setKVCache(kv: any) {
+  kvCache = kv;
+}
+
+// Fetch recently played from history (top 10 items) - USES KV
 async function getRecentlyPlayed(): Promise<any[]> {
   try {
-    const historyDoc = await getDocument('liveSettings', 'playlistHistory');
-    if (historyDoc && historyDoc.items) {
-      return historyDoc.items.slice(0, 10);
+    if (!kvCache) return [];
+    const data = await kvCache.get(KV_HISTORY_KEY, 'json');
+    if (data && data.items) {
+      return data.items.slice(0, 10);
     }
   } catch (error) {
     console.warn('[GlobalPlaylist] Could not fetch recently played:', error);
@@ -636,18 +600,23 @@ async function getRecentlyPlayed(): Promise<any[]> {
   return [];
 }
 
-// Add a track to the recently played list (keeps only last 10)
+// Add a track to the recently played list (keeps only last 10) - USES KV
 async function addToRecentlyPlayed(track: any): Promise<void> {
   try {
+    if (!kvCache) {
+      console.log('[GlobalPlaylist] KV not available for history');
+      return;
+    }
+
     // Always save tracks - UI will fetch real titles async if needed
     if (!track.url) {
       console.log('[GlobalPlaylist] Skipping recently played - no URL');
       return;
     }
 
-    // Get current history
-    const historyDoc = await getDocument('liveSettings', 'playlistHistory');
-    let items: any[] = historyDoc?.items || [];
+    // Get current history from KV
+    const data = await kvCache.get(KV_HISTORY_KEY, 'json');
+    let items: any[] = data?.items || [];
 
     // Create the history item
     const historyItem = {
@@ -665,11 +634,11 @@ async function addToRecentlyPlayed(track: any): Promise<void> {
     // Prepend to list and keep only last 10
     items = [historyItem, ...items.filter(item => item.id !== track.id)].slice(0, 10);
 
-    // Save to Firestore (include lastUpdated for Firestore rules)
-    await setDocument('liveSettings', 'playlistHistory', {
+    // Save to KV
+    await kvCache.put(KV_HISTORY_KEY, JSON.stringify({
       items,
       lastUpdated: new Date().toISOString()
-    });
+    }));
     console.log('[GlobalPlaylist] Added to recently played:', track.title);
   } catch (error) {
     console.error('[GlobalPlaylist] Error adding to recently played:', error);

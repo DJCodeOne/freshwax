@@ -1667,8 +1667,11 @@ export class PlaylistManager {
    * Add a track to personal playlist (for later use)
    * Plus users: 1000 tracks with cloud sync
    * Standard users: 100 tracks local only
+   * @param url - The media URL
+   * @param providedTitle - Optional title if already known (e.g., from queue)
+   * @param providedThumbnail - Optional thumbnail if already known
    */
-  async addToPersonalPlaylist(url: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  async addToPersonalPlaylist(url: string, providedTitle?: string, providedThumbnail?: string): Promise<{ success: boolean; message?: string; error?: string }> {
     if (!url || !url.trim()) {
       return { success: false, error: 'Please enter a URL' };
     }
@@ -1701,11 +1704,17 @@ export class PlaylistManager {
         return { success: false, error: parsed.error || 'Invalid URL' };
       }
 
-      // Fetch metadata
-      const metadata = await this.fetchMetadata(url.trim());
+      // Use provided title/thumbnail or fetch metadata
+      let title = providedTitle;
+      let thumbnail = providedThumbnail;
 
-      // Get thumbnail
-      let thumbnail = metadata.thumbnail;
+      if (!title || !thumbnail) {
+        const metadata = await this.fetchMetadata(url.trim());
+        title = title || metadata.title;
+        thumbnail = thumbnail || metadata.thumbnail;
+      }
+
+      // Fallback thumbnail for YouTube
       if (!thumbnail && parsed.platform === 'youtube' && parsed.embedId) {
         thumbnail = `https://img.youtube.com/vi/${parsed.embedId}/mqdefault.jpg`;
       }
@@ -1715,7 +1724,7 @@ export class PlaylistManager {
         url: url.trim(),
         platform: parsed.platform,
         embedId: parsed.embedId,
-        title: metadata.title,
+        title: title || 'Untitled',
         thumbnail,
         addedAt: new Date().toISOString()
       };

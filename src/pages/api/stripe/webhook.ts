@@ -665,10 +665,36 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 });
                 console.log('[Stripe Webhook] ✓ Welcome email sent to:', email);
 
+                // Mark referral code as redeemed if one was used
+                const referralCardId = metadata.referralCardId;
+                if (referralCardId) {
+                  try {
+                    const redeemData = {
+                      fields: {
+                        redeemedBy: { stringValue: userId },
+                        redeemedAt: { stringValue: new Date().toISOString() },
+                        isActive: { booleanValue: false }
+                      }
+                    };
+
+                    await fetch(
+                      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/giftCards/${referralCardId}?updateMask.fieldPaths=redeemedBy&updateMask.fieldPaths=redeemedAt&updateMask.fieldPaths=isActive&key=${FIREBASE_API_KEY}`,
+                      {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(redeemData)
+                      }
+                    );
+                    console.log(`[Stripe Webhook] ✓ Referral code ${referralCardId} marked as redeemed by ${userId}`);
+                  } catch (referralError) {
+                    console.error('[Stripe Webhook] Failed to mark referral code as redeemed:', referralError);
+                  }
+                }
+
                 // Log successful subscription
                 logStripeEvent(event.type, event.id, true, {
                   message: `Plus subscription activated for ${userId}`,
-                  metadata: { userId, plusId },
+                  metadata: { userId, plusId, promoCode: promoCode || null },
                   processingTimeMs: Date.now() - startTime
                 }).catch(() => {});
               } catch (emailError) {
@@ -694,6 +720,130 @@ export const POST: APIRoute = async ({ request, locals }) => {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
+      }
+
+      // Handle one-off Plus payment (promo code purchases)
+      if (session.mode === 'payment') {
+        const metadata = session.metadata || {};
+
+        // Check if this is a Plus subscription payment (promo)
+        if (metadata.type === 'plus_subscription') {
+          console.log('[Stripe Webhook] 👑 Processing Plus one-off payment (promo)...');
+
+          const userId = metadata.userId;
+          const email = session.customer_email || metadata.email;
+          const promoCode = metadata.promoCode;
+
+          if (userId) {
+            // Calculate subscription dates
+            const subscribedAt = new Date().toISOString();
+            const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(); // 1 year
+
+            // Generate Plus ID
+            const year = new Date().getFullYear().toString().slice(-2);
+            const month = (new Date().getMonth() + 1).toString().padStart(2, '0');
+            const userHash = userId.slice(-4).toUpperCase();
+            const plusId = `FWP-${year}${month}-${userHash}`;
+
+            // Update user subscription in Firestore
+            const FIREBASE_PROJECT_ID = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+            const FIREBASE_API_KEY = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
+
+            const updateData = {
+              fields: {
+                'subscription': {
+                  mapValue: {
+                    fields: {
+                      tier: { stringValue: 'pro' },
+                      subscribedAt: { stringValue: subscribedAt },
+                      expiresAt: { stringValue: expiresAt },
+                      subscriptionId: { stringValue: session.payment_intent || session.id },
+                      plusId: { stringValue: plusId },
+                      paymentMethod: { stringValue: 'stripe' },
+                      promoCode: { stringValue: promoCode || '' }
+                    }
+                  }
+                }
+              }
+            };
+
+            try {
+              const updateResponse = await fetch(
+                `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${userId}?updateMask.fieldPaths=subscription&key=${FIREBASE_API_KEY}`,
+                {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(updateData)
+                }
+              );
+
+              if (updateResponse.ok) {
+                console.log('[Stripe Webhook] ✓ User Plus subscription activated (promo):', userId);
+
+                // Send welcome email
+                try {
+                  const origin = new URL(request.url).origin;
+                  await fetch(`${origin}/api/admin/send-plus-welcome-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      email: email,
+                      name: metadata.userName || email?.split('@')[0],
+                      subscribedAt,
+                      expiresAt,
+                      plusId,
+                      isRenewal: false
+                    })
+                  });
+                  console.log('[Stripe Webhook] ✓ Welcome email sent to:', email);
+                } catch (emailError) {
+                  console.error('[Stripe Webhook] Failed to send welcome email:', emailError);
+                }
+
+                // Mark referral code as redeemed in Firebase
+                const referralCardId = metadata.referralCardId;
+                if (referralCardId) {
+                  try {
+                    const redeemData = {
+                      fields: {
+                        redeemedBy: { stringValue: userId },
+                        redeemedAt: { stringValue: new Date().toISOString() },
+                        isActive: { booleanValue: false }
+                      }
+                    };
+
+                    await fetch(
+                      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/giftCards/${referralCardId}?updateMask.fieldPaths=redeemedBy&updateMask.fieldPaths=redeemedAt&updateMask.fieldPaths=isActive&key=${FIREBASE_API_KEY}`,
+                      {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(redeemData)
+                      }
+                    );
+                    console.log(`[Stripe Webhook] ✓ Referral code ${referralCardId} marked as redeemed by ${userId}`);
+                  } catch (referralError) {
+                    console.error('[Stripe Webhook] Failed to mark referral code as redeemed:', referralError);
+                  }
+                }
+
+                logStripeEvent(event.type, event.id, true, {
+                  message: `Plus subscription activated via promo for ${userId}`,
+                  metadata: { userId, plusId, promoCode },
+                  processingTimeMs: Date.now() - startTime
+                }).catch(() => {});
+              } else {
+                console.error('[Stripe Webhook] Failed to update user subscription (promo)');
+              }
+            } catch (updateError) {
+              console.error('[Stripe Webhook] Error updating subscription (promo):', updateError);
+            }
+          }
+
+          return new Response(JSON.stringify({ received: true }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
       }
 
       // Extract order data from metadata

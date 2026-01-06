@@ -574,8 +574,21 @@ export const prerender = false;
           </ul>
         </div>
         <div class="goplus-modal-footer">
+          <div class="goplus-promo-section">
+            <label for="goPlusPromoCode" class="promo-label">Have a promo code?</label>
+            <div class="promo-input-wrapper">
+              <input type="text" id="goPlusPromoCode" placeholder="Enter code" maxlength="20" autocomplete="off" />
+              <button type="button" id="goPlusApplyPromo" class="promo-apply-btn">Apply</button>
+            </div>
+            <p id="goPlusPromoMessage" class="promo-message"></p>
+            <div id="goPlusDiscountedPrice" class="discounted-price hidden">
+              <span class="original-price">£10</span>
+              <span class="sale-price">£5</span>
+              <span class="discount-badge">50% OFF</span>
+            </div>
+          </div>
           <button id="goPlusUpgradeBtn" class="goplus-upgrade-btn">
-            <span class="btn-text">Upgrade Now</span>
+            <span class="btn-text">Upgrade Now - £10</span>
             <span class="btn-loading hidden">Processing...</span>
           </button>
           <p class="goplus-secure">Secure payment via Stripe</p>
@@ -630,6 +643,7 @@ export const prerender = false;
   let currentUser = null;
   let customerData = null;
   let orders = [];
+  let appliedPromoCode = null; // Track applied promo code for Plus upgrade
   let authUnsubscribe = null;
 
   // Load customer data from Firestore (customers collection only)
@@ -2704,6 +2718,69 @@ export const prerender = false;
     }
   }
 
+  // Handle promo code application for Plus upgrade
+  async function handleApplyPromoCode() {
+    if (!currentUser) {
+      alert('Please sign in first');
+      return;
+    }
+
+    const promoInput = document.getElementById('goPlusPromoCode');
+    const promoMessage = document.getElementById('goPlusPromoMessage');
+    const discountedPriceEl = document.getElementById('goPlusDiscountedPrice');
+    const upgradeBtn = document.getElementById('goPlusUpgradeBtn');
+    const applyBtn = document.getElementById('goPlusApplyPromo');
+
+    const code = promoInput?.value.trim().toUpperCase();
+    if (!code) {
+      promoMessage.textContent = 'Please enter a promo code';
+      promoMessage.className = 'promo-message error';
+      return;
+    }
+
+    // Disable apply button while checking
+    if (applyBtn) applyBtn.disabled = true;
+    promoMessage.textContent = 'Checking...';
+    promoMessage.className = 'promo-message';
+
+    try {
+      const response = await fetch('/api/plus/validate-promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code,
+          userId: currentUser.uid
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.valid) {
+        appliedPromoCode = code;
+        promoMessage.textContent = result.message || 'Promo code applied!';
+        promoMessage.className = 'promo-message success';
+        discountedPriceEl?.classList.remove('hidden');
+        promoInput.disabled = true;
+        if (applyBtn) applyBtn.textContent = 'Applied';
+
+        // Update button text to show discounted price
+        const btnText = upgradeBtn?.querySelector('.btn-text');
+        if (btnText) btnText.textContent = 'Upgrade Now - £5';
+      } else {
+        appliedPromoCode = null;
+        promoMessage.textContent = result.error || 'Invalid promo code';
+        promoMessage.className = 'promo-message error';
+        discountedPriceEl?.classList.add('hidden');
+      }
+    } catch (error) {
+      console.error('Promo validation error:', error);
+      promoMessage.textContent = 'Failed to validate code. Please try again.';
+      promoMessage.className = 'promo-message error';
+    } finally {
+      if (applyBtn && applyBtn.textContent !== 'Applied') applyBtn.disabled = false;
+    }
+  }
+
   // Handle upgrade button click - redirect to Stripe checkout
   async function handleUpgradeClick() {
     if (!currentUser) {
@@ -2730,14 +2807,17 @@ export const prerender = false;
 
     try {
       // Create Stripe checkout session for Pro subscription
+      // Promo uses one-off payment, regular uses subscription
+      const isPromo = !!appliedPromoCode;
       const response = await fetch('/api/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'subscription',
-          priceId: 'plus_annual', // This will be mapped to actual Stripe price ID
+          type: isPromo ? 'payment' : 'subscription', // Promo is one-off payment
+          priceId: isPromo ? 'plus_annual_promo' : 'plus_annual',
           userId: currentUser.uid,
           email: currentUser.email,
+          promoCode: appliedPromoCode,
           successUrl: `${window.location.origin}/account/dashboard?upgraded=true`,
           cancelUrl: `${window.location.origin}/account/dashboard`,
         })
@@ -2815,6 +2895,38 @@ export const prerender = false;
 
     // Handle upgrade button in modal
     upgradeBtn?.addEventListener('click', handleUpgradeClick);
+
+    // Handle promo code apply button
+    const promoApplyBtn = document.getElementById('goPlusApplyPromo');
+    promoApplyBtn?.addEventListener('click', handleApplyPromoCode);
+
+    // Handle Enter key in promo input
+    const promoInput = document.getElementById('goPlusPromoCode');
+    promoInput?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleApplyPromoCode();
+      }
+    });
+
+    // Reset promo state when modal closes
+    const originalCloseModal = closeModal;
+    closeModal = function() {
+      originalCloseModal();
+      // Reset promo code state
+      appliedPromoCode = null;
+      const promoInputEl = document.getElementById('goPlusPromoCode');
+      const promoMessage = document.getElementById('goPlusPromoMessage');
+      const discountedPriceEl = document.getElementById('goPlusDiscountedPrice');
+      const promoBtnEl = document.getElementById('goPlusApplyPromo');
+      const upgradeBtnText = document.getElementById('goPlusUpgradeBtn')?.querySelector('.btn-text');
+
+      if (promoInputEl) { promoInputEl.value = ''; promoInputEl.disabled = false; }
+      if (promoMessage) { promoMessage.textContent = ''; promoMessage.className = 'promo-message'; }
+      if (discountedPriceEl) discountedPriceEl.classList.add('hidden');
+      if (promoBtnEl) { promoBtnEl.textContent = 'Apply'; promoBtnEl.disabled = false; }
+      if (upgradeBtnText) upgradeBtnText.textContent = 'Upgrade Now - £10';
+    };
   }
 
   // Check URL params for successful upgrade
@@ -3271,6 +3383,108 @@ export const prerender = false;
     margin: 0.75rem 0 0;
     font-size: 0.75rem;
     color: #6b7280;
+  }
+
+  /* Promo Code Section */
+  .goplus-promo-section {
+    margin-bottom: 1rem;
+    text-align: left;
+  }
+
+  .promo-label {
+    display: block;
+    font-size: 0.85rem;
+    color: #9ca3af;
+    margin-bottom: 0.5rem;
+  }
+
+  .promo-input-wrapper {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .promo-input-wrapper input {
+    flex: 1;
+    padding: 0.6rem 0.75rem;
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 0.375rem;
+    color: #fff;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+  }
+
+  .promo-input-wrapper input:focus {
+    outline: none;
+    border-color: #f59e0b;
+  }
+
+  .promo-apply-btn {
+    padding: 0.6rem 1rem;
+    background: #374151;
+    color: #fff;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .promo-apply-btn:hover {
+    background: #4b5563;
+  }
+
+  .promo-apply-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .promo-message {
+    margin: 0.5rem 0 0;
+    font-size: 0.8rem;
+    min-height: 1.2em;
+  }
+
+  .promo-message.error {
+    color: #ef4444;
+  }
+
+  .promo-message.success {
+    color: #22c55e;
+  }
+
+  .discounted-price {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 0.5rem;
+  }
+
+  .discounted-price .original-price {
+    font-size: 1.1rem;
+    color: #6b7280;
+    text-decoration: line-through;
+  }
+
+  .discounted-price .sale-price {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #22c55e;
+  }
+
+  .discounted-price .discount-badge {
+    padding: 0.25rem 0.5rem;
+    background: #22c55e;
+    color: #000;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 0.25rem;
   }
 
   /* Subscription Card Styles */

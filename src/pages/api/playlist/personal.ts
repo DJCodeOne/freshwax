@@ -1,10 +1,10 @@
 // src/pages/api/playlist/personal.ts
 // Personal playlist API - save/load user's personal playlist to D1
-// Cloud sync is a Plus-only feature - Standard users only have local storage
+// All users get cloud sync: Standard = 100 tracks, Plus = 1000 tracks
 
 import type { APIContext } from 'astro';
 import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
-import { getEffectiveTier, SUBSCRIPTION_TIERS } from '../../../lib/subscription';
+import { getEffectiveTier, SUBSCRIPTION_TIERS, TIER_LIMITS } from '../../../lib/subscription';
 
 function initEnv(locals: any) {
   const env = (locals as any).runtime?.env;
@@ -14,20 +14,24 @@ function initEnv(locals: any) {
   });
 }
 
-// Check if user has Plus subscription (still uses Firebase for user data)
-async function isUserPlus(userId: string): Promise<boolean> {
+// Get user's subscription tier and track limit
+async function getUserTierInfo(userId: string): Promise<{ tier: string; isPlus: boolean; trackLimit: number }> {
   try {
     const userDoc = await getDocument('users', userId);
-    if (!userDoc) return false;
+    if (!userDoc) {
+      return { tier: 'free', isPlus: false, trackLimit: TIER_LIMITS[SUBSCRIPTION_TIERS.FREE].playlistTrackLimit };
+    }
     const tier = getEffectiveTier(userDoc.subscription);
-    return tier === SUBSCRIPTION_TIERS.PRO;
+    const isPlus = tier === SUBSCRIPTION_TIERS.PRO;
+    const trackLimit = TIER_LIMITS[tier].playlistTrackLimit;
+    return { tier, isPlus, trackLimit };
   } catch (error) {
     console.error('[PersonalPlaylist] Error checking subscription:', error);
-    return false;
+    return { tier: 'free', isPlus: false, trackLimit: TIER_LIMITS[SUBSCRIPTION_TIERS.FREE].playlistTrackLimit };
   }
 }
 
-// GET - Load user's personal playlist from D1 (Plus only - returns empty for Standard)
+// GET - Load user's personal playlist from D1
 export async function GET({ request, locals }: APIContext) {
   try {
     initEnv(locals);
@@ -47,18 +51,8 @@ export async function GET({ request, locals }: APIContext) {
       });
     }
 
-    // Check if user has Plus subscription for cloud sync
-    const hasPlus = await isUserPlus(userId);
-    if (!hasPlus) {
-      return new Response(JSON.stringify({
-        success: true,
-        playlist: [],
-        isPlus: false,
-        message: 'Cloud playlist sync is a Plus feature'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    // Get user tier info
+    const { isPlus, trackLimit } = await getUserTierInfo(userId);
 
     // Load from D1
     if (!db) {
@@ -66,7 +60,8 @@ export async function GET({ request, locals }: APIContext) {
       return new Response(JSON.stringify({
         success: true,
         playlist: [],
-        isPlus: true,
+        isPlus,
+        trackLimit,
         error: 'Database not available'
       }), {
         headers: { 'Content-Type': 'application/json' }
@@ -89,7 +84,8 @@ export async function GET({ request, locals }: APIContext) {
     return new Response(JSON.stringify({
       success: true,
       playlist,
-      isPlus: true
+      isPlus,
+      trackLimit
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -105,7 +101,7 @@ export async function GET({ request, locals }: APIContext) {
   }
 }
 
-// POST - Save user's personal playlist to D1 (Plus only)
+// POST - Save user's personal playlist to D1
 export async function POST({ request, locals }: APIContext) {
   try {
     initEnv(locals);
@@ -161,24 +157,16 @@ export async function POST({ request, locals }: APIContext) {
       });
     }
 
-    // Check if user has Plus subscription for cloud sync
-    const hasPlus = await isUserPlus(userId);
-    if (!hasPlus) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Cloud playlist sync is a Plus feature. Upgrade to Plus to sync your playlist across devices.',
-        isPlus: false
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    // Get user tier info and enforce track limit
+    const { isPlus, trackLimit } = await getUserTierInfo(userId);
 
-    // Enforce 1000 track limit for Plus users
-    if (items.length > 1000) {
+    if (items.length > trackLimit) {
+      const upgradeMsg = !isPlus ? ' Go Plus for up to 1,000 tracks.' : '';
       return new Response(JSON.stringify({
         success: false,
-        error: 'Playlist exceeds 1,000 track limit'
+        error: `Playlist exceeds ${trackLimit} track limit.${upgradeMsg}`,
+        isPlus,
+        trackLimit
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -212,7 +200,8 @@ export async function POST({ request, locals }: APIContext) {
     return new Response(JSON.stringify({
       success: true,
       message: 'Playlist saved to cloud',
-      isPlus: true
+      isPlus,
+      trackLimit
     }), {
       headers: { 'Content-Type': 'application/json' }
     });

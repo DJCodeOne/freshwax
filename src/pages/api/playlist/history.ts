@@ -1,19 +1,14 @@
 // src/pages/api/playlist/history.ts
 // Server-side playlist history - shared across all users for auto-play
+// NOW USES CLOUDFLARE KV - NO MORE FIREBASE READS!
 
 import type { APIContext } from 'astro';
-import { getDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
-const HISTORY_DOC = 'playlistHistory';
+const KV_HISTORY_KEY = 'playlist-history';
 const MAX_HISTORY_SIZE = 100;
-const MAX_CHUNKS = 10; // Maximum number of history chunks to read
 
-function initEnv(locals: any) {
-  const env = (locals as any).runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || env?.PUBLIC_FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || env?.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-  });
+function getKV(locals: any): any {
+  return (locals as any).runtime?.env?.CACHE;
 }
 
 interface HistoryItem {
@@ -28,50 +23,35 @@ interface HistoryItem {
   addedByName?: string;
 }
 
-// GET - Fetch playlist history (reads all chunks)
+// GET - Fetch playlist history from KV (NO FIREBASE!)
 export async function GET({ locals }: APIContext) {
   try {
-    initEnv(locals);
-
-    // Read main document first to check for chunk metadata
-    const mainDoc = await getDocument('liveSettings', HISTORY_DOC);
-
-    if (!mainDoc) {
+    const kv = getKV(locals);
+    if (!kv) {
       return new Response(JSON.stringify({
-        success: true,
+        success: false,
+        error: 'KV storage not available',
         items: []
       }), {
+        status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Collect all items from main doc
-    let allItems: HistoryItem[] = mainDoc.items || [];
+    // Read from KV - single key, no chunks needed
+    const data = await kv.get(KV_HISTORY_KEY, 'json');
 
-    // Check if there are additional chunks
-    const totalChunks = mainDoc.totalChunks || 1;
-
-    if (totalChunks > 1) {
-      // Fetch remaining chunks (chunk indices 1, 2, 3, etc.)
-      for (let i = 1; i < Math.min(totalChunks, MAX_CHUNKS); i++) {
-        try {
-          const chunkDoc = await getDocument('liveSettings', `${HISTORY_DOC}_${i}`);
-          if (chunkDoc && chunkDoc.items) {
-            allItems = allItems.concat(chunkDoc.items);
-          }
-        } catch (chunkError) {
-          console.warn(`[PlaylistHistory] Could not read chunk ${i}:`, chunkError);
-        }
-      }
-    }
+    const items = data?.items || [];
 
     return new Response(JSON.stringify({
       success: true,
-      items: allItems,
-      totalChunks: totalChunks,
-      count: allItems.length
+      items,
+      count: items.length
     }), {
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=10'
+      }
     });
   } catch (error: any) {
     console.error('[PlaylistHistory] GET error:', error);
@@ -90,7 +70,17 @@ export async function GET({ locals }: APIContext) {
 // This is a non-critical operation - if it fails, playback should continue
 export async function POST({ request, locals }: APIContext) {
   try {
-    initEnv(locals);
+    const kv = getKV(locals);
+    if (!kv) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'KV storage not available'
+      }), {
+        status: 200, // Non-critical
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const body = await request.json();
     const { item } = body;
 
@@ -104,16 +94,15 @@ export async function POST({ request, locals }: APIContext) {
       });
     }
 
-    // Get current history
+    // Get current history from KV
     let history: HistoryItem[] = [];
     try {
-      const doc = await getDocument('liveSettings', HISTORY_DOC);
-      if (doc && doc.items) {
-        history = doc.items;
+      const data = await kv.get(KV_HISTORY_KEY, 'json');
+      if (data && data.items) {
+        history = data.items;
       }
     } catch (readError: any) {
       console.warn('[PlaylistHistory] Could not read existing history:', readError.message);
-      // Continue with empty history - we'll create fresh
     }
 
     // Check if URL already exists - update timestamp and move to front
@@ -145,36 +134,25 @@ export async function POST({ request, locals }: APIContext) {
       history = history.slice(0, MAX_HISTORY_SIZE);
     }
 
-    // Try to save to Firebase - if it fails, return success anyway (non-critical)
-    try {
-      await setDocument('liveSettings', HISTORY_DOC, { items: history });
-      return new Response(JSON.stringify({
-        success: true,
-        count: history.length
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    } catch (writeError: any) {
-      // Write failed (likely permission issue) - log but return 200
-      // This is non-critical, local history still works for auto-play
-      console.warn('[PlaylistHistory] Could not save to Firebase:', writeError.message);
-      return new Response(JSON.stringify({
-        success: false,
-        warning: 'History not persisted to server (local history still works)',
-        error: writeError.message
-      }), {
-        status: 200, // Return 200 to avoid red console errors
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    // Save to KV
+    await kv.put(KV_HISTORY_KEY, JSON.stringify({
+      items: history,
+      lastUpdated: new Date().toISOString()
+    }));
+
+    return new Response(JSON.stringify({
+      success: true,
+      count: history.length
+    }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error: any) {
     console.error('[PlaylistHistory] POST error:', error);
-    // Even on unexpected errors, return 200 to not break playback
     return new Response(JSON.stringify({
       success: false,
       error: error.message
     }), {
-      status: 200, // Non-critical operation, don't break playback
+      status: 200, // Non-critical operation
       headers: { 'Content-Type': 'application/json' }
     });
   }
@@ -184,7 +162,17 @@ export async function POST({ request, locals }: APIContext) {
 // This prevents the video from being auto-played again
 export async function DELETE({ request, locals }: APIContext) {
   try {
-    initEnv(locals);
+    const kv = getKV(locals);
+    if (!kv) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'KV storage not available'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const body = await request.json();
     const { url, embedId, reason } = body;
 
@@ -200,67 +188,41 @@ export async function DELETE({ request, locals }: APIContext) {
 
     console.log(`[PlaylistHistory] Removing blocked video: ${url} (reason: ${reason})`);
 
-    // Track if we removed from any chunk
-    let removedFromAny = false;
-    let totalRemoved = 0;
+    // Read from KV
+    const data = await kv.get(KV_HISTORY_KEY, 'json');
 
-    // Read main document first
-    const mainDoc = await getDocument('liveSettings', HISTORY_DOC);
+    if (!data || !data.items) {
+      return new Response(JSON.stringify({
+        success: true,
+        removed: false,
+        count: 0,
+        message: 'Video not found in history'
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
-    if (mainDoc && mainDoc.items) {
-      const totalChunks = mainDoc.totalChunks || 1;
+    const originalLength = data.items.length;
+    const filteredItems = data.items.filter((item: HistoryItem) =>
+      item.url !== url && (embedId ? item.embedId !== embedId : true)
+    );
 
-      // Process main document (chunk 0)
-      const originalLength = mainDoc.items.length;
-      const filteredItems = mainDoc.items.filter((item: HistoryItem) =>
-        item.url !== url && (embedId ? item.embedId !== embedId : true)
-      );
+    const totalRemoved = originalLength - filteredItems.length;
 
-      if (filteredItems.length < originalLength) {
-        removedFromAny = true;
-        totalRemoved += originalLength - filteredItems.length;
-
-        // Save updated main document
-        await setDocument('liveSettings', HISTORY_DOC, {
-          items: filteredItems,
-          totalChunks: totalChunks,
-          lastUpdated: new Date().toISOString()
-        });
-        console.log(`[PlaylistHistory] Removed ${originalLength - filteredItems.length} item(s) from main chunk`);
-      }
-
-      // Process additional chunks
-      for (let i = 1; i < Math.min(totalChunks, MAX_CHUNKS); i++) {
-        try {
-          const chunkDoc = await getDocument('liveSettings', `${HISTORY_DOC}_${i}`);
-          if (chunkDoc && chunkDoc.items) {
-            const chunkOriginalLength = chunkDoc.items.length;
-            const chunkFiltered = chunkDoc.items.filter((item: HistoryItem) =>
-              item.url !== url && (embedId ? item.embedId !== embedId : true)
-            );
-
-            if (chunkFiltered.length < chunkOriginalLength) {
-              removedFromAny = true;
-              totalRemoved += chunkOriginalLength - chunkFiltered.length;
-
-              await setDocument('liveSettings', `${HISTORY_DOC}_${i}`, {
-                items: chunkFiltered,
-                lastUpdated: new Date().toISOString()
-              });
-              console.log(`[PlaylistHistory] Removed ${chunkOriginalLength - chunkFiltered.length} item(s) from chunk ${i}`);
-            }
-          }
-        } catch (chunkError) {
-          console.warn(`[PlaylistHistory] Could not process chunk ${i}:`, chunkError);
-        }
-      }
+    if (totalRemoved > 0) {
+      // Save filtered list back to KV
+      await kv.put(KV_HISTORY_KEY, JSON.stringify({
+        items: filteredItems,
+        lastUpdated: new Date().toISOString()
+      }));
+      console.log(`[PlaylistHistory] Removed ${totalRemoved} item(s)`);
     }
 
     return new Response(JSON.stringify({
       success: true,
-      removed: removedFromAny,
+      removed: totalRemoved > 0,
       count: totalRemoved,
-      message: removedFromAny
+      message: totalRemoved > 0
         ? `Removed ${totalRemoved} blocked video(s) from history`
         : 'Video not found in history'
     }), {
