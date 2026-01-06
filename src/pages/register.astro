@@ -119,8 +119,16 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
         </div>
 
         <div class="role-selection">
-          <p class="role-info">All accounts include customer access (buy, comment, rate) and ability to upload DJ mixes. Select additional roles below if needed:</p>
-          
+          <p class="role-info">Select additional roles below if needed:</p>
+
+          <label class="role-option role-included">
+            <input type="checkbox" checked disabled>
+            <div class="role-content">
+              <span class="role-title">Customer / DJ <span class="role-badge">Included</span></span>
+              <span class="role-desc">Buy music, comment, rate releases, upload DJ mixes, and book live stream slots.</span>
+            </div>
+          </label>
+
           <label class="role-option">
             <input type="checkbox" name="requestArtist" id="requestArtist">
             <div class="role-content">
@@ -431,6 +439,28 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
     .role-desc {
       font-size: 0.9rem;
       color: var(--text-secondary, #a3a3a3);
+    }
+
+    .role-included {
+      opacity: 0.7;
+      cursor: default;
+      border-color: #22c55e40;
+      background: #22c55e10;
+    }
+
+    .role-included:hover {
+      border-color: #22c55e40;
+    }
+
+    .role-badge {
+      font-size: 0.7rem;
+      background: #22c55e;
+      color: #000;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      margin-left: 0.5rem;
+      font-weight: 700;
+      text-transform: uppercase;
     }
 
     .conditional-fields {
