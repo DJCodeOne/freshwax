@@ -7276,6 +7276,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       btn.textContent = '...';
       streamKeyEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
 
+      // Wait 3 seconds for animation effect
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
       try {
         const token = await currentUser.getIdToken();
         const now = new Date();
@@ -7323,7 +7326,6 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
         updateButtPassword(mySlot.streamKey);
         btn.textContent = 'Done';
-        btn.style.background = '#10b981';
 
         // Update slot time display
         const slotTimeDisplay = document.getElementById('slotTimeDisplay');

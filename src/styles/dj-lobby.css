@@ -3617,7 +3617,7 @@
   .spawn-key-btn {
     padding: 0.4rem 0.65rem;
     font-size: 0.8rem;
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
     border: none;
     border-radius: 6px;
     color: #fff;
@@ -3629,12 +3629,12 @@
   }
 
   .spawn-key-btn:hover {
-    background: linear-gradient(135deg, #059669, #047857);
+    background: linear-gradient(135deg, #b91c1c, #991b1b);
     transform: translateY(-1px);
   }
 
   .spawn-key-btn:disabled {
-    opacity: 0.5;
+    opacity: 0.7;
     cursor: not-allowed;
     transform: none;
   }
