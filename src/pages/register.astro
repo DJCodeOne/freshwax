@@ -92,7 +92,6 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
           <ul class="password-requirements" id="passwordRequirements">
             <li id="req-length"><span class="req-icon">○</span> At least 8 characters</li>
             <li id="req-upper"><span class="req-icon">○</span> One uppercase letter</li>
-            <li id="req-lower"><span class="req-icon">○</span> One lowercase letter</li>
             <li id="req-number"><span class="req-icon">○</span> One number</li>
             <li id="req-special"><span class="req-icon">○</span> One special character</li>
           </ul>
@@ -807,7 +806,6 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
     const strengthText = document.getElementById('strengthText');
     const reqLength = document.getElementById('req-length');
     const reqUpper = document.getElementById('req-upper');
-    const reqLower = document.getElementById('req-lower');
     const reqNumber = document.getElementById('req-number');
     const reqSpecial = document.getElementById('req-special');
 
@@ -815,7 +813,6 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
       const checks = {
         length: password.length >= 8,
         upper: /[A-Z]/.test(password),
-        lower: /[a-z]/.test(password),
         number: /[0-9]/.test(password),
         special: /[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/`~]/.test(password)
       };
@@ -823,7 +820,6 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
       // Update requirement indicators
       updateRequirement(reqLength, checks.length);
       updateRequirement(reqUpper, checks.upper);
-      updateRequirement(reqLower, checks.lower);
       updateRequirement(reqNumber, checks.number);
       updateRequirement(reqSpecial, checks.special);
 
