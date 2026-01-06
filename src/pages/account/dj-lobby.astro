@@ -1652,6 +1652,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
   }, 8000);
   
+  let lobbyInitialized = false;
+
   onAuthStateChanged(auth, async (user) => {
     authInitialized = true;
     clearTimeout(authTimeout);
@@ -1660,7 +1662,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       return;
     }
     currentUser = user;
-    
+
     // Set a timeout for the access check itself
     const accessCheckTimeout = setTimeout(() => {
       log('[DJLobby] Access check timeout - no response after 15 seconds');
@@ -1785,11 +1787,26 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       showLobby();
       initLobby();
       updateProFeatures();
+      lobbyInitialized = true;
     } catch (e) {
       console.error('[DJ Lobby] Access check failed:', e);
       showAccessDenied();
     }
   }
+
+  // Handle ViewTransitions navigation - re-init if already logged in
+  document.addEventListener('astro:page-load', async () => {
+    console.log('[DJ Lobby] astro:page-load fired, lobbyInitialized:', lobbyInitialized, 'currentUser:', !!currentUser);
+    // If user is already authenticated but lobby wasn't initialized (ViewTransitions navigation)
+    if (currentUser && !lobbyInitialized) {
+      console.log('[DJ Lobby] Re-initializing after ViewTransitions navigation');
+      await checkDjAccess(currentUser.uid);
+    } else if (currentUser && lobbyInitialized) {
+      // Already initialized, but reload slot data in case it changed
+      console.log('[DJ Lobby] Refreshing slot data after navigation');
+      await loadMySlot();
+    }
+  });
   
   function showNotEligible(eligibility) {
     document.getElementById('authGate').classList.add('hidden');
