@@ -4637,9 +4637,9 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   // Cancel slot
   window.cancelSlot = async (slotId) => {
     if (!confirm('Cancel this slot?')) return;
-    
+
     try {
-      const token = await currentUser.getIdToken();
+      const idToken = await currentUser.getIdToken();
       const response = await fetch('/api/livestream/slots', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -4647,7 +4647,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           action: 'cancel',
           slotId,
           djId: currentUser.uid,
-          token
+          idToken
         })
       });
       
