@@ -3614,6 +3614,31 @@
     background: #9a3412;
   }
 
+  .spawn-key-btn {
+    padding: 0.4rem 0.65rem;
+    font-size: 0.8rem;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .spawn-key-btn:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+  }
+
+  .spawn-key-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
   /* Multi Stream Section - Below Title/Genre (Collapsible) */
   .multi-stream-section {
     background: linear-gradient(to bottom, #1a1a1a, #111);

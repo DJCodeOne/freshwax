@@ -992,6 +992,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
                   <label>Key</label>
                   <div class="cred-value-compact">
                     <code id="myStreamKey" class="key-loading"><span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span></code>
+                    <button class="spawn-key-btn" id="spawnKeyBtn" title="Generate stream key">Spawn</button>
                     <button class="copy-btn-sm" data-copy="myStreamKey">Copy</button>
                   </div>
                 </div>
@@ -7256,6 +7257,96 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Initialize audio source state
     updateAudioSourceUI();
     // =============== END AUDIO SOURCE TOGGLE ===============
+
+    // Spawn Key button - Generate stream key without going live
+    document.getElementById('spawnKeyBtn')?.addEventListener('click', async () => {
+      if (!currentUser) return;
+
+      const btn = document.getElementById('spawnKeyBtn');
+      const streamKeyEl = document.getElementById('myStreamKey');
+      const icecastPasswordEl = document.getElementById('icecastPassword');
+
+      // If already have a key, don't spawn again
+      if (mySlot?.streamKey || currentStreamKey) {
+        alert('You already have a stream key!');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '...';
+      streamKeyEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
+
+      try {
+        const token = await currentUser.getIdToken();
+        const now = new Date();
+        now.setSeconds(0, 0);
+
+        // Auto-book a slot to get a stream key
+        const bookResponse = await fetch('/api/livestream/slots', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            action: 'book',
+            djId: currentUser.uid,
+            djName: userInfo?.name || currentUser.displayName || 'DJ',
+            djAvatar: userInfo?.avatar || currentUser.photoURL || '/place-holder.webp',
+            startTime: now.toISOString(),
+            duration: 60,
+            title: 'Live Session',
+            genre: '',
+            description: ''
+          })
+        });
+
+        const bookResult = await bookResponse.json();
+
+        if (!bookResult.success) {
+          throw new Error(bookResult.error || 'Failed to spawn key');
+        }
+
+        // Update mySlot with the new booking
+        mySlot = bookResult.slot;
+        currentStreamKey = mySlot.streamKey;
+
+        // Update displays
+        streamKeyEl.classList.remove('key-loading', 'key-unavailable');
+        streamKeyEl.classList.add('key-reveal');
+        streamKeyEl.innerHTML = `<span class="key-text">${mySlot.streamKey}</span>`;
+
+        if (icecastPasswordEl) {
+          icecastPasswordEl.textContent = mySlot.streamKey;
+          icecastPasswordEl.classList.remove('stream-key-placeholder');
+        }
+
+        updateButtPassword(mySlot.streamKey);
+        btn.textContent = 'Done';
+        btn.style.background = '#10b981';
+
+        // Update slot time display
+        const slotTimeDisplay = document.getElementById('slotTimeDisplay');
+        const countdownEl = document.getElementById('countdownToSlot');
+        if (slotTimeDisplay && mySlot.startTime) {
+          const slotStart = new Date(mySlot.startTime);
+          const slotEnd = new Date(mySlot.endTime);
+          slotTimeDisplay.textContent = `Your slot: ${slotStart.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${slotEnd.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+        if (countdownEl) {
+          countdownEl.textContent = 'Key ready - copy to OBS';
+          countdownEl.classList.add('slot-now');
+        }
+
+        console.log('[DJ Lobby] Spawned key:', mySlot.id);
+
+      } catch (error) {
+        console.error('[DJ Lobby] Spawn key error:', error);
+        streamKeyEl.innerHTML = '<span class="key-error">Failed - try again</span>';
+        btn.textContent = 'Spawn';
+        btn.disabled = false;
+      }
+    });
 
     // Ready button - Indicates DJ is ready and shows preview (does NOT go live yet)
     document.getElementById('setReadyBtn')?.addEventListener('click', async () => {
