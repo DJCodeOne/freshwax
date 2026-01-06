@@ -376,8 +376,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.log('[livestream/slots] Booking request:', { djId, djName, startTime, duration, title, hasIdToken: !!idToken });
 
       if (!djId || !startTime || !duration || !djName) {
-        console.log('[livestream/slots] Missing required fields:', { djId: !!djId, startTime: !!startTime, duration: !!duration, djName: !!djName });
-        return new Response(JSON.stringify({ success: false, error: 'Missing required fields' }), {
+        const missing = [];
+        if (!djId) missing.push('djId');
+        if (!startTime) missing.push('startTime');
+        if (!duration) missing.push('duration');
+        if (!djName) missing.push('djName');
+        console.log('[livestream/slots] Missing required fields:', missing);
+        return new Response(JSON.stringify({
+          success: false,
+          error: `Missing required fields: ${missing.join(', ')}`
+        }), {
           status: 400, headers: { 'Content-Type': 'application/json' }
         });
       }
