@@ -756,13 +756,6 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     max-width: 100%;
   }
 
-  :global(.slot-block .slot-time) {
-    font-size: 0.6rem;
-    font-weight: 500;
-    opacity: 0.85;
-    margin-top: 0;
-  }
-
   :global(.slot-block .status-badge) {
     display: inline-block;
     padding: 0.1rem 0.25rem;
@@ -1415,10 +1408,7 @@ const { mode, id = 'dailySchedule' } = Astro.props;
         } else if (isSelected) {
           const block = document.createElement('div');
           block.className = 'slot-block selected';
-          block.innerHTML = `
-            <span class="dj-name">${userDisplayName || 'Your Selection'}</span>
-            <span class="slot-time">${formatHour(hour)} - ${formatHour((hour + 1) % 24)}</span>
-          `;
+          block.innerHTML = `<span class="dj-name">${userDisplayName || 'Your Selection'}</span>`;
           cell.appendChild(block);
 
           if (scheduleMode === 'booking') {
@@ -1433,10 +1423,7 @@ const { mode, id = 'dailySchedule' } = Astro.props;
           // Current hour with no booking - show "Go Live Now" option
           const goLiveBlock = document.createElement('div');
           goLiveBlock.className = 'slot-block go-live-now';
-          goLiveBlock.innerHTML = `
-            <span class="go-live-text">GO LIVE NOW</span>
-            <span class="slot-time">${formatHour(hour)} - ${formatHour((hour + 1) % 24)}</span>
-          `;
+          goLiveBlock.innerHTML = `<span class="go-live-text">GO LIVE NOW</span>`;
           cell.appendChild(goLiveBlock);
           goLiveBlock.addEventListener('click', async () => {
             // Try early_start first (extends upcoming booking), then fall back to go-live page
@@ -1467,10 +1454,7 @@ const { mode, id = 'dailySchedule' } = Astro.props;
                   window.location.href = '/account/dj-lobby';
                 } else {
                   alert(result.error || 'Could not start early. Try the Go Live page.');
-                  goLiveBlock.innerHTML = `
-                    <span class="go-live-text">GO LIVE NOW</span>
-                    <span class="slot-time">${formatHour(hour)} - ${formatHour((hour + 1) % 24)}</span>
-                  `;
+                  goLiveBlock.innerHTML = `<span class="go-live-text">GO LIVE NOW</span>`;
                   goLiveBlock.style.pointerEvents = 'auto';
                 }
               } catch (e) {
