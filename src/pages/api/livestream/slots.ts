@@ -1338,9 +1338,12 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       status: 200, headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
-    console.error('[livestream/slots] DELETE Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Failed to cancel slot' }), {
+  } catch (error: any) {
+    console.error('[livestream/slots] DELETE Error:', error?.message || error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: error?.message || 'Failed to cancel slot'
+    }), {
       status: 500, headers: { 'Content-Type': 'application/json' }
     });
   }
