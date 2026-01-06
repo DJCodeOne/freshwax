@@ -7266,8 +7266,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       const streamKeyEl = document.getElementById('myStreamKey');
       const icecastPasswordEl = document.getElementById('icecastPassword');
 
-      // If already have a key, don't spawn again
-      if (mySlot?.streamKey || currentStreamKey) {
+      // If already have a key displayed, don't spawn again
+      if (currentStreamKey) {
         alert('You already have a stream key!');
         return;
       }
@@ -7281,38 +7281,63 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
       try {
         const token = await currentUser.getIdToken();
-        const now = new Date();
-        now.setSeconds(0, 0);
 
-        // Auto-book a slot to get a stream key
-        const bookResponse = await fetch('/api/livestream/slots', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            action: 'book',
-            djId: currentUser.uid,
-            djName: userInfo?.name || currentUser.displayName || 'DJ',
-            djAvatar: userInfo?.avatar || currentUser.photoURL || '/place-holder.webp',
-            startTime: now.toISOString(),
-            duration: 60,
-            title: 'Live Session',
-            genre: '',
-            description: ''
-          })
-        });
+        // If we already have a slot, just fetch its stream key
+        if (mySlot?.id) {
+          const keyResponse = await fetch('/api/livestream/slots', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              action: 'getStreamKey',
+              slotId: mySlot.id,
+              djId: currentUser.uid
+            })
+          });
 
-        const bookResult = await bookResponse.json();
+          const keyResult = await keyResponse.json();
+          if (keyResult.success && keyResult.streamKey) {
+            mySlot.streamKey = keyResult.streamKey;
+            currentStreamKey = keyResult.streamKey;
+          } else {
+            throw new Error(keyResult.error || 'Failed to get stream key');
+          }
+        } else {
+          // No existing slot - book a new one
+          const now = new Date();
+          now.setSeconds(0, 0);
 
-        if (!bookResult.success) {
-          throw new Error(bookResult.error || 'Failed to spawn key');
+          const bookResponse = await fetch('/api/livestream/slots', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              action: 'book',
+              djId: currentUser.uid,
+              djName: userInfo?.name || currentUser.displayName || 'DJ',
+              djAvatar: userInfo?.avatar || currentUser.photoURL || '/place-holder.webp',
+              startTime: now.toISOString(),
+              duration: 60,
+              title: 'Live Session',
+              genre: '',
+              description: ''
+            })
+          });
+
+          const bookResult = await bookResponse.json();
+
+          if (!bookResult.success) {
+            throw new Error(bookResult.error || 'Failed to spawn key');
+          }
+
+          // Update mySlot with the new booking
+          mySlot = bookResult.slot;
+          currentStreamKey = mySlot.streamKey;
         }
-
-        // Update mySlot with the new booking
-        mySlot = bookResult.slot;
-        currentStreamKey = mySlot.streamKey;
 
         // Update displays
         streamKeyEl.classList.remove('key-loading', 'key-unavailable');
