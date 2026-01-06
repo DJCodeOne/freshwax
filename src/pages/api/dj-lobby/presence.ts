@@ -504,11 +504,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-  } catch (error) {
-    console.error('[dj-lobby/presence] POST Error:', error);
+  } catch (error: any) {
+    console.error('[dj-lobby/presence] POST Error:', error?.message || error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to update presence'
+      error: error?.message || 'Failed to update presence'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

@@ -7346,9 +7346,13 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         }
 
         // Set ready status (but don't go live yet)
+        const idToken = await currentUser.getIdToken();
         await fetch('/api/dj-lobby/presence', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
           body: JSON.stringify({
             action: 'heartbeat',
             userId: currentUser.uid,
