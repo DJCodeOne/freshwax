@@ -627,11 +627,12 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     height: 100%;
     max-height: 100%;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     justify-content: center;
     align-items: center;
     text-align: center;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
   }
 
   :global(.slot-block.booked) {
@@ -672,14 +673,6 @@ const { mode, id = 'dailySchedule' } = Astro.props;
 
   :global(.slot-block.my-booking:hover) {
     background: linear-gradient(135deg, #047857 0%, #059669 100%);
-  }
-
-  :global(.slot-block .cancel-hint) {
-    font-size: 0.625rem;
-    opacity: 0.8;
-    margin-top: 0.25rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
   }
 
   :global(.slot-block.past-slot) {
@@ -746,13 +739,6 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     animation: pulse-glow 2s ease-in-out infinite;
   }
 
-  :global(.go-live-hint) {
-    font-size: 0.7rem;
-    color: #10b981;
-    font-weight: 600;
-    margin-top: 2px;
-  }
-
   @keyframes pulse-glow {
     0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.4); }
     50% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.8); }
@@ -761,9 +747,13 @@ const { mode, id = 'dailySchedule' } = Astro.props;
   :global(.slot-block .dj-name) {
     font-family: 'Inter', sans-serif;
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     letter-spacing: 0.02em;
     line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   :global(.slot-block .slot-time) {
@@ -775,13 +765,14 @@ const { mode, id = 'dailySchedule' } = Astro.props;
 
   :global(.slot-block .status-badge) {
     display: inline-block;
-    padding: 0.125rem 0.375rem;
+    padding: 0.1rem 0.25rem;
     background: rgba(255,255,255,0.2);
     border-radius: 3px;
-    font-size: 0.5625rem;
+    font-size: 0.5rem;
     font-weight: 700;
     text-transform: uppercase;
-    margin-left: 0.5rem;
+    margin-left: 0.35rem;
+    flex-shrink: 0;
   }
 
   :global(.mode-admin .slot-block) {
@@ -1508,32 +1499,13 @@ const { mode, id = 'dailySchedule' } = Astro.props;
       const status = booking.status || 'scheduled';
       block.className = `slot-block booked ${status}${isMyBooking ? ' my-booking' : ''}${isCurrentHour ? ' current-hour' : ''}`;
 
-      const startTime = new Date(booking.startTime);
-      const endTime = new Date(booking.endTime);
-      const slotEndTime = new Date(startTime);
-      slotEndTime.setHours(slotEndTime.getHours() + 1);
-      const isPastSlot = slotEndTime <= new Date(); // Only past if slot has ended
-
       let statusBadge = '';
       if (status === 'live') statusBadge = '<span class="status-badge">LIVE</span>';
-      else if (status === 'in_lobby') statusBadge = '<span class="status-badge">IN LOBBY</span>';
+      else if (status === 'in_lobby') statusBadge = '<span class="status-badge">LOBBY</span>';
       else if (isCurrentHour && isMyBooking) statusBadge = '<span class="status-badge go-live">GO LIVE</span>';
 
-      // Show cancel hint for user's own future bookings in booking mode
-      const cancelHint = (isMyBooking && scheduleMode === 'booking' && !isPastSlot && status === 'scheduled' && !isCurrentHour)
-        ? '<span class="cancel-hint">Click to cancel</span>'
-        : '';
-
-      // Show go live hint for current hour bookings
-      const goLiveHint = (isMyBooking && isCurrentHour && status === 'scheduled')
-        ? '<span class="go-live-hint">Click to go live</span>'
-        : '';
-
-      block.innerHTML = `
-        <span class="dj-name">${booking.djName}${statusBadge}</span>
-        <span class="slot-time">${formatTime(startTime)} - ${formatTime(endTime)}</span>
-        ${cancelHint}${goLiveHint}
-      `;
+      // Simplified: just show DJ name + status badge (time shown in row header)
+      block.innerHTML = `<span class="dj-name">${booking.djName}${statusBadge}</span>`;
 
       // If it's user's current hour booking, clicking should go to go-live page
       if (isMyBooking && isCurrentHour && status === 'scheduled') {
