@@ -28,10 +28,14 @@ export const GET: APIRoute = async ({ url }) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    // Fetch the audio stream
+    // Fetch the audio stream - use browser-like headers to avoid blocks
     const response = await fetch(station.streamUrl, {
       headers: {
-        'User-Agent': 'FreshWax/1.0 (Audio Relay)',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.theundergroundlair.fr/',
+        'Origin': 'https://www.theundergroundlair.fr',
         'Icy-MetaData': '0'
       },
       signal: controller.signal

@@ -1655,7 +1655,25 @@ function showLiveStream(stream) {
     if (stream.isRelay && stream.relaySource?.url) {
       // Relay from external station
       console.log('[Stream] Using relay source:', stream.relaySource.stationName);
-      stream.audioStreamUrl = stream.relaySource.url;
+      const relayUrl = stream.relaySource.url;
+
+      // Extract station ID from URL
+      let stationId = null;
+      if (relayUrl.includes('relay.freshwax.co.uk/')) {
+        stationId = relayUrl.split('relay.freshwax.co.uk/')[1];
+      } else if (relayUrl.includes('/api/relay-stream?station=')) {
+        stationId = relayUrl.split('station=')[1];
+      }
+
+      if (stationId) {
+        // Use cloudflared tunnel relay (has CORS headers from local Node server)
+        stream.audioStreamUrl = `https://relay.freshwax.co.uk/${stationId}`;
+        console.log('[Stream] Using tunnel relay:', stream.audioStreamUrl);
+      } else {
+        // Fallback to direct URL
+        stream.audioStreamUrl = relayUrl;
+        console.warn('[Stream] Using direct relay URL:', relayUrl);
+      }
     } else if (!stream.audioStreamUrl) {
       stream.audioStreamUrl = 'https://icecast.freshwax.co.uk/live';
     }

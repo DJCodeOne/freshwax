@@ -328,7 +328,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         <div class="djs-online-box">
           <div class="box-header">
             <h3>🎧 DJs in Lobby <span class="online-count-inline" id="onlineDjCount">0</span></h3>
-            <button id="openDmBtn" class="dm-btn" onclick="if(typeof openDmModal==='function')openDmModal()">DM</button>
+            <button id="openDmBtn" class="dm-btn" onclick="console.log('[DM] Button clicked, window.openDmModal:', typeof window.openDmModal); if(typeof window.openDmModal==='function'){window.openDmModal();}else{console.error('[DM] openDmModal not defined');}">DM</button>
           </div>
           <div id="djsList" class="djs-list">
             <p class="empty-state">No DJs online yet</p>
@@ -2435,30 +2435,56 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     const relayDot = document.getElementById('relayDot');
     const previewRelayDot = document.getElementById('previewRelayDot');
 
-    if (relayAudio && stationUrl) {
-      // Set up event listener for when audio starts playing
-      relayAudio.onplaying = () => {
-        log('[RelayPreview] Audio connected and playing');
-        relayDot?.classList.remove('disconnected');
-        relayDot?.classList.add('connected');
-        previewRelayDot?.classList.remove('disconnected');
-        previewRelayDot?.classList.add('connected');
-      };
+    console.log('[RelayPreview] Starting relay audio preview:', stationUrl);
 
-      // Set up event listener for when audio fails/stops
-      relayAudio.onerror = () => {
-        log('[RelayPreview] Audio connection error');
-        relayDot?.classList.remove('connected');
-        relayDot?.classList.add('disconnected');
-        previewRelayDot?.classList.remove('connected');
-        previewRelayDot?.classList.add('disconnected');
-      };
-
-      relayAudio.src = stationUrl;
-      relayAudio.play().catch(e => {
-        log('[RelayPreview] Audio autoplay blocked:', e.message);
-      });
+    if (!relayAudio) {
+      console.error('[RelayPreview] relayAudio element not found');
+      return;
     }
+
+    if (!stationUrl) {
+      console.error('[RelayPreview] No station URL provided');
+      return;
+    }
+
+    // Set up event listeners
+    relayAudio.onplaying = () => {
+      console.log('[RelayPreview] Audio connected and playing, volume:', relayAudio.volume, 'muted:', relayAudio.muted);
+      relayDot?.classList.remove('disconnected');
+      relayDot?.classList.add('connected');
+      previewRelayDot?.classList.remove('disconnected');
+      previewRelayDot?.classList.add('connected');
+    };
+
+    relayAudio.onerror = (e) => {
+      console.error('[RelayPreview] Audio connection error:', e, relayAudio.error);
+      relayDot?.classList.remove('connected');
+      relayDot?.classList.add('disconnected');
+      previewRelayDot?.classList.remove('connected');
+      previewRelayDot?.classList.add('disconnected');
+    };
+
+    relayAudio.onloadstart = () => console.log('[RelayPreview] Loading started');
+    relayAudio.oncanplay = () => console.log('[RelayPreview] Can play, duration:', relayAudio.duration);
+    relayAudio.onstalled = () => console.log('[RelayPreview] Stalled - buffering');
+    relayAudio.onwaiting = () => console.log('[RelayPreview] Waiting for data');
+
+    // Ensure volume is set and not muted
+    relayAudio.volume = 1.0;
+    relayAudio.muted = false;
+
+    relayAudio.src = stationUrl;
+    console.log('[RelayPreview] Set src, attempting to play...');
+
+    relayAudio.play().then(() => {
+      console.log('[RelayPreview] Play started successfully');
+    }).catch(e => {
+      console.error('[RelayPreview] Audio play failed:', e.name, e.message);
+      // If autoplay blocked, show user a hint
+      if (e.name === 'NotAllowedError') {
+        console.log('[RelayPreview] Autoplay blocked - user interaction needed');
+      }
+    });
   }
 
   function renderInlineRelayStations() {
@@ -2512,8 +2538,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         log('[Relay] Selected station:', selectedRelaySource.name, 'Live:', selectedRelaySource.isLive, 'Now playing:', selectedRelaySource.nowPlaying);
         // Update the relay preview in left panel immediately
         updateRelayPreview();
-        // Start playing the relay audio preview (URL is already HTTPS)
-        startRelayAudioPreview(selectedRelaySource.url);
+        // Start playing the relay audio preview via cloudflared tunnel (local Node.js relay server)
+        const tunnelUrl = `https://relay.freshwax.co.uk/${selectedRelaySource.id}`;
+        console.log('[Relay] Using tunnel URL:', tunnelUrl);
+        startRelayAudioPreview(tunnelUrl);
         // Show broadcast audio panel so DJ can check levels before going live
         document.getElementById('broadcastAudioPanel')?.classList.remove('hidden');
         // Set up relay audio analysers for meters
@@ -5961,37 +5989,57 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   }
   
   function openDmModal() {
-    document.getElementById('dmModal').classList.remove('hidden');
-    document.getElementById('dmSelectView').classList.remove('hidden');
-    document.getElementById('dmChatView').classList.add('hidden');
-    populateDmDjList();
+    console.log('[DM] openDmModal called');
+    try {
+      const modal = document.getElementById('dmModal');
+      const selectView = document.getElementById('dmSelectView');
+      const chatView = document.getElementById('dmChatView');
+
+      if (!modal) {
+        console.error('[DM] dmModal element not found');
+        return;
+      }
+
+      console.log('[DM] Modal found, removing hidden class');
+      modal.classList.remove('hidden');
+      selectView?.classList.remove('hidden');
+      chatView?.classList.add('hidden');
+      populateDmDjList();
+      console.log('[DM] Modal opened successfully');
+    } catch (e) {
+      console.error('[DM] Error opening modal:', e);
+    }
   }
   // Expose to window for onclick fallback
   window.openDmModal = openDmModal;
+  console.log('[DM] openDmModal exposed to window');
   
   function closeDmModal() {
-    document.getElementById('dmModal').classList.add('hidden');
-    
+    document.getElementById('dmModal')?.classList.add('hidden');
+
     // Clean up DM messages from Firestore
     if (dmTargetDj && currentUser) {
       cleanupDmMessages();
     }
-    
+
     // Unsubscribe from DM listener
     if (dmUnsubscribe) {
       dmUnsubscribe();
       dmUnsubscribe = null;
     }
-    
+
     // Reset state
     dmTargetDj = null;
     dmMessages = [];
-    document.getElementById('dmMessages').innerHTML = `
-      <div class="dm-welcome">
-        <p>Start a private conversation</p>
-        <p class="hint">Only you and this DJ can see these messages.</p>
-      </div>
-    `;
+    const dmMessagesEl = document.getElementById('dmMessages');
+    if (dmMessagesEl) {
+      dmMessagesEl.innerHTML = `
+        <div class="dm-welcome">
+          <p>Start a private conversation</p>
+          <p class="hint">Only you and this DJ can see these messages.</p>
+        </div>
+      `;
+    }
   }
   
   function populateDmDjList() {
@@ -6360,8 +6408,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
     // Check for relay mode using the mode toggle
     const isRelayMode = currentStreamMode === 'relay';
-    const userRelayUrl = isRelayMode && selectedRelaySource ? selectedRelaySource.url : null;
+    // Use cloudflared tunnel URL for relay (local Node.js server provides CORS headers)
+    const userRelayUrl = isRelayMode && selectedRelaySource ? `https://relay.freshwax.co.uk/${selectedRelaySource.id}` : null;
     const relaySourceName = selectedRelaySource?.name || 'External Source';
+    console.log('[GoLive] Relay mode:', isRelayMode, 'URL:', userRelayUrl);
 
     // For relay mode, use now playing as title; for direct mode, use input field
     if (isRelayMode && selectedRelaySource?.nowPlaying) {

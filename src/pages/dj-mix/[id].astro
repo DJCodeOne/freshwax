@@ -863,10 +863,11 @@ Artist - Track Title
   }
 
   // Update duration display in info grid when metadata loads (only if not already set from Firebase)
-  audio?.addEventListener('loadedmetadata', function() {
+  function updateDurationDisplay() {
     const durationDisplay = document.getElementById('mix-duration-display');
-    // Only update if currently showing placeholder
-    if (durationDisplay && durationDisplay.textContent === '--:--' && audio.duration && isFinite(audio.duration)) {
+    const storedDuration = durationDisplay?.getAttribute('data-duration-seconds');
+    // Only update if no valid stored duration (0 or missing)
+    if (durationDisplay && (!storedDuration || storedDuration === '0' || storedDuration === 'null') && audio && audio.duration && isFinite(audio.duration) && audio.duration > 0) {
       const totalSecs = Math.floor(audio.duration);
       const hours = Math.floor(totalSecs / 3600);
       const mins = Math.floor((totalSecs % 3600) / 60);
@@ -889,7 +890,15 @@ Artist - Track Title
         durationDisplay.textContent = secs + ' ' + secWord;
       }
     }
-  });
+  }
+
+  // Listen for metadata load
+  audio?.addEventListener('loadedmetadata', updateDurationDisplay);
+
+  // Also check immediately in case metadata already loaded (race condition)
+  if (audio && audio.readyState >= 1) {
+    updateDurationDisplay();
+  }
 
   // Play/Pause - using global player
   function updatePlayButton(isPlaying) {
