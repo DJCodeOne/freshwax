@@ -712,8 +712,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
             </div>
           </div>
 
-          <!-- Professional Broadcast Audio Panel (visible only when streaming) -->
-          <div class="broadcast-audio-panel hidden" id="broadcastAudioPanel">
+          <!-- Professional Broadcast Audio Panel (always visible) -->
+          <div class="broadcast-audio-panel" id="broadcastAudioPanel">
             <div class="panel-header">
               <span class="panel-title">BROADCAST AUDIO</span>
               <span class="audio-source-indicator" id="audioSourceIndicator">
@@ -3673,10 +3673,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       buttAudioPreview?.classList.remove('hidden');
     }
 
-    // Only hide audio panel if not streaming/ready
-    if (!userIsStreaming) {
-      broadcastAudioPanel?.classList.add('hidden');
-    }
+    // Audio panel is now always visible - no longer hide it
   }
 
   function startObsPreviewCheck() {
@@ -5121,7 +5118,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           // User hasn't clicked "I'm Ready" yet - show stream key setup
           document.getElementById('streamKeySection')?.classList.remove('hidden');
           document.getElementById('multiStreamSection')?.classList.remove('hidden');
-          document.getElementById('broadcastAudioPanel')?.classList.add('hidden');
+          // Audio panel is persistent - don't hide it
           stopBroadcastMeters();
           document.querySelector('.preview-section')?.classList.remove('expanded');
           // Enable Go Live button when no one is streaming
@@ -8441,8 +8438,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
     // Show the stream key section again (contains Direct/Relay toggle)
     document.getElementById('streamKeySection')?.classList.remove('hidden');
-    // Hide the audio panel
-    document.getElementById('broadcastAudioPanel')?.classList.add('hidden');
+    // Audio panel is persistent - don't hide it
     // Reset preview section
     document.querySelector('.preview-section')?.classList.remove('expanded');
     // Reset userIsStreaming flag
