@@ -92,6 +92,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const userUpdate: any = { updatedAt: timestamp };
 
         if (updates.displayName !== undefined) userUpdate.displayName = updates.displayName;
+        // Note: email is immutable in users collection - use customers collection as source of truth
+        if (updates.phone !== undefined) userUpdate.phone = updates.phone;
         if (updates.approved !== undefined) userUpdate.approved = updates.approved;
         if (updates.isAdmin !== undefined) userUpdate.isAdmin = updates.isAdmin;
         if (updates.roles !== undefined) userUpdate.roles = updates.roles;

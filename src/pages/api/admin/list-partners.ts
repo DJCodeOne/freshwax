@@ -44,11 +44,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
   try {
     const partners: any[] = [];
 
-    // Load from users collection - SOURCE OF TRUTH
-    const users = await queryCollection('users', {
-      cacheTime: 300000,  // 5 min cache
-      limit: 500
-    });
+    // Load from both users and customers collections
+    const [users, customers] = await Promise.all([
+      queryCollection('users', { cacheTime: 300000, limit: 500 }),
+      queryCollection('customers', { cacheTime: 300000, limit: 500 })
+    ]);
+
+    // Build customer lookup map for merging profile data
+    const customerMap = new Map<string, any>();
+    for (const customer of customers) {
+      customerMap.set(customer.id, customer);
+    }
 
     // Process users - only include those with artist, merch, or vinyl seller roles
     for (const user of users) {
@@ -62,13 +68,23 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Only include if they have artist, merch, or vinyl seller role
       if (!isArtist && !isMerchSupplier && !isVinylSeller) continue;
 
+      // Merge with customer data for email/phone/name (customers collection has latest profile data)
+      const customer = customerMap.get(user.id);
+
       partners.push({
         id: user.id,
-        email: user.email || '',
-        name: user.fullName || user.name || user.displayName || '',
-        displayName: user.partnerInfo?.displayName || user.displayName || '',
-        phone: user.phone || '',
-        address: user.address || null,
+        email: customer?.email || user.email || user.partnerInfo?.email || '',
+        name: customer?.fullName || user.fullName || user.name || user.displayName || '',
+        displayName: user.partnerInfo?.displayName || user.displayName || customer?.displayName || '',
+        phone: customer?.phone || user.phone || user.partnerInfo?.phone || '',
+        address: customer?.address1 ? {
+          line1: customer.address1,
+          line2: customer.address2,
+          city: customer.city,
+          county: customer.county,
+          postcode: customer.postcode,
+          country: customer.country
+        } : (user.address || null),
         isAdmin: user.isAdmin || roles.admin || false,
         isCustomer: roles.customer !== false,
         isArtist: isArtist,

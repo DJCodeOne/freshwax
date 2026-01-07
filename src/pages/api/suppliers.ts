@@ -132,14 +132,52 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     // List all suppliers (admin only)
-    const suppliers = await queryCollection('merch-suppliers', { limit: 100 });
+    // Combine from both merch-suppliers collection AND users with merchSupplier role
+    const [merchSuppliers, allUsers] = await Promise.all([
+      queryCollection('merch-suppliers', { limit: 100 }),
+      queryCollection('users', { limit: 500 })
+    ]);
 
-    log.info('[suppliers] Listed', suppliers.length, 'suppliers');
+    // Convert users with merchSupplier/merchSeller role to supplier format
+    const userSuppliers = allUsers
+      .filter((u: any) => {
+        const roles = u.roles || {};
+        return (roles.merchSupplier === true || roles.merchSeller === true) && u.deleted !== true;
+      })
+      .map((u: any) => ({
+        id: u.id,
+        name: u.partnerInfo?.storeName || u.partnerInfo?.displayName || u.displayName || 'Unknown',
+        email: u.email,
+        phone: u.phone || '',
+        type: u.partnerInfo?.type || 'other',
+        code: (u.displayName || 'USR').substring(0, 3).toUpperCase(),
+        defaultCut: u.partnerInfo?.defaultCut || 50,
+        contactName: u.fullName || u.displayName || '',
+        notes: u.partnerInfo?.notes || '',
+        accessCode: null, // User-based suppliers use auth, not access codes
+        totalProducts: 0,
+        totalStock: 0,
+        totalSold: 0,
+        totalRevenue: u.totalEarnings || 0,
+        active: u.approved === true || u.partnerInfo?.approved === true,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
+        source: 'users' // Track source for admin UI
+      }));
+
+    // Combine both sources, avoiding duplicates by email
+    const supplierEmails = new Set(merchSuppliers.map((s: any) => s.email?.toLowerCase()));
+    const combinedSuppliers = [
+      ...merchSuppliers.map((s: any) => ({ ...s, source: 'merch-suppliers' })),
+      ...userSuppliers.filter((u: any) => !u.email || !supplierEmails.has(u.email.toLowerCase()))
+    ];
+
+    log.info('[suppliers] Listed', combinedSuppliers.length, 'suppliers (', merchSuppliers.length, 'legacy +', userSuppliers.length, 'users)');
 
     return new Response(JSON.stringify({
       success: true,
-      count: suppliers.length,
-      suppliers: suppliers
+      count: combinedSuppliers.length,
+      suppliers: combinedSuppliers
     }), {
       status: 200,
       headers: {

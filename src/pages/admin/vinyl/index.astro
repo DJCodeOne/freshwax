@@ -12,23 +12,64 @@ let pendingSellerRequests: any[] = [];
 
 try {
   const results = await Promise.allSettled([
-    queryCollection('vinylSellers', { limit: 100 }),
+    // Query users with vinylSeller role (source of truth)
+    queryCollection('users', { limit: 500 }),
     queryCollection('vinylListings', { limit: 200 }),
     queryCollection('orders', {
       filters: [{ field: 'hasVinylItems', op: 'EQUAL', value: true }],
       limit: 100
     }),
-    queryCollection('pendingRoleRequests', {
-      filters: [{ field: 'roleType', op: 'EQUAL', value: 'vinylSeller' }]
-    })
+    // Query customers for email/phone data
+    queryCollection('customers', { limit: 500 })
   ]);
 
-  vinylSellers = results[0].status === 'fulfilled' ? results[0].value : [];
+  // Build customer lookup map for merging profile data
+  const allCustomers = results[3].status === 'fulfilled' ? results[3].value : [];
+  const customerMap = new Map<string, any>();
+  for (const customer of allCustomers) {
+    customerMap.set(customer.id, customer);
+  }
+
+  // Filter users to get vinyl sellers
+  const allUsers = results[0].status === 'fulfilled' ? results[0].value : [];
+  vinylSellers = allUsers.filter((u: any) => {
+    const roles = u.roles || {};
+    return roles.vinylSeller === true && u.deleted !== true;
+  }).map((u: any) => {
+    const customer = customerMap.get(u.id);
+    return {
+      id: u.id,
+      storeName: u.partnerInfo?.storeName || u.partnerInfo?.displayName || u.displayName || 'Unnamed Store',
+      email: customer?.email || u.email || u.partnerInfo?.email || '',
+      location: u.partnerInfo?.location || customer?.city || u.address?.city || '',
+      approved: u.approved === true || u.partnerInfo?.approved === true ||
+                u.pendingRoles?.vinylSeller?.status === 'approved',
+      suspended: u.suspended === true || u.disabled === true,
+      discogsUrl: u.partnerInfo?.discogsUrl || '',
+      description: u.partnerInfo?.description || '',
+      createdAt: u.createdAt,
+      ratings: u.ratings || null
+    };
+  });
+
+  // Get pending vinyl seller requests from users collection
+  pendingSellerRequests = allUsers.filter((u: any) => {
+    const pending = u.pendingRoles?.vinylSeller;
+    return pending && pending.status === 'pending';
+  }).map((u: any) => {
+    const customer = customerMap.get(u.id);
+    return {
+      id: u.id,
+      userId: u.id,
+      email: customer?.email || u.email || '',
+      displayName: u.displayName,
+      status: 'pending',
+      ...u.pendingRoles?.vinylSeller
+    };
+  });
+
   vinylListings = results[1].status === 'fulfilled' ? results[1].value : [];
   vinylOrders = results[2].status === 'fulfilled' ? results[2].value : [];
-  pendingSellerRequests = results[3].status === 'fulfilled'
-    ? results[3].value.filter((r: any) => r.status === 'pending')
-    : [];
 } catch (error) {
   console.error('[Admin Vinyl] Error fetching data:', error);
 }
@@ -164,10 +205,10 @@ export const prerender = false;
     </a>
   </div>
 
-  <!-- Two Column Layout -->
-  <div class="grid grid-2 gap-2">
+  <!-- Stacked Layout -->
+  <div class="stack-layout">
     <!-- Sellers List -->
-    <div class="card">
+    <div class="card mb-4">
       <div class="card-header">
         <h2>👤 Vinyl Sellers</h2>
         <span class="badge">{vinylSellers.length} total</span>
@@ -182,13 +223,11 @@ export const prerender = false;
         </div>
       ) : (
         <div class="table-wrapper">
-          <table class="data-table">
+          <table class="data-table compact-table">
             <thead>
               <tr>
-                <th>Store Name</th>
-                <th>Location</th>
+                <th>Seller</th>
                 <th>Listings</th>
-                <th>Rating</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -203,21 +242,10 @@ export const prerender = false;
                       <div class="seller-info">
                         <span class="seller-name">{seller.storeName || 'Unnamed'}</span>
                         <span class="seller-email">{seller.email}</span>
+                        {seller.location && <span class="seller-location">📍 {seller.location}</span>}
                       </div>
                     </td>
-                    <td class="cell-secondary">{seller.location || '-'}</td>
-                    <td>{activeCount} / {sellerListings.length}</td>
-                    <td>
-                      {seller.ratings?.average ? (
-                        <span class="rating">
-                          <span class="rating-star">★</span>
-                          {seller.ratings.average.toFixed(1)}
-                          <span class="rating-count">({seller.ratings.count})</span>
-                        </span>
-                      ) : (
-                        <span class="text-muted">No ratings</span>
-                      )}
-                    </td>
+                    <td class="cell-center">{activeCount} / {sellerListings.length}</td>
                     <td>
                       <span class={`badge badge-${seller.suspended ? 'danger' : seller.approved ? 'success' : 'warning'}`}>
                         {seller.suspended ? 'Suspended' : seller.approved ? 'Active' : 'Pending'}
@@ -404,6 +432,22 @@ export const prerender = false;
     gap: 0.125rem;
   }
 
+  .stack-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .compact-table th,
+  .compact-table td {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .cell-center {
+    text-align: center;
+  }
+
   .seller-name, .listing-title {
     font-weight: 500;
     color: #fff;
@@ -412,6 +456,13 @@ export const prerender = false;
   .seller-email, .listing-label {
     font-size: 0.75rem;
     color: #6b7280;
+  }
+
+  .seller-location {
+    font-size: 0.7rem;
+    color: #9ca3af;
+    display: block;
+    margin-top: 0.125rem;
   }
 
   .rating {

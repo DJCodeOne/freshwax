@@ -228,6 +228,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
         console.error('[PayPal] Artist payment processing error:', paymentErr);
         // Don't fail the order, just log the error
       }
+
+      // Process merch supplier payments
+      try {
+        await processMerchSupplierPayments({
+          orderId: result.orderId,
+          orderNumber: result.orderNumber || '',
+          items: orderData.items,
+          stripeSecretKey,
+          env
+        });
+      } catch (supplierErr) {
+        console.error('[PayPal] Supplier payment processing error:', supplierErr);
+      }
+
+      // Process vinyl crate seller payments
+      try {
+        await processVinylCrateSellerPayments({
+          orderId: result.orderId,
+          orderNumber: result.orderNumber || '',
+          items: orderData.items,
+          stripeSecretKey,
+          env
+        });
+      } catch (sellerErr) {
+        console.error('[PayPal] Crate seller payment processing error:', sellerErr);
+      }
     }
 
     return new Response(JSON.stringify({
@@ -254,7 +280,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// Process artist payments via Stripe Connect
+// Process artist payments via Stripe Connect or PayPal
 async function processArtistPayments(params: {
   orderId: string;
   orderNumber: string;
@@ -262,8 +288,12 @@ async function processArtistPayments(params: {
   stripeSecretKey: string;
   env: any;
 }) {
-  const { orderId, orderNumber, items, stripeSecretKey } = params;
+  const { orderId, orderNumber, items, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+
+  // Import PayPal payout functions
+  const { createPayout, getPayPalConfig } = await import('../../../lib/paypal-payouts');
+  const paypalConfig = getPayPalConfig(env);
 
   try {
     // Group items by artist
@@ -272,6 +302,8 @@ async function processArtistPayments(params: {
       artistName: string;
       artistEmail: string;
       stripeConnectId: string | null;
+      paypalEmail: string | null;
+      payoutMethod: string | null;
       amount: number;
       items: string[];
     }> = {};
@@ -311,6 +343,8 @@ async function processArtistPayments(params: {
           artistName: artist?.artistName || release.artistName || release.artist || 'Unknown Artist',
           artistEmail: artist?.email || release.artistEmail || '',
           stripeConnectId: artist?.stripeConnectId || null,
+          paypalEmail: artist?.paypalEmail || null,
+          payoutMethod: artist?.payoutMethod || null,
           amount: 0,
           items: []
         };
@@ -328,12 +362,85 @@ async function processArtistPayments(params: {
 
       console.log('[PayPal] Processing payment for', payment.artistName, ':', payment.amount, 'GBP');
 
-      if (payment.stripeConnectId) {
+      // Determine payout method - respect artist preference
+      const usePayPal = payment.payoutMethod === 'paypal' && payment.paypalEmail && paypalConfig;
+      const useStripe = payment.payoutMethod === 'stripe' && payment.stripeConnectId;
+      // If no preference set, default to whatever is available (Stripe first)
+      const defaultToStripe = !payment.payoutMethod && payment.stripeConnectId;
+      const defaultToPayPal = !payment.payoutMethod && !payment.stripeConnectId && payment.paypalEmail && paypalConfig;
+
+      if (usePayPal || defaultToPayPal) {
+        // Pay via PayPal
+        try {
+          const paypalResult = await createPayout(paypalConfig!, {
+            email: payment.paypalEmail!,
+            amount: payment.amount,
+            currency: 'GBP',
+            note: `Fresh Wax payout for order ${orderNumber}`,
+            reference: `${orderId}-${payment.artistId}`
+          });
+
+          if (paypalResult.success) {
+            await addDocument('payouts', {
+              artistId: payment.artistId,
+              artistName: payment.artistName,
+              artistEmail: payment.artistEmail,
+              paypalEmail: payment.paypalEmail,
+              paypalBatchId: paypalResult.batchId,
+              paypalPayoutItemId: paypalResult.payoutItemId,
+              orderId,
+              orderNumber,
+              amount: payment.amount,
+              currency: 'gbp',
+              status: 'completed',
+              payoutMethod: 'paypal',
+              customerPaymentMethod: 'paypal',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              completedAt: new Date().toISOString()
+            });
+
+            const artist = await getDocument('artists', payment.artistId);
+            if (artist) {
+              await updateDocument('artists', payment.artistId, {
+                totalEarnings: (artist.totalEarnings || 0) + payment.amount,
+                lastPayoutAt: new Date().toISOString()
+              });
+            }
+
+            console.log('[PayPal] ✓ PayPal payout created:', paypalResult.batchId);
+          } else {
+            throw new Error(paypalResult.error || 'PayPal payout failed');
+          }
+
+        } catch (paypalError: any) {
+          console.error('[PayPal] PayPal payout failed:', paypalError.message);
+
+          await addDocument('pendingPayouts', {
+            artistId: payment.artistId,
+            artistName: payment.artistName,
+            artistEmail: payment.artistEmail,
+            paypalEmail: payment.paypalEmail,
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'retry_pending',
+            failureReason: paypalError.message,
+            payoutMethod: 'paypal',
+            customerPaymentMethod: 'paypal',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+
+      } else if (useStripe || defaultToStripe) {
+        // Pay via Stripe Connect
         try {
           const transfer = await stripe.transfers.create({
             amount: Math.round(payment.amount * 100),
             currency: 'gbp',
-            destination: payment.stripeConnectId,
+            destination: payment.stripeConnectId!,
             transfer_group: orderId,
             metadata: {
               orderId,
@@ -341,7 +448,7 @@ async function processArtistPayments(params: {
               artistId: payment.artistId,
               artistName: payment.artistName,
               platform: 'freshwax',
-              paymentMethod: 'paypal'
+              customerPaymentMethod: 'paypal'
             }
           });
 
@@ -356,7 +463,8 @@ async function processArtistPayments(params: {
             amount: payment.amount,
             currency: 'gbp',
             status: 'completed',
-            paymentMethod: 'paypal',
+            payoutMethod: 'stripe',
+            customerPaymentMethod: 'paypal',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             completedAt: new Date().toISOString()
@@ -370,10 +478,10 @@ async function processArtistPayments(params: {
             });
           }
 
-          console.log('[PayPal] ✓ Transfer created:', transfer.id);
+          console.log('[PayPal] ✓ Stripe transfer created:', transfer.id);
 
         } catch (transferError: any) {
-          console.error('[PayPal] Transfer failed:', transferError.message);
+          console.error('[PayPal] Stripe transfer failed:', transferError.message);
 
           await addDocument('pendingPayouts', {
             artistId: payment.artistId,
@@ -385,12 +493,14 @@ async function processArtistPayments(params: {
             currency: 'gbp',
             status: 'retry_pending',
             failureReason: transferError.message,
-            paymentMethod: 'paypal',
+            payoutMethod: 'stripe',
+            customerPaymentMethod: 'paypal',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           });
         }
       } else {
+        // Artist not connected to any payout method - store as pending
         console.log('[PayPal] Artist', payment.artistName, 'not connected - storing pending');
 
         await addDocument('pendingPayouts', {
@@ -403,7 +513,7 @@ async function processArtistPayments(params: {
           currency: 'gbp',
           status: 'awaiting_connect',
           notificationSent: false,
-          paymentMethod: 'paypal',
+          customerPaymentMethod: 'paypal',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
@@ -411,6 +521,556 @@ async function processArtistPayments(params: {
     }
   } catch (error) {
     console.error('[PayPal] processArtistPayments error:', error);
+    throw error;
+  }
+}
+
+// Process merch supplier payments via Stripe Connect or PayPal
+async function processMerchSupplierPayments(params: {
+  orderId: string;
+  orderNumber: string;
+  items: any[];
+  stripeSecretKey: string;
+  env: any;
+}) {
+  const { orderId, orderNumber, items, stripeSecretKey, env } = params;
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+
+  const { createPayout, getPayPalConfig } = await import('../../../lib/paypal-payouts');
+  const paypalConfig = getPayPalConfig(env);
+
+  try {
+    // Filter to only merch items
+    const merchItems = items.filter(item => item.type === 'merch');
+
+    if (merchItems.length === 0) {
+      console.log('[PayPal] No merch items in order - skipping supplier payments');
+      return;
+    }
+
+    console.log('[PayPal] Processing', merchItems.length, 'merch items for supplier payments');
+
+    // Group items by supplier
+    const supplierPayments: Record<string, {
+      supplierId: string;
+      supplierName: string;
+      supplierEmail: string;
+      stripeConnectId: string | null;
+      paypalEmail: string | null;
+      payoutMethod: string | null;
+      amount: number;
+      items: string[];
+    }> = {};
+
+    // Cache for merch product lookups
+    const merchCache: Record<string, any> = {};
+
+    for (const item of merchItems) {
+      // Get merch product data to find supplier
+      const productId = item.productId || item.merchId || item.id;
+      if (!productId) continue;
+
+      let product = merchCache[productId];
+      if (!product) {
+        product = await getDocument('merch', productId);
+        if (product) {
+          merchCache[productId] = product;
+        }
+      }
+
+      if (!product) {
+        console.log('[PayPal] Merch product not found:', productId);
+        continue;
+      }
+
+      // Get supplier ID from product
+      const supplierId = product.supplierId;
+      if (!supplierId) {
+        console.log('[PayPal] No supplier ID on merch product:', productId, '- keeping revenue');
+        continue;
+      }
+
+      // Look up supplier for payout details
+      let supplier = null;
+      try {
+        supplier = await getDocument('merch-suppliers', supplierId);
+      } catch (e) {
+        console.log('[PayPal] Could not find supplier:', supplierId);
+      }
+
+      if (!supplier) continue;
+
+      // Calculate supplier share
+      // Supplier gets their cost price per item, platform keeps the margin
+      const supplierPrice = product.supplierCost || product.costPrice || (item.price * 0.7);
+      const itemTotal = supplierPrice * (item.quantity || 1);
+
+      // Group by supplier
+      if (!supplierPayments[supplierId]) {
+        supplierPayments[supplierId] = {
+          supplierId,
+          supplierName: supplier.name || 'Unknown Supplier',
+          supplierEmail: supplier.email || '',
+          stripeConnectId: supplier.stripeConnectId || null,
+          paypalEmail: supplier.paypalEmail || null,
+          payoutMethod: supplier.payoutMethod || null,
+          amount: 0,
+          items: []
+        };
+      }
+
+      supplierPayments[supplierId].amount += itemTotal;
+      supplierPayments[supplierId].items.push(item.name || item.title || 'Item');
+    }
+
+    console.log('[PayPal] Supplier payments to process:', Object.keys(supplierPayments).length);
+
+    // Process each supplier payment
+    for (const supplierId of Object.keys(supplierPayments)) {
+      const payment = supplierPayments[supplierId];
+
+      if (payment.amount <= 0) continue;
+
+      console.log('[PayPal] Processing payment for supplier', payment.supplierName, ':', payment.amount.toFixed(2), 'GBP');
+
+      // Check preferred payout method
+      const usePayPal = payment.payoutMethod === 'paypal' && payment.paypalEmail && paypalConfig;
+      const useStripe = payment.stripeConnectId && payment.payoutMethod !== 'paypal';
+
+      if (usePayPal) {
+        // PayPal payout for supplier
+        try {
+          const paypalResult = await createPayout(paypalConfig!, {
+            email: payment.paypalEmail!,
+            amount: payment.amount,
+            currency: 'GBP',
+            note: `Fresh Wax supplier payout for order #${orderNumber}`,
+            reference: `${orderId}-supplier-${payment.supplierId}`
+          });
+
+          if (paypalResult.success) {
+            await addDocument('supplierPayouts', {
+              supplierId: payment.supplierId,
+              supplierName: payment.supplierName,
+              supplierEmail: payment.supplierEmail,
+              paypalEmail: payment.paypalEmail,
+              paypalBatchId: paypalResult.batchId,
+              payoutMethod: 'paypal',
+              customerPaymentMethod: 'paypal',
+              orderId,
+              orderNumber,
+              amount: payment.amount,
+              currency: 'gbp',
+              status: 'completed',
+              items: payment.items,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              completedAt: new Date().toISOString()
+            });
+
+            const supplier = await getDocument('merch-suppliers', payment.supplierId);
+            if (supplier) {
+              await updateDocument('merch-suppliers', payment.supplierId, {
+                totalEarnings: (supplier.totalEarnings || 0) + payment.amount,
+                lastPayoutAt: new Date().toISOString()
+              });
+            }
+
+            console.log('[PayPal] ✓ Supplier PayPal payout created:', paypalResult.batchId);
+          } else {
+            throw new Error(paypalResult.error || 'PayPal payout failed');
+          }
+
+        } catch (paypalError: any) {
+          console.error('[PayPal] Supplier PayPal payout failed:', paypalError.message);
+
+          await addDocument('pendingSupplierPayouts', {
+            supplierId: payment.supplierId,
+            supplierName: payment.supplierName,
+            supplierEmail: payment.supplierEmail,
+            paypalEmail: payment.paypalEmail,
+            payoutMethod: 'paypal',
+            customerPaymentMethod: 'paypal',
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'retry_pending',
+            items: payment.items,
+            failureReason: paypalError.message,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+
+      } else if (useStripe) {
+        // Stripe transfer for supplier
+        try {
+          const transfer = await stripe.transfers.create({
+            amount: Math.round(payment.amount * 100),
+            currency: 'gbp',
+            destination: payment.stripeConnectId!,
+            transfer_group: orderId,
+            metadata: {
+              orderId,
+              orderNumber,
+              supplierId: payment.supplierId,
+              supplierName: payment.supplierName,
+              type: 'merch_supplier',
+              platform: 'freshwax',
+              customerPaymentMethod: 'paypal'
+            }
+          });
+
+          await addDocument('supplierPayouts', {
+            supplierId: payment.supplierId,
+            supplierName: payment.supplierName,
+            supplierEmail: payment.supplierEmail,
+            stripeConnectId: payment.stripeConnectId,
+            stripeTransferId: transfer.id,
+            payoutMethod: 'stripe',
+            customerPaymentMethod: 'paypal',
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'completed',
+            items: payment.items,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString()
+          });
+
+          const supplier = await getDocument('merch-suppliers', payment.supplierId);
+          if (supplier) {
+            await updateDocument('merch-suppliers', payment.supplierId, {
+              totalEarnings: (supplier.totalEarnings || 0) + payment.amount,
+              lastPayoutAt: new Date().toISOString()
+            });
+          }
+
+          console.log('[PayPal] ✓ Supplier Stripe transfer created:', transfer.id);
+
+        } catch (transferError: any) {
+          console.error('[PayPal] Supplier transfer failed:', transferError.message);
+
+          await addDocument('pendingSupplierPayouts', {
+            supplierId: payment.supplierId,
+            supplierName: payment.supplierName,
+            supplierEmail: payment.supplierEmail,
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'retry_pending',
+            items: payment.items,
+            failureReason: transferError.message,
+            customerPaymentMethod: 'paypal',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } else {
+        // Supplier not connected - store as pending
+        console.log('[PayPal] Supplier', payment.supplierName, 'not connected - storing pending');
+
+        await addDocument('pendingSupplierPayouts', {
+          supplierId: payment.supplierId,
+          supplierName: payment.supplierName,
+          supplierEmail: payment.supplierEmail,
+          orderId,
+          orderNumber,
+          amount: payment.amount,
+          currency: 'gbp',
+          status: 'awaiting_connect',
+          items: payment.items,
+          notificationSent: false,
+          customerPaymentMethod: 'paypal',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[PayPal] processMerchSupplierPayments error:', error);
+    throw error;
+  }
+}
+
+// Process vinyl crate seller payments via Stripe Connect or PayPal
+async function processVinylCrateSellerPayments(params: {
+  orderId: string;
+  orderNumber: string;
+  items: any[];
+  stripeSecretKey: string;
+  env: any;
+}) {
+  const { orderId, orderNumber, items, stripeSecretKey, env } = params;
+  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+
+  const { createPayout, getPayPalConfig } = await import('../../../lib/paypal-payouts');
+  const paypalConfig = getPayPalConfig(env);
+
+  try {
+    // Filter to only vinyl crate items
+    const crateItems = items.filter(item =>
+      item.type === 'crate' ||
+      item.type === 'vinyl-crate' ||
+      item.crateListingId ||
+      item.sellerId
+    );
+
+    if (crateItems.length === 0) {
+      console.log('[PayPal] No vinyl crate items in order - skipping seller payments');
+      return;
+    }
+
+    console.log('[PayPal] Processing', crateItems.length, 'vinyl crate items for seller payments');
+
+    // Group items by seller
+    const sellerPayments: Record<string, {
+      sellerId: string;
+      sellerName: string;
+      sellerEmail: string;
+      stripeConnectId: string | null;
+      paypalEmail: string | null;
+      payoutMethod: string | null;
+      amount: number;
+      items: string[];
+    }> = {};
+
+    // Cache for crate listing lookups
+    const listingCache: Record<string, any> = {};
+
+    for (const item of crateItems) {
+      // Get the seller info
+      let sellerId = item.sellerId;
+      let listingId = item.crateListingId || item.listingId;
+
+      // If no sellerId, try to get from listing
+      if (!sellerId && listingId) {
+        let listing = listingCache[listingId];
+        if (!listing) {
+          listing = await getDocument('crateListings', listingId);
+          if (listing) {
+            listingCache[listingId] = listing;
+          }
+        }
+        if (listing) {
+          sellerId = listing.sellerId || listing.userId;
+        }
+      }
+
+      if (!sellerId) {
+        console.log('[PayPal] No seller ID for crate item:', item.name);
+        continue;
+      }
+
+      // Look up seller (user) for payout details
+      let seller = null;
+      try {
+        seller = await getDocument('users', sellerId);
+      } catch (e) {
+        console.log('[PayPal] Could not find seller user:', sellerId);
+      }
+
+      if (!seller) continue;
+
+      // Calculate seller share
+      // Platform takes 15% commission on crate sales
+      const platformFeePercent = 0.15;
+      const itemPrice = item.price || 0;
+      const sellerShare = itemPrice * (1 - platformFeePercent);
+      const itemTotal = sellerShare * (item.quantity || 1);
+
+      // Group by seller
+      if (!sellerPayments[sellerId]) {
+        sellerPayments[sellerId] = {
+          sellerId,
+          sellerName: seller.displayName || seller.name || 'Seller',
+          sellerEmail: seller.email || '',
+          stripeConnectId: seller.stripeConnectId || null,
+          paypalEmail: seller.paypalEmail || null,
+          payoutMethod: seller.payoutMethod || null,
+          amount: 0,
+          items: []
+        };
+      }
+
+      sellerPayments[sellerId].amount += itemTotal;
+      sellerPayments[sellerId].items.push(item.name || item.title || 'Vinyl');
+    }
+
+    console.log('[PayPal] Vinyl crate seller payments to process:', Object.keys(sellerPayments).length);
+
+    // Process each seller payment
+    for (const sellerId of Object.keys(sellerPayments)) {
+      const payment = sellerPayments[sellerId];
+
+      if (payment.amount <= 0) continue;
+
+      console.log('[PayPal] Processing payment for seller', payment.sellerName, ':', payment.amount.toFixed(2), 'GBP');
+
+      // Check preferred payout method
+      const usePayPal = payment.payoutMethod === 'paypal' && payment.paypalEmail && paypalConfig;
+      const useStripe = payment.stripeConnectId && payment.payoutMethod !== 'paypal';
+
+      if (usePayPal) {
+        // PayPal payout for crate seller
+        try {
+          const paypalResult = await createPayout(paypalConfig!, {
+            email: payment.paypalEmail!,
+            amount: payment.amount,
+            currency: 'GBP',
+            note: `Fresh Wax vinyl sale payout for order #${orderNumber}`,
+            reference: `${orderId}-seller-${payment.sellerId}`
+          });
+
+          if (paypalResult.success) {
+            await addDocument('crateSellerPayouts', {
+              sellerId: payment.sellerId,
+              sellerName: payment.sellerName,
+              sellerEmail: payment.sellerEmail,
+              paypalEmail: payment.paypalEmail,
+              paypalBatchId: paypalResult.batchId,
+              payoutMethod: 'paypal',
+              customerPaymentMethod: 'paypal',
+              orderId,
+              orderNumber,
+              amount: payment.amount,
+              currency: 'gbp',
+              status: 'completed',
+              items: payment.items,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              completedAt: new Date().toISOString()
+            });
+
+            const sellerUser = await getDocument('users', payment.sellerId);
+            if (sellerUser) {
+              await updateDocument('users', payment.sellerId, {
+                crateEarnings: (sellerUser.crateEarnings || 0) + payment.amount,
+                lastCratePayoutAt: new Date().toISOString()
+              });
+            }
+
+            console.log('[PayPal] ✓ Crate seller PayPal payout created:', paypalResult.batchId);
+          } else {
+            throw new Error(paypalResult.error || 'PayPal payout failed');
+          }
+
+        } catch (paypalError: any) {
+          console.error('[PayPal] Crate seller PayPal payout failed:', paypalError.message);
+
+          await addDocument('pendingCrateSellerPayouts', {
+            sellerId: payment.sellerId,
+            sellerName: payment.sellerName,
+            sellerEmail: payment.sellerEmail,
+            paypalEmail: payment.paypalEmail,
+            payoutMethod: 'paypal',
+            customerPaymentMethod: 'paypal',
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'retry_pending',
+            items: payment.items,
+            failureReason: paypalError.message,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+
+      } else if (useStripe) {
+        // Stripe transfer for crate seller
+        try {
+          const transfer = await stripe.transfers.create({
+            amount: Math.round(payment.amount * 100),
+            currency: 'gbp',
+            destination: payment.stripeConnectId!,
+            transfer_group: orderId,
+            metadata: {
+              orderId,
+              orderNumber,
+              sellerId: payment.sellerId,
+              sellerName: payment.sellerName,
+              type: 'vinyl_crate_seller',
+              platform: 'freshwax',
+              customerPaymentMethod: 'paypal'
+            }
+          });
+
+          await addDocument('crateSellerPayouts', {
+            sellerId: payment.sellerId,
+            sellerName: payment.sellerName,
+            sellerEmail: payment.sellerEmail,
+            stripeConnectId: payment.stripeConnectId,
+            stripeTransferId: transfer.id,
+            payoutMethod: 'stripe',
+            customerPaymentMethod: 'paypal',
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'completed',
+            items: payment.items,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString()
+          });
+
+          const sellerUser = await getDocument('users', payment.sellerId);
+          if (sellerUser) {
+            await updateDocument('users', payment.sellerId, {
+              crateEarnings: (sellerUser.crateEarnings || 0) + payment.amount,
+              lastCratePayoutAt: new Date().toISOString()
+            });
+          }
+
+          console.log('[PayPal] ✓ Crate seller Stripe transfer created:', transfer.id);
+
+        } catch (transferError: any) {
+          console.error('[PayPal] Crate seller transfer failed:', transferError.message);
+
+          await addDocument('pendingCrateSellerPayouts', {
+            sellerId: payment.sellerId,
+            sellerName: payment.sellerName,
+            sellerEmail: payment.sellerEmail,
+            orderId,
+            orderNumber,
+            amount: payment.amount,
+            currency: 'gbp',
+            status: 'retry_pending',
+            items: payment.items,
+            failureReason: transferError.message,
+            customerPaymentMethod: 'paypal',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } else {
+        // Seller not connected - store as pending
+        console.log('[PayPal] Crate seller', payment.sellerName, 'not connected - storing pending');
+
+        await addDocument('pendingCrateSellerPayouts', {
+          sellerId: payment.sellerId,
+          sellerName: payment.sellerName,
+          sellerEmail: payment.sellerEmail,
+          orderId,
+          orderNumber,
+          amount: payment.amount,
+          currency: 'gbp',
+          status: 'awaiting_connect',
+          items: payment.items,
+          notificationSent: false,
+          customerPaymentMethod: 'paypal',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[PayPal] processVinylCrateSellerPayments error:', error);
     throw error;
   }
 }

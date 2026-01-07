@@ -796,7 +796,7 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
 
   <script type="module" define:vars={{ firebaseConfig, recaptchaSiteKey }}>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-    import { getAuth, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+    import { getAuth, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signInWithPopup, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
     import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, where, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 
     // Initialize Firebase
@@ -1179,6 +1179,7 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
           displayName: displayName,
           displayNameLower: displayName.toLowerCase(),
           provider: 'email',
+          emailVerified: false,  // Must verify email before full access
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           roles: {
@@ -1298,6 +1299,11 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
           console.error('[Register] Failed to send verification email:', verifyError);
           // Continue anyway - they can resend from verify-email page
         }
+
+        // Keep user signed in temporarily so they can access verify-email page
+        // But set a flag so protected pages know to block them
+        sessionStorage.setItem('fw_email_unverified', 'true');
+        sessionStorage.setItem('fw_pending_verification', email);
 
         // Show success message
         formSuccess.innerHTML = `

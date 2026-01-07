@@ -412,7 +412,39 @@ export const prerender = false;
             
             <button type="submit" class="save-btn">Save Changes</button>
           </form>
-          
+
+          <!-- Selling & Payments Section (for vendors) -->
+          <div class="selling-section hidden" id="sellingSection">
+            <h3>Selling & Payments</h3>
+            <p class="selling-hint">Manage how you receive payments for your sales on Fresh Wax.</p>
+            <div class="selling-links">
+              <a href="/account/payment-settings" class="selling-link">
+                <span class="selling-icon">&#128179;</span>
+                <div class="selling-info">
+                  <strong>Payment Settings</strong>
+                  <span>Set up Stripe or PayPal to receive payouts</span>
+                </div>
+                <span class="selling-arrow">&rarr;</span>
+              </a>
+              <a href="/account/selling" class="selling-link" id="vinylSellingLink" style="display:none;">
+                <span class="selling-icon">&#128230;</span>
+                <div class="selling-info">
+                  <strong>Vinyl Selling</strong>
+                  <span>Manage your vinyl crate listings</span>
+                </div>
+                <span class="selling-arrow">&rarr;</span>
+              </a>
+              <a href="/artist/dashboard" class="selling-link" id="artistDashboardLink" style="display:none;">
+                <span class="selling-icon">&#9889;</span>
+                <div class="selling-info">
+                  <strong>Artist Dashboard</strong>
+                  <span>Manage releases, merch and analytics</span>
+                </div>
+                <span class="selling-arrow">&rarr;</span>
+              </a>
+            </div>
+          </div>
+
           <!-- Danger Zone -->
           <div class="danger-zone">
             <h3>Data & Account</h3>
@@ -1208,10 +1240,30 @@ export const prerender = false;
 
       if (data.success) {
         // Partner Dashboard is only for artists and merch sellers (NOT DJs)
-        const isArtistOrMerchSeller = data.roles?.artist || data.roles?.merchSupplier;
+        const isArtist = data.roles?.artist === true;
+        const isMerchSupplier = data.roles?.merchSupplier === true;
+        const isVinylSeller = data.roles?.vinylSeller === true;
+        const isArtistOrMerchSeller = isArtist || isMerchSupplier;
+        const isAnyVendor = isArtist || isMerchSupplier || isVinylSeller;
         const isApprovedPartner = data.isApproved && isArtistOrMerchSeller;
 
-        console.log('[Dashboard] isArtistOrMerchSeller:', isArtistOrMerchSeller, 'isApproved:', data.isApproved, 'isApprovedPartner:', isApprovedPartner);
+        console.log('[Dashboard] isArtistOrMerchSeller:', isArtistOrMerchSeller, 'isApproved:', data.isApproved, 'isApprovedPartner:', isApprovedPartner, 'isVinylSeller:', isVinylSeller);
+
+        // Show selling section for any vendor type
+        const sellingSection = document.getElementById('sellingSection');
+        if (sellingSection && isAnyVendor) {
+          sellingSection.classList.remove('hidden');
+
+          // Show role-specific links
+          if (isVinylSeller) {
+            const vinylLink = document.getElementById('vinylSellingLink');
+            if (vinylLink) vinylLink.style.display = 'flex';
+          }
+          if (isApprovedPartner) {
+            const artistLink = document.getElementById('artistDashboardLink');
+            if (artistLink) artistLink.style.display = 'flex';
+          }
+        }
 
         if (isApprovedPartner) {
           // Enable the Partner Dashboard button for approved artists/merch sellers
@@ -1770,13 +1822,15 @@ export const prerender = false;
       const lastName = document.getElementById('lastName').value;
       
       try {
+        const phoneValue = document.getElementById('phone').value;
+
         // Update customers collection (only collection with write rules for users)
         await setDoc(doc(db, 'customers', currentUser.uid), {
           firstName: firstName,
           lastName: lastName,
           fullName: firstName + ' ' + lastName,
           displayName: newDisplayName,
-          phone: document.getElementById('phone').value,
+          phone: phoneValue,
           address1: document.getElementById('address1').value,
           address2: document.getElementById('address2').value,
           city: document.getElementById('city').value,
@@ -1785,10 +1839,28 @@ export const prerender = false;
           country: document.getElementById('country').value,
           updatedAt: new Date().toISOString()
         }, { merge: true });
-        
+
         // Update Firebase Auth profile
         await updateProfile(currentUser, { displayName: newDisplayName });
-        
+
+        // Sync profile to users collection for partner dashboard
+        try {
+          await fetch('/api/profile-sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: currentUser.uid,
+              displayName: newDisplayName,
+              phone: phoneValue,
+              firstName: firstName,
+              lastName: lastName,
+              email: currentUser.email
+            })
+          });
+        } catch (syncError) {
+          console.error('Profile sync error:', syncError);
+        }
+
         btn.textContent = 'Saved!';
         setTimeout(() => {
           btn.textContent = 'Save Changes';

@@ -259,9 +259,11 @@ const firebaseConfig = {
   <script type="module" define:vars={{ firebaseConfig }}>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged, sendEmailVerification, reload } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+    import { getFirestore, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
     const resendBtn = document.getElementById('resendBtn');
     const checkBtn = document.getElementById('checkBtn');
@@ -287,6 +289,15 @@ const firebaseConfig = {
       // Check if already verified
       await reload(user);
       if (user.emailVerified) {
+        // Update Firestore to mark email as verified
+        try {
+          await updateDoc(doc(db, 'users', user.uid), {
+            emailVerified: true,
+            emailVerifiedAt: new Date().toISOString()
+          });
+        } catch (e) {
+          console.log('[Verify] Could not update Firestore:', e);
+        }
         successMessage.textContent = 'Your email is verified! Redirecting...';
         successMessage.style.display = 'block';
         setTimeout(() => {
@@ -357,6 +368,15 @@ const firebaseConfig = {
         await reload(user);
 
         if (user.emailVerified) {
+          // Update Firestore to mark email as verified
+          try {
+            await updateDoc(doc(db, 'users', user.uid), {
+              emailVerified: true,
+              emailVerifiedAt: new Date().toISOString()
+            });
+          } catch (e) {
+            console.log('[Verify] Could not update Firestore:', e);
+          }
           successMessage.textContent = 'Email verified! Redirecting to your dashboard...';
           successMessage.style.display = 'block';
           setTimeout(() => {

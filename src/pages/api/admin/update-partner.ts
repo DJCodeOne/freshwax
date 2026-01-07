@@ -100,6 +100,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     if (updates.name !== undefined) userUpdate.displayName = updates.name;
+    if (updates.phone !== undefined) userUpdate.phone = updates.phone;
     if (updates.approved !== undefined) userUpdate.approved = updates.approved;
 
     // Build roles object
@@ -150,6 +151,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: now
         };
 
+        if (updates.phone !== undefined) customerUpdate.phone = updates.phone;
         if (updates.isArtist !== undefined) customerUpdate.isArtist = updates.isArtist;
         if (updates.isMerchSupplier !== undefined) customerUpdate.isMerchSupplier = updates.isMerchSupplier;
         if (updates.isVinylSeller !== undefined) customerUpdate.isVinylSeller = updates.isVinylSeller;

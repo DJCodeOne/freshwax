@@ -999,7 +999,89 @@
     outline: none;
     border-color: #dc2626;
   }
-  
+
+  /* Selling & Payments Section */
+  .selling-section {
+    margin-top: 2.5rem;
+    padding-top: 2rem;
+    border-top: 2px solid #374151;
+  }
+
+  .selling-section h3 {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.5rem;
+    color: #fff;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: 0.02em;
+  }
+
+  .selling-hint {
+    color: #9ca3af;
+    font-size: 0.9375rem;
+    margin: 0 0 1.25rem 0;
+  }
+
+  .selling-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .selling-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #fff;
+    transition: all 0.2s;
+  }
+
+  .selling-link:hover {
+    border-color: #dc2626;
+    background: linear-gradient(to bottom, #2d3748, #1f2937);
+  }
+
+  .selling-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(220, 38, 38, 0.1);
+    border-radius: 8px;
+  }
+
+  .selling-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .selling-info strong {
+    display: block;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .selling-info span {
+    font-size: 0.875rem;
+    color: #9ca3af;
+  }
+
+  .selling-arrow {
+    color: #9ca3af;
+    font-size: 1.25rem;
+  }
+
+  .selling-link:hover .selling-arrow {
+    color: #dc2626;
+  }
+
   /* Danger Zone */
   .danger-zone {
     margin-top: 3rem;

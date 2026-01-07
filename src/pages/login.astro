@@ -423,13 +423,34 @@ const firebaseConfig = {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Check if email is verified - allow login but show reminder
-        if (!user.emailVerified) {
-          console.log('[Login] Email not verified - allowing limited access');
-          // Store unverified status for client-side checks
-          sessionStorage.setItem('fw_email_unverified', 'true');
-        } else {
-          sessionStorage.removeItem('fw_email_unverified');
+        // Check if email is verified
+        // Users created after 2026-01-06 MUST verify email before logging in
+        const EMAIL_VERIFY_CUTOFF = new Date('2026-01-06T00:00:00Z').getTime();
+        const creationTime = user.metadata?.creationTime;
+        const createdAt = creationTime ? new Date(creationTime).getTime() : Date.now();
+        const isNewUser = createdAt >= EMAIL_VERIFY_CUTOFF;
+
+        if (!user.emailVerified && isNewUser) {
+          console.log('[Login] Email not verified - blocking login for new user');
+          // Sign them out immediately
+          await signOut(auth);
+          // Show error and redirect to verify page
+          formError.innerHTML = `
+            <strong>Email verification required</strong><br>
+            Please verify your email address before logging in.<br>
+            <a href="/verify-email" style="color: #22c55e; text-decoration: underline;">Click here to verify</a>
+          `;
+          formError.style.display = 'block';
+          submitBtn.disabled = false;
+          btnText.style.display = 'inline';
+          btnLoading.style.display = 'none';
+          return;
+        }
+
+        // Clear any unverified flags for verified/grandfathered users
+        sessionStorage.removeItem('fw_email_unverified');
+        if (!isNewUser) {
+          sessionStorage.setItem('fw_email_grandfathered', 'true');
         }
 
         // Cookie expiry: 30 days if remember me, 1 day otherwise

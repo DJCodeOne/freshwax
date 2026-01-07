@@ -39,9 +39,9 @@ service cloud.firestore {
                       // Allow admin API updates (affectedKeys returns top-level keys only)
                       // API has its own admin UID protection
                       request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['roles', 'pendingRoles', 'displayName', 'approved', 'updatedAt',
+                        .hasOnly(['roles', 'pendingRoles', 'displayName', 'name', 'phone', 'approved', 'updatedAt',
                                   'isAdmin', 'permissions', 'suspended', 'approvedAt',
-                                  'deleted', 'deletedAt', 'deletedBy']);
+                                  'deleted', 'deletedAt', 'deletedBy', 'partnerInfo']);
       allow delete: if isAdmin();
     }
 
