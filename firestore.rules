@@ -41,7 +41,9 @@ service cloud.firestore {
                       request.resource.data.diff(resource.data).affectedKeys()
                         .hasOnly(['roles', 'pendingRoles', 'displayName', 'name', 'phone', 'approved', 'updatedAt',
                                   'isAdmin', 'permissions', 'suspended', 'approvedAt',
-                                  'deleted', 'deletedAt', 'deletedBy', 'partnerInfo']);
+                                  'deleted', 'deletedAt', 'deletedBy', 'partnerInfo',
+                                  'stripeConnectId', 'stripeConnectStatus', 'stripeChargesEnabled', 'stripePayoutsEnabled',
+                                  'stripeDetailsSubmitted', 'stripeLastUpdated', 'paypalEmail', 'paypalLinkedAt', 'payoutMethod']);
       allow delete: if isAdmin();
     }
 
