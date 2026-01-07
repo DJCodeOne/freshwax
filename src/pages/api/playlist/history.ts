@@ -5,7 +5,7 @@
 import type { APIContext } from 'astro';
 
 const KV_HISTORY_KEY = 'playlist-history';
-const MAX_HISTORY_SIZE = 100;
+const MAX_HISTORY_SIZE = 500;
 
 function getKV(locals: any): any {
   return (locals as any).runtime?.env?.CACHE;

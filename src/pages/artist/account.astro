@@ -214,16 +214,30 @@ export const prerender = false;
           </section>
 
           <!-- Payment Setup Section -->
-          <section class="account-section stripe-section" id="stripe-connect-section">
-            <div class="section-header">
-              <h2>🏦 Payment Setup</h2>
-              {(partner.stripeConnectStatus === 'active' || partner.paypalEmail) && (
-                <div class="payout-method-badge">
-                  Preferred: <strong>{partner.payoutMethod === 'paypal' ? 'PayPal' : 'Stripe'}</strong>
-                </div>
-              )}
+          <section class={`account-section stripe-section ${(partner.stripeConnectStatus === 'active' || partner.paypalEmail) ? 'payment-complete' : ''}`} id="stripe-connect-section" data-collapsed={(partner.stripeConnectStatus === 'active' || partner.paypalEmail) ? 'true' : 'false'}>
+            <div class="section-header clickable" id="payment-section-toggle">
+              <div class="header-left">
+                <h2>🏦 Payment Setup</h2>
+                {(partner.stripeConnectStatus === 'active' || partner.paypalEmail) && (
+                  <span class="setup-complete-badge">✓ Connected</span>
+                )}
+              </div>
+              <div class="header-right">
+                {(partner.stripeConnectStatus === 'active' || partner.paypalEmail) && (
+                  <div class="payout-method-badge">
+                    Preferred: <strong>{partner.payoutMethod === 'paypal' ? 'PayPal' : 'Stripe'}</strong>
+                  </div>
+                )}
+                {(partner.stripeConnectStatus === 'active' || partner.paypalEmail) && (
+                  <button class="collapse-toggle" id="payment-collapse-btn" aria-label="Toggle payment section">
+                    <span class="collapse-icon">▼</span>
+                  </button>
+                )}
+              </div>
             </div>
 
+            <!-- Collapsible Content -->
+            <div class="payment-content" id="payment-content">
             <!-- Payout Method Tabs -->
             <div class="payout-tabs">
               <button class="payout-tab active" data-tab="stripe">
@@ -326,6 +340,7 @@ export const prerender = false;
                 </div>
               )}
             </div>
+            </div><!-- end payment-content -->
 
             {partner.pendingBalance > 0 && !partner.stripeConnectStatus && !partner.paypalEmail && (
               <div class="pending-earnings-notice">
@@ -1226,6 +1241,86 @@ export const prerender = false;
     border-color: #6366f1;
   }
 
+  /* Collapsible Payment Section */
+  .stripe-section.payment-complete .section-header.clickable {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .stripe-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .stripe-section .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .stripe-section .header-left h2 {
+    margin: 0;
+  }
+
+  .stripe-section .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .setup-complete-badge {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .collapse-toggle {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .collapse-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .collapse-icon {
+    color: white;
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+  }
+
+  .stripe-section[data-collapsed="true"] .collapse-icon {
+    transform: rotate(-90deg);
+  }
+
+  .payment-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+    max-height: 800px;
+    opacity: 1;
+  }
+
+  .stripe-section[data-collapsed="true"] .payment-content {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
   .stripe-connect-content {
     padding: 0.5rem 0;
   }
@@ -1918,12 +2013,15 @@ export const prerender = false;
 </style>
 
 <script type="module">
-  const partnerId = document.cookie.split('; ')
-    .find(row => row.startsWith('partnerId='))
-    ?.split('=')[1] || '';
-  
-  // Edit Profile Toggle
-  const editBtn = document.getElementById('edit-profile-btn');
+  function initArtistAccount() {
+    console.log('[ArtistAccount] Initializing...');
+    const partnerId = document.cookie.split('; ')
+      .find(row => row.startsWith('partnerId='))
+      ?.split('=')[1] || '';
+    console.log('[ArtistAccount] Partner ID:', partnerId);
+
+    // Edit Profile Toggle
+    const editBtn = document.getElementById('edit-profile-btn');
   const profileView = document.getElementById('profile-view');
   const profileEdit = document.getElementById('profile-edit');
   const cancelBtn = document.getElementById('cancel-profile');
@@ -1979,9 +2077,30 @@ export const prerender = false;
     saveBtn.disabled = false;
   });
   
+  // Payment Section Toggle (collapsible when complete)
+  const paymentSection = document.getElementById('stripe-connect-section');
+  const paymentToggle = document.getElementById('payment-section-toggle');
+  const paymentCollapseBtn = document.getElementById('payment-collapse-btn');
+
+  function togglePaymentSection() {
+    if (!paymentSection) return;
+    const isCollapsed = paymentSection.dataset.collapsed === 'true';
+    paymentSection.dataset.collapsed = isCollapsed ? 'false' : 'true';
+  }
+
+  // Click on header or button to toggle
+  paymentToggle?.addEventListener('click', (e) => {
+    // Only toggle if payment is complete (has the toggle button)
+    if (paymentCollapseBtn && paymentSection?.classList.contains('payment-complete')) {
+      togglePaymentSection();
+    }
+  });
+
   // Stripe Connect - Start onboarding
   const stripeConnectBtn = document.getElementById('stripe-connect-btn');
+  console.log('[ArtistAccount] Stripe Connect btn:', stripeConnectBtn);
   stripeConnectBtn?.addEventListener('click', async () => {
+    console.log('[ArtistAccount] Stripe Connect btn CLICKED');
     stripeConnectBtn.textContent = 'Creating account...';
     stripeConnectBtn.disabled = true;
 
@@ -2010,7 +2129,9 @@ export const prerender = false;
 
   // Stripe Connect - Continue onboarding
   const stripeContinueBtn = document.getElementById('stripe-continue-btn');
+  console.log('[ArtistAccount] Stripe Continue btn:', stripeContinueBtn);
   stripeContinueBtn?.addEventListener('click', async () => {
+    console.log('[ArtistAccount] Stripe Continue btn CLICKED');
     stripeContinueBtn.textContent = 'Loading...';
     stripeContinueBtn.disabled = true;
 
@@ -2086,8 +2207,10 @@ export const prerender = false;
   // PayPal Link
   const paypalLinkBtn = document.getElementById('paypal-link-btn');
   const paypalEmailInput = document.getElementById('paypal-email-input');
+  console.log('[ArtistAccount] PayPal Link btn:', paypalLinkBtn);
 
   paypalLinkBtn?.addEventListener('click', async () => {
+    console.log('[ArtistAccount] PayPal Link btn CLICKED');
     const email = paypalEmailInput?.value?.trim();
 
     if (!email || !email.includes('@')) {
@@ -2244,10 +2367,10 @@ export const prerender = false;
   const shippingStatus = document.getElementById('shipping-save-status');
 
   saveShippingBtn?.addEventListener('click', async () => {
-    const ukInput = document.getElementById('shipping-uk') as HTMLInputElement;
-    const euInput = document.getElementById('shipping-eu') as HTMLInputElement;
-    const intlInput = document.getElementById('shipping-intl') as HTMLInputElement;
-    const shipsFromInput = document.getElementById('ships-from') as HTMLInputElement;
+    const ukInput = document.getElementById('shipping-uk');
+    const euInput = document.getElementById('shipping-eu');
+    const intlInput = document.getElementById('shipping-intl');
+    const shipsFromInput = document.getElementById('ships-from');
 
     const vinylShippingUK = ukInput?.value ? parseFloat(ukInput.value) : null;
     const vinylShippingEU = euInput?.value ? parseFloat(euInput.value) : null;
@@ -2290,4 +2413,9 @@ export const prerender = false;
     saveShippingBtn.textContent = 'Save Shipping Rates';
     saveShippingBtn.disabled = false;
   });
+  } // end initArtistAccount
+
+  // Run on initial load and ViewTransitions navigation
+  initArtistAccount();
+  document.addEventListener('astro:page-load', initArtistAccount);
 </script>

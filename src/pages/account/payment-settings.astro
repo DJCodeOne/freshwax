@@ -60,10 +60,22 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         <div class="vendor-roles" id="vendor-roles"></div>
 
         <!-- Payment Setup Section -->
-        <section class="connect-section">
-          <h2>Payment Method</h2>
-          <div class="payout-method-indicator" id="payout-method-indicator"></div>
+        <section class="connect-section" id="payment-section">
+          <div class="section-header" id="payment-header">
+            <div class="header-left">
+              <h2>Payment Method</h2>
+              <span class="setup-complete-badge" id="setup-badge" style="display:none">&#10003; Connected</span>
+            </div>
+            <div class="header-right">
+              <div class="payout-method-indicator" id="payout-method-indicator"></div>
+              <button class="collapse-toggle" id="payment-collapse-btn" style="display:none" aria-label="Toggle payment section">
+                <span class="collapse-icon">&#9660;</span>
+              </button>
+            </div>
+          </div>
 
+          <!-- Collapsible Content -->
+          <div class="payment-content" id="payment-content">
           <!-- Payout Method Tabs -->
           <div class="payout-tabs">
             <button class="payout-tab active" data-tab="stripe">
@@ -89,6 +101,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
               <div class="status-loading">Checking PayPal status...</div>
             </div>
           </div>
+          </div><!-- end payment-content -->
         </section>
 
         <!-- Earnings Summary -->
@@ -177,12 +190,14 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
   let vendorRoles = [];
 
   async function init() {
+    console.log('[PaymentSettings] init() called');
     const loadingState = document.getElementById('loading-state');
     const authRequired = document.getElementById('auth-required');
     const notVendor = document.getElementById('not-vendor');
     const mainContent = document.getElementById('main-content');
 
     onAuthStateChanged(auth, async (user) => {
+      console.log('[PaymentSettings] onAuthStateChanged - user:', user ? user.uid : 'null');
       if (!user) {
         loadingState.style.display = 'none';
         authRequired.style.display = 'block';
@@ -193,27 +208,33 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 
       try {
         // Get user type/roles from existing API
+        console.log('[PaymentSettings] Fetching user type...');
         const userRes = await fetch(`/api/get-user-type?uid=${user.uid}`);
-        const userData = await userRes.json();
+        const userTypeData = await userRes.json();
+        console.log('[PaymentSettings] User type data:', userTypeData);
 
         // Determine vendor roles
         vendorRoles = [];
-        const roles = userData.roles || {};
+        const roles = userTypeData.roles || {};
 
         if (roles.artist === true) vendorRoles.push('artist');
         if (roles.merchSupplier === true) vendorRoles.push('merchSupplier');
         if (roles.vinylSeller === true) vendorRoles.push('vinylSeller');
+        console.log('[PaymentSettings] Vendor roles:', vendorRoles);
 
         // If not a vendor, show message
         if (vendorRoles.length === 0) {
+          console.log('[PaymentSettings] No vendor roles - showing not-vendor screen');
           loadingState.style.display = 'none';
           notVendor.style.display = 'block';
           return;
         }
 
         // Get payment status - use unified endpoint
+        console.log('[PaymentSettings] Fetching payment status...');
         const paymentRes = await fetch(`/api/payment/status?userId=${user.uid}`);
         const paymentData = await paymentRes.json();
+        console.log('[PaymentSettings] Payment data:', paymentData);
 
         // Store combined data
         userData = paymentData;
@@ -240,6 +261,17 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         }
         if (paymentData.paypalLinked) {
           document.getElementById('paypal-check').style.display = 'inline';
+        }
+
+        // If payment is connected, show collapse button and auto-collapse
+        if (paymentData.stripeConnected || paymentData.paypalLinked) {
+          const setupBadge = document.getElementById('setup-badge');
+          const collapseBtn = document.getElementById('payment-collapse-btn');
+          const paymentSection = document.getElementById('payment-section');
+
+          if (setupBadge) setupBadge.style.display = 'inline';
+          if (collapseBtn) collapseBtn.style.display = 'flex';
+          if (paymentSection) paymentSection.classList.add('collapsed');
         }
 
         // Update earnings
@@ -287,8 +319,11 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
   }
 
   function updateStripeStatus(data) {
+    console.log('[PaymentSettings] updateStripeStatus called with:', data);
     const statusEl = document.getElementById('connect-status');
+    console.log('[PaymentSettings] connect-status element:', statusEl);
     const status = data.stripeStatus || data.status || 'not_started';
+    console.log('[PaymentSettings] Stripe status:', status);
 
     if (status === 'active' || data.stripeConnected) {
       statusEl.innerHTML = `
@@ -325,7 +360,15 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         </div>
       `;
 
-      document.getElementById('connect-btn').addEventListener('click', startStripeConnect);
+      const continueBtn = document.getElementById('connect-btn');
+      console.log('[PaymentSettings] Continue setup btn found:', !!continueBtn, continueBtn);
+      if (continueBtn) {
+        continueBtn.addEventListener('click', function(e) {
+          console.log('[PaymentSettings] Continue btn CLICKED');
+          startStripeConnect();
+        });
+        console.log('[PaymentSettings] Click listener added to continue btn');
+      }
     } else {
       statusEl.innerHTML = `
         <div class="status-not-started">
@@ -343,12 +386,22 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         </div>
       `;
 
-      document.getElementById('connect-btn').addEventListener('click', startStripeConnect);
+      const connectBtn = document.getElementById('connect-btn');
+      console.log('[PaymentSettings] Connect btn found:', !!connectBtn, connectBtn);
+      if (connectBtn) {
+        connectBtn.addEventListener('click', function(e) {
+          console.log('[PaymentSettings] Connect btn CLICKED');
+          startStripeConnect();
+        });
+        console.log('[PaymentSettings] Click listener added to connect btn');
+      }
     }
   }
 
   function updatePayPalStatus(data) {
+    console.log('[PaymentSettings] updatePayPalStatus called with:', data);
     const statusEl = document.getElementById('paypal-status');
+    console.log('[PaymentSettings] paypal-status element:', statusEl);
 
     if (data.paypalLinked) {
       statusEl.innerHTML = `
@@ -383,7 +436,15 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         </div>
       `;
 
-      document.getElementById('paypal-link-btn')?.addEventListener('click', linkPayPal);
+      const linkBtn = document.getElementById('paypal-link-btn');
+      console.log('[PaymentSettings] PayPal link btn found:', !!linkBtn, linkBtn);
+      if (linkBtn) {
+        linkBtn.addEventListener('click', function(e) {
+          console.log('[PaymentSettings] PayPal link btn CLICKED');
+          linkPayPal();
+        });
+        console.log('[PaymentSettings] Click listener added to PayPal link btn');
+      }
     }
   }
 
@@ -417,6 +478,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
   }
 
   async function startStripeConnect() {
+    console.log('[PaymentSettings] startStripeConnect called, userId:', currentUserId);
     const btn = document.getElementById('connect-btn');
     if (btn) {
       btn.disabled = true;
@@ -424,6 +486,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     }
 
     try {
+      console.log('[PaymentSettings] Calling Stripe Connect API...');
       // Use user endpoint that works for all vendor types
       const res = await fetch('/api/stripe/connect/user/create-account', {
         method: 'POST',
@@ -452,9 +515,11 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
   }
 
   async function linkPayPal() {
+    console.log('[PaymentSettings] linkPayPal called');
     const input = document.getElementById('paypal-email-input');
     const btn = document.getElementById('paypal-link-btn');
-    const email = input?.value?.trim();
+    const email = input ? input.value.trim() : '';
+    console.log('[PaymentSettings] PayPal email:', email);
 
     if (!email || !email.includes('@')) {
       alert('Please enter a valid email address');
@@ -515,7 +580,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     }
   }
 
-  async function setPreferred(method: 'stripe' | 'paypal') {
+  async function setPreferred(method) {
     try {
       const res = await fetch('/api/paypal/set-payout-method', {
         method: 'POST',
@@ -543,6 +608,17 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
       const tabName = tab.dataset.tab;
       document.getElementById(`${tabName}-tab`)?.classList.add('active');
     });
+  });
+
+  // Payment section collapse toggle
+  const paymentHeader = document.getElementById('payment-header');
+  paymentHeader?.addEventListener('click', () => {
+    const paymentSection = document.getElementById('payment-section');
+    const collapseBtn = document.getElementById('payment-collapse-btn');
+    // Only toggle if collapse button is visible (payment connected)
+    if (collapseBtn && collapseBtn.style.display !== 'none') {
+      paymentSection?.classList.toggle('collapsed');
+    }
   });
 
   function updatePayoutsList(payouts, pending) {
@@ -745,7 +821,82 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 
   section h2 {
     font-size: 1.25rem;
+    margin-bottom: 0;
+  }
+
+  /* Collapsible Payment Section */
+  .connect-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
     margin-bottom: 20px;
+    cursor: pointer;
+  }
+
+  .connect-section.collapsed .section-header {
+    margin-bottom: 0;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .setup-complete-badge {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .collapse-toggle {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .collapse-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .collapse-icon {
+    color: white;
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+  }
+
+  .connect-section.collapsed .collapse-icon {
+    transform: rotate(-90deg);
+  }
+
+  .payment-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    max-height: 800px;
+    opacity: 1;
+  }
+
+  .connect-section.collapsed .payment-content {
+    max-height: 0;
+    opacity: 0;
   }
 
   /* Payout Method Tabs */

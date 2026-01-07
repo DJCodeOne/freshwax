@@ -160,8 +160,8 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
   const app = initializeApp(firebaseConfig, 'selling-settings');
   const auth = getAuth(app);
 
-  let currentUserId: string | null = null;
-  let userData: any = {};
+  let currentUserId = null;
+  let userData = {};
 
   async function init() {
     const loadingState = document.getElementById('loading-state');
@@ -170,8 +170,8 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        loadingState!.style.display = 'none';
-        authRequired!.style.display = 'block';
+        if (loadingState) loadingState.style.display = 'none';
+        if (authRequired) authRequired.style.display = 'block';
         return;
       }
 
@@ -194,8 +194,8 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         userData = { ...stripeData, ...paypalData };
 
         // Hide loading, show content
-        loadingState!.style.display = 'none';
-        mainContent!.style.display = 'block';
+        if (loadingState) loadingState.style.display = 'none';
+        if (mainContent) mainContent.style.display = 'block';
 
         // Update Stripe status
         updateStripeStatus(stripeData);
@@ -208,43 +208,51 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 
         // Show check marks on tabs
         if (stripeData.status === 'active') {
-          document.getElementById('stripe-check')!.style.display = 'inline';
+          const stripeCheck = document.getElementById('stripe-check');
+          if (stripeCheck) stripeCheck.style.display = 'inline';
         }
         if (paypalData.paypalLinked) {
-          document.getElementById('paypal-check')!.style.display = 'inline';
+          const paypalCheck = document.getElementById('paypal-check');
+          if (paypalCheck) paypalCheck.style.display = 'inline';
         }
 
         // Update earnings
         if (payoutsData.success) {
-          document.getElementById('total-earned')!.textContent = `£${(payoutsData.summary?.totalPaid || 0).toFixed(2)}`;
-          document.getElementById('this-month')!.textContent = `£${(payoutsData.summary?.thisMonthPaid || 0).toFixed(2)}`;
-          document.getElementById('pending-amount')!.textContent = `£${(payoutsData.summary?.totalPending || 0).toFixed(2)}`;
+          const totalEarnedEl = document.getElementById('total-earned');
+          const thisMonthEl = document.getElementById('this-month');
+          const pendingEl = document.getElementById('pending-amount');
+          if (totalEarnedEl) totalEarnedEl.textContent = `£${(payoutsData.summary?.totalPaid || 0).toFixed(2)}`;
+          if (thisMonthEl) thisMonthEl.textContent = `£${(payoutsData.summary?.thisMonthPaid || 0).toFixed(2)}`;
+          if (pendingEl) pendingEl.textContent = `£${(payoutsData.summary?.totalPending || 0).toFixed(2)}`;
 
           updatePayoutsList(payoutsData.payouts, payoutsData.pendingPayouts);
         }
 
       } catch (error) {
         console.error('Failed to load selling settings:', error);
-        loadingState!.style.display = 'none';
-        mainContent!.style.display = 'block';
+        if (loadingState) loadingState.style.display = 'none';
+        if (mainContent) mainContent.style.display = 'block';
       }
     });
   }
 
-  function updateMethodIndicator(method: string | null, stripeActive: boolean, paypalLinked: boolean) {
+  function updateMethodIndicator(method, stripeActive, paypalLinked) {
     const indicator = document.getElementById('payout-method-indicator');
     if (stripeActive || paypalLinked) {
       const preferredMethod = method === 'paypal' ? 'PayPal' : 'Stripe';
-      indicator!.innerHTML = `Preferred: <strong>${preferredMethod}</strong>`;
-      indicator!.style.display = 'block';
+      if (indicator) {
+        indicator.innerHTML = `Preferred: <strong>${preferredMethod}</strong>`;
+        indicator.style.display = 'block';
+      }
     }
   }
 
-  function updateStripeStatus(data: any) {
+  function updateStripeStatus(data) {
     const statusEl = document.getElementById('connect-status');
+    if (!statusEl) return;
 
     if (data.status === 'active') {
-      statusEl!.innerHTML = `
+      statusEl.innerHTML = `
         <div class="status-active">
           <span class="status-icon">&#10003;</span>
           <div>
@@ -263,7 +271,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 
       document.getElementById('set-stripe-preferred')?.addEventListener('click', () => setPreferred('stripe'));
     } else if (data.status === 'onboarding' || data.status === 'not_started') {
-      statusEl!.innerHTML = `
+      statusEl.innerHTML = `
         <div class="status-incomplete">
           <span class="status-icon">&#9888;</span>
           <div>
@@ -278,9 +286,9 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         </div>
       `;
 
-      document.getElementById('connect-btn')!.addEventListener('click', startStripeConnect);
+      document.getElementById('connect-btn')?.addEventListener('click', startStripeConnect);
     } else if (data.status === 'restricted') {
-      statusEl!.innerHTML = `
+      statusEl.innerHTML = `
         <div class="status-restricted">
           <span class="status-icon">&#9888;</span>
           <div>
@@ -291,15 +299,16 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         </div>
       `;
 
-      document.getElementById('update-btn')!.addEventListener('click', startStripeConnect);
+      document.getElementById('update-btn')?.addEventListener('click', startStripeConnect);
     }
   }
 
-  function updatePayPalStatus(data: any) {
+  function updatePayPalStatus(data) {
     const statusEl = document.getElementById('paypal-status');
+    if (!statusEl) return;
 
     if (data.paypalLinked) {
-      statusEl!.innerHTML = `
+      statusEl.innerHTML = `
         <div class="status-active">
           <span class="status-icon">&#10003;</span>
           <div>
@@ -317,7 +326,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
       document.getElementById('paypal-change-btn')?.addEventListener('click', changePayPalEmail);
       document.getElementById('set-paypal-preferred')?.addEventListener('click', () => setPreferred('paypal'));
     } else {
-      statusEl!.innerHTML = `
+      statusEl.innerHTML = `
         <div class="status-incomplete">
           <span class="status-icon">P</span>
           <div>
@@ -336,7 +345,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
   }
 
   async function startStripeConnect() {
-    const btn = document.getElementById('connect-btn') as HTMLButtonElement | null;
+    const btn = document.getElementById('connect-btn');
     if (btn) {
       btn.disabled = true;
       btn.textContent = 'Loading...';
@@ -356,7 +365,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
       } else {
         throw new Error(data.error || 'Failed to start Stripe setup');
       }
-    } catch (error: any) {
+    } catch (error) {
       alert(error.message);
       if (btn) {
         btn.disabled = false;
@@ -366,8 +375,8 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
   }
 
   async function linkPayPal() {
-    const input = document.getElementById('paypal-email-input') as HTMLInputElement;
-    const btn = document.getElementById('paypal-link-btn') as HTMLButtonElement;
+    const input = document.getElementById('paypal-email-input');
+    const btn = document.getElementById('paypal-link-btn');
     const email = input?.value?.trim();
 
     if (!email || !email.includes('@')) {
@@ -421,7 +430,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     }
   }
 
-  async function setPreferred(method: 'stripe' | 'paypal') {
+  async function setPreferred(method) {
     try {
       const res = await fetch('/api/paypal/set-payout-method', {
         method: 'POST',
@@ -441,13 +450,13 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     tab.addEventListener('click', () => {
       document.querySelectorAll('.payout-tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.payout-tab-content').forEach(c => c.classList.remove('active'));
-      (tab as HTMLElement).classList.add('active');
-      const tabName = (tab as HTMLElement).dataset.tab;
+      tab.classList.add('active');
+      const tabName = tab.dataset.tab;
       document.getElementById(`${tabName}-tab`)?.classList.add('active');
     });
   });
 
-  function updatePayoutsList(payouts: any[], pending: any[]) {
+  function updatePayoutsList(payouts, pending) {
     const listEl = document.getElementById('payouts-list');
 
     if ((!payouts || payouts.length === 0) && (!pending || pending.length === 0)) {
@@ -488,10 +497,10 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
       }
     }
 
-    listEl!.innerHTML = html;
+    if (listEl) listEl.innerHTML = html;
   }
 
-  function formatDate(dateStr: string) {
+  function formatDate(dateStr) {
     if (!dateStr) return '';
     return new Date(dateStr).toLocaleDateString('en-GB', {
       day: 'numeric',
