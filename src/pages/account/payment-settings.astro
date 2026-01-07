@@ -192,26 +192,17 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
       currentUserId = user.uid;
 
       try {
-        // First check user's roles
-        const userRes = await fetch(`/api/user/roles?userId=${user.uid}`);
-        const userRolesData = await userRes.json();
+        // Get user type/roles from existing API
+        const userRes = await fetch(`/api/get-user-type?uid=${user.uid}`);
+        const userData = await userRes.json();
 
         // Determine vendor roles
         vendorRoles = [];
-        const roles = userRolesData.roles || {};
+        const roles = userData.roles || {};
 
         if (roles.artist === true) vendorRoles.push('artist');
         if (roles.merchSupplier === true) vendorRoles.push('merchSupplier');
         if (roles.vinylSeller === true) vendorRoles.push('vinylSeller');
-
-        // Also check artists collection for legacy data
-        if (vendorRoles.length === 0) {
-          const artistRes = await fetch(`/api/artist/check?userId=${user.uid}`);
-          const artistData = await artistRes.json();
-          if (artistData.isArtist) vendorRoles.push('artist');
-          if (artistData.isMerchSupplier) vendorRoles.push('merchSupplier');
-          if (artistData.isVinylSeller) vendorRoles.push('vinylSeller');
-        }
 
         // If not a vendor, show message
         if (vendorRoles.length === 0) {
@@ -433,8 +424,8 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     }
 
     try {
-      // Use unified endpoint that works for all vendor types
-      const res = await fetch('/api/stripe/connect/create-account', {
+      // Use user endpoint that works for all vendor types
+      const res = await fetch('/api/stripe/connect/user/create-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
