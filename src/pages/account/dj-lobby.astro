@@ -1447,7 +1447,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     sendDm,
     cleanup as cleanupPusher,
     getOnlineDjs
-  } from '/dj-lobby-pusher.js?v=3';
+  } from '/dj-lobby-pusher.js?v=3.4';
   
   const app = initializeApp(window.FIREBASE_CONFIG);
 
@@ -1508,6 +1508,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   let icecastAnalyserR = null;
   let icecastKWeightedAnalyserL = null;
   let icecastKWeightedAnalyserR = null;
+  let icecastGainNode = null; // GainNode to control volume without breaking analyser
 
   // LED meter animation IDs - declared here to avoid timing issues
   let liveMeterAnimationId = null;
@@ -2377,8 +2378,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       // Stop relay audio preview
       const relayAudio = document.getElementById('relayAudio');
       if (relayAudio) {
-        relayAudio.pause();
-        relayAudio.src = '';
+        relayAudio.muted = true;
+        // relayAudio keeps playing for meters
       }
       // Clear relay selection when switching back
       selectedRelaySource = null;
@@ -2557,6 +2558,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
               initBroadcastMeters();
               // Start preview meter animation
               if (window.startPreviewMeterAnimation) window.startPreviewMeterAnimation();
+              // Start live output LED meters for relay mode
+              if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
+                animateLiveMeters();
+              }
             }
           }, { once: true });
         } else if (icecastAudioContext) {
@@ -3319,6 +3324,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           }
           // Start LED meter animation if not already running
           if (window.startPreviewMeterAnimation) window.startPreviewMeterAnimation();
+              // Start live output LED meters for relay mode
+              if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
+                animateLiveMeters();
+              }
           // Start live output meters for BUTT mode
           if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
             animateLiveMeters();
@@ -3336,6 +3345,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
             }
             // Start LED meter animation if not already running
             if (window.startPreviewMeterAnimation) window.startPreviewMeterAnimation();
+              // Start live output LED meters for relay mode
+              if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
+                animateLiveMeters();
+              }
             // Start live output meters for BUTT mode
             if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
               animateLiveMeters();
@@ -3446,10 +3459,13 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       highPassL.connect(icecastKWeightedAnalyserL);
       highPassR.connect(icecastKWeightedAnalyserR);
 
-      // Output to speakers (unfiltered)
-      source.connect(icecastAudioContext.destination);
+      // Output to speakers through GainNode (allows muting without breaking analyser)
+      icecastGainNode = icecastAudioContext.createGain();
+      icecastGainNode.gain.value = 1; // Start at full volume
+      source.connect(icecastGainNode);
+      icecastGainNode.connect(icecastAudioContext.destination);
 
-      console.log('[Audio] Icecast analysers initialized with K-weighting');
+      console.log('[Audio] Icecast analysers initialized with K-weighting and GainNode');
     } catch (e) {
       console.error('[Audio] Icecast analyser setup error:', e);
     }
@@ -4266,13 +4282,19 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       }
     });
 
-    // Source toggle button - only works in OBS mode, switches between preview and live
+    // Source toggle button - switches between preview and live audio sources
     document.getElementById('audioSourceToggle')?.addEventListener('click', () => {
-      // If BUTT or RELAY mode is active, don't toggle - there's only one stream source
+      // In BUTT/RELAY mode, only allow toggle if HLS video is playing (live analysers available)
       if (currentPreviewSource === 'butt' || currentPreviewSource === 'relay') {
-        return;
+        const hlsVid = document.getElementById('hlsVideo');
+        const hasLiveAnalysers = liveAnalyserL && liveAnalyserR;
+        if (!hlsVid || hlsVid.paused || !hasLiveAnalysers) {
+          console.log('[AudioToggle] Cannot toggle in relay mode - HLS not playing or no live analysers');
+          return;
+        }
       }
       broadcastAudioSource = broadcastAudioSource === 'preview' ? 'live' : 'preview';
+      console.log('[AudioToggle] Switched to:', broadcastAudioSource);
       const label = document.querySelector('#audioSourceToggle .source-label');
       if (label) label.textContent = broadcastAudioSource.toUpperCase();
 
@@ -4361,24 +4383,36 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   }
 
   function animateBroadcastMeters() {
-    // Get the active analyser based on OBS/BUTT tab and preview/live toggle
+    // Get the active analyser based on OBS/BUTT/Relay tab and preview/live toggle
     let analyserL, analyserR;
     let kWeightedL = null, kWeightedR = null;
 
-    if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && icecastAnalyserL && icecastAnalyserR) {
-      // BUTT tab selected - use Icecast audio
+    if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && broadcastAudioSource === 'preview' && icecastAnalyserL && icecastAnalyserR) {
+      // BUTT/Relay in preview mode - use Icecast audio (relay input)
       analyserL = icecastAnalyserL;
       analyserR = icecastAnalyserR;
       // Use K-weighted analysers for accurate LUFS when available
       kWeightedL = icecastKWeightedAnalyserL;
       kWeightedR = icecastKWeightedAnalyserR;
-    } else {
-      // OBS tab selected - use preview or live based on toggle
+    } else if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && broadcastAudioSource === 'live' && liveAnalyserL && liveAnalyserR) {
+      // BUTT/Relay in live mode - use HLS video audio (stream output)
+      analyserL = liveAnalyserL;
+      analyserR = liveAnalyserR;
+      kWeightedL = liveKWeightedAnalyserL;
+      kWeightedR = liveKWeightedAnalyserR;
+    } else if (currentPreviewSource === 'obs') {
+      // OBS mode - use preview or live based on toggle
       analyserL = broadcastAudioSource === 'preview' ? obsAnalyserL : liveAnalyserL;
       analyserR = broadcastAudioSource === 'preview' ? obsAnalyserR : liveAnalyserR;
       // K-weighted analysers for accurate LUFS
       kWeightedL = broadcastAudioSource === 'preview' ? obsKWeightedAnalyserL : liveKWeightedAnalyserL;
       kWeightedR = broadcastAudioSource === 'preview' ? obsKWeightedAnalyserR : liveKWeightedAnalyserR;
+    } else {
+      // Fallback - use icecast if available
+      analyserL = icecastAnalyserL;
+      analyserR = icecastAnalyserR;
+      kWeightedL = icecastKWeightedAnalyserL;
+      kWeightedR = icecastKWeightedAnalyserR;
     }
 
     if (analyserL && analyserR) {
@@ -4961,8 +4995,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         // Check if this is an audio-only stream (BUTT/Icecast) or video (HLS/Red5)
         // Important: If hlsUrl exists, always treat as video stream (even for BUTT placeholder mode)
         // The placeholder mode generates an HLS video stream via FFmpeg
-        const hasHlsUrl = !!currentStream.hlsUrl;
+        // For relay mode, always show audio placeholder on both sides (no HLS video)
+        const hasHlsUrl = !!currentStream.hlsUrl && !currentStream.isRelay;
         const isAudioStream = !hasHlsUrl && (
+                             currentStream.isRelay ||
                              currentStream.streamType === 'audio' ||
                              currentStream.broadcastMode === 'butt' ||
                              currentStream.audioStreamUrl?.includes(':8000') ||
@@ -5037,6 +5073,66 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           noStreamTakeover?.classList.add('hidden');
           // Enable End Stream button for current streamer
           updateEndStreamButton(true, true);
+
+          // DJ is viewing their own live stream - set streaming flag
+          userIsStreaming = true;
+
+          // If this is the DJ's own relay stream and relay audio isn't playing, restart it
+          // This handles the case where DJ logs out and back in while live
+          if (currentStream.isRelay && currentStream.audioStreamUrl) {
+            const relayAudio = document.getElementById('relayAudio');
+            if (relayAudio && relayAudio.paused) {
+              console.log('[Stream] Restarting relay audio preview for own live stream');
+
+              // Set selectedRelaySource from the current stream's relay info
+              // This ensures the relay preview shows the correct station
+              if (currentStream.relaySource) {
+                selectedRelaySource = {
+                  id: currentStream.relaySource.url?.split('/').pop() || 'unknown',
+                  url: currentStream.relaySource.url || currentStream.audioStreamUrl,
+                  name: currentStream.relaySource.stationName || 'External Source',
+                  nowPlaying: currentStream.title || '',
+                  listeners: 0
+                };
+                console.log('[Stream] Set selectedRelaySource from live stream:', selectedRelaySource.name);
+              }
+
+              // Switch to relay mode - this handles all UI, tabs, and indicators
+              setPreviewSource('relay');
+              console.log('[Stream] Switched to relay mode');
+
+              relayAudio.src = currentStream.audioStreamUrl;
+              relayAudio.play().then(() => {
+                console.log('[Stream] Relay audio restarted successfully');
+                // Set up icecast analysers if not already done
+                if (!icecastAudioContext) {
+                  setupIcecastAnalysers(relayAudio);
+                }
+                // Mute relay audio since we're already live (use GainNode if available)
+                if (icecastGainNode) {
+                  icecastGainNode.gain.value = 0;
+                } else {
+                  relayAudio.volume = 0;
+                }
+                // Start LED meter animations now that analysers are set up
+                console.log('[Stream] Starting LED meters for relay reconnect');
+                // Start left LED strip (preview meters)
+                if (window.startPreviewMeterAnimation) {
+                  window.startPreviewMeterAnimation();
+                }
+                // Start right LED strip (live meters)
+                if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
+                  animateLiveMeters();
+                }
+                // Also restart broadcast meters with analysers now available
+                if (!broadcastMeterAnimationId) {
+                  initBroadcastMeters();
+                }
+              }).catch(e => {
+                console.warn('[Stream] Could not restart relay audio:', e.message);
+              });
+            }
+          }
         } else {
           takeoverRequest?.classList.remove('hidden');
           noStreamTakeover?.classList.add('hidden');
@@ -5053,6 +5149,19 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         // Show Broadcast Audio Panel when live
         document.getElementById('broadcastAudioPanel')?.classList.remove('hidden');
         initBroadcastMeters();
+        // Start live LED meters for right side (only if analysers are ready)
+        // For relay mode, analysers are set up async so this may not start here
+        // but will be started in the relay restart callback
+        if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
+          // Check if we have analysers available
+          const hasAnalysers = (icecastAnalyserL && icecastAnalyserR) || (liveAnalyserL && liveAnalyserR);
+          if (hasAnalysers) {
+            animateLiveMeters();
+            console.log('[Stream] Started live LED meters (analysers ready)');
+          } else {
+            console.log('[Stream] Deferred live LED meters (waiting for analysers)');
+          }
+        }
         // Expand video player to use the extra space
         document.querySelector('.preview-section')?.classList.add('expanded');
         // Disable Go Live button when someone is streaming
@@ -5142,6 +5251,23 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
   // Expose globally for Pusher module to call on stream-ended event
   window.loadStreamStatus = loadStreamStatus;
+
+  // Expose function to reset userIsStreaming flag (called by Pusher when user's stream ends)
+  window.resetUserIsStreaming = function() {
+    console.log('[DJLobby] Resetting userIsStreaming flag');
+    userIsStreaming = false;
+  };
+
+  // Expose stopBroadcastMeters for Pusher module to call when stream ends
+  window.stopBroadcastMeters = stopBroadcastMeters;
+
+  // Expose function to restore GainNode volume (called by Pusher when stream ends)
+  window.restoreIcecastGain = function() {
+    if (icecastGainNode) {
+      icecastGainNode.gain.value = 1;
+      console.log('[DJLobby] Restored GainNode to 1');
+    }
+  };
 
   // Fetch and display stream viewers (users on live page)
   async function loadStreamViewers() {
@@ -6400,6 +6526,50 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   }
 
   async function handleGoLiveReady() {
+    // Use GainNode to silence relay audio without breaking Web Audio API analyser
+    // Setting element.volume=0 can break analyser on some browsers
+    const relayAudio = document.getElementById('relayAudio');
+    console.log('[GoLive] Relay audio element:', relayAudio, 'paused:', relayAudio?.paused);
+    console.log('[GoLive] currentPreviewSource:', currentPreviewSource);
+    console.log('[GoLive] icecastAudioContext:', icecastAudioContext?.state);
+    console.log('[GoLive] icecastAnalyserL:', !!icecastAnalyserL, 'icecastAnalyserR:', !!icecastAnalyserR);
+    console.log('[GoLive] icecastGainNode:', !!icecastGainNode);
+
+    if (relayAudio && !relayAudio.paused) {
+      // Use GainNode to mute - keeps audio flowing through analyser
+      if (icecastGainNode) {
+        icecastGainNode.gain.value = 0;
+        console.log('[GoLive] Set GainNode to 0 (audio still flows to analyser)');
+      } else {
+        // Fallback to volume if GainNode not available
+        relayAudio.volume = 0;
+        console.log('[GoLive] Fallback: Set relay audio volume to 0');
+      }
+
+      // Resume audio context if suspended (required for meters to work)
+      if (icecastAudioContext && icecastAudioContext.state === 'suspended') {
+        await icecastAudioContext.resume();
+        console.log('[GoLive] Resumed icecast audio context, new state:', icecastAudioContext.state);
+      }
+
+      // Ensure meters are running for relay mode
+      if (icecastAnalyserL && icecastAnalyserR) {
+        console.log('[GoLive] Analysers available, liveMeterAnimationId:', liveMeterAnimationId, 'broadcastMeterAnimationId:', broadcastMeterAnimationId);
+        if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
+          animateLiveMeters();
+          console.log('[GoLive] Started live meters for relay');
+        }
+        if (!broadcastMeterAnimationId) {
+          initBroadcastMeters();
+          console.log('[GoLive] Started broadcast meters for relay');
+        }
+      } else {
+        console.warn('[GoLive] Icecast analysers not available');
+      }
+    } else {
+      console.log('[GoLive] Relay audio not playing or not found');
+    }
+
     // Get title and genre from inline fields
     let title, genre;
 
@@ -7184,14 +7354,17 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
 
     function animateLiveMeters() {
-      // Use Icecast analysers when in BUTT mode, otherwise use HLS live analysers
+      // Right side LEDs show live output (what viewers hear)
+      // Priority: liveAnalysers (from audioElement or hlsVideo) > icecastAnalysers (fallback)
       let analyserL, analyserR;
-      if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && icecastAnalyserL && icecastAnalyserR) {
-        analyserL = icecastAnalyserL;
-        analyserR = icecastAnalyserR;
-      } else {
+      if (liveAnalyserL && liveAnalyserR) {
+        // Use live analysers from audioElement or HLS video
         analyserL = liveAnalyserL;
         analyserR = liveAnalyserR;
+      } else if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && icecastAnalyserL && icecastAnalyserR) {
+        // Fallback to icecast analysers for preview audio
+        analyserL = icecastAnalyserL;
+        analyserR = icecastAnalyserR;
       }
 
       if (analyserL && analyserR) {
@@ -7263,6 +7436,41 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         }
         // Clear all LEDs
         document.querySelectorAll('#liveLeftLeds .led, #liveRightLeds .led').forEach(led => led.classList.remove('lit'));
+      });
+    }
+
+    // Set up live analysers on audioElement for audio-only/relay streams
+    const audioEl = document.getElementById('audioElement');
+    if (audioEl) {
+      audioEl.addEventListener('play', () => {
+        // Only set up if we don't already have live analysers (from HLS video)
+        if (!liveAudioContext) {
+          const result = setupAudioMeter(audioEl, 'LiveAudio');
+          if (result) {
+            liveAudioContext = result.audioContext;
+            liveAnalyserL = result.analyserL;
+            liveAnalyserR = result.analyserR;
+            console.log('[Audio] Live audio analysers initialized from audioElement');
+          }
+        }
+        if (liveAudioContext?.state === 'suspended') {
+          liveAudioContext.resume();
+        }
+        if (!liveMeterAnimationId) {
+          animateLiveMeters();
+          console.log('[Audio] Started live meters from audioElement play');
+        }
+      });
+      audioEl.addEventListener('pause', () => {
+        // Don't stop meters if HLS video is still playing
+        const liveVid = document.getElementById('hlsVideo');
+        if (!liveVid || liveVid.paused) {
+          if (liveMeterAnimationId) {
+            cancelAnimationFrame(liveMeterAnimationId);
+            liveMeterAnimationId = null;
+          }
+          document.querySelectorAll('#liveLeftLeds .led, #liveRightLeds .led').forEach(led => led.classList.remove('lit'));
+        }
       });
     }
     // =============== END STEREO AUDIO METERS ===============
