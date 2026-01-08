@@ -337,6 +337,13 @@ async function processArtistPayments(params: {
 
       const itemTotal = (item.price || 0) * (item.quantity || 1);
 
+      // Calculate artist share after fees (Bandcamp-style)
+      // 1% Fresh Wax fee
+      const freshWaxFee = itemTotal * 0.01;
+      // PayPal fee: 1.4% + £0.20 (split fixed fee across items)
+      const paypalFee = (itemTotal * 0.014) + (0.20 / items.length);
+      const artistShare = itemTotal - freshWaxFee - paypalFee;
+
       if (!artistPayments[artistId]) {
         artistPayments[artistId] = {
           artistId,
@@ -350,7 +357,7 @@ async function processArtistPayments(params: {
         };
       }
 
-      artistPayments[artistId].amount += itemTotal;
+      artistPayments[artistId].amount += artistShare;
       artistPayments[artistId].items.push(item.name || item.title || 'Item');
     }
 

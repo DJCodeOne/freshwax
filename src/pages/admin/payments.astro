@@ -26,6 +26,34 @@ const pendingPayouts = await queryCollection('pendingPayouts', {
   limit: 50
 });
 
+// Fetch completed payouts
+const completedPayouts = await queryCollection('payouts', {
+  orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+  limit: 100
+});
+
+// Fetch recent orders to check which need payouts
+const recentOrders = await queryCollection('orders', {
+  orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+  limit: 100
+});
+
+// Find orders needing payouts (orders without corresponding payout records)
+const paidOrderIds = new Set(completedPayouts.map(p => p.orderId));
+const ordersNeedingPayouts = recentOrders.filter(order => {
+  // Skip if already paid
+  if (paidOrderIds.has(order.id)) return false;
+  // Skip if no items
+  if (!order.items || order.items.length === 0) return false;
+  // Skip if payment not completed
+  if (order.paymentStatus !== 'completed' && order.status !== 'completed' && order.orderStatus !== 'completed') return false;
+  // Check if has digital items (which need artist payouts)
+  const hasDigitalItems = order.items.some(item =>
+    item.type === 'digital' || item.type === 'release' || item.type === 'track' || !item.type
+  );
+  return hasDigitalItems;
+});
+
 // Stats
 const openDisputes = disputes.filter(d => d.status === 'open' || d.status === 'needs_response').length;
 const wonDisputes = disputes.filter(d => d.outcome === 'won').length;
@@ -33,11 +61,17 @@ const lostDisputes = disputes.filter(d => d.outcome === 'lost').length;
 const totalRefunded = refunds.reduce((sum, r) => sum + (r.amountRefunded || 0), 0);
 const pendingPayoutTotal = pendingPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
 
+const completedPayoutTotal = completedPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
+const ordersNeedingPayoutTotal = ordersNeedingPayouts.reduce((sum, o) => {
+  const itemTotal = (o.items || []).reduce((s, i) => s + ((i.price || 0) * (i.quantity || 1)), 0);
+  return sum + itemTotal;
+}, 0);
+
 const stats = [
+  { label: 'Orders Need Payout', value: ordersNeedingPayouts.length, type: ordersNeedingPayouts.length > 0 ? 'warning' : 'default', detail: `~£${ordersNeedingPayoutTotal.toFixed(2)}` },
+  { label: 'Pending/Failed', value: pendingPayouts.length, type: pendingPayouts.length > 0 ? 'danger' : 'default', detail: `£${pendingPayoutTotal.toFixed(2)}` },
+  { label: 'Completed Payouts', value: completedPayouts.length, type: 'success', detail: `£${completedPayoutTotal.toFixed(2)}` },
   { label: 'Open Disputes', value: openDisputes, type: openDisputes > 0 ? 'danger' : 'default' },
-  { label: 'Won / Lost', value: `${wonDisputes} / ${lostDisputes}`, type: wonDisputes > lostDisputes ? 'success' : 'warning' },
-  { label: 'Total Refunded', value: `£${totalRefunded.toFixed(2)}`, type: 'info' },
-  { label: 'Pending Payouts', value: pendingPayouts.length, type: pendingPayouts.length > 0 ? 'warning' : 'default', detail: `£${pendingPayoutTotal.toFixed(2)}` },
 ];
 
 // Format currency
@@ -79,19 +113,150 @@ export const prerender = false;
 
   <!-- Tab Navigation -->
   <div class="tabs">
-    <button class="tab active" data-tab="disputes">
+    <button class="tab active" data-tab="trigger">
+      💰 Trigger Payouts ({ordersNeedingPayouts.length})
+    </button>
+    <button class="tab" data-tab="completed">
+      ✅ Completed ({completedPayouts.length})
+    </button>
+    <button class="tab" data-tab="pending">
+      ⏳ Pending ({pendingPayouts.length})
+    </button>
+    <button class="tab" data-tab="disputes">
       ⚠️ Disputes ({disputes.length})
     </button>
     <button class="tab" data-tab="refunds">
       💸 Refunds ({refunds.length})
     </button>
-    <button class="tab" data-tab="pending">
-      ⏳ Pending Payouts ({pendingPayouts.length})
-    </button>
+  </div>
+
+  <!-- Trigger Payouts Tab -->
+  <div class="tab-content" id="trigger-tab">
+    <div class="card">
+      <div class="card-header">
+        <h2>Orders Needing Artist Payouts</h2>
+        <span class="text-muted">{ordersNeedingPayouts.length} orders</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Order</th>
+              <th>Customer</th>
+              <th>Items</th>
+              <th>Total</th>
+              <th>Payment</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ordersNeedingPayouts.length === 0 ? (
+              <tr>
+                <td colspan="7" class="text-center text-muted" style="padding: 3rem;">
+                  All orders have been paid out!
+                </td>
+              </tr>
+            ) : (
+              ordersNeedingPayouts.map(order => {
+                const itemTotal = (order.items || []).reduce((s, i) => s + ((i.price || 0) * (i.quantity || 1)), 0);
+                const artistNames = [...new Set((order.items || []).map(i => i.artist || 'Unknown').filter(Boolean))].join(', ');
+                return (
+                  <tr data-order-id={order.id}>
+                    <td class="cell-secondary">{formatDate(order.createdAt)}</td>
+                    <td>
+                      <span class="cell-mono">#{(order.orderNumber || order.id || '').slice(-8).toUpperCase()}</span>
+                    </td>
+                    <td>
+                      <div class="item-info">
+                        <h4 style="font-size: 0.875rem;">{order.customer?.firstName} {order.customer?.lastName}</h4>
+                        <p style="font-size: 0.75rem;">{order.customer?.email}</p>
+                      </div>
+                    </td>
+                    <td>
+                      <div style="font-size: 0.875rem;">{(order.items || []).length} item(s)</div>
+                      <div style="font-size: 0.75rem; color: #666;">{artistNames}</div>
+                    </td>
+                    <td class="font-bold">{formatCurrency(itemTotal)}</td>
+                    <td>
+                      <span class="badge badge-info">{order.paymentMethod || 'unknown'}</span>
+                    </td>
+                    <td class="text-right">
+                      <button
+                        class="btn btn-primary btn-sm trigger-payout-btn"
+                        data-order-id={order.id}
+                        data-order-number={order.orderNumber}
+                      >
+                        💸 Pay Artist
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Completed Payouts Tab -->
+  <div class="tab-content" id="completed-tab" style="display: none;">
+    <div class="card">
+      <div class="card-header">
+        <h2>Completed Payouts</h2>
+        <span class="text-muted">{completedPayouts.length} payouts - {formatCurrency(completedPayoutTotal)} total</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Artist</th>
+              <th>Order</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>Batch ID</th>
+            </tr>
+          </thead>
+          <tbody>
+            {completedPayouts.length === 0 ? (
+              <tr>
+                <td colspan="6" class="text-center text-muted" style="padding: 3rem;">
+                  No completed payouts yet
+                </td>
+              </tr>
+            ) : (
+              completedPayouts.map(payout => (
+                <tr>
+                  <td class="cell-secondary">{formatDate(payout.completedAt || payout.createdAt)}</td>
+                  <td>
+                    <div class="item-info">
+                      <h4 style="font-size: 0.875rem;">{payout.artistName || 'Unknown'}</h4>
+                      <p style="font-size: 0.75rem;">{payout.paypalEmail || payout.artistEmail || ''}</p>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="cell-mono">#{(payout.orderNumber || payout.orderId || '').slice(-8).toUpperCase()}</span>
+                  </td>
+                  <td class="font-bold" style="color: #16a34a;">{formatCurrency(payout.amount)}</td>
+                  <td>
+                    <span class="badge badge-success">{payout.payoutMethod || 'paypal'}</span>
+                  </td>
+                  <td class="cell-mono" style="font-size: 0.75rem;">
+                    {payout.paypalBatchId || payout.stripeTransferId || '-'}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- Disputes Tab -->
-  <div class="tab-content" id="disputes-tab">
+  <div class="tab-content" id="disputes-tab" style="display: none;">
     <div class="card">
       <div class="card-header">
         <h2>Payment Disputes</h2>
@@ -646,6 +811,79 @@ export const prerender = false;
       }
 
       window.retryPayout = retryPayout;
+
+      // Trigger payout for an order
+      document.querySelectorAll('.trigger-payout-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          triggerPayout(btn.dataset.orderId, btn.dataset.orderNumber, btn);
+        });
+      });
+
+      async function triggerPayout(orderId, orderNumber, btn) {
+        if (!confirm(`Trigger payout for order ${orderNumber}?\n\nThis will send money to the artist(s) via PayPal.`)) return;
+
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Processing...';
+
+        try {
+          // Get admin key from localStorage or prompt
+          let adminKey = localStorage.getItem('adminKey');
+          if (!adminKey) {
+            adminKey = prompt('Enter admin key:');
+            if (!adminKey) {
+              btn.disabled = false;
+              btn.innerHTML = originalText;
+              return;
+            }
+            localStorage.setItem('adminKey', adminKey);
+          }
+
+          const response = await fetch('/api/admin/trigger-payout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, adminKey })
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            const payouts = result.payouts || [];
+            const successful = payouts.filter(p => p.status === 'success').length;
+            const failed = payouts.filter(p => p.status === 'failed' || p.status === 'error').length;
+            const skipped = payouts.filter(p => p.status === 'skipped').length;
+
+            let message = `Payout results for ${orderNumber}:\n`;
+            payouts.forEach(p => {
+              message += `\n${p.artistName}: £${p.amount?.toFixed(2)} - ${p.status}`;
+              if (p.error) message += ` (${p.error})`;
+              if (p.reason) message += ` (${p.reason})`;
+            });
+
+            alert(message);
+
+            if (successful > 0) {
+              // Remove row from table
+              const row = btn.closest('tr');
+              if (row) row.remove();
+              showToast(`${successful} payout(s) completed`);
+            } else if (failed > 0) {
+              btn.innerHTML = '❌ Failed';
+              btn.classList.remove('btn-primary');
+              btn.classList.add('btn-danger');
+            }
+          } else {
+            showToast(result.error || 'Payout failed', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+          }
+        } catch (error) {
+          console.error(error);
+          showToast('Failed to trigger payout', 'error');
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      }
     </script>
   </Fragment>
 </AdminLayout>

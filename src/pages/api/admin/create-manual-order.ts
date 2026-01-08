@@ -4,9 +4,10 @@
 
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
-import { saSetDocument, saGetDocument } from '../../../lib/firebase-service-account';
+import { saSetDocument, saGetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { generateOrderNumber, getShortOrderNumber } from '../../../lib/order-utils';
+import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 
 export const prerender = false;
 
@@ -260,10 +261,147 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
+    // Process artist payouts automatically
+    const paypalConfig = getPayPalConfig(env);
+    const payoutResults: any[] = [];
+
+    if (paypalConfig && digitalItems.length > 0) {
+      console.log('[admin] Processing auto-payouts for digital items');
+
+      // Calculate artist payments
+      const artistPayments: Record<string, {
+        artistId: string;
+        artistName: string;
+        paypalEmail: string | null;
+        amount: number;
+        items: string[];
+      }> = {};
+
+      for (const item of digitalItems) {
+        const itemArtistId = item.artistId;
+        if (!itemArtistId) continue;
+
+        const artist = await saGetDocument(serviceAccountKey, projectId, 'artists', itemArtistId);
+        const paypalEmail = artist?.paypalEmail || null;
+
+        const itemTotal = (item.price || 0) * (item.quantity || 1);
+
+        // Calculate artist share (subtract platform fees - Bandcamp style)
+        // 1% Fresh Wax fee
+        const freshWaxFee = itemTotal * 0.01;
+        // PayPal fee: 1.4% + £0.20 (split fixed fee across items)
+        const paypalFeePercent = 0.014;
+        const paypalFixedFee = 0.20 / processedItems.length;
+        const paypalFee = (itemTotal * paypalFeePercent) + paypalFixedFee;
+        const artistShare = itemTotal - freshWaxFee - paypalFee;
+
+        if (!artistPayments[itemArtistId]) {
+          artistPayments[itemArtistId] = {
+            artistId: itemArtistId,
+            artistName: artist?.artistName || item.artist || 'Unknown Artist',
+            paypalEmail,
+            amount: 0,
+            items: []
+          };
+        }
+
+        artistPayments[itemArtistId].amount += artistShare;
+        artistPayments[itemArtistId].items.push(item.name || 'Item');
+      }
+
+      // Process payouts for each artist
+      for (const payment of Object.values(artistPayments)) {
+        if (payment.amount <= 0) continue;
+
+        if (!payment.paypalEmail) {
+          payoutResults.push({
+            artistId: payment.artistId,
+            artistName: payment.artistName,
+            amount: payment.amount,
+            status: 'skipped',
+            reason: 'No PayPal email configured'
+          });
+          continue;
+        }
+
+        console.log('[admin] Auto-paying', payment.artistName, '£' + payment.amount.toFixed(2), 'to', payment.paypalEmail);
+
+        try {
+          const payoutResult = await createPayout(paypalConfig, {
+            email: payment.paypalEmail,
+            amount: payment.amount,
+            currency: 'GBP',
+            note: `Fresh Wax payout for order ${orderNumber}`,
+            reference: `${orderId}-${payment.artistId}`
+          });
+
+          if (payoutResult.success) {
+            // Record the payout
+            const payoutId = `payout_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            await saSetDocument(serviceAccountKey, projectId, 'payouts', payoutId, {
+              artistId: payment.artistId,
+              artistName: payment.artistName,
+              paypalEmail: payment.paypalEmail,
+              paypalBatchId: payoutResult.batchId,
+              paypalPayoutItemId: payoutResult.payoutItemId,
+              orderId,
+              orderNumber,
+              amount: payment.amount,
+              currency: 'gbp',
+              status: 'completed',
+              payoutMethod: 'paypal',
+              triggeredBy: 'auto-manual-order',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              completedAt: new Date().toISOString()
+            });
+
+            // Update artist earnings
+            const artistDoc = await saGetDocument(serviceAccountKey, projectId, 'artists', payment.artistId);
+            if (artistDoc) {
+              await saUpdateDocument(serviceAccountKey, projectId, 'artists', payment.artistId, {
+                totalEarnings: (artistDoc.totalEarnings || 0) + payment.amount,
+                lastPayoutAt: new Date().toISOString()
+              });
+            }
+
+            payoutResults.push({
+              artistId: payment.artistId,
+              artistName: payment.artistName,
+              amount: payment.amount,
+              status: 'success',
+              batchId: payoutResult.batchId
+            });
+
+            console.log('[admin] ✓ Auto-payout successful:', payoutResult.batchId);
+          } else {
+            payoutResults.push({
+              artistId: payment.artistId,
+              artistName: payment.artistName,
+              amount: payment.amount,
+              status: 'failed',
+              error: payoutResult.error
+            });
+            console.error('[admin] Auto-payout failed:', payoutResult.error);
+          }
+        } catch (err: any) {
+          payoutResults.push({
+            artistId: payment.artistId,
+            artistName: payment.artistName,
+            amount: payment.amount,
+            status: 'error',
+            error: err.message
+          });
+          console.error('[admin] Auto-payout error:', err.message);
+        }
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       orderId,
       orderNumber,
+      payouts: payoutResults,
       message: `Order ${orderNumber} created successfully`
     }), {
       status: 200,
