@@ -52,9 +52,18 @@ function createReleaseFolderName(artistName: string, releaseName: string): strin
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Admin authentication required
-  const authError = requireAdminAuth(request, locals);
-  if (authError) return authError;
+  try {
+    // Parse body first to get adminKey for auth
+    let bodyData: any;
+    try {
+      bodyData = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
+    }
+
+    // Admin authentication required - pass body data for adminKey check
+    const authError = requireAdminAuth(request, locals, bodyData);
+    if (authError) return authError;
 
   // Rate limit: write operations - 30 per minute
   const clientId = getClientId(request);
@@ -74,7 +83,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    let { submissionId } = await request.json();
+    let { submissionId } = bodyData;
 
     if (!submissionId) {
       return ApiErrors.badRequest('submissionId required');
@@ -175,8 +184,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`Target folder: ${releaseFolder}`);
 
-    // Copy files from submissions/ to releases/ folder
+    // Use server-side copy to move files from submissions/ to releases/ folder
+    // This avoids loading large files into memory (R2 CopyObject via x-amz-copy-source header)
     const copiedFiles: { oldKey: string; newKey: string }[] = [];
+
+    // Helper function for server-side copy (no memory overhead)
+    async function copyObject(sourceKey: string, destKey: string): Promise<boolean> {
+      const destUrl = `${bucketUrl}/${encodeURIComponent(destKey)}`;
+      const copySource = `/${R2_CONFIG.bucketName}/${sourceKey}`;
+
+      const copyResponse = await awsClient.fetch(destUrl, {
+        method: 'PUT',
+        headers: {
+          'x-amz-copy-source': copySource
+        }
+      });
+
+      return copyResponse.ok;
+    }
 
     // Copy artwork
     let artworkUrl = `${R2_CONFIG.publicDomain}/place-holder.webp`;
@@ -184,20 +209,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const artworkFilename = artworkKey.split('/').pop() || 'cover.webp';
       const newArtworkKey = `${releaseFolder}/${artworkFilename}`;
 
-      // Copy the file
-      const sourceUrl = `${bucketUrl}/${encodeURIComponent(artworkKey)}`;
-      const artworkData = await awsClient.fetch(sourceUrl);
-      if (artworkData.ok) {
-        const artworkBuffer = await artworkData.arrayBuffer();
-        const destUrl = `${bucketUrl}/${encodeURIComponent(newArtworkKey)}`;
-        await awsClient.fetch(destUrl, {
-          method: 'PUT',
-          body: artworkBuffer,
-          headers: { 'Content-Type': 'image/webp' }
-        });
+      const copied = await copyObject(artworkKey, newArtworkKey);
+      if (copied) {
         copiedFiles.push({ oldKey: artworkKey, newKey: newArtworkKey });
         artworkUrl = `${R2_CONFIG.publicDomain}/${newArtworkKey}`;
         log.debug(`Copied artwork: ${artworkFilename}`);
+      } else {
+        log.warn(`Failed to copy artwork: ${artworkKey}`);
       }
     }
 
@@ -207,18 +225,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const audioFilename = audioFile.split('/').pop() || 'track.wav';
       const newAudioKey = `${releaseFolder}/${audioFilename}`;
 
-      const sourceUrl = `${bucketUrl}/${encodeURIComponent(audioFile)}`;
-      const audioData = await awsClient.fetch(sourceUrl);
-      if (audioData.ok) {
-        const audioBuffer = await audioData.arrayBuffer();
-        const contentType = audioFilename.toLowerCase().endsWith('.mp3') ? 'audio/mpeg' :
-                           audioFilename.toLowerCase().endsWith('.flac') ? 'audio/flac' : 'audio/wav';
-        const destUrl = `${bucketUrl}/${encodeURIComponent(newAudioKey)}`;
-        await awsClient.fetch(destUrl, {
-          method: 'PUT',
-          body: audioBuffer,
-          headers: { 'Content-Type': contentType }
-        });
+      const copied = await copyObject(audioFile, newAudioKey);
+      if (copied) {
         copiedFiles.push({ oldKey: audioFile, newKey: newAudioKey });
         newAudioFiles.push({
           oldKey: audioFile,
@@ -226,6 +234,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           url: `${R2_CONFIG.publicDomain}/${newAudioKey}`
         });
         log.debug(`Copied audio: ${audioFilename}`);
+      } else {
+        log.warn(`Failed to copy audio: ${audioFile}`);
       }
     }
 
@@ -236,9 +246,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Build tracks - match metadata tracks to audio files by name
     const tracks: any[] = [];
-    const metadataTracks = metadata.tracks || [];
 
-    log.debug(`Metadata tracks:`, metadataTracks);
+    // Parse tracks from metadata - try tracks array first, then trackListingJSON string
+    let metadataTracks: any[] = [];
+    if (metadata.tracks && Array.isArray(metadata.tracks)) {
+      metadataTracks = metadata.tracks;
+    } else if (metadata.trackListingJSON) {
+      try {
+        metadataTracks = JSON.parse(metadata.trackListingJSON);
+      } catch (e) {
+        log.warn('Failed to parse trackListingJSON:', e);
+      }
+    }
+
+    log.debug(`Metadata tracks (${metadataTracks.length}):`, metadataTracks);
     log.debug(`Audio files:`, audioFiles);
 
     // Helper to normalize names for matching (lowercase, remove special chars)
@@ -398,8 +419,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`Created release: ${releaseId}`);
 
-    // Optionally delete submission files (or keep for review)
-    // For now, keep them
+    // Delete submission files after successful processing
+    try {
+      log.info(`Deleting submission files from ${submissionPrefix}/`);
+      for (const file of files) {
+        const deleteUrl = `${bucketUrl}/${encodeURIComponent(file)}`;
+        await awsClient.fetch(deleteUrl, { method: 'DELETE' });
+        log.debug(`Deleted: ${file}`);
+      }
+      log.info(`Deleted ${files.length} submission files`);
+    } catch (deleteError) {
+      log.warn('Failed to delete some submission files:', deleteError);
+    }
 
     return successResponse({
       releaseId,
@@ -410,7 +441,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error) {
-    log.error('Error:', error);
+    log.error('Inner error:', error);
     return errorResponse(error instanceof Error ? error.message : 'Processing failed');
+  }
+
+  } catch (outerError) {
+    log.error('Outer error (uncaught):', outerError);
+    return errorResponse(outerError instanceof Error ? outerError.message : 'Unexpected error');
   }
 };

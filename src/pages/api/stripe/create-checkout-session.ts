@@ -272,13 +272,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const validatedShipping = merchShipping + vinylShippingTotal;
-    const freshWaxFee = validatedSubtotal * 0.01;
-    const baseAmount = validatedSubtotal + validatedShipping + freshWaxFee;
-    const stripeFee = ((baseAmount * 0.014) + 0.20) / 0.986;
-    const validatedServiceFees = freshWaxFee + stripeFee;
-    const validatedTotal = validatedSubtotal + validatedShipping + validatedServiceFees;
 
-    console.log('[Stripe] Validated totals - Subtotal:', validatedSubtotal, 'Total:', validatedTotal);
+    // Bandcamp-style: customer pays subtotal + shipping only
+    // Fees are deducted from artist payout, not charged to customer
+    const validatedTotal = validatedSubtotal + validatedShipping;
+
+    // Calculate fees for payout purposes (deducted from artist share)
+    const freshWaxFee = validatedSubtotal * 0.01;
+    const stripeFee = (validatedTotal * 0.014) + 0.20;
+    const validatedServiceFees = freshWaxFee + stripeFee;
+
+    console.log('[Stripe] Validated totals - Subtotal:', validatedSubtotal, 'Total:', validatedTotal, '(fees deducted from payout:', validatedServiceFees.toFixed(2), ')');
 
     // Build line items for Stripe using VALIDATED prices
     const lineItems: string[][] = [];
@@ -297,17 +301,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     });
 
-    // Add service fees as a separate line item (using validated amount)
-    if (validatedServiceFees > 0) {
-      const feeIndex = validatedItems.length;
-      lineItems.push(
-        [`line_items[${feeIndex}][price_data][currency]`, 'gbp'],
-        [`line_items[${feeIndex}][price_data][unit_amount]`, String(Math.round(validatedServiceFees * 100))],
-        [`line_items[${feeIndex}][price_data][product_data][name]`, 'Service Fee'],
-        [`line_items[${feeIndex}][price_data][product_data][description]`, 'Processing and platform fees'],
-        [`line_items[${feeIndex}][quantity]`, '1']
-      );
-    }
+    // Note: Service fees are NOT added as line items anymore (Bandcamp-style)
+    // Fees are deducted from artist payout instead of being charged to customer
 
     // Prepare metadata - store order data for webhook
     // Stripe metadata has 500 char limit per value, so we'll compress

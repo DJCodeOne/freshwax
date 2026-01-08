@@ -159,13 +159,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       item.type === 'vinyl' || item.type === 'merch'
     );
     const shipping = hasPhysicalItems ? (itemTotal >= 50 ? 0 : 4.99) : 0;
-    const freshWaxFee = itemTotal * 0.01;
-    const baseAmount = itemTotal + shipping + freshWaxFee;
-    const stripeFee = ((baseAmount * 0.014) + 0.20) / 0.986;
-    const serviceFees = freshWaxFee + stripeFee;
-    const validatedTotal = itemTotal + shipping + serviceFees;
 
-    console.log('[PayPal] Validated totals - Subtotal:', itemTotal, 'Total:', validatedTotal);
+    // Bandcamp-style: customer pays subtotal + shipping only
+    // Fees are deducted from artist payout, not charged to customer
+    const validatedTotal = itemTotal + shipping;
+
+    // Calculate fees for payout purposes (deducted from artist share)
+    const freshWaxFee = itemTotal * 0.01;
+    const stripeFee = (validatedTotal * 0.014) + 0.20;
+    const serviceFees = freshWaxFee + stripeFee;
+
+    console.log('[PayPal] Validated totals - Subtotal:', itemTotal, 'Total:', validatedTotal, '(fees deducted from payout:', serviceFees.toFixed(2), ')');
 
     // Get access token
     const accessToken = await getPayPalAccessToken(paypalClientId, paypalSecret, paypalMode);
@@ -207,7 +211,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }).substring(0, 255), // PayPal custom_id limit - we'll store full data server-side
         amount: {
           currency_code: 'GBP',
-          value: validatedTotal.toFixed(2), // Use validated total
+          value: validatedTotal.toFixed(2), // Use validated total (no fees added)
           breakdown: {
             item_total: {
               currency_code: 'GBP',
@@ -216,10 +220,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
             shipping: {
               currency_code: 'GBP',
               value: shipping.toFixed(2)
-            },
-            handling: {
-              currency_code: 'GBP',
-              value: serviceFees.toFixed(2)
             }
           }
         },

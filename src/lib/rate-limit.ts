@@ -148,6 +148,12 @@ export const RateLimiters = {
   admin: {
     maxRequests: 120,
     windowMs: 60 * 1000
+  },
+
+  // Write operations: 30 per minute
+  write: {
+    maxRequests: 30,
+    windowMs: 60 * 1000
   }
 };
 

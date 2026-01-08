@@ -159,16 +159,15 @@ export const prerender = false;
 
     const shipping = hasPhysicalItems ? (subtotal >= 50 ? 0 : 4.99) : 0;
 
-    // Service fees added on top so artists get their full asking price
-    const freshWaxFee = subtotal * 0.01; // 1% Fresh Wax
-    // Stripe fee calculated on the payment total (subtotal + shipping + freshWaxFee + stripeFee itself)
-    // Formula: stripeFee = (total * 0.014) + 0.20, where total includes stripeFee
-    // Solving: total = subtotal + shipping + freshWaxFee + stripeFee
-    // stripeFee = ((subtotal + shipping + freshWaxFee) * 0.014 + 0.20) / (1 - 0.014)
-    const baseAmount = subtotal + shipping + freshWaxFee;
-    const stripeFee = ((baseAmount * 0.014) + 0.20) / 0.986;
+    // Bandcamp-style pricing: fees come OUT of the sale, not added on top
+    // Customer pays exactly what's displayed (subtotal + shipping)
+    // Fees are deducted from artist payout, not charged to customer
+    const total = subtotal + shipping;
+
+    // Calculate fees for backend/payout purposes (deducted from artist share)
+    const freshWaxFee = subtotal * 0.01; // 1% Fresh Wax platform fee
+    const stripeFee = (total * 0.014) + 0.20; // Stripe processing fee
     const serviceFees = freshWaxFee + stripeFee;
-    const total = subtotal + shipping + serviceFees;
 
     return { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total };
   }
@@ -363,10 +362,6 @@ export const prerender = false;
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 1.125rem; color: #6b7280;">Shipping</span>
                 <span style="font-size: 1.25rem; font-weight: 600; color: #16a34a;">${hasPhysicalItems ? (shipping === 0 ? 'FREE' : '£' + shipping.toFixed(2)) : 'Digital'}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 1rem; color: #9ca3af;">Service Fee</span>
-                <span style="font-size: 1rem; color: #9ca3af;">£${serviceFees.toFixed(2)}</span>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; margin-top: 0.625rem; border-top: 2px solid #dc2626;">
                 <span style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: 0.04em; color: #111827;">TOTAL</span>

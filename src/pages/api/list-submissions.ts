@@ -65,10 +65,16 @@ export const GET: APIRoute = async ({ locals }) => {
         // Match pattern like "Artist_Name-1234567890" (name + timestamp)
         if (/^[A-Za-z0-9_]+-\d{10,}$/.test(folder) && !folder.startsWith('test-')) {
           // Check if this folder has a metadata.json (confirms it's a submission)
-          const metaCheckUrl = `${endpoint}/${R2_CONFIG.bucketName}/${folder}/metadata.json`;
-          const metaCheck = await awsClient.fetch(metaCheckUrl, { method: 'HEAD' });
-          if (metaCheck.ok) {
-            submissions.push(`root:${folder}`); // Prefix with root: to indicate location
+          const infoCheckUrl = `${endpoint}/${R2_CONFIG.bucketName}/${folder}/info.json`;
+          const infoCheck = await awsClient.fetch(infoCheckUrl, { method: 'HEAD' });
+          if (infoCheck.ok) {
+            submissions.push(`root:${folder}`);
+          } else {
+            const metaCheckUrl = `${endpoint}/${R2_CONFIG.bucketName}/${folder}/metadata.json`;
+            const metaCheck = await awsClient.fetch(metaCheckUrl, { method: 'HEAD' });
+            if (metaCheck.ok) {
+              submissions.push(`root:${folder}`);
+            }
           }
         }
       }

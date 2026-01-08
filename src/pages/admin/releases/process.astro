@@ -6,6 +6,9 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 
 export const prerender = false;
 
+const runtimeEnv = Astro.locals.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+
 // Use local API endpoint instead of external worker
 const WORKER_URL = '/api';
 ---
@@ -52,7 +55,8 @@ const WORKER_URL = '/api';
   </div>
 
   <Fragment slot="scripts">
-    <script is:inline define:vars={{ WORKER_URL }}>
+    <script is:inline define:vars={{ WORKER_URL, adminKey }}>
+      const ADMIN_KEY = adminKey;
       const workerStatus = document.getElementById('workerStatus');
       const submissionCount = document.getElementById('submissionCount');
       const submissionsContainer = document.getElementById('submissionsContainer');
@@ -160,7 +164,7 @@ const WORKER_URL = '/api';
           const response = await fetch('/api/process-release', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ submissionId })
+            body: JSON.stringify({ submissionId, adminKey: ADMIN_KEY })
           });
 
           const data = await response.json();
