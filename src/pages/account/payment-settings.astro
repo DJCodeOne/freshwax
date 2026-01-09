@@ -37,7 +37,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         <a href="/account/dashboard" class="btn btn-primary">Go to Dashboard</a>
       </div>
 
-      <div id="main-content" class="main-content" style="display: none;">
+      <div id="payment-main-content" class="main-content" style="display: none;">
         <div class="page-header">
           <a href="/account/dashboard" class="back-link">&larr; Back to Dashboard</a>
           <h1>Payment Settings</h1>
@@ -168,13 +168,13 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
   <Footer />
 </Layout>
 
-<script>
+<script is:inline type="module">
   import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
   // Initialize Firebase (reuse existing app if available)
   const firebaseConfig = {
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store",
     storageBucket: "freshwax-store.firebasestorage.app",
@@ -194,7 +194,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     const loadingState = document.getElementById('loading-state');
     const authRequired = document.getElementById('auth-required');
     const notVendor = document.getElementById('not-vendor');
-    const mainContent = document.getElementById('main-content');
+    const mainContent = document.getElementById('payment-main-content');
 
     onAuthStateChanged(auth, async (user) => {
       console.log('[PaymentSettings] onAuthStateChanged - user:', user ? user.uid : 'null');
@@ -240,8 +240,13 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         userData = paymentData;
 
         // Hide loading, show content
-        loadingState.style.display = 'none';
-        mainContent.style.display = 'block';
+        console.log('[PaymentSettings] Hiding loading, showing main content');
+        console.log('[PaymentSettings] loadingState element:', loadingState);
+        console.log('[PaymentSettings] mainContent element:', mainContent);
+        if (loadingState) loadingState.style.display = 'none';
+        if (mainContent) mainContent.style.display = 'block';
+        console.log('[PaymentSettings] After display change - loadingState.style.display:', loadingState?.style?.display);
+        console.log('[PaymentSettings] After display change - mainContent.style.display:', mainContent?.style?.display);
 
         // Show vendor roles
         showVendorRoles();

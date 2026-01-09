@@ -614,10 +614,12 @@ async function processMerchSupplierPayments(params: {
 
       if (!supplier) continue;
 
-      // Calculate supplier share
-      // Supplier gets their cost price per item, platform keeps the margin
-      const supplierPrice = product.supplierCost || product.costPrice || (item.price * 0.7);
-      const itemTotal = supplierPrice * (item.quantity || 1);
+      // Calculate supplier share (same structure as releases/vinyl, but 5% Fresh Wax fee)
+      const itemPrice = item.price || 0;
+      const itemTotal = itemPrice * (item.quantity || 1);
+      const freshWaxFee = itemTotal * 0.05; // 5% for merch
+      const paypalFee = (itemTotal * 0.014) + (0.20 / merchItems.length);
+      const supplierShare = itemTotal - freshWaxFee - paypalFee;
 
       // Group by supplier
       if (!supplierPayments[supplierId]) {
@@ -633,7 +635,7 @@ async function processMerchSupplierPayments(params: {
         };
       }
 
-      supplierPayments[supplierId].amount += itemTotal;
+      supplierPayments[supplierId].amount += supplierShare;
       supplierPayments[supplierId].items.push(item.name || item.title || 'Item');
     }
 
@@ -897,12 +899,13 @@ async function processVinylCrateSellerPayments(params: {
 
       if (!seller) continue;
 
-      // Calculate seller share
-      // Platform takes 15% commission on crate sales
-      const platformFeePercent = 0.15;
+      // Calculate seller share (same structure as releases)
+      // 1% Fresh Wax fee + payment processor fees
       const itemPrice = item.price || 0;
-      const sellerShare = itemPrice * (1 - platformFeePercent);
-      const itemTotal = sellerShare * (item.quantity || 1);
+      const itemTotal = itemPrice * (item.quantity || 1);
+      const freshWaxFee = itemTotal * 0.01;
+      const paypalFee = (itemTotal * 0.014) + (0.20 / crateItems.length);
+      const sellerShare = itemTotal - freshWaxFee - paypalFee;
 
       // Group by seller
       if (!sellerPayments[sellerId]) {
@@ -918,7 +921,7 @@ async function processVinylCrateSellerPayments(params: {
         };
       }
 
-      sellerPayments[sellerId].amount += itemTotal;
+      sellerPayments[sellerId].amount += sellerShare;
       sellerPayments[sellerId].items.push(item.name || item.title || 'Vinyl');
     }
 

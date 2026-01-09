@@ -30,7 +30,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         <a href="/account/dashboard" class="btn btn-primary">Sign In</a>
       </div>
 
-      <div id="main-content" class="main-content" style="display: none;">
+      <div id="selling-main-content" class="main-content" style="display: none;">
         <div class="page-header">
           <a href="/account/dashboard" class="back-link">&larr; Back to Dashboard</a>
           <h1>Selling Settings</h1>
@@ -143,13 +143,13 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
   <Footer />
 </Layout>
 
-<script>
+<script is:inline type="module">
   import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
   // Initialize Firebase (reuse existing app if available)
   const firebaseConfig = {
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store",
     storageBucket: "freshwax-store.firebasestorage.app",
@@ -166,7 +166,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
   async function init() {
     const loadingState = document.getElementById('loading-state');
     const authRequired = document.getElementById('auth-required');
-    const mainContent = document.getElementById('main-content');
+    const mainContent = document.getElementById('selling-main-content');
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
