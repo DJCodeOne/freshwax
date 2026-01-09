@@ -28,6 +28,9 @@ export function generateReferralCode(creatorName: string): string {
 }
 
 // Create a new referral code object
+// Hard deadline for all referral codes
+export const REFERRAL_CODE_DEADLINE = new Date('2026-12-26T23:59:59Z');
+
 export function createReferralCode(
   creatorId: string,
   creatorName: string,
@@ -36,7 +39,6 @@ export function createReferralCode(
 ): ReferralCode {
   const code = generateReferralCode(creatorName);
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year
 
   return {
     code,
@@ -48,7 +50,7 @@ export function createReferralCode(
     usedCount: 0,
     usedBy: [],
     createdAt: now.toISOString(),
-    expiresAt: expiresAt.toISOString(),
+    expiresAt: REFERRAL_CODE_DEADLINE.toISOString(), // All codes expire Dec 26, 2026
     active: true
   };
 }
