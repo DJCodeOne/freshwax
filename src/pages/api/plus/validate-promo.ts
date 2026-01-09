@@ -1,10 +1,10 @@
 // src/pages/api/plus/validate-promo.ts
 // Validate referral codes for Plus membership - 50% off (£5 instead of £10)
-// Each referral code can only be used ONCE total (not per user)
-// Referral codes are generated when users become Plus members
+// Checks KV storage first (new system), then falls back to Firebase giftCards (legacy)
 
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { validateReferralCode } from '../../../lib/referral-codes';
 
 export const prerender = false;
 
@@ -18,6 +18,9 @@ function initFirebase(locals: any) {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
+    const env = (locals as any)?.runtime?.env;
+    const kv = env?.CACHE as KVNamespace | undefined;
+
     const body = await request.json();
     const { code, userId } = body;
 
@@ -45,7 +48,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // Look up referral code in giftCards collection
+    // Try KV storage first (new referral code system)
+    if (kv) {
+      const kvResult = await validateReferralCode(kv, normalizedCode, userId, 'pro_upgrade');
+      if (kvResult.valid && kvResult.referralCode) {
+        return new Response(JSON.stringify({
+          success: true,
+          valid: true,
+          discount: kvResult.referralCode.discountPercent,
+          message: `${kvResult.referralCode.discountPercent}% off Plus membership - Pay only £5!`,
+          finalPrice: 5,
+          isKvCode: true, // Flag to indicate KV-based code
+          referredBy: kvResult.referralCode.creatorId
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      } else if (kvResult.error && kvResult.error !== 'Invalid referral code') {
+        // KV code exists but has an error (expired, used, etc.)
+        return new Response(JSON.stringify({
+          success: true,
+          valid: false,
+          error: kvResult.error
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      // If not found in KV, fall through to check Firebase
+    }
+
+    // Fall back to Firebase giftCards collection (legacy system)
     const giftCards = await queryCollection('giftCards', {
       filters: [
         { field: 'code', op: 'EQUAL', value: normalizedCode },

@@ -1,8 +1,9 @@
 // src/pages/api/create-checkout.ts
 // Creates Stripe checkout session for Plus subscription upgrade
-// Supports unique referral codes (one-time use total)
+// Supports unique referral codes from KV (new) and Firebase giftCards (legacy)
 import type { APIRoute } from 'astro';
 import { queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { validateReferralCode } from '../../lib/referral-codes';
 
 export const prerender = false;
 
@@ -29,6 +30,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Get Stripe key from environment
     const env = (locals as any)?.runtime?.env;
+    const kv = env?.CACHE as KVNamespace | undefined;
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
     if (!stripeSecretKey) {
@@ -43,49 +45,68 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let validatedPromoCode: string | null = null;
     let referralCardId: string | null = null;
     let referredBy: string | null = null;
+    let isKvCode = false;
 
     if (promoCode && priceId === 'plus_annual_promo') {
-      initFirebase(locals);
       const normalizedCode = promoCode.toUpperCase().trim();
 
-      // Look up referral code in giftCards collection
-      const giftCards = await queryCollection('giftCards', {
-        filters: [
-          { field: 'code', op: 'EQUAL', value: normalizedCode },
-          { field: 'type', op: 'EQUAL', value: 'referral' }
-        ],
-        limit: 1
-      });
-
-      if (!giftCards || giftCards.length === 0) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid referral code'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      // Try KV storage first (new referral code system)
+      if (kv) {
+        const kvResult = await validateReferralCode(kv, normalizedCode, userId, 'pro_upgrade');
+        if (kvResult.valid && kvResult.referralCode) {
+          validatedPromoCode = normalizedCode;
+          referredBy = kvResult.referralCode.creatorId;
+          isKvCode = true;
+          console.log(`[create-checkout] Valid KV referral code ${normalizedCode} for user ${userId}, referred by ${referredBy}`);
+        } else if (kvResult.error && kvResult.error !== 'Invalid referral code') {
+          // KV code exists but has an error
+          return new Response(JSON.stringify({
+            success: false,
+            error: kvResult.error
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
       }
 
-      const referralCard = giftCards[0];
+      // Fall back to Firebase giftCards if not found in KV
+      if (!validatedPromoCode) {
+        initFirebase(locals);
 
-      // Check if code is still active
-      if (!referralCard.isActive || referralCard.redeemedBy) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'This referral code has already been used'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        const giftCards = await queryCollection('giftCards', {
+          filters: [
+            { field: 'code', op: 'EQUAL', value: normalizedCode },
+            { field: 'type', op: 'EQUAL', value: 'referral' }
+          ],
+          limit: 1
+        });
+
+        if (!giftCards || giftCards.length === 0) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Invalid referral code'
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const referralCard = giftCards[0];
+
+        if (!referralCard.isActive || referralCard.redeemedBy) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'This referral code has already been used'
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        if (referralCard.createdByUserId === userId) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'You cannot use your own referral code'
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        validatedPromoCode = normalizedCode;
+        referralCardId = referralCard.id;
+        referredBy = referralCard.createdByUserId;
+        console.log(`[create-checkout] Valid Firebase referral code ${normalizedCode} for user ${userId}, referred by ${referredBy}`);
       }
-
-      // Prevent self-referral
-      if (referralCard.createdByUserId === userId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'You cannot use your own referral code'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-      }
-
-      validatedPromoCode = normalizedCode;
-      referralCardId = referralCard.id;
-      referredBy = referralCard.createdByUserId;
-      console.log(`[create-checkout] Valid referral code ${normalizedCode} for user ${userId}, referred by ${referredBy}`);
     }
 
     // Map price IDs to actual Stripe price IDs
@@ -110,6 +131,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
     if (validatedPromoCode) {
       metadata['metadata[promoCode]'] = validatedPromoCode;
+      metadata['metadata[isKvCode]'] = isKvCode ? 'true' : 'false';
     }
     if (referralCardId) {
       metadata['metadata[referralCardId]'] = referralCardId;

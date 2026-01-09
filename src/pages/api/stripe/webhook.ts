@@ -7,6 +7,7 @@ import { createOrder } from '../../../lib/order-utils';
 import { initFirebaseEnv, getDocument, queryCollection, deleteDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
 import { logStripeEvent } from '../../../lib/webhook-logger';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
+import { redeemReferralCode } from '../../../lib/referral-codes';
 
 export const prerender = false;
 
@@ -667,7 +668,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
                 // Mark referral code as redeemed if one was used
                 const referralCardId = metadata.referralCardId;
-                if (referralCardId) {
+                const isKvCode = metadata.isKvCode === 'true';
+                const promoCodeUsed = metadata.promoCode;
+
+                if (isKvCode && promoCodeUsed) {
+                  // New KV-based referral code system
+                  try {
+                    const kv = env?.CACHE as KVNamespace | undefined;
+                    if (kv) {
+                      const result = await redeemReferralCode(kv, promoCodeUsed, userId);
+                      if (result.success) {
+                        console.log(`[Stripe Webhook] ✓ KV referral code ${promoCodeUsed} marked as redeemed by ${userId}`);
+                      } else {
+                        console.error('[Stripe Webhook] KV referral redemption error:', result.error);
+                      }
+                    }
+                  } catch (referralError) {
+                    console.error('[Stripe Webhook] Failed to mark KV referral code as redeemed:', referralError);
+                  }
+                } else if (referralCardId) {
+                  // Legacy Firebase giftCards system
                   try {
                     const redeemData = {
                       fields: {
@@ -685,9 +705,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
                         body: JSON.stringify(redeemData)
                       }
                     );
-                    console.log(`[Stripe Webhook] ✓ Referral code ${referralCardId} marked as redeemed by ${userId}`);
+                    console.log(`[Stripe Webhook] ✓ Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
                   } catch (referralError) {
-                    console.error('[Stripe Webhook] Failed to mark referral code as redeemed:', referralError);
+                    console.error('[Stripe Webhook] Failed to mark Firebase referral code as redeemed:', referralError);
                   }
                 }
 
@@ -800,9 +820,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   console.error('[Stripe Webhook] Failed to send welcome email:', emailError);
                 }
 
-                // Mark referral code as redeemed in Firebase
+                // Mark referral code as redeemed
                 const referralCardId = metadata.referralCardId;
-                if (referralCardId) {
+                const isKvCode = metadata.isKvCode === 'true';
+
+                if (isKvCode && promoCode) {
+                  // Redeem KV-based referral code
+                  try {
+                    const kv = env?.CACHE as KVNamespace | undefined;
+                    if (kv) {
+                      const result = await redeemReferralCode(kv, promoCode, userId);
+                      if (result.success) {
+                        console.log(`[Stripe Webhook] ✓ KV referral code ${promoCode} marked as redeemed by ${userId}`);
+                      } else {
+                        console.error(`[Stripe Webhook] Failed to redeem KV code: ${result.error}`);
+                      }
+                    }
+                  } catch (referralError) {
+                    console.error('[Stripe Webhook] Failed to mark KV referral code as redeemed:', referralError);
+                  }
+                } else if (referralCardId) {
+                  // Redeem Firebase-based referral code (legacy)
                   try {
                     const redeemData = {
                       fields: {
@@ -820,9 +858,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
                         body: JSON.stringify(redeemData)
                       }
                     );
-                    console.log(`[Stripe Webhook] ✓ Referral code ${referralCardId} marked as redeemed by ${userId}`);
+                    console.log(`[Stripe Webhook] ✓ Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
                   } catch (referralError) {
-                    console.error('[Stripe Webhook] Failed to mark referral code as redeemed:', referralError);
+                    console.error('[Stripe Webhook] Failed to mark Firebase referral code as redeemed:', referralError);
                   }
                 }
 
