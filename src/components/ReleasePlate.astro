@@ -161,10 +161,10 @@ const tracksWithIds = tracks.map((track, index) => {
   const displayNum = track.displayTrackNumber || track.trackNumber || (index + 1);
   return {
     id: `${id}-track-${displayNum}`,
-    title: track.trackName || `Track ${displayNum}`,
+    title: track.trackName || track.title || `Track ${displayNum}`,
     featured: track.featured || '',
     remixer: track.remixer || '',
-    preview_url: track.previewUrl || null,
+    preview_url: track.previewUrl || track.preview_url || track.mp3Url || null,
     track_number: displayNum,
     mp3Url: track.mp3Url,
     wavUrl: track.wavUrl,
@@ -479,16 +479,18 @@ const totalDurationFormatted = totalDurationSeconds > 0
         <h4 class="text-sm text-white uppercase tracking-wider font-heading">
           TRACKS ({tracksWithIds.length})
         </h4>
-        <div class="text-sm text-white font-body">
-          {hasSale ? (
-            <Fragment>
-              <span class="line-through opacity-60">£{originalTrackPrice.toFixed(2)}</span>
-              <span class="text-green-400 font-bold ml-1">£{saleTrackPrice.toFixed(2)}</span> per track
-            </Fragment>
-          ) : (
-            <Fragment>£{finalTrackPrice.toFixed(2)} per track</Fragment>
-          )}
-        </div>
+        {finalTrackPrice > 0 && (
+          <div class="text-sm text-white font-body">
+            {hasSale ? (
+              <Fragment>
+                <span class="line-through opacity-60">£{originalTrackPrice.toFixed(2)}</span>
+                <span class="text-green-400 font-bold ml-1">£{saleTrackPrice.toFixed(2)}</span> per track
+              </Fragment>
+            ) : (
+              <Fragment>£{finalTrackPrice.toFixed(2)} per track</Fragment>
+            )}
+          </div>
+        )}
       </div>
 
       {tracksWithIds.length > 0 ? (
@@ -519,18 +521,20 @@ const totalDurationFormatted = totalDurationSeconds > 0
                   {track.featured && <span class="text-gray-400 font-normal"> feat. {track.featured}</span>}
                   {track.remixer && <span class="text-gray-400 font-normal"> ({track.remixer} Remix)</span>}
                 </p>
-                <button 
-                  class="buy-track flex-shrink-0 text-sm font-bold text-white bg-green-600 hover:bg-green-700 transition-all px-3 py-1 rounded font-body"
-                  data-track-id={track.id}
-                  data-track-title={track.title}
-                  data-track-price={finalTrackPrice}
-                  data-release-id={id}
-                  data-artist={artistName}
-                  data-artwork={coverArtUrl}
-                  title="Buy this track"
-                >
-                  BUY
-                </button>
+                {finalTrackPrice > 0 && (
+                  <button
+                    class="buy-track flex-shrink-0 text-sm font-bold text-white bg-green-600 hover:bg-green-700 transition-all px-3 py-1 rounded font-body"
+                    data-track-id={track.id}
+                    data-track-title={track.title}
+                    data-track-price={finalTrackPrice}
+                    data-release-id={id}
+                    data-artist={artistName}
+                    data-artwork={coverArtUrl}
+                    title="Buy this track"
+                  >
+                    BUY
+                  </button>
+                )}
               </div>
             ))}
             

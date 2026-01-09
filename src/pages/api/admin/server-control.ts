@@ -1,7 +1,7 @@
 // src/pages/api/admin/server-control.ts
 // Admin server control API - handles start/stop/restart and maintenance actions
 import type { APIRoute } from 'astro';
-import { queryCollection, updateDocument, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, updateDocument, deleteDocument, initFirebaseEnv, clearCache as clearFirebaseCache } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -234,11 +234,11 @@ async function kickViewers(): Promise<{ success: boolean; message?: string; erro
 // Clear cache
 async function clearCache(locals: any): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    // Note: Cloudflare cache purge would require API key
-    // For now, return success with note
+    // Clear in-memory firebase-rest cache
+    clearFirebaseCache();
     return {
       success: true,
-      message: 'Cache clear requested. CDN cache will be purged on next deployment.'
+      message: 'In-memory cache cleared successfully. Note: Each worker isolate has its own cache.'
     };
   } catch (error) {
     return { success: false, error: 'Failed to clear cache' };
