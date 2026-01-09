@@ -365,7 +365,7 @@ export const prerender = false;
                   <td class="cell-mono">#{order.orderNumber || order.id?.slice(-6).toUpperCase()}</td>
                   <td>{order.customerName || order.email || 'Unknown'}</td>
                   <td>{vinylItems.length} vinyl item{vinylItems.length !== 1 ? 's' : ''}</td>
-                  <td class="font-bold">{formatCurrency(order.total)}</td>
+                  <td class="font-bold">{formatCurrency(order.totals?.total || order.total)}</td>
                   <td>
                     <span class={`badge badge-${order.status}`}>{order.status}</span>
                   </td>

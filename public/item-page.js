@@ -1163,6 +1163,10 @@ async function checkUserPurchasePermission() {
 // Initialize user type check
 checkUserPurchasePermission();
 
+// Only add cart listener if not already attached (ReleasePlate.astro may have done it)
+if (!window.cartListenersAttached) {
+  window.cartListenersAttached = true;
+
 document.addEventListener('click', (e) => {
   const button = e.target.closest('.add-to-cart');
   if (!button || button.hasAttribute('disabled')) return;
@@ -1270,6 +1274,7 @@ document.addEventListener('click', (e) => {
     button.classList.remove('bg-green-600');
   }, 1500);
 });
+} // end cartListenersAttached guard
 
 // ========== WISHLIST SYSTEM ==========
 function getUserId() {

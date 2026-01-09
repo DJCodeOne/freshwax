@@ -544,8 +544,15 @@ export const prerender = false;
             </div>
 
             <!-- PayPal Button Container (hidden by default) -->
-            <div id="paypalPaymentSection" style="display: none;">
-              <div id="paypal-button-container" style="min-height: 55px; display: flex; flex-direction: column; align-items: center; justify-content: center;"></div>
+            <div id="paypalPaymentSection" style="display: none; width: 100%;">
+              <button type="button" id="customPaypalBtn" style="width: 100%; padding: 1rem; background: #FFC439; color: #003087; border: none; border-radius: 10px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.375rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.217a.774.774 0 0 1 .763-.645h6.333c2.097 0 3.768.514 4.967 1.53 1.178 1.001 1.763 2.442 1.737 4.28-.023 1.596-.492 2.95-1.392 4.02-.888 1.054-2.118 1.808-3.654 2.24a15.42 15.42 0 0 1-4.108.52H7.7l-.625 6.175z" fill="#003087"/>
+                  <path d="M23.048 7.667c-.03 1.651-.523 3.033-1.463 4.108-.953 1.088-2.256 1.86-3.87 2.293-1.157.31-2.47.466-3.896.466h-1.76a.774.774 0 0 0-.764.645l-1.14 7.218a.641.641 0 0 1-.633.54H6.5l-.09.528a.641.641 0 0 0 .634.74h4.022a.774.774 0 0 0 .763-.645l.704-4.46.045-.232a.774.774 0 0 1 .764-.645h.481c3.114 0 5.553-1.265 6.266-4.925.298-1.53.143-2.807-.658-3.704a3.198 3.198 0 0 0-.383-.327z" fill="#0070E0"/>
+                  <path d="M21.754 7.151a7.12 7.12 0 0 0-.877-.19 11.24 11.24 0 0 0-1.79-.133h-5.276a.752.752 0 0 0-.741.632l-1.12 7.1-.032.207a.774.774 0 0 1 .764-.645h1.59c3.127 0 5.574-1.27 6.29-4.944.021-.109.04-.215.055-.318.213-1.143.001-1.921-.863-2.71z" fill="#003087"/>
+                </svg>
+                PAY WITH PAYPAL
+              </button>
               <p style="text-align: center; font-size: 0.8125rem; color: #6b7280; margin-top: 0.75rem;">
                 You'll be redirected to PayPal to complete payment
               </p>
@@ -656,23 +663,108 @@ export const prerender = false;
   const PAYPAL_CLIENT_ID = import.meta.env.PUBLIC_PAYPAL_CLIENT_ID || 'AZL6pU1E2TbA9DdGgLvljJsON4-IwXIyWsHhQ_Od-BtMXTZTTgThss7pVuZzscyovO1z7XZRKgLRwpmv';
 
   function loadPayPalSDK() {
-    if (paypalSDKLoaded) {
-      renderPayPalButtons();
-      return;
+    // Set up custom PayPal button click handler
+    const customBtn = document.getElementById('customPaypalBtn');
+    if (customBtn && !customBtn.hasAttribute('data-paypal-init')) {
+      customBtn.setAttribute('data-paypal-init', 'true');
+      customBtn.addEventListener('click', handleCustomPayPalClick);
     }
+  }
 
-    const script = document.createElement('script');
-    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=GBP&intent=capture`;
-    script.async = true;
-    script.onload = () => {
-      paypalSDKLoaded = true;
-      renderPayPalButtons();
-    };
-    script.onerror = () => {
-      console.error('[Checkout] Failed to load PayPal SDK');
-      document.getElementById('paypal-button-container').innerHTML = '<p style="color: #dc2626; text-align: center;">Failed to load PayPal. Please try again or use card payment.</p>';
-    };
-    document.head.appendChild(script);
+  async function handleCustomPayPalClick() {
+    const customBtn = document.getElementById('customPaypalBtn');
+    const errorMsg = document.getElementById('error-message');
+
+    try {
+      // Check email verification
+      if (window.FreshWax?.checkEmailVerified) {
+        const verified = await window.FreshWax.checkEmailVerified('complete purchases');
+        if (!verified) return;
+      }
+
+      const form = document.getElementById('checkoutForm');
+      const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals();
+
+      // Validate form
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+
+      // Show loading state
+      customBtn.disabled = true;
+      customBtn.innerHTML = '<span>Processing...</span>';
+
+      const orderData = {
+        customer: {
+          email: form.email.value,
+          firstName: form.firstName.value,
+          lastName: form.lastName.value,
+          phone: form.phone?.value || '',
+          userId: currentUser?.uid || null
+        },
+        shipping: hasPhysicalItems ? {
+          address1: form.address1.value,
+          address2: form.address2?.value || '',
+          city: form.city.value,
+          county: form.county?.value || '',
+          postcode: form.postcode.value,
+          country: form.country.value
+        } : null,
+        items: cart.map(item => ({
+          id: item.id || item.productId,
+          productId: item.productId || item.id,
+          releaseId: item.releaseId || item.productId || item.id,
+          trackId: item.trackId || null,
+          name: item.name,
+          type: item.type || item.productType,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image || item.artwork,
+          size: item.size || null,
+          color: typeof item.color === 'object' ? item.color.name : item.color || null
+        })),
+        totals: { subtotal, shipping, freshWaxFee, stripeFee, serviceFees, total },
+        hasPhysicalItems,
+        returnUrl: window.location.origin + '/api/paypal/capture-redirect'
+      };
+
+      // Create PayPal order
+      const response = await fetch('/api/paypal/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create PayPal order');
+      }
+
+      // Store order data for capture
+      localStorage.setItem('pendingPayPalOrder', JSON.stringify(orderData));
+
+      // Redirect to PayPal approval URL
+      if (result.approvalUrl) {
+        window.location.href = result.approvalUrl;
+      } else {
+        throw new Error('No PayPal approval URL returned');
+      }
+
+    } catch (error) {
+      console.error('PayPal error:', error);
+      errorMsg.textContent = error.message || 'PayPal error. Please try again.';
+      errorMsg.style.display = 'block';
+
+      // Reset button
+      customBtn.disabled = false;
+      customBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.217a.774.774 0 0 1 .763-.645h6.333c2.097 0 3.768.514 4.967 1.53 1.178 1.001 1.763 2.442 1.737 4.28-.023 1.596-.492 2.95-1.392 4.02-.888 1.054-2.118 1.808-3.654 2.24a15.42 15.42 0 0 1-4.108.52H7.7l-.625 6.175z" fill="#003087"/>
+        <path d="M23.048 7.667c-.03 1.651-.523 3.033-1.463 4.108-.953 1.088-2.256 1.86-3.87 2.293-1.157.31-2.47.466-3.896.466h-1.76a.774.774 0 0 0-.764.645l-1.14 7.218a.641.641 0 0 1-.633.54H6.5l-.09.528a.641.641 0 0 0 .634.74h4.022a.774.774 0 0 0 .763-.645l.704-4.46.045-.232a.774.774 0 0 1 .764-.645h.481c3.114 0 5.553-1.265 6.266-4.925.298-1.53.143-2.807-.658-3.704a3.198 3.198 0 0 0-.383-.327z" fill="#0070E0"/>
+        <path d="M21.754 7.151a7.12 7.12 0 0 0-.877-.19 11.24 11.24 0 0 0-1.79-.133h-5.276a.752.752 0 0 0-.741.632l-1.12 7.1-.032.207a.774.774 0 0 1 .764-.645h1.59c3.127 0 5.574-1.27 6.29-4.944.021-.109.04-.215.055-.318.213-1.143.001-1.921-.863-2.71z" fill="#003087"/>
+      </svg> PAY WITH PAYPAL`;
+    }
   }
 
   function renderPayPalButtons() {
@@ -691,7 +783,8 @@ export const prerender = false;
         color: 'gold',
         shape: 'rect',
         label: 'paypal',
-        height: 55
+        height: 55,
+        tagline: false
       },
 
       createOrder: async function(data, actions) {
@@ -823,7 +916,24 @@ export const prerender = false;
       onCancel: function() {
         console.log('PayPal payment cancelled');
       }
-    }).render('#paypal-button-container').catch(err => {
+    }).render('#paypal-button-container').then(() => {
+      // Force full width on all PayPal elements after render
+      setTimeout(() => {
+        const container = document.getElementById('paypal-button-container');
+        if (container) {
+          const allDivs = container.querySelectorAll('div');
+          allDivs.forEach(div => {
+            div.style.width = '100%';
+            div.style.maxWidth = '100%';
+          });
+          const iframes = container.querySelectorAll('iframe');
+          iframes.forEach(iframe => {
+            iframe.style.width = '100%';
+            iframe.style.maxWidth = '100%';
+          });
+        }
+      }, 100);
+    }).catch(err => {
       console.error('PayPal render error:', err);
       // Reset flag on error so user can retry
       paypalButtonsRendered = false;

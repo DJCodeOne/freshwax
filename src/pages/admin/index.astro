@@ -71,8 +71,8 @@ const todayOrders = orders.filter(o => o.createdAt >= startOfToday);
 const monthOrders = orders.filter(o => o.createdAt >= startOfMonth);
 const pendingOrders = orders.filter(o => o.status === 'pending');
 
-const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-const monthRevenue = monthOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.totals?.total || o.total || 0), 0);
+const monthRevenue = monthOrders.reduce((sum, o) => sum + (o.totals?.total || o.total || 0), 0);
 
 // Partner stats (data already in array format from REST API)
 const artists = artistsData;
@@ -151,7 +151,7 @@ const disputesLost = disputesData.filter(d => d.status === 'lost').reduce((sum, 
 const disputesWon = disputesData.filter(d => d.status === 'won').reduce((sum, d) => sum + (d.amount || 0), 0);
 
 // Calculate gross revenue (all orders)
-const grossRevenue = ordersData.reduce((sum, o) => sum + (o.total || 0), 0);
+const grossRevenue = ordersData.reduce((sum, o) => sum + (o.totals?.total || o.total || 0), 0);
 
 // Platform fees earned (1% of gross revenue minus refunds)
 const platformFeesEarned = (grossRevenue - totalRefunded) * PLATFORM_FEE_RATE;
@@ -435,7 +435,7 @@ export const prerender = false;
               {recentOrders.map(order => (
                 <tr>
                   <td class="cell-mono">#{order.id?.slice(-6).toUpperCase()}</td>
-                  <td class="font-bold">{formatCurrency(order.total)}</td>
+                  <td class="font-bold">{formatCurrency(order.totals?.total || order.total)}</td>
                   <td><span class={`badge badge-${order.status}`}>{order.status}</span></td>
                   <td class="cell-secondary">{formatDate(order.createdAt)}</td>
                 </tr>

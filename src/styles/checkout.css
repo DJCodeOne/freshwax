@@ -559,17 +559,46 @@
     .checkout-form-grid {
       grid-template-columns: 1fr !important;
     }
-    
+
     .postcode-lookup-row {
       flex-direction: column !important;
     }
-    
+
     .postcode-lookup-row button {
       width: 100% !important;
     }
-    
+
     #checkoutForm input,
     #checkoutForm select {
       font-size: 16px !important; /* Prevents iOS zoom */
     }
+  }
+
+  /* PayPal Button Styling - Full Width */
+  #paypal-button-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  #paypal-button-container > div,
+  #paypal-button-container > div > div {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  #paypal-button-container .paypal-buttons,
+  #paypal-button-container .paypal-buttons-context-iframe {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  #paypal-button-container iframe {
+    width: 100% !important;
+  }
+
+  #paypalPaymentSection {
+    width: 100% !important;
+    box-sizing: border-box;
   }

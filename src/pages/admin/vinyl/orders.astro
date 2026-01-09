@@ -303,7 +303,7 @@ export const prerender = false;
         const shipped = allOrders.filter(o => o.status === 'shipped');
         const delivered = allOrders.filter(o => o.status === 'delivered');
         const revenue = allOrders.filter(o => o.status !== 'cancelled' && o.status !== 'refunded')
-          .reduce((sum, o) => sum + (o.total || 0), 0);
+          .reduce((sum, o) => sum + (o.totals?.total || o.total || 0), 0);
 
         document.getElementById('totalCount').textContent = allOrders.length;
         document.getElementById('pendingCount').textContent = pending.length;
@@ -385,7 +385,7 @@ export const prerender = false;
               <td>${o.buyerName}</td>
               <td>${o.sellerName}</td>
               <td>${itemCount} item${itemCount !== 1 ? 's' : ''}</td>
-              <td><strong>£${(o.total || 0).toFixed(2)}</strong></td>
+              <td><strong>£${(o.totals?.total || o.total || 0).toFixed(2)}</strong></td>
               <td>${statusBadge}</td>
               <td class="text-right">
                 <button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">View</button>
@@ -440,7 +440,7 @@ export const prerender = false;
         document.getElementById('viewShipping').textContent = '£' + (order.shipping || 0).toFixed(2);
         document.getElementById('viewProcessingFee').textContent = '£' + (order.processingFee || 0).toFixed(2);
         document.getElementById('viewPlatformFee').textContent = '£' + (order.platformFee || 0).toFixed(2);
-        document.getElementById('viewTotal').textContent = '£' + (order.total || 0).toFixed(2);
+        document.getElementById('viewTotal').textContent = '£' + (order.totals?.total || order.total || 0).toFixed(2);
         document.getElementById('viewSellerPayout').textContent = '£' + (order.sellerPayout || 0).toFixed(2);
 
         // Shipping address

@@ -207,7 +207,7 @@ export const prerender = false;
                     </span>
                   </td>
                   <td class="font-bold">
-                    {formatCurrency(order.total)}
+                    {formatCurrency(order.totals?.total || order.total)}
                   </td>
                   <td>
                     <span class={`badge badge-${order.status}`}>
@@ -362,7 +362,7 @@ export const prerender = false;
             </div>
             <div>
               <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.25rem;">Total</div>
-              <div style="font-weight: 700; font-size: 1.25rem;">${formatCurrency(order.total)}</div>
+              <div style="font-weight: 700; font-size: 1.25rem;">${formatCurrency(order.totals?.total || order.total)}</div>
             </div>
           </div>
           
@@ -402,7 +402,7 @@ export const prerender = false;
             ${itemsHtml || '<div style="color: #888;">No items</div>'}
             <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: #000; color: #fff; font-weight: 700; margin-top: 0.5rem;">
               <span>Total</span>
-              <span>${formatCurrency(order.total)}</span>
+              <span>${formatCurrency(order.totals?.total || order.total)}</span>
             </div>
           </div>
           

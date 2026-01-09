@@ -279,6 +279,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const paypalResult = await createResponse.json();
     console.log('[PayPal] Order created:', paypalResult.id);
 
+    // Extract approval URL from PayPal response links
+    const approvalLink = paypalResult.links?.find((link: any) => link.rel === 'approve');
+    const approvalUrl = approvalLink?.href || null;
+
     // Store VALIDATED order data in Firebase for secure retrieval during capture
     // This prevents client-side tampering with order data
     try {
@@ -327,7 +331,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: true,
       orderId: paypalResult.id,
-      status: paypalResult.status
+      status: paypalResult.status,
+      approvalUrl: approvalUrl
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
