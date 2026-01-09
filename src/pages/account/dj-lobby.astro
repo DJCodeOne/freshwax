@@ -4276,6 +4276,11 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       if (panel?.classList.contains('minimized')) {
         panel.classList.remove('minimized');
         btn.textContent = '−';
+        // Restart meters when expanding panel (they may have stopped)
+        if (!broadcastMeterAnimationId) {
+          console.log('[BroadcastMeters] Restarting meters after panel expand');
+          animateBroadcastMeters();
+        }
       } else {
         panel?.classList.add('minimized');
         btn.textContent = '+';
@@ -4366,6 +4371,17 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       peakHoldL = -Infinity;
       peakHoldR = -Infinity;
     }, 2000);
+
+    // Restart meters when tab becomes visible (browser may stop requestAnimationFrame in background)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        const panel = document.getElementById('broadcastAudioPanel');
+        if (panel && !panel.classList.contains('hidden') && !broadcastMeterAnimationId) {
+          console.log('[BroadcastMeters] Restarting meters after tab visible');
+          animateBroadcastMeters();
+        }
+      }
+    });
   }
 
   function stopBroadcastMeters() {
@@ -4382,7 +4398,53 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     lastLufsBlockTime = 0;
   }
 
+  // Debug counter for broadcast meters
+  let broadcastMeterFrameCount = 0;
+  let lastBroadcastDebugTime = 0;
+
   function animateBroadcastMeters() {
+    try {
+    // Keep AudioContext active - browsers may suspend it after inactivity
+    if (icecastAudioContext && icecastAudioContext.state === 'suspended') {
+      console.log('[BroadcastMeters] Resuming suspended icecastAudioContext');
+      icecastAudioContext.resume().catch(() => {});
+    }
+
+    // Debug logging every 5 seconds
+    broadcastMeterFrameCount++;
+    const now = Date.now();
+    if (now - lastBroadcastDebugTime > 5000) {
+      // Check audio element status
+      const relayAudio = document.getElementById('relayAudio');
+      const audioPlaying = relayAudio && !relayAudio.paused && relayAudio.currentTime > 0;
+
+      // Sample analyser data to check if it's updating
+      let peakL = 0, peakR = 0;
+      if (icecastAnalyserL && icecastAnalyserR) {
+        const testDataL = new Uint8Array(icecastAnalyserL.frequencyBinCount);
+        const testDataR = new Uint8Array(icecastAnalyserR.frequencyBinCount);
+        icecastAnalyserL.getByteFrequencyData(testDataL);
+        icecastAnalyserR.getByteFrequencyData(testDataR);
+        peakL = Math.max(...testDataL);
+        peakR = Math.max(...testDataR);
+      }
+
+      console.log('[BroadcastMeters] Status:', {
+        frames: broadcastMeterFrameCount,
+        animationId: broadcastMeterAnimationId,
+        icecastState: icecastAudioContext?.state,
+        hasIcecastAnalysers: !!(icecastAnalyserL && icecastAnalyserR),
+        currentPreviewSource,
+        broadcastAudioSource,
+        audioPlaying,
+        audioCurrentTime: relayAudio?.currentTime?.toFixed(1),
+        peakL,
+        peakR
+      });
+      lastBroadcastDebugTime = now;
+      broadcastMeterFrameCount = 0;
+    }
+
     // Get the active analyser based on OBS/BUTT/Relay tab and preview/live toggle
     let analyserL, analyserR;
     let kWeightedL = null, kWeightedR = null;
@@ -4474,6 +4536,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       }
     }
 
+    } catch (err) {
+      console.error('[BroadcastMeters] ERROR:', err);
+    }
     broadcastMeterAnimationId = requestAnimationFrame(animateBroadcastMeters);
   }
 
@@ -4520,6 +4585,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
   }
 
+  // PPM debug tracking
+  let lastPPMDebugTime = 0;
+  let ppmUpdateCount = 0;
+  let lastPPMValue = { L: 0, R: 0 };
   function updatePPMMeter(channel, db) {
     const fillEl = document.getElementById(`ppmFill${channel}`);
     const peakEl = document.getElementById(`ppmPeak${channel}`);
@@ -4528,6 +4597,16 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     // Map dB to percentage (PPM scale: -60 to +3 dB)
     const normalizedLevel = Math.max(0, Math.min(1, (db + 60) / 63));
     const percentage = normalizedLevel * 100;
+
+    // Track PPM updates for debugging
+    ppmUpdateCount++;
+    lastPPMValue[channel] = percentage;
+    const ppmNow = Date.now();
+    if (ppmNow - lastPPMDebugTime > 5000 && channel === 'L') {
+      console.log('[PPM Debug]', { updates: ppmUpdateCount, fillElExists: !!fillEl, peakElExists: !!peakEl, ppmL: lastPPMValue.L?.toFixed(1), ppmR: lastPPMValue.R?.toFixed(1), dbL: db?.toFixed(1) });
+      lastPPMDebugTime = ppmNow;
+      ppmUpdateCount = 0;
+    }
 
     if (fillEl) fillEl.style.height = `${percentage}%`;
     if (peakEl) peakEl.style.bottom = `${percentage}%`;
@@ -5228,7 +5307,6 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           document.getElementById('streamKeySection')?.classList.remove('hidden');
           document.getElementById('multiStreamSection')?.classList.remove('hidden');
           // Audio panel is persistent - don't hide it
-          stopBroadcastMeters();
           document.querySelector('.preview-section')?.classList.remove('expanded');
           // Enable Go Live button when no one is streaming
           const goLiveBtn = document.getElementById('setReadyBtn');

@@ -280,6 +280,7 @@ let globalAnalyserLeft = null;
 let globalAnalyserRight = null;
 let globalAnimationId = null;
 let globalMediaSource = null;
+let globalMediaElement = null; // Track which element is connected
 
 // Mobile touch state
 let touchStartY = 0;
@@ -738,8 +739,11 @@ function setupPlaylistPlayButton() {
       return;
     }
 
-    // Priority 2: Handle HLS video stream
-    if (videoElement && !videoElement.classList.contains('hidden') && window.isLiveStreamActive) {
+    // Priority 2: Handle HLS video stream (only when video player is visible, not audio player)
+    const audioPlayerVisible = document.getElementById('audioPlayer') && !document.getElementById('audioPlayer').classList.contains('hidden');
+    const videoPlayerVisible = document.getElementById('videoPlayer') && !document.getElementById('videoPlayer').classList.contains('hidden');
+
+    if (videoElement && videoPlayerVisible && !audioPlayerVisible && window.isLiveStreamActive) {
       if (videoElement.paused) {
         rememberAutoplay();
         setLiveStreamPlaying(true); // Track playing state for persistence
@@ -2142,27 +2146,46 @@ function showStreamError(message) {
 // AUDIO ANALYZER FOR LED METERS
 // ==========================================
 function initGlobalAudioAnalyzer(mediaElement) {
-  if (globalAudioContext && globalMediaSource) return;
-  
+  // If same element already connected, just return
+  if (globalAudioContext && globalMediaSource && globalMediaElement === mediaElement) {
+    console.log('[Audio] Analyzer already connected to this element');
+    return;
+  }
+
+  // If different element, close old context first
+  if (globalAudioContext && globalMediaElement !== mediaElement) {
+    console.log('[Audio] Switching analyzer to different media element');
+    try {
+      globalAudioContext.close();
+    } catch (e) {
+      console.warn('[Audio] Error closing old context:', e);
+    }
+    globalAudioContext = null;
+    globalMediaSource = null;
+    globalAnalyserLeft = null;
+    globalAnalyserRight = null;
+  }
+
   try {
     globalAudioContext = new (window.AudioContext || window.webkitAudioContext)();
     globalMediaSource = globalAudioContext.createMediaElementSource(mediaElement);
-    
+    globalMediaElement = mediaElement; // Track which element is connected
+
     const splitter = globalAudioContext.createChannelSplitter(2);
-    
+
     globalAnalyserLeft = globalAudioContext.createAnalyser();
     globalAnalyserRight = globalAudioContext.createAnalyser();
     globalAnalyserLeft.fftSize = 256;
     globalAnalyserRight.fftSize = 256;
     globalAnalyserLeft.smoothingTimeConstant = 0.5;
     globalAnalyserRight.smoothingTimeConstant = 0.5;
-    
+
     globalMediaSource.connect(splitter);
     splitter.connect(globalAnalyserLeft, 0);
     splitter.connect(globalAnalyserRight, 1);
     globalMediaSource.connect(globalAudioContext.destination);
-    
-    console.log('[Audio] Analyzer initialized');
+
+    console.log('[Audio] Analyzer initialized for', mediaElement.tagName);
   } catch (err) {
     console.error('[Audio] Analyzer error:', err);
   }
