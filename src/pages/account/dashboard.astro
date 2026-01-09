@@ -664,11 +664,23 @@ export const prerender = false;
               <span class="discount-badge">50% OFF</span>
             </div>
           </div>
-          <button id="goPlusUpgradeBtn" class="goplus-upgrade-btn">
-            <span class="btn-text">Upgrade Now - £10</span>
-            <span class="btn-loading hidden">Processing...</span>
-          </button>
-          <p class="goplus-secure">Secure payment via Stripe</p>
+          <div class="goplus-payment-buttons">
+            <button id="goPlusStripeBtn" class="goplus-upgrade-btn goplus-stripe-btn">
+              <span class="btn-icon">💳</span>
+              <span class="btn-text">Pay with Card - £10</span>
+              <span class="btn-loading hidden">Processing...</span>
+            </button>
+            <button id="goPlusPayPalBtn" class="goplus-upgrade-btn goplus-paypal-btn">
+              <span class="btn-icon">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                  <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 0 0 .554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.852.816-5.09a.932.932 0 0 1 .923-.788h.58c3.76 0 6.705-1.528 7.565-5.946.36-1.847.174-3.388-.777-4.471z"/>
+                </svg>
+              </span>
+              <span class="btn-text">Pay with PayPal - £10</span>
+              <span class="btn-loading hidden">Processing...</span>
+            </button>
+          </div>
+          <p class="goplus-secure">Secure payment • Cancel anytime</p>
         </div>
       </div>
     </div>
@@ -3079,7 +3091,8 @@ export const prerender = false;
     const promoInput = document.getElementById('goPlusPromoCode');
     const promoMessage = document.getElementById('goPlusPromoMessage');
     const discountedPriceEl = document.getElementById('goPlusDiscountedPrice');
-    const upgradeBtn = document.getElementById('goPlusUpgradeBtn');
+    const stripeBtn = document.getElementById('goPlusStripeBtn');
+    const paypalBtn = document.getElementById('goPlusPayPalBtn');
     const applyBtn = document.getElementById('goPlusApplyPromo');
 
     const code = promoInput?.value.trim().toUpperCase();
@@ -3114,9 +3127,11 @@ export const prerender = false;
         promoInput.disabled = true;
         if (applyBtn) applyBtn.textContent = 'Applied';
 
-        // Update button text to show discounted price
-        const btnText = upgradeBtn?.querySelector('.btn-text');
-        if (btnText) btnText.textContent = 'Upgrade Now - £5';
+        // Update button texts to show discounted price
+        const stripeBtnText = stripeBtn?.querySelector('.btn-text');
+        const paypalBtnText = paypalBtn?.querySelector('.btn-text');
+        if (stripeBtnText) stripeBtnText.textContent = 'Pay with Card - £5';
+        if (paypalBtnText) paypalBtnText.textContent = 'Pay with PayPal - £5';
       } else {
         appliedPromoCode = null;
         promoMessage.textContent = result.error || 'Invalid promo code';
@@ -3132,15 +3147,56 @@ export const prerender = false;
     }
   }
 
-  // Handle upgrade button click - redirect to Stripe checkout
-  async function handleUpgradeClick() {
+  // Helper to set button loading state
+  function setPaymentButtonLoading(btn, loading) {
+    if (!btn) return;
+    btn.disabled = loading;
+    const btnText = btn.querySelector('.btn-text');
+    const btnLoading = btn.querySelector('.btn-loading');
+    if (btnText) btnText.classList.toggle('hidden', loading);
+    if (btnLoading) btnLoading.classList.toggle('hidden', !loading);
+  }
+
+  // Reset all payment buttons to default state
+  function resetPaymentButtons() {
+    const goPlusHeaderBtn = document.getElementById('goPlusHeaderBtn');
+    const stripeBtn = document.getElementById('goPlusStripeBtn');
+    const paypalBtn = document.getElementById('goPlusPayPalBtn');
+    const priceText = appliedPromoCode ? '£5' : '£10';
+
+    if (goPlusHeaderBtn) {
+      goPlusHeaderBtn.style.pointerEvents = '';
+      const btnText = goPlusHeaderBtn.querySelector('.pro-text');
+      if (btnText) btnText.textContent = 'Go Plus';
+    }
+
+    if (stripeBtn) {
+      stripeBtn.disabled = false;
+      const btnText = stripeBtn.querySelector('.btn-text');
+      const btnLoading = stripeBtn.querySelector('.btn-loading');
+      if (btnText) { btnText.textContent = `Pay with Card - ${priceText}`; btnText.classList.remove('hidden'); }
+      if (btnLoading) btnLoading.classList.add('hidden');
+    }
+
+    if (paypalBtn) {
+      paypalBtn.disabled = false;
+      const btnText = paypalBtn.querySelector('.btn-text');
+      const btnLoading = paypalBtn.querySelector('.btn-loading');
+      if (btnText) { btnText.textContent = `Pay with PayPal - ${priceText}`; btnText.classList.remove('hidden'); }
+      if (btnLoading) btnLoading.classList.add('hidden');
+    }
+  }
+
+  // Handle Stripe (card) payment
+  async function handleStripeUpgrade() {
     if (!currentUser) {
       alert('Please sign in to upgrade');
       return;
     }
 
     const goPlusHeaderBtn = document.getElementById('goPlusHeaderBtn');
-    const goPlusUpgradeBtn = document.getElementById('goPlusUpgradeBtn');
+    const stripeBtn = document.getElementById('goPlusStripeBtn');
+    const paypalBtn = document.getElementById('goPlusPayPalBtn');
 
     // Disable buttons and show processing state
     if (goPlusHeaderBtn) {
@@ -3148,13 +3204,8 @@ export const prerender = false;
       const btnText = goPlusHeaderBtn.querySelector('.pro-text');
       if (btnText) btnText.textContent = 'Processing...';
     }
-    if (goPlusUpgradeBtn) {
-      goPlusUpgradeBtn.disabled = true;
-      const btnText = goPlusUpgradeBtn.querySelector('.btn-text');
-      const btnLoading = goPlusUpgradeBtn.querySelector('.btn-loading');
-      if (btnText) btnText.classList.add('hidden');
-      if (btnLoading) btnLoading.classList.remove('hidden');
-    }
+    setPaymentButtonLoading(stripeBtn, true);
+    if (paypalBtn) paypalBtn.disabled = true;
 
     try {
       // Create Stripe checkout session for Pro subscription
@@ -3182,22 +3233,91 @@ export const prerender = false;
         throw new Error(result.error || 'Failed to create checkout session');
       }
     } catch (error) {
-      console.error('Upgrade error:', error);
+      console.error('Stripe upgrade error:', error);
       alert('Failed to start upgrade process. Please try again.');
+      resetPaymentButtons();
+    }
+  }
 
-      // Reset buttons
-      if (goPlusHeaderBtn) {
-        goPlusHeaderBtn.style.pointerEvents = '';
-        const btnText = goPlusHeaderBtn.querySelector('.pro-text');
-        if (btnText) btnText.textContent = 'Go Plus';
+  // Handle PayPal payment
+  async function handlePayPalUpgrade() {
+    if (!currentUser) {
+      alert('Please sign in to upgrade');
+      return;
+    }
+
+    const goPlusHeaderBtn = document.getElementById('goPlusHeaderBtn');
+    const stripeBtn = document.getElementById('goPlusStripeBtn');
+    const paypalBtn = document.getElementById('goPlusPayPalBtn');
+
+    // Disable buttons and show processing state
+    if (goPlusHeaderBtn) {
+      goPlusHeaderBtn.style.pointerEvents = 'none';
+      const btnText = goPlusHeaderBtn.querySelector('.pro-text');
+      if (btnText) btnText.textContent = 'Processing...';
+    }
+    setPaymentButtonLoading(paypalBtn, true);
+    if (stripeBtn) stripeBtn.disabled = true;
+
+    try {
+      // Create PayPal order for Plus subscription
+      const response = await fetch('/api/paypal/create-plus-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.uid,
+          email: currentUser.email,
+          promoCode: appliedPromoCode
+        })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create PayPal order');
       }
-      if (goPlusUpgradeBtn) {
-        goPlusUpgradeBtn.disabled = false;
-        const btnText = goPlusUpgradeBtn.querySelector('.btn-text');
-        const btnLoading = goPlusUpgradeBtn.querySelector('.btn-loading');
-        if (btnText) btnText.classList.remove('hidden');
-        if (btnLoading) btnLoading.classList.add('hidden');
-      }
+
+      // Open PayPal approval URL
+      const paypalWindow = window.open(result.approvalUrl, 'paypal_plus', 'width=500,height=700,left=200,top=100');
+
+      // Poll for popup close and check for success
+      const checkClosed = setInterval(async () => {
+        if (paypalWindow?.closed) {
+          clearInterval(checkClosed);
+
+          // Try to capture the order
+          try {
+            const captureResponse = await fetch('/api/paypal/capture-plus-order', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                paypalOrderId: result.paypalOrderId,
+                orderData: result.orderData,
+                expectedAmount: result.amount
+              })
+            });
+
+            const captureResult = await captureResponse.json();
+
+            if (captureResult.success) {
+              // Redirect to success page
+              window.location.href = '/account/dashboard?upgraded=true';
+            } else {
+              // Payment was cancelled or failed
+              console.log('PayPal payment not completed:', captureResult.error);
+              resetPaymentButtons();
+            }
+          } catch (captureError) {
+            console.error('PayPal capture error:', captureError);
+            resetPaymentButtons();
+          }
+        }
+      }, 500);
+
+    } catch (error) {
+      console.error('PayPal upgrade error:', error);
+      alert(error.message || 'Failed to start PayPal payment. Please try again.');
+      resetPaymentButtons();
     }
   }
 
@@ -3208,7 +3328,8 @@ export const prerender = false;
     const modal = document.getElementById('goPlusModal');
     const closeBtn = document.getElementById('goPlusModalClose');
     const backdrop = modal?.querySelector('.goplus-modal-backdrop');
-    const upgradeBtn = document.getElementById('goPlusUpgradeBtn');
+    const stripeBtn = document.getElementById('goPlusStripeBtn');
+    const paypalBtn = document.getElementById('goPlusPayPalBtn');
 
     console.log('[Dashboard] Go Plus button:', goPlusHeaderBtn);
     console.log('[Dashboard] Go Plus modal:', modal);
@@ -3244,8 +3365,11 @@ export const prerender = false;
       }
     });
 
-    // Handle upgrade button in modal
-    upgradeBtn?.addEventListener('click', handleUpgradeClick);
+    // Handle Stripe payment button
+    stripeBtn?.addEventListener('click', handleStripeUpgrade);
+
+    // Handle PayPal payment button
+    paypalBtn?.addEventListener('click', handlePayPalUpgrade);
 
     // Handle promo code apply button
     const promoApplyBtn = document.getElementById('goPlusApplyPromo');
@@ -3270,13 +3394,15 @@ export const prerender = false;
       const promoMessage = document.getElementById('goPlusPromoMessage');
       const discountedPriceEl = document.getElementById('goPlusDiscountedPrice');
       const promoBtnEl = document.getElementById('goPlusApplyPromo');
-      const upgradeBtnText = document.getElementById('goPlusUpgradeBtn')?.querySelector('.btn-text');
+      const stripeBtnText = document.getElementById('goPlusStripeBtn')?.querySelector('.btn-text');
+      const paypalBtnText = document.getElementById('goPlusPayPalBtn')?.querySelector('.btn-text');
 
       if (promoInputEl) { promoInputEl.value = ''; promoInputEl.disabled = false; }
       if (promoMessage) { promoMessage.textContent = ''; promoMessage.className = 'promo-message'; }
       if (discountedPriceEl) discountedPriceEl.classList.add('hidden');
       if (promoBtnEl) { promoBtnEl.textContent = 'Apply'; promoBtnEl.disabled = false; }
-      if (upgradeBtnText) upgradeBtnText.textContent = 'Upgrade Now - £10';
+      if (stripeBtnText) stripeBtnText.textContent = 'Pay with Card - £10';
+      if (paypalBtnText) paypalBtnText.textContent = 'Pay with PayPal - £10';
     };
   }
 
@@ -3706,28 +3832,62 @@ export const prerender = false;
     text-align: center;
   }
 
+  .goplus-payment-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
   .goplus-upgrade-btn {
     width: 100%;
-    padding: 1rem 2rem;
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    color: #000;
+    padding: 0.875rem 1.5rem;
     border: none;
     border-radius: 0.5rem;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .goplus-stripe-btn {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #000;
     box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
   }
 
-  .goplus-upgrade-btn:hover:not(:disabled) {
+  .goplus-stripe-btn:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+  }
+
+  .goplus-paypal-btn {
+    background: linear-gradient(135deg, #0070ba 0%, #003087 100%);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(0, 112, 186, 0.4);
+  }
+
+  .goplus-paypal-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 112, 186, 0.5);
   }
 
   .goplus-upgrade-btn:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+    transform: none !important;
+  }
+
+  .goplus-upgrade-btn .btn-icon {
+    display: flex;
+    align-items: center;
+  }
+
+  .goplus-upgrade-btn .btn-icon svg {
+    fill: currentColor;
   }
 
   .goplus-secure {
