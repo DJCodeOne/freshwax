@@ -132,14 +132,16 @@ export const prerender = false;
                 <p class="referral-desc">Share your code with a friend and they'll get 50% off Plus (just £5 instead of £10)!</p>
                 <div class="referral-code-box">
                   <code id="referralCodeDisplay" class="referral-code">Loading...</code>
-                  <button class="copy-referral-btn" id="copyReferralBtn" title="Copy code">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                  </button>
                 </div>
+                <button class="copy-referral-btn" id="copyReferralBtn" title="Copy code">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span>Copy Code</span>
+                </button>
                 <p class="referral-note" id="referralNote">One-time use code. Expires in 1 year.</p>
+                <p class="referral-expires" id="referralExpires">Offer ends 26th December 2026</p>
                 <p class="referral-used hidden" id="referralUsed">✓ Your referral code has been used!</p>
                 </div>
               </div>
@@ -2753,25 +2755,27 @@ export const prerender = false;
     }
   }
 
-  // Load and display referral code for Pro users
+  // Load and display referral code for Pro users (from KV storage)
   async function loadReferralCode(userId) {
     try {
       console.log('[Dashboard] Loading referral code for:', userId);
-      // Fetch user document to get referral code
-      const response = await fetch(`/api/get-user-type?uid=${userId}`);
+
+      // Fetch referral code from KV-based API
+      const response = await fetch(`/api/get-referral-code?userId=${userId}`);
       const data = await response.json();
       console.log('[Dashboard] Referral data:', data);
 
       const referralCodeDisplay = document.getElementById('referralCodeDisplay');
       const copyReferralBtn = document.getElementById('copyReferralBtn');
       const referralNote = document.getElementById('referralNote');
+      const referralExpires = document.getElementById('referralExpires');
       const referralUsed = document.getElementById('referralUsed');
       const referralSection = document.getElementById('referralSection');
 
       console.log('[Dashboard] Referral elements:', {
         referralCodeDisplay: !!referralCodeDisplay,
         referralSection: !!referralSection,
-        hasReferralCode: !!data.referralCode
+        hasCode: data.hasCode
       });
 
       if (!referralSection) {
@@ -2779,26 +2783,66 @@ export const prerender = false;
         return;
       }
 
-      if (data.referralCode) {
-        referralCodeDisplay.textContent = data.referralCode;
+      // Check if code has been used (from KV data)
+      const isUsed = data.hasCode && data.data && data.data.usedCount >= data.data.maxUses;
 
-        // Check if referral code has been used
-        const codeCheckResponse = await fetch(`/api/giftcards/apply-referral?code=${data.referralCode}`);
-        const codeCheck = await codeCheckResponse.json();
+      if (isUsed) {
+        // Code was used - show it directly (no animation needed)
+        referralCodeDisplay.textContent = data.code;
+        referralNote.classList.add('hidden');
+        referralUsed.classList.remove('hidden');
+        copyReferralBtn.style.display = 'none';
+      } else {
+        // Either no code yet OR code exists but not used - always show "Generate/Reveal" button
+        const hasExistingCode = data.hasCode && data.code;
+        referralCodeDisplay.textContent = hasExistingCode ? 'Reveal Your Code' : 'Generate Code';
+        referralCodeDisplay.style.cursor = 'pointer';
+        referralNote.textContent = hasExistingCode
+          ? 'Click to reveal your exclusive referral code'
+          : 'Click to generate your unique referral code';
+        copyReferralBtn.style.display = 'none';
 
-        if (!codeCheck.success && codeCheck.error?.includes('already been used')) {
-          // Code was used
-          referralNote.classList.add('hidden');
-          referralUsed.classList.remove('hidden');
-          copyReferralBtn.style.display = 'none';
-        } else {
-          // Code is still active
-          referralNote.classList.remove('hidden');
-          referralUsed.classList.add('hidden');
+        // Helper function to animate code reveal
+        const animateCodeReveal = (code) => {
+          referralCodeDisplay.textContent = '';
+          referralCodeDisplay.style.cursor = 'default';
+          referralCodeDisplay.classList.add('code-generating');
+
+          // Add glow animation styles
+          referralCodeDisplay.style.animation = 'none';
+          referralCodeDisplay.offsetHeight; // Trigger reflow
+          referralCodeDisplay.style.animation = 'codeReveal 0.5s ease-out forwards, codeGlow 2s ease-in-out infinite';
+          referralCodeDisplay.style.textShadow = '0 0 10px #22c55e, 0 0 20px #22c55e, 0 0 30px #22c55e';
+
+          // Typewriter effect
+          let i = 0;
+          const typeWriter = () => {
+            if (i < code.length) {
+              referralCodeDisplay.textContent += code.charAt(i);
+              i++;
+              setTimeout(typeWriter, 80);
+            } else {
+              // Code fully revealed - show celebration
+              referralCodeDisplay.classList.remove('code-generating');
+              referralCodeDisplay.classList.add('code-revealed');
+              setTimeout(() => {
+                referralCodeDisplay.style.animation = 'codeGlow 3s ease-in-out infinite';
+              }, 500);
+            }
+          };
+          setTimeout(typeWriter, 300);
+
+          referralNote.innerHTML = '<span style="color: #22c55e;">Your exclusive, one-time use discount code is ready!</span>';
+          copyReferralBtn.style.display = 'flex';
+          copyReferralBtn.style.animation = 'fadeIn 0.5s ease-out 1s forwards';
+          copyReferralBtn.style.opacity = '0';
+          referralExpires.style.display = 'block';
+          referralExpires.style.animation = 'fadeIn 0.5s ease-out 1.2s forwards';
+          referralExpires.style.opacity = '0';
 
           // Set up copy button
           copyReferralBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(data.referralCode).then(() => {
+            navigator.clipboard.writeText(code).then(() => {
               copyReferralBtn.classList.add('copied');
               copyReferralBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
               setTimeout(() => {
@@ -2807,54 +2851,49 @@ export const prerender = false;
               }, 2000);
             });
           });
-        }
-      } else {
-        // No referral code yet - make the code box clickable
-        referralCodeDisplay.textContent = 'Click to generate';
-        referralCodeDisplay.style.cursor = 'pointer';
-        referralNote.textContent = 'Click the box above to generate your unique referral code';
-        copyReferralBtn.style.display = 'none';
+        };
 
-        // Make the code display clickable to generate
+        // Make the code display clickable
         referralCodeDisplay.addEventListener('click', async () => {
-          if (referralCodeDisplay.textContent === 'Generating...') return;
-          referralCodeDisplay.textContent = 'Generating...';
-          try {
-            // Get fresh auth token
-            const user = auth.currentUser;
-            const idToken = user ? await user.getIdToken() : null;
+          const currentText = referralCodeDisplay.textContent;
+          if (currentText === 'Generating...' || currentText === 'Revealing...') return;
 
-            const res = await fetch('/api/generate-referral-code', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
-              },
-              body: JSON.stringify({ userId })
-            });
-            const result = await res.json();
-            if (result.success && result.code) {
-              referralCodeDisplay.textContent = result.code;
-              referralCodeDisplay.style.cursor = 'default';
-              referralNote.textContent = 'One-time use code. Expires in 1 year.';
-              copyReferralBtn.style.display = 'block';
-              copyReferralBtn.addEventListener('click', () => {
-                navigator.clipboard.writeText(result.code).then(() => {
-                  copyReferralBtn.classList.add('copied');
-                  copyReferralBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
-                  setTimeout(() => {
-                    copyReferralBtn.classList.remove('copied');
-                    copyReferralBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
-                  }, 2000);
-                });
+          if (hasExistingCode) {
+            // Already have a code - just animate the reveal
+            referralCodeDisplay.textContent = 'Revealing...';
+            setTimeout(() => {
+              animateCodeReveal(data.code);
+            }, 300);
+          } else {
+            // Generate new code
+            referralCodeDisplay.textContent = 'Generating...';
+            try {
+              // Get fresh auth token
+              const user = auth.currentUser;
+              const idToken = user ? await user.getIdToken() : null;
+
+              console.log('[Referral] Generating code for userId:', userId);
+              const res = await fetch('/api/generate-referral-code', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+                },
+                body: JSON.stringify({ userId })
               });
-            } else {
+              const result = await res.json();
+              console.log('[Referral] API response:', res.status, result);
+
+              if (result.success && result.code) {
+                animateCodeReveal(result.code);
+              } else {
+                referralCodeDisplay.textContent = 'Click to retry';
+                referralNote.textContent = result.error || 'Failed to generate code';
+              }
+            } catch (err) {
               referralCodeDisplay.textContent = 'Click to retry';
-              referralNote.textContent = result.error || 'Failed to generate code';
+              referralNote.textContent = 'Error generating code';
             }
-          } catch (err) {
-            referralCodeDisplay.textContent = 'Click to retry';
-            referralNote.textContent = 'Error generating code';
           }
         });
       }
@@ -3860,41 +3899,111 @@ export const prerender = false;
     font-weight: 700;
     color: #22c55e;
     letter-spacing: 0.05em;
+    transition: all 0.3s ease;
+  }
+
+  .referral-code.code-generating {
+    color: #fbbf24;
+    text-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
+  }
+
+  .referral-code.code-revealed {
+    color: #22c55e;
+    text-shadow: 0 0 10px rgba(34, 197, 94, 0.6), 0 0 20px rgba(34, 197, 94, 0.4);
+    animation: codeGlow 3s ease-in-out infinite;
+  }
+
+  @keyframes codeReveal {
+    0% {
+      opacity: 0;
+      transform: scale(0.8);
+      filter: blur(4px);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.05);
+      filter: blur(0);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+      filter: blur(0);
+    }
+  }
+
+  @keyframes codeGlow {
+    0%, 100% {
+      text-shadow: 0 0 10px rgba(34, 197, 94, 0.6), 0 0 20px rgba(34, 197, 94, 0.4);
+    }
+    50% {
+      text-shadow: 0 0 15px rgba(34, 197, 94, 0.8), 0 0 30px rgba(34, 197, 94, 0.6), 0 0 45px rgba(34, 197, 94, 0.4);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .copy-referral-btn {
-    padding: 0.5rem;
+    padding: 0.6rem 1.2rem;
     background: rgba(34, 197, 94, 0.2);
     border: 1px solid rgba(34, 197, 94, 0.4);
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
+    gap: 0.5rem;
+    margin: 0.75rem auto 0;
+    color: #22c55e;
+    font-size: 0.875rem;
+    font-weight: 600;
   }
 
   .copy-referral-btn svg {
     color: #22c55e;
   }
 
+  .copy-referral-btn span {
+    color: #22c55e;
+  }
+
   .copy-referral-btn:hover {
     background: rgba(34, 197, 94, 0.3);
-    transform: scale(1.05);
+    transform: scale(1.02);
   }
 
   .copy-referral-btn.copied {
     background: #22c55e;
   }
 
-  .copy-referral-btn.copied svg {
+  .copy-referral-btn.copied svg,
+  .copy-referral-btn.copied span {
     color: #fff;
   }
 
   .referral-note {
-    margin: 0;
+    margin: 0.75rem 0 0 0;
     color: #888;
+    font-size: 0.8rem;
+    text-align: center;
+  }
+
+  .referral-expires {
+    margin: 0.25rem 0 0 0;
+    color: #f59e0b;
     font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    display: none;
   }
 
   .referral-used {
