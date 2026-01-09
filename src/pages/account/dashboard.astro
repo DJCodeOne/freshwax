@@ -314,7 +314,45 @@ export const prerender = false;
               <div id="avatarUploadStatus" class="avatar-status"></div>
             </div>
           </div>
-          
+
+          <!-- Plus Badge Selector - Only visible to Plus members -->
+          <div class="plus-badge-section hidden" id="plusBadgeSection">
+            <div class="badge-header" id="badgeHeader">
+              <h3>Plus Badge <span class="plus-only-tag">Plus Only</span></h3>
+              <span class="current-badge" id="currentBadgePreview">👑</span>
+              <button type="button" class="badge-toggle-btn" id="badgeToggleBtn">▼</button>
+            </div>
+            <div class="badge-content" id="badgeContent" style="display: none;">
+              <p class="badge-hint">Choose your badge - displayed next to your name in chat and across the site.</p>
+              <div class="badge-grid" id="badgeGrid">
+                <button type="button" class="badge-option" data-badge="crown" title="Crown">👑</button>
+                <button type="button" class="badge-option" data-badge="fire" title="Fire">🔥</button>
+                <button type="button" class="badge-option" data-badge="headphones" title="Headphones">🎧</button>
+                <button type="button" class="badge-option" data-badge="skull" title="Skull">💀</button>
+                <button type="button" class="badge-option" data-badge="lion" title="Lion">🦁</button>
+                <button type="button" class="badge-option" data-badge="leopard" title="Leopard">🐆</button>
+                <button type="button" class="badge-option" data-badge="palm" title="Palm Tree">🌴</button>
+                <button type="button" class="badge-option" data-badge="lightning" title="Lightning">⚡</button>
+                <button type="button" class="badge-option" data-badge="vinyl" title="Vinyl">💿</button>
+                <button type="button" class="badge-option" data-badge="speaker" title="Speaker">🔊</button>
+                <button type="button" class="badge-option" data-badge="moon" title="Moon">🌙</button>
+                <button type="button" class="badge-option" data-badge="star" title="Star">⭐</button>
+                <button type="button" class="badge-option" data-badge="diamond" title="Diamond">💎</button>
+                <button type="button" class="badge-option" data-badge="snake" title="Snake">🐍</button>
+                <button type="button" class="badge-option" data-badge="bat" title="Bat">🦇</button>
+                <button type="button" class="badge-option" data-badge="mic" title="Microphone">🎤</button>
+                <button type="button" class="badge-option" data-badge="leaf" title="Leaf">🌿</button>
+                <button type="button" class="badge-option" data-badge="gorilla" title="Gorilla">🦍</button>
+                <button type="button" class="badge-option" data-badge="spider" title="Spider">🕷️</button>
+                <button type="button" class="badge-option" data-badge="alien" title="Alien">👽</button>
+              </div>
+              <div class="badge-save-row">
+                <button type="button" id="saveBadgeBtn" class="btn-save-badge" disabled>Save Badge</button>
+                <span id="badgeSaveStatus" class="badge-save-status"></span>
+              </div>
+            </div>
+          </div>
+
           <form id="profileForm" class="profile-form">
             <div class="form-row">
               <div class="form-group">
@@ -2669,6 +2707,13 @@ export const prerender = false;
         // Hide Go Plus header button for Plus members
         if (goPlusHeaderBtn) goPlusHeaderBtn.classList.add('hidden');
 
+        // Show Plus badge selector
+        const plusBadgeSection = document.getElementById('plusBadgeSection');
+        if (plusBadgeSection) {
+          plusBadgeSection.classList.remove('hidden');
+          initBadgeSelector(userId);
+        }
+
         // Show expiry date
         if (proExpires && result.subscription.expiresAt) {
           const expDate = new Date(result.subscription.expiresAt);
@@ -2902,6 +2947,126 @@ export const prerender = false;
       const referralCodeDisplay = document.getElementById('referralCodeDisplay');
       if (referralCodeDisplay) referralCodeDisplay.textContent = 'Error loading';
     }
+  }
+
+  // Badge emoji map for display
+  const BADGE_EMOJIS = {
+    crown: '👑', fire: '🔥', headphones: '🎧', skull: '💀', lion: '🦁',
+    leopard: '🐆', palm: '🌴', lightning: '⚡', vinyl: '💿', speaker: '🔊',
+    moon: '🌙', star: '⭐', diamond: '💎', snake: '🐍', bat: '🦇',
+    mic: '🎤', leaf: '🌿', gorilla: '🦍', spider: '🕷️', alien: '👽'
+  };
+
+  // Initialize Plus badge selector
+  async function initBadgeSelector(userId) {
+    const badgeHeader = document.getElementById('badgeHeader');
+    const badgeContent = document.getElementById('badgeContent');
+    const badgeToggleBtn = document.getElementById('badgeToggleBtn');
+    const currentBadgePreview = document.getElementById('currentBadgePreview');
+    const badgeGrid = document.getElementById('badgeGrid');
+    const saveBadgeBtn = document.getElementById('saveBadgeBtn');
+    const badgeSaveStatus = document.getElementById('badgeSaveStatus');
+
+    if (!badgeGrid || !saveBadgeBtn) return;
+
+    // Set up collapsible toggle
+    if (badgeHeader && badgeContent && badgeToggleBtn) {
+      badgeHeader.addEventListener('click', () => {
+        const isHidden = badgeContent.style.display === 'none';
+        badgeContent.style.display = isHidden ? 'block' : 'none';
+        badgeToggleBtn.classList.toggle('open', isHidden);
+      });
+    }
+
+    let selectedBadge = 'crown'; // Default
+    let savedBadge = 'crown';
+
+    // Load user's current badge from KV
+    try {
+      const response = await fetch(`/api/get-user-badge?userId=${userId}`);
+      const data = await response.json();
+      if (data.success && data.badge) {
+        selectedBadge = data.badge;
+        savedBadge = data.badge;
+        // Update preview
+        if (currentBadgePreview) {
+          currentBadgePreview.textContent = BADGE_EMOJIS[data.badge] || '👑';
+        }
+      }
+    } catch (err) {
+      console.error('Error loading badge:', err);
+    }
+
+    // Mark the current badge as selected
+    const updateSelection = () => {
+      badgeGrid.querySelectorAll('.badge-option').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.badge === selectedBadge);
+      });
+      // Enable save button only if selection changed
+      saveBadgeBtn.disabled = selectedBadge === savedBadge;
+      badgeSaveStatus.textContent = '';
+    };
+
+    updateSelection();
+
+    // Handle badge selection
+    badgeGrid.addEventListener('click', (e) => {
+      const btn = e.target.closest('.badge-option');
+      if (btn) {
+        selectedBadge = btn.dataset.badge;
+        updateSelection();
+      }
+    });
+
+    // Handle save
+    saveBadgeBtn.addEventListener('click', async () => {
+      saveBadgeBtn.disabled = true;
+      badgeSaveStatus.textContent = 'Saving...';
+      badgeSaveStatus.classList.remove('error');
+
+      try {
+        const user = auth.currentUser;
+        const idToken = user ? await user.getIdToken() : null;
+
+        const response = await fetch('/api/save-user-badge', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+          },
+          body: JSON.stringify({ userId, badge: selectedBadge })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          savedBadge = selectedBadge;
+          badgeSaveStatus.textContent = '✓ Badge saved!';
+          saveBadgeBtn.disabled = true;
+
+          // Update the preview emoji
+          if (currentBadgePreview) {
+            currentBadgePreview.textContent = BADGE_EMOJIS[selectedBadge] || '👑';
+          }
+
+          // Update localStorage cache so it's immediately reflected
+          const cached = localStorage.getItem('fw_auth_cache');
+          if (cached) {
+            const cachedAuth = JSON.parse(cached);
+            cachedAuth.plusBadge = selectedBadge;
+            localStorage.setItem('fw_auth_cache', JSON.stringify(cachedAuth));
+          }
+        } else {
+          badgeSaveStatus.textContent = result.error || 'Failed to save';
+          badgeSaveStatus.classList.add('error');
+          saveBadgeBtn.disabled = false;
+        }
+      } catch (err) {
+        console.error('Error saving badge:', err);
+        badgeSaveStatus.textContent = 'Error saving badge';
+        badgeSaveStatus.classList.add('error');
+        saveBadgeBtn.disabled = false;
+      }
+    });
   }
 
   // Handle promo code application for Plus upgrade
@@ -4029,6 +4194,171 @@ export const prerender = false;
 
     .referral-section {
       max-width: 100%;
+    }
+  }
+
+  /* Plus Badge Selector */
+  .plus-badge-section {
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.1) 0%, rgba(161, 98, 7, 0.1) 100%);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .badge-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .badge-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #eab308;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+  }
+
+  .current-badge {
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  .badge-toggle-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    transition: transform 0.2s ease;
+  }
+
+  .badge-toggle-btn.open {
+    transform: rotate(180deg);
+  }
+
+  .badge-content {
+    padding-top: 1rem;
+    margin-top: 1rem;
+    border-top: 1px solid rgba(234, 179, 8, 0.2);
+  }
+
+  .plus-badge-section h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    color: #eab308;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .plus-only-tag {
+    font-size: 0.65rem;
+    background: linear-gradient(135deg, #eab308 0%, #a16207 100%);
+    color: #000;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .badge-hint {
+    margin: 0 0 1rem 0;
+    color: #888;
+    font-size: 0.8rem;
+  }
+
+  .badge-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .badge-option {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    background: rgba(30, 30, 30, 0.8);
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+  }
+
+  .badge-option:hover {
+    background: rgba(50, 50, 50, 0.9);
+    transform: scale(1.1);
+    border-color: rgba(234, 179, 8, 0.5);
+  }
+
+  .badge-option.selected {
+    background: rgba(234, 179, 8, 0.2);
+    border-color: #eab308;
+    transform: scale(1.05);
+    box-shadow: 0 0 12px rgba(234, 179, 8, 0.4);
+  }
+
+  .badge-save-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .btn-save-badge {
+    padding: 0.5rem 1.25rem;
+    background: linear-gradient(135deg, #eab308 0%, #a16207 100%);
+    border: none;
+    border-radius: 6px;
+    color: #000;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-save-badge:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3);
+  }
+
+  .btn-save-badge:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .badge-save-status {
+    font-size: 0.8rem;
+    color: #22c55e;
+  }
+
+  .badge-save-status.error {
+    color: #ef4444;
+  }
+
+  @media (max-width: 768px) {
+    .badge-grid {
+      grid-template-columns: repeat(5, 1fr);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .badge-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .badge-option {
+      font-size: 1.2rem;
     }
   }
 </style>
