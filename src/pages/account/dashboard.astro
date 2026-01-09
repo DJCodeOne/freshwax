@@ -112,15 +112,19 @@ export const prerender = false;
 
             <!-- Upgrade section removed - now in Go Plus modal -->
 
-            <div class="subscription-pro hidden" id="subscriptionPro">
-              <div class="pro-active">
-                <span class="pro-icon-large">⚡</span>
-                <span class="pro-message">You're a Plus member!</span>
+            <div class="subscription-pro hidden collapsed" id="subscriptionPro">
+              <div class="pro-header" id="proHeader" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                <div class="pro-active">
+                  <span class="pro-icon-large">⚡</span>
+                  <span class="pro-message">You're a Plus member!</span>
+                </div>
+                <button class="pro-toggle-btn" id="proToggleBtn" style="background: none; border: none; color: #a3a3a3; font-size: 1.2rem; cursor: pointer; padding: 5px;">▼</button>
               </div>
-              <p class="pro-expires" id="proExpires"></p>
+              <div class="pro-details" id="proDetails" style="display: none;">
+                <p class="pro-expires" id="proExpires"></p>
 
-              <!-- Referral Code Section -->
-              <div class="referral-section" id="referralSection">
+                <!-- Referral Code Section -->
+                <div class="referral-section" id="referralSection">
                 <div class="referral-header">
                   <span class="referral-icon">🎁</span>
                   <span class="referral-title">Invite a Friend - 50% Off!</span>
@@ -137,6 +141,7 @@ export const prerender = false;
                 </div>
                 <p class="referral-note" id="referralNote">One-time use code. Expires in 1 year.</p>
                 <p class="referral-used hidden" id="referralUsed">✓ Your referral code has been used!</p>
+                </div>
               </div>
             </div>
           </div>
@@ -2670,6 +2675,21 @@ export const prerender = false;
 
         // Load referral code
         loadReferralCode(userId);
+
+        // Set up toggle for Plus member section
+        const proHeader = document.getElementById('proHeader');
+        const proDetails = document.getElementById('proDetails');
+        const proToggleBtn = document.getElementById('proToggleBtn');
+        console.log('[Dashboard] Pro toggle setup:', { proHeader: !!proHeader, proDetails: !!proDetails, proToggleBtn: !!proToggleBtn });
+        if (proHeader && proDetails && proToggleBtn) {
+          proHeader.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = proDetails.style.display === 'none' || proDetails.style.display === '';
+            console.log('[Dashboard] Pro toggle clicked, isHidden:', isHidden);
+            proDetails.style.display = isHidden ? 'block' : 'none';
+            proToggleBtn.textContent = isHidden ? '▲' : '▼';
+          });
+        }
       } else {
         tierBadge.textContent = 'Standard';
         tierBadge.classList.add('free');
@@ -2736,9 +2756,11 @@ export const prerender = false;
   // Load and display referral code for Pro users
   async function loadReferralCode(userId) {
     try {
+      console.log('[Dashboard] Loading referral code for:', userId);
       // Fetch user document to get referral code
       const response = await fetch(`/api/get-user-type?uid=${userId}`);
       const data = await response.json();
+      console.log('[Dashboard] Referral data:', data);
 
       const referralCodeDisplay = document.getElementById('referralCodeDisplay');
       const copyReferralBtn = document.getElementById('copyReferralBtn');
@@ -2746,7 +2768,16 @@ export const prerender = false;
       const referralUsed = document.getElementById('referralUsed');
       const referralSection = document.getElementById('referralSection');
 
-      if (!referralSection) return;
+      console.log('[Dashboard] Referral elements:', {
+        referralCodeDisplay: !!referralCodeDisplay,
+        referralSection: !!referralSection,
+        hasReferralCode: !!data.referralCode
+      });
+
+      if (!referralSection) {
+        console.log('[Dashboard] No referral section found');
+        return;
+      }
 
       if (data.referralCode) {
         referralCodeDisplay.textContent = data.referralCode;
@@ -2778,10 +2809,54 @@ export const prerender = false;
           });
         }
       } else {
-        // No referral code yet - might be legacy Pro user
-        referralCodeDisplay.textContent = 'Not available';
-        referralNote.textContent = 'Contact support to get your referral code';
+        // No referral code yet - make the code box clickable
+        referralCodeDisplay.textContent = 'Click to generate';
+        referralCodeDisplay.style.cursor = 'pointer';
+        referralNote.textContent = 'Click the box above to generate your unique referral code';
         copyReferralBtn.style.display = 'none';
+
+        // Make the code display clickable to generate
+        referralCodeDisplay.addEventListener('click', async () => {
+          if (referralCodeDisplay.textContent === 'Generating...') return;
+          referralCodeDisplay.textContent = 'Generating...';
+          try {
+            // Get fresh auth token
+            const user = auth.currentUser;
+            const idToken = user ? await user.getIdToken() : null;
+
+            const res = await fetch('/api/generate-referral-code', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+              },
+              body: JSON.stringify({ userId })
+            });
+            const result = await res.json();
+            if (result.success && result.code) {
+              referralCodeDisplay.textContent = result.code;
+              referralCodeDisplay.style.cursor = 'default';
+              referralNote.textContent = 'One-time use code. Expires in 1 year.';
+              copyReferralBtn.style.display = 'block';
+              copyReferralBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(result.code).then(() => {
+                  copyReferralBtn.classList.add('copied');
+                  copyReferralBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>';
+                  setTimeout(() => {
+                    copyReferralBtn.classList.remove('copied');
+                    copyReferralBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+                  }, 2000);
+                });
+              });
+            } else {
+              referralCodeDisplay.textContent = 'Click to retry';
+              referralNote.textContent = result.error || 'Failed to generate code';
+            }
+          } catch (err) {
+            referralCodeDisplay.textContent = 'Click to retry';
+            referralNote.textContent = 'Error generating code';
+          }
+        });
       }
     } catch (error) {
       console.error('Error loading referral code:', error);

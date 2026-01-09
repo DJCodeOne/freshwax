@@ -1,8 +1,9 @@
 // src/pages/api/get-user-type.ts
 // Returns user type info - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { getAdminUids, getAdminEmails, initAdminEnv } from '../../lib/admin';
+import { createReferralGiftCard } from '../../lib/giftcard';
 
 export const prerender = false;
 
@@ -161,7 +162,34 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Get referral code from user document (generated when upgrading to Pro)
-    const referralCode = userDoc?.referralCode || null;
+    let referralCode = userDoc?.referralCode || null;
+
+    // Auto-generate referral code for Plus users who don't have one (legacy users)
+    if (isPro && !referralCode) {
+      try {
+        console.log('[get-user-type] Generating referral code for legacy Plus user:', uid);
+        const referralGiftCard = createReferralGiftCard(uid, name || 'Plus Member');
+        const referralCardId = `ref_${uid}_${Date.now()}`;
+
+        // Save the gift card
+        await setDocument('giftCards', referralCardId, {
+          ...referralGiftCard,
+          id: referralCardId
+        });
+
+        // Update user with referral code
+        await setDocument('users', uid, {
+          ...userDoc,
+          referralCode: referralGiftCard.code,
+          referralCodeId: referralCardId
+        });
+
+        referralCode = referralGiftCard.code;
+        console.log('[get-user-type] Generated referral code:', referralCode);
+      } catch (err) {
+        console.error('[get-user-type] Failed to generate referral code:', err);
+      }
+    }
 
     // If no avatarUrl found in Firestore, check if one exists in R2
     console.log('[get-user-type] avatarUrl from Firestore:', avatarUrl || 'none');

@@ -155,7 +155,28 @@ const isPreOrder = releaseDateTime > now;
 const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 ---
 
-<Layout title={release ? `${releaseName} - ${artistName}` : 'Release Not Found'}>
+<Layout
+  title={release ? `${releaseName} - ${artistName}` : 'Release Not Found'}
+  description={release ? `${releaseName} by ${artistName}${genre ? ` - ${genre}` : ''}${labelName ? ` on ${labelName}` : ''}. Stream, buy and download on Fresh Wax.` : 'Release not found'}
+  image={coverArtUrl && coverArtUrl !== '/place-holder.webp' ? coverArtUrl : undefined}
+  imageAlt={release ? `${releaseName} by ${artistName} - Album Artwork` : undefined}
+  type="music.album"
+  music={release ? {
+    artist: artistName,
+    releaseDate: releaseDate,
+    genre: genre ? [genre] : undefined,
+    label: labelName || undefined,
+    format: vinylRelease ? ['Vinyl', 'Digital'] : ['Digital'],
+    tracks: tracks?.map((t: any) => ({ name: t.trackName || 'Untitled', duration: t.duration }))
+  } : undefined}
+  product={release && actualPricePerSale > 0 ? {
+    price: actualPricePerSale,
+    currency: 'GBP',
+    availability: 'InStock',
+    brand: artistName,
+    category: 'Music > Digital Downloads'
+  } : undefined}
+>
   <Header />
   
   {!release ? (

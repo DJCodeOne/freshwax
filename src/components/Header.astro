@@ -812,13 +812,46 @@ const firebaseConfig = {
           const data = await response.json();
           if (data.success) {
             setCachedUserType(data.isArtist ? 'artist' : 'customer', data.isAdmin, data.avatarUrl || null);
+            // Also set fw_auth_cache for instant auth on other pages (comments, ratings, etc.)
+            try {
+              localStorage.setItem('fw_auth_cache', JSON.stringify({
+                loggedIn: true,
+                id: user.uid,
+                name: data.displayName || data.name || user.displayName || user.email?.split('@')[0] || 'User',
+                displayName: data.displayName || data.name || user.displayName || user.email?.split('@')[0] || 'User',
+                avatar: data.avatarUrl || user.photoURL || '',
+                avatarUrl: data.avatarUrl || user.photoURL || '',
+                timestamp: Date.now(),
+                cachedAt: Date.now()
+              }));
+            } catch (e) { /* Ignore storage errors */ }
           } else {
             setCachedUserType('customer', false, null);
           }
         } catch (e) {
           setCachedUserType('customer', false, null);
         }
+      } else {
+        // Even with cached data, ensure fw_auth_cache is set
+        try {
+          const existing = localStorage.getItem('fw_auth_cache');
+          if (!existing || JSON.parse(existing).id !== user.uid) {
+            localStorage.setItem('fw_auth_cache', JSON.stringify({
+              loggedIn: true,
+              id: user.uid,
+              name: user.displayName || user.email?.split('@')[0] || 'User',
+              displayName: user.displayName || user.email?.split('@')[0] || 'User',
+              avatar: cachedData?.avatarUrl || user.photoURL || '',
+              avatarUrl: cachedData?.avatarUrl || user.photoURL || '',
+              timestamp: Date.now(),
+              cachedAt: Date.now()
+            }));
+          }
+        } catch (e) { /* Ignore storage errors */ }
       }
+    } else {
+      // User logged out - clear the auth cache
+      try { localStorage.removeItem('fw_auth_cache'); } catch (e) {}
     }
     // Update UI AFTER any fetch is complete
     updateAuthUI();

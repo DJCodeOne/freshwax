@@ -1137,9 +1137,31 @@ const totalDurationFormatted = totalDurationSeconds > 0
   // AUTH HELPER - Wait for auth to be ready
   // ============================================
   async function getAuthUser() {
-    // If authReady promise exists (from Header), wait for it
+    // Check localStorage cache first for instant auth (prevents race condition)
+    try {
+      const cached = localStorage.getItem('fw_auth_cache');
+      if (cached) {
+        const cachedAuth = JSON.parse(cached);
+        if (cachedAuth && cachedAuth.id && cachedAuth.timestamp) {
+          // Cache valid for 30 minutes
+          if (Date.now() - cachedAuth.timestamp < 1800000) {
+            // Return a minimal user object with uid from cache
+            return { uid: cachedAuth.id, displayName: cachedAuth.displayName || cachedAuth.name };
+          }
+        }
+      }
+    } catch (e) { /* ignore cache errors */ }
+
+    // If authReady promise exists (from Header), wait for it with timeout
     if (window.authReady) {
-      await window.authReady;
+      try {
+        await Promise.race([
+          window.authReady,
+          new Promise((_, reject) => setTimeout(() => reject('timeout'), 3000))
+        ]);
+      } catch (e) {
+        // Timeout - check cache again or Firebase directly
+      }
     }
     // Return the authenticated user
     return window.firebaseAuth?.currentUser || window.authUser || null;
@@ -1307,9 +1329,17 @@ const totalDurationFormatted = totalDurationSeconds > 0
           window.location.href = '/login?redirect=' + encodeURIComponent(currentPage);
           return;
         }
-        
+
+        // Get ID token for API authentication
+        var idToken = null;
+        try {
+          if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+            idToken = await window.firebaseAuth.currentUser.getIdToken();
+          }
+        } catch (e) { /* Ignore token errors, API will use userId fallback */ }
+
         var card = document.querySelector('[data-release="' + releaseId + '"]');
-        
+
         // Optimistic UI update
         if (card) {
           card.querySelectorAll('.rating-star[data-release-id="' + releaseId + '"]').forEach(function(s) {
@@ -1320,10 +1350,15 @@ const totalDurationFormatted = totalDurationSeconds > 0
             }
           });
         }
-        
+
+        var headers = { 'Content-Type': 'application/json' };
+        if (idToken) {
+          headers['Authorization'] = 'Bearer ' + idToken;
+        }
+
         fetch('/api/rate-release', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: headers,
           body: JSON.stringify({ releaseId: releaseId, rating: rating, userId: user.uid })
         })
         .then(function(response) { return response.json(); })
