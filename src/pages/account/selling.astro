@@ -144,20 +144,20 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 </Layout>
 
 <script>
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-  // Initialize Firebase
+  // Initialize Firebase (reuse existing app if available)
   const firebaseConfig = {
     apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store",
     storageBucket: "freshwax-store.firebasestorage.app",
-    messagingSenderId: "632122501684",
-    appId: "1:632122501684:web:a6f3ca1a6c9d7a7a7a7a7a"
+    messagingSenderId: "675435782973",
+    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
   };
 
-  const app = initializeApp(firebaseConfig, 'selling-settings');
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
   let currentUserId = null;

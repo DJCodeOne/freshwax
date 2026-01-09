@@ -1,6 +1,6 @@
 // public/dj-lobby-pusher.js
 // DJ Lobby client - Pusher-based real-time (replaces Firebase onSnapshot)
-// Version: 3.1 - December 2025 - Fixed module load timing
+// Version: 3.2 - January 2026 - Fixed stream end reset
 
 // ==========================================
 // PUSHER CONFIGURATION (from window.PUSHER_CONFIG set by Layout.astro)
@@ -126,6 +126,15 @@ export async function initDjLobbyPusher(user, info) {
 
   liveStatusChannel.bind('stream-ended', (data) => {
     console.log('[DJLobby] Stream ended:', data);
+    // Check if this is the current user's stream ending
+    const isMyStream = data.djId === currentUser?.uid;
+    if (isMyStream) {
+      console.log('[DJLobby] My stream ended - resetting userIsStreaming');
+      // Reset the userIsStreaming flag in the main page context
+      if (typeof window.resetUserIsStreaming === 'function') {
+        window.resetUserIsStreaming();
+      }
+    }
     // Reset UI to non-streaming state
     resetStreamUI();
     // Reload stream status to update UI
@@ -186,17 +195,20 @@ function resetStreamUI() {
     if (goLiveBtnText) goLiveBtnText.textContent = 'GO LIVE!';
   }
 
-  // Reset End Stream button
-  const endStreamBtn = document.getElementById('endStreamBtn');
-  if (endStreamBtn) {
-    endStreamBtn.disabled = true;
-    endStreamBtn.innerHTML = '<span class="end-icon">⏹</span><span class="end-text">End Stream</span>';
+  // Reset Lobby End Stream button
+  const lobbyEndStreamBtn = document.getElementById('lobbyEndStreamBtn');
+  if (lobbyEndStreamBtn) {
+    lobbyEndStreamBtn.classList.add('disabled');
+    lobbyEndStreamBtn.classList.remove('ending');
+    lobbyEndStreamBtn.disabled = true;
+    lobbyEndStreamBtn.innerHTML = '<span class="end-icon">⏹</span><span class="end-text">End Stream</span>';
   }
 
   // Reset status text
   const endStreamStatus = document.getElementById('endStreamStatus');
   if (endStreamStatus) {
     endStreamStatus.textContent = 'No active stream';
+    endStreamStatus.classList.remove('live', 'ending');
   }
 
   // Hide broadcast audio panel
@@ -215,6 +227,22 @@ function resetStreamUI() {
   const previewSection = document.querySelector('.preview-section');
   if (previewSection) {
     previewSection.classList.remove('expanded');
+  }
+
+  // Stop relay audio and restore GainNode
+  const relayAudio = document.getElementById('relayAudio');
+  if (relayAudio) {
+    relayAudio.pause();
+    relayAudio.currentTime = 0;
+  }
+  // Restore GainNode volume (was set to 0 when going live)
+  if (window.restoreIcecastGain) {
+    window.restoreIcecastGain();
+  }
+
+  // Stop broadcast meters
+  if (typeof window.stopBroadcastMeters === 'function') {
+    window.stopBroadcastMeters();
   }
 }
 

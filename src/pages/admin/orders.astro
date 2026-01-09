@@ -61,6 +61,7 @@ const orders = await Promise.all(allOrders.map(async (data: any) => {
     paymentStatus: data.paymentStatus || data.payment?.status || 'Unknown',
     notes: data.notes || data.customerNotes || '',
     trackingNumber: data.trackingNumber || '',
+    total: data.total || data.totals?.total || 0,
     createdAt: data.createdAt instanceof Date ? data.createdAt : new Date(data.createdAt || Date.now()),
     shippedAt: data.shippedAt ? (data.shippedAt instanceof Date ? data.shippedAt : new Date(data.shippedAt)) : null,
     deliveredAt: data.deliveredAt ? (data.deliveredAt instanceof Date ? data.deliveredAt : new Date(data.deliveredAt)) : null

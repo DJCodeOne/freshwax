@@ -1,10 +1,11 @@
 // src/pages/api/livestream/slots.ts
 // DJ livestream schedule - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument, setDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, getDocument, setDocument, updateDocument, initFirebaseEnv, clearCache } from '../../../lib/firebase-rest';
 import { generateStreamKey as generateSecureStreamKey, buildRtmpUrl, buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { broadcastLiveStatus } from '../../../lib/pusher';
 import { APPROVED_RELAY_STATIONS } from '../../../lib/relay-stations';
+import { initKVCache, kvDelete } from '../../../lib/kv-cache';
 
 // Helper to initialize services
 function initServices(locals: any) {
@@ -40,6 +41,9 @@ function initServices(locals: any) {
     RED5_HLS_URL: red5HlsUrl,
     RED5_SIGNING_SECRET: red5Secret,
   });
+
+  // Initialize KV cache for invalidation
+  initKVCache(env);
 }
 
 const SLOT_DURATIONS = [30, 45, 60, 120, 180, 240];
@@ -826,6 +830,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       invalidateCache();
+
+      // Clear firebase-rest in-memory cache for livestream queries
+      clearCache('livestreamSlots');
+      console.log('[livestream/slots] Cleared firebase-rest cache for livestreamSlots');
+
+      // Also invalidate KV cache so /api/livestream/status returns fresh data
+      await kvDelete('general', { prefix: 'status' });
+      console.log('[livestream/slots] Invalidated KV status cache');
 
       // Broadcast via Pusher for instant client updates
       await broadcastLiveStatus('stream-ended', {

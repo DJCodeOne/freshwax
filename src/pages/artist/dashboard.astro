@@ -1343,19 +1343,19 @@ export const prerender = false;
 </style>
 
 <script is:inline type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
-  
+  import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
   const firebaseConfig = {
     apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store",
-    storageBucket: "freshwax-store.appspot.com",
-    messagingSenderId: "1098330475390",
-    appId: "1:1098330475390:web:b2e6b8c6e4c2a9a8b8c9d0"
+    storageBucket: "freshwax-store.firebasestorage.app",
+    messagingSenderId: "675435782973",
+    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
   };
-  
-  const app = initializeApp(firebaseConfig);
+
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   const auth = getAuth(app);
   
   // Helper to check if a cookie is properly set (not empty or expired)
