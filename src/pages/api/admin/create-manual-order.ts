@@ -324,12 +324,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
           continue;
         }
 
-        console.log('[admin] Auto-paying', payment.artistName, '£' + payment.amount.toFixed(2), 'to', payment.paypalEmail);
+        // Deduct 2% PayPal payout fee from artist share
+        const paypalPayoutFee = payment.amount * 0.02;
+        const paypalAmount = payment.amount - paypalPayoutFee;
+
+        console.log('[admin] Auto-paying', payment.artistName, '£' + paypalAmount.toFixed(2), 'via PayPal to', payment.paypalEmail, '(2% fee: £' + paypalPayoutFee.toFixed(2) + ')');
 
         try {
           const payoutResult = await createPayout(paypalConfig, {
             email: payment.paypalEmail,
-            amount: payment.amount,
+            amount: paypalAmount,
             currency: 'GBP',
             note: `Fresh Wax payout for order ${orderNumber}`,
             reference: `${orderId}-${payment.artistId}`
@@ -346,7 +350,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
               paypalPayoutItemId: payoutResult.payoutItemId,
               orderId,
               orderNumber,
-              amount: payment.amount,
+              amount: paypalAmount,
+              paypalPayoutFee: paypalPayoutFee,
               currency: 'gbp',
               status: 'completed',
               payoutMethod: 'paypal',
@@ -360,7 +365,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             const artistDoc = await saGetDocument(serviceAccountKey, projectId, 'artists', payment.artistId);
             if (artistDoc) {
               await saUpdateDocument(serviceAccountKey, projectId, 'artists', payment.artistId, {
-                totalEarnings: (artistDoc.totalEarnings || 0) + payment.amount,
+                totalEarnings: (artistDoc.totalEarnings || 0) + paypalAmount,
                 lastPayoutAt: new Date().toISOString()
               });
             }
@@ -368,7 +373,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
             payoutResults.push({
               artistId: payment.artistId,
               artistName: payment.artistName,
-              amount: payment.amount,
+              amount: paypalAmount,
+              paypalFee: paypalPayoutFee,
               status: 'success',
               batchId: payoutResult.batchId
             });
@@ -378,7 +384,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             payoutResults.push({
               artistId: payment.artistId,
               artistName: payment.artistName,
-              amount: payment.amount,
+              amount: paypalAmount,
               status: 'failed',
               error: payoutResult.error
             });
@@ -388,7 +394,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           payoutResults.push({
             artistId: payment.artistId,
             artistName: payment.artistName,
-            amount: payment.amount,
+            amount: paypalAmount,
             status: 'error',
             error: err.message
           });

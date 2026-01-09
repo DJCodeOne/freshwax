@@ -377,11 +377,16 @@ async function processArtistPayments(params: {
       const defaultToPayPal = !payment.payoutMethod && !payment.stripeConnectId && payment.paypalEmail && paypalConfig;
 
       if (usePayPal || defaultToPayPal) {
-        // Pay via PayPal
+        // Pay via PayPal - deduct 2% payout fee from artist share
+        const paypalPayoutFee = payment.amount * 0.02;
+        const paypalAmount = payment.amount - paypalPayoutFee;
+
+        console.log('[PayPal] Paying', payment.artistName, '£' + paypalAmount.toFixed(2), 'via PayPal (2% fee: £' + paypalPayoutFee.toFixed(2) + ')');
+
         try {
           const paypalResult = await createPayout(paypalConfig!, {
             email: payment.paypalEmail!,
-            amount: payment.amount,
+            amount: paypalAmount,
             currency: 'GBP',
             note: `Fresh Wax payout for order ${orderNumber}`,
             reference: `${orderId}-${payment.artistId}`
@@ -397,7 +402,8 @@ async function processArtistPayments(params: {
               paypalPayoutItemId: paypalResult.payoutItemId,
               orderId,
               orderNumber,
-              amount: payment.amount,
+              amount: paypalAmount,
+              paypalPayoutFee: paypalPayoutFee,
               currency: 'gbp',
               status: 'completed',
               payoutMethod: 'paypal',
@@ -410,7 +416,7 @@ async function processArtistPayments(params: {
             const artist = await getDocument('artists', payment.artistId);
             if (artist) {
               await updateDocument('artists', payment.artistId, {
-                totalEarnings: (artist.totalEarnings || 0) + payment.amount,
+                totalEarnings: (artist.totalEarnings || 0) + paypalAmount,
                 lastPayoutAt: new Date().toISOString()
               });
             }
@@ -430,7 +436,8 @@ async function processArtistPayments(params: {
             paypalEmail: payment.paypalEmail,
             orderId,
             orderNumber,
-            amount: payment.amount,
+            amount: paypalAmount,
+            paypalPayoutFee: paypalPayoutFee,
             currency: 'gbp',
             status: 'retry_pending',
             failureReason: paypalError.message,
@@ -645,11 +652,16 @@ async function processMerchSupplierPayments(params: {
       const useStripe = payment.stripeConnectId && payment.payoutMethod !== 'paypal';
 
       if (usePayPal) {
-        // PayPal payout for supplier
+        // PayPal payout for supplier - deduct 2% payout fee
+        const paypalPayoutFee = payment.amount * 0.02;
+        const paypalAmount = payment.amount - paypalPayoutFee;
+
+        console.log('[PayPal] Paying supplier', payment.supplierName, '£' + paypalAmount.toFixed(2), 'via PayPal (2% fee: £' + paypalPayoutFee.toFixed(2) + ')');
+
         try {
           const paypalResult = await createPayout(paypalConfig!, {
             email: payment.paypalEmail!,
-            amount: payment.amount,
+            amount: paypalAmount,
             currency: 'GBP',
             note: `Fresh Wax supplier payout for order #${orderNumber}`,
             reference: `${orderId}-supplier-${payment.supplierId}`
@@ -666,7 +678,8 @@ async function processMerchSupplierPayments(params: {
               customerPaymentMethod: 'paypal',
               orderId,
               orderNumber,
-              amount: payment.amount,
+              amount: paypalAmount,
+              paypalPayoutFee: paypalPayoutFee,
               currency: 'gbp',
               status: 'completed',
               items: payment.items,
@@ -678,7 +691,7 @@ async function processMerchSupplierPayments(params: {
             const supplier = await getDocument('merch-suppliers', payment.supplierId);
             if (supplier) {
               await updateDocument('merch-suppliers', payment.supplierId, {
-                totalEarnings: (supplier.totalEarnings || 0) + payment.amount,
+                totalEarnings: (supplier.totalEarnings || 0) + paypalAmount,
                 lastPayoutAt: new Date().toISOString()
               });
             }
@@ -700,7 +713,8 @@ async function processMerchSupplierPayments(params: {
             customerPaymentMethod: 'paypal',
             orderId,
             orderNumber,
-            amount: payment.amount,
+            amount: paypalAmount,
+            paypalPayoutFee: paypalPayoutFee,
             currency: 'gbp',
             status: 'retry_pending',
             items: payment.items,
@@ -923,11 +937,16 @@ async function processVinylCrateSellerPayments(params: {
       const useStripe = payment.stripeConnectId && payment.payoutMethod !== 'paypal';
 
       if (usePayPal) {
-        // PayPal payout for crate seller
+        // PayPal payout for crate seller - deduct 2% payout fee
+        const paypalPayoutFee = payment.amount * 0.02;
+        const paypalAmount = payment.amount - paypalPayoutFee;
+
+        console.log('[PayPal] Paying crate seller', payment.sellerName, '£' + paypalAmount.toFixed(2), 'via PayPal (2% fee: £' + paypalPayoutFee.toFixed(2) + ')');
+
         try {
           const paypalResult = await createPayout(paypalConfig!, {
             email: payment.paypalEmail!,
-            amount: payment.amount,
+            amount: paypalAmount,
             currency: 'GBP',
             note: `Fresh Wax vinyl sale payout for order #${orderNumber}`,
             reference: `${orderId}-seller-${payment.sellerId}`
@@ -944,7 +963,8 @@ async function processVinylCrateSellerPayments(params: {
               customerPaymentMethod: 'paypal',
               orderId,
               orderNumber,
-              amount: payment.amount,
+              amount: paypalAmount,
+              paypalPayoutFee: paypalPayoutFee,
               currency: 'gbp',
               status: 'completed',
               items: payment.items,
@@ -956,7 +976,7 @@ async function processVinylCrateSellerPayments(params: {
             const sellerUser = await getDocument('users', payment.sellerId);
             if (sellerUser) {
               await updateDocument('users', payment.sellerId, {
-                crateEarnings: (sellerUser.crateEarnings || 0) + payment.amount,
+                crateEarnings: (sellerUser.crateEarnings || 0) + paypalAmount,
                 lastCratePayoutAt: new Date().toISOString()
               });
             }
@@ -978,7 +998,8 @@ async function processVinylCrateSellerPayments(params: {
             customerPaymentMethod: 'paypal',
             orderId,
             orderNumber,
-            amount: payment.amount,
+            amount: paypalAmount,
+            paypalPayoutFee: paypalPayoutFee,
             currency: 'gbp',
             status: 'retry_pending',
             items: payment.items,

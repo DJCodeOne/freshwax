@@ -241,11 +241,11 @@ export const prerender = false;
             <!-- Payout Method Tabs -->
             <div class="payout-tabs">
               <button class="payout-tab active" data-tab="stripe">
-                <span class="tab-icon">💳</span> Stripe
+                <span class="tab-icon">💳</span> Stripe <span class="tab-recommended">Recommended</span>
                 {partner.stripeConnectStatus === 'active' && <span class="tab-check">✓</span>}
               </button>
               <button class="payout-tab" data-tab="paypal">
-                <span class="tab-icon">🅿️</span> PayPal
+                <span class="tab-icon">🅿️</span> PayPal <span class="tab-fee">+2% fee</span>
                 {partner.paypalEmail && <span class="tab-check">✓</span>}
               </button>
             </div>
@@ -293,10 +293,10 @@ export const prerender = false;
                   <div class="status-icon">💳</div>
                   <div class="status-info">
                     <h3>Connect with Stripe</h3>
-                    <p>Link your bank account via Stripe to receive instant payouts. You keep 99% of every sale!</p>
+                    <p>Link your bank account via Stripe to receive payouts. You keep 99% of every sale!</p>
                     <ul class="stripe-benefits">
-                      <li>✓ Instant payouts to your bank</li>
-                      <li>✓ Secure payment processing</li>
+                      <li>✓ <strong>No payout fees</strong> - keep more of your earnings</li>
+                      <li>✓ Direct bank deposits in 2-3 days</li>
                       <li>✓ View earnings in Stripe Dashboard</li>
                     </ul>
                   </div>
@@ -331,7 +331,8 @@ export const prerender = false;
                   <div class="status-icon">🅿️</div>
                   <div class="status-info">
                     <h3>Link PayPal Account</h3>
-                    <p>Enter your PayPal email to receive payouts via PayPal instead of Stripe.</p>
+                    <p>Enter your PayPal email to receive payouts via PayPal.</p>
+                    <p class="paypal-fee-note">Note: PayPal charges a 2% payout fee. We recommend Stripe for lower fees.</p>
                     <div class="paypal-form">
                       <input type="email" id="paypal-email-input" placeholder="your@paypal-email.com" />
                       <button class="paypal-link-btn" id="paypal-link-btn">Link PayPal</button>
@@ -1712,6 +1713,31 @@ export const prerender = false;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .payout-tab .tab-recommended {
+    background: #22c55e;
+    color: #000;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+
+  .payout-tab .tab-fee {
+    background: #f59e0b;
+    color: #000;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.125rem 0.375rem;
+    border-radius: 4px;
+  }
+
+  .paypal-fee-note {
+    color: #f59e0b;
+    font-size: 0.8125rem;
+    margin-top: 0.5rem;
   }
 
   .payout-tab-content {
