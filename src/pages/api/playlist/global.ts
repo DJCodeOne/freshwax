@@ -40,7 +40,7 @@ export async function GET({ request, locals }: APIContext) {
   try {
     const headers = {
       'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=5',
+      'Cache-Control': 'public, max-age=10, s-maxage=15', // Increased caching - Pusher handles real-time
     };
 
     const kv = getKV(locals);
@@ -760,6 +760,20 @@ async function broadcastEmojiReaction(emoji: string, sessionId: string, env?: an
   }
 }
 
+// In-memory cache for recently played (reduces KV reads)
+let recentlyPlayedCache: { items: any[], timestamp: number } | null = null;
+const RECENTLY_PLAYED_CACHE_TTL = 10000; // 10 seconds
+
+async function getCachedRecentlyPlayed(): Promise<any[]> {
+  const now = Date.now();
+  if (recentlyPlayedCache && (now - recentlyPlayedCache.timestamp) < RECENTLY_PLAYED_CACHE_TTL) {
+    return recentlyPlayedCache.items;
+  }
+  const items = await getRecentlyPlayed();
+  recentlyPlayedCache = { items, timestamp: now };
+  return items;
+}
+
 // Broadcast playlist update via Pusher (includes recently played)
 async function broadcastPlaylistUpdate(playlist: GlobalPlaylist, env?: any) {
   try {
@@ -768,21 +782,13 @@ async function broadcastPlaylistUpdate(playlist: GlobalPlaylist, env?: any) {
     const PUSHER_SECRET = env?.PUSHER_SECRET || import.meta.env.PUSHER_SECRET;
     const PUSHER_CLUSTER = env?.PUSHER_CLUSTER || env?.PUBLIC_PUSHER_CLUSTER || import.meta.env.PUSHER_CLUSTER || 'eu';
 
-    console.log('[GlobalPlaylist] Broadcast attempt - env available:', !!env);
-    console.log('[GlobalPlaylist] Pusher config:', {
-      hasAppId: !!PUSHER_APP_ID,
-      hasKey: !!PUSHER_KEY,
-      hasSecret: !!PUSHER_SECRET,
-      cluster: PUSHER_CLUSTER
-    });
-
     if (!PUSHER_APP_ID || !PUSHER_KEY || !PUSHER_SECRET) {
       console.warn('[GlobalPlaylist] Pusher not configured, skipping broadcast');
       return;
     }
 
-    // Fetch recently played to include in broadcast
-    const recentlyPlayed = await getRecentlyPlayed();
+    // Use cached recently played to reduce KV reads
+    const recentlyPlayed = await getCachedRecentlyPlayed();
 
     const channel = 'live-playlist';
     const event = 'playlist-update';

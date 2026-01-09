@@ -74,6 +74,16 @@ const pendingOrders = orders.filter(o => o.status === 'pending');
 const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.totals?.total || o.total || 0), 0);
 const monthRevenue = monthOrders.reduce((sum, o) => sum + (o.totals?.total || o.total || 0), 0);
 
+// Calculate artist earnings from completed orders (subtotal minus fees)
+const artistEarningsFromOrders = ordersData
+  .filter(o => o.paymentStatus === 'completed' || o.orderStatus === 'completed' || o.status === 'completed')
+  .reduce((sum, o) => {
+    const subtotal = o.totals?.subtotal || 0;
+    const freshWaxFee = o.totals?.freshWaxFee || 0;
+    const stripeFee = o.totals?.stripeFee || 0;
+    return sum + (subtotal - freshWaxFee - stripeFee);
+  }, 0);
+
 // Partner stats (data already in array format from REST API)
 const artists = artistsData;
 const pendingPartners = artists.filter(a => a.approved === false);
@@ -317,9 +327,9 @@ export const prerender = false;
         <div class="earning-stat info">
           <div class="earning-icon">🎤</div>
           <div class="earning-info">
-            <span class="earning-label">Paid to Artists</span>
-            <span class="earning-value">{formatCurrency(totalArtistPayouts)}</span>
-            <span class="earning-detail">{payoutsData.filter(p => p.status === 'completed').length} payouts completed</span>
+            <span class="earning-label">Artist Earnings</span>
+            <span class="earning-value">{formatCurrency(artistEarningsFromOrders)}</span>
+            <span class="earning-detail">{ordersData.filter(o => o.paymentStatus === 'completed' || o.orderStatus === 'completed' || o.status === 'completed').length} completed orders</span>
           </div>
         </div>
 

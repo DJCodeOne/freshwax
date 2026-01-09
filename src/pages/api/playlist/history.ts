@@ -50,7 +50,7 @@ export async function GET({ locals }: APIContext) {
     }), {
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=10'
+        'Cache-Control': 'public, max-age=30, s-maxage=60' // History doesn't change often
       }
     });
   } catch (error: any) {

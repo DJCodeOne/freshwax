@@ -1,17 +1,50 @@
 // src/pages/api/livestream/status.ts
 // Check if any stream is currently live - uses Firebase REST API
-// Uses Cloudflare KV for caching to reduce Firebase reads
+// NOW USES CLOUDFLARE CACHE API (FREE & UNLIMITED) instead of KV
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument } from '../../../lib/firebase-rest';
 import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
-import { initKVCache, kvGet, kvSet, CACHE_CONFIG } from '../../../lib/kv-cache';
 
 // Cache TTLs in seconds
+// Pusher handles real-time updates, so polling can be slower
 const CACHE_TTL = {
-  LIVE_STATUS: 60,      // 60s - Pusher handles real-time, polling is backup
-  SPECIFIC_STREAM: 60,  // 60s
+  LIVE_STATUS: 60,      // 1 min - Pusher handles real-time, this is just backup
+  SPECIFIC_STREAM: 60,  // 1 min
   OFFLINE_STATUS: 120,  // 2 min when offline - no urgency
 };
+
+// Cache API helpers (FREE and unlimited - replaces KV for reads)
+const CACHE_BASE_URL = 'https://freshwax.co.uk/__cache/status';
+
+async function getCached(key: string): Promise<any | null> {
+  try {
+    const cache = caches.default;
+    const cacheUrl = `${CACHE_BASE_URL}/${key}`;
+    const cached = await cache.match(cacheUrl);
+    if (cached) {
+      return await cached.json();
+    }
+  } catch (e) {
+    // Cache API not available (local dev) - continue without cache
+  }
+  return null;
+}
+
+async function setCached(key: string, data: any, ttlSeconds: number): Promise<void> {
+  try {
+    const cache = caches.default;
+    const cacheUrl = `${CACHE_BASE_URL}/${key}`;
+    const response = new Response(JSON.stringify(data), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': `public, max-age=${ttlSeconds}`,
+      }
+    });
+    await cache.put(cacheUrl, response);
+  } catch (e) {
+    // Cache API not available (local dev) - continue without cache
+  }
+}
 
 function jsonResponse(data: any, status: number, maxAge: number = 10): Response {
   return new Response(JSON.stringify(data), {
@@ -30,9 +63,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     RED5_HLS_URL: env?.RED5_HLS_URL || import.meta.env.RED5_HLS_URL,
   });
 
-  // Initialize KV cache
-  initKVCache(env);
-
   try {
     const url = new URL(request.url);
     const streamId = url.searchParams.get('streamId');
@@ -40,13 +70,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Specific stream lookup
     if (streamId) {
-      const cacheKey = `stream:${streamId}`;
+      const cacheKey = `stream-${streamId}`;
 
       if (!skipCache) {
-        const cached = await kvGet(cacheKey, { prefix: 'status', ttl: CACHE_TTL.SPECIFIC_STREAM });
+        // Check Cache API (FREE - replaces KV)
+        const cached = await getCached(cacheKey);
         if (cached) {
-          console.log('[status] KV cache hit for stream:', streamId);
-          return jsonResponse(cached, (cached as any).success ? 200 : 404, 15);
+          return jsonResponse(cached, cached.success ? 200 : 404, 15);
         }
       }
 
@@ -60,7 +90,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
       if (!streamDoc) {
         const result = { success: false, error: 'Stream not found' };
-        kvSet(cacheKey, result, { prefix: 'status', ttl: CACHE_TTL.SPECIFIC_STREAM });
+        await setCached(cacheKey, result, CACHE_TTL.SPECIFIC_STREAM);
         return jsonResponse(result, 404, 15);
       }
 
@@ -71,22 +101,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
         success: true,
         stream: safeStreamDoc
       };
-      kvSet(cacheKey, result, { prefix: 'status', ttl: CACHE_TTL.SPECIFIC_STREAM });
+      await setCached(cacheKey, result, CACHE_TTL.SPECIFIC_STREAM);
       return jsonResponse(result, 200, 15);
     }
 
     // General live status check
     const statusCacheKey = 'general';
 
-    // IGNORE _t cache buster - we want server-side caching to reduce Firebase reads
-    // The _t parameter is only to bypass Cloudflare edge cache, not our server cache
-    const shouldSkipCache = skipCache;
-
-    if (!shouldSkipCache) {
-      const cached = await kvGet(statusCacheKey, { prefix: 'status', ttl: CACHE_TTL.LIVE_STATUS });
+    if (!skipCache) {
+      // Check Cache API (FREE - replaces KV)
+      const cached = await getCached(statusCacheKey);
       if (cached) {
-        console.log('[status] KV cache hit for general status');
-        const maxAge = (cached as any).isLive ? 10 : 30;
+        const maxAge = cached.isLive ? 10 : 30;
         return jsonResponse(cached, 200, maxAge);
       }
     }
@@ -174,8 +200,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         scheduled
       };
 
-      // Cache offline status for longer (2 min)
-      kvSet(statusCacheKey, result, { prefix: 'status', ttl: CACHE_TTL.OFFLINE_STATUS });
+      // Cache offline status (Cache API - FREE)
+      await setCached(statusCacheKey, result, CACHE_TTL.OFFLINE_STATUS);
 
       return jsonResponse(result, 200, 30);
     }
@@ -194,8 +220,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       primaryStream: streams[0]
     };
 
-    // Cache live status for 1 min
-    kvSet(statusCacheKey, result, { prefix: 'status', ttl: CACHE_TTL.LIVE_STATUS });
+    // Cache live status (Cache API - FREE)
+    await setCached(statusCacheKey, result, CACHE_TTL.LIVE_STATUS);
 
     return jsonResponse(result, 200, 10);
 
