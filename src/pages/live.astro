@@ -3081,7 +3081,21 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 
         // Store Pro status globally for live-stream.js to access
         window.userIsPro = userInfo.isPro;
-        
+
+        // Fetch user's Plus badge if they're Pro
+        window.userBadge = 'crown'; // Default
+        if (userInfo.isPro) {
+          try {
+            const badgeRes = await fetch(`/api/get-user-badge?userId=${userId}`);
+            const badgeData = await badgeRes.json();
+            if (badgeData.success && badgeData.badge) {
+              window.userBadge = badgeData.badge;
+            }
+          } catch (e) {
+            console.warn('[Live] Failed to fetch user badge:', e);
+          }
+        }
+
         // Update global user info for shoutouts and playlist
         window.currentUserInfo = {
           loggedIn: true,

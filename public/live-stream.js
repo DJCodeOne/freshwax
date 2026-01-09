@@ -38,6 +38,14 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Plus badge emojis - matches dashboard.astro
+const BADGE_EMOJIS = {
+  crown: '👑', fire: '🔥', headphones: '🎧', skull: '💀', lion: '🦁',
+  leopard: '🐆', palm: '🌴', lightning: '⚡', vinyl: '💿', speaker: '🔊',
+  moon: '🌙', star: '⭐', diamond: '💎', snake: '🐍', bat: '🦇',
+  mic: '🎤', leaf: '🌿', gorilla: '🦍', spider: '🕷️', alien: '👽'
+};
+
 // Normalize HLS URLs to use the correct base URL (handles old trycloudflare URLs)
 function normalizeHlsUrl(url) {
   if (!url) return url;
@@ -3104,15 +3112,16 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
         `;
       }
 
-      // Plus member crown badge
-      const crownBadge = msg.isPro ? '<svg viewBox="0 0 24 24" fill="#f59e0b" width="14" height="14" style="margin-left: 4px; vertical-align: middle;"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>' : '';
+      // Plus member badge - show user's selected badge emoji
+      const badgeEmoji = msg.isPro ? (BADGE_EMOJIS[msg.badge] || BADGE_EMOJIS.crown) : '';
+      const plusBadge = badgeEmoji ? `<span style="margin-left: 4px; font-size: 14px; vertical-align: middle;">${badgeEmoji}</span>` : '';
 
       if (msg.type === 'giphy' && msg.giphyUrl) {
         return `
           <div class="chat-message" style="padding: 0.5rem 0; animation: slideIn 0.2s ease-out; position: relative;" onmouseenter="this.querySelector('.reply-btn').style.opacity='1'" onmouseleave="this.querySelector('.reply-btn').style.opacity='0'">
             ${replyHtml}
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
-              <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem; display: inline-flex; align-items: center;">${escapeHtml(msg.userName)}${crownBadge}</span>
+              <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem; display: inline-flex; align-items: center;">${escapeHtml(msg.userName)}${plusBadge}</span>
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <button class="reply-btn" onclick="window.replyToMessage('${msg.id}', '${escapeHtml(msg.userName)}', 'GIF')" style="opacity: 0; background: none; border: none; color: #22c55e; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">↩ Reply</button>
                 <span style="font-size: 0.6875rem; color: #666;">${time}</span>
@@ -3127,7 +3136,7 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
         <div class="chat-message" style="padding: 0.5rem 0; animation: slideIn 0.2s ease-out; position: relative;" onmouseenter="this.querySelector('.reply-btn').style.opacity='1'" onmouseleave="this.querySelector('.reply-btn').style.opacity='0'">
           ${replyHtml}
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.125rem;">
-            <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem; display: inline-flex; align-items: center;">${escapeHtml(msg.userName)}${crownBadge}</span>
+            <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem; display: inline-flex; align-items: center;">${escapeHtml(msg.userName)}${plusBadge}</span>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
               <button class="reply-btn" onclick="window.replyToMessage('${msg.id}', '${escapeHtml(msg.userName)}', '${escapeHtml(msgPreview).replace(/'/g, "\\'")}')" style="opacity: 0; background: none; border: none; color: #22c55e; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">↩ Reply</button>
               <span style="font-size: 0.6875rem; color: #666;">${time}</span>
@@ -3636,6 +3645,7 @@ function setupChatInput(streamId) {
           userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
           userAvatar: currentUser.photoURL || null,
           isPro: window.userIsPro === true,
+          badge: window.userBadge || 'crown',
           message,
           type: 'text',
           ...replyData
