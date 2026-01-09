@@ -810,6 +810,11 @@
           return;
         }
 
+        // Add cache-busting param to bypass CDN cached responses without CORS headers
+        if (trackAudioUrl.indexOf('cdn.freshwax.co.uk') > -1 && trackAudioUrl.indexOf('?') === -1) {
+          trackAudioUrl = trackAudioUrl + '?v=2';
+        }
+
         var audio = document.getElementById('global-audio');
         if (audio) {
           // Start with volume 0 for fade in effect
@@ -941,7 +946,12 @@
           window.FreshWaxPlayer.hasTrackedPlay = false;
 
           // Set source and preload for smooth playback
-          audio.src = mixData.audio_url;
+          // Add cache-busting param to bypass CDN cached responses without CORS headers
+          var audioUrl = mixData.audio_url;
+          if (audioUrl.indexOf('cdn.freshwax.co.uk') > -1 && audioUrl.indexOf('?') === -1) {
+            audioUrl = audioUrl + '?v=2';
+          }
+          audio.src = audioUrl;
           audio.preload = 'auto';
           audio.load();
           
