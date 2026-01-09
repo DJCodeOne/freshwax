@@ -149,7 +149,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
               <span class="help-icon">2</span>
               <div>
                 <strong>Automatic Split</strong>
-                <p>Your share is calculated automatically. Artists get ~92%, vinyl sellers get 85%, merch suppliers get their cost price.</p>
+                <p>Your share is calculated automatically minus a small platform fee (1% for music/vinyl, 5% for merch) and payment processing fees.</p>
               </div>
             </div>
             <div class="help-item">
@@ -354,12 +354,12 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         <div class="status-incomplete">
           <span class="status-icon">&#9888;</span>
           <div>
-            <strong>${status === 'restricted' ? 'Action Required' : 'Setup Incomplete'}</strong>
+            <strong style="${status === 'restricted' ? 'color: #ef4444;' : ''}">${status === 'restricted' ? 'Action Required' : 'Setup Incomplete'}</strong>
             <p>${status === 'restricted'
               ? 'Stripe requires additional information. Please update your account.'
               : 'Complete your Stripe setup to receive payments.'}</p>
           </div>
-          <button id="connect-btn" class="btn btn-${status === 'restricted' ? 'warning' : 'primary'}">
+          <button id="connect-btn" class="btn btn-${status === 'restricted' ? 'warning' : 'primary'}" style="${status === 'restricted' ? 'color: #3b82f6;' : ''}">
             ${status === 'onboarding' ? 'Continue Setup' : 'Update Account'}
           </button>
         </div>
@@ -413,11 +413,11 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         <div class="status-active">
           <span class="status-icon">&#10003;</span>
           <div>
-            <strong>PayPal Connected</strong>
+            <strong style="color: #3b82f6;">PayPal Connected</strong>
             <p>Payouts will be sent to: <strong>${data.paypalEmail}</strong></p>
           </div>
           <div class="status-actions-col">
-            <button id="paypal-change-btn" class="btn btn-secondary">Change Email</button>
+            <button id="paypal-change-btn" class="btn btn-secondary" style="color: #22c55e;">Change Email</button>
             ${data.payoutMethod !== 'paypal' && userData.stripeConnected ?
               '<button id="set-paypal-preferred" class="btn btn-primary">Set as Preferred</button>' : ''}
           </div>
@@ -1093,7 +1093,11 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 
   .btn-warning {
     background: #f59e0b;
-    color: black;
+    color: #3b82f6;
+  }
+
+  .action-required-text {
+    color: #ef4444;
   }
 
   .btn:disabled {

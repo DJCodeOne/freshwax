@@ -98,7 +98,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
               <span class="amount" id="pending-amount">£0.00</span>
             </div>
           </div>
-          <p class="earnings-note">You earn 85% of sales from your vinyl crates.</p>
+          <p class="earnings-note">You keep your sale price minus a small platform fee.</p>
         </section>
 
         <!-- Recent Payouts -->
@@ -131,7 +131,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
               <span class="help-icon">3</span>
               <div>
                 <strong>Get Paid</strong>
-                <p>Your 85% share is sent instantly to Stripe or PayPal.</p>
+                <p>Your payout is sent to your Stripe or PayPal account.</p>
               </div>
             </div>
           </div>
@@ -292,10 +292,10 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         <div class="status-restricted">
           <span class="status-icon">&#9888;</span>
           <div>
-            <strong>Action Required</strong>
+            <strong style="color: #ef4444;">Action Required</strong>
             <p>Stripe requires additional information: ${data.disabledReason || 'Please update your account'}</p>
           </div>
-          <button id="update-btn" class="btn btn-warning">Update Account</button>
+          <button id="update-btn" class="btn btn-warning" style="color: #3b82f6;">Update Account</button>
         </div>
       `;
 
@@ -776,7 +776,11 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 
   .btn-warning {
     background: #f59e0b;
-    color: black;
+    color: #3b82f6;
+  }
+
+  .action-required-text {
+    color: #ef4444;
   }
 
   .earnings-cards {
