@@ -80,10 +80,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
             return item;
           }
 
-          if (item.downloads?.tracks?.length > 0 && item.downloads.tracks[0]?.mp3Url) {
-            return item;
-          }
-
+          // Always look up release for fresh artwork URL (stored URL may be stale)
           const releaseId = item.releaseId || item.productId || item.id;
           if (!releaseId) return item;
 
@@ -120,13 +117,18 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
                 const artistName = releaseData?.artistName || item.artist || 'Unknown Artist';
                 const releaseName = releaseData?.releaseName || releaseData?.title || item.title || 'Release';
 
+                // Prioritize release artwork over stored (may be stale/moved)
+                const artworkUrl = releaseData?.coverArtUrl || releaseData?.artworkUrl || releaseData?.artwork?.cover || item.image || null;
+
                 if (track) {
                   return {
                     ...item,
+                    image: artworkUrl,
+                    artwork: artworkUrl,
                     downloads: {
                       artistName,
                       releaseName,
-                      artworkUrl: releaseData?.artworkUrl || releaseData?.coverArtUrl || null,
+                      artworkUrl,
                       tracks: [{
                         name: track.trackName || track.name || item.title,
                         mp3Url: track.mp3Url || null,
@@ -137,10 +139,12 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
                 } else {
                   return {
                     ...item,
+                    image: artworkUrl,
+                    artwork: artworkUrl,
                     downloads: {
                       artistName,
                       releaseName,
-                      artworkUrl: releaseData?.artworkUrl || releaseData?.coverArtUrl || null,
+                      artworkUrl,
                       tracks: (releaseData?.tracks || []).map((t: any) => ({
                         name: t.trackName || t.name,
                         mp3Url: t.mp3Url || null,
@@ -153,13 +157,17 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
               const artistName = releaseData?.artistName || item.artist || 'Unknown Artist';
               const releaseName = releaseData?.releaseName || releaseData?.title || item.title || 'Release';
+              // Prioritize release artwork over stored (may be stale/moved)
+              const artworkUrl = releaseData?.coverArtUrl || releaseData?.artworkUrl || releaseData?.artwork?.cover || item.image || null;
 
               return {
                 ...item,
+                image: artworkUrl,
+                artwork: artworkUrl,
                 downloads: {
                   artistName,
                   releaseName,
-                  artworkUrl: releaseData?.artworkUrl || releaseData?.coverArtUrl || null,
+                  artworkUrl,
                   tracks: (releaseData?.tracks || []).map((track: any) => ({
                     name: track.trackName || track.name,
                     mp3Url: track.mp3Url || null,
