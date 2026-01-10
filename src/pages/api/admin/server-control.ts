@@ -327,21 +327,34 @@ async function runHealthCheck(): Promise<{ success: boolean; message?: string; e
       checks.firebase = true;
     } catch {}
 
-    // Check stream server
+    // Check stream server via API endpoint
     try {
-      const response = await fetch('https://stream.freshwax.co.uk', {
-        method: 'HEAD',
+      const response = await fetch('https://stream.freshwax.co.uk/v3/paths/list', {
+        method: 'GET',
         signal: AbortSignal.timeout(5000)
       });
       checks.stream = response.ok;
     } catch {}
 
+    // Check R2/CDN
+    try {
+      const response = await fetch('https://cdn.freshwax.co.uk/', {
+        method: 'HEAD',
+        signal: AbortSignal.timeout(5000)
+      });
+      checks.storage = response.ok || response.status === 404;
+    } catch {}
+
     const passed = Object.values(checks).filter(Boolean).length;
     const total = Object.keys(checks).length;
 
+    const details = Object.entries(checks)
+      .map(([k, v]) => `${k}: ${v ? '✓' : '✗'}`)
+      .join(', ');
+
     return {
       success: true,
-      message: `Health check complete: ${passed}/${total} services healthy`
+      message: `Health check complete: ${passed}/${total} services healthy (${details})`
     };
   } catch (error) {
     return { success: false, error: 'Health check failed' };

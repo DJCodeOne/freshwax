@@ -38,13 +38,14 @@ interface HealthCheckResponse {
 async function checkFirebase(): Promise<ServiceStatus> {
   const start = Date.now();
   try {
+    // Use releases collection (public) to verify Firebase is reachable
     const response = await fetch(
-      `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/system/health?key=${import.meta.env.PUBLIC_FIREBASE_API_KEY}`,
+      `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/releases?pageSize=1&key=${import.meta.env.PUBLIC_FIREBASE_API_KEY}`,
       { signal: AbortSignal.timeout(5000) }
     );
     const latency = Date.now() - start;
 
-    if (response.ok || response.status === 404) {
+    if (response.ok) {
       return { name: 'Firebase', status: 'ok', latency, lastChecked: new Date().toISOString() };
     }
     return { name: 'Firebase', status: 'warning', latency, message: `HTTP ${response.status}`, lastChecked: new Date().toISOString() };
@@ -97,19 +98,20 @@ async function checkStripe(): Promise<ServiceStatus> {
 async function checkStreaming(): Promise<ServiceStatus> {
   const start = Date.now();
   try {
-    // Check the HLS endpoint
-    const response = await fetch('https://live.freshwax.co.uk/freshwax-main/index.m3u8', {
-      method: 'HEAD',
+    // Check the MediaMTX API endpoint (more reliable than HLS)
+    const response = await fetch('https://stream.freshwax.co.uk/v3/paths/list', {
+      method: 'GET',
       signal: AbortSignal.timeout(5000)
     });
     const latency = Date.now() - start;
 
-    // 404 means server is up but no stream, 200 means stream active
     if (response.ok) {
-      return { name: 'Stream Server', status: 'ok', latency, message: 'Stream active', lastChecked: new Date().toISOString() };
-    }
-    if (response.status === 404) {
-      return { name: 'Stream Server', status: 'ok', latency, message: 'No active stream', lastChecked: new Date().toISOString() };
+      const data = await response.json();
+      const activePaths = (data.items || []).filter((p: any) => p.ready);
+      const message = activePaths.length > 0
+        ? `${activePaths.length} active stream(s)`
+        : 'Online, no active streams';
+      return { name: 'Stream Server', status: 'ok', latency, message, lastChecked: new Date().toISOString() };
     }
     return { name: 'Stream Server', status: 'warning', latency, message: `HTTP ${response.status}`, lastChecked: new Date().toISOString() };
   } catch (e: any) {
