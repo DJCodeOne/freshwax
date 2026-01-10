@@ -2677,7 +2677,13 @@ export const prerender = false;
   // Load subscription status and update UI
   async function loadSubscriptionStatus(userId) {
     try {
-      const response = await fetch(`/api/subscription?userId=${userId}`);
+      // Get auth token for authenticated API call
+      const user = window.firebase?.auth()?.currentUser;
+      const idToken = user ? await user.getIdToken() : null;
+
+      const response = await fetch(`/api/subscription?userId=${userId}`, {
+        headers: idToken ? { 'Authorization': `Bearer ${idToken}` } : {}
+      });
       const result = await response.json();
 
       if (!result.success) return;
