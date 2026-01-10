@@ -401,14 +401,32 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
     
     // Note: firebase-rest doesn't support startAfter, so we'll skip pagination for now
-    const messages = await queryCollection('livestream-chat', {
-      filters: [
-        { field: 'streamId', op: 'EQUAL', value: streamId },
-        { field: 'isModerated', op: 'EQUAL', value: false }
-      ],
-      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-      limit
-    });
+    // When streamId is 'playlist-global' (no live stream), show recent messages from any stream
+    // This allows chat to persist between streams as a general chat area
+    const isGlobalMode = streamId === 'playlist-global';
+
+    let messages: any[];
+
+    if (isGlobalMode) {
+      // For global mode, fetch recent messages without the composite filter
+      // (avoids needing a new Firestore index) and filter client-side
+      const allMessages = await queryCollection('livestream-chat', {
+        orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+        limit: limit * 2 // Fetch extra to account for filtering
+      });
+      messages = allMessages
+        .filter((msg: any) => !msg.isModerated)
+        .slice(0, limit);
+    } else {
+      messages = await queryCollection('livestream-chat', {
+        filters: [
+          { field: 'streamId', op: 'EQUAL', value: streamId },
+          { field: 'isModerated', op: 'EQUAL', value: false }
+        ],
+        orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+        limit
+      });
+    }
 
     // Reverse to get chronological order
     messages.reverse();
