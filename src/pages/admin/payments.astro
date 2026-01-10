@@ -41,8 +41,10 @@ const recentOrders = await queryCollection('orders', {
 // Find orders needing payouts (orders without corresponding payout records)
 const paidOrderIds = new Set(completedPayouts.map(p => p.orderId));
 const ordersNeedingPayouts = recentOrders.filter(order => {
-  // Skip test mode orders - no real money involved
-  if (order.paymentMethod === 'test_mode') return false;
+  // Skip test mode and free download orders - no real money involved
+  if (order.paymentMethod === 'test_mode' || order.paymentMethod === 'free_download') return false;
+  // Skip orders with zero total
+  if (order.totals?.total === 0 || order.total === 0) return false;
   // Skip if already paid
   if (paidOrderIds.has(order.id)) return false;
   // Skip if no items
