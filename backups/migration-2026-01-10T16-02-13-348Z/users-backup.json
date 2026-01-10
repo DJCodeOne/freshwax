@@ -1,0 +1,523 @@
+[
+  {
+    "_id": "0jYmHOiuDMPomSYZlgpLYCaR0D82",
+    "updatedAt": "2026-01-09T20:22:11.537Z",
+    "createdAt": "2026-01-09T20:19:15.481Z",
+    "emailVerified": false,
+    "provider": "email",
+    "email": "a.witten@sky.com",
+    "roles": {
+      "merchSeller": false,
+      "artist": false,
+      "customer": true,
+      "djEligible": false,
+      "vinylSeller": false
+    },
+    "displayName": "Madayo",
+    "uid": "0jYmHOiuDMPomSYZlgpLYCaR0D82",
+    "pendingRoles": {},
+    "displayNameLower": "madayo",
+    "phone": "",
+    "name": ""
+  },
+  {
+    "_id": "5UejyuBnRuNsX6bTmvDnFuzHBzf2",
+    "uid": "5UejyuBnRuNsX6bTmvDnFuzHBzf2",
+    "roles": {
+      "djEligible": false,
+      "customer": true,
+      "merchSeller": false,
+      "artist": true
+    },
+    "email": "paulf9970@yahoo.com",
+    "displayName": "NoLightNoShadows",
+    "createdAt": "2025-12-16T20:26:27.487Z",
+    "updatedAt": "2025-12-17T12:40:46.593Z",
+    "pendingRoles": {
+      "artist": {
+        "artistName": "NoLightNoShadows",
+        "bio": "I offer original narration clips , for drum and bass music , and custom write and narrate clips for existing artists .",
+        "status": "approved",
+        "requestedAt": "2025-12-16T20:26:27.487Z",
+        "links": ""
+      }
+    }
+  },
+  {
+    "_id": "8WmxYeCp4PSym5iWHahgizokn5F2",
+    "stripeConnectStatus": "restricted",
+    "suspended": false,
+    "partnerInfo": {
+      "approved": true
+    },
+    "isAdmin": true,
+    "payoutMethod": "paypal",
+    "stripeLastUpdated": "2026-01-09T00:07:46.179Z",
+    "disabled": false,
+    "stripeDetailsSubmitted": false,
+    "paypalEmail": "david_hagon@hotmail.com",
+    "phone": "07971331814",
+    "bypassedBy": "admin",
+    "createdAt": "2025-12-10T22:44:17.342Z",
+    "permissions": {
+      "canBuy": true,
+      "canComment": true,
+      "canRate": true
+    },
+    "paypalLinkedAt": "2026-01-09T03:00:56.115Z",
+    "subscription": {
+      "tier": "pro",
+      "source": "admin",
+      "expiresAt": "2027-01-06T12:27:31.685Z",
+      "startedAt": "2026-01-06T12:27:31.685Z"
+    },
+    "stripeChargesEnabled": false,
+    "updatedAt": "2026-01-09T03:00:56.115Z",
+    "email": "davidhagon@gmail.com",
+    "go-liveBypassed": true,
+    "name": "Dave Hagon",
+    "approved": true,
+    "displayName": "Code One",
+    "roles": {
+      "dj": true,
+      "customer": true,
+      "artist": true,
+      "admin": true,
+      "merchSupplier": true,
+      "vinylSeller": true
+    },
+    "bypassedAt": "2026-01-10T02:06:40.193Z",
+    "stripePayoutsEnabled": false,
+    "stripeConnectId": "acct_1SmlYOEhIBAXavmI"
+  },
+  {
+    "_id": "BNpWXqfKDoOCXHKN2IqfxWcHtBv2",
+    "uid": "BNpWXqfKDoOCXHKN2IqfxWcHtBv2",
+    "provider": "email",
+    "permissions": {
+      "canBuy": true,
+      "canRate": true,
+      "canComment": true
+    },
+    "pendingRoles": {
+      "merchSeller": {
+        "website": "",
+        "status": "approved",
+        "description": "",
+        "businessName": "Danger Chamber",
+        "requestedAt": "2026-01-09T17:14:18.003Z"
+      },
+      "vinylSeller": {
+        "status": "pending",
+        "requestedAt": "2026-01-09T17:14:18.003Z",
+        "storeName": "",
+        "description": "",
+        "discogsUrl": "",
+        "location": "Dartford"
+      },
+      "artist": {
+        "bio": "",
+        "requestedAt": "2026-01-09T17:14:18.003Z",
+        "status": "approved",
+        "links": "",
+        "artistName": "Danger Chamber"
+      }
+    },
+    "displayNameLower": "y2 - danger chamber",
+    "approved": true,
+    "updatedAt": "2026-01-10T00:19:11.467Z",
+    "roles": {
+      "vinylSeller": true,
+      "customer": true,
+      "artist": true,
+      "merchSupplier": true,
+      "dj": true,
+      "merchSeller": true,
+      "admin": false
+    },
+    "displayName": "Y2 - Danger Chamber",
+    "phone": "",
+    "createdAt": "2026-01-09T17:14:18.003Z",
+    "emailVerified": false,
+    "isAdmin": false,
+    "email": "vaughnb1980@live.co.uk"
+  },
+  {
+    "_id": "BV0K2nR4FiUgCxawgG69DGQgAki1",
+    "createdAt": "2026-01-02T21:59:28.928Z",
+    "roles": {
+      "merchSeller": false,
+      "vinylSeller": false,
+      "artist": true,
+      "djEligible": false,
+      "customer": true
+    },
+    "email": "jay.248@hotmail.co.uk",
+    "uid": "BV0K2nR4FiUgCxawgG69DGQgAki1",
+    "approved": true,
+    "pendingRoles": {
+      "artist": {
+        "status": "approved",
+        "links": "https://rokodj.bandcamp.com/",
+        "artistName": "ⱤØ₭Ø",
+        "bio": "Darkside jungle hardcore dj and producer",
+        "requestedAt": "2026-01-02T21:59:28.928Z"
+      }
+    },
+    "updatedAt": "2026-01-05T18:48:23.686Z",
+    "displayName": "ⱤØ₭Ø"
+  },
+  {
+    "_id": "CCMDrCWRkUXiPN7O83iSfm1BxGo1",
+    "createdAt": "2025-12-17T16:17:29.480Z",
+    "pendingRoles": {
+      "artist": {
+        "requestedAt": "2025-12-17T16:17:29.480Z",
+        "status": "approved",
+        "links": "Bakkusrecordings.bandcamp.com",
+        "bio": "I focus mainly on the harder, darker side of DnB (Amens/Tech Step etc), but coming from the early 90's rave scene Im also into  the early Hardcore and Jungle scene of that era.",
+        "artistName": "Bakkus Recordings"
+      }
+    },
+    "roles": {
+      "djEligible": false,
+      "customer": true,
+      "artist": true,
+      "merchSeller": false
+    },
+    "displayName": "DJ BAKKUS",
+    "email": "mitchellwebb82@yahoo.co.uk",
+    "updatedAt": "2025-12-28T19:25:26.973Z",
+    "uid": "CCMDrCWRkUXiPN7O83iSfm1BxGo1",
+    "approved": true
+  },
+  {
+    "_id": "DknlMzyCXaXZaME6s2XKr5DIzbG2",
+    "email": "david_hagon@hotmail.com",
+    "isAdmin": false,
+    "roles": {
+      "merchSupplier": false,
+      "admin": false,
+      "artist": true,
+      "dj": true,
+      "customer": true
+    },
+    "approved": true,
+    "permissions": {
+      "canRate": true,
+      "canComment": true,
+      "canBuy": true
+    },
+    "createdAt": "2025-12-23T17:39:56.275Z",
+    "updatedAt": "2025-12-28T20:58:13.626Z",
+    "pendingRoles": {},
+    "displayName": "Code Two",
+    "uid": "DknlMzyCXaXZaME6s2XKr5DIzbG2"
+  },
+  {
+    "_id": "HVXl6a4BQ7WmSw4QemNP76Qnktm2",
+    "email": "drumunitrecordings@gmail.com",
+    "pendingRoles": {
+      "vinylSeller": {
+        "status": "approved",
+        "storeName": "",
+        "requestedAt": "2026-01-01T15:02:37.008Z",
+        "location": "High Wycombe",
+        "description": "",
+        "discogsUrl": "",
+        "approvedAt": "2026-01-01T15:56:33.545Z"
+      },
+      "merchSeller": {
+        "website": "",
+        "businessName": "",
+        "description": "",
+        "requestedAt": "2026-01-01T15:02:37.008Z",
+        "status": "approved"
+      },
+      "artist": {
+        "artistName": "Drum Unit Recordings",
+        "requestedAt": "2026-01-01T15:02:37.008Z",
+        "status": "approved",
+        "bio": "Drum unit recordings has been in business for 5 years. We release many styles of Drum n bass, Jungle.",
+        "links": "https://drumunitrecordings.bandcamp.com"
+      }
+    },
+    "updatedAt": "2026-01-01T16:06:56.765Z",
+    "uid": "HVXl6a4BQ7WmSw4QemNP76Qnktm2",
+    "createdAt": "2026-01-01T15:02:37.008Z",
+    "displayName": "Drum Unit Recordings",
+    "approved": true,
+    "roles": {
+      "artist": true,
+      "merchSupplier": true,
+      "vinylSeller": true,
+      "customer": true,
+      "dj": true,
+      "admin": false
+    }
+  },
+  {
+    "_id": "IljMR5LfwdQ7QwoDO2qr4wOb0aO2",
+    "updatedAt": "2025-12-28T19:12:45.709Z",
+    "pendingRoles": {
+      "artist": {
+        "status": "approved",
+        "requestedAt": "2025-12-23T14:53:41.567Z",
+        "bio": "Techstep drum & bass",
+        "artistName": "Parody",
+        "links": ""
+      }
+    },
+    "roles": {
+      "artist": true,
+      "djEligible": false,
+      "customer": true,
+      "merchSeller": false
+    },
+    "email": "nyctophiliarecordings@hotmail.com",
+    "createdAt": "2025-12-23T14:53:41.567Z",
+    "uid": "IljMR5LfwdQ7QwoDO2qr4wOb0aO2",
+    "displayName": "Parody"
+  },
+  {
+    "_id": "JueT7q9eKjQk4iFRg2tXa4ZP8642",
+    "pendingRoles": {
+      "artist": {
+        "links": "https://undergroundlairrecordings.bandcamp.com/",
+        "requestedAt": "2025-12-16T18:14:59.183Z",
+        "bio": "",
+        "status": "approved",
+        "artistName": "Dark Dusk / The Underground Lair"
+      },
+      "merchSeller": {
+        "description": "",
+        "requestedAt": "2025-12-16T18:14:59.183Z",
+        "website": "https://www.theundergroundlair.fr/",
+        "businessName": "",
+        "status": "approved"
+      }
+    },
+    "roles": {
+      "djEligible": false,
+      "merchSeller": true,
+      "artist": true,
+      "customer": true
+    },
+    "email": "undergroundlair.23@gmail.com",
+    "displayName": "Dark Dusk",
+    "uid": "JueT7q9eKjQk4iFRg2tXa4ZP8642",
+    "createdAt": "2025-12-16T18:14:59.183Z",
+    "updatedAt": "2025-12-17T12:40:52.066Z"
+  },
+  {
+    "_id": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+    "pendingRoles": {
+      "artist": {
+        "artistName": "Underground Lair Recordings",
+        "approvedAt": "2025-12-19T01:32:53.854Z",
+        "bio": "Electronic Music / Digital and Vinyl",
+        "status": "approved",
+        "links": "https://undergroundlairrecordings.bandcamp.com/",
+        "requestedAt": "2025-12-18T12:07:12.440Z",
+        "approvedBy": "Y3TGc171cHSWTqZDRSniyu7Jxc33"
+      },
+      "merchSeller": {
+        "approvedAt": "2025-12-19T01:36:17.420Z",
+        "businessName": "",
+        "requestedAt": "2025-12-18T12:07:12.440Z",
+        "status": "approved",
+        "approvedBy": "Y3TGc171cHSWTqZDRSniyu7Jxc33",
+        "website": "https://www.theundergroundlair.fr/",
+        "description": ""
+      }
+    },
+    "uid": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+    "email": "undergroundlair.recordings@gmail.com",
+    "createdAt": "2025-12-18T12:07:12.440Z",
+    "role": "artist",
+    "isArtist": true,
+    "artistName": "Underground Lair Recordings",
+    "roles": {
+      "djEligible": false,
+      "customer": true,
+      "artist": true,
+      "merchSeller": true
+    },
+    "displayName": "Underground Lair Recordings",
+    "updatedAt": "2025-12-19T01:36:17.420Z"
+  },
+  {
+    "_id": "Ohocq8fzUFT70ynz3JXUMOJfsUU2",
+    "email": "bengittins22@outlook.com",
+    "createdAt": "2025-12-20T21:30:54.785Z",
+    "displayName": "Ben G",
+    "roles": {
+      "customer": true,
+      "artist": false,
+      "merchSeller": false,
+      "djEligible": false
+    },
+    "updatedAt": "2025-12-20T21:30:54.785Z",
+    "pendingRoles": {},
+    "uid": "Ohocq8fzUFT70ynz3JXUMOJfsUU2"
+  },
+  {
+    "_id": "TIkp2qeThxUTpGYigVNpx11cYtS2",
+    "uid": "TIkp2qeThxUTpGYigVNpx11cYtS2",
+    "updatedAt": "2025-12-26T13:54:12.260Z",
+    "email": "jonathanwhittelsey@gmail.com",
+    "createdAt": "2025-12-26T13:54:12.260Z",
+    "displayName": "JonyNo5",
+    "roles": {
+      "merchSeller": false,
+      "artist": false,
+      "customer": true,
+      "djEligible": false
+    },
+    "pendingRoles": {}
+  },
+  {
+    "_id": "WaBFNXo7rqY0GdjDVjnMUdInC9t2",
+    "displayName": "Jase-1",
+    "email": "j1stephens@live.co.uk",
+    "roles": {
+      "customer": true,
+      "djEligible": false,
+      "merchSeller": false,
+      "artist": false
+    },
+    "createdAt": "2025-12-24T07:26:52.405Z",
+    "updatedAt": "2025-12-24T07:26:52.405Z",
+    "pendingRoles": {},
+    "uid": "WaBFNXo7rqY0GdjDVjnMUdInC9t2"
+  },
+  {
+    "_id": "WxkmLIeoqZcRIydAHdCCuTCVcnu2",
+    "email": "tim@ernest-aircooling.co.uk",
+    "createdAt": "2025-12-22T17:03:09.107Z",
+    "pendingRoles": {},
+    "uid": "WxkmLIeoqZcRIydAHdCCuTCVcnu2",
+    "roles": {
+      "customer": true,
+      "djEligible": false,
+      "artist": false,
+      "merchSeller": false
+    },
+    "displayName": "Masivetimmy",
+    "updatedAt": "2025-12-22T17:03:09.107Z"
+  },
+  {
+    "_id": "Y3TGc171cHSWTqZDRSniyu7Jxc33",
+    "provider": "email",
+    "name": "David Hagon",
+    "roles": {
+      "djEligible": true,
+      "vinylSeller": false,
+      "admin": true,
+      "artist": false,
+      "customer": true,
+      "merchSeller": false
+    },
+    "displayNameLower": "fresh wax admin",
+    "uid": "Y3TGc171cHSWTqZDRSniyu7Jxc33",
+    "email": "freshwaxonline@gmail.com",
+    "createdAt": "2025-12-11T00:00:00Z",
+    "phone": "+447971331814",
+    "updatedAt": "2026-01-10T15:46:17.515Z",
+    "emailVerified": true,
+    "displayName": "Fresh Wax Admin"
+  },
+  {
+    "_id": "ZEdBuXGO6bXuz5DkmTJOjeZLtN33",
+    "displayName": "Overkill",
+    "email": "rob.homer87@gmail.com",
+    "createdAt": "2025-12-15T13:10:24.032Z",
+    "pendingRoles": {},
+    "uid": "ZEdBuXGO6bXuz5DkmTJOjeZLtN33",
+    "roles": {
+      "customer": true,
+      "djEligible": false,
+      "merchSeller": false,
+      "artist": false
+    },
+    "updatedAt": "2025-12-15T13:10:24.032Z"
+  },
+  {
+    "_id": "qCfSeHZRihQG6gmMjiprsOD5wVt1",
+    "displayName": "Hutts",
+    "displayNameLower": "hutts",
+    "updatedAt": "2026-01-06T10:27:46.499Z",
+    "email": "andyhutton2@yahoo.com",
+    "uid": "qCfSeHZRihQG6gmMjiprsOD5wVt1",
+    "createdAt": "2026-01-06T06:12:34.764Z",
+    "roles": {
+      "vinylSeller": false,
+      "artist": true,
+      "djEligible": false,
+      "merchSeller": false,
+      "customer": true
+    },
+    "pendingRoles": {
+      "artist": {
+        "links": "https://www.mixcloud.com/andyhutton2/",
+        "bio": "New DJ onto the d&b / jump up scene",
+        "status": "approved",
+        "requestedAt": "2026-01-06T06:12:34.764Z",
+        "artistName": "Hutts"
+      }
+    },
+    "provider": "email",
+    "approved": true
+  },
+  {
+    "_id": "syAaEemyYhc1WjS0zwSQFgpAhUz2",
+    "email": "david@chilterncomputers.net",
+    "deletedAt": "2025-12-29T18:49:20.720Z",
+    "displayName": "Bob Fresh",
+    "uid": "syAaEemyYhc1WjS0zwSQFgpAhUz2",
+    "updatedAt": "2026-01-10T15:46:17.607Z",
+    "suspended": true,
+    "emailVerified": true,
+    "displayNameLower": "bob fresh",
+    "provider": "email",
+    "createdAt": "2025-12-11T17:54:51.795Z",
+    "name": "Bob Fresh",
+    "roles": {
+      "merchSeller": true,
+      "admin": false,
+      "djEligible": true,
+      "customer": true,
+      "artist": true,
+      "vinylSeller": false
+    },
+    "phone": "07971331814",
+    "deleted": true
+  },
+  {
+    "_id": "yrtSPdlNQ5QjtGiTfvdivzMfLCi1",
+    "bypassedAt": "2025-12-19T03:08:10.170Z",
+    "createdAt": "2025-12-16T19:00:12.228Z",
+    "bypassedBy": "quick-access-key",
+    "displayName": "MrKrotos",
+    "email": "andy@krotos.co.uk",
+    "roles": {
+      "customer": true,
+      "merchSeller": false,
+      "artist": true,
+      "djEligible": false
+    },
+    "updatedAt": "2025-12-17T12:40:49.891Z",
+    "uid": "yrtSPdlNQ5QjtGiTfvdivzMfLCi1",
+    "go-liveBypassed": true,
+    "quickAccessCode": "Y8Y2GXDU",
+    "pendingRoles": {
+      "artist": {
+        "status": "approved",
+        "links": "https://soundcloud.com/mrkrotos",
+        "bio": "Mostly Drum & Bass stuff, had a release on Drum Unit https://drumunitrecordings.bandcamp.com/track/code-name-trinity-mr-krotos-remix\nI am also 1/2 of Code Name Trinity (with Trainspotter)",
+        "requestedAt": "2025-12-16T19:00:12.228Z",
+        "artistName": "MrKrotos"
+      }
+    }
+  }
+]

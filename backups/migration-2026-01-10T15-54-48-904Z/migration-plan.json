@@ -1,0 +1,231 @@
+[
+  {
+    "uid": "0jYmHOiuDMPomSYZlgpLYCaR0D82",
+    "email": "a.witten@sky.com",
+    "fieldsToMigrate": {
+      "address1": "",
+      "address2": "",
+      "city": "",
+      "county": "",
+      "postcode": "",
+      "country": "United Kingdom",
+      "firstName": "",
+      "lastName": "",
+      "fullName": " ",
+      "avatarUrl": "https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/avatars/0jYmHOiuDMPomSYZlgpLYCaR0D82.webp?t=1767990116682",
+      "avatarUpdatedAt": "2026-01-09T20:21:56.682Z"
+    },
+    "fieldCount": 11
+  },
+  {
+    "uid": "8WmxYeCp4PSym5iWHahgizokn5F2",
+    "email": "davidhagon@gmail.com",
+    "fieldsToMigrate": {
+      "address1": "38 hilldene Avenue",
+      "address2": "",
+      "city": "London",
+      "county": "Havering",
+      "postcode": "RM3 8YP",
+      "country": "United Kingdom",
+      "firstName": "Dave",
+      "lastName": "Hagon",
+      "fullName": " ",
+      "avatarUrl": "https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/avatars/8WmxYeCp4PSym5iWHahgizokn5F2.webp?t=1765935359667",
+      "avatarUpdatedAt": "2025-12-17T01:35:59.667Z",
+      "wishlist": [
+        "test_full_release_1766956919611"
+      ],
+      "wishlistUpdatedAt": "2025-12-30T00:55:15.816Z",
+      "followedArtists": [],
+      "followedArtistsUpdatedAt": "2025-12-30T00:55:47.295Z"
+    },
+    "fieldCount": 15
+  },
+  {
+    "uid": "BNpWXqfKDoOCXHKN2IqfxWcHtBv2",
+    "email": "vaughnb1980@live.co.uk",
+    "fieldsToMigrate": {
+      "fullName": "",
+      "adminNotes": ""
+    },
+    "fieldCount": 2
+  },
+  {
+    "uid": "BV0K2nR4FiUgCxawgG69DGQgAki1",
+    "email": "jay.248@hotmail.co.uk",
+    "fieldsToMigrate": {
+      "address1": "",
+      "address2": "",
+      "city": "",
+      "county": "",
+      "postcode": "",
+      "country": "United Kingdom",
+      "firstName": "Jay",
+      "lastName": "Griffiths",
+      "fullName": "Jay Griffiths",
+      "avatarUrl": "https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/avatars/BV0K2nR4FiUgCxawgG69DGQgAki1.webp?t=1767391230613",
+      "avatarUpdatedAt": "2026-01-02T22:00:30.613Z"
+    },
+    "fieldCount": 11
+  },
+  {
+    "uid": "CCMDrCWRkUXiPN7O83iSfm1BxGo1",
+    "email": "mitchellwebb82@yahoo.co.uk",
+    "fieldsToMigrate": {
+      "address1": "",
+      "address2": "",
+      "city": "",
+      "county": "",
+      "postcode": "",
+      "country": "United Kingdom",
+      "firstName": "Mitch",
+      "lastName": "Webb",
+      "fullName": "Mitch Webb",
+      "avatarUrl": "https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/avatars/CCMDrCWRkUXiPN7O83iSfm1BxGo1.webp?t=1765988365468",
+      "avatarUpdatedAt": "2025-12-17T16:19:25.468Z"
+    },
+    "fieldCount": 11
+  },
+  {
+    "uid": "DknlMzyCXaXZaME6s2XKr5DIzbG2",
+    "email": "david_hagon@hotmail.com",
+    "fieldsToMigrate": {
+      "address1": "",
+      "address2": "",
+      "city": "",
+      "county": "",
+      "postcode": "",
+      "country": "United Kingdom",
+      "firstName": "",
+      "lastName": "",
+      "fullName": "",
+      "avatarUrl": "https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/avatars/DknlMzyCXaXZaME6s2XKr5DIzbG2.webp?t=1766511619539",
+      "avatarUpdatedAt": "2025-12-23T17:40:19.539Z",
+      "adminNotes": ""
+    },
+    "fieldCount": 12
+  },
+  {
+    "uid": "HVXl6a4BQ7WmSw4QemNP76Qnktm2",
+    "email": "drumunitrecordings@gmail.com",
+    "fieldsToMigrate": {
+      "address1": "27 Northfield Road",
+      "address2": "",
+      "city": "Princes Risborough",
+      "county": "Buckinghamshire",
+      "postcode": "HP27 0HY",
+      "country": "United Kingdom",
+      "firstName": "Phillip",
+      "lastName": "Dusek",
+      "fullName": "Phillip Dusek",
+      "avatarUrl": "https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/avatars/HVXl6a4BQ7WmSw4QemNP76Qnktm2.webp?t=1767279801017",
+      "avatarUpdatedAt": "2026-01-01T15:03:21.017Z",
+      "followedArtists": [
+        "Code One"
+      ],
+      "followedArtistsUpdatedAt": "2026-01-01T16:40:17.007Z",
+      "phone": "07821162273"
+    },
+    "fieldCount": 14
+  },
+  {
+    "uid": "IljMR5LfwdQ7QwoDO2qr4wOb0aO2",
+    "email": "nyctophiliarecordings@hotmail.com",
+    "fieldsToMigrate": {
+      "address1": "",
+      "address2": "",
+      "city": "",
+      "county": "",
+      "postcode": "",
+      "country": "United Kingdom",
+      "firstName": "Roj",
+      "lastName": "Naylor ",
+      "fullName": "Roj Naylor ",
+      "avatarUrl": "https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/avatars/IljMR5LfwdQ7QwoDO2qr4wOb0aO2.webp?t=1766501740159",
+      "avatarUpdatedAt": "2025-12-23T14:55:40.159Z"
+    },
+    "fieldCount": 11
+  },
+  {
+    "uid": "JueT7q9eKjQk4iFRg2tXa4ZP8642",
+    "email": "undergroundlair.23@gmail.com",
+    "fieldsToMigrate": {
+      "address1": "2 Rue Viollet le Duc",
+      "address2": "",
+      "city": "Dijon",
+      "county": "US Customers only",
+      "postcode": "21000",
+      "country": "France",
+      "firstName": "Maxime",
+      "lastName": "Marié",
+      "fullName": "Maxime Marié",
+      "avatarUrl": "https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/avatars/JueT7q9eKjQk4iFRg2tXa4ZP8642.webp?t=1766059098790",
+      "avatarUpdatedAt": "2025-12-18T11:58:18.790Z",
+      "phone": "0648284599"
+    },
+    "fieldCount": 12
+  },
+  {
+    "uid": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+    "email": "undergroundlair.recordings@gmail.com",
+    "fieldsToMigrate": {
+      "avatarUrl": "https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/avatars/OcnffhxjgTVvKkIDIG8zjujTOiY2.webp?t=1766059744667",
+      "avatarUpdatedAt": "2025-12-18T12:09:04.667Z"
+    },
+    "fieldCount": 2
+  },
+  {
+    "uid": "Y3TGc171cHSWTqZDRSniyu7Jxc33",
+    "email": "freshwaxonline@gmail.com",
+    "fieldsToMigrate": {
+      "address1": "38 Hilldene Avenue",
+      "address2": "",
+      "city": "Essex",
+      "county": "Havering",
+      "postcode": "RM3 8YP",
+      "country": "United Kingdom",
+      "firstName": "David",
+      "lastName": "Hagon",
+      "avatarUrl": "https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/avatars/Y3TGc171cHSWTqZDRSniyu7Jxc33.webp?t=1765415320528",
+      "avatarUpdatedAt": "2025-12-11T01:08:40.528Z",
+      "wishlist": [
+        "CodeOne_001-1765422523908",
+        "code_one_FW-1765803666207"
+      ],
+      "wishlistUpdatedAt": "2025-12-17T13:19:31.539Z",
+      "followedArtists": [
+        "Code One"
+      ],
+      "followedArtistsUpdatedAt": "2025-12-17T13:28:26.593Z"
+    },
+    "fieldCount": 14
+  },
+  {
+    "uid": "syAaEemyYhc1WjS0zwSQFgpAhUz2",
+    "email": "david@chilterncomputers.net",
+    "fieldsToMigrate": {
+      "fullName": "Bob Fresh",
+      "adminNotes": "",
+      "deletedBy": "8WmxYeCp4PSym5iWHahgizokn5F2"
+    },
+    "fieldCount": 3
+  },
+  {
+    "uid": "yrtSPdlNQ5QjtGiTfvdivzMfLCi1",
+    "email": "andy@krotos.co.uk",
+    "fieldsToMigrate": {
+      "address1": "",
+      "address2": "",
+      "city": "",
+      "county": "UK",
+      "postcode": "",
+      "country": "United Kingdom",
+      "firstName": "Andy",
+      "lastName": "",
+      "fullName": "Andy ",
+      "avatarUrl": "https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/avatars/yrtSPdlNQ5QjtGiTfvdivzMfLCi1.webp?t=1765915381244",
+      "avatarUpdatedAt": "2025-12-16T20:03:01.244Z"
+    },
+    "fieldCount": 11
+  }
+]
