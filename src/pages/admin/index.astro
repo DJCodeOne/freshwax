@@ -74,9 +74,11 @@ const pendingOrders = orders.filter(o => o.status === 'pending');
 const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.totals?.total || o.total || 0), 0);
 const monthRevenue = monthOrders.reduce((sum, o) => sum + (o.totals?.total || o.total || 0), 0);
 
-// Filter out test orders for financial calculations
-const realOrders = ordersData.filter(o =>
+// Filter out test orders and free downloads for financial calculations (from sorted orders)
+const realOrders = orders.filter(o =>
   o.paymentMethod !== 'test_mode' &&
+  o.paymentMethod !== 'free_download' &&
+  (o.totals?.total > 0 || o.total > 0) &&
   (o.paymentStatus === 'completed' || o.orderStatus === 'completed' || o.status === 'completed')
 );
 
@@ -131,8 +133,8 @@ const bypassRequests = bypassRequestsData
     return createdDate > fifteenMinsAgo;
   });
 
-// Recent orders (last 5)
-const recentOrders = orders.slice(0, 5);
+// Recent orders (last 5 real orders - excludes test mode and free downloads)
+const recentOrders = realOrders.slice(0, 5);
 
 // Platform earnings calculations
 const PLATFORM_FEE_RATE = 0.01; // 1% platform fee
