@@ -4,9 +4,16 @@
 // DJs are now customer-level (no approval needed)
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 export const prerender = false;
+
+// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 
 <AdminLayout title="Partner Management" activeNav="artists">
+  <!-- Admin key for API calls -->
+  <div id="adminConfig" data-admin-key={adminKey} style="display:none;"></div>
+
   <Fragment slot="actions">
     <a href="/admin/artists/pending" class="btn btn-secondary">
       <span>⏳</span> Pending Approvals
@@ -282,6 +289,9 @@ export const prerender = false;
       let currentFilter = 'all';
       let currentPartnerId = null;
 
+      // Get admin key from data attribute
+      const ADMIN_KEY = document.getElementById('adminConfig')?.dataset.adminKey || '';
+
       onAuthStateChanged(auth, (user) => {
         if (!user) {
           window.location.href = '/admin/login';
@@ -298,7 +308,9 @@ export const prerender = false;
             throw new Error('Not authenticated');
           }
 
-          const response = await fetch(`/api/admin/list-partners?uid=${adminUid}`);
+          const response = await fetch(`/api/admin/list-partners`, {
+            headers: { 'X-Admin-Key': ADMIN_KEY }
+          });
           const data = await response.json();
 
           if (!data.success) {
