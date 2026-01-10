@@ -1,7 +1,7 @@
 // src/pages/api/stream/dj-settings.ts
 // Admin endpoint to add/update DJ settings and grant streaming access
 import type { APIRoute } from 'astro';
-import { setDocument, updateDocument, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { setDocument, updateDocument, deleteDocument, initFirebaseEnv, queryCollection } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -9,6 +9,46 @@ export const prerender = false;
 function getAdminKey(locals: any): string {
   const env = locals?.runtime?.env;
   return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+}
+
+// Look up user by email across all collections
+async function findUserByEmail(email: string): Promise<{ userId: string; displayName: string; email: string } | null> {
+  const [users, customers, artists] = await Promise.all([
+    queryCollection('users', {
+      filters: [{ field: 'email', op: 'EQUAL', value: email }],
+      limit: 1
+    }),
+    queryCollection('customers', {
+      filters: [{ field: 'email', op: 'EQUAL', value: email }],
+      limit: 1
+    }),
+    queryCollection('artists', {
+      filters: [{ field: 'email', op: 'EQUAL', value: email }],
+      limit: 1
+    })
+  ]);
+
+  if (users.length > 0) {
+    return {
+      userId: users[0].id,
+      displayName: users[0].displayName || users[0].name || users[0].djName || 'DJ',
+      email: users[0].email
+    };
+  } else if (customers.length > 0) {
+    return {
+      userId: customers[0].id,
+      displayName: customers[0].displayName || customers[0].firstName || 'DJ',
+      email: customers[0].email
+    };
+  } else if (artists.length > 0) {
+    return {
+      userId: artists[0].id,
+      displayName: artists[0].displayName || artists[0].artistName || artists[0].name || 'DJ',
+      email: artists[0].email
+    };
+  }
+
+  return null;
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -21,7 +61,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { userId, djName, twitchChannel, isApproved, adminKey } = data;
+    const { userId: providedUserId, email: providedEmail, djName, twitchChannel, isApproved, adminKey } = data;
 
     // Simple admin key check
     if (adminKey !== getAdminKey(locals)) {
@@ -31,17 +71,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // Look up user by email if no userId provided
+    let userId = providedUserId;
+    let email = providedEmail || '';
+    let displayName = djName || 'DJ';
+
+    if (!userId && email) {
+      const user = await findUserByEmail(email);
+      if (!user) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'User not found with that email. They need to create an account first.'
+        }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      userId = user.userId;
+      displayName = djName || user.displayName;
+      email = user.email;
+    }
+
     if (!userId) {
-      return new Response(JSON.stringify({ success: false, error: 'User ID required' }), {
+      return new Response(JSON.stringify({ success: false, error: 'Email or User ID required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    // Note: Firebase Auth operations (auth.getUser) are not available in REST API
-    // We'll use the provided data directly
-    let email = '';
-    let displayName = djName || 'DJ';
 
     // Generate mount point based on user ID
     const mountPoint = `/live/${userId.substring(0, 8)}`;

@@ -1285,22 +1285,9 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         </div>
         <form id="addDJForm">
           <div class="form-group">
-            <label for="djUserId">User ID *</label>
-            <input type="text" id="djUserId" required placeholder="Firebase User ID">
-          </div>
-          <div class="form-group">
-            <label for="djNameInput">DJ Name *</label>
-            <input type="text" id="djNameInput" required placeholder="Display name for streaming">
-          </div>
-          <div class="form-group">
-            <label for="djTwitch">Twitch Channel (optional)</label>
-            <input type="text" id="djTwitch" placeholder="Twitch username">
-          </div>
-          <div class="form-group">
-            <label>
-              <input type="checkbox" id="djApproved" checked>
-              Approve immediately
-            </label>
+            <label for="djEmail">Email Address *</label>
+            <input type="email" id="djEmail" required placeholder="DJ's account email">
+            <small style="color: var(--text-muted); margin-top: 0.25rem; display: block;">User must have an account. Name will be auto-populated.</small>
           </div>
           <div class="form-actions">
             <button type="button" class="cancel-btn close-modal">Cancel</button>
@@ -1807,29 +1794,28 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     
     document.getElementById('addDJForm')?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
-      const userId = document.getElementById('djUserId').value.trim();
-      const djName = document.getElementById('djNameInput').value.trim();
-      const twitchChannel = document.getElementById('djTwitch').value.trim();
-      const isApproved = document.getElementById('djApproved').checked;
-      
+
+      const email = document.getElementById('djEmail').value.trim();
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Looking up...';
+      submitBtn.disabled = true;
+
       try {
         const response = await fetch('/api/stream/dj-settings', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId,
-            djName,
-            twitchChannel: twitchChannel || null,
-            isApproved,
+            email,
+            isApproved: true,
             adminKey: ADMIN_KEY
           })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
-          alert('DJ added successfully!\n\nMount point: ' + (result.mountPoint || 'Check settings'));
+          alert('DJ added successfully!\n\nName: ' + result.djName + '\nMount point: ' + (result.mountPoint || 'Check settings'));
           document.getElementById('addDJModal').classList.add('hidden');
           document.getElementById('addDJForm').reset();
           loadApprovedDJs();
@@ -1839,6 +1825,9 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       } catch (error) {
         console.error('Error adding DJ:', error);
         alert('Failed to add DJ');
+      } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
       }
     });
     
