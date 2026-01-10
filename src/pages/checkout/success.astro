@@ -75,12 +75,12 @@ const orderId = Astro.url.searchParams.get('orderId');
       localStorage.removeItem('cart');
       window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
 
-      // Show success and redirect
+      // Show success and redirect to order confirmation
       loadingState.style.display = 'none';
       successState.style.display = 'block';
 
       setTimeout(() => {
-        window.location.href = `/account/orders`;
+        window.location.href = `/order-confirmation/${orderId}`;
       }, 1500);
       return;
     }
