@@ -1411,6 +1411,12 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       const response = await fetch(`${STREAM_SERVER}/v3/paths/list`);
       if (!response.ok) throw new Error('Failed to fetch paths');
 
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response');
+      }
+
       const data = await response.json();
       const paths = data.items || [];
       const activePaths = paths.filter(p => p.ready);
@@ -1450,7 +1456,8 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 
       // Get connection count from paths
       const pathsResponse = await fetch(`${STREAM_SERVER}/v3/paths/list`);
-      if (pathsResponse.ok) {
+      const pathsContentType = pathsResponse.headers.get('content-type');
+      if (pathsResponse.ok && pathsContentType?.includes('application/json')) {
         const data = await pathsResponse.json();
         const paths = data.items || [];
         let totalConnections = 0;
