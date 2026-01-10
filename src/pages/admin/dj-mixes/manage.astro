@@ -3,16 +3,24 @@
 // Fresh Wax DJ Mixes Management - Unified Admin Design
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { d1GetAllMixes } from '../../../lib/d1-catalog';
 import { queryCollection } from '../../../lib/firebase-rest';
 
 // Get admin key for API calls
 const runtime = (Astro.locals as any)?.runtime;
 const ADMIN_KEY = runtime?.env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+const db = runtime?.env?.DB;
 
-// Fetch all DJ mixes via REST API
-const allMixes = await queryCollection('dj-mixes', {
-  orderBy: { field: 'uploadedAt', direction: 'DESCENDING' }
-});
+// Fetch all DJ mixes - prefer D1, fallback to Firebase
+let allMixes: any[] = [];
+if (db) {
+  allMixes = await d1GetAllMixes(db);
+}
+if (allMixes.length === 0) {
+  allMixes = await queryCollection('dj-mixes', {
+    orderBy: { field: 'uploadedAt', direction: 'DESCENDING' }
+  });
+}
 
 const mixes = allMixes.map((data: any) => ({
   ...data,
@@ -53,13 +61,25 @@ const getDurationSeconds = (mix: any): number => {
     return Math.floor(mix.durationSeconds);
   }
 
+  // Check durationSeconds as string (e.g., "3600")
+  if (mix.durationSeconds && typeof mix.durationSeconds === 'string') {
+    const parsed = parseInt(mix.durationSeconds, 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+
   // Check if duration is a string in format "H:MM:SS" or "MM:SS"
-  if (mix.duration && typeof mix.duration === 'string' && mix.duration.includes(':')) {
-    const parts = mix.duration.split(':').map(Number);
-    if (parts.length === 3) {
-      return parts[0] * 3600 + parts[1] * 60 + parts[2]; // H:MM:SS
-    } else if (parts.length === 2) {
-      return parts[0] * 60 + parts[1]; // MM:SS
+  if (mix.duration && typeof mix.duration === 'string') {
+    if (mix.duration.includes(':')) {
+      const parts = mix.duration.split(':').map(Number);
+      if (parts.length === 3) {
+        return parts[0] * 3600 + parts[1] * 60 + parts[2]; // H:MM:SS
+      } else if (parts.length === 2) {
+        return parts[0] * 60 + parts[1]; // MM:SS
+      }
+    } else {
+      // Try parsing as seconds string
+      const parsed = parseInt(mix.duration, 10);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
     }
   }
 
@@ -68,8 +88,17 @@ const getDurationSeconds = (mix: any): number => {
     return Math.floor(mix.duration);
   }
 
+  // Check duration_seconds (snake_case from D1)
+  if (mix.duration_seconds && typeof mix.duration_seconds === 'number') {
+    return Math.floor(mix.duration_seconds);
+  }
+  if (mix.duration_seconds && typeof mix.duration_seconds === 'string') {
+    const parsed = parseInt(mix.duration_seconds, 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+
   // Check other possible field names
-  return Math.floor(mix.duration_seconds || mix.mixDuration || mix.length || (mix.durationMs ? mix.durationMs / 1000 : 0) || 0);
+  return Math.floor(mix.mixDuration || mix.length || (mix.durationMs ? mix.durationMs / 1000 : 0) || 0);
 };
 
 // Format duration for display

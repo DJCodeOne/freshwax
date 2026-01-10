@@ -284,6 +284,19 @@ export async function d1GetAllPublishedMixes(db: D1Database): Promise<any[]> {
   }
 }
 
+export async function d1GetAllMixes(db: D1Database): Promise<any[]> {
+  try {
+    const { results } = await db.prepare(
+      `SELECT data FROM dj_mixes ORDER BY upload_date DESC`
+    ).all();
+
+    return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
+  } catch (e) {
+    console.error('[D1] Error getting all mixes:', e);
+    return [];
+  }
+}
+
 export async function d1GetMixById(db: D1Database, id: string): Promise<any | null> {
   try {
     const row = await db.prepare(
