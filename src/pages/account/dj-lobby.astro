@@ -3462,10 +3462,20 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       // Output to speakers through GainNode (allows muting without breaking analyser)
       icecastGainNode = icecastAudioContext.createGain();
       icecastGainNode.gain.value = 1; // Start at full volume
-      source.connect(icecastGainNode);
-      icecastGainNode.connect(icecastAudioContext.destination);
 
-      console.log('[Audio] Icecast analysers initialized with K-weighting and GainNode');
+      // Brick wall limiter to prevent clipping and protect ears
+      const limiter = icecastAudioContext.createDynamicsCompressor();
+      limiter.threshold.value = -1;   // Catch peaks near 0dB
+      limiter.knee.value = 0;         // Hard knee for true limiting
+      limiter.ratio.value = 20;       // High ratio = limiting behavior
+      limiter.attack.value = 0.001;   // 1ms attack
+      limiter.release.value = 0.1;    // 100ms release
+
+      source.connect(icecastGainNode);
+      icecastGainNode.connect(limiter);
+      limiter.connect(icecastAudioContext.destination);
+
+      console.log('[Audio] Icecast analysers initialized with K-weighting, GainNode, and limiter');
     } catch (e) {
       console.error('[Audio] Icecast analyser setup error:', e);
     }
@@ -7319,8 +7329,17 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         highPassL.connect(kWeightedAnalyserL);
         highPassR.connect(kWeightedAnalyserR);
 
-        // Output to speakers (unfiltered)
-        source.connect(audioContext.destination);
+        // Brick wall limiter to prevent clipping and protect ears
+        const limiter = audioContext.createDynamicsCompressor();
+        limiter.threshold.value = -1;   // Catch peaks near 0dB
+        limiter.knee.value = 0;         // Hard knee for true limiting
+        limiter.ratio.value = 20;       // High ratio = limiting behavior
+        limiter.attack.value = 0.001;   // 1ms attack
+        limiter.release.value = 0.1;    // 100ms release
+
+        // Output to speakers through limiter
+        source.connect(limiter);
+        limiter.connect(audioContext.destination);
 
         // Store K-weighted analysers in global vars based on prefix
         if (prefix === 'OBS') {
@@ -7331,7 +7350,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           liveKWeightedAnalyserR = kWeightedAnalyserR;
         }
 
-        console.log(`[${prefix}] Audio meter with K-weighting initialized`);
+        console.log(`[${prefix}] Audio meter with K-weighting and limiter initialized`);
         return { audioContext, analyserL, analyserR, kWeightedAnalyserL, kWeightedAnalyserR };
       } catch (e) {
         console.error(`[${prefix}] Audio meter setup error:`, e);
