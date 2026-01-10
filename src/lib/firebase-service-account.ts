@@ -250,6 +250,29 @@ function escapeFieldPath(key: string): string {
   return key;
 }
 
+// Convert flat dotted keys to nested Firestore structure
+// e.g., {'subscription.expiresAt': 'value'} -> {subscription: {expiresAt: 'value'}}
+function unflattenObject(data: Record<string, any>): Record<string, any> {
+  const result: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    const parts = key.split('.');
+    let current = result;
+
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i];
+      if (!(part in current)) {
+        current[part] = {};
+      }
+      current = current[part];
+    }
+
+    current[parts[parts.length - 1]] = value;
+  }
+
+  return result;
+}
+
 // Update specific fields with service account auth
 export async function saUpdateDocument(
   serviceAccountKey: string,
@@ -266,8 +289,10 @@ export async function saUpdateDocument(
     .join('&');
   const url = `${getFirestoreUrl(projectId, `${collection}/${docId}`)}?${updateMask}`;
 
+  // Convert flat dotted keys to nested structure for Firestore
+  const nestedData = unflattenObject(data);
   const fields: Record<string, any> = {};
-  for (const [key, value] of Object.entries(data)) {
+  for (const [key, value] of Object.entries(nestedData)) {
     fields[key] = toFirestoreValue(value);
   }
 
