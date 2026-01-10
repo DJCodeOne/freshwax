@@ -1,7 +1,8 @@
 // src/pages/api/stream/dj-settings.ts
 // Admin endpoint to add/update DJ settings and grant streaming access
 import type { APIRoute } from 'astro';
-import { setDocument, updateDocument, deleteDocument, initFirebaseEnv, queryCollection } from '../../../lib/firebase-rest';
+import { initFirebaseEnv, queryCollection } from '../../../lib/firebase-rest';
+import { saSetDocument, saUpdateDocument, saDeleteDocument } from '../../../lib/firebase-service-account';
 
 export const prerender = false;
 
@@ -9,6 +10,26 @@ export const prerender = false;
 function getAdminKey(locals: any): string {
   const env = locals?.runtime?.env;
   return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+}
+
+// Build service account key from individual env vars
+function getServiceAccountKey(env: any): string | null {
+  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+  const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+  if (!clientEmail || !privateKey) return null;
+
+  return JSON.stringify({
+    type: 'service_account',
+    project_id: projectId,
+    private_key_id: 'auto',
+    private_key: privateKey.replace(/\\n/g, '\n'),
+    client_email: clientEmail,
+    client_id: '',
+    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: 'https://oauth2.googleapis.com/token'
+  });
 }
 
 // Look up user by email across all collections
@@ -99,12 +120,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // Get service account for writes
+    const serviceAccountKey = getServiceAccountKey(env);
+    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+
+    if (!serviceAccountKey) {
+      return new Response(JSON.stringify({ success: false, error: 'Service account not configured' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Generate mount point based on user ID
     const mountPoint = `/live/${userId.substring(0, 8)}`;
 
     if (isApproved) {
       // Grant access - add to djLobbyBypass collection
-      await setDocument('djLobbyBypass', userId, {
+      await saSetDocument(serviceAccountKey, projectId, 'djLobbyBypass', userId, {
         email,
         name: displayName,
         twitchChannel: twitchChannel || null,
@@ -114,7 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
       // Also set user's bypass flag
-      await setDocument('users', userId, {
+      await saUpdateDocument(serviceAccountKey, projectId, 'users', userId, {
         'go-liveBypassed': true,
         bypassedAt: new Date().toISOString(),
         bypassedBy: 'admin'
@@ -123,11 +155,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.log(`[dj-settings] Granted streaming access to ${displayName} (${userId})`);
     } else {
       // Revoke access
-      await deleteDocument('djLobbyBypass', userId);
+      await saDeleteDocument(serviceAccountKey, projectId, 'djLobbyBypass', userId);
 
       // Remove bypass flag
       try {
-        await updateDocument('users', userId, {
+        await saUpdateDocument(serviceAccountKey, projectId, 'users', userId, {
           'go-liveBypassed': false,
           bypassRevokedAt: new Date().toISOString()
         });

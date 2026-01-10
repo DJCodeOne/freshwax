@@ -241,6 +241,15 @@ export async function saSetDocument(
   return result;
 }
 
+// Helper to escape field paths with special characters (hyphens, etc.)
+function escapeFieldPath(key: string): string {
+  // If key contains special characters, wrap in backticks
+  if (!/^[a-zA-Z_][a-zA-Z_0-9]*$/.test(key)) {
+    return `\`${key}\``;
+  }
+  return key;
+}
+
 // Update specific fields with service account auth
 export async function saUpdateDocument(
   serviceAccountKey: string,
@@ -251,9 +260,9 @@ export async function saUpdateDocument(
 ): Promise<Record<string, any>> {
   const token = await getServiceAccountToken(serviceAccountKey);
 
-  // Build update mask
+  // Build update mask - escape field paths with special characters
   const updateMask = Object.keys(data)
-    .map(key => `updateMask.fieldPaths=${encodeURIComponent(key)}`)
+    .map(key => `updateMask.fieldPaths=${encodeURIComponent(escapeFieldPath(key))}`)
     .join('&');
   const url = `${getFirestoreUrl(projectId, `${collection}/${docId}`)}?${updateMask}`;
 
