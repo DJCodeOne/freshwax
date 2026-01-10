@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
-import { isAdmin, initAdminEnv } from '../../../lib/admin';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -22,25 +22,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase and admin config for Cloudflare runtime
   initServices(locals);
 
-  const url = new URL(request.url);
-  const uid = url.searchParams.get('uid');
-  
-  if (!uid) {
-    return new Response(JSON.stringify({ success: false, error: 'Missing uid' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-  
-  // Verify admin status
-  const adminCheck = await isAdmin(uid);
-  if (!adminCheck) {
-    return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-  
+  // Verify admin authentication using secure admin key
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   try {
     const partners: any[] = [];
 

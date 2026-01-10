@@ -3,7 +3,7 @@
 // Uses Firebase REST API efficiently, Pusher for real-time updates
 
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, updateDocument, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, setDocument, updateDocument, deleteDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -202,12 +202,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
+    // Verify the user is authenticated
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUserId) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const body = await request.json();
     const { action, sellerId, sellerName, listingId, ...data } = body;
 
     if (!sellerId) {
       return new Response(JSON.stringify({ success: false, error: 'Seller ID required' }), {
         status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Verify the authenticated user matches the sellerId
+    if (verifiedUserId !== sellerId) {
+      return new Response(JSON.stringify({ success: false, error: 'You can only manage your own listings' }), {
+        status: 403,
         headers: { 'Content-Type': 'application/json' }
       });
     }

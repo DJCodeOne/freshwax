@@ -2,7 +2,7 @@
 // Apply a referral code to a Pro subscription upgrade
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { isValidCodeFormat, isExpired, formatGBP, REFERRAL_DISCOUNT_AMOUNT } from '../../../lib/giftcard';
 import { SUBSCRIPTION_TIERS, PRO_ANNUAL_PRICE } from '../../../lib/subscription';
 
@@ -121,6 +121,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
+    // Verify the user is authenticated
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const { code, userId, paymentId, userName } = await request.json();
 
     if (!code) {
@@ -130,12 +139,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    if (!userId) {
+    // Verify the authenticated user matches the userId in the request
+    if (userId && verifiedUserId !== userId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'You must be logged in to use a referral code'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+        error: 'You can only apply referral codes to your own account'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
+
+    // Use the verified userId for all operations
+    const authenticatedUserId = verifiedUserId;
 
     const normalizedCode = code.toUpperCase().trim();
 
@@ -172,7 +185,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Check if user is trying to use their own referral code
-    if (giftCard.createdByUserId === userId) {
+    if (giftCard.createdByUserId === authenticatedUserId) {
       return new Response(JSON.stringify({
         success: false,
         error: 'You cannot use your own referral code'
@@ -202,7 +215,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Check if user already has Pro
-    const userDoc = await getDocument('users', userId) || {};
+    const userDoc = await getDocument('users', authenticatedUserId) || {};
     if (userDoc.subscription?.tier === SUBSCRIPTION_TIERS.PRO) {
       const expiresAt = userDoc.subscription.expiresAt;
       if (!expiresAt || new Date(expiresAt) > new Date()) {
@@ -220,7 +233,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Mark the referral code as redeemed
     await updateDocument('giftCards', giftCardId, {
-      redeemedBy: userId,
+      redeemedBy: authenticatedUserId,
       redeemedAt: nowISO,
       currentBalance: 0,
       isActive: false
@@ -228,17 +241,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Import the createReferralGiftCard to give the new Pro user their own referral code
     const { createReferralGiftCard } = await import('../../../lib/giftcard');
-    const newUserReferralCard = createReferralGiftCard(userId, userName || userDoc.displayName);
+    const newUserReferralCard = createReferralGiftCard(authenticatedUserId, userName || userDoc.displayName);
 
     // Save the new referral gift card
-    const newReferralCardId = `ref_${userId}_${Date.now()}`;
+    const newReferralCardId = `ref_${authenticatedUserId}_${Date.now()}`;
     await setDocument('giftCards', newReferralCardId, {
       ...newUserReferralCard,
       id: newReferralCardId
     });
 
     // Activate Pro subscription
-    await setDocument('users', userId, {
+    await setDocument('users', authenticatedUserId, {
       ...userDoc,
       subscription: {
         tier: SUBSCRIPTION_TIERS.PRO,
@@ -254,7 +267,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     // Notify the referrer (optional - could add email notification here)
-    console.log('[apply-referral] Referral code used:', normalizedCode, 'by user:', userId, 'referrer:', giftCard.createdByUserId);
+    console.log('[apply-referral] Referral code used:', normalizedCode, 'by user:', authenticatedUserId, 'referrer:', giftCard.createdByUserId);
 
     return new Response(JSON.stringify({
       success: true,

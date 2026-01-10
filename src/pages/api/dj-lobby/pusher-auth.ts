@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 // Web Crypto API helper for HMAC-SHA256 (hex output)
 async function hmacSha256Hex(key: string, data: string): Promise<string> {
@@ -37,11 +38,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const PUSHER_KEY = env?.PUBLIC_PUSHER_KEY || import.meta.env.PUBLIC_PUSHER_KEY;
   const PUSHER_SECRET = env?.PUSHER_SECRET || import.meta.env.PUSHER_SECRET;
 
+  // Initialize Firebase for token verification
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   try {
+    // Verify the user is authenticated via Firebase token
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUserId) {
+      return new Response(JSON.stringify({
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const formData = await request.formData();
     const socketId = formData.get('socket_id') as string;
     const channelName = formData.get('channel_name') as string;
-    const userId = formData.get('user_id') as string; // Sent by client
 
     if (!socketId || !channelName) {
       return new Response(JSON.stringify({
@@ -56,13 +70,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Validate that the user is authorized for this private channel
+    // Validate that the authenticated user is authorized for this private channel
     // Channel format: private-dj-{userId}
     if (channelName.startsWith('private-dj-')) {
       const channelUserId = channelName.replace('private-dj-', '');
 
-      // User must provide userId AND it must match the channel they're subscribing to
-      if (!userId || channelUserId !== userId) {
+      // Verified user must match the channel they're subscribing to
+      if (channelUserId !== verifiedUserId) {
         return new Response(JSON.stringify({
           error: 'Forbidden - cannot subscribe to another user\'s private channel'
         }), { status: 403, headers: { 'Content-Type': 'application/json' } });

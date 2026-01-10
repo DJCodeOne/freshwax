@@ -2,8 +2,20 @@
 // Manage merch suppliers/consignment partners - uses Firebase REST API
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument , initFirebaseEnv } from '../../lib/firebase-rest';
+import { requireAdminAuth, initAdminEnv } from '../../lib/admin';
+import { parseJsonBody } from '../../lib/api-utils';
 
 export const prerender = false;
+
+// Helper to initialize services
+function initServices(locals: any) {
+  const env = locals?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+}
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -12,12 +24,21 @@ const log = {
 };
 
 // GET - List all suppliers or get specific supplier
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
+  initServices(locals);
+
   try {
     const params = url.searchParams;
     const supplierId = params.get('id');
     const includeProducts = params.get('products') === 'true';
     const accessCode = params.get('code');
+
+    // Supplier portal access via code - no admin auth needed
+    // But listing all suppliers or getting by ID requires admin auth
+    if (!accessCode) {
+      const authError = requireAdminAuth(request, locals);
+      if (authError) return authError;
+    }
 
     if (supplierId) {
       // Get specific supplier
@@ -200,10 +221,16 @@ export const GET: APIRoute = async ({ url }) => {
   }
 };
 
-// POST - Create new supplier
-export const POST: APIRoute = async ({ request }) => {
+// POST - Create new supplier (Admin only)
+export const POST: APIRoute = async ({ request, locals }) => {
+  initServices(locals);
+
   try {
-    const body = await request.json();
+    const body = await parseJsonBody(request);
+
+    // Verify admin authentication
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
 
     const {
       name,
@@ -278,10 +305,17 @@ export const POST: APIRoute = async ({ request }) => {
   }
 };
 
-// PUT - Update supplier
-export const PUT: APIRoute = async ({ request }) => {
+// PUT - Update supplier (Admin only)
+export const PUT: APIRoute = async ({ request, locals }) => {
+  initServices(locals);
+
   try {
-    const body = await request.json();
+    const body = await parseJsonBody(request);
+
+    // Verify admin authentication
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
     const { supplierId, ...updates } = body;
 
     if (!supplierId) {
@@ -328,10 +362,18 @@ export const PUT: APIRoute = async ({ request }) => {
   }
 };
 
-// DELETE - Deactivate or permanently delete supplier
-export const DELETE: APIRoute = async ({ request }) => {
+// DELETE - Deactivate or permanently delete supplier (Admin only)
+export const DELETE: APIRoute = async ({ request, locals }) => {
+  initServices(locals);
+
   try {
-    const { supplierId, hardDelete } = await request.json();
+    const body = await parseJsonBody(request);
+
+    // Verify admin authentication
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
+    const { supplierId, hardDelete } = body;
 
     if (!supplierId) {
       return new Response(JSON.stringify({

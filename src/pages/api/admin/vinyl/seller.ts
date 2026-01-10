@@ -15,6 +15,12 @@ function initFirebase(locals: any) {
 
 export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const env = locals?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+
+  // Verify admin authentication for GET as well (sensitive seller data)
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
 
   const url = new URL(request.url);
   const sellerId = url.searchParams.get('id');
@@ -74,9 +80,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const env = locals?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   try {
     const body = await request.json();
+
+    // Verify admin authentication
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
     const { action, sellerId, source } = body;
 
     if (!sellerId) {

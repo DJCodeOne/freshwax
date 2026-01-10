@@ -1,7 +1,7 @@
 // src/pages/api/subscription.ts
 // Subscription management API - check limits, get status, upgrade
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, updateDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, setDocument, updateDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 import {
   SUBSCRIPTION_TIERS,
   TIER_LIMITS,
@@ -44,6 +44,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (!userId) {
     return new Response(JSON.stringify({ success: false, error: 'userId required' }), {
       status: 400, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Verify the authenticated user matches the requested userId
+  const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+  if (authError || !verifiedUserId) {
+    return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (verifiedUserId !== userId) {
+    return new Response(JSON.stringify({ success: false, error: 'You can only view your own subscription' }), {
+      status: 403, headers: { 'Content-Type': 'application/json' }
     });
   }
 

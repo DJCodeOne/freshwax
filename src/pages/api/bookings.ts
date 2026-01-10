@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument, setDocument , initFirebaseEnv } from '../../lib/firebase-rest';
+import { queryCollection, getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 
 const MAX_DAILY_HOURS = 2;
 const PROJECT_ID = 'freshwax-store';
@@ -178,20 +178,40 @@ export const GET: APIRoute = async ({ url }) => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
+    // Verify the user is authenticated
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const body = await request.json();
     const { action, uid, djName, streamTitle, description, slots, durationType } = body;
 
+    // Verify the authenticated user matches the uid in the request
+    if (uid && verifiedUserId !== uid) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only manage your own bookings'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Use verified userId for all operations
+    const authenticatedUid = verifiedUserId;
+
     // Create booking(s)
     if (action === 'createBooking') {
-      if (!uid || !djName || !streamTitle || !slots || slots.length === 0) {
+      if (!djName || !streamTitle || !slots || slots.length === 0) {
         return new Response(JSON.stringify({
           success: false,
-          error: 'Missing required fields'
+          error: 'Missing required fields: djName, streamTitle, and slots are required'
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
       // Verify DJ eligibility
-      if (!(await isDJEligible(uid))) {
+      if (!(await isDJEligible(authenticatedUid))) {
         return new Response(JSON.stringify({
           success: false,
           error: 'You are not DJ eligible'
@@ -203,7 +223,7 @@ export const POST: APIRoute = async ({ request }) => {
       const bookingDate = slotDates[0];
 
       // Check daily allowance
-      const usedHours = await getUserDailyHours(uid, bookingDate);
+      const usedHours = await getUserDailyHours(authenticatedUid, bookingDate);
       const requestedHours = durationType === '2hr' ? 2 : slotDates.length;
 
       if (usedHours + requestedHours > MAX_DAILY_HOURS) {
@@ -235,7 +255,7 @@ export const POST: APIRoute = async ({ request }) => {
         const bookingId = generateId();
 
         await setDocument('livestream-bookings', bookingId, {
-          djId: uid,
+          djId: authenticatedUid,
           djName,
           streamTitle,
           description: description || '',
@@ -252,7 +272,7 @@ export const POST: APIRoute = async ({ request }) => {
           const bookingId = generateId();
 
           await setDocument('livestream-bookings', bookingId, {
-            djId: uid,
+            djId: authenticatedUid,
             djName,
             streamTitle,
             description: description || '',
@@ -277,10 +297,10 @@ export const POST: APIRoute = async ({ request }) => {
     if (action === 'cancelBooking') {
       const { bookingId } = body;
 
-      if (!uid || !bookingId) {
+      if (!bookingId) {
         return new Response(JSON.stringify({
           success: false,
-          error: 'Missing required fields'
+          error: 'Booking ID required'
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
@@ -294,8 +314,8 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 404, headers: { 'Content-Type': 'application/json' } });
       }
 
-      // Verify ownership
-      if (booking.djId !== uid) {
+      // Verify ownership using authenticated user ID
+      if (booking.djId !== authenticatedUid) {
         return new Response(JSON.stringify({
           success: false,
           error: 'You can only cancel your own bookings'
