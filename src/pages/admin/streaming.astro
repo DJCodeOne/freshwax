@@ -1999,7 +1999,9 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     const container = document.getElementById('bypassList');
     
     try {
-      const response = await fetch('/api/admin/lobby-bypass?action=list');
+      const response = await fetch('/api/admin/lobby-bypass?action=list', {
+        headers: { 'X-Admin-Key': ADMIN_KEY }
+      });
       const result = await response.json();
       
       if (result.success && result.bypasses?.length > 0) {
@@ -2228,7 +2230,9 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     const onholdContainer = document.getElementById('onholdList');
     
     try {
-      const response = await fetch('/api/admin/dj-moderation?action=list');
+      const response = await fetch('/api/admin/dj-moderation?action=list', {
+        headers: { 'X-Admin-Key': ADMIN_KEY }
+      });
       const result = await response.json();
       
       if (result.success) {
@@ -2551,7 +2555,9 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     const container = document.getElementById('eventRequests');
 
     try {
-      const response = await fetch('/api/livestream/event-requests?admin=true&status=pending');
+      const response = await fetch('/api/livestream/event-requests?admin=true&status=pending', {
+        headers: { 'X-Admin-Key': ADMIN_KEY }
+      });
       const result = await response.json();
 
       if (result.success && result.requests?.length > 0) {
