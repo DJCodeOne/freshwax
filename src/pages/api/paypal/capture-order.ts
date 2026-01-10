@@ -337,7 +337,7 @@ async function processArtistPayments(params: {
 
       const itemTotal = (item.price || 0) * (item.quantity || 1);
 
-      // Calculate artist share after fees (Bandcamp-style)
+      // Artist sets full price, fees deducted from that
       // 1% Fresh Wax fee
       const freshWaxFee = itemTotal * 0.01;
       // PayPal fee: 1.4% + £0.20 (split fixed fee across items)

@@ -647,7 +647,7 @@ export const prerender = false;
             <li><span class="benefit-icon">✓</span> 1,000 tracks in cloud playlist (syncs across devices)</li>
             <li><span class="benefit-icon">✓</span> !skip command in chat (3 per day)</li>
             <li><span class="benefit-icon">✓</span> Record live stream button enabled</li>
-            <li><span class="benefit-icon">✓</span> Gold crown on your chat avatar</li>
+            <li><span class="benefit-icon">✓</span> 20 exclusive chat avatars to choose from</li>
           </ul>
         </div>
         <div class="goplus-modal-footer">
@@ -1496,9 +1496,10 @@ export const prerender = false;
               const typeClass = itemType === 'vinyl' ? 'vinyl' : 
                                itemType === 'merch' ? 'merch' : 
                                itemType === 'track' ? 'track' : 'digital';
+              const itemImage = item.image || item.artwork || item.artworkUrl || item.coverArtUrl || item.downloads?.artworkUrl || '/place-holder.webp';
               return `
                 <div class="order-item">
-                  <img src="${item.image || '/place-holder.webp'}" alt="" class="order-item-image">
+                  <img src="${itemImage}" alt="" class="order-item-image">
                   <div class="order-item-details">
                     <div class="order-item-name">${item.name || item.title || 'Item'}</div>
                     <div class="order-item-meta">
@@ -3729,7 +3730,7 @@ export const prerender = false;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     border: 2px solid #f59e0b;
     border-radius: 1rem;
-    max-width: 400px;
+    max-width: 600px;
     width: 100%;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(245, 158, 11, 0.2);
     animation: modalSlideIn 0.3s ease-out;
@@ -3770,13 +3771,15 @@ export const prerender = false;
 
   .goplus-modal-header {
     text-align: center;
-    padding: 2rem 1.5rem 1rem;
+    padding: 1.25rem 1.5rem 0.75rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .goplus-modal-crown {
     color: #f59e0b;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
+    width: 36px;
+    height: 36px;
   }
 
   .goplus-modal-header h2 {
@@ -3790,8 +3793,8 @@ export const prerender = false;
   }
 
   .goplus-price {
-    margin: 0.5rem 0 0;
-    font-size: 2rem;
+    margin: 0.25rem 0 0;
+    font-size: 1.5rem;
     font-weight: 700;
     color: #fff;
   }
@@ -3803,39 +3806,57 @@ export const prerender = false;
   }
 
   .goplus-modal-body {
-    padding: 1.5rem;
+    padding: 1rem 1.5rem;
   }
 
   .goplus-benefits {
     list-style: none;
     margin: 0;
     padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
   }
 
   .goplus-benefits li {
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.625rem 0;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
     color: #e5e7eb;
-    font-size: 0.95rem;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+  }
+
+  .goplus-benefits li:hover {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.3);
   }
 
   .benefit-icon {
     color: #10b981;
     font-weight: 700;
     flex-shrink: 0;
+    font-size: 0.9rem;
   }
 
   .goplus-modal-footer {
-    padding: 1rem 1.5rem 1.5rem;
+    padding: 0.75rem 1.5rem 1.25rem;
     text-align: center;
   }
 
   .goplus-payment-buttons {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 0.75rem;
+  }
+
+  .goplus-payment-buttons .goplus-upgrade-btn {
+    flex: 1;
   }
 
   .goplus-upgrade-btn {

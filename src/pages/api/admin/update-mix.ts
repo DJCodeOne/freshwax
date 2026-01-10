@@ -1,7 +1,8 @@
 // src/pages/api/admin/update-mix.ts
 // Admin endpoint to update DJ mix metadata (no ownership check)
 import type { APIRoute } from 'astro';
-import { updateDocument, initFirebaseEnv, invalidateMixesCache } from '../../../lib/firebase-rest';
+import { initFirebaseEnv, invalidateMixesCache } from '../../../lib/firebase-rest';
+import { saUpdateDocument } from '../../../lib/firebase-service-account';
 
 export const prerender = false;
 
@@ -115,12 +116,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updateData.featured = !!body.featured;
     }
 
+    // Duration (in seconds)
+    if (body.durationSeconds !== undefined && body.durationSeconds !== null) {
+      const secs = parseInt(body.durationSeconds, 10) || 0;
+      updateData.durationSeconds = secs;
+      // Format as MM:SS or H:MM:SS
+      const hours = Math.floor(secs / 3600);
+      const mins = Math.floor((secs % 3600) / 60);
+      const seconds = secs % 60;
+      const formatted = hours > 0
+        ? `${hours}:${String(mins).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+        : `${mins}:${String(seconds).padStart(2, '0')}`;
+      updateData.duration = formatted;
+      updateData.durationFormatted = formatted;
+    }
+
     // User ID (for fixing ownership)
     if (body.userId !== undefined) {
       updateData.userId = body.userId;
     }
 
-    await updateDocument('dj-mixes', mixId, updateData);
+    // Use service account for authorized write
+    const serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT;
+    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+
+    if (!serviceAccountKey) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT not configured');
+    }
+
+    await saUpdateDocument(serviceAccountKey, projectId, 'dj-mixes', mixId, updateData);
 
     // Clear mixes cache so changes appear immediately
     invalidateMixesCache();

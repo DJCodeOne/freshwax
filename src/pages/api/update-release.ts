@@ -35,9 +35,7 @@ function getServiceAccountKey(env: any): string | null {
 }
 
 export async function POST({ request, locals }: any) {
-  // Admin authentication required
-  const authError = requireAdminAuth(request, locals);
-  if (authError) return authError;
+  log.info('[update-release] POST request received');
 
   // Rate limit: write operations - 30 per minute
   const clientId = getClientId(request);
@@ -46,7 +44,20 @@ export async function POST({ request, locals }: any) {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  log.info('[update-release] POST request received');
+  let updates: any;
+  try {
+    updates = await request.json();
+    log.info('[update-release] Request body:', JSON.stringify(updates, null, 2));
+  } catch (e) {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // Admin authentication required - pass body data for adminKey check
+  const authError = requireAdminAuth(request, locals, updates);
+  if (authError) return authError;
 
   try {
     const env = locals?.runtime?.env || {};
@@ -57,10 +68,7 @@ export async function POST({ request, locals }: any) {
       FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
     });
 
-    const updates = await request.json();
-    log.info('[update-release] Request body:', JSON.stringify(updates, null, 2));
-
-    const { id, idToken, ...updateData } = updates;
+    const { id, idToken, adminKey, ...updateData } = updates;
 
     if (!id) {
       log.error('[update-release] No release ID provided');

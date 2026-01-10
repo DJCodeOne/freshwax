@@ -8,6 +8,10 @@ export const prerender = false;
 
 const { id } = Astro.params;
 
+// Get admin key for API calls
+const runtimeEnv = Astro.locals.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+
 // Fetch release from Firebase REST API
 let release = null;
 let errorMessage = '';
@@ -655,8 +659,9 @@ if (!release) {
 
   <div class="success-message" id="successMessage">✅ Release Updated Successfully!</div>
 
-  <script define:vars={{ releaseId: release.id, existingSocialLinks: JSON.stringify(release.socialLinks || {}), trackCount: release.tracks?.length || 0, existingNotes: release.metadata?.notes || '', timestamps: JSON.stringify({ uploadedAt: release.uploadedAt || null, createdAt: release.createdAt || null, processedAt: release.processedAt || null, updatedAt: release.updatedAt || null }) }}>
+  <script define:vars={{ releaseId: release.id, existingSocialLinks: JSON.stringify(release.socialLinks || {}), trackCount: release.tracks?.length || 0, existingNotes: release.metadata?.notes || '', timestamps: JSON.stringify({ uploadedAt: release.uploadedAt || null, createdAt: release.createdAt || null, processedAt: release.processedAt || null, updatedAt: release.updatedAt || null }), adminKey }}>
     var currentIdToken = null;
+    var ADMIN_KEY = adminKey;
 
     // Initialize Firebase for auth using dynamic import
     (async function() {
@@ -1074,6 +1079,9 @@ if (!release) {
 
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
+
+      // Add admin key for authentication
+      updates.adminKey = ADMIN_KEY;
 
       // Add idToken for authenticated writes
       if (currentIdToken) {

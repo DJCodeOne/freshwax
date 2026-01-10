@@ -140,7 +140,21 @@
       "Bash(netstat:*)",
       "Bash(\"C:\\\\cloudflared\\\\cloudflared.exe\" tunnel run freshwax-stream)",
       "Bash(C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Owner\\\\freshwax\\\\scripts\\\\test-queue.ps1\")",
-      "Bash(C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -ExecutionPolicy Bypass -Command \"\n$ytdlpPath = ''C:\\\\Users\\\\Owner\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Packages\\\\yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe\\\\yt-dlp.exe''\n$url = ''https://www.youtube.com/watch?v=5NV6Rdv1a3I''\n$outputDir = ''H:\\\\FreshWax-Backup''\n$archiveFile = \"\"$outputDir\\\\downloaded.txt\"\"\n\nWrite-Host ''Downloading DJ Shadow - Building Steam With A Grain Of Salt...''\n& $ytdlpPath $url --download-archive $archiveFile -x --audio-format mp3 --audio-quality 0 -o \"\"$outputDir\\\\%\\(title\\)s [%\\(id\\)s].%\\(ext\\)s\"\" --no-overwrites --write-info-json --write-thumbnail --embed-thumbnail --add-metadata --no-playlist --retries 3\nWrite-Host ''Done!''\n\")"
+      "Bash(C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -ExecutionPolicy Bypass -Command \"\n$ytdlpPath = ''C:\\\\Users\\\\Owner\\\\AppData\\\\Local\\\\Microsoft\\\\WinGet\\\\Packages\\\\yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe\\\\yt-dlp.exe''\n$url = ''https://www.youtube.com/watch?v=5NV6Rdv1a3I''\n$outputDir = ''H:\\\\FreshWax-Backup''\n$archiveFile = \"\"$outputDir\\\\downloaded.txt\"\"\n\nWrite-Host ''Downloading DJ Shadow - Building Steam With A Grain Of Salt...''\n& $ytdlpPath $url --download-archive $archiveFile -x --audio-format mp3 --audio-quality 0 -o \"\"$outputDir\\\\%\\(title\\)s [%\\(id\\)s].%\\(ext\\)s\"\" --no-overwrites --write-info-json --write-thumbnail --embed-thumbnail --add-metadata --no-playlist --retries 3\nWrite-Host ''Done!''\n\")",
+      "Bash(\"C:\\\\cloudflared\\\\cloudflared.exe\" tunnel run)",
+      "Bash(\"C:/cloudflared/cloudflared.exe\" tunnel --config \"C:/Users/Owner/.cloudflared/config.yml\" run)",
+      "Bash(xxd:*)",
+      "Bash(schtasks /create:*)",
+      "Bash(npm run deploy:cf:*)",
+      "Bash(for id in 8Cq20mLj5xgj5RrA1cOP 9DIlEdzvdW3zZUYff1e3 ACn3oaGcGur5jgSqGjlJ)",
+      "Bash(do)",
+      "Bash(__NEW_LINE__ echo \"\")",
+      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\":*)",
+      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -i \"Code_One_Speed_Of_Dark.mp3\" -y \"Code_One_Speed_Of_Dark.wav\")",
+      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -i \"Code_One_Entropic.mp3\" -y \"Code_One_Entropic.wav\")",
+      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -i \"UL_Track1_Migration.wav\" -codec:a libmp3lame -b:a 320k -y \"UL_Track1_Migration.mp3\")",
+      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -i \"UL_Track4_Joker.wav\" -codec:a libmp3lame -b:a 320k -y \"UL_Track4_Joker.mp3\")",
+      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -i \"UL_Track5_Perfect.wav\" -codec:a libmp3lame -b:a 320k -y \"UL_Track5_Perfect.mp3\")"
     ]
   }
 }
