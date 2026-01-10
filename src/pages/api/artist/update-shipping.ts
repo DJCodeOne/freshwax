@@ -1,10 +1,32 @@
 // src/pages/api/artist/update-shipping.ts
 // Update artist's default vinyl shipping rates
+// Uses service account for writes to ensure Firebase security rules don't block
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { saUpdateDocument } from '../../../lib/firebase-service-account';
 
 export const prerender = false;
+
+// Build service account key from individual env vars
+function getServiceAccountKey(env: any): string | null {
+  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+  const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+  if (!clientEmail || !privateKey) return null;
+
+  return JSON.stringify({
+    type: 'service_account',
+    project_id: projectId,
+    private_key_id: 'auto',
+    private_key: privateKey.replace(/\\n/g, '\n'),
+    client_email: clientEmail,
+    client_id: '',
+    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: 'https://oauth2.googleapis.com/token'
+  });
+}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
@@ -68,7 +90,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updateData.vinylShipsFrom = vinylShipsFrom.trim();
     }
 
-    await updateDocument('artists', artistId, updateData);
+    // Get service account key for writes
+    const serviceAccountKey = getServiceAccountKey(env);
+    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+
+    if (!serviceAccountKey) {
+      console.error('[Artist] Service account not configured');
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Service account not configured'
+      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    await saUpdateDocument(serviceAccountKey, projectId, 'artists', artistId, updateData);
 
     console.log('[Artist] Updated shipping rates for:', artistId, updateData);
 
