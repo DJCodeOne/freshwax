@@ -1525,7 +1525,9 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       logsEl.textContent = 'Loading logs...';
 
       try {
-        const response = await fetch('/api/admin/server-logs');
+        const response = await fetch('/api/admin/server-logs', {
+          headers: { 'X-Admin-Key': ADMIN_KEY }
+        });
         const data = await response.json();
         logsEl.textContent = data.logs || 'No logs available';
       } catch (error) {
@@ -1548,7 +1550,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       const response = await fetch('/api/admin/server-control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action })
+        body: JSON.stringify({ action, adminKey: ADMIN_KEY })
       });
       return await response.json();
     } catch (error) {
