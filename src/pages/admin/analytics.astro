@@ -31,36 +31,81 @@ try {
   console.error('Error fetching orders:', e);
 }
 
+// Price correction: £2.25 was charged but should show as £2.00 (fees were added on top instead of taken off)
+const correctItemPrice = (price: number) => (price === 2.25 ? 2.00 : price);
+
 // Calculate metrics
 function calculateMetrics(ordersSubset) {
   const revenue = ordersSubset.reduce((sum, o) => {
-    // Check nested totals object first (as used in create-order)
-    let orderTotal = o.totals?.total || o.total || o.orderTotal || o.grandTotal || o.amount || 0;
-    
-    // If still no total, try summing items
-    if (orderTotal === 0 && o.items && Array.isArray(o.items)) {
-      orderTotal = o.items.reduce((itemSum, item) => {
-        const itemPrice = (item.price || item.total || 0) * (item.quantity || 1);
+    // Sum items with price correction applied
+    if (o.items && Array.isArray(o.items)) {
+      const itemsTotal = o.items.reduce((itemSum, item) => {
+        const itemPrice = correctItemPrice(item.price || item.total || 0) * (item.quantity || 1);
         return itemSum + itemPrice;
       }, 0);
+      return sum + itemsTotal;
     }
-    
+
+    // Fallback to order total fields (may include uncorrected prices for legacy orders)
+    let orderTotal = o.totals?.total || o.total || o.orderTotal || o.grandTotal || o.amount || 0;
     return sum + orderTotal;
   }, 0);
-  
-  const fees = ordersSubset.reduce((sum, o) => {
-    // Platform fees are stored in totals object from createOrder()
-    // Check for serviceFees (combined) or individual fees
-    const serviceFees = o.totals?.serviceFees || 0;
+
+  // Calculate fees split by platform
+  let stripeFees = 0;
+  let paypalFees = 0;
+  let freshWaxFees = 0;
+
+  ordersSubset.forEach(o => {
     const freshWaxFee = o.totals?.freshWaxFee || 0;
-    const stripeFee = o.totals?.stripeFee || 0;
-    // Use serviceFees if available, otherwise sum individual fees, otherwise try legacy fields
-    const fee = serviceFees || (freshWaxFee + stripeFee) || o.platformFee || o.fees || 0;
-    return sum + fee;
-  }, 0);
-  
+    const serviceFees = o.totals?.serviceFees || 0;
+    const isPayPal = o.paymentMethod === 'paypal' || o.paymentMethod === 'paypal_manual';
+
+    // Fresh Wax fee is always separate
+    freshWaxFees += freshWaxFee;
+
+    // Get processing fee
+    // - If paymentProcessingFee or stripeFee exists, use it
+    // - Otherwise calculate from serviceFees - freshWaxFee
+    let processingFee = o.totals?.paymentProcessingFee || o.totals?.stripeFee || 0;
+    if (!processingFee && serviceFees && freshWaxFee) {
+      // serviceFees = freshWaxFee + processingFee, so processingFee = serviceFees - freshWaxFee
+      processingFee = serviceFees - freshWaxFee;
+    }
+
+    // Processing fee goes to either Stripe or PayPal based on payment method
+    if (isPayPal) {
+      paypalFees += processingFee;
+    } else {
+      stripeFees += processingFee;
+    }
+
+    // Handle legacy orders with only serviceFees (no freshWaxFee breakdown)
+    if (!freshWaxFee && !processingFee && serviceFees) {
+      // Estimate: ~8% is Fresh Wax (1% of subtotal), rest is processing
+      const estimatedFreshWax = serviceFees * 0.08;
+      const estimatedProcessing = serviceFees * 0.92;
+      freshWaxFees += estimatedFreshWax;
+      if (isPayPal) {
+        paypalFees += estimatedProcessing;
+      } else {
+        stripeFees += estimatedProcessing;
+      }
+    }
+  });
+
+  const totalFees = stripeFees + paypalFees + freshWaxFees;
   const avgOrder = ordersSubset.length > 0 ? revenue / ordersSubset.length : 0;
-  return { revenue, fees, orders: ordersSubset.length, avgOrder };
+
+  return {
+    revenue,
+    fees: totalFees,
+    stripeFees,
+    paypalFees,
+    freshWaxFees,
+    orders: ordersSubset.length,
+    avgOrder
+  };
 }
 
 // Filter orders by date range
@@ -87,7 +132,7 @@ const releaseSales = {};
 orders.forEach(order => {
   (order.items || []).forEach(item => {
     // Only include actual releases, not merch
-    const isRelease = (item.type === 'release' || item.type === 'digital' || item.releaseId) && 
+    const isRelease = (item.type === 'release' || item.type === 'digital' || item.releaseId) &&
                       item.type !== 'merch' && !item.isPhysical && !item.isMerch;
     if (isRelease) {
       const key = item.releaseId || item.title || 'Unknown';
@@ -101,7 +146,7 @@ orders.forEach(order => {
         };
       }
       const qty = item.quantity || 1;
-      const price = item.price || item.total || 0;
+      const price = correctItemPrice(item.price || item.total || 0);
       releaseSales[key].sales += qty;
       releaseSales[key].revenue += price * qty;
     }
@@ -207,7 +252,10 @@ export const prerender = false;
     <div class="stat-card">
       <div class="stat-label">Platform Fees</div>
       <div class="stat-value">{formatCurrency(thisMonth.fees)}</div>
-      <div class="stat-detail">This month</div>
+      <div class="stat-detail" style="font-size: 0.65rem; line-height: 1.4;">
+        Stripe: {formatCurrency(thisMonth.stripeFees)} • PayPal: {formatCurrency(thisMonth.paypalFees)}<br>
+        <span style="color: var(--accent-red);">Fresh Wax</span>: {formatCurrency(thisMonth.freshWaxFees)}
+      </div>
     </div>
     
     <div class="stat-card success">
@@ -359,7 +407,9 @@ export const prerender = false;
               <th>Period</th>
               <th class="text-center">Orders</th>
               <th class="text-center">Revenue</th>
-              <th class="text-center">Platform Fees</th>
+              <th class="text-center">Stripe</th>
+              <th class="text-center">PayPal</th>
+              <th class="text-center" style="color: var(--accent-red);">FW Tax</th>
               <th class="text-center">Avg Order</th>
             </tr>
           </thead>
@@ -368,28 +418,36 @@ export const prerender = false;
               <td class="font-bold">This Month</td>
               <td class="text-center">{thisMonth.orders}</td>
               <td class="text-center font-bold">{formatCurrency(thisMonth.revenue)}</td>
-              <td class="text-center">{formatCurrency(thisMonth.fees)}</td>
+              <td class="text-center">{formatCurrency(thisMonth.stripeFees)}</td>
+              <td class="text-center">{formatCurrency(thisMonth.paypalFees)}</td>
+              <td class="text-center" style="color: var(--accent-red);">{formatCurrency(thisMonth.freshWaxFees)}</td>
               <td class="text-center">{formatCurrency(thisMonth.avgOrder)}</td>
             </tr>
             <tr>
               <td class="font-bold">Last Month</td>
               <td class="text-center">{lastMonth.orders}</td>
               <td class="text-center font-bold">{formatCurrency(lastMonth.revenue)}</td>
-              <td class="text-center">{formatCurrency(lastMonth.fees)}</td>
+              <td class="text-center">{formatCurrency(lastMonth.stripeFees)}</td>
+              <td class="text-center">{formatCurrency(lastMonth.paypalFees)}</td>
+              <td class="text-center" style="color: var(--accent-red);">{formatCurrency(lastMonth.freshWaxFees)}</td>
               <td class="text-center">{formatCurrency(lastMonth.avgOrder)}</td>
             </tr>
             <tr>
               <td class="font-bold">Year to Date</td>
               <td class="text-center">{thisYear.orders}</td>
               <td class="text-center font-bold">{formatCurrency(thisYear.revenue)}</td>
-              <td class="text-center">{formatCurrency(thisYear.fees)}</td>
+              <td class="text-center">{formatCurrency(thisYear.stripeFees)}</td>
+              <td class="text-center">{formatCurrency(thisYear.paypalFees)}</td>
+              <td class="text-center" style="color: var(--accent-red);">{formatCurrency(thisYear.freshWaxFees)}</td>
               <td class="text-center">{formatCurrency(thisYear.avgOrder)}</td>
             </tr>
             <tr style="background: var(--bg-hover);">
               <td class="font-bold">All Time</td>
               <td class="text-center">{allTime.orders}</td>
               <td class="text-center font-bold">{formatCurrency(allTime.revenue)}</td>
-              <td class="text-center">{formatCurrency(allTime.fees)}</td>
+              <td class="text-center">{formatCurrency(allTime.stripeFees)}</td>
+              <td class="text-center">{formatCurrency(allTime.paypalFees)}</td>
+              <td class="text-center" style="color: var(--accent-red);">{formatCurrency(allTime.freshWaxFees)}</td>
               <td class="text-center">{formatCurrency(allTime.avgOrder)}</td>
             </tr>
           </tbody>
