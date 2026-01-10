@@ -163,7 +163,15 @@ const grossRevenue = realOrders.reduce((sum, o) => sum + (o.totals?.total || o.t
 const platformFeesEarned = realOrders.reduce((sum, o) => sum + (o.totals?.freshWaxFee || 0), 0);
 
 // Net to artists (what artists actually receive after all fees)
-const netToArtists = realOrders.reduce((sum, o) => sum + (o.totals?.artistEarnings || 0), 0);
+// If artistEarnings is stored, use it. Otherwise calculate: subtotal - freshWaxFee - processingFee
+const netToArtists = realOrders.reduce((sum, o) => {
+  if (o.totals?.artistEarnings) return sum + o.totals.artistEarnings;
+  // Calculate if not stored
+  const subtotal = o.totals?.subtotal || 0;
+  const freshWaxFee = o.totals?.freshWaxFee || (subtotal * 0.01);
+  const processingFee = o.totals?.paymentProcessingFee || o.totals?.stripeFee || ((subtotal * 0.014) + 0.20);
+  return sum + (subtotal - freshWaxFee - processingFee);
+}, 0);
 
 // Month-over-month calculations
 const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
