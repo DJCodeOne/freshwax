@@ -303,15 +303,6 @@ const firebaseConfig = {
           };
 
           await setDoc(doc(db, 'users', user.uid), userData);
-
-          // Also create in customers collection (use normalized email)
-          await setDoc(doc(db, 'customers', user.uid), {
-            uid: user.uid,
-            email: normalizedEmail,
-            displayName: userData.displayName,
-            displayNameLower: userData.displayNameLower,
-            createdAt: serverTimestamp()
-          });
         }
 
         // Set cookies

@@ -300,7 +300,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Get buyer name
     let buyerName = '';
     try {
-      const buyerDoc = await getDocument('customers', buyerUserId);
+      const buyerDoc = await getDocument('users', buyerUserId);
       if (buyerDoc) {
         buyerName = buyerDoc.displayName || buyerDoc.fullName || buyerDoc.firstName || '';
       }
@@ -362,7 +362,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // We'll use a workaround by creating a document with a generated ID
     const purchaseRecordId = `purchase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     await fetch(
-      `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/customers/${buyerUserId}/purchasedGiftCards?documentId=${purchaseRecordId}`,
+      `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/users/${buyerUserId}/purchasedGiftCards?documentId=${purchaseRecordId}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

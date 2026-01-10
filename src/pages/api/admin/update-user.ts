@@ -54,7 +54,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Update customers collection - only include provided fields
     try {
-      const customerDoc = await getDocument('customers', userId);
+      const customerDoc = await getDocument('users', userId);
       if (customerDoc) {
         const customerUpdate: any = { updatedAt: timestamp };
 
@@ -78,7 +78,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (updates.suspended !== undefined) customerUpdate.suspended = updates.suspended;
         if (updates.adminNotes !== undefined) customerUpdate.adminNotes = updates.adminNotes;
 
-        await updateDocument('customers', userId, customerUpdate);
+        await updateDocument('users', userId, customerUpdate);
         results.customers = true;
       }
     } catch (e) {

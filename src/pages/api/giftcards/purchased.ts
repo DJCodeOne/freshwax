@@ -16,7 +16,7 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     // Get customer document which may contain purchased gift cards
-    const customerDoc = await getDocument('customers', userId);
+    const customerDoc = await getDocument('users', userId);
 
     // The subcollection approach doesn't work with REST API directly,
     // so we'll check if purchased cards are stored on the customer doc

@@ -617,9 +617,9 @@ export async function updateCustomerOrderCount(userId: string): Promise<void> {
   if (!userId) return;
 
   try {
-    const customerDoc = await getDocument('customers', userId);
+    const customerDoc = await getDocument('users', userId);
     if (customerDoc) {
-      await updateDocument('customers', userId, {
+      await updateDocument('users', userId, {
         orderCount: (customerDoc.orderCount || 0) + 1,
         lastOrderAt: new Date().toISOString()
       });

@@ -929,12 +929,7 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
         const q = query(usersRef, where('displayNameLower', '==', normalizedName));
         const snapshot = await getDocs(q);
 
-        // Also check customers collection
-        const customersRef = collection(db, 'customers');
-        const q2 = query(customersRef, where('displayNameLower', '==', normalizedName));
-        const snapshot2 = await getDocs(q2);
-
-        const isTaken = !snapshot.empty || !snapshot2.empty;
+        const isTaken = !snapshot.empty;
 
         if (isTaken) {
           displayNameStatus.textContent = '✗';
@@ -1047,15 +1042,6 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
         };
 
         await setDoc(doc(db, 'users', user.uid), userData);
-
-        // Also create in customers collection (use normalized email)
-        await setDoc(doc(db, 'customers', user.uid), {
-          uid: user.uid,
-          email: normalizedEmail,
-          displayName: userData.displayName,
-          displayNameLower: userData.displayNameLower,
-          createdAt: serverTimestamp()
-        });
 
         // Social login users are considered verified
         formSuccess.innerHTML = `
@@ -1226,17 +1212,8 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
           };
         }
 
-        // Save to Firestore
+        // Save to Firestore (single users collection - customers collection deprecated)
         await setDoc(doc(db, 'users', user.uid), userData);
-
-        // Also create in customers collection for compatibility
-        await setDoc(doc(db, 'customers', user.uid), {
-          uid: user.uid,
-          email: user.email,
-          displayName: displayName,
-          displayNameLower: displayName.toLowerCase(),
-          createdAt: serverTimestamp()
-        });
 
         // Also write pending requests to pendingRoleRequests collection (for REST API access)
         if (requestArtist) {

@@ -154,6 +154,13 @@ export const RateLimiters = {
   write: {
     maxRequests: 30,
     windowMs: 60 * 1000
+  },
+
+  // Strict: 5 per minute (for sensitive operations like orders)
+  strict: {
+    maxRequests: 5,
+    windowMs: 60 * 1000,
+    blockDurationMs: 60 * 1000
   }
 };
 

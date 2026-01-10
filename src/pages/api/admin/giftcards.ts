@@ -176,7 +176,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         let customerInfo = { email: 'Unknown', name: 'Unknown' };
 
         try {
-          const customer = await getDocument('customers', credit.id);
+          const customer = await getDocument('users', credit.id);
           if (customer) {
             customerInfo = {
               email: customer.email || 'Unknown',
@@ -354,7 +354,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Update customer doc (ignore errors if doesn't exist)
       try {
-        await updateDocument('customers', userId, {
+        await updateDocument('users', userId, {
           creditBalance: newBalance,
           creditUpdatedAt: now
         });

@@ -139,7 +139,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     // Also update customer document
-    await updateDocument('customers', userId, {
+    await updateDocument('users', userId, {
       creditBalance: newBalance,
       creditUpdatedAt: now
     });

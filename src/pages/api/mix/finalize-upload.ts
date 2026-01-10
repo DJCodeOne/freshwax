@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let displayName = djName || 'Unknown DJ';
     if (userId) {
       try {
-        let userData = await getDocument('customers', userId);
+        let userData = await getDocument('users', userId);
         if (userData?.displayName) {
           displayName = userData.displayName;
         } else {

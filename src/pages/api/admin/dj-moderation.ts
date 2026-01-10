@@ -122,7 +122,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return { userId: users[0].id, name: users[0].displayName || users[0].name || null };
         }
         // Also check customers collection
-        const customers = await queryCollection('customers', {
+        const customers = await queryCollection('users', {
           filters: [{ field: 'email', op: 'EQUAL', value: email }],
           limit: 1
         });

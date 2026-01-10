@@ -180,30 +180,13 @@ export const prerender = false;
   
   async function loadCustomerData(uid) {
     try {
-      
-      // Try customers collection first - direct document lookup
-      const customerDoc = await getDoc(doc(db, 'customers', uid));
-      if (customerDoc.exists()) {
-        const data = customerDoc.data();
-        return data;
-      }
-      
-      // Try querying customers by uid field
-      const customersRef = collection(db, 'customers');
-      const q = query(customersRef, where('uid', '==', uid));
-      const customerSnap = await getDocs(q);
-      if (!customerSnap.empty) {
-        const data = customerSnap.docs[0].data();
-        return data;
-      }
-      
-      // Try users collection
+      // Load from users collection (single source of truth)
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {
         const data = userDoc.data();
         return data;
       }
-      
+
     } catch (e) {
       console.error('[Checkout] Error loading customer data:', e);
     }
@@ -979,8 +962,8 @@ export const prerender = false;
     const saveDetails = form.saveDetails?.checked;
     if (saveDetails && currentUser) {
       try {
-        const customerRef = doc(db, 'customers', currentUser.uid);
-        await setDoc(customerRef, {
+        const userRef = doc(db, 'users', currentUser.uid);
+        await setDoc(userRef, {
           firstName: form.firstName.value,
           lastName: form.lastName.value,
           email: form.email.value,

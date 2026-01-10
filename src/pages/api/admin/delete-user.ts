@@ -62,9 +62,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Soft-delete from customers collection
     try {
-      const customerDoc = await getDocument('customers', userId);
+      const customerDoc = await getDocument('users', userId);
       if (customerDoc) {
-        await updateDocument('customers', userId, softDeleteData);
+        await updateDocument('users', userId, softDeleteData);
         results.customers = true;
       }
     } catch (e) {

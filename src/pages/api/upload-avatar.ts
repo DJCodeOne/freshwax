@@ -173,7 +173,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Update customer document with idToken for authentication
     console.log(`[upload-avatar] Updating Firestore for user ${userId}, hasToken: ${!!finalIdToken}`);
     try {
-      await setDocument('customers', userId, {
+      await setDocument('users', userId, {
         avatarUrl,
         avatarUpdatedAt: new Date().toISOString()
       }, finalIdToken);
@@ -265,7 +265,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     }
 
     // Remove avatar URL from customer document
-    await setDocument('customers', userId, {
+    await setDocument('users', userId, {
       avatarUrl: null,
       avatarUpdatedAt: new Date().toISOString()
     }, idToken);

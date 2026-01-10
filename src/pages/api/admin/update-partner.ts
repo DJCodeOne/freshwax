@@ -142,7 +142,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Update or create customers collection record
     // This ensures downgraded partners appear in User Management
     try {
-      const customerDoc = await getDocument('customers', partnerId);
+      const customerDoc = await getDocument('users', partnerId);
       const isBeingDowngraded = updates.isArtist === false && updates.isMerchSupplier === false && updates.isVinylSeller === false;
 
       if (customerDoc) {
@@ -165,12 +165,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
           vinylSeller: updates.isVinylSeller ?? customerDoc.roles?.vinylSeller ?? false
         };
 
-        await updateDocument('customers', partnerId, customerUpdate, idToken);
+        await updateDocument('users', partnerId, customerUpdate, idToken);
         results.push('customers:updated');
       } else if (isBeingDowngraded && artistDoc) {
         // Create customers record for downgraded partner so they appear in User Management
         const { setDocument } = await import('../../../lib/firebase-rest');
-        await setDocument('customers', partnerId, {
+        await setDocument('users', partnerId, {
           uid: partnerId,
           displayName: updates.name || artistDoc.artistName || artistDoc.name || '',
           name: updates.name || artistDoc.artistName || artistDoc.name || '',

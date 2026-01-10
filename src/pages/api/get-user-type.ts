@@ -32,13 +32,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   try {
     // Fetch all possible user documents in parallel
-    const [userDoc, artistDoc, customerDoc, adminDoc, vinylSellerDoc] = await Promise.all([
+    const [userDoc, artistDoc, adminDoc, vinylSellerDoc] = await Promise.all([
       getDocument('users', uid),
       getDocument('artists', uid),
-      getDocument('customers', uid),
       getDocument('admins', uid),
       getDocument('vinylSellers', uid),
     ]);
+    // userDoc contains all customer data (merged from old customers collection)
+    const customerDoc = userDoc;
 
     let name = '';
     let isCustomer = false;
@@ -114,7 +115,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // Check legacy customers collection - avatarUrl from customers takes priority (upload-avatar saves here)
+    // Check user profile data (formerly in customers collection, now merged into users)
     if (customerDoc) {
       isCustomer = true;
       if (!name) {
@@ -123,13 +124,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
       if (!partnerDisplayName && customerDoc.displayName) {
         partnerDisplayName = customerDoc.displayName;
       }
-      // Customer avatarUrl takes precedence over users collection (upload-avatar saves to customers)
+      // Check for avatar URL
       if (customerDoc.avatarUrl) {
         avatarUrl = customerDoc.avatarUrl;
       } else if (!avatarUrl) {
         avatarUrl = customerDoc.photoURL || '';
       }
-      // Check for vinyl seller flag in customers
+      // Check for vinyl seller flag
       isVinylSeller = isVinylSeller || customerDoc.isVinylSeller === true;
     }
 

@@ -106,7 +106,7 @@ if (partnerId) {
     if (partner) {
       // Fetch displayName and avatar from customers collection (user's preferred display name)
       try {
-        const customerData = await getDocument('customers', partnerId);
+        const customerData = await getDocument('users', partnerId);
         if (customerData) {
           // Use customer's displayName if available (this is what they set in their profile)
           if (customerData?.displayName) {

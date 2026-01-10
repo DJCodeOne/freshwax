@@ -74,7 +74,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // IMPORTANT: Verify user is a customer (only customers can purchase)
     if (orderData.customer.userId) {
       const [customerDoc, userDoc, artistDoc] = await Promise.all([
-        getDocument('customers', orderData.customer.userId),
+        getDocument('users', orderData.customer.userId),
         getDocument('users', orderData.customer.userId),
         getDocument('artists', orderData.customer.userId)
       ]);
@@ -596,9 +596,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Update customer's order count if they have an account
     if (orderData.customer.userId) {
       try {
-        const customerDoc = await getDocument('customers', orderData.customer.userId);
+        const customerDoc = await getDocument('users', orderData.customer.userId);
         if (customerDoc) {
-          await updateDocument('customers', orderData.customer.userId, {
+          await updateDocument('users', orderData.customer.userId, {
             orderCount: (customerDoc.orderCount || 0) + 1,
             lastOrderAt: now
           });

@@ -198,7 +198,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         break;
       }
 
-      case 'customers': {
+      case 'users': {
         const orders = await queryCollection('orders', {
           filters: [{ field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startDateStr }],
           limit: 1000

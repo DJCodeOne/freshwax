@@ -107,7 +107,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           filters: [{ field: 'email', op: 'EQUAL', value: email }],
           limit: 1
         }),
-        queryCollection('customers', {
+        queryCollection('users', {
           filters: [{ field: 'email', op: 'EQUAL', value: email }],
           limit: 1
         }),

@@ -39,7 +39,7 @@ if (partnerId) {
       // If no avatar in artists collection, try to get from customers collection
       if (!partner.avatarUrl && !partner.imageUrl && !partner.photoURL) {
         try {
-          const customerData = await getDocument('customers', partnerId);
+          const customerData = await getDocument('users', partnerId);
           if (customerData) {
             partner.avatarUrl = customerData?.avatarUrl || customerData?.photoURL || null;
           }

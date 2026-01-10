@@ -70,7 +70,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           const { getDocument } = await import('../../lib/firebase-rest');
           // Fetch from all collections in parallel
           const [customerProfile, userProfile, artistProfile] = await Promise.all([
-            getDocument('customers', userId),
+            getDocument('users', userId),
             getDocument('users', userId),
             getDocument('artists', userId)
           ]);

@@ -733,7 +733,7 @@ export function invalidateMixesCache(): void {
 
 export function invalidateUsersCache(): void {
   clearCache('users');
-  clearCache('customers');
+  clearCache('users');
   clearCache('artists');
 }
 

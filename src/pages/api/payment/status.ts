@@ -51,7 +51,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const [userDoc, artistDoc, customerDoc] = await Promise.all([
       getDocument('users', userId),
       getDocument('artists', userId),
-      getDocument('customers', userId)
+      getDocument('users', userId)
     ]);
 
     // Determine roles

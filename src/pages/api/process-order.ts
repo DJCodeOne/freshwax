@@ -391,9 +391,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Update customer order count
     if (orderData.customer.userId) {
       try {
-        const customerDoc = await getDocument('customers', orderData.customer.userId);
+        const customerDoc = await getDocument('users', orderData.customer.userId);
         if (customerDoc) {
-          await updateDocument('customers', orderData.customer.userId, {
+          await updateDocument('users', orderData.customer.userId, {
             orderCount: (customerDoc.orderCount || 0) + 1,
             lastOrderAt: now,
           });

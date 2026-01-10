@@ -214,7 +214,7 @@ export const POST: APIRoute = async ({ request }) => {
 
       // Also update customers collection - create if doesn't exist
       try {
-        const existingCustomer = await getDocument('customers', uid);
+        const existingCustomer = await getDocument('users', uid);
         const customerData = {
           [`roles.${roleKey}`]: true,
           isArtist: roleType === 'artist' ? true : (existingCustomer?.isArtist || false),
@@ -225,10 +225,10 @@ export const POST: APIRoute = async ({ request }) => {
         };
 
         if (existingCustomer) {
-          await updateDocument('customers', uid, customerData);
+          await updateDocument('users', uid, customerData);
         } else {
           // Create customers doc if it doesn't exist
-          await setDocument('customers', uid, {
+          await setDocument('users', uid, {
             uid: uid,
             email: userData?.email || '',
             displayName: userData?.displayName || '',
@@ -448,7 +448,7 @@ export const POST: APIRoute = async ({ request }) => {
 
       // Also update customers collection
       try {
-        const existingCustomer = await getDocument('customers', uid);
+        const existingCustomer = await getDocument('users', uid);
         if (existingCustomer) {
           const customerUpdate: any = {
             [`roles.${roleKey}`]: false,
@@ -457,7 +457,7 @@ export const POST: APIRoute = async ({ request }) => {
           if (roleType === 'artist') customerUpdate.isArtist = false;
           if (roleType === 'merchSeller') customerUpdate.isMerchSupplier = false;
           if (roleType === 'vinylSeller') customerUpdate.isVinylSeller = false;
-          await updateDocument('customers', uid, customerUpdate);
+          await updateDocument('users', uid, customerUpdate);
         }
       } catch (e) {
         console.error(`[roles/manage] Failed to update customers/${uid} during revoke:`, e);

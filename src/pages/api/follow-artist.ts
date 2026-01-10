@@ -29,7 +29,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     // Get user's followed artists
-    const customerDoc = await getDocument('customers', userId);
+    const customerDoc = await getDocument('users', userId);
     const followedArtists = customerDoc?.followedArtists || [];
 
     // If has followed artists, fetch their info
@@ -176,7 +176,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (action === 'follow') {
       // Get current followed artists and add new one
-      const customerDoc = await getDocument('customers', userId);
+      const customerDoc = await getDocument('users', userId);
       const currentFollowed = customerDoc?.followedArtists || [];
 
       if (!currentFollowed.includes(artistIdentifier)) {
@@ -184,7 +184,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // Only update followedArtists fields to comply with Firestore rules
-      await updateDocument('customers', userId, {
+      await updateDocument('users', userId, {
         followedArtists: currentFollowed,
         followedArtistsUpdatedAt: now
       });
@@ -199,11 +199,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
     } else if (action === 'unfollow') {
-      const customerDoc = await getDocument('customers', userId);
+      const customerDoc = await getDocument('users', userId);
       const currentFollowed = customerDoc?.followedArtists || [];
       const newFollowed = currentFollowed.filter((a: string) => a !== artistIdentifier);
 
-      await updateDocument('customers', userId, {
+      await updateDocument('users', userId, {
         followedArtists: newFollowed,
         followedArtistsUpdatedAt: now
       });
@@ -218,13 +218,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
     } else if (action === 'toggle') {
-      const customerDoc = await getDocument('customers', userId);
+      const customerDoc = await getDocument('users', userId);
       const currentFollowed = customerDoc?.followedArtists || [];
       const isFollowing = currentFollowed.includes(artistIdentifier);
 
       if (isFollowing) {
         const newFollowed = currentFollowed.filter((a: string) => a !== artistIdentifier);
-        await updateDocument('customers', userId, {
+        await updateDocument('users', userId, {
           followedArtists: newFollowed,
           followedArtistsUpdatedAt: now
         });
@@ -239,7 +239,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       } else {
         currentFollowed.push(artistIdentifier);
         // Only update followedArtists fields to comply with Firestore rules
-        await updateDocument('customers', userId, {
+        await updateDocument('users', userId, {
           followedArtists: currentFollowed,
           followedArtistsUpdatedAt: now
         });
@@ -254,7 +254,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
     } else if (action === 'check') {
-      const customerDoc = await getDocument('customers', userId);
+      const customerDoc = await getDocument('users', userId);
       const currentFollowed = customerDoc?.followedArtists || [];
       const isFollowing = currentFollowed.includes(artistIdentifier);
 

@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (userId) {
       try {
         // Check customers collection first (preferred display name)
-        let userData = await getDocument('customers', userId);
+        let userData = await getDocument('users', userId);
         if (userData?.displayName) {
           displayName = userData.displayName;
           log.info(`[upload-mix] Using displayName from customers: ${displayName}`);

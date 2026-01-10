@@ -23,7 +23,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     // Get user's wishlist
-    const customerDoc = await getDocument('customers', userId);
+    const customerDoc = await getDocument('users', userId);
     const wishlist = Array.isArray(customerDoc?.wishlist) ? customerDoc.wishlist : [];
 
     // If wishlist has items, fetch release details
@@ -126,7 +126,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (action === 'add') {
       // Get current wishlist and add new item
-      const customerDoc = await getDocument('customers', userId);
+      const customerDoc = await getDocument('users', userId);
       const currentWishlist = Array.isArray(customerDoc?.wishlist) ? customerDoc.wishlist : [];
 
       if (!currentWishlist.includes(releaseId)) {
@@ -134,7 +134,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // Only update wishlist fields (not entire document) to comply with Firestore rules
-      await updateDocument('customers', userId, {
+      await updateDocument('users', userId, {
         wishlist: currentWishlist,
         wishlistUpdatedAt: now
       });
@@ -150,12 +150,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     } else if (action === 'remove') {
       // Remove from wishlist
-      const customerDoc = await getDocument('customers', userId);
+      const customerDoc = await getDocument('users', userId);
       const currentWishlist = Array.isArray(customerDoc?.wishlist) ? customerDoc.wishlist : [];
       const newWishlist = currentWishlist.filter((id: string) => id !== releaseId);
 
       // Only update wishlist fields (not entire document) to comply with Firestore rules
-      await updateDocument('customers', userId, {
+      await updateDocument('users', userId, {
         wishlist: newWishlist,
         wishlistUpdatedAt: now
       });
@@ -171,14 +171,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     } else if (action === 'toggle') {
       // Toggle wishlist status
-      const customerDoc = await getDocument('customers', userId);
+      const customerDoc = await getDocument('users', userId);
       const currentWishlist = Array.isArray(customerDoc?.wishlist) ? customerDoc.wishlist : [];
       const isInWishlist = currentWishlist.includes(releaseId);
 
       if (isInWishlist) {
         // Remove from wishlist
         const newWishlist = currentWishlist.filter((id: string) => id !== releaseId);
-        await updateDocument('customers', userId, {
+        await updateDocument('users', userId, {
           wishlist: newWishlist,
           wishlistUpdatedAt: now
         });
@@ -193,7 +193,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       } else {
         // Add to wishlist
         currentWishlist.push(releaseId);
-        await updateDocument('customers', userId, {
+        await updateDocument('users', userId, {
           wishlist: currentWishlist,
           wishlistUpdatedAt: now
         });
@@ -209,7 +209,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     } else if (action === 'check') {
       // Check if item is in wishlist
-      const customerDoc = await getDocument('customers', userId);
+      const customerDoc = await getDocument('users', userId);
       const currentWishlist = Array.isArray(customerDoc?.wishlist) ? customerDoc.wishlist : [];
       const isInWishlist = currentWishlist.includes(releaseId);
 

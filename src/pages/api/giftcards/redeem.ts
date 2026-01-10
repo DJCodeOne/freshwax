@@ -171,7 +171,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Also update the customer document with the new balance for quick access
-    await updateDocument('customers', userId, {
+    await updateDocument('users', userId, {
       creditBalance: newBalance,
       creditUpdatedAt: nowISO,
       creditExpiresAt: creditExpiresAt

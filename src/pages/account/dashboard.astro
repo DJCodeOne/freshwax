@@ -735,10 +735,10 @@ export const prerender = false;
   let appliedPromoCode = null; // Track applied promo code for Plus upgrade
   let authUnsubscribe = null;
 
-  // Load customer data from Firestore (customers collection only)
+  // Load customer data from Firestore (users collection)
   async function loadCustomerData(uid) {
     try {
-      const customerDoc = await getDoc(doc(db, 'customers', uid));
+      const customerDoc = await getDoc(doc(db, 'users', uid));
       
       if (customerDoc.exists()) {
         const data = customerDoc.data();
@@ -1882,12 +1882,13 @@ export const prerender = false;
       try {
         const phoneValue = document.getElementById('phone').value;
 
-        // Update customers collection (only collection with write rules for users)
-        await setDoc(doc(db, 'customers', currentUser.uid), {
+        // Update users collection (single collection for all user data)
+        await setDoc(doc(db, 'users', currentUser.uid), {
           firstName: firstName,
           lastName: lastName,
           fullName: firstName + ' ' + lastName,
           displayName: newDisplayName,
+          displayNameLower: newDisplayName.toLowerCase(),
           phone: phoneValue,
           address1: document.getElementById('address1').value,
           address2: document.getElementById('address2').value,
@@ -1900,24 +1901,6 @@ export const prerender = false;
 
         // Update Firebase Auth profile
         await updateProfile(currentUser, { displayName: newDisplayName });
-
-        // Sync profile to users collection for partner dashboard
-        try {
-          await fetch('/api/profile-sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: currentUser.uid,
-              displayName: newDisplayName,
-              phone: phoneValue,
-              firstName: firstName,
-              lastName: lastName,
-              email: currentUser.email
-            })
-          });
-        } catch (syncError) {
-          console.error('Profile sync error:', syncError);
-        }
 
         btn.textContent = 'Saved!';
         setTimeout(() => {

@@ -22,7 +22,7 @@ const orders = await Promise.all(allOrders.map(async (data: any) => {
 
   if (data.customerId || data.userId) {
     try {
-      const customer = await getDocument('customers', data.customerId || data.userId);
+      const customer = await getDocument('users', data.customerId || data.userId);
       if (customer) {
         customerName = customer.fullName || customer.name || customer.displayName || 'Customer';
         customerEmail = customer.email || customerEmail;
