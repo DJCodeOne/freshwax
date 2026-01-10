@@ -3,7 +3,8 @@
 // Allows admin to generate a key that gives DJs instant lobby access when redeemed
 
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { saSetDocument } from '../../../lib/firebase-service-account';
 
 // Helper to get admin key from environment
 function getAdminKey(locals: any): string {
@@ -17,6 +18,26 @@ function initFirebase(locals: any) {
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+}
+
+// Build service account key from individual env vars
+function getServiceAccountKey(env: any): string | null {
+  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+  const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+  if (!clientEmail || !privateKey) return null;
+
+  return JSON.stringify({
+    type: 'service_account',
+    project_id: projectId,
+    private_key_id: 'auto',
+    private_key: privateKey.replace(/\\n/g, '\n'),
+    client_email: clientEmail,
+    client_id: '',
+    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: 'https://oauth2.googleapis.com/token'
   });
 }
 
@@ -89,6 +110,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // POST: Generate, revoke, or update quick access key
 export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const env = (locals as any)?.runtime?.env;
+  const serviceAccountKey = getServiceAccountKey(env);
+  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+
+  if (!serviceAccountKey) {
+    return new Response(JSON.stringify({ success: false, error: 'Service account not configured' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   try {
     const data = await request.json();
@@ -119,7 +150,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         usedBy: [] // Reset usedBy for new key
       };
 
-      await setDocument('system', 'quickAccessKey', newKeyData);
+      await saSetDocument(serviceAccountKey, projectId, 'system', 'quickAccessKey', newKeyData);
 
       console.log(`[quick-access-key] Generated new key: ${newCode}`);
 
@@ -143,7 +174,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      await setDocument('system', 'quickAccessKey', {
+      await saSetDocument(serviceAccountKey, projectId, 'system', 'quickAccessKey', {
         ...existingKey,
         active: false,
         revokedAt: new Date().toISOString()
@@ -170,7 +201,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      await setDocument('system', 'quickAccessKey', {
+      await saSetDocument(serviceAccountKey, projectId, 'system', 'quickAccessKey', {
         ...existingKey,
         expiresAt: expiresAt || null
       });
