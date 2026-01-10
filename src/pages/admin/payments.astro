@@ -4,6 +4,24 @@
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
+import { saQueryCollection } from '../../lib/firebase-service-account';
+
+// Get service account config for payouts collection (requires auth)
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const projectId = runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
+const clientEmail = runtimeEnv?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = runtimeEnv?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+const serviceAccountKey = JSON.stringify({
+  type: 'service_account',
+  project_id: projectId,
+  private_key_id: 'auto',
+  private_key: privateKey?.replace(/\\n/g, '\n'),
+  client_email: clientEmail,
+  client_id: '',
+  auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+  token_uri: 'https://oauth2.googleapis.com/token'
+});
 
 // Fetch disputes
 const disputes = await queryCollection('disputes', {
@@ -26,11 +44,16 @@ const pendingPayouts = await queryCollection('pendingPayouts', {
   limit: 50
 });
 
-// Fetch completed payouts
-const completedPayouts = await queryCollection('payouts', {
-  orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-  limit: 100
-});
+// Fetch completed payouts using service account auth (payouts collection requires auth)
+let completedPayouts: Record<string, any>[] = [];
+try {
+  completedPayouts = await saQueryCollection(serviceAccountKey, projectId, 'payouts', {
+    orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+    limit: 100
+  });
+} catch (err) {
+  console.error('[payments] Error fetching payouts:', err);
+}
 
 // Fetch recent orders to check which need payouts
 const recentOrders = await queryCollection('orders', {
@@ -187,13 +210,21 @@ export const prerender = false;
                     <td>
                       <span class="badge badge-info">{order.paymentMethod || 'unknown'}</span>
                     </td>
-                    <td class="text-right">
+                    <td class="text-right" style="display: flex; gap: 0.5rem; justify-content: flex-end;">
                       <button
                         class="btn btn-primary btn-sm trigger-payout-btn"
                         data-order-id={order.id}
                         data-order-number={order.orderNumber}
                       >
                         💸 Pay Artist
+                      </button>
+                      <button
+                        class="btn btn-outline btn-sm mark-paid-btn"
+                        data-order-id={order.id}
+                        data-order-number={order.orderNumber}
+                        title="Mark as already paid (manual payout)"
+                      >
+                        ✓ Paid
                       </button>
                     </td>
                   </tr>
@@ -886,6 +917,57 @@ export const prerender = false;
         } catch (error) {
           console.error(error);
           showToast('Failed to trigger payout', 'error');
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      }
+
+      // Mark as paid (manual payout record)
+      document.querySelectorAll('.mark-paid-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          markAsPaid(btn.dataset.orderId, btn.dataset.orderNumber, btn);
+        });
+      });
+
+      async function markAsPaid(orderId, orderNumber, btn) {
+        if (!confirm(`Mark order ${orderNumber} as already paid?\n\nThis records the payout without sending money.`)) return;
+
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '⏳...';
+
+        try {
+          let adminKey = localStorage.getItem('adminKey');
+          if (!adminKey) {
+            adminKey = prompt('Enter admin key:');
+            if (!adminKey) {
+              btn.disabled = false;
+              btn.innerHTML = originalText;
+              return;
+            }
+            localStorage.setItem('adminKey', adminKey);
+          }
+
+          const response = await fetch('/api/admin/record-payout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, adminKey, notes: 'Manual payout - already paid outside system' })
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            showToast(result.message || 'Marked as paid');
+            const row = btn.closest('tr');
+            if (row) row.remove();
+          } else {
+            showToast(result.error || 'Failed to record', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+          }
+        } catch (error) {
+          console.error(error);
+          showToast('Failed to record payout', 'error');
           btn.disabled = false;
           btn.innerHTML = originalText;
         }

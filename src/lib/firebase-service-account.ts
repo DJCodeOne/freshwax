@@ -317,3 +317,56 @@ export async function saDeleteDocument(
     throw new Error(`Failed to delete document: ${error}`);
   }
 }
+
+// Query a collection with service account auth
+export async function saQueryCollection(
+  serviceAccountKey: string,
+  projectId: string,
+  collection: string,
+  options?: {
+    orderBy?: { field: string; direction?: 'ASCENDING' | 'DESCENDING' };
+    limit?: number;
+  }
+): Promise<Record<string, any>[]> {
+  const token = await getServiceAccountToken(serviceAccountKey);
+
+  // Build query URL
+  let url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}`;
+  const params: string[] = [];
+
+  if (options?.orderBy) {
+    params.push(`orderBy=${options.orderBy.field}${options.orderBy.direction === 'DESCENDING' ? ' desc' : ''}`);
+  }
+  if (options?.limit) {
+    params.push(`pageSize=${options.limit}`);
+  }
+
+  if (params.length > 0) {
+    url += '?' + params.join('&');
+  }
+
+  const response = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('[saQueryCollection] Error:', error);
+    return [];
+  }
+
+  const data = await response.json() as any;
+  const documents = data.documents || [];
+
+  return documents.map((doc: any) => {
+    const result: Record<string, any> = {};
+    const fields = doc.fields || {};
+    for (const [key, value] of Object.entries(fields)) {
+      result[key] = fromFirestoreValue(value);
+    }
+    // Extract document ID from name
+    const nameParts = doc.name.split('/');
+    result.id = nameParts[nameParts.length - 1];
+    return result;
+  });
+}
