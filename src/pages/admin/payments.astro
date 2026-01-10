@@ -41,6 +41,8 @@ const recentOrders = await queryCollection('orders', {
 // Find orders needing payouts (orders without corresponding payout records)
 const paidOrderIds = new Set(completedPayouts.map(p => p.orderId));
 const ordersNeedingPayouts = recentOrders.filter(order => {
+  // Skip test mode orders - no real money involved
+  if (order.paymentMethod === 'test_mode') return false;
   // Skip if already paid
   if (paidOrderIds.has(order.id)) return false;
   // Skip if no items
@@ -61,7 +63,9 @@ const lostDisputes = disputes.filter(d => d.outcome === 'lost').length;
 const totalRefunded = refunds.reduce((sum, r) => sum + (r.amountRefunded || 0), 0);
 const pendingPayoutTotal = pendingPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
 
-const completedPayoutTotal = completedPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
+// Only count real payouts (exclude test mode)
+const realPayouts = completedPayouts.filter(p => !p.isTestMode);
+const completedPayoutTotal = realPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
 const ordersNeedingPayoutTotal = ordersNeedingPayouts.reduce((sum, o) => {
   const itemTotal = (o.items || []).reduce((s, i) => s + ((i.price || 0) * (i.quantity || 1)), 0);
   return sum + itemTotal;
@@ -70,7 +74,7 @@ const ordersNeedingPayoutTotal = ordersNeedingPayouts.reduce((sum, o) => {
 const stats = [
   { label: 'Orders Need Payout', value: ordersNeedingPayouts.length, type: ordersNeedingPayouts.length > 0 ? 'warning' : 'default', detail: `~£${ordersNeedingPayoutTotal.toFixed(2)}` },
   { label: 'Pending/Failed', value: pendingPayouts.length, type: pendingPayouts.length > 0 ? 'danger' : 'default', detail: `£${pendingPayoutTotal.toFixed(2)}` },
-  { label: 'Completed Payouts', value: completedPayouts.length, type: 'success', detail: `£${completedPayoutTotal.toFixed(2)}` },
+  { label: 'Completed Payouts', value: realPayouts.length, type: 'success', detail: `£${completedPayoutTotal.toFixed(2)}` },
   { label: 'Open Disputes', value: openDisputes, type: openDisputes > 0 ? 'danger' : 'default' },
 ];
 

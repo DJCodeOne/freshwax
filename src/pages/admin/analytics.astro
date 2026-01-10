@@ -23,7 +23,10 @@ try {
   orders = allOrders.map((data: any) => ({
     ...data,
     createdAt: data.createdAt instanceof Date ? data.createdAt : new Date(data.createdAt || Date.now())
-  })).filter((o: any) => o.status !== 'cancelled');
+  })).filter((o: any) =>
+    o.status !== 'cancelled' &&
+    o.paymentMethod !== 'test_mode'  // Exclude test orders from analytics
+  );
 } catch (e) {
   console.error('Error fetching orders:', e);
 }

@@ -74,15 +74,19 @@ const pendingOrders = orders.filter(o => o.status === 'pending');
 const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.totals?.total || o.total || 0), 0);
 const monthRevenue = monthOrders.reduce((sum, o) => sum + (o.totals?.total || o.total || 0), 0);
 
-// Calculate artist earnings from completed orders (subtotal minus fees)
-const artistEarningsFromOrders = ordersData
-  .filter(o => o.paymentStatus === 'completed' || o.orderStatus === 'completed' || o.status === 'completed')
-  .reduce((sum, o) => {
-    const subtotal = o.totals?.subtotal || 0;
-    const freshWaxFee = o.totals?.freshWaxFee || 0;
-    const stripeFee = o.totals?.stripeFee || 0;
-    return sum + (subtotal - freshWaxFee - stripeFee);
-  }, 0);
+// Filter out test orders for financial calculations
+const realOrders = ordersData.filter(o =>
+  o.paymentMethod !== 'test_mode' &&
+  (o.paymentStatus === 'completed' || o.orderStatus === 'completed' || o.status === 'completed')
+);
+
+// Calculate artist earnings from completed real orders (subtotal minus platform fee only)
+// Payment processing fee is covered by service fees charged to customer, not deducted from artist
+const artistEarningsFromOrders = realOrders.reduce((sum, o) => {
+  const subtotal = o.totals?.subtotal || 0;
+  const freshWaxFee = o.totals?.freshWaxFee || 0;
+  return sum + (subtotal - freshWaxFee);
+}, 0);
 
 // Partner stats (data already in array format from REST API)
 const artists = artistsData;
@@ -160,14 +164,14 @@ const disputesUnderReview = openDisputes.reduce((sum, d) => sum + (d.amount || 0
 const disputesLost = disputesData.filter(d => d.status === 'lost').reduce((sum, d) => sum + (d.amount || 0), 0);
 const disputesWon = disputesData.filter(d => d.status === 'won').reduce((sum, d) => sum + (d.amount || 0), 0);
 
-// Calculate gross revenue (all orders)
-const grossRevenue = ordersData.reduce((sum, o) => sum + (o.totals?.total || o.total || 0), 0);
+// Calculate gross revenue (only real orders, not test mode)
+const grossRevenue = realOrders.reduce((sum, o) => sum + (o.totals?.total || o.total || 0), 0);
 
-// Platform fees earned (1% of gross revenue minus refunds)
-const platformFeesEarned = (grossRevenue - totalRefunded) * PLATFORM_FEE_RATE;
+// Platform fees earned (actual fees from orders, not calculated %)
+const platformFeesEarned = realOrders.reduce((sum, o) => sum + (o.totals?.freshWaxFee || 0), 0);
 
-// Net to artists (after platform fees)
-const netToArtists = (grossRevenue - totalRefunded) * (1 - PLATFORM_FEE_RATE);
+// Net to artists (what artists actually receive after all fees)
+const netToArtists = realOrders.reduce((sum, o) => sum + (o.totals?.artistEarnings || 0), 0);
 
 // Month-over-month calculations
 const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -311,7 +315,7 @@ export const prerender = false;
           <div class="earning-info">
             <span class="earning-label">Gross Revenue</span>
             <span class="earning-value">{formatCurrency(grossRevenue)}</span>
-            <span class="earning-detail">{ordersData.length} total orders</span>
+            <span class="earning-detail">{realOrders.length} real order{realOrders.length !== 1 ? 's' : ''} (excl. test)</span>
           </div>
         </div>
 
@@ -329,7 +333,7 @@ export const prerender = false;
           <div class="earning-info">
             <span class="earning-label">Artist Earnings</span>
             <span class="earning-value">{formatCurrency(artistEarningsFromOrders)}</span>
-            <span class="earning-detail">{ordersData.filter(o => o.paymentStatus === 'completed' || o.orderStatus === 'completed' || o.status === 'completed').length} completed orders</span>
+            <span class="earning-detail">{realOrders.length} real order{realOrders.length !== 1 ? 's' : ''}</span>
           </div>
         </div>
 
