@@ -154,7 +154,9 @@
       "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -i \"Code_One_Entropic.mp3\" -y \"Code_One_Entropic.wav\")",
       "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -i \"UL_Track1_Migration.wav\" -codec:a libmp3lame -b:a 320k -y \"UL_Track1_Migration.mp3\")",
       "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -i \"UL_Track4_Joker.wav\" -codec:a libmp3lame -b:a 320k -y \"UL_Track4_Joker.mp3\")",
-      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -i \"UL_Track5_Perfect.wav\" -codec:a libmp3lame -b:a 320k -y \"UL_Track5_Perfect.mp3\")"
+      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -i \"UL_Track5_Perfect.wav\" -codec:a libmp3lame -b:a 320k -y \"UL_Track5_Perfect.mp3\")",
+      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffprobe.exe\" -v quiet -show_entries format=duration -of csv=p=0 \"https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/02-jah-phantom.mp3\")",
+      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffprobe.exe\" -v quiet -show_entries format=duration -of csv=p=0 \"https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/03-kitano.mp3\")"
     ]
   }
 }

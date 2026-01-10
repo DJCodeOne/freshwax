@@ -9,6 +9,17 @@ export const prerender = false;
 const LOW_STOCK_THRESHOLD = 5;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // DISABLED - Low stock emails turned off per user request
+  console.log('[Stock Alerts] Disabled - skipping');
+  return new Response(JSON.stringify({
+    success: true,
+    skipped: true,
+    reason: 'Stock alerts disabled'
+  }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  });
+
   const startTime = Date.now();
   console.log('[Stock Alerts] ========== CRON JOB STARTED ==========');
 
