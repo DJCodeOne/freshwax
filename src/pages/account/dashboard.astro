@@ -2677,16 +2677,22 @@ export const prerender = false;
   // Load subscription status and update UI
   async function loadSubscriptionStatus(userId) {
     try {
-      // Get auth token for authenticated API call
-      const user = window.firebase?.auth()?.currentUser;
-      const idToken = user ? await user.getIdToken() : null;
+      // Get auth token for authenticated API call (use module-level currentUser)
+      const idToken = currentUser ? await currentUser.getIdToken() : null;
+
+      console.log('[Subscription] Loading status for', userId, 'hasToken:', !!idToken);
 
       const response = await fetch(`/api/subscription?userId=${userId}`, {
         headers: idToken ? { 'Authorization': `Bearer ${idToken}` } : {}
       });
       const result = await response.json();
 
-      if (!result.success) return;
+      console.log('[Subscription] API response:', result.success, result.subscription?.isPro, result.error);
+
+      if (!result.success) {
+        console.warn('[Subscription] API failed:', result.error);
+        return;
+      }
 
       const tierBadge = document.querySelector('#subscriptionTier .tier-badge');
       const tierName = document.querySelector('#subscriptionTier .tier-name');
@@ -2697,6 +2703,7 @@ export const prerender = false;
 
       // Update tier badge
       if (result.subscription.isPro) {
+        console.log('[Subscription] User is Plus - updating UI');
         tierBadge.textContent = 'Plus';
         tierBadge.classList.remove('free');
         tierBadge.classList.add('plus');
