@@ -384,6 +384,7 @@ async function init() {
       if (!window.currentStreamId || window.currentStreamId === 'playlist-global') {
         window.currentStreamId = 'playlist-global';
         setupChat('playlist-global');
+        joinStream('playlist-global'); // Track playlist listeners
         console.log('[Init] Subscribed to playlist-global for reactions');
       } else {
         console.log('[Init] Already subscribed to:', window.currentStreamId);
@@ -534,6 +535,10 @@ function handlePlaylistUpdate(event) {
         // Setup chat/Pusher for global reactions
         if (typeof setupChat === 'function') {
           setupChat('playlist-global');
+        }
+        // Track playlist listeners
+        if (typeof joinStream === 'function') {
+          joinStream('playlist-global');
         }
         console.log('[Playlist] Set up global channel for reactions');
       }
@@ -2745,20 +2750,20 @@ async function joinStream(streamId) {
   
   // Send initial heartbeat
   sendHeartbeat(streamId);
-  
-  // Heartbeat every 30 seconds
+
+  // Heartbeat every 30 seconds - track both live stream and playlist listeners
   setInterval(() => {
-    if (currentStream) {
-      sendHeartbeat(currentStream.id);
-    }
+    const activeStreamId = currentStream ? currentStream.id : 'playlist-global';
+    sendHeartbeat(activeStreamId);
   }, 30000);
-  
+
   // Leave on page unload
   window.addEventListener('beforeunload', () => {
-    if (currentStream && viewerSessionId) {
+    if (viewerSessionId) {
+      const activeStreamId = currentStream ? currentStream.id : 'playlist-global';
       navigator.sendBeacon('/api/livestream/heartbeat', JSON.stringify({
         action: 'leave',
-        streamId: currentStream.id,
+        streamId: activeStreamId,
         sessionId: viewerSessionId
       }));
     }
@@ -2770,41 +2775,34 @@ async function sendHeartbeat(streamId) {
     // Include user info if logged in
     const user = window.liveStreamState?.currentUser;
     const heartbeatData = {
+      action: 'heartbeat',
       streamId,
-      sessionId: viewerSessionId
+      userId: viewerSessionId // Use session ID for anonymous users
     };
 
     if (user) {
       heartbeatData.userId = user.uid;
       heartbeatData.userName = user.displayName || user.email?.split('@')[0] || 'User';
-      heartbeatData.userAvatar = user.photoURL || null;
+      heartbeatData.avatarUrl = user.photoURL || null;
+    } else {
+      heartbeatData.userName = 'Viewer';
     }
 
-    const response = await fetch('/api/livestream/heartbeat', {
+    // Use listeners API with heartbeat action (KV-backed, persistent)
+    const response = await fetch('/api/livestream/listeners', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(heartbeatData)
     });
 
     const data = await response.json();
-    const count = data.count || 0;
+    const count = data.activeViewers || 0;
 
-    // Update "watching" display only (not viewerCount - that shows totalViews)
+    // Update "watching" display
     const chatViewers = document.getElementById('chatViewers');
     if (chatViewers) {
-      chatViewers.textContent = `${count} watching`;
-    }
-
-    // Update online users list from heartbeat response
-    if (data.onlineUsers) {
-      // Store in cache for getOnlineViewers to use
-      if (window.setHeartbeatOnlineUsers) {
-        window.setHeartbeatOnlineUsers(data.onlineUsers);
-      }
-      // Update UI
-      if (window.updateOnlineUsers) {
-        window.updateOnlineUsers(window.getOnlineViewers());
-      }
+      const label = currentStream ? 'watching' : 'listening';
+      chatViewers.textContent = `${count} ${label}`;
     }
   } catch (error) {
     console.warn('[Heartbeat] Failed:', error);

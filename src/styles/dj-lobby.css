@@ -12,7 +12,31 @@
     min-height: 100vh !important;
     line-height: 1.5 !important;
   }
-  
+
+  /* Custom scrollbars - Fresh Wax red theme */
+  .dj-lobby-page ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .dj-lobby-page ::-webkit-scrollbar-track {
+    background: #1f2937;
+    border-radius: 4px;
+  }
+
+  .dj-lobby-page ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #dc2626 0%, #991b1b 100%);
+    border-radius: 4px;
+  }
+
+  .dj-lobby-page ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+  }
+
+  .dj-lobby-page ::-webkit-scrollbar-corner {
+    background: #1f2937;
+  }
+
   /* DJ Lobby scoped hidden class - applies to all elements with .hidden class inside .dj-lobby-page */
   .dj-lobby-page .hidden {
     display: none !important;
@@ -7423,7 +7447,7 @@
   .ls-chat-username {
     font-weight: 600;
     font-size: 0.85rem;
-    color: #e5e7eb;
+    color: #dc2626;
   }
 
   .ls-chat-badge {
@@ -7435,6 +7459,23 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.03em;
+  }
+
+  .ls-chat-plus-badge {
+    font-size: 0.9rem;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  .ls-chat-bot-badge {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.35rem;
+    background: #3b82f6;
+    color: #fff;
+    border-radius: 4px;
+    font-weight: 600;
+    margin-left: 4px;
+    vertical-align: middle;
   }
 
   .ls-chat-time {

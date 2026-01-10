@@ -5347,30 +5347,22 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
   };
 
-  // Fetch and display stream viewers (users on live page)
+  // Fetch and display stream viewers (users on live page - both live stream and playlist)
   async function loadStreamViewers() {
     try {
-      // Need a current stream to show viewers
-      if (!currentStream || !currentStream.id) {
-        updateCenterStats({ viewers: 0 });
-        const chatViewers = document.getElementById('chatViewers');
-        if (chatViewers) chatViewers.textContent = '0 watching';
-        return;
-      }
+      // Use current stream ID if live, otherwise query playlist-global for playlist listeners
+      const streamId = (currentStream && currentStream.id) ? currentStream.id : 'playlist-global';
+      const isLive = currentStream && currentStream.id;
 
-      const response = await fetch(`/api/livestream/listeners?streamId=${currentStream.id}`);
+      // Use listeners endpoint (Firebase/KV-backed) for accurate counts
+      const response = await fetch(`/api/livestream/listeners?streamId=${streamId}`);
       const result = await response.json();
 
-      if (result.success) {
-        const newCount = result.count || (result.listeners?.length ?? 0);
-        updateCenterStats({ viewers: newCount });
-        // Also update chat header
-        const chatViewers = document.getElementById('chatViewers');
-        if (chatViewers) chatViewers.textContent = `${newCount} watching`;
-      } else {
-        updateCenterStats({ viewers: 0 });
-        const chatViewers = document.getElementById('chatViewers');
-        if (chatViewers) chatViewers.textContent = '0 watching';
+      const newCount = result.count || 0;
+      updateCenterStats({ viewers: newCount });
+      const chatViewers = document.getElementById('chatViewers');
+      if (chatViewers) {
+        chatViewers.textContent = isLive ? `${newCount} watching` : `${newCount} listening`;
       }
     } catch (e) {
       console.error('Failed to load viewers:', e);
@@ -6179,7 +6171,15 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     div.textContent = text;
     return div.innerHTML;
   }
-  
+
+  // Plus badge emojis - matches dashboard.astro and live-stream.js
+  const BADGE_EMOJIS = {
+    crown: '👑', fire: '🔥', headphones: '🎧', skull: '💀', lion: '🦁',
+    leopard: '🐆', palm: '🌴', lightning: '⚡', vinyl: '💿', speaker: '🔊',
+    moon: '🌙', star: '⭐', diamond: '💎', snake: '🐍', bat: '🦇',
+    mic: '🎤', leaf: '🌿', gorilla: '🦍', spider: '🕷️', alien: '👽'
+  };
+
   // ============================================
   // DM SYSTEM
   // ============================================
@@ -8231,9 +8231,18 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   function formatLivestreamMessage(msg) {
     const time = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
     const initial = (msg.userName || 'U').charAt(0).toUpperCase();
+
+    // Avatar HTML - show image if available, otherwise show letter initial
     const avatarHtml = msg.userAvatar
       ? `<img src="${msg.userAvatar}" alt="" class="ls-chat-avatar" onerror="this.outerHTML='<span class=\\'ls-chat-avatar-letter\\'>${initial}</span>'" />`
       : `<span class="ls-chat-avatar-letter">${initial}</span>`;
+
+    // Plus badge - convert badge name to emoji (only show for Plus members)
+    const badgeEmoji = msg.isPro ? (BADGE_EMOJIS[msg.badge] || BADGE_EMOJIS.crown) : '';
+    const plusBadgeHtml = badgeEmoji ? `<span class="ls-chat-plus-badge">${badgeEmoji}</span>` : '';
+
+    // Bot badge
+    const botBadgeHtml = msg.type === 'bot' ? `<span class="ls-chat-bot-badge">BOT</span>` : '';
 
     // Handle GIF messages
     if (msg.type === 'giphy' && msg.giphyUrl) {
@@ -8243,6 +8252,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
             <div class="ls-chat-user">
               ${avatarHtml}
               <span class="ls-chat-username">${escapeHtml(msg.userName || 'User')}</span>
+              ${plusBadgeHtml}
             </div>
             <span class="ls-chat-time">${time}</span>
           </div>
@@ -8253,8 +8263,6 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       `;
     }
 
-    // Handle bot messages
-    const badgeHtml = msg.badge ? `<span class="ls-chat-badge">${msg.badge}</span>` : '';
     const botClass = msg.type === 'bot' ? 'ls-bot-message' : '';
 
     return `
@@ -8263,7 +8271,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           <div class="ls-chat-user">
             ${avatarHtml}
             <span class="ls-chat-username">${escapeHtml(msg.userName || 'User')}</span>
-            ${badgeHtml}
+            ${plusBadgeHtml}
+            ${botBadgeHtml}
           </div>
           <span class="ls-chat-time">${time}</span>
         </div>
@@ -8283,7 +8292,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       if (!message || !currentUser) return;
 
       const userName = userInfo?.displayName || userInfo?.firstName || currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
-      const userAvatar = userInfo?.photoURL || currentUser.photoURL || null;
+      const userAvatar = userInfo?.avatar || currentUser.photoURL || null;
 
       // Optimistic UI - show message immediately
       const tempMsg = {
