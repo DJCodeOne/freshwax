@@ -1374,7 +1374,9 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     const restartBtn = document.getElementById('restartServerBtn');
 
     try {
-      const response = await fetch('/api/admin/server-status');
+      const response = await fetch('/api/admin/server-status', {
+        headers: { 'X-Admin-Key': ADMIN_KEY }
+      });
       const data = await response.json();
 
       if (data.online) {
